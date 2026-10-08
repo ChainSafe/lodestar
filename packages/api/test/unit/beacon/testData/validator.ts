@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {BuilderSelection, Endpoints} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
@@ -13,6 +13,8 @@ const builderAuth = {
   ...ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
   message: {data: new TextEncoder().encode("builder.example.com"), slot: 32000},
 };
+const signedProposerPreferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+signedProposerPreferences.message.proposalSlot = SLOTS_PER_EPOCH;
 
 export const testData: GenericServerTestCases<Endpoints> = {
   getAttesterDuties: {
@@ -177,7 +179,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   submitProposerPreferences: {
-    args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
+    args: {signedProposerPreferences: [signedProposerPreferences]},
     res: undefined,
   },
   submitBuilderPreferences: {

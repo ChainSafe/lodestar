@@ -24,7 +24,6 @@ export type JsonSchema = {
 
 export type OpenApiJson = {
   paths: Record<RouteUrl, Record<HttpMethod, RouteDefinition>>;
-  components?: {schemas: Record<string, JsonSchema>};
   info: {
     version: string;
   };

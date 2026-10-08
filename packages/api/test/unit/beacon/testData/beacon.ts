@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {
@@ -15,6 +15,13 @@ const balance = 32e9;
 const reward = 32e9;
 const pubkeyHex = toHex(Buffer.alloc(48, 1));
 const versionedHash = ssz.deneb.VersionedHash.defaultValue();
+
+const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+signedBlock.message.slot = SLOTS_PER_EPOCH;
+const signedEnvelopeContents = ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue();
+signedEnvelopeContents.signedExecutionPayloadEnvelope.message.payload.slotNumber = SLOTS_PER_EPOCH;
+const signedExecutionPayloadBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+signedExecutionPayloadBid.message.slot = SLOTS_PER_EPOCH;
 
 const blockHeaderResponse: BlockHeaderResponse = {
   root,
@@ -67,7 +74,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishBlockV2: {
     args: {
-      signedBlockContents: {signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue()},
+      signedBlockContents: {signedBlock},
       broadcastValidation: BroadcastValidation.consensus,
       builderUrl: "https://builder.example.com",
     },
@@ -82,13 +89,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishExecutionPayloadEnvelope: {
     args: {
-      signedEnvelopeOrContents: ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue(),
+      signedEnvelopeOrContents: signedEnvelopeContents,
       broadcastValidation: BroadcastValidation.gossip,
     },
     res: undefined,
   },
   publishExecutionPayloadBid: {
-    args: {signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue()},
+    args: {signedExecutionPayloadBid},
     res: undefined,
   },
   getSignedExecutionPayloadEnvelope: {

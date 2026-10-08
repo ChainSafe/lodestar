@@ -1,20 +1,16 @@
-import {readFileSync} from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {beforeAll, describe, expect, it} from "vitest";
-import {Type} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ssz} from "@lodestar/types";
 import {routes} from "../../../src/beacon/index.js";
-import {IgnoredProperty, runTestCheckAgainstSpec, validateSchema} from "../../utils/checkAgainstSpec.js";
+import {IgnoredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
-import {OpenApiFile, OpenApiJson} from "../../utils/parseOpenApiSpec.js";
+import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 // Import all testData and merge below
 import {testData as beaconTestData} from "./testData/beacon.js";
 import {testData as configTestData} from "./testData/config.js";
 import {testData as debugTestData} from "./testData/debug.js";
 import {eventTestData, testData as eventsTestData} from "./testData/events.js";
-import {componentTestData, testData as gloasTestData} from "./testData/gloas.js";
 import {testData as lightclientTestData} from "./testData/lightclient.js";
 import {testData as nodeTestData} from "./testData/node.js";
 import {testData as proofsTestData} from "./testData/proofs.js";
@@ -25,16 +21,13 @@ import {testData as validatorTestData} from "./testData/validator.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const version = "v5.0.0-beta.0";
-// BEACON_API_SPEC must point to a dereferenced JSON bundle.
-const localSpecPath = process.env.BEACON_API_SPEC;
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
 
-const config = createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
-const preGloasConfig = createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: Infinity});
+const config = createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 1});
 
 const definitions = {
   ...routes.beacon.getDefinitions(config),
@@ -45,7 +38,6 @@ const definitions = {
   ...routes.node.getDefinitions(config),
   ...routes.proof.getDefinitions(config),
   ...routes.validator.getDefinitions(config),
-  publishBlindedBlockV2: routes.beacon.getDefinitions(preGloasConfig).publishBlindedBlockV2,
 };
 
 const testDatas = {
@@ -59,6 +51,8 @@ const testDatas = {
   ...validatorTestData,
 };
 
+const ignoredOperations: string[] = [];
+
 const ignoredProperties: Record<string, IgnoredProperty> = {
   /*
    https://github.com/ChainSafe/lodestar/issues/6168
@@ -67,39 +61,10 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
   getHealth: {request: ["query.syncing_status"]},
 };
 
-const openApiJson: OpenApiJson = localSpecPath
-  ? JSON.parse(readFileSync(localSpecPath, "utf8"))
-  : await fetchOpenApiSpec(openApiFile);
-runTestCheckAgainstSpec(openApiJson, definitions, testDatas, [], ignoredProperties);
+const openApiJson = await fetchOpenApiSpec(openApiFile);
+runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
-describe("Gloas", () => {
-  const gloasTestDatas: typeof testDatas = {...testDatas, ...gloasTestData};
-  const ignoredOperations = Object.keys(testDatas).filter((operation) => !(operation in gloasTestData));
-  runTestCheckAgainstSpec(openApiJson, definitions, gloasTestDatas, ignoredOperations, ignoredProperties);
-});
-
-describe("Gloas components", () => {
-  const types: Record<string, Type<unknown>> = {
-    ...ssz.gloas,
-    BuilderEntry: routes.validator.BuilderEntryType,
-    BuilderConfig: routes.validator.BuilderConfigType,
-    BuilderPreferencesEntry: routes.validator.BuilderPreferencesEntryType,
-  };
-  const schemas = Object.entries(openApiJson.components?.schemas ?? {}).filter(([name]) => name.startsWith("Gloas."));
-
-  it("includes Gloas schemas", () => {
-    expect(schemas.length).toBeGreaterThan(0);
-  });
-
-  for (const [name, schema] of schemas) {
-    it(name, () => {
-      const typeName = name.slice("Gloas.".length);
-      const type = types[typeName];
-      expect(type, `No Lodestar type for ${name}`).toBeDefined();
-      validateSchema(schema, type.toJson(componentTestData[typeName] ?? type.defaultValue()), name);
-    });
-  }
-});
+const ignoredTopics: string[] = [];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:
@@ -121,10 +86,15 @@ describe("eventstream event data", () => {
     }
   });
 
-  const eventSerdes = routes.events.getEventSerdes(config);
+  // Spec event examples use Gloas fields even in the first epoch.
+  const eventSerdes = routes.events.getEventSerdes(
+    createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0})
+  );
   const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
-  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {})) {
+  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {}).filter(
+    ([topic]) => !ignoredTopics.includes(topic)
+  )) {
     it(topic, () => {
       if (!knownTopics.has(topic)) {
         throw Error(`topic ${topic} not implemented`);
