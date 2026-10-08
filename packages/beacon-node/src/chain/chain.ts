@@ -328,7 +328,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
-    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
+    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics, logger);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
