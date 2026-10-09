@@ -1,379 +1,333 @@
 import {createHmac} from "node:crypto";
-import {createServer} from "node:http";
-import {afterEach, describe, expect, it, vi} from "vitest";
+import {getEventListeners} from "node:events";
+import {readFileSync} from "node:fs";
+import {FastifyInstance, fastify} from "fastify";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {EnginePayloadSource} from "@lodestar/builder";
-import {ForkName, ForkPostGloas} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {ErrorAborted, toHex} from "@lodestar/utils";
+import {ErrorAborted, fromHex, toHex} from "@lodestar/utils";
 import {BuilderEngineErrorCode, createPayloadSourceEngine} from "../../../../src/cmds/builder/engine.js";
+import {testLogger} from "../../../utils.js";
 
-describe("Builder JSON-RPC Engine connection", () => {
-  const jwtSecret = new Uint8Array(32).fill(1);
-  const headBlockHash = toHex(new Uint8Array(32).fill(1));
-  const safeBlockHash = toHex(new Uint8Array(32).fill(2));
-  const finalizedBlockHash = toHex(new Uint8Array(32).fill(3));
-  const forkchoiceState = {headBlockHash, safeBlockHash, finalizedBlockHash};
-  const payloadId = "0x0102030405060708";
-  const validResult = {
-    payloadId,
-    payloadStatus: {status: "VALID", latestValidHash: headBlockHash, validationError: null},
-  };
-  const makeEngine = () => createPayloadSourceEngine({url: "http://localhost:8551", jwtSecret});
+const fixtures: {forkchoice: string; payload: string} = JSON.parse(
+  readFileSync(new URL("./engineSsz.json", import.meta.url), "utf8")
+);
+const hash = toHex(new Uint8Array(32).fill(1));
+const payloadId = "0x0102030405060708";
+const jwtSecret = new Uint8Array(32).fill(2);
+const logger = testLogger();
+const forkchoiceState = {headBlockHash: hash, safeBlockHash: hash, finalizedBlockHash: hash};
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
-  });
+describe("Builder shared Engine connection", () => {
+  let server: FastifyInstance;
+  let url: string;
+  let controller: AbortController;
+  let capabilitiesStatus: number;
+  let failureStatus: number | undefined;
+  let failOnce: boolean;
+  let rpcStatus: string;
+  let rpcPayloadId: string | null;
+  let methodError: boolean;
+  let gate: Promise<void> | undefined;
+  let releaseGate: (() => void) | undefined;
+  let discoveryGate: Promise<void> | undefined;
+  let releaseDiscovery: (() => void) | undefined;
+  let requests: {path: string; body: unknown; authorization?: string}[];
 
-  it.each(["prepare", "getPayload"] as const)("rejects Heze %s before sending a request", async (operation) => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(Response.json({result: operation === "prepare" ? validResult : payloadResponse()}));
-    vi.stubGlobal("fetch", fetch);
-    const source = new EnginePayloadSource("local", makeEngine());
-    const result =
-      operation === "prepare"
-        ? prepare(makeEngine(), ForkName.heze)
-        : source.getPayload({sourceId: "local", fork: ForkName.heze, payloadId}, new AbortController().signal);
-
-    await expect(result).rejects.toMatchObject({type: {code: BuilderEngineErrorCode.UNSUPPORTED_FORK}});
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("sends Gloas attributes, explicit null custody and the supplied finality hashes", async () => {
-    const fork = ForkName.gloas;
-    const attributes = ssz[fork].PayloadAttributes.defaultValue();
-    attributes.timestamp = 42;
-    attributes.slotNumber = 3;
-    attributes.targetGasLimit = 30_000_000n;
-    attributes.prevRandao.fill(4);
-    attributes.suggestedFeeRecipient = toHex(new Uint8Array(20).fill(5));
-    attributes.parentBeaconBlockRoot.fill(6);
-    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({result: validResult}));
-    vi.stubGlobal("fetch", fetch);
-    const source = new EnginePayloadSource("local", makeEngine());
-
-    await expect(
-      source.prepare({fork, forkchoiceState, payloadAttributes: attributes}, new AbortController().signal)
-    ).resolves.toEqual({sourceId: "local", fork, payloadId});
-
-    const body = JSON.parse(String(fetch.mock.calls[0][1]?.body));
-    expect(body).toEqual({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "engine_forkchoiceUpdatedV4",
-      params: [
-        forkchoiceState,
-        {
-          timestamp: "0x2a",
-          slotNumber: "0x3",
-          targetGasLimit: "0x1c9c380",
-          prevRandao: toHex(attributes.prevRandao),
-          suggestedFeeRecipient: attributes.suggestedFeeRecipient,
-          parentBeaconBlockRoot: toHex(attributes.parentBeaconBlockRoot),
-          withdrawals: [],
-        },
-        null,
-      ],
+  beforeEach(async () => {
+    controller = new AbortController();
+    capabilitiesStatus = 200;
+    failureStatus = undefined;
+    failOnce = false;
+    rpcStatus = "VALID";
+    rpcPayloadId = payloadId;
+    methodError = false;
+    gate = undefined;
+    releaseGate = undefined;
+    discoveryGate = undefined;
+    releaseDiscovery = undefined;
+    requests = [];
+    server = fastify({forceCloseConnections: true});
+    server.addContentTypeParser("application/octet-stream", {parseAs: "buffer"}, (_, body, done) => done(null, body));
+    server.get("/engine/v1/capabilities", async (_, reply) => {
+      await discoveryGate;
+      return reply.code(capabilitiesStatus).send({supported_forks: ["amsterdam"]});
     });
-  });
-
-  it("retrieves Gloas payloads with getPayloadV6", async () => {
-    const fork = ForkName.gloas;
-    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({result: payloadResponse()}));
-    vi.stubGlobal("fetch", fetch);
-    const source = new EnginePayloadSource("local", makeEngine());
-
-    const result = await source.getPayload({sourceId: "local", fork, payloadId}, new AbortController().signal);
-
-    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toMatchObject({
-      method: "engine_getPayloadV6",
-      params: [payloadId],
-    });
-    expect(result.executionPayload).toEqual(ssz[fork].ExecutionPayload.defaultValue());
-    expect(result.executionPayloadValue).toBe(123n);
-    expect(result.executionRequests).toEqual(ssz[fork].ExecutionRequests.defaultValue());
-    expect(result.blobsBundle).toEqual({blobs: [], commitments: [], proofs: []});
-  });
-
-  it.each([
-    ssz.heze.PayloadAttributes.defaultValue(),
-    {...ssz.heze.PayloadAttributes.defaultValue(), inclusionListTransactions: undefined},
-  ])("rejects inclusion-list attributes on the Gloas connection before sending", async (attributes) => {
-    const fetch = vi.fn();
-    vi.stubGlobal("fetch", fetch);
-
-    await expect(
-      makeEngine().notifyForkchoiceUpdate(
-        ForkName.gloas,
-        headBlockHash,
-        safeBlockHash,
-        finalizedBlockHash,
-        attributes,
-        null,
-        new AbortController().signal
-      )
-    ).rejects.toMatchObject({type: {code: BuilderEngineErrorCode.INVALID_ATTRIBUTES}});
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it.each(["INVALID", "ACCEPTED"])("rejects %s even if a payload ID is supplied", async (status) => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        Response.json({
-          result: {
-            payloadId,
-            payloadStatus: {status, latestValidHash: null, validationError: "invalid parent"},
-          },
-        })
-      )
-    );
-    await expect(prepare(makeEngine())).rejects.toMatchObject({
-      type: {code: BuilderEngineErrorCode.PAYLOAD_NOT_VALID, status, validationError: "invalid parent"},
-    });
-  });
-
-  it("leaves a syncing Engine retryable through the missing-payload-ID error", async () => {
-    const fetch = vi.fn().mockResolvedValue(
-      Response.json({
-        result: {
-          payloadId: null,
-          payloadStatus: {status: "SYNCING", latestValidHash: null, validationError: null},
-        },
-      })
-    );
-    vi.stubGlobal("fetch", fetch);
-    await expect(prepare(makeEngine())).rejects.toMatchObject({
-      type: {code: "PAYLOAD_SOURCE_ERROR_NO_PAYLOAD_ID"},
-    });
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it("lets PayloadSource reject a missing payload ID", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({result: {...validResult, payloadId: null}})));
-    await expect(prepare(makeEngine())).rejects.toMatchObject({type: {code: "PAYLOAD_SOURCE_ERROR_NO_PAYLOAD_ID"}});
-  });
-
-  it("rejects an empty hexadecimal payload ID on a VALID response", async () => {
-    const fetch = vi.fn().mockResolvedValue(Response.json({result: {...validResult, payloadId: "0x"}}));
-    vi.stubGlobal("fetch", fetch);
-    await expect(prepare(makeEngine())).rejects.toMatchObject({
-      type: {code: BuilderEngineErrorCode.INVALID_PAYLOAD_ID, payloadId: "0x"},
-    });
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it.each(["prepare", "getPayload"] as const)("retries a transient transport failure during %s", async (operation) => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValueOnce(new Response("unavailable", {status: 503}))
-      .mockResolvedValueOnce(Response.json({result: operation === "prepare" ? validResult : payloadResponse()}));
-    vi.stubGlobal("fetch", fetch);
-    const engine = makeEngine();
-    await (operation === "prepare"
-      ? prepare(engine)
-      : engine.getPayload(ForkName.gloas, payloadId, new AbortController().signal));
-    expect(fetch).toHaveBeenCalledTimes(2);
-    const firstRequest = JSON.parse(String(fetch.mock.calls[0][1].body));
-    expect(JSON.parse(String(fetch.mock.calls[1][1].body))).toMatchObject({
-      method: firstRequest.method,
-      params: firstRequest.params,
-    });
-  });
-
-  it.each([400, 401, 403, 404])("does not retry HTTP %s", async (status) => {
-    const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response("rejected", {status})));
-    vi.stubGlobal("fetch", fetch);
-    await expect(prepare(makeEngine())).rejects.toMatchObject({status});
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it("bounds transient retries", async () => {
-    const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response("busy", {status: 429})));
-    vi.stubGlobal("fetch", fetch);
-    await expect(prepare(makeEngine())).rejects.toMatchObject({status: 429});
-    expect(fetch).toHaveBeenCalledTimes(3);
-  });
-
-  it("cancels during transport retry backoff", async () => {
-    vi.useFakeTimers();
-    const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response("busy", {status: 503})));
-    vi.stubGlobal("fetch", fetch);
-    const controller = new AbortController();
-    const engine = createPayloadSourceEngine({url: "http://localhost:8551", jwtSecret, signal: controller.signal});
-    const result = expect(prepare(engine)).rejects.toThrow(ErrorAborted);
-    await vi.advanceTimersByTimeAsync(1);
-    controller.abort();
-    await result;
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("preserves an unsupported Engine method error without downgrading or retrying", async () => {
-    const fetch = vi.fn().mockResolvedValue(Response.json({error: {code: -32601, message: "Method not found"}}));
-    vi.stubGlobal("fetch", fetch);
-    await expect(prepare(makeEngine())).rejects.toMatchObject({
-      response: {error: {code: -32601}},
-    });
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not send cancelled preparation or retrieval requests", async () => {
-    const fetch = vi.fn();
-    vi.stubGlobal("fetch", fetch);
-    const source = new EnginePayloadSource("local", makeEngine());
-    const signal = AbortSignal.abort();
-    await expect(
-      source.prepare(
-        {
-          fork: ForkName.gloas,
-          forkchoiceState,
-          payloadAttributes: ssz.gloas.PayloadAttributes.defaultValue(),
-        },
-        signal
-      )
-    ).rejects.toThrow(ErrorAborted);
-    await expect(source.getPayload({sourceId: "local", fork: ForkName.gloas, payloadId}, signal)).rejects.toThrow(
-      ErrorAborted
-    );
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    [[], "0x" + "00".repeat(16)],
-    [[0, 7, 8, 127], "0x8101" + "00".repeat(13) + "80"],
-  ])("serializes a non-null custody set %s as a bitvector", async (columns, expected) => {
-    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({result: validResult}));
-    vi.stubGlobal("fetch", fetch);
-    await makeEngine().notifyForkchoiceUpdate(
-      ForkName.gloas,
-      headBlockHash,
-      safeBlockHash,
-      finalizedBlockHash,
-      ssz.gloas.PayloadAttributes.defaultValue(),
-      columns,
-      new AbortController().signal
-    );
-    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).params[2]).toBe(expected);
-  });
-
-  it.each([-1, 128, 0.5, NaN])("rejects invalid custody column %s", async (column) => {
-    const fetch = vi.fn();
-    vi.stubGlobal("fetch", fetch);
-    await expect(
-      makeEngine().notifyForkchoiceUpdate(
-        ForkName.gloas,
-        headBlockHash,
-        safeBlockHash,
-        finalizedBlockHash,
-        ssz.gloas.PayloadAttributes.defaultValue(),
-        [column],
-        new AbortController().signal
-      )
-    ).rejects.toMatchObject({type: {code: BuilderEngineErrorCode.INVALID_CUSTODY_COLUMN}});
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("rejects a Gloas response missing its block access list", async () => {
-    const response = payloadResponse();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        Response.json({
-          result: {
-            ...response,
-            executionPayload: {...response.executionPayload, blockAccessList: undefined},
-          },
-        })
-      )
-    );
-    await expect(makeEngine().getPayload(ForkName.gloas, payloadId, new AbortController().signal)).rejects.toThrow(
-      "blockAccessList missing"
-    );
-  });
-
-  it.each(["blobsBundle", "executionRequests"] as const)(
-    "leaves missing %s validation to PayloadSource",
-    async (field) => {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(Response.json({result: {...payloadResponse(), [field]: undefined}}))
-      );
-      const source = new EnginePayloadSource("local", makeEngine());
-      await expect(
-        source.getPayload({sourceId: "local", fork: ForkName.gloas, payloadId}, new AbortController().signal)
-      ).rejects.toMatchObject({
-        type: {
-          code:
-            field === "blobsBundle"
-              ? "PAYLOAD_SOURCE_ERROR_MISSING_BLOBS_BUNDLE"
-              : "PAYLOAD_SOURCE_ERROR_MISSING_EXECUTION_REQUESTS",
+    server.get("/engine/v1/identity", () => [{code: "GE", name: "Geth", version: "test", commit: "0x12345678"}]);
+    for (const path of ["/engine/v1/forkchoice", `/engine/v1/payloads/${payloadId}`, "/"]) {
+      server.route({
+        method: path.includes("/payloads/") ? "GET" : "POST",
+        url: path,
+        handler: async (req, reply) => {
+          const rpc = req.body as {method?: string; id?: number};
+          if (rpc?.method === "engine_getClientVersionV1") {
+            return {id: rpc.id, result: [{code: "GE", name: "Geth", version: "test", commit: "0x12345678"}]};
+          }
+          requests.push({path: req.url, body: req.body, authorization: req.headers.authorization});
+          await gate;
+          if (failureStatus !== undefined) {
+            const status = failureStatus;
+            if (failOnce) failureStatus = undefined;
+            return reply.code(status).send({type: "/engine-api/errors/invalid-params"});
+          }
+          if (path !== "/") {
+            return reply
+              .type("application/octet-stream")
+              .send(Buffer.from(fromHex(path.includes("/payloads/") ? fixtures.payload : fixtures.forkchoice)));
+          }
+          if (methodError) return {id: rpc.id, error: {code: -32601, message: "Method not found"}};
+          return {
+            id: rpc.id,
+            result:
+              rpc.method === "engine_getPayloadV6"
+                ? payloadResponse()
+                : {
+                    payloadId: rpcPayloadId,
+                    payloadStatus: {status: rpcStatus, latestValidHash: null, validationError: "test"},
+                  },
+          };
         },
       });
     }
-  );
-
-  it("authenticates a real local HTTP request with the existing JWT client", async () => {
-    let received: {authorization: string | undefined; body: string} | undefined;
-    const server = createServer(async (req, res) => {
-      const chunks: Buffer[] = [];
-      for await (const chunk of req) chunks.push(Buffer.from(chunk));
-      received = {authorization: req.headers.authorization, body: Buffer.concat(chunks).toString()};
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({jsonrpc: "2.0", id: 1, result: validResult}));
-    });
-    await new Promise<void>((resolve, reject) => {
-      server.once("error", reject);
-      server.listen(0, "127.0.0.1", resolve);
-    });
-    try {
-      const address = server.address();
-      if (!address || typeof address === "string") throw Error("Expected TCP server address");
-      await prepare(createPayloadSourceEngine({url: `http://127.0.0.1:${address.port}`, jwtSecret}));
-      if (!received) throw Error("Engine request not received");
-      const {authorization, body} = received;
-      expect(JSON.parse(body).method).toBe("engine_forkchoiceUpdatedV4");
-      const [header, payload, signature] = (authorization ?? "").replace("Bearer ", "").split(".");
-      expect(JSON.parse(Buffer.from(header, "base64url").toString()).alg).toBe("HS256");
-      expect(signature).toBe(createHmac("sha256", jwtSecret).update(`${header}.${payload}`).digest("base64url"));
-      const claim = JSON.parse(Buffer.from(payload, "base64url").toString());
-      expect(Math.abs(claim.iat - Date.now() / 1000)).toBeLessThan(5);
-    } finally {
-      server.closeAllConnections();
-      await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-    }
+    url = await server.listen({port: 0, host: "127.0.0.1"});
   });
 
-  function prepare(engine: ReturnType<typeof makeEngine>, fork: ForkPostGloas = ForkName.gloas) {
-    return new EnginePayloadSource("local", engine).prepare(
-      {
-        fork,
-        forkchoiceState,
-        payloadAttributes: ssz[fork].PayloadAttributes.defaultValue(),
-      },
-      new AbortController().signal
+  afterEach(async () => {
+    controller.abort();
+    releaseGate?.();
+    releaseDiscovery?.();
+    await server.close();
+  });
+
+  function engine(engineApi: "auto" | "ssz" | "json-rpc" = "auto") {
+    return createPayloadSourceEngine({url, jwtSecret, signal: controller.signal, logger, engineApi});
+  }
+
+  function prepare(connection = engine(), signal = new AbortController().signal) {
+    return new EnginePayloadSource("local", connection).prepare(
+      {fork: ForkName.gloas, forkchoiceState, payloadAttributes: ssz.gloas.PayloadAttributes.defaultValue()},
+      signal
     );
   }
+
+  it.each(["auto", "ssz", "json-rpc"] as const)("prepares and retrieves a Gloas payload using %s", async (mode) => {
+    const source = new EnginePayloadSource("local", engine(mode));
+    const handle = await prepare(engine(mode));
+    const result = await source.getPayload(handle, new AbortController().signal);
+    expect(result.executionPayload).toEqual(ssz.gloas.ExecutionPayload.defaultValue());
+    expect(result.executionPayloadValue).toBe(123n);
+    expect(result.blobsBundle).toEqual({blobs: [], commitments: [], proofs: []});
+    expect(result.executionRequests).toEqual(ssz.gloas.ExecutionRequests.defaultValue());
+    expect(requests.map((req) => req.path)).toEqual(
+      mode === "json-rpc" ? ["/", "/"] : ["/engine/v1/forkchoice", `/engine/v1/payloads/${payloadId}`]
+    );
+    const [header, claim, signature] = (requests[0].authorization ?? "").replace("Bearer ", "").split(".");
+    expect(signature).toBe(createHmac("sha256", jwtSecret).update(`${header}.${claim}`).digest("base64url"));
+    expect(Math.abs(JSON.parse(Buffer.from(claim, "base64url").toString()).iat - Date.now() / 1000)).toBeLessThan(5);
+  });
+
+  it("uses JSON-RPC when the EL has no REST API", async () => {
+    capabilitiesStatus = 404;
+    await prepare();
+    expect(requests[0]).toMatchObject({
+      path: "/",
+      body: {method: "engine_forkchoiceUpdatedV4", params: [forkchoiceState, expect.any(Object), null]},
+    });
+  });
+
+  it("does not hide a capabilities authentication failure with JSON-RPC fallback", async () => {
+    capabilitiesStatus = 401;
+    await expect(prepare()).rejects.toMatchObject({status: 401});
+    expect(requests).toHaveLength(0);
+  });
+
+  for (const mode of ["ssz", "json-rpc"] as const) {
+    it(`cleans up ${mode} cancellation listeners after successful and failed requests`, async () => {
+      const connection = engine(mode);
+      const signal = new AbortController().signal;
+      const baseline = getEventListeners(controller.signal, "abort").length;
+      await prepare(connection, signal);
+      await expect.poll(() => getEventListeners(controller.signal, "abort").length).toBe(baseline);
+      for (let i = 0; i < 3; i++) {
+        await prepare(connection, signal);
+        expect(getEventListeners(controller.signal, "abort").length, `connection listeners after request ${i}`).toBe(
+          baseline
+        );
+        expect(getEventListeners(signal, "abort"), `request listeners after request ${i}`).toHaveLength(0);
+      }
+      failureStatus = 401;
+      await expect(prepare(connection, signal)).rejects.toThrow();
+      expect(getEventListeners(controller.signal, "abort")).toHaveLength(baseline);
+      expect(getEventListeners(signal, "abort")).toHaveLength(0);
+    });
+
+    it.each([null, [], [0, 7, 127]])(`preserves ${mode} custody argument %j`, async (columns) => {
+      await engine(mode).notifyForkchoiceUpdate(
+        ForkName.gloas,
+        hash,
+        hash,
+        hash,
+        ssz.gloas.PayloadAttributes.defaultValue(),
+        columns,
+        controller.signal
+      );
+      const expected = new Uint8Array(16);
+      for (const column of columns ?? []) expected[Math.floor(column / 8)] |= 1 << (column % 8);
+      if (mode === "json-rpc") {
+        expect((requests[0].body as {params: unknown[]}).params[2]).toBe(columns === null ? null : toHex(expected));
+      } else {
+        const body = requests[0].body as Buffer;
+        const custodyOffset = body.readUInt32LE(100);
+        expect(body.subarray(custodyOffset)).toEqual(Buffer.from(columns === null ? [] : expected));
+      }
+    });
+
+    it(`cancels ${mode} retry backoff`, async () => {
+      failureStatus = 503;
+      const requestController = new AbortController();
+      const pending = expect(prepare(engine(mode), requestController.signal)).rejects.toThrow(ErrorAborted);
+      await expect.poll(() => requests.length, {interval: 1}).toBe(1);
+      requestController.abort();
+      await pending;
+      expect(requests).toHaveLength(1);
+    });
+
+    it(`does not send pre-cancelled ${mode} preparation or retrieval`, async () => {
+      const connection = engine(mode);
+      const signal = AbortSignal.abort();
+      await expect(prepare(connection, signal)).rejects.toThrow(ErrorAborted);
+      await expect(connection.getPayload(ForkName.gloas, payloadId, signal)).rejects.toThrow(ErrorAborted);
+      expect(requests).toHaveLength(0);
+    });
+  }
+
+  it.each([-1, 128, 0.5, NaN])("rejects invalid custody column %s before sending", async (column) => {
+    await expect(
+      engine().notifyForkchoiceUpdate(
+        ForkName.gloas,
+        hash,
+        hash,
+        hash,
+        ssz.gloas.PayloadAttributes.defaultValue(),
+        [column],
+        controller.signal
+      )
+    ).rejects.toMatchObject({type: {code: BuilderEngineErrorCode.INVALID_CUSTODY_COLUMN}});
+    expect(requests).toHaveLength(0);
+  });
+
+  it.each(["ssz", "json-rpc"] as const)("retries transient %s failures with unchanged content", async (mode) => {
+    failureStatus = 503;
+    failOnce = true;
+    await prepare(engine(mode));
+    expect(requests).toHaveLength(2);
+    if (mode === "ssz") expect(requests[0].body).toEqual(requests[1].body);
+    else expect(requests[1].body).toMatchObject({params: (requests[0].body as {params: unknown[]}).params});
+  });
+
+  it.each(["ssz", "json-rpc"] as const)("bounds %s transport retries", async (mode) => {
+    failureStatus = 503;
+    await expect(prepare(engine(mode))).rejects.toMatchObject({status: 503});
+    expect(requests).toHaveLength(3);
+  });
+
+  for (const mode of ["ssz", "json-rpc"] as const) {
+    it.each([400, 401, 403, 404])(`does not retry ${mode} HTTP %s`, async (status) => {
+      failureStatus = status;
+      await expect(prepare(engine(mode))).rejects.toMatchObject({status});
+      expect(requests).toHaveLength(1);
+    });
+  }
+
+  it.each(["ssz", "json-rpc"] as const)("cancels a %s request without cancelling the connection", async (mode) => {
+    gate = new Promise<void>((resolve) => {
+      releaseGate = resolve;
+    });
+    const requestController = new AbortController();
+    const connection = engine(mode);
+    const pending = expect(prepare(connection, requestController.signal)).rejects.toThrow(ErrorAborted);
+    await expect.poll(() => requests.length).toBe(1);
+    requestController.abort();
+    await pending;
+    releaseGate?.();
+    gate = undefined;
+    await expect(prepare(connection)).resolves.toMatchObject({payloadId});
+    expect(controller.signal.aborted).toBe(false);
+  });
+
+  it("cancels a discovery waiter without aborting shared discovery", async () => {
+    discoveryGate = new Promise<void>((resolve) => {
+      releaseDiscovery = resolve;
+    });
+    const connection = engine();
+    const requestController = new AbortController();
+    const pending = expect(prepare(connection, requestController.signal)).rejects.toThrow(ErrorAborted);
+    requestController.abort();
+    await pending;
+    expect(requests).toHaveLength(0);
+    releaseDiscovery?.();
+    await expect(prepare(connection)).resolves.toMatchObject({payloadId});
+    expect(requests).toHaveLength(1);
+  });
+
+  it.each([null, "0x"])("rejects unusable JSON-RPC payload ID %s", async (value) => {
+    rpcPayloadId = value;
+    await expect(prepare(engine("json-rpc"))).rejects.toMatchObject({
+      type: {code: "PAYLOAD_SOURCE_ERROR_NO_PAYLOAD_ID"},
+    });
+  });
+
+  it.each(["INVALID", "ACCEPTED"])("rejects %s without creating a handle", async (status) => {
+    rpcStatus = status;
+    await expect(prepare(engine("json-rpc"))).rejects.toMatchObject({
+      type: {code: BuilderEngineErrorCode.PAYLOAD_NOT_VALID, status},
+    });
+  });
+
+  it("leaves SYNCING retryable by the orchestrator", async () => {
+    rpcStatus = "SYNCING";
+    rpcPayloadId = null;
+    await expect(prepare(engine("json-rpc"))).rejects.toMatchObject({
+      type: {code: "PAYLOAD_SOURCE_ERROR_NO_PAYLOAD_ID"},
+    });
+  });
+
+  it("does not retry unsupported JSON-RPC methods", async () => {
+    methodError = true;
+    await expect(prepare(engine("json-rpc"))).rejects.toMatchObject({response: {error: {code: -32601}}});
+    expect(requests).toHaveLength(1);
+  });
+
+  it("rejects Heze without sending Engine traffic", async () => {
+    await expect(engine().getPayload(ForkName.heze, payloadId, controller.signal)).rejects.toMatchObject({
+      type: {code: BuilderEngineErrorCode.UNSUPPORTED_FORK},
+    });
+    expect(requests).toHaveLength(0);
+  });
 });
 
 function payloadResponse() {
-  const zeroHash = "0x" + "00".repeat(32);
+  const payload = ssz.gloas.ExecutionPayload.toJson(ssz.gloas.ExecutionPayload.defaultValue()) as Record<
+    string,
+    unknown
+  >;
+  // The Engine JSON-RPC quantities use hex rather than the consensus JSON decimal representation.
   return {
     executionPayload: {
-      parentHash: zeroHash,
-      feeRecipient: "0x" + "00".repeat(20),
-      stateRoot: zeroHash,
-      receiptsRoot: zeroHash,
-      logsBloom: "0x" + "00".repeat(256),
-      prevRandao: zeroHash,
+      parentHash: payload.parent_hash,
+      feeRecipient: payload.fee_recipient,
+      stateRoot: payload.state_root,
+      receiptsRoot: payload.receipts_root,
+      logsBloom: payload.logs_bloom,
+      prevRandao: payload.prev_randao,
       blockNumber: "0x0",
       gasLimit: "0x0",
       gasUsed: "0x0",
       timestamp: "0x0",
       extraData: "0x",
       baseFeePerGas: "0x0",
-      blockHash: zeroHash,
+      blockHash: payload.block_hash,
       transactions: [],
       withdrawals: [],
       blobGasUsed: "0x0",

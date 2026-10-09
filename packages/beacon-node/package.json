@@ -14,6 +14,11 @@
   "version": "1.49.0",
   "type": "module",
   "exports": {
+    "./execution/engine": {
+      "typescript": "./src/execution/engine/index.ts",
+      "types": "./lib/execution/engine/index.d.ts",
+      "import": "./lib/execution/engine/index.js"
+    },
     ".": {
       "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
@@ -43,11 +48,6 @@
       "typescript": "./src/metrics/index.ts",
       "types": "./lib/metrics/index.d.ts",
       "import": "./lib/metrics/index.js"
-    },
-    "./execution/engine": {
-      "typescript": "./src/execution/engine/rpc.ts",
-      "types": "./lib/execution/engine/rpc.d.ts",
-      "import": "./lib/execution/engine/rpc.js"
     },
     "./monitoring": {
       "typescript": "./src/monitoring/index.ts",
