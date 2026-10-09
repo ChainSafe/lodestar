@@ -65,15 +65,16 @@ describe("supported proposal body fields", () => {
         expect(body).toEqual({
           randaoReveal: attrs.randaoReveal,
           graffiti: attrs.graffiti,
-          eth1Data: state.eth1Data,
           proposerSlashings: common.proposerSlashings,
           attesterSlashings: common.attesterSlashings,
           attestations: common.attestations,
-          deposits: [],
           voluntaryExits: common.voluntaryExits,
           blsToExecutionChanges: common.blsToExecutionChanges,
           syncAggregate: common.syncAggregate,
+          ...(fork === ForkName.heze ? {} : {eth1Data: state.eth1Data, deposits: []}),
         });
+        expect(Object.hasOwn(body, "eth1Data")).toBe(fork !== ForkName.heze);
+        expect(Object.hasOwn(body, "deposits")).toBe(fork !== ForkName.heze);
         expect(modules.chain.syncContributionAndProofPool.getAggregate).toHaveBeenCalledExactlyOnceWith(
           attrs.slot - 1,
           parentBlockRoot
