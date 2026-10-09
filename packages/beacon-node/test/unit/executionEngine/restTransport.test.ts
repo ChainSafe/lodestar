@@ -40,6 +40,20 @@ describe("REST engine metadata and limits", () => {
     });
   });
 
+  it("uses the standard endpoint sets when the EL omits them", async () => {
+    probe.mockResolvedValue(
+      jsonResponse({
+        supported_forks: capabilities.supported_forks,
+        independently_versioned: capabilities.independently_versioned,
+      })
+    );
+
+    expect(await transport.getCapabilities()).toMatchObject({
+      forkScopedEndpoints: new Set(["payloads", "forkchoice", "bodies"]),
+      unscopedEndpoints: new Set(["capabilities", "identity"]),
+    });
+  });
+
   it.each([
     null,
     [],

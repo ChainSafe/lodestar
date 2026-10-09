@@ -124,7 +124,8 @@ export class RestEngineTransport implements IEngineTransport {
     ) {
       throw new EngineRestResponseError("getCapabilities", "supported_forks must be an array of strings");
     }
-    if (!Array.isArray(capabilities.fork_scoped_endpoints) || !capabilities.fork_scoped_endpoints.every(isString)) {
+    const forkScopedEndpoints = capabilities.fork_scoped_endpoints ?? ["payloads", "forkchoice", "bodies"];
+    if (!Array.isArray(forkScopedEndpoints) || !forkScopedEndpoints.every(isString)) {
       throw new EngineRestResponseError("getCapabilities", "fork_scoped_endpoints must be an array of strings");
     }
     const versioned = capabilities.independently_versioned;
@@ -135,7 +136,8 @@ export class RestEngineTransport implements IEngineTransport {
     if (!Array.isArray(blobs) || !blobs.every(isString)) {
       throw new EngineRestResponseError("getCapabilities", "blobs revisions must be an array of strings");
     }
-    if (!Array.isArray(capabilities.unscoped_endpoints) || !capabilities.unscoped_endpoints.every(isString)) {
+    const unscopedEndpoints = capabilities.unscoped_endpoints ?? ["capabilities", "identity"];
+    if (!Array.isArray(unscopedEndpoints) || !unscopedEndpoints.every(isString)) {
       throw new EngineRestResponseError("getCapabilities", "unscoped_endpoints must be an array of strings");
     }
     const advertisedLimits = capabilities.limits;
@@ -158,9 +160,9 @@ export class RestEngineTransport implements IEngineTransport {
     this.limits = limits;
     return {
       supportedForks: new Set(capabilities.supported_forks.map((fork) => fork.toLowerCase())),
-      forkScopedEndpoints: new Set(capabilities.fork_scoped_endpoints.map((endpoint) => endpoint.toLowerCase())),
+      forkScopedEndpoints: new Set(forkScopedEndpoints.map((endpoint) => endpoint.toLowerCase())),
       blobsRevisions: new Set(blobs.map((rev) => rev.toLowerCase())),
-      unscopedEndpoints: new Set(capabilities.unscoped_endpoints.map((endpoint) => endpoint.toLowerCase())),
+      unscopedEndpoints: new Set(unscopedEndpoints.map((endpoint) => endpoint.toLowerCase())),
       limits,
     };
   }
