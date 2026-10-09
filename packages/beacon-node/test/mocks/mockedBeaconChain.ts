@@ -182,6 +182,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       payloadAttestationPool: {
         add: vi.fn(),
         getAll: vi.fn(),
+        getPayloadAttestationsForBlock: vi.fn().mockReturnValue([]),
       },
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
