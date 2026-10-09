@@ -159,8 +159,7 @@ exceptions:
     # The pre-Gloas retention minimum exceeds the reduced Gloas minimum.
     - compute_min_epochs_for_block_requests#gloas
 
-    # heze EIP-8015 / EIP-8365 (not implemented)
-    - apply_pending_deposit#heze
+    # heze EIP-8015 (not implemented)
     - process_block#heze
     - process_epoch#heze
     - process_operations#heze

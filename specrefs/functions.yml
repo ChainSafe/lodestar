@@ -276,7 +276,9 @@
     </spec>
 
 - name: apply_pending_deposit#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/epoch/processPendingDeposits.ts
+      search: function applyPendingDeposit(
   spec: |
     <spec fn="apply_pending_deposit" fork="heze" hash="bdef283e">
     def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:

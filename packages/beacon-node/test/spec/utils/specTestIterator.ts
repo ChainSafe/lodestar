@@ -90,32 +90,12 @@ export const defaultSkipOpts: SkipOpts = {
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
     // TODO-HEZE: temporary. v1.7.0-beta.4 adds EIP-8015 (removes the eth1 fields from the Heze BeaconState and
-    // BeaconBlockBody) and EIP-8365 (apply_pending_deposit), so every Heze vector carrying a state or a block no
-    // longer deserializes. Unskip in the EIP-8015 and EIP-8365 PRs. Containers EIP-8015 does not touch keep
-    // running through ssz_static.
+    // BeaconBlockBody), so every Heze vector carrying a state or a block no longer deserializes. Unskip in the
+    // EIP-8015 PR. Containers EIP-8015 does not touch keep running through ssz_static.
     /^heze\/(?!ssz_static\/).*/,
     /^heze\/ssz_static\/(BeaconState|BeaconBlockBody|BeaconBlock|SignedBeaconBlock)\/.*$/,
   ],
-  skippedTests: [
-    // TODO-HEZE: remove once the spec tests are bumped to v1.7.0-beta.4. EIP-8365 (consensus-specs #5713) skips
-    // pending deposits that would create a validator with BLS withdrawal credentials. These v1.7.0-beta.3 vectors
-    // still onboard new validators with the pre-#5713 default BLS credentials and expect them to be created.
-    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_correct_sig_but_forked_state$/,
-    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_effective_deposit_with_genesis_fork_version$/,
-    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_min_activation$/,
-    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_over_min_activation$/,
-    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_over_min_activation_next_increment$/,
-    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_under_min_activation$/,
-    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/process_pending_deposits_eth1_bridge_transition_complete$/,
-    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/process_pending_deposits_multiple_for_new_validator$/,
-    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/process_pending_deposits_not_finalized$/,
-    /^heze\/sanity\/slots\/pyspec_tests\/multiple_pending_deposits_same_pubkey$/,
-    /^heze\/sanity\/slots\/pyspec_tests\/multiple_pending_deposits_same_pubkey_above_upward_threshold$/,
-    /^heze\/sanity\/slots\/pyspec_tests\/multiple_pending_deposits_same_pubkey_below_upward_threshold$/,
-    /^heze\/sanity\/slots\/pyspec_tests\/multiple_pending_deposits_same_pubkey_different_signature$/,
-    /^heze\/sanity\/slots\/pyspec_tests\/pending_deposit_extra_gwei$/,
-    /^heze\/fork_choice\/deposit_with_reorg\/pyspec_tests\/new_validator_deposit_with_multiple_epoch_transitions$/,
-  ],
+  skippedTests: [],
   skippedRunners: [],
   // Gossip handlers not implemented in the spec runner.
   skippedHandlers: [
