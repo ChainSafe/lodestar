@@ -15,10 +15,18 @@ export class BeaconProposerCache {
     this.feeRecipientByValidatorIndex.set(validatorIndex, {epoch, feeRecipient});
   }
 
-  /** Track a validator that uses this node for duties, keeping the fee recipient it may have registered */
-  touch(epoch: Epoch, validatorIndex: number): void {
-    const feeRecipient = this.feeRecipientByValidatorIndex.get(validatorIndex)?.feeRecipient;
-    this.feeRecipientByValidatorIndex.set(validatorIndex, {epoch, feeRecipient});
+  /**
+   * Track a validator that uses this node for duties, keeping the fee recipient it may have
+   * registered. Returns true if the validator was not tracked before.
+   */
+  track(epoch: Epoch, validatorIndex: number): boolean {
+    const entry = this.feeRecipientByValidatorIndex.get(validatorIndex);
+    if (entry !== undefined) {
+      entry.epoch = epoch;
+      return false;
+    }
+    this.feeRecipientByValidatorIndex.set(validatorIndex, {epoch});
+    return true;
   }
 
   has(validatorIndex: number): boolean {

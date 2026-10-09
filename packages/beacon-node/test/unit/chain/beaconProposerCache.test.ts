@@ -43,8 +43,9 @@ describe("BeaconProposerCache", () => {
     expect(cache.get(validatorIndex2)).toBe(feeRecipient2);
   });
 
-  it("touch tracks a validator without fee recipient", () => {
-    cache.touch(3, unknownValidatorIndex);
+  it("track adds a validator without fee recipient", () => {
+    expect(cache.track(3, unknownValidatorIndex)).toBe(true);
+    expect(cache.track(4, unknownValidatorIndex)).toBe(false);
 
     expect(cache.has(unknownValidatorIndex)).toBe(true);
     expect(cache.get(unknownValidatorIndex)).toBeUndefined();
@@ -52,8 +53,8 @@ describe("BeaconProposerCache", () => {
     expect(cache.getValidatorIndices()).toEqual([validatorIndex1, validatorIndex2, unknownValidatorIndex]);
   });
 
-  it("touch keeps the fee recipient and extends its retention", () => {
-    cache.touch(5, validatorIndex1);
+  it("track keeps the fee recipient and extends its retention", () => {
+    expect(cache.track(5, validatorIndex1)).toBe(false);
     expect(cache.get(validatorIndex1)).toBe(feeRecipient1);
 
     cache.prune(6);

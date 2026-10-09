@@ -1937,16 +1937,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void> {
-    const previousValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
-
+    let hasNewValidators = false;
     for (const validatorIndex of validatorIndices) {
-      this.beaconProposerCache.touch(epoch, validatorIndex);
+      if (this.beaconProposerCache.track(epoch, validatorIndex)) {
+        hasNewValidators = true;
+      }
     }
 
-    const newValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
-
     // Only update validator custody if we discovered new validators
-    if (newValidatorCount > previousValidatorCount) {
+    if (hasNewValidators) {
       const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }
