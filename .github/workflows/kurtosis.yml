@@ -5,10 +5,14 @@ on:
   schedule:
     - cron: "0 0 * * *" # Runs at midnight UTC everyday
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  test:
-    timeout-minutes: 60
-    name: Build and run Kurtosis
+  build:
+    name: Build Lodestar image
+    timeout-minutes: 30
     runs-on: warp-ubuntu-2204-x64-4x
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -21,7 +25,63 @@ jobs:
           docker buildx build . --load \
             --tag chainsafe/lodestar:kurtosis-ci \
             --build-arg COMMIT=$(git rev-parse HEAD)
+      - name: Export Docker image
+        run: docker save chainsafe/lodestar:kurtosis-ci | gzip > lodestar-kurtosis-ci.tar.gz
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lodestar-kurtosis-ci
+          path: lodestar-kurtosis-ci.tar.gz
+          retention-days: 3
+
+  test:
+    needs: build
+    timeout-minutes: 60
+    name: Kurtosis (${{ matrix.el }})
+    runs-on: warp-ubuntu-2204-x64-4x
+    strategy:
+      fail-fast: false
+      matrix:
+        # Trunk builds of every EL, to catch interop regressions before they reach a release
+        include:
+          - el: geth
+            image: ethereum/client-go:latest
+          - el: nethermind
+            image: nethermindeth/nethermind:master
+          - el: reth
+            image: ethpandaops/reth:main
+          - el: besu
+            image: ethpandaops/besu:main
+          - el: erigon
+            image: ethpandaops/erigon:main
+          - el: ethrex
+            image: ethpandaops/ethrex:main
+          - el: nimbus
+            image: ethpandaops/nimbus-eth1:master
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: lodestar-kurtosis-ci
+      - name: Load Docker image
+        run: gunzip -c lodestar-kurtosis-ci.tar.gz | docker load
+      - name: Write ethereum-package config
+        run: |
+          cat > "${{ runner.temp }}/kurtosis_sim_test_config.yaml" <<EOF
+          participants:
+            - el_type: ${{ matrix.el }}
+              el_image: ${{ matrix.image }}
+              cl_type: lodestar
+              cl_image: chainsafe/lodestar:kurtosis-ci
+              count: 2
+          additional_services:
+            - assertoor
+          assertoor_params:
+            run_block_proposal_check: true
+            run_transaction_test: true
+            run_blob_transaction_test: true
+            run_opcodes_transaction_test: true
+          EOF
       - name: Run test
         uses: ethpandaops/kurtosis-assertoor-github-action@f64942cbc780df731a731ea9f45765b161d2c8df # v1.0.1
         with:
-          ethereum_package_args: ".github/workflows/assets/kurtosis_sim_test_config.yaml"
+          enclave_name: lodestar-${{ matrix.el }}
+          ethereum_package_args: ${{ runner.temp }}/kurtosis_sim_test_config.yaml
