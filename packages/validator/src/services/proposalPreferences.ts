@@ -1,4 +1,4 @@
-import {ApiClient, routes} from "@lodestar/api";
+import {ApiClient, ApiError, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
@@ -7,6 +7,7 @@ import {fromHex, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {LoggerVc} from "../util/index.js";
 import {BlockDutiesService} from "./blockDuties.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 /**
@@ -52,11 +53,28 @@ export class ProposalPreferencesService {
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly blockDutiesService: BlockDutiesService,
+    syncingStatusTracker: SyncingStatusTracker,
     _metrics: Metrics | null
   ) {
     clock.runEverySlot(this.runPreferencesTask);
     clock.runEveryEpoch(this.runEveryEpochTask);
+    syncingStatusTracker.runOnResynced(this.onResynced);
   }
+
+  /**
+   * A beacon node that was unreachable or syncing may have restarted and lost the preferences it
+   * accepted, it keeps them in memory only. Submit everything within the window again, the beacon
+   * node ignores preferences it still has.
+   */
+  private onResynced = async (slot: Slot): Promise<void> => {
+    if (this.submitted.size === 0) {
+      return;
+    }
+
+    this.logger.verbose("Beacon node resynced; resubmitting preferences", {slot});
+    this.submitted.clear();
+    await this.runPreferencesTask(slot);
+  };
 
   private runPreferencesTask = async (slot: Slot): Promise<void> => {
     // Start running once the submission window (`slot + SUBMIT_BEFORE_PROPOSAL_SLOTS`) reaches
@@ -181,17 +199,39 @@ export class ProposalPreferencesService {
       }
       this.logger.debug("Submitted signed proposer preferences", {count: signedProposerPreferences.length});
     } catch (e) {
-      this.logger.error(
-        "Error submitting signed proposer preferences",
-        {count: signedProposerPreferences.length},
-        e as Error
-      );
+      const failures = e instanceof ApiError ? e.failures : undefined;
+      if (failures === undefined) {
+        this.logger.error(
+          "Error submitting signed proposer preferences",
+          {count: signedProposerPreferences.length},
+          e as Error
+        );
+        return;
+      }
+
+      // The beacon node rejected some of the preferences, reported by index into the batch.
+      // Mark the accepted ones, the rejected ones are retried on the next tick.
+      const failedIndices = new Set(failures.map(({index}) => index));
+      pending.forEach(({submission, slot: submittedSlot}, index) => {
+        if (!failedIndices.has(index)) {
+          submission.proposerSlots.add(submittedSlot);
+        }
+      });
+      for (const {index, message} of failures) {
+        this.logger.error("Error submitting signed proposer preferences", {
+          slot: pending[index]?.slot,
+          validatorIndex: signedProposerPreferences[index]?.message.validatorIndex,
+          message,
+        });
+      }
     }
   }
 
   private async submitBuilderPreferences(proposals: UpcomingProposal[], slot: Slot): Promise<void> {
     const builderPreferences: routes.validator.BuilderPreferencesEntry[] = [];
     const pending: PendingSubmission[] = [];
+    // Index into `pending` of each entry in `builderPreferences`, a proposal has one entry per builder
+    const pendingIndexByEntry: number[] = [];
 
     for (const {duty, submission} of proposals) {
       if (submission.builderSlots.has(duty.slot)) continue;
@@ -217,6 +257,7 @@ export class ProposalPreferencesService {
           });
         }
         builderPreferences.push(...dutyEntries);
+        pendingIndexByEntry.push(...dutyEntries.map(() => pending.length));
         pending.push({submission, slot: duty.slot});
       } catch (e) {
         this.logger.error(
@@ -241,7 +282,27 @@ export class ProposalPreferencesService {
       }
       this.logger.debug("Submitted builder preferences", {count: builderPreferences.length});
     } catch (e) {
-      this.logger.warn("Error submitting builder preferences", {count: builderPreferences.length}, e as Error);
+      const failures = e instanceof ApiError ? e.failures : undefined;
+      if (failures === undefined) {
+        this.logger.warn("Error submitting builder preferences", {count: builderPreferences.length}, e as Error);
+        return;
+      }
+
+      // Some entries were not accepted by their builder, reported by index into the batch. Mark the
+      // proposals whose entries were all accepted, the others are retried with all their builders.
+      const failedPendingIndices = new Set(failures.map(({index}) => pendingIndexByEntry[index]));
+      pending.forEach(({submission, slot: submittedSlot}, index) => {
+        if (!failedPendingIndices.has(index)) {
+          submission.builderSlots.add(submittedSlot);
+        }
+      });
+      for (const {index, message} of failures) {
+        this.logger.warn("Error submitting builder preferences", {
+          slot: pending[pendingIndexByEntry[index]]?.slot,
+          builder: builderPreferences[index] ? new TextDecoder().decode(builderPreferences[index].url) : undefined,
+          message,
+        });
+      }
     }
   }
 }

@@ -1,7 +1,9 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {config} from "@lodestar/config/default";
 import {gloas} from "@lodestar/types";
 import {ProposerPreferencesPool} from "../../../../src/chain/opPools/proposerPreferencesPool.js";
+import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 
 describe("chain / opPools / ProposerPreferencesPool", () => {
   const makePrefs = (
@@ -91,5 +93,29 @@ describe("chain / opPools / ProposerPreferencesPool", () => {
     expect(pool.get(10, rootAHex)).toBeNull();
     expect(pool.get(11, rootAHex)).not.toBeNull();
     expect(pool.get(12, rootAHex)).not.toBeNull();
+  });
+
+  it("restores the preferences of upcoming slots from the db", async () => {
+    const {db, close} = await startIsolatedTmpBeaconDb(config);
+    try {
+      pool.add(makePrefs(10, 1, rootA));
+      pool.add(makePrefs(10, 2, rootB));
+      pool.add(makePrefs(11, 3, rootA));
+      await pool.toPersisted(db);
+      expect(await db.proposerPreferences.keys()).toHaveLength(3);
+
+      const restored = new ProposerPreferencesPool();
+      await restored.fromPersisted(db, 11);
+      expect(
+        restored
+          .getAll()
+          .map((p) => [p.message.proposalSlot, p.message.validatorIndex, toHexString(p.message.dependentRoot)])
+      ).toEqual([[11, 3, rootAHex]]);
+
+      await restored.toPersisted(db);
+      expect(await db.proposerPreferences.keys()).toHaveLength(1);
+    } finally {
+      await close();
+    }
   });
 });

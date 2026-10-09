@@ -9,6 +9,7 @@ import {gloas, ssz} from "@lodestar/types";
 import {LogLevel, defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ProposalPreferencesService} from "../../../src/services/proposalPreferences.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
@@ -38,6 +39,7 @@ describe("ProposalPreferencesService", () => {
 
   let secretKeys: SecretKey[];
   let duties: routes.validator.ProposerDuty[];
+  let twoDuties: routes.validator.ProposerDuty[];
   let validatorStore: ValidatorStore;
   let controller: AbortController;
   let clock: ClockMock;
@@ -49,12 +51,18 @@ describe("ProposalPreferencesService", () => {
   }
 
   function startService(config: ChainForkConfig, store: ValidatorStore): void {
-    new ProposalPreferencesService(config, loggerVc, api, clock, store, blockDutiesService, null);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    new ProposalPreferencesService(config, loggerVc, api, clock, store, blockDutiesService, syncingStatusTracker, null);
   }
 
   beforeAll(async () => {
-    secretKeys = [SecretKey.fromBytes(toBufferBE(1n, 32))];
-    duties = [{slot: proposalSlot, validatorIndex: 0, pubkey: secretKeys[0].toPublicKey().toBytes()}];
+    secretKeys = [SecretKey.fromBytes(toBufferBE(1n, 32)), SecretKey.fromBytes(toBufferBE(2n, 32))];
+    const pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+    duties = [{slot: proposalSlot, validatorIndex: 0, pubkey: pubkeys[0]}];
+    twoDuties = [
+      {slot: proposalSlot, validatorIndex: 0, pubkey: pubkeys[0]},
+      {slot: proposalSlot + 1, validatorIndex: 1, pubkey: pubkeys[1]},
+    ];
     validatorStore = await initValidatorStore(secretKeys, api, gloasConfig, {
       defaultConfig: {builder: {builders: [{url: builderUrl}]}},
       proposerConfig: {},
@@ -67,6 +75,9 @@ describe("ProposalPreferencesService", () => {
     mockDuties(0, dependentRoot, duties);
     api.validator.submitProposerPreferences.mockResolvedValue(mockApiResponse({}));
     api.validator.submitBuilderPreferences.mockResolvedValue(mockApiResponse({}));
+    api.node.getSyncingStatus.mockResolvedValue(
+      mockApiResponse({data: {headSlot: 0, syncDistance: 0, isSyncing: false, isOptimistic: false, elOffline: false}})
+    );
   });
 
   afterEach(() => {
@@ -159,6 +170,76 @@ describe("ProposalPreferencesService", () => {
     await clock.tickSlotFns(proposalSlot - 1, controller.signal);
     expect(api.validator.submitProposerPreferences).toHaveBeenCalledTimes(2);
     expect(api.validator.submitBuilderPreferences).toHaveBeenCalledOnce();
+  });
+
+  it("marks the accepted proposer preferences and retries the rejected ones after a partial failure", async () => {
+    mockDuties(0, dependentRoot, twoDuties);
+    api.validator.submitProposerPreferences.mockResolvedValueOnce(
+      await mockApiErrorResponse(HttpStatusCode.BAD_REQUEST, {
+        code: 400,
+        message: "Error processing signed proposer preferences",
+        failures: [{index: 1, message: "rejected"}],
+      })
+    );
+    const errorSpy = vi.spyOn(loggerVc, LogLevel.error);
+    startService(gloasConfig, validatorStore);
+
+    await clock.tickSlotFns(proposalSlot - 2, controller.signal);
+    expect(api.validator.submitProposerPreferences.mock.calls[0][0].signedProposerPreferences).toHaveLength(2);
+    expect(errorSpy).toHaveBeenCalledExactlyOnceWith("Error submitting signed proposer preferences", {
+      slot: proposalSlot + 1,
+      validatorIndex: 1,
+      message: "rejected",
+    });
+
+    await clock.tickSlotFns(proposalSlot - 1, controller.signal);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledTimes(2);
+    const retried = api.validator.submitProposerPreferences.mock.calls[1][0].signedProposerPreferences;
+    expect(retried.map((signed) => signed.message.proposalSlot)).toEqual([proposalSlot + 1]);
+    expect(api.validator.submitBuilderPreferences).toHaveBeenCalledOnce();
+  });
+
+  it("marks the accepted builder preferences and retries the rejected ones after a partial failure", async () => {
+    mockDuties(0, dependentRoot, twoDuties);
+    api.validator.submitBuilderPreferences.mockResolvedValueOnce(
+      await mockApiErrorResponse(HttpStatusCode.BAD_REQUEST, {
+        code: 400,
+        message: "Error submitting builder preferences",
+        failures: [{index: 0, message: `${builderUrl}: timeout`}],
+      })
+    );
+    const warnSpy = vi.spyOn(loggerVc, LogLevel.warn);
+    startService(gloasConfig, validatorStore);
+
+    await clock.tickSlotFns(proposalSlot - 2, controller.signal);
+    expect(api.validator.submitBuilderPreferences.mock.calls[0][0].builderPreferences).toHaveLength(2);
+    expect(warnSpy).toHaveBeenCalledExactlyOnceWith("Error submitting builder preferences", {
+      slot: proposalSlot,
+      builder: builderUrl,
+      message: `${builderUrl}: timeout`,
+    });
+
+    await clock.tickSlotFns(proposalSlot - 1, controller.signal);
+    expect(api.validator.submitBuilderPreferences).toHaveBeenCalledTimes(2);
+    const retried = api.validator.submitBuilderPreferences.mock.calls[1][0].builderPreferences;
+    expect(retried.map((entry) => entry.auth.message.slot)).toEqual([proposalSlot]);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
+  });
+
+  it("resubmits the preferences within the window after the beacon node resynced", async () => {
+    startService(gloasConfig, validatorStore);
+
+    await clock.tickSlotFns(proposalSlot - 3, controller.signal);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
+
+    // The beacon node is unreachable for a slot, e.g. while it restarts
+    api.node.getSyncingStatus.mockRejectedValueOnce(new Error("fetch failed"));
+    await clock.tickSlotFns(proposalSlot - 2, controller.signal);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
+
+    await clock.tickSlotFns(proposalSlot - 1, controller.signal);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledTimes(2);
+    expect(api.validator.submitBuilderPreferences).toHaveBeenCalledTimes(2);
   });
 
   it("submits builder preferences while proposer preferences are still being signed", async () => {

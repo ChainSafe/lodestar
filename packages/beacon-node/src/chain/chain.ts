@@ -620,12 +620,14 @@ export class BeaconChain implements IBeaconChain {
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
     await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot);
+    await this.proposerPreferencesPool.fromPersisted(this.db, this.clock.currentSlot);
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
     await this.archiveStore.persistToDisk();
     await this.opPool.toPersisted(this.db);
+    await this.proposerPreferencesPool.toPersisted(this.db);
   }
 
   getHeadState(): IBeaconStateView {
@@ -1929,6 +1931,21 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (newValidatorCount > previousValidatorCount) {
+      const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+      await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
+    }
+  }
+
+  async updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void> {
+    let hasNewValidators = false;
+    for (const validatorIndex of validatorIndices) {
+      if (this.beaconProposerCache.track(epoch, validatorIndex)) {
+        hasNewValidators = true;
+      }
+    }
+
+    // Only update validator custody if we discovered new validators
+    if (hasNewValidators) {
       const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }
