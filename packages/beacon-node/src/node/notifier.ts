@@ -144,18 +144,18 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
   const currentSlot = chain.clock.currentSlot;
   const nextSlotTimeSec = computeTimeAtSlot(config, currentSlot + 1, chain.genesisTime);
   const nowMs = Date.now();
-  const msToNextSlot = Math.max(0, nextSlotTimeSec * 1000 - nowMs);
-
-  const currentSlotTimeSec = computeTimeAtSlot(config, currentSlot, chain.genesisTime);
-  const msPerSlot = (nextSlotTimeSec - currentSlotTimeSec) * 1000;
-  const msPerHalfSlot = msPerSlot / 2;
 
   if (isFirstTime) {
-    // at the 1st time we may miss middle of the current clock slot
-    return msToNextSlot > msPerHalfSlot ? msToNextSlot - msPerHalfSlot : msToNextSlot + msPerHalfSlot;
+    const currentSlotTimeSec = computeTimeAtSlot(config, currentSlot, chain.genesisTime);
+    const currentMidpointMs = ((currentSlotTimeSec + nextSlotTimeSec) / 2) * 1000;
+    if (currentMidpointMs > nowMs) {
+      return currentMidpointMs - nowMs;
+    }
   }
-  // after the 1st time always wait until middle of next clock slot
-  return msToNextSlot + msPerHalfSlot;
+
+  const nextSlotEndTimeSec = computeTimeAtSlot(config, currentSlot + 2, chain.genesisTime);
+  const nextMidpointMs = ((nextSlotTimeSec + nextSlotEndTimeSec) / 2) * 1000;
+  return Math.max(0, nextMidpointMs - nowMs);
 }
 
 function getHeadExecutionInfo(
