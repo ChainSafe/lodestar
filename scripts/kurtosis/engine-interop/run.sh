@@ -110,7 +110,11 @@ snapshot() {
   date -u +%Y-%m-%dT%H:%M:%S.000Z > "$OUT_DIR/snapshot-$1.time"
 }
 
-log "starting enclave $ENCLAVE ($EL_IMAGE, lodestar $LODESTAR_IMAGE)"
+# floating tags must mean the latest build, kurtosis would otherwise reuse whatever the host already has
+docker pull -q "$LODESTAR_IMAGE" > /dev/null
+docker pull -q "$EL_IMAGE" > /dev/null
+LODESTAR_VERSION=$(docker run --rm --entrypoint node "$LODESTAR_IMAGE" /usr/app/packages/cli/bin/lodestar.js --version 2>/dev/null | sed -n 's/.*Version: //p' | head -1)
+log "starting enclave $ENCLAVE ($EL_IMAGE, lodestar $LODESTAR_IMAGE ${LODESTAR_VERSION:-unknown version})"
 # kurtosis occasionally loses track of the short-lived key generation service while bringing the enclave up
 # ("has Docker resources but not a container"), a fresh engine and a second attempt get past it
 for attempt in 1 2; do
@@ -181,6 +185,7 @@ docker logs "spamoor-$ENCLAVE" > "$OUT_DIR/spamoor.log" 2>&1 || true
 
 JWT_SECRET=$(docker exec "$CL1" cat /jwt/jwtsecret)
 EL_TYPE="$EL_TYPE" EL_IMAGE="$EL_IMAGE" SCENARIO="$SCENARIO" OUT_DIR="$OUT_DIR" JWT_SECRET="$JWT_SECRET" \
+  LODESTAR_IMAGE="$LODESTAR_IMAGE" LODESTAR_VERSION="${LODESTAR_VERSION:-}" \
   API1="$(port "$CL1" 4000)" API2="$API2" METRICS1="$(port "$CL1" 8008)" METRICS2="$(port "$CL2" 8008)" \
   ENGINE1="$(port "$EL1" 8551)" RPC1="$(port "$EL1" 8545)" RESTART_SLOT="$RESTART_SLOT" \
   node "$SCRIPT_DIR/check.mjs"

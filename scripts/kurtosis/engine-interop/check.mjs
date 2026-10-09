@@ -20,6 +20,7 @@ const METRICS1 = env("METRICS1");
 const ENGINE1 = env("ENGINE1");
 const RPC1 = env("RPC1");
 const RESTART_SLOT = process.env.RESTART_SLOT || "";
+const LODESTAR = `${process.env.LODESTAR_IMAGE ?? ""} ${process.env.LODESTAR_VERSION ?? ""}`.trim();
 
 const SLOTS_PER_EPOCH = 8;
 const GLOAS_FORK_EPOCH = 2;
@@ -229,6 +230,7 @@ const result = {
   el: EL_TYPE,
   image: EL_IMAGE,
   version: elVersion,
+  lodestar: LODESTAR,
   scenario: SCENARIO,
   verdict,
   transport,
@@ -251,6 +253,7 @@ const result = {
 writeFileSync(path.join(OUT_DIR, "result.json"), JSON.stringify(result, null, 2));
 
 const details = [
+  `lodestar ${LODESTAR}`,
   `finality ${finalized}, head ${head}, blocks ${proposals[0]}/${proposals[1]}, ${blobs} blobs in ${blobBlocks[0]}/${blobBlocks[1]} blocks`,
   `${getBlobsRequests} getBlobs requests, supernode resolved ${resolvedBlobs}, non-supernode got ${nullBlobs} null`,
   RESTART_SLOT ? `EL restarted at slot ${RESTART_SLOT}, judged again from slot ${restartEndSlot}` : "",
