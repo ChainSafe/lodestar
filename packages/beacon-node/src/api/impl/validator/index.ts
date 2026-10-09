@@ -396,7 +396,7 @@ export function getValidatorApi(
    * Both the above scenarios could be problematic and hence validator shouldn't participate
    * or weigh its vote on a head till it resolves to a Valid execution status.
    * Following activities should be skipped on an Optimistic head (with Syncing status):
-   * 1. Attestation if targetRoot is optimistic
+   * 1. Attestation if the head block voted for (post-gloas the variant voted for) or the targetRoot is optimistic
    * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
    * 3. ProduceBlock if the parentRoot (chain's current head) is optimistic. Must be checked
    *    explicitly as only local payload production consults the EL, blinded blocks from an
@@ -1354,10 +1354,18 @@ export function getValidatorApi(
         // After Gloas, attestation.data.index signals payload status in fork-choice:
         // - 0 = EMPTY / not present, 1 = FULL / present
         // - same-slot attestations must always use index = 0
+        // Validator shouldn't vote on an optimistic head, post-gloas that is the variant voted for
         if (canonicalBlock.slot !== slot) {
           index = canonicalBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
+          if (isOptimisticBlock(canonicalBlock)) {
+            throw new NodeIsSyncing(
+              `Head block's execution payload not yet validated, executionPayloadBlockHash=${canonicalBlock.executionPayloadBlockHash}`
+            );
+          }
         } else {
           index = 0;
+          // Same-slot votes support the PENDING variant, which does not depend on the block's own payload
+          notOnOptimisticBlockRoot(beaconBlockRoot);
         }
       } else if (isForkPostElectra(fork)) {
         index = 0;
@@ -1375,8 +1383,11 @@ export function getValidatorApi(
             headBlockRoot
           : headState.getBlockRootAtSlot(targetSlot);
 
-      // Check the execution status as validator shouldn't vote on an optimistic head
-      // Check on target is sufficient as a valid target would imply a valid source
+      // Check the execution status as validator shouldn't vote on an optimistic head, post-gloas the
+      // variant voted for is checked above. Check on target is sufficient for a valid source
+      if (!isForkPostGloas(fork)) {
+        notOnOptimisticBlockRoot(beaconBlockRoot);
+      }
       notOnOptimisticBlockRoot(targetRoot);
       notOnOutOfRangeData(targetRoot);
 
