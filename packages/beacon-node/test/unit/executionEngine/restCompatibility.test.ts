@@ -192,9 +192,9 @@ describe("REST engine compatibility", () => {
     }
   );
 
-  it("reprobes after a temporary discovery failure without probing every call", async () => {
+  it.each([503, 429])("reprobes after a temporary discovery failure %s without probing every call", async (status) => {
     const now = vi.spyOn(Date, "now").mockReturnValue(100_000);
-    discovery = {status: 503, body: {}};
+    discovery = {status, body: {}};
     const engine = createEngine();
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
@@ -206,7 +206,7 @@ describe("REST engine compatibility", () => {
     expect(logger.debug).toHaveBeenCalledWith(
       "Unable to probe engine API capabilities",
       {engineApi: "auto", fallback: "json-rpc", retryAfterMs: 12_000},
-      expect.objectContaining({status: 503})
+      expect.objectContaining({status})
     );
     expectCompatibilityLogsAtDebugOnly();
   });

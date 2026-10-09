@@ -644,10 +644,18 @@ function isEngineResponseError(e: Error): boolean {
 
 /**
  * Legacy JSON-RPC servers and proxies reject the capabilities probe in different ways, a 404 or
- * another client error such as 405. Neither serves the REST API.
+ * another client error such as 405. Neither serves the REST API. Authentication failures and
+ * transient client errors say nothing about REST support.
  */
 function isRestApiAbsent(e: Error): e is EngineRestError {
-  return e instanceof EngineRestError && e.status >= 400 && e.status < 500 && e.status !== 401 && e.status !== 403;
+  return (
+    e instanceof EngineRestError &&
+    e.status >= 400 &&
+    e.status < 500 &&
+    e.status !== 401 &&
+    e.status !== 403 &&
+    !isRetryableEngineRestError(e)
+  );
 }
 
 function isUnsupportedForkError(e: unknown): e is EngineRestError {

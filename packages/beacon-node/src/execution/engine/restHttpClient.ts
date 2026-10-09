@@ -233,10 +233,10 @@ export class EngineRestHttpClient {
   }
 }
 
-/** Client errors are deterministic, only transport failures and server errors are worth retrying */
+/** Client errors are deterministic apart from timeouts and rate limits, transport failures and server errors are retried */
 export function isRetryableEngineRestError(e: Error): boolean {
   return (
-    (e instanceof EngineRestError && e.status >= 500) ||
+    (e instanceof EngineRestError && (e.status >= 500 || e.status === 408 || e.status === 429)) ||
     e instanceof TimeoutError ||
     (e instanceof FetchError && e.type !== "input" && e.type !== "aborted")
   );
