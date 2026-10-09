@@ -65,8 +65,8 @@ describe("Builder", () => {
 
   afterEach(async () => {
     controller.abort();
-    await closeDb();
     vi.restoreAllMocks();
+    await closeDb();
   });
 
   it("starts one shared stream after the clock and preserves slot pruning", async () => {
@@ -244,7 +244,8 @@ describe("Builder", () => {
     expect(api.events.eventstream).not.toHaveBeenCalled();
   });
 
-  it("persists the tracked preferences on close", async () => {
+  it("persists the tracked preferences and closes the db on close", async () => {
+    const closeDb = vi.spyOn(modules.opts.db, "close").mockResolvedValue();
     const builder = new Builder(modules);
     const {onEvent} = api.events.eventstream.mock.calls[0][0];
     const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
@@ -255,6 +256,16 @@ describe("Builder", () => {
     const persisted = await modules.proposerPreferencesRepository.values();
     expect(persisted).toHaveLength(1);
     expect(ssz.gloas.SignedProposerPreferences.equals(persisted[0], preferences)).toBe(true);
+    expect(closeDb).toHaveBeenCalledOnce();
+  });
+
+  it("closes the db when persisting the preferences fails", async () => {
+    const closeDb = vi.spyOn(modules.opts.db, "close");
+    vi.spyOn(modules.proposerPreferencesRepository, "keys").mockRejectedValue(Error("db failure"));
+    const builder = new Builder(modules);
+
+    await expect(builder.close()).rejects.toThrow("db failure");
+    expect(closeDb).toHaveBeenCalledOnce();
   });
 
   it("ignores both topics after shutdown", async () => {

@@ -45,6 +45,7 @@ export type BuilderOptions = {
 export class Builder {
   readonly builderSigner: BuilderSigner;
   readonly proposerPreferencesTracker: ProposerPreferencesTracker;
+  private readonly db: Db;
   private readonly proposerPreferencesRepository: ProposerPreferencesRepository;
   private readonly blockObserver: BlockObserver;
   private readonly builderStatusTracker: BuilderStatusTracker;
@@ -54,6 +55,7 @@ export class Builder {
   private readonly logger: Logger;
   private readonly executionFeeRecipient: ExecutionAddress;
   private readonly payloadStore: PayloadStore;
+  private closed = false;
 
   constructor({
     opts,
@@ -66,6 +68,7 @@ export class Builder {
     index,
     payloadStore,
   }: BuilderModules) {
+    this.db = opts.db;
     this.proposerPreferencesRepository = proposerPreferencesRepository;
     this.builderSigner = builderSigner;
     this.blockObserver = blockObserver;
@@ -231,9 +234,16 @@ export class Builder {
     }
   }
 
-  /** Persists in-memory data to the DB, the caller is responsible for closing the DB afterwards */
+  /** Persist in-memory data to the DB and close it */
   async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
     this.controller.abort();
-    await this.proposerPreferencesTracker.toPersisted(this.proposerPreferencesRepository);
+    try {
+      await this.proposerPreferencesTracker.toPersisted(this.proposerPreferencesRepository);
+    } finally {
+      // Make sure db is always closed gracefully
+      await this.db.close();
+    }
   }
 }

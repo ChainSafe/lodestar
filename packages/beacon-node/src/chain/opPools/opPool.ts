@@ -1,4 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
+import {persistDiff} from "@lodestar/db";
 import {
   BLS_WITHDRAWAL_PREFIX,
   ForkName,
@@ -41,7 +42,6 @@ import {
   getAttesterSlashingSignatureDomains,
   getProposerSlashingSignatureDomain,
   isValidBlsToExecutionChangeForBlockInclusion,
-  persistDiff,
 } from "./utils.js";
 
 type HexRoot = string;

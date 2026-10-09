@@ -1,7 +1,7 @@
+import {persistDiff} from "@lodestar/db";
 import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
-import {persistDiff} from "./utils.js";
 
 /**
  * Pool of validated `SignedProposerPreferences` indexed by `(slot, dependent_root)`.

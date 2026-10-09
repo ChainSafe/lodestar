@@ -1,5 +1,6 @@
+import {persistDiff} from "@lodestar/db";
 import type {RootHex, Slot, gloas} from "@lodestar/types";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, toHex, toRootHex} from "@lodestar/utils";
 import type {ProposerPreferencesRepository} from "../repositories/proposerPreferences.js";
 
 /** Retains validated proposer preferences by the branch-specific identity used for bid validation. */
@@ -55,11 +56,11 @@ export class ProposerPreferencesTracker {
     }
   }
 
-  /** Replace the persisted preferences with the retained ones */
   async toPersisted(repo: ProposerPreferencesRepository): Promise<void> {
-    await repo.batch([
-      ...(await repo.keys()).map((key) => ({type: "del" as const, key})),
-      ...this.getAll().map((signed) => ({type: "put" as const, key: repo.getId(signed), value: signed})),
-    ]);
+    await persistDiff(
+      repo,
+      this.getAll().map((signed) => ({key: repo.getId(signed), value: signed})),
+      toHex
+    );
   }
 }

@@ -77,20 +77,23 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   mkdir(dbPath);
   const db = await LevelDbController.create({name: dbPath}, {metrics: null, logger});
 
-  const builder = await Builder.init({
-    keypair,
-    logger,
-    config,
-    db,
-    abortController,
-    api,
-    executionFeeRecipient: fromHex(executionFeeRecipient),
-    metrics,
-  });
-
-  // Close the builder before the database to persist its in-memory data
-  onGracefulShutdownCbs.push(async () => {
-    await builder.close();
+  let builder: Builder;
+  try {
+    builder = await Builder.init({
+      keypair,
+      logger,
+      config,
+      db,
+      abortController,
+      api,
+      executionFeeRecipient: fromHex(executionFeeRecipient),
+      metrics,
+    });
+  } catch (e) {
     await db.close();
-  });
+    throw e;
+  }
+
+  // Persists in-memory data and closes the db
+  onGracefulShutdownCbs.push(() => builder.close());
 }
