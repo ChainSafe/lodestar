@@ -7,6 +7,7 @@ import {fromHex, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {LoggerVc} from "../util/index.js";
 import {BlockDutiesService} from "./blockDuties.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 /**
@@ -52,11 +53,28 @@ export class ProposalPreferencesService {
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly blockDutiesService: BlockDutiesService,
+    syncingStatusTracker: SyncingStatusTracker,
     _metrics: Metrics | null
   ) {
     clock.runEverySlot(this.runPreferencesTask);
     clock.runEveryEpoch(this.runEveryEpochTask);
+    syncingStatusTracker.runOnResynced(this.onResynced);
   }
+
+  /**
+   * A beacon node that was unreachable or syncing may have restarted and lost the preferences it
+   * accepted, it keeps them in memory only. Submit everything within the window again, the beacon
+   * node ignores preferences it still has.
+   */
+  private onResynced = async (slot: Slot): Promise<void> => {
+    if (this.submitted.size === 0) {
+      return;
+    }
+
+    this.logger.info("Beacon node resynced; resubmitting preferences", {slot});
+    this.submitted.clear();
+    await this.runPreferencesTask(slot);
+  };
 
   private runPreferencesTask = async (slot: Slot): Promise<void> => {
     // Start running once the submission window (`slot + SUBMIT_BEFORE_PROPOSAL_SLOTS`) reaches
