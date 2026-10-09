@@ -151,7 +151,12 @@ export class EngineRestHttpClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), opts?.timeout ?? this.opts.timeout ?? REQUEST_TIMEOUT);
 
-    const signal = this.opts.signal ? AbortSignal.any([controller.signal, this.opts.signal]) : controller.signal;
+    // Not AbortSignal.any(), Node retains every composite until the long-lived parent signal aborts
+    const onParentSignalAbort = (): void => controller.abort();
+    this.opts.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
+    if (this.opts.signal?.aborted) {
+      controller.abort();
+    }
 
     const routeId = opts?.routeId ?? "unknown";
     const timer = this.metrics?.requestTime.startTimer({routeId});
@@ -186,7 +191,7 @@ export class EngineRestHttpClient {
         method: req.method,
         body: req.body as BodyInit | undefined,
         headers,
-        signal,
+        signal: controller.signal,
       });
 
       const streamTimer = this.metrics?.streamTime.startTimer({routeId});
@@ -217,7 +222,7 @@ export class EngineRestHttpClient {
       return {status: res.status, body};
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
-      if (signal.aborted) {
+      if (controller.signal.aborted) {
         if (this.opts.signal?.aborted) {
           throw new ErrorAborted("request");
         }
@@ -229,6 +234,7 @@ export class EngineRestHttpClient {
       this.metrics?.activeRequests.dec({routeId}, 1);
 
       clearTimeout(timeout);
+      this.opts.signal?.removeEventListener("abort", onParentSignalAbort);
     }
   }
 }
