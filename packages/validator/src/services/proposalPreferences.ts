@@ -71,7 +71,7 @@ export class ProposalPreferencesService {
       return;
     }
 
-    this.logger.info("Beacon node resynced; resubmitting preferences", {slot});
+    this.logger.verbose("Beacon node resynced; resubmitting preferences", {slot});
     this.submitted.clear();
     await this.runPreferencesTask(slot);
   };
