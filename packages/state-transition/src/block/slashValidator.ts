@@ -96,12 +96,12 @@ export function slashValidator(
     }
   }
 
-  // Cleared on every slashing, not only proposer slashings: a proposer slashed via an attester slashing
-  // first would otherwise keep the builder paying for a block it equivocated on
   if (fork >= ForkSeq.gloas) {
+    // Cleared on every slashing, not only proposer slashings: a proposer slashed via an attester slashing
+    // first would otherwise keep the builder paying for a block it equivocated on
     const {builderPendingPayments} = state as CachedBeaconStateGloas;
     for (let i = 0; i < builderPendingPayments.length; i++) {
-      if (builderPendingPayments.get(i).proposerIndex === slashedIndex) {
+      if (builderPendingPayments.getReadonly(i).proposerIndex === slashedIndex) {
         builderPendingPayments.set(i, ssz.gloas.BuilderPendingPayment.defaultViewDU());
       }
     }
