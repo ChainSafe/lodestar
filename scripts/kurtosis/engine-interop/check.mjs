@@ -20,7 +20,9 @@ const METRICS1 = env("METRICS1");
 const ENGINE1 = env("ENGINE1");
 const RPC1 = env("RPC1");
 const RESTART_SLOT = process.env.RESTART_SLOT || "";
-const LODESTAR = `${process.env.LODESTAR_IMAGE ?? ""} ${process.env.LODESTAR_VERSION ?? ""}`.trim();
+const shortDigest = (d) => (d ? ` ${d.slice(7, 19)}` : "");
+const LODESTAR = `${process.env.LODESTAR_IMAGE ?? ""}${shortDigest(process.env.LODESTAR_DIGEST)} ${process.env.LODESTAR_VERSION ?? ""}`.trim();
+const EL_DIGEST = shortDigest(process.env.EL_DIGEST).trim();
 
 const SLOTS_PER_EPOCH = 8;
 const GLOAS_FORK_EPOCH = 2;
@@ -230,6 +232,7 @@ const result = {
   el: EL_TYPE,
   image: EL_IMAGE,
   version: elVersion,
+  digest: process.env.EL_DIGEST ?? "",
   lodestar: LODESTAR,
   scenario: SCENARIO,
   verdict,
@@ -262,7 +265,7 @@ const details = [
 ]
   .filter(Boolean)
   .join("; ");
-const row = `| ${EL_TYPE} | \`${EL_IMAGE}\` ${elVersion} | ${SCENARIO} | ${elHasRest ? "yes" : "no"} | ${transport} | ${verdict === "pass" ? "✅ pass" : "❌ fail"} | ${[...failures, details].join("<br>")} |`;
+const row = `| ${EL_TYPE} | \`${EL_IMAGE}\` ${EL_DIGEST} ${elVersion} | ${SCENARIO} | ${elHasRest ? "yes" : "no"} | ${transport} | ${verdict === "pass" ? "✅ pass" : "❌ fail"} | ${[...failures, details].join("<br>")} |`;
 writeFileSync(path.join(OUT_DIR, "summary.md"), `${row}\n`);
 
 console.log(`${verdict.toUpperCase()} ${EL_TYPE}/${SCENARIO}: ${details}`);

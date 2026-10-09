@@ -39,20 +39,35 @@ mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 log() { echo "[$EL_TYPE/$SCENARIO] $*"; }
 
+# Floating tags must mean the latest build. The host may already have an older image under the same tag and a
+# registry mirror may still serve an older manifest for it, so resolve the tag at the registry and pull by digest.
+resolve() {
+  local raw digest=""
+  # the manifest digest is the sha256 of the raw manifest (or index) bytes as served by the registry
+  raw=$(docker buildx imagetools inspect "$1" --raw 2>/dev/null) && [ -n "$raw" ] && digest="sha256:$(printf '%s' "$raw" | sha256sum | cut -c1-64)"
+  if [ -n "$digest" ]; then echo "${1%%@*}"; echo "$digest"; else echo "$1"; echo ""; fi
+}
+{ read -r LODESTAR_REPO; read -r LODESTAR_DIGEST; } < <(resolve "$LODESTAR_IMAGE")
+{ read -r EL_REPO; read -r EL_DIGEST; } < <(resolve "$EL_IMAGE")
+LODESTAR_REF="${LODESTAR_DIGEST:+${LODESTAR_REPO%%:*}@$LODESTAR_DIGEST}"; LODESTAR_REF="${LODESTAR_REF:-$LODESTAR_IMAGE}"
+EL_REF="${EL_DIGEST:+${EL_REPO%%:*}@$EL_DIGEST}"; EL_REF="${EL_REF:-$EL_IMAGE}"
+docker pull -q "$LODESTAR_REF" > /dev/null
+docker pull -q "$EL_REF" > /dev/null
+LODESTAR_VERSION=$(docker run --rm --entrypoint node "$LODESTAR_REF" /usr/app/packages/cli/bin/lodestar.js --version 2>/dev/null | sed -n 's/.*Version: //p' | head -1)
 cat > "$OUT_DIR/args.yaml" <<YAML
 participants:
   - el_type: $EL_TYPE
-    el_image: $EL_IMAGE
+    el_image: $EL_REF
     el_extra_params: $EL_EXTRA_PARAMS
     cl_type: lodestar
-    cl_image: $LODESTAR_IMAGE
+    cl_image: $LODESTAR_REF
     cl_extra_params: ["--logLevelModule=execution=debug"]
     supernode: false
   - el_type: $EL_TYPE
-    el_image: $EL_IMAGE
+    el_image: $EL_REF
     el_extra_params: $EL_EXTRA_PARAMS
     cl_type: lodestar
-    cl_image: $LODESTAR_IMAGE
+    cl_image: $LODESTAR_REF
     cl_extra_params: ["--logLevelModule=execution=debug"]
     supernode: true
 network_params:
@@ -110,11 +125,7 @@ snapshot() {
   date -u +%Y-%m-%dT%H:%M:%S.000Z > "$OUT_DIR/snapshot-$1.time"
 }
 
-# floating tags must mean the latest build, kurtosis would otherwise reuse whatever the host already has
-docker pull -q "$LODESTAR_IMAGE" > /dev/null
-docker pull -q "$EL_IMAGE" > /dev/null
-LODESTAR_VERSION=$(docker run --rm --entrypoint node "$LODESTAR_IMAGE" /usr/app/packages/cli/bin/lodestar.js --version 2>/dev/null | sed -n 's/.*Version: //p' | head -1)
-log "starting enclave $ENCLAVE ($EL_IMAGE, lodestar $LODESTAR_IMAGE ${LODESTAR_VERSION:-unknown version})"
+log "starting enclave $ENCLAVE ($EL_IMAGE ${EL_DIGEST:0:19}, lodestar $LODESTAR_IMAGE ${LODESTAR_DIGEST:0:19} ${LODESTAR_VERSION:-unknown version})"
 # kurtosis occasionally loses track of the short-lived key generation service while bringing the enclave up
 # ("has Docker resources but not a container"), a fresh engine and a second attempt get past it
 for attempt in 1 2; do
@@ -185,7 +196,7 @@ docker logs "spamoor-$ENCLAVE" > "$OUT_DIR/spamoor.log" 2>&1 || true
 
 JWT_SECRET=$(docker exec "$CL1" cat /jwt/jwtsecret)
 EL_TYPE="$EL_TYPE" EL_IMAGE="$EL_IMAGE" SCENARIO="$SCENARIO" OUT_DIR="$OUT_DIR" JWT_SECRET="$JWT_SECRET" \
-  LODESTAR_IMAGE="$LODESTAR_IMAGE" LODESTAR_VERSION="${LODESTAR_VERSION:-}" \
+  LODESTAR_IMAGE="$LODESTAR_IMAGE" LODESTAR_VERSION="${LODESTAR_VERSION:-}" LODESTAR_DIGEST="${LODESTAR_DIGEST:-}" EL_DIGEST="${EL_DIGEST:-}" \
   API1="$(port "$CL1" 4000)" API2="$API2" METRICS1="$(port "$CL1" 8008)" METRICS2="$(port "$CL2" 8008)" \
   ENGINE1="$(port "$EL1" 8551)" RPC1="$(port "$EL1" 8545)" RESTART_SLOT="$RESTART_SLOT" \
   node "$SCRIPT_DIR/check.mjs"
