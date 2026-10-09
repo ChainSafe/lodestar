@@ -27,6 +27,7 @@ const openApiFile: OpenApiFile = {
   version: RegExp(version),
 };
 
+// Blinded block fixtures use slot 0, before Gloas.
 const config = createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 1});
 
 const definitions = {
