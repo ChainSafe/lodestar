@@ -1,4 +1,4 @@
-import {ForkPostGloas, ForkSeq} from "@lodestar/params";
+import {ForkPostGloas, ForkPreHeze, ForkSeq} from "@lodestar/params";
 import {BeaconBlock, BlindedBeaconBlock, Slot, altair, capella} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
@@ -117,9 +117,9 @@ export function processBlock(
     timer?.();
   }
 
-  {
+  if (fork < ForkSeq.heze) {
     const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processEth1Data});
-    processEth1Data(state, block.body.eth1Data);
+    processEth1Data(state, (block as BeaconBlock<ForkPreHeze>).body.eth1Data);
     timer?.();
   }
 

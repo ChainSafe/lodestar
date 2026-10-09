@@ -77,10 +77,7 @@ describe("BlockDutiesService", () => {
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
-      signature: signedBlock.signature,
-    }));
+    validatorStore.signBlock.mockResolvedValue(signedBlock);
     validatorStore.getBuilderSelectionParams.mockReturnValue({
       selection: routes.validator.BuilderSelection.MaxProfit,
       boostFactor: BigInt(100),
@@ -110,6 +107,8 @@ describe("BlockDutiesService", () => {
     // Resolve all promises
     await sleep(20, controller.signal);
 
+    expect(validatorStore.signBlock).toHaveBeenCalledOnce();
+    expect(validatorStore.signBlock.mock.calls[0][1]).toBe(signedBlock.message);
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlockV2.mock.calls[0]).toEqual([
@@ -160,10 +159,7 @@ describe("BlockDutiesService", () => {
 
     const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
-      signature: signedBlock.signature,
-    }));
+    validatorStore.signBlock.mockResolvedValue(signedBlock);
     api.validator.produceBlockV3.mockResolvedValue(
       mockApiResponse({
         data: signedBlock.message,
@@ -185,6 +181,8 @@ describe("BlockDutiesService", () => {
     // Resolve all promises
     await sleep(20, controller.signal);
 
+    expect(validatorStore.signBlock).toHaveBeenCalledOnce();
+    expect(validatorStore.signBlock.mock.calls[0][1]).toBe(signedBlock.message);
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlindedBlockV2).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlindedBlockV2.mock.calls[0]).toEqual([
@@ -231,10 +229,7 @@ describe("BlockDutiesService", () => {
     signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = 1;
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
-      signature: signedBlock.signature,
-    }));
+    validatorStore.signBlock.mockResolvedValue(signedBlock);
     validatorStore.getBuilderSelectionParams.mockReturnValue({
       selection: routes.validator.BuilderSelection.ExecutionAlways,
       boostFactor: BigInt(0),
@@ -262,6 +257,10 @@ describe("BlockDutiesService", () => {
     notifyBlockProductionFn(1, [pubkeys[0]]);
     await sleep(20, controller.signal);
 
+    expect(validatorStore.signBlock).toHaveBeenCalledOnce();
+    expect(validatorStore.signBlock.mock.calls[0][1]).toBe(signedBlock.message);
+    expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+    expect(api.beacon.publishBlockV2.mock.calls[0][0]).toMatchObject({signedBlockContents: {signedBlock}});
     expect(api.validator.produceBlockV4).toHaveBeenCalledWith({
       slot: 1,
       randaoReveal: signedBlock.message.body.randaoReveal,
@@ -316,10 +315,7 @@ describe("BlockDutiesService", () => {
       signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = builderIndex;
       const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
       validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-      validatorStore.signBlock.mockImplementation(async (_, block) => ({
-        message: block,
-        signature: signedBlock.signature,
-      }));
+      validatorStore.signBlock.mockResolvedValue(signedBlock);
       validatorStore.getBuilderSelectionParams.mockReturnValue({
         selection: routes.validator.BuilderSelection.ExecutionOnly,
         boostFactor: BigInt(0),
