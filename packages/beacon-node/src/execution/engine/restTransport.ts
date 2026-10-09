@@ -368,7 +368,10 @@ export class RestEngineTransport implements IEngineTransport {
     return entries.map((entry) => (entry.available ? entry.contents : null));
   }
 
-  /** SSZ decoding already allocates fresh arrays, copying them into the pooled buffers would only add aliasing */
+  /**
+   * Blobs and proofs are views into the response body rather than copies, the response is all-or-nothing
+   * so every byte of it is needed. The pooled buffers of the JSON-RPC transport are not used.
+   */
   async getBlobsV2(versionedHashes: VersionedHashes, _buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null> {
     assertReqSizeLimit(versionedHashes.length, this.limits.blobsMaxVersionedHashes);
 
@@ -381,7 +384,7 @@ export class RestEngineTransport implements IEngineTransport {
       return null;
     }
 
-    const {entries} = BlobsV2Response.deserialize(res.body);
+    const {entries} = BlobsV2Response.deserialize(res.body, {reuseBytes: true});
     if (entries.length !== versionedHashes.length) {
       throw Error(`Invalid blobs/v2 response length=${entries.length} versionedHashes=${versionedHashes.length}`);
     }
