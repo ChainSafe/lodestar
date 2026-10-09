@@ -2015,7 +2015,7 @@ export function getValidatorApi(
         );
         throw new ApiError(
           410,
-          "prepareBeaconProposer is deprecated from gloas, submit signed proposer preferences instead"
+          "prepareBeaconProposer is no longer supported from gloas, submit signed proposer preferences via POST /eth/v1/validator/proposer_preferences instead"
         );
       }
 
@@ -2060,7 +2060,10 @@ export function getValidatorApi(
             count: registrations.length,
           }
         );
-        throw new ApiError(410, "registerValidator is deprecated from gloas, submit builder preferences instead");
+        throw new ApiError(
+          410,
+          "registerValidator is no longer supported from gloas, submit builder preferences via POST /eth/v1/validator/builder_preferences instead"
+        );
       }
 
       if (!chain.executionBuilder) {
