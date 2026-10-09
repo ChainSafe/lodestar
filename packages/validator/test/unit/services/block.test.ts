@@ -259,6 +259,8 @@ describe("BlockDutiesService", () => {
 
     expect(validatorStore.signBlock).toHaveBeenCalledOnce();
     expect(validatorStore.signBlock.mock.calls[0][1]).toBe(signedBlock.message);
+    expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+    expect(api.beacon.publishBlockV2.mock.calls[0][0]).toMatchObject({signedBlockContents: {signedBlock}});
     expect(api.validator.produceBlockV4).toHaveBeenCalledWith({
       slot: 1,
       randaoReveal: signedBlock.message.body.randaoReveal,

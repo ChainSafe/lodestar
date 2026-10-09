@@ -385,9 +385,9 @@ describe("ValidatorStore", () => {
   });
 
   it("signs a Heze block over the fork-specific block root", async () => {
-    const chainConfig = getConfig(ForkName.heze);
-    const config = createBeaconConfig(chainConfig, Buffer.alloc(32, 0xdd));
-    const store = await initValidatorStore(secretKeys, api, chainConfig);
+    const hezeChainConfig = getConfig(ForkName.heze);
+    const config = createBeaconConfig(hezeChainConfig, Buffer.alloc(32, 0xdd));
+    const store = await initValidatorStore(secretKeys, api, hezeChainConfig);
     const block = ssz.heze.BeaconBlock.defaultValue();
     block.slot = 32;
     block.body.graffiti.fill(1);
