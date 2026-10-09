@@ -47,6 +47,7 @@ interface RpcResponseError {
 }
 
 export type ReqOpts = {
+  signal?: AbortSignal;
   timeout?: number;
   // To label request metrics
   routeId?: string;
@@ -156,22 +157,31 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   async fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
     return this.wrapWithEvents(async () => {
       const routeId = opts?.routeId ?? "unknown";
-
-      const res = await retry<RpcResponse<R>>(
-        async (_attempt) => {
-          return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
-        },
-        {
-          retries: opts?.retries ?? this.opts?.retries ?? 0,
-          retryDelay: opts?.retryDelay ?? this.opts?.retryDelay,
-          shouldRetry: opts?.shouldRetry,
-          signal: this.opts?.signal,
-          onRetry: () => {
-            this.opts?.metrics?.retryCount.inc({routeId});
+      const controller = new AbortController();
+      const onAbort = (): void => controller.abort();
+      this.opts?.signal?.addEventListener("abort", onAbort, {once: true});
+      opts?.signal?.addEventListener("abort", onAbort, {once: true});
+      if (this.opts?.signal?.aborted || opts?.signal?.aborted) controller.abort();
+      try {
+        const res = await retry<RpcResponse<R>>(
+          async (_attempt) => {
+            return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
           },
-        }
-      );
-      return parseRpcResponse(res, payload);
+          {
+            retries: opts?.retries ?? this.opts?.retries ?? 0,
+            retryDelay: opts?.retryDelay ?? this.opts?.retryDelay,
+            shouldRetry: opts?.shouldRetry,
+            signal: controller.signal,
+            onRetry: () => {
+              this.opts?.metrics?.retryCount.inc({routeId});
+            },
+          }
+        );
+        return parseRpcResponse(res, payload);
+      } finally {
+        this.opts?.signal?.removeEventListener("abort", onAbort);
+        opts?.signal?.removeEventListener("abort", onAbort);
+      }
     }, payload);
   }
 
@@ -244,6 +254,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
     const onParentSignalAbort = (): void => controller.abort();
     this.opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
+    opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
+    if (this.opts?.signal?.aborted || opts?.signal?.aborted) controller.abort();
 
     // Default to "unknown" to prevent mixing metrics with others.
     const routeId = opts?.routeId ?? "unknown";
@@ -251,6 +263,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     this.metrics?.activeRequests.inc({routeId}, 1);
 
     try {
+      if (controller.signal.aborted) throw new ErrorAborted("request");
       const headers: Record<string, string> = {"Content-Type": "application/json"};
       if (this.jwtSecret) {
         /**
@@ -300,7 +313,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       this.metrics?.requestErrors.inc({routeId});
       if (controller.signal.aborted) {
         // controller will abort on both parent signal abort + timeout of this specific request
-        if (this.opts?.signal?.aborted) {
+        if (this.opts?.signal?.aborted || opts?.signal?.aborted) {
           throw new ErrorAborted("request");
         }
         throw new TimeoutError("request");
@@ -312,6 +325,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
       clearTimeout(timeout);
       this.opts?.signal?.removeEventListener("abort", onParentSignalAbort);
+      opts?.signal?.removeEventListener("abort", onParentSignalAbort);
     }
   }
 }
