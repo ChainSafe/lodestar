@@ -190,6 +190,20 @@ describe("ExecutionEngine / rest", () => {
       expect(requests.some((r) => r.url === "/engine/v1/forkchoice")).toBe(false);
     });
 
+    it("falls back to JSON-RPC for a fork-scoped endpoint the execution client does not advertise", async () => {
+      capabilities = {
+        status: 200,
+        body: {...defaultCapabilities, fork_scoped_endpoints: ["payloads", "forkchoice"]},
+      };
+      jsonRpcResult = [null];
+      const engine = createEngine();
+
+      expect(await engine.getPayloadBodiesByHashV2([hashHex])).toEqual([null]);
+
+      expect(jsonRpcMethods()).toContain("engine_getPayloadBodiesByHashV2");
+      expect(requests.some((r) => r.url === "/engine/v1/bodies/hash")).toBe(false);
+    });
+
     it("falls back to JSON-RPC for blob revisions the execution client does not serve", async () => {
       capabilities = {status: 200, body: {...defaultCapabilities, independently_versioned: {blobs: ["v1"]}}};
       const engine = createEngine();

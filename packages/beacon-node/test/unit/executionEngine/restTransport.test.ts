@@ -14,7 +14,9 @@ describe("REST engine metadata and limits", () => {
   const hashHex = `0x${"00".repeat(32)}`;
   const capabilities = {
     supported_forks: ["paris", "future-fork"],
+    fork_scoped_endpoints: ["payloads", "forkchoice", "bodies"],
     independently_versioned: {blobs: ["v1", "v2"]},
+    unscoped_endpoints: ["capabilities", "identity"],
   };
   const identity = {code: ClientCode.XX, name: "Test EL", version: "1", commit: "12345678"};
 
@@ -31,18 +33,25 @@ describe("REST engine metadata and limits", () => {
   it("uses spec limits when the EL omits optional limits", async () => {
     expect(await transport.getCapabilities()).toMatchObject({
       supportedForks: new Set(["paris", "future-fork"]),
+      forkScopedEndpoints: new Set(["payloads", "forkchoice", "bodies"]),
       blobsRevisions: new Set(["v1", "v2"]),
+      unscopedEndpoints: new Set(["capabilities", "identity"]),
       limits: {bodiesMaxCount: 32, blobsMaxVersionedHashes: 128, payloadMaxBytes: 67108864},
     });
   });
 
-  it.each([null, [], {}, {supported_forks: [1]}, {...capabilities, independently_versioned: {blobs: "v1"}}])(
-    "rejects malformed capabilities: %j",
-    async (body) => {
-      probe.mockResolvedValue(jsonResponse(body));
-      await expect(transport.getCapabilities()).rejects.toMatchObject({type: {code: "ENGINE_REST_INVALID_RESPONSE"}});
-    }
-  );
+  it.each([
+    null,
+    [],
+    {},
+    {supported_forks: [1]},
+    {...capabilities, fork_scoped_endpoints: "payloads"},
+    {...capabilities, independently_versioned: {blobs: "v1"}},
+    {...capabilities, unscoped_endpoints: "identity"},
+  ])("rejects malformed capabilities: %j", async (body) => {
+    probe.mockResolvedValue(jsonResponse(body));
+    await expect(transport.getCapabilities()).rejects.toMatchObject({type: {code: "ENGINE_REST_INVALID_RESPONSE"}});
+  });
 
   it.each([0, -1, 1.5, "1"])("rejects invalid advertised limits: %j", async (limit) => {
     probe.mockResolvedValue(jsonResponse({...capabilities, limits: {"bodies.max_count": limit}}));

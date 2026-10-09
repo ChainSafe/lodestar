@@ -105,6 +105,16 @@ type RestSupport =
   | {state: "unsupported"}
   | {state: "supported"; capabilities: EngineCapabilities};
 
+type ForkScopedRestEndpoint = "payloads" | "forkchoice" | "bodies";
+type UnscopedRestEndpoint = "identity";
+
+type RestFeature =
+  | {kind: "fork"; fork: ForkName; endpoint: ForkScopedRestEndpoint}
+  | {kind: "blobs"; revision: "v1" | "v2"}
+  | {kind: "unscoped"; endpoint: UnscopedRestEndpoint};
+
+type RestFallback = ForkName | ForkScopedRestEndpoint | UnscopedRestEndpoint | "v1" | "v2";
+
 /**
  * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
  * EPOCHS_PER_BATCH * 2 in case new payloads are also not awaited serially
@@ -122,7 +132,7 @@ const REST_PROBE_RETRY_MS = 12_000;
  * In `auto` mode a capabilities response from a server without the REST API, a 4xx other than
  * 401/403, selects JSON-RPC until the EL reconnects. Transient discovery failures use JSON-RPC while
  * awaiting another probe; authentication failures fail visibly, malformed capabilities fall back to
- * JSON-RPC with a warning. Forks and blob revisions the EL does not advertise also use JSON-RPC.
+ * JSON-RPC with a warning. Forks, endpoints and blob revisions the EL does not advertise also use JSON-RPC.
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
@@ -154,7 +164,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private restSupport: RestSupport = {state: "pending"};
   private restProbe: Promise<RestSupport> | null = null;
   private lastRestProbeMs = Number.NEGATIVE_INFINITY;
-  private readonly loggedRestFallbacks = new Set<ForkName | "v1" | "v2">();
+  private readonly loggedRestFallbacks = new Set<RestFallback>();
 
   constructor(
     {jsonRpc, rest}: ExecutionEngineTransports,
@@ -242,7 +252,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     let result: PayloadStatusResult;
     try {
       result = await this.enqueue(() =>
-        this.withTransport(fork, undefined, (transport) =>
+        this.withTransport({kind: "fork", fork, endpoint: "payloads"}, (transport) =>
           transport.newPayload(fork, executionPayload, versionedHashes, parentBlockRoot, executionRequests)
         )
       );
@@ -331,7 +341,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       payloadStatus: {status, validationError},
       payloadId,
     } = await this.enqueue(() =>
-      this.withTransport(fork, undefined, (transport) =>
+      this.withTransport({kind: "fork", fork, endpoint: "forkchoice"}, (transport) =>
         transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes)
       )
     );
@@ -389,7 +399,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
-    return this.withTransport(fork, undefined, (transport) => transport.getPayload(fork, payloadId));
+    return this.withTransport({kind: "fork", fork, endpoint: "payloads"}, (transport) =>
+      transport.getPayload(fork, payloadId)
+    );
   }
 
   async prunePayloadIdCache(): Promise<void> {
@@ -397,7 +409,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {
-    return this.withTransport(ForkName.gloas, undefined, (transport) =>
+    return this.withTransport({kind: "fork", fork: ForkName.gloas, endpoint: "bodies"}, (transport) =>
       transport.getPayloadBodiesByHashV2(blockHashes)
     );
   }
@@ -418,9 +430,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
     if (isForkPostFulu(fork)) {
-      return this.withTransport(undefined, "v2", (transport) => transport.getBlobsV2(versionedHashes, buffers));
+      return this.withTransport({kind: "blobs", revision: "v2"}, (transport) =>
+        transport.getBlobsV2(versionedHashes, buffers)
+      );
     }
-    return this.withTransport(undefined, "v1", (transport) => transport.getBlobsV1(versionedHashes));
+    return this.withTransport({kind: "blobs", revision: "v1"}, (transport) => transport.getBlobsV1(versionedHashes));
   }
 
   private enqueue<T>(job: () => Promise<T>): Promise<T> {
@@ -432,18 +446,19 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * capabilities but rejects it with `unsupported-fork` is not spec compliant, keep the node
    * functional by serving that fork over JSON-RPC from then on.
    */
-  private async withTransport<T>(
-    fork: ForkName | undefined,
-    blobsRevision: "v1" | "v2" | undefined,
-    fn: (transport: IEngineTransport) => Promise<T>
-  ): Promise<T> {
-    const transport = await this.getTransport(fork, blobsRevision);
+  private async withTransport<T>(feature: RestFeature, fn: (transport: IEngineTransport) => Promise<T>): Promise<T> {
+    const transport = await this.getTransport(feature);
     this.metrics?.engineApiRequests.inc({transport: transport === this.rest ? "ssz" : "json-rpc"});
     try {
       return await fn(transport);
     } catch (e) {
-      if (fork !== undefined && transport === this.rest && this.engineApi === "auto" && isUnsupportedForkError(e)) {
-        this.disableRestForFork(fork, e);
+      if (
+        feature.kind === "fork" &&
+        transport === this.rest &&
+        this.engineApi === "auto" &&
+        isUnsupportedForkError(e)
+      ) {
+        this.disableRestForFork(feature.fork, e);
         this.metrics?.engineApiRequests.inc({transport: "json-rpc"});
         return fn(this.jsonRpc);
       }
@@ -472,10 +487,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   /**
-   * Pick the transport for a call. Fork-scoped calls only go over REST if the execution client
-   * advertises that fork, blob requests only if it serves the needed `/blobs/vN` revision.
+   * Pick the transport for a call. REST is used only when the execution client advertises the
+   * requested fork and endpoint, blob revision, or unscoped endpoint.
    */
-  private async getTransport(fork?: ForkName, blobsRevision?: "v1" | "v2"): Promise<IEngineTransport> {
+  private async getTransport(feature: RestFeature): Promise<IEngineTransport> {
     if (this.rest === null || this.engineApi === "json-rpc") {
       return this.jsonRpc;
     }
@@ -494,7 +509,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       return this.jsonRpc;
     }
 
-    if (fork !== undefined) {
+    if (feature.kind === "fork") {
+      const {fork, endpoint} = feature;
       const executionFork = isForkPostBellatrix(fork) ? executionForkName[fork] : null;
       if (executionFork === null || !restSupport.capabilities.supportedForks.has(executionFork)) {
         if (!this.loggedRestFallbacks.has(fork)) {
@@ -503,11 +519,30 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
         return this.jsonRpc;
       }
-    }
-    if (blobsRevision !== undefined && !restSupport.capabilities.blobsRevisions.has(blobsRevision)) {
-      if (!this.loggedRestFallbacks.has(blobsRevision)) {
-        this.loggedRestFallbacks.add(blobsRevision);
-        this.logger.debug("Using JSON-RPC for a blob revision not advertised by the REST engine API", {blobsRevision});
+      if (!restSupport.capabilities.forkScopedEndpoints.has(endpoint)) {
+        if (!this.loggedRestFallbacks.has(endpoint)) {
+          this.loggedRestFallbacks.add(endpoint);
+          this.logger.debug("Using JSON-RPC for an endpoint not advertised by the REST engine API", {endpoint});
+        }
+        return this.jsonRpc;
+      }
+    } else if (feature.kind === "blobs") {
+      const {revision} = feature;
+      if (!restSupport.capabilities.blobsRevisions.has(revision)) {
+        if (!this.loggedRestFallbacks.has(revision)) {
+          this.loggedRestFallbacks.add(revision);
+          this.logger.debug("Using JSON-RPC for a blob revision not advertised by the REST engine API", {
+            blobsRevision: revision,
+          });
+        }
+        return this.jsonRpc;
+      }
+    } else if (!restSupport.capabilities.unscopedEndpoints.has(feature.endpoint)) {
+      if (!this.loggedRestFallbacks.has(feature.endpoint)) {
+        this.loggedRestFallbacks.add(feature.endpoint);
+        this.logger.debug("Using JSON-RPC for an endpoint not advertised by the REST engine API", {
+          endpoint: feature.endpoint,
+        });
       }
       return this.jsonRpc;
     }
@@ -535,7 +570,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           this.loggedRestFallbacks.clear();
           this.logger.debug("Discovered REST engine API capabilities", {
             supportedForks: Array.from(capabilities.supportedForks).join(","),
+            forkScopedEndpoints: Array.from(capabilities.forkScopedEndpoints).join(","),
             blobsRevisions: Array.from(capabilities.blobsRevisions).join(","),
+            unscopedEndpoints: Array.from(capabilities.unscopedEndpoints).join(","),
             ...capabilities.limits,
           });
           return this.restSupport;
@@ -576,7 +613,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
-    const clientVersions = await this.withTransport(undefined, undefined, (transport) =>
+    const clientVersions = await this.withTransport({kind: "unscoped", endpoint: "identity"}, (transport) =>
       transport.getClientVersion(clientVersion)
     );
 

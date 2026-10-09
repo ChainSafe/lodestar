@@ -17,7 +17,9 @@ import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
 const hash = `0x${"11".repeat(32)}`;
 const capabilities = {
   supported_forks: ["paris", "cancun"],
+  fork_scoped_endpoints: ["payloads", "forkchoice", "bodies"],
   independently_versioned: {blobs: ["v1", "v2"]},
+  unscoped_endpoints: ["capabilities", "identity"],
 };
 const validStatus = {status: PayloadStatusCode.VALID, latestValidHash: [], validationError: []};
 
@@ -32,6 +34,7 @@ describe("REST engine compatibility", () => {
   let requests: string[];
   let beforePayload: (() => Promise<void>) | undefined;
   let beforeForkchoice: (() => Promise<void>) | undefined;
+  let identityRequests: string[];
   let logger: MockedLogger;
 
   beforeEach(async () => {
@@ -44,6 +47,7 @@ describe("REST engine compatibility", () => {
     beforePayload = undefined;
     beforeForkchoice = undefined;
     requests = [];
+    identityRequests = [];
     await startServer();
   });
 
@@ -54,7 +58,10 @@ describe("REST engine compatibility", () => {
       requests.push("capabilities");
       return reply.code(discovery.status).send(discovery.body);
     });
-    server.get("/engine/v1/identity", () => [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]);
+    server.get("/engine/v1/identity", () => {
+      identityRequests.push("REST identity");
+      return [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}];
+    });
     server.post("/engine/v1/payloads", async (_, reply) => {
       requests.push("REST newPayload");
       await beforePayload?.();
@@ -68,6 +75,7 @@ describe("REST engine compatibility", () => {
     server.post<{Body: {method: string}}>("/", (req) => {
       const method = req.body.method;
       if (method === "engine_getClientVersionV1") {
+        identityRequests.push(method);
         return {jsonrpc: "2.0", id: 1, result: [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]};
       }
       requests.push(method);
@@ -136,6 +144,32 @@ describe("REST engine compatibility", () => {
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
     expectCompatibilityLogsAtDebugOnly();
+  });
+
+  it("uses JSON-RPC for a fork-scoped endpoint the execution client does not advertise", async () => {
+    discovery = {
+      status: 200,
+      body: {...capabilities, fork_scoped_endpoints: ["payloads", "bodies"]},
+    };
+    const engine = createEngine();
+
+    await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+
+    expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1"]);
+  });
+
+  it("uses JSON-RPC for an unscoped endpoint the execution client does not advertise", async () => {
+    discovery = {
+      status: 200,
+      body: {...capabilities, unscoped_endpoints: ["capabilities"]},
+    };
+    const engine = createEngine();
+
+    await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+    await vi.waitFor(() => expect(engine.clientVersion?.name).toBe("Test EL"));
+
+    expect(requests).toEqual(["capabilities", "REST forkchoice"]);
+    expect(identityRequests).toEqual(["engine_getClientVersionV1"]);
   });
 
   it("rediscovers REST after the execution client reconnects", async () => {

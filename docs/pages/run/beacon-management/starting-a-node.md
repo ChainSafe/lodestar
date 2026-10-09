@@ -106,13 +106,13 @@ It is dangerous to expose your Beacon or Execution APIs publicly as there is no 
 
 Use `--execution.engineApi` to select how Lodestar communicates with the execution client:
 
-- `auto` (default): with one execution URL, discover REST support and use SSZ for advertised forks and blob API revisions. With multiple execution URLs, use JSON-RPC and its existing fallback across URLs.
+- `auto` (default): with one execution URL, discover REST support and use SSZ for advertised forks, endpoints, and blob API revisions. With multiple execution URLs, use JSON-RPC and its existing fallback across URLs.
 - `ssz`: require one execution URL with a working REST capabilities endpoint. Use REST without JSON-RPC fallback.
 - `json-rpc`: use JSON-RPC without probing REST support.
 
 In `auto` mode, a capabilities response from a server without the REST API selects JSON-RPC until the execution client reconnects. That is a `4xx` other than `401`, `403`, `408` or `429`. Temporary discovery failures, such as timeouts, rate limits or server errors, use JSON-RPC while allowing another probe after 12 seconds. A capabilities document that cannot be parsed also selects JSON-RPC until the execution client reconnects and is logged as a warning. Authentication failures remain errors.
 
-After REST is selected, request failures do not switch protocols. The exception in `auto` mode is an explicit `400 /engine-api/errors/unsupported-fork`: Lodestar retries through JSON-RPC and remembers that choice for the fork until the execution client reconnects. An unknown payload, invalid fork choice state, or invalid payload does not trigger this workaround.
+After REST is selected, endpoints not listed in the capabilities document use JSON-RPC. Other request failures do not switch protocols. The exception in `auto` mode is an explicit `400 /engine-api/errors/unsupported-fork`: Lodestar retries through JSON-RPC and remembers that choice for the fork until the execution client reconnects. An unknown payload, invalid fork choice state, or invalid payload does not trigger this workaround.
 
 Both REST modes honor advertised request-size limits. Oversized requests fail locally; Lodestar does not split them into smaller requests automatically.
 

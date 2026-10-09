@@ -57,7 +57,9 @@ import {
 
 export type EngineCapabilities = {
   supportedForks: Set<string>;
+  forkScopedEndpoints: Set<string>;
   blobsRevisions: Set<string>;
+  unscopedEndpoints: Set<string>;
   limits: {bodiesMaxCount: number; blobsMaxVersionedHashes: number; payloadMaxBytes: number};
 };
 
@@ -122,6 +124,9 @@ export class RestEngineTransport implements IEngineTransport {
     ) {
       throw new EngineRestResponseError("getCapabilities", "supported_forks must be an array of strings");
     }
+    if (!Array.isArray(capabilities.fork_scoped_endpoints) || !capabilities.fork_scoped_endpoints.every(isString)) {
+      throw new EngineRestResponseError("getCapabilities", "fork_scoped_endpoints must be an array of strings");
+    }
     const versioned = capabilities.independently_versioned;
     if (versioned !== undefined && !isRecord(versioned)) {
       throw new EngineRestResponseError("getCapabilities", "independently_versioned must be an object");
@@ -129,6 +134,9 @@ export class RestEngineTransport implements IEngineTransport {
     const blobs = versioned?.blobs ?? [];
     if (!Array.isArray(blobs) || !blobs.every(isString)) {
       throw new EngineRestResponseError("getCapabilities", "blobs revisions must be an array of strings");
+    }
+    if (!Array.isArray(capabilities.unscoped_endpoints) || !capabilities.unscoped_endpoints.every(isString)) {
+      throw new EngineRestResponseError("getCapabilities", "unscoped_endpoints must be an array of strings");
     }
     const advertisedLimits = capabilities.limits;
     if (advertisedLimits !== undefined && !isRecord(advertisedLimits)) {
@@ -150,7 +158,9 @@ export class RestEngineTransport implements IEngineTransport {
     this.limits = limits;
     return {
       supportedForks: new Set(capabilities.supported_forks.map((fork) => fork.toLowerCase())),
+      forkScopedEndpoints: new Set(capabilities.fork_scoped_endpoints.map((endpoint) => endpoint.toLowerCase())),
       blobsRevisions: new Set(blobs.map((rev) => rev.toLowerCase())),
+      unscopedEndpoints: new Set(capabilities.unscoped_endpoints.map((endpoint) => endpoint.toLowerCase())),
       limits,
     };
   }
