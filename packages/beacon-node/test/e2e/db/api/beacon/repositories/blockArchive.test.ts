@@ -43,6 +43,6 @@ describe("BlockArchiveRepository", () => {
 
     // make sure they are the same except for slot
     savedBlock2.message.slot = sampleBlock.message.slot;
-    expect(ssz.phase0.SignedBeaconBlock.equals(savedBlock1, savedBlock2)).toBe(true);
+    expect(config.getForkTypes(savedBlock1.message.slot).SignedBeaconBlock.equals(savedBlock1, savedBlock2)).toBe(true);
   });
 });

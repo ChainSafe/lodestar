@@ -2,10 +2,12 @@ import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {getConfig} from "@lodestar/config/test-utils";
 import {encodeKey} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {Bucket} from "../../../../../src/db/buckets.js";
@@ -196,7 +198,7 @@ describe("block archive repository", () => {
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByRoot(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).toBe(true);
+    expect(config.getForkTypes(retrieved.message.slot).SignedBeaconBlock.equals(retrieved, block)).toBe(true);
   });
 
   it("should get slot by parent root", async () => {
@@ -211,7 +213,7 @@ describe("block archive repository", () => {
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).toBe(true);
+    expect(config.getForkTypes(retrieved.message.slot).SignedBeaconBlock.equals(retrieved, block)).toBe(true);
   });
 
   it("should delete index entries of a pruned range", async () => {
@@ -291,5 +293,24 @@ describe("block archive repository", () => {
     }
     expect(await blockArchive.getSlotByParentRoot(roots[count - 2])).toBe(count - 1);
     expect(await blockArchive.get(count - 1)).not.toBeNull();
+  });
+
+  it.each([ForkName.gloas, ForkName.heze])("archives and removes block root indexes in %s", async (fork) => {
+    blockArchive = new BlockArchiveRepository(getConfig(fork), db);
+    const forkTypes = sszTypesFor(fork);
+    const block = forkTypes.SignedBeaconBlock.defaultValue();
+    block.message.slot = 10;
+    block.message.parentRoot.fill(1);
+    block.message.body.voluntaryExits.push(ssz.phase0.SignedVoluntaryExit.defaultValue());
+    const root = forkTypes.BeaconBlock.hashTreeRoot(block.message);
+
+    await blockArchive.putBinary(10, forkTypes.SignedBeaconBlock.serialize(block));
+    expect(await blockArchive.getSlotByRoot(root)).toBe(10);
+    expect(await blockArchive.getSlotByParentRoot(block.message.parentRoot)).toBe(10);
+
+    await blockArchive.remove(block);
+    expect(await blockArchive.get(10)).toBeNull();
+    expect(await blockArchive.getSlotByRoot(root)).toBeNull();
+    expect(await blockArchive.getSlotByParentRoot(block.message.parentRoot)).toBeNull();
   });
 });

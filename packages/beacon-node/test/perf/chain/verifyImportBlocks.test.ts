@@ -3,9 +3,10 @@ import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/ben
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPreDeneb, SLOTS_PER_EPOCH, isForkPostDeneb} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
 import {rangeSyncTest} from "@lodestar/state-transition/test-utils";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
@@ -121,8 +122,11 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
         );
         const forkName = chain.config.getForkName(block.message.slot);
+        if (isForkPostDeneb(forkName)) {
+          throw Error("This pre-Deneb range sync benchmark does not support data sidecars");
+        }
         return BlockInputPreData.createFromBlock({
-          block,
+          block: block as SignedBeaconBlock<ForkPreDeneb>,
           blockRootHex,
           forkName,
           daOutOfRange: true,

@@ -1,10 +1,12 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {ApiError} from "../../../../../src/api/impl/errors.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BuilderStatus} from "../../../../../src/execution/builder/http.js";
@@ -202,6 +204,24 @@ describe("api/validator - produceBlockV3", () => {
     );
     expect(block).toEqual(blindedBlock);
     expect(meta.executionPayloadBlinded).toBe(true);
+  });
+
+  it("rejects post-gloas slots with a 400 pointing to produceBlockV4", async () => {
+    const gloasConfig = createBeaconConfig(getConfig(ForkName.gloas), genesisValidatorsRoot);
+    const gloasModules = getApiTestModules({config: gloasConfig});
+    const gloasApi = getValidatorApi(defaultApiOptions, {...gloasModules, config: gloasConfig});
+
+    const result = gloasApi.produceBlockV3({
+      slot: 1,
+      randaoReveal: ssz.BLSSignature.defaultValue(),
+      graffiti: "a".repeat(32),
+      skipRandaoVerification: false,
+    });
+
+    await expect(result).rejects.toThrow(ApiError);
+    await expect(result).rejects.toMatchObject({statusCode: 400, message: expect.stringContaining("produceBlockV4")});
+    expect(gloasModules.chain.produceBlock).not.toHaveBeenCalled();
+    expect(gloasModules.chain.produceBlindedBlock).not.toHaveBeenCalled();
   });
 
   it("rejects block production if parent block is optimistic", async () => {
