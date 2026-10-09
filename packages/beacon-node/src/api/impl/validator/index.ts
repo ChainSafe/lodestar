@@ -2075,11 +2075,14 @@ export function getValidatorApi(
 
     async submitProposerPreferences({signedProposerPreferences}) {
       const failures: FailureList = [];
+      // Preferences submitted here are signed by validators using this node, gossiped ones are not
+      const attachedValidatorIndices: ValidatorIndex[] = [];
 
       await Promise.all(
         signedProposerPreferences.map(async (signed, i) => {
           try {
             await validateGossipProposerPreferences(chain, signed);
+            attachedValidatorIndices.push(signed.message.validatorIndex);
 
             chain.proposerPreferencesPool.add(signed);
             await network.publishProposerPreferences(signed);
@@ -2095,6 +2098,7 @@ export function getValidatorApi(
             };
 
             if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+              attachedValidatorIndices.push(signed.message.validatorIndex);
               logger.debug("Ignoring known signed proposer preferences", logCtx);
               return;
             }
@@ -2107,6 +2111,14 @@ export function getValidatorApi(
           }
         })
       );
+
+      if (attachedValidatorIndices.length > 0) {
+        try {
+          await chain.updateAttachedValidators(chain.clock.currentEpoch, attachedValidatorIndices);
+        } catch (e) {
+          logger.warn("Error tracking attached validators", {count: attachedValidatorIndices.length}, e as Error);
+        }
+      }
 
       if (failures.length > 0) {
         throw new IndexedError("Error processing signed proposer preferences", failures);
