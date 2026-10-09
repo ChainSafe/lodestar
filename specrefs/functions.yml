@@ -111,7 +111,7 @@
     - file: packages/state-transition/src/block/processDeposit.ts
       search: export function applyDeposit(
   spec: |
-    <spec fn="apply_deposit" fork="phase0" hash="9d7c9ab6">
+    <spec fn="apply_deposit" fork="phase0" hash="f2338c57">
     def apply_deposit(
         state: BeaconState,
         pubkey: BLSPubkey,
@@ -119,7 +119,7 @@
         amount: Gwei,
         signature: BLSSignature,
     ) -> None:
-        validator_pubkeys = [v.pubkey for v in state.validators]
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
         if pubkey not in validator_pubkeys:
             # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
             deposit_message = DepositMessage(
@@ -143,7 +143,7 @@
     - file: packages/state-transition/src/block/processDeposit.ts
       search: export function applyDeposit(
   spec: |
-    <spec fn="apply_deposit" fork="electra" hash="21c72370">
+    <spec fn="apply_deposit" fork="electra" hash="f6b34cd7">
     def apply_deposit(
         state: BeaconState,
         pubkey: BLSPubkey,
@@ -151,7 +151,7 @@
         amount: Gwei,
         signature: BLSSignature,
     ) -> None:
-        validator_pubkeys = [v.pubkey for v in state.validators]
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
         if pubkey not in validator_pubkeys:
             # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
             if is_valid_deposit_signature(pubkey, withdrawal_credentials, amount, signature):
@@ -256,13 +256,39 @@
     - file: packages/state-transition/src/epoch/processPendingDeposits.ts
       search: function applyPendingDeposit(
   spec: |
-    <spec fn="apply_pending_deposit" fork="electra" hash="e60b5fed">
+    <spec fn="apply_pending_deposit" fork="electra" hash="6ac3a622">
     def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
         """
         Applies ``deposit`` to the ``state``.
         """
-        validator_pubkeys = [v.pubkey for v in state.validators]
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
         if deposit.pubkey not in validator_pubkeys:
+            # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
+            if is_valid_deposit_signature(
+                deposit.pubkey, deposit.withdrawal_credentials, deposit.amount, deposit.signature
+            ):
+                add_validator_to_registry(
+                    state, deposit.pubkey, deposit.withdrawal_credentials, deposit.amount
+                )
+        else:
+            validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
+            increase_balance(state, validator_index, deposit.amount)
+    </spec>
+
+- name: apply_pending_deposit#heze
+  sources: []
+  spec: |
+    <spec fn="apply_pending_deposit" fork="heze" hash="bdef283e">
+    def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
+        """
+        Applies ``deposit`` to the ``state`` without creating validators with BLS withdrawal credentials.
+        """
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
+        if deposit.pubkey not in validator_pubkeys:
+            # [New in Heze:EIP8365]
+            # Do not create validators with BLS withdrawal credentials
+            if deposit.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX:
+                return
             # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
             if is_valid_deposit_signature(
                 deposit.pubkey, deposit.withdrawal_credentials, deposit.amount, deposit.signature
@@ -493,9 +519,14 @@
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: function getCommitteeFraction(
   spec: |
-    <spec fn="calculate_committee_fraction" fork="phase0" hash="cfd9ac06">
+    <spec fn="calculate_committee_fraction" fork="phase0" hash="67f1f47d">
     def calculate_committee_fraction(state: BeaconState, committee_percent: Uint64) -> Gwei:
-        committee_weight = get_total_active_balance(state) // Uint64(SLOTS_PER_EPOCH)
+        unslashed_and_active_indices: set[ValidatorIndex] = set()
+        for index in get_active_validator_indices(state, get_current_epoch(state)):
+            if not state.validators[index].slashed:
+                unslashed_and_active_indices.add(index)
+        total_balance = get_total_balance(state, unslashed_and_active_indices)
+        committee_weight = total_balance // Uint64(SLOTS_PER_EPOCH)
         return (committee_weight * committee_percent) // 100
     </spec>
 
@@ -633,12 +664,13 @@
     - file: packages/beacon-node/src/util/dataColumns.ts
       search: export function computeColumnsForCustodyGroup(
   spec: |
-    <spec fn="compute_columns_for_custody_group" fork="fulu" hash="af24b659">
+    <spec fn="compute_columns_for_custody_group" fork="fulu" hash="a56bd22e">
     def compute_columns_for_custody_group(custody_group: CustodyIndex) -> Sequence[ColumnIndex]:
         assert custody_group < NUMBER_OF_CUSTODY_GROUPS
         columns_per_group = NUMBER_OF_COLUMNS // NUMBER_OF_CUSTODY_GROUPS
         return [
-            ColumnIndex(NUMBER_OF_CUSTODY_GROUPS * i + custody_group) for i in range(columns_per_group)
+            ColumnIndex(NUMBER_OF_CUSTODY_GROUPS * index + custody_group)
+            for index in range(columns_per_group)
         ]
     </spec>
 
@@ -647,7 +679,7 @@
     - file: packages/state-transition/src/util/epochShuffling.ts
       search: function buildCommitteesFromShuffling(
   spec: |
-    <spec fn="compute_committee" fork="phase0" hash="23ad35aa">
+    <spec fn="compute_committee" fork="phase0" hash="fe5ddb42">
     def compute_committee(
         indices: Sequence[ValidatorIndex], seed: Bytes32, index: Uint64, count: Uint64
     ) -> Sequence[ValidatorIndex]:
@@ -657,8 +689,8 @@
         start = (len(indices) * index) // count
         end = (len(indices) * Uint64(index + 1)) // count
         return [
-            indices[compute_shuffled_index(Uint64(i), Uint64(len(indices)), seed)]
-            for i in range(start, end)
+            indices[compute_shuffled_index(Uint64(index), Uint64(len(indices)), seed)]
+            for index in range(start, end)
         ]
     </spec>
 
@@ -1343,7 +1375,7 @@
     - file: packages/beacon-node/src/chain/opPools/aggregatedAttestationPool.ts
       search: export function aggregateConsolidation(
   spec: |
-    <spec fn="compute_on_chain_aggregate" fork="electra" hash="e6142045">
+    <spec fn="compute_on_chain_aggregate" fork="electra" hash="f8d5b525">
     def compute_on_chain_aggregate(network_aggregates: Sequence[Attestation]) -> Attestation:
         aggregates = sorted(
             network_aggregates, key=lambda a: get_committee_indices(a.committee_bits)[0]
@@ -1355,9 +1387,11 @@
             for b in a.aggregation_bits:
                 aggregation_bits.append(b)
 
-        signature = bls.Aggregate([a.signature for a in aggregates])
+        signature = bls.Aggregate([aggregate.signature for aggregate in aggregates])
 
-        committee_indices = [get_committee_indices(a.committee_bits)[0] for a in aggregates]
+        committee_indices = [
+            get_committee_indices(aggregate.committee_bits)[0] for aggregate in aggregates
+        ]
         committee_flags = [(index in committee_indices) for index in range(MAX_COMMITTEES_PER_SLOT)]
         committee_bits = CommitteeBits(data=committee_flags)
 
@@ -1429,7 +1463,7 @@
     - file: packages/state-transition/src/util/seed.ts
       search: export function computeProposerIndices(
   spec: |
-    <spec fn="compute_proposer_indices" fork="fulu" hash="86cdf258">
+    <spec fn="compute_proposer_indices" fork="fulu" hash="6af78368">
     def compute_proposer_indices(
         state: BeaconState, epoch: Epoch, seed: Bytes32, indices: Sequence[ValidatorIndex]
     ) -> ProposerIndices:
@@ -1437,7 +1471,7 @@
         Return the proposer indices for the given ``epoch``.
         """
         start_slot = compute_start_slot_at_epoch(epoch)
-        seeds = [sha256(seed + uint_to_bytes(start_slot + i)) for i in range(SLOTS_PER_EPOCH)]
+        seeds = [sha256(seed + uint_to_bytes(start_slot + index)) for index in range(SLOTS_PER_EPOCH)]
         return ProposerIndices(data=[compute_proposer_index(state, indices, seed) for seed in seeds])
     </spec>
 
@@ -1446,7 +1480,7 @@
     - file: packages/state-transition/src/util/seed.ts
       search: export function computeProposerIndices(
   spec: |
-    <spec fn="compute_proposer_indices" fork="gloas" hash="f86052af">
+    <spec fn="compute_proposer_indices" fork="gloas" hash="87b9ff2d">
     def compute_proposer_indices(
         state: BeaconState, epoch: Epoch, seed: Bytes32, indices: Sequence[ValidatorIndex]
     ) -> ProposerIndices:
@@ -1454,7 +1488,7 @@
         Return the proposer indices for the given ``epoch``.
         """
         start_slot = compute_start_slot_at_epoch(epoch)
-        seeds = [sha256(seed + uint_to_bytes(start_slot + i)) for i in range(SLOTS_PER_EPOCH)]
+        seeds = [sha256(seed + uint_to_bytes(start_slot + index)) for index in range(SLOTS_PER_EPOCH)]
         # [Modified in Gloas:EIP7732]
         return ProposerIndices(
             data=[
@@ -1475,10 +1509,9 @@
     - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
       search: export function computeProposerScore(
   spec: |
-    <spec fn="compute_proposer_score" fork="phase0" hash="06f308f2">
+    <spec fn="compute_proposer_score" fork="phase0" hash="67f295a9">
     def compute_proposer_score(state: BeaconState) -> Gwei:
-        committee_weight = get_total_active_balance(state) // Uint64(SLOTS_PER_EPOCH)
-        return (committee_weight * PROPOSER_SCORE_BOOST) // 100
+        return calculate_committee_fraction(state, PROPOSER_SCORE_BOOST)
     </spec>
 
 - name: compute_ptc#gloas
@@ -1580,14 +1613,14 @@
     - file: packages/state-transition/src/util/epochShuffling.ts
       search: const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
   spec: |
-    <spec fn="compute_shuffled_permutation" fork="phase0" hash="d18b8ca3">
+    <spec fn="compute_shuffled_permutation" fork="phase0" hash="3d7842fa">
     def compute_shuffled_permutation(index_count: Uint64, seed: Bytes32) -> Sequence[Uint64]:
         """
         Return the full shuffled permutation corresponding to ``seed`` (and ``index_count``).
         """
         # Swap or not (https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf)
         # See the 'generalized domain' algorithm on page 3
-        indices = [Uint64(i) for i in range(index_count)]
+        indices = [Uint64(index) for index in range(index_count)]
         for current_round in range(SHUFFLE_ROUND_COUNT):
             round_bytes = uint_to_bytes(Uint8(current_round))
             pivot = bytes_to_uint64(sha256(seed + round_bytes)[0:8]) % index_count
@@ -2464,13 +2497,15 @@
     - file: packages/state-transition/src/util/validator.ts
       search: export function getActiveValidatorIndices(
   spec: |
-    <spec fn="get_active_validator_indices" fork="phase0" hash="b515ea11">
+    <spec fn="get_active_validator_indices" fork="phase0" hash="e9d21b54">
     def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
         """
         Return the sequence of active validator indices at ``epoch``.
         """
         return [
-            ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)
+            ValidatorIndex(index)
+            for index, validator in enumerate(state.validators)
+            if is_active_validator(validator, epoch)
         ]
     </spec>
 
@@ -2652,7 +2687,7 @@
     - file: packages/state-transition/src/epoch/getAttestationDeltas.ts
       search: export function getAttestationDeltas(
   spec: |
-    <spec fn="get_attestation_deltas" fork="phase0" hash="25d3474a">
+    <spec fn="get_attestation_deltas" fork="phase0" hash="a8ed8792">
     def get_attestation_deltas(state: BeaconState) -> tuple[Sequence[Gwei], Sequence[Gwei]]:
         """
         Return attestation reward/penalty deltas for each validator.
@@ -2664,13 +2699,19 @@
         _, inactivity_penalties = get_inactivity_penalty_deltas(state)
 
         rewards = [
-            source_rewards[i] + target_rewards[i] + head_rewards[i] + inclusion_delay_rewards[i]
-            for i in range(len(state.validators))
+            source_rewards[index]
+            + target_rewards[index]
+            + head_rewards[index]
+            + inclusion_delay_rewards[index]
+            for index in range(len(state.validators))
         ]
 
         penalties = [
-            source_penalties[i] + target_penalties[i] + head_penalties[i] + inactivity_penalties[i]
-            for i in range(len(state.validators))
+            source_penalties[index]
+            + target_penalties[index]
+            + head_penalties[index]
+            + inactivity_penalties[index]
+            for index in range(len(state.validators))
         ]
 
         return rewards, penalties
@@ -2845,21 +2886,23 @@
     - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
       search: export function getAttestationScore(
   spec: |
-    <spec fn="get_attestation_score" fork="phase0" hash="0a9ceb6e">
+    <spec fn="get_attestation_score" fork="phase0" hash="b33ba4c3">
     def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState) -> Gwei:
         unslashed_and_active_indices = [
-            i
-            for i in get_active_validator_indices(state, get_current_epoch(state))
-            if not state.validators[i].slashed
+            index
+            for index in get_active_validator_indices(state, get_current_epoch(state))
+            if not state.validators[index].slashed
         ]
         return Gwei(
             sum(
-                state.validators[i].effective_balance
-                for i in unslashed_and_active_indices
+                state.validators[index].effective_balance
+                for index in unslashed_and_active_indices
                 if (
-                    i in store.latest_messages
-                    and i not in store.equivocating_indices
-                    and is_ancestor(store, get_supported_node(store, store.latest_messages[i]), node)
+                    index in store.latest_messages
+                    and index not in store.equivocating_indices
+                    and is_ancestor(
+                        store, get_supported_node(store, store.latest_messages[index]), node
+                    )
                 )
             )
         )
@@ -2896,13 +2939,17 @@
     - file: packages/state-transition/src/cache/epochCache.ts
       search: "getAttestingIndices(fork: ForkSeq, attestation: Attestation)"
   spec: |
-    <spec fn="get_attesting_indices" fork="phase0" hash="ce39d2a9">
+    <spec fn="get_attesting_indices" fork="phase0" hash="09e9b4d3">
     def get_attesting_indices(state: BeaconState, attestation: Attestation) -> set[ValidatorIndex]:
         """
         Return the set of attesting indices corresponding to ``data`` and ``bits``.
         """
         committee = get_beacon_committee(state, attestation.data.slot, attestation.data.index)
-        return {index for i, index in enumerate(committee) if attestation.aggregation_bits[i]}
+        return {
+            validator_index
+            for index, validator_index in enumerate(committee)
+            if attestation.aggregation_bits[index]
+        }
     </spec>
 
 - name: get_attesting_indices#electra
@@ -2910,7 +2957,7 @@
     - file: packages/state-transition/src/cache/epochCache.ts
       search: "getAttestingIndices(fork: ForkSeq, attestation: Attestation)"
   spec: |
-    <spec fn="get_attesting_indices" fork="electra" hash="4379b30d">
+    <spec fn="get_attesting_indices" fork="electra" hash="b91efdf8">
     def get_attesting_indices(state: BeaconState, attestation: Attestation) -> set[ValidatorIndex]:
         """
         Return the set of attesting indices corresponding to ``aggregation_bits`` and ``committee_bits``.
@@ -2922,8 +2969,8 @@
             committee = get_beacon_committee(state, attestation.data.slot, committee_index)
             committee_attesters = {
                 attester_index
-                for i, attester_index in enumerate(committee)
-                if attestation.aggregation_bits[committee_offset + i]
+                for index, attester_index in enumerate(committee)
+                if attestation.aggregation_bits[committee_offset + index]
             }
             output = output.union(committee_attesters)
 
@@ -3580,7 +3627,7 @@
     - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
       search: export function getCurrentTargetScore(
   spec: |
-    <spec fn="get_current_target_score" fork="phase0" hash="aaef2a7c">
+    <spec fn="get_current_target_score" fork="phase0" hash="a5a45460">
     def get_current_target_score(store: Store) -> Gwei:
         """
         Return the estimate of FFG support of the current epoch target by using LMD-GHOST votes.
@@ -3588,22 +3635,22 @@
         target = get_current_target(store)
         state = get_pulled_up_head_state(store)
         unslashed_and_active_indices = [
-            i
-            for i in get_active_validator_indices(state, get_current_epoch(state))
-            if not state.validators[i].slashed
+            index
+            for index in get_active_validator_indices(state, get_current_epoch(state))
+            if not state.validators[index].slashed
         ]
         return Gwei(
             sum(
-                state.validators[i].effective_balance
-                for i in unslashed_and_active_indices
+                state.validators[index].effective_balance
+                for index in unslashed_and_active_indices
                 if (
-                    i in store.latest_messages
-                    and i not in store.equivocating_indices
+                    index in store.latest_messages
+                    and index not in store.equivocating_indices
                     and target
                     == get_checkpoint_for_block(
                         store,
-                        store.latest_messages[i].root,
-                        get_latest_message_epoch(store.latest_messages[i]),
+                        store.latest_messages[index].root,
+                        get_latest_message_epoch(store.latest_messages[index]),
                     )
                 )
             )
@@ -3632,13 +3679,13 @@
     - file: packages/beacon-node/src/util/dataColumns.ts
       search: export function getCustodyGroups(
   spec: |
-    <spec fn="get_custody_groups" fork="fulu" hash="a18e8aa3">
+    <spec fn="get_custody_groups" fork="fulu" hash="767e375a">
     def get_custody_groups(node_id: NodeID, custody_group_count: Uint64) -> Sequence[CustodyIndex]:
         assert custody_group_count <= NUMBER_OF_CUSTODY_GROUPS
 
         # Skip computation if all groups are custodied
         if custody_group_count == NUMBER_OF_CUSTODY_GROUPS:
-            return [CustodyIndex(i) for i in range(NUMBER_OF_CUSTODY_GROUPS)]
+            return [CustodyIndex(index) for index in range(NUMBER_OF_CUSTODY_GROUPS)]
 
         current_id = Uint256(node_id)
         custody_groups: list[CustodyIndex] = []
@@ -3861,14 +3908,14 @@
     - file: packages/state-transition/src/cache/epochTransitionCache.ts
       search: (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
   spec: |
-    <spec fn="get_eligible_validator_indices" fork="phase0" hash="22a24ce4">
+    <spec fn="get_eligible_validator_indices" fork="phase0" hash="e266c51e">
     def get_eligible_validator_indices(state: BeaconState) -> Sequence[ValidatorIndex]:
         previous_epoch = get_previous_epoch(state)
         return [
             ValidatorIndex(index)
-            for index, v in enumerate(state.validators)
-            if is_active_validator(v, previous_epoch)
-            or (v.slashed and previous_epoch + 1 < v.withdrawable_epoch)
+            for index, validator in enumerate(state.validators)
+            if is_active_validator(validator, previous_epoch)
+            or (validator.slashed and previous_epoch + 1 < validator.withdrawable_epoch)
         ]
     </spec>
 
@@ -3889,7 +3936,7 @@
     - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
       search: export function getEquivocationScore(
   spec: |
-    <spec fn="get_equivocation_score" fork="phase0" hash="aafa1bea">
+    <spec fn="get_equivocation_score" fork="phase0" hash="0de04dec">
     def get_equivocation_score(
         store: Store,
         balance_source: BeaconState,
@@ -3907,13 +3954,16 @@
         # Keep equivocating validators that were active at the balance_source epoch to be consistent
         # with get_total_active_balance() computation
         active_equivocating_indices = [
-            i
-            for i in committee_indices.intersection(store.equivocating_indices)
-            if is_active_validator(balance_source.validators[i], get_current_epoch(balance_source))
+            index
+            for index in committee_indices.intersection(store.equivocating_indices)
+            if is_active_validator(balance_source.validators[index], get_current_epoch(balance_source))
         ]
 
         return Gwei(
-            sum(balance_source.validators[i].effective_balance for i in active_equivocating_indices)
+            sum(
+                balance_source.validators[index].effective_balance
+                for index in active_equivocating_indices
+            )
         )
     </spec>
 
@@ -4708,7 +4758,7 @@
     - file: packages/state-transition/src/epoch/getAttestationDeltas.ts
       search: // inclusion speed bonus
   spec: |
-    <spec fn="get_inclusion_delay_deltas" fork="phase0" hash="088e5e90">
+    <spec fn="get_inclusion_delay_deltas" fork="phase0" hash="0ac4bdc0">
     def get_inclusion_delay_deltas(state: BeaconState) -> tuple[Sequence[Gwei], Sequence[Gwei]]:
         """
         Return proposer and inclusion delay micro-rewards/penalties for each validator.
@@ -4720,9 +4770,9 @@
         for index in get_unslashed_attesting_indices(state, matching_source_attestations):
             attestation = min(
                 [
-                    a
-                    for a in matching_source_attestations
-                    if index in get_pending_attesting_indices(state, a)
+                    attestation
+                    for attestation in matching_source_attestations
+                    if index in get_pending_attesting_indices(state, attestation)
                 ],
                 key=lambda a: a.inclusion_delay,
             )
@@ -4738,7 +4788,7 @@
 - name: get_inclusion_list_bits#heze
   sources: []
   spec: |
-    <spec fn="get_inclusion_list_bits" fork="heze" hash="feec924c">
+    <spec fn="get_inclusion_list_bits" fork="heze" hash="ebdce3b7">
     def get_inclusion_list_bits(
         store: InclusionListStore,
         committee: InclusionListCommittee,
@@ -4762,15 +4812,13 @@
 
             validator_indices.append(validator_index)
 
-        return InclusionListBits(
-            data=[validator_index in validator_indices for validator_index in committee]
-        )
+        return InclusionListBits(data=[index in validator_indices for index in committee])
     </spec>
 
 - name: get_inclusion_list_committee#heze
   sources: []
   spec: |
-    <spec fn="get_inclusion_list_committee" fork="heze" hash="012e9fad">
+    <spec fn="get_inclusion_list_committee" fork="heze" hash="6c0625d9">
     def get_inclusion_list_committee(state: BeaconState, slot: Slot) -> InclusionListCommittee:
         """
         Get the inclusion list committee for the given ``slot``.
@@ -4783,7 +4831,7 @@
             committee = get_beacon_committee(state, slot, CommitteeIndex(i))
             indices.extend(committee)
         return InclusionListCommittee(
-            data=[indices[i % len(indices)] for i in range(INCLUSION_LIST_COMMITTEE_SIZE)]
+            data=[indices[index % len(indices)] for index in range(INCLUSION_LIST_COMMITTEE_SIZE)]
         )
     </spec>
 
@@ -4820,12 +4868,14 @@
 - name: get_inclusion_list_signature#heze
   sources: []
   spec: |
-    <spec fn="get_inclusion_list_signature" fork="heze" hash="42bcbc85">
+    <spec fn="get_inclusion_list_signature" fork="heze" hash="8d9fc0d7">
     def get_inclusion_list_signature(
         state: BeaconState, inclusion_list: InclusionList, privkey: int
     ) -> BLSSignature:
-        domain = get_domain(
-            state, DOMAIN_INCLUSION_LIST_COMMITTEE, compute_epoch_at_slot(inclusion_list.slot)
+        domain = compute_domain(
+            DOMAIN_INCLUSION_LIST_COMMITTEE,
+            compute_fork_version(compute_epoch_at_slot(inclusion_list.slot)),
+            state.genesis_validators_root,
         )
         signing_root = compute_signing_root(inclusion_list, domain)
         return bls.Sign(privkey, signing_root)
@@ -4919,7 +4969,7 @@
       search: '^\s+getIndexedPayloadAttestation\('
       regex: true
   spec: |
-    <spec fn="get_indexed_payload_attestation" fork="gloas" hash="53d80b99">
+    <spec fn="get_indexed_payload_attestation" fork="gloas" hash="2b7862fa">
     def get_indexed_payload_attestation(
         state: BeaconState, payload_attestation: PayloadAttestation
     ) -> IndexedPayloadAttestation:
@@ -4929,7 +4979,9 @@
         slot = payload_attestation.data.slot
         ptc = get_ptc(state, slot)
         bits = payload_attestation.aggregation_bits
-        attesting_indices = [index for i, index in enumerate(ptc) if bits[i]]
+        attesting_indices = [
+            validator_index for index, validator_index in enumerate(ptc) if bits[index]
+        ]
 
         return IndexedPayloadAttestation(
             attesting_indices=PayloadTimelinessCommitteeIndices(data=sorted(attesting_indices)),
@@ -5117,14 +5169,15 @@
     - file: packages/state-transition/src/epoch/processPendingAttestations.ts
       search: const attVotedHeadRoot =
   spec: |
-    <spec fn="get_matching_head_attestations" fork="phase0" hash="9e3ca171">
+    <spec fn="get_matching_head_attestations" fork="phase0" hash="d0fd2cf6">
     def get_matching_head_attestations(
         state: BeaconState, epoch: Epoch
     ) -> Sequence[PendingAttestation]:
         return [
-            a
-            for a in get_matching_target_attestations(state, epoch)
-            if a.data.beacon_block_root == get_block_root_at_slot(state, a.data.slot)
+            attestation
+            for attestation in get_matching_target_attestations(state, epoch)
+            if attestation.data.beacon_block_root
+            == get_block_root_at_slot(state, attestation.data.slot)
         ]
     </spec>
 
@@ -5148,14 +5201,14 @@
     - file: packages/state-transition/src/epoch/processPendingAttestations.ts
       search: const attVotedTargetRoot = byteArrayEqualsFn(attData.target.root, actualTargetBlockRoot);
   spec: |
-    <spec fn="get_matching_target_attestations" fork="phase0" hash="811f3459">
+    <spec fn="get_matching_target_attestations" fork="phase0" hash="ad4545dd">
     def get_matching_target_attestations(
         state: BeaconState, epoch: Epoch
     ) -> Sequence[PendingAttestation]:
         return [
-            a
-            for a in get_matching_source_attestations(state, epoch)
-            if a.data.target.root == get_block_root(state, epoch)
+            attestation
+            for attestation in get_matching_source_attestations(state, epoch)
+            if attestation.data.target.root == get_block_root(state, epoch)
         ]
     </spec>
 
@@ -5333,7 +5386,7 @@
     - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
       search: export function getNodeSupportBetweenSlots(
   spec: |
-    <spec fn="get_node_support_between_slots" fork="phase0" hash="7e3e86fb">
+    <spec fn="get_node_support_between_slots" fork="phase0" hash="f6d00005">
     def get_node_support_between_slots(
         store: Store,
         balance_source: BeaconState,
@@ -5352,24 +5405,26 @@
         # Keep validators that were active at the balance_source epoch to be consistent
         # with get_total_active_balance() computation, also filter out slashed validators
         unslashed_and_active_indices = [
-            i
-            for i in participants
+            index
+            for index in participants
             if (
-                not balance_source.validators[i].slashed
-                and is_active_validator(balance_source.validators[i], get_current_epoch(balance_source))
+                not balance_source.validators[index].slashed
+                and is_active_validator(
+                    balance_source.validators[index], get_current_epoch(balance_source)
+                )
             )
         ]
 
         return Gwei(
             sum(
-                balance_source.validators[i].effective_balance
-                for i in unslashed_and_active_indices
+                balance_source.validators[index].effective_balance
+                for index in unslashed_and_active_indices
                 # Check that validator has voted in the support of the node
                 # and has not been slashed
                 if (
-                    i in store.latest_messages
-                    and get_supported_node(store, store.latest_messages[i]) == node
-                    and i not in store.equivocating_indices
+                    index in store.latest_messages
+                    and get_supported_node(store, store.latest_messages[index]) == node
+                    and index not in store.equivocating_indices
                 )
             )
         )
@@ -5446,7 +5501,7 @@
     - file: packages/state-transition/src/epoch/processPendingAttestations.ts
       search: "const participants = att.aggregationBits.intersectValues(committee);"
   spec: |
-    <spec fn="get_pending_attesting_indices" fork="phase0" hash="7ee5d051">
+    <spec fn="get_pending_attesting_indices" fork="phase0" hash="3321e867">
     def get_pending_attesting_indices(
         state: BeaconState, attestation: PendingAttestation
     ) -> set[ValidatorIndex]:
@@ -5454,7 +5509,11 @@
         Return the set of attesting indices for a ``PendingAttestation``.
         """
         committee = get_beacon_committee(state, attestation.data.slot, attestation.data.index)
-        return {index for i, index in enumerate(committee) if attestation.aggregation_bits[i]}
+        return {
+            validator_index
+            for index, validator_index in enumerate(committee)
+            if attestation.aggregation_bits[index]
+        }
     </spec>
 
 - name: get_pending_balance_to_withdraw#electra
@@ -6386,7 +6445,7 @@
 - name: get_unslashed_participating_indices#altair
   sources: []
   spec: |
-    <spec fn="get_unslashed_participating_indices" fork="altair" hash="57e2043c">
+    <spec fn="get_unslashed_participating_indices" fork="altair" hash="d33eb6c1">
     def get_unslashed_participating_indices(
         state: BeaconState, flag_index: int, epoch: Epoch
     ) -> set[ValidatorIndex]:
@@ -6400,7 +6459,9 @@
             epoch_participation = state.previous_epoch_participation
         active_validator_indices = get_active_validator_indices(state, epoch)
         participating_indices = [
-            i for i in active_validator_indices if has_flag(epoch_participation[i], flag_index)
+            index
+            for index in active_validator_indices
+            if has_flag(epoch_participation[index], flag_index)
         ]
         return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
     </spec>
@@ -6902,7 +6963,7 @@
     - file: packages/state-transition/src/util/gloas.ts
       search: export function initializePtcWindow(
   spec: |
-    <spec fn="initialize_ptc_window" fork="gloas" hash="88530cbd">
+    <spec fn="initialize_ptc_window" fork="gloas" hash="a02bea8d">
     def initialize_ptc_window(
         state: BeaconState,
     ) -> PayloadTimelinessCommitteeWindow:
@@ -6920,7 +6981,7 @@
         for e in range(1 + MIN_SEED_LOOKAHEAD):
             epoch = current_epoch + e
             start_slot = compute_start_slot_at_epoch(epoch)
-            ptcs += [compute_ptc(state, start_slot + i) for i in range(SLOTS_PER_EPOCH)]
+            ptcs += [compute_ptc(state, start_slot + index) for index in range(SLOTS_PER_EPOCH)]
 
         return PayloadTimelinessCommitteeWindow(data=empty_previous_epoch + ptcs)
     </spec>
@@ -6945,7 +7006,7 @@
     - file: packages/state-transition/src/block/initiateValidatorExit.ts
       search: export function initiateValidatorExit(
   spec: |
-    <spec fn="initiate_validator_exit" fork="phase0" hash="3fe78d6a">
+    <spec fn="initiate_validator_exit" fork="phase0" hash="025466a5">
     def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
         """
         Initiate the exit of the validator with index ``index``.
@@ -6956,9 +7017,15 @@
             return
 
         # Compute exit queue epoch
-        exit_epochs = [v.exit_epoch for v in state.validators if v.exit_epoch != FAR_FUTURE_EPOCH]
+        exit_epochs = [
+            validator.exit_epoch
+            for validator in state.validators
+            if validator.exit_epoch != FAR_FUTURE_EPOCH
+        ]
         exit_queue_epoch = max(exit_epochs + [compute_activation_exit_epoch(get_current_epoch(state))])
-        exit_queue_churn = len([v for v in state.validators if v.exit_epoch == exit_queue_epoch])
+        exit_queue_churn = len([
+            validator for validator in state.validators if validator.exit_epoch == exit_queue_epoch
+        ])
         if exit_queue_churn >= get_validator_churn_limit(state):
             exit_queue_epoch += 1
 
@@ -7689,7 +7756,7 @@
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_head_weak"
   spec: |
-    <spec fn="is_head_weak" fork="phase0" hash="08f7dac6">
+    <spec fn="is_head_weak" fork="phase0" hash="99cf8799">
     def is_head_weak(store: Store, head_root: Root) -> bool:
         # Calculate weight threshold for weak head
         justified_state = store.checkpoint_states[store.justified_checkpoint]
@@ -7705,9 +7772,9 @@
             committee = get_beacon_committee(head_state, head_block.slot, CommitteeIndex(index))
             head_weight += Gwei(
                 sum(
-                    justified_state.validators[i].effective_balance
-                    for i in committee
-                    if i in store.equivocating_indices
+                    justified_state.validators[index].effective_balance
+                    for index in committee
+                    if index in store.equivocating_indices
                 )
             )
 
@@ -7719,7 +7786,7 @@
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_head_weak"
   spec: |
-    <spec fn="is_head_weak" fork="gloas" hash="5b81945a">
+    <spec fn="is_head_weak" fork="gloas" hash="a98e1174">
     def is_head_weak(store: Store, head_root: Root) -> bool:
         # Calculate weight threshold for weak head
         justified_state = store.checkpoint_states[store.justified_checkpoint]
@@ -7736,9 +7803,9 @@
             committee = get_beacon_committee(head_state, head_block.slot, CommitteeIndex(index))
             head_weight += Gwei(
                 sum(
-                    justified_state.validators[i].effective_balance
-                    for i in committee
-                    if i in store.equivocating_indices
+                    justified_state.validators[index].effective_balance
+                    for index in committee
+                    if index in store.equivocating_indices
                 )
             )
 
@@ -8244,7 +8311,7 @@
 - name: is_valid_inclusion_list_signature#heze
   sources: []
   spec: |
-    <spec fn="is_valid_inclusion_list_signature" fork="heze" hash="3c56208b">
+    <spec fn="is_valid_inclusion_list_signature" fork="heze" hash="ab8ab841">
     def is_valid_inclusion_list_signature(
         state: BeaconState, signed_inclusion_list: SignedInclusionList
     ) -> bool:
@@ -8254,7 +8321,11 @@
         message = signed_inclusion_list.message
         index = message.validator_index
         pubkey = state.validators[index].pubkey
-        domain = get_domain(state, DOMAIN_INCLUSION_LIST_COMMITTEE, compute_epoch_at_slot(message.slot))
+        domain = compute_domain(
+            DOMAIN_INCLUSION_LIST_COMMITTEE,
+            compute_fork_version(compute_epoch_at_slot(message.slot)),
+            state.genesis_validators_root,
+        )
         signing_root = compute_signing_root(message, domain)
         return bls.Verify(pubkey, signing_root, signed_inclusion_list.signature)
     </spec>
@@ -8264,7 +8335,7 @@
     - file: packages/state-transition/src/block/isValidIndexedAttestation.ts
       search: export function isValidIndexedAttestation(
   spec: |
-    <spec fn="is_valid_indexed_attestation" fork="phase0" hash="756c2738">
+    <spec fn="is_valid_indexed_attestation" fork="phase0" hash="d8c6b9c1">
     def is_valid_indexed_attestation(
         state: BeaconState, indexed_attestation: IndexedAttestation
     ) -> bool:
@@ -8276,7 +8347,7 @@
         if len(indices) == 0 or list(indices) != sorted(set(indices)):
             return False
         # Verify aggregate signature
-        pubkeys = [state.validators[i].pubkey for i in indices]
+        pubkeys = [state.validators[index].pubkey for index in indices]
         domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
         signing_root = compute_signing_root(indexed_attestation.data, domain)
         return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
@@ -8287,7 +8358,7 @@
     - file: packages/state-transition/src/block/isValidIndexedAttestation.ts
       search: export function isValidIndexedAttestation(
   spec: |
-    <spec fn="is_valid_indexed_attestation" fork="gloas" hash="4a8f400e">
+    <spec fn="is_valid_indexed_attestation" fork="gloas" hash="31f5cc96">
     def is_valid_indexed_attestation(
         state: BeaconState, indexed_attestation: IndexedAttestation
     ) -> bool:
@@ -8304,7 +8375,7 @@
         ):
             return False
         # Verify aggregate signature
-        pubkeys = [state.validators[i].pubkey for i in indices]
+        pubkeys = [state.validators[index].pubkey for index in indices]
         domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
         signing_root = compute_signing_root(indexed_attestation.data, domain)
         return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
@@ -8315,7 +8386,7 @@
     - file: packages/state-transition/src/block/isValidIndexedPayloadAttestation.ts
       search: export function isValidIndexedPayloadAttestation(
   spec: |
-    <spec fn="is_valid_indexed_payload_attestation" fork="gloas" hash="37b2500a">
+    <spec fn="is_valid_indexed_payload_attestation" fork="gloas" hash="dd1e5a76">
     def is_valid_indexed_payload_attestation(
         state: BeaconState, attestation: IndexedPayloadAttestation
     ) -> bool:
@@ -8329,7 +8400,7 @@
             return False
 
         # Verify aggregate signature
-        pubkeys = [state.validators[i].pubkey for i in indices]
+        pubkeys = [state.validators[index].pubkey for index in indices]
         domain = get_domain(state, DOMAIN_PTC_ATTESTER, compute_epoch_at_slot(attestation.data.slot))
         signing_root = compute_signing_root(attestation.data, domain)
         return bls.FastAggregateVerify(pubkeys, signing_root, attestation.signature)
@@ -8480,7 +8551,7 @@
     - file: packages/state-transition/src/block/processConsolidationRequest.ts
       search: function isValidSwitchToCompoundRequest(
   spec: |
-    <spec fn="is_valid_switch_to_compounding_request" fork="electra" hash="91aa69bb">
+    <spec fn="is_valid_switch_to_compounding_request" fork="electra" hash="57283459">
     def is_valid_switch_to_compounding_request(
         state: BeaconState, consolidation_request: ConsolidationRequest
     ) -> bool:
@@ -8490,7 +8561,7 @@
 
         # Verify pubkey exists
         source_pubkey = consolidation_request.source_pubkey
-        validator_pubkeys = [v.pubkey for v in state.validators]
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
         if source_pubkey not in validator_pubkeys:
             return False
 
@@ -9416,13 +9487,13 @@
     - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
       search: function onboardBuildersFromPendingDeposits(
   spec: |
-    <spec fn="onboard_builders_from_pending_deposits" fork="gloas" hash="49853afd">
+    <spec fn="onboard_builders_from_pending_deposits" fork="gloas" hash="e09a82dc">
     def onboard_builders_from_pending_deposits(state: BeaconState) -> None:
         """
         Applies any pending deposit for builders, effectively
         onboarding builders at the fork.
         """
-        validator_pubkeys = [v.pubkey for v in state.validators]
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
 
         pending_deposits = PendingDeposits()
         for deposit in state.pending_deposits:
@@ -9434,7 +9505,7 @@
             # Note that applying a deposit below can mutate the state and
             # may add a builder to the registry. For this reason, the list
             # of builder pubkeys must be recomputed each iteration.
-            builder_pubkeys = [b.pubkey for b in state.builders]
+            builder_pubkeys = [builder.pubkey for builder in state.builders]
 
             # Deposits for non-builders stay in the pending queue. If there is a
             # valid pending deposit for a new validator with this pubkey, keep this
@@ -9476,7 +9547,7 @@
     - file: packages/fork-choice/src/protoArray/protoArray.ts
       search: "  isPayloadDataNotAvailable(blockRoot: RootHex): boolean {"
   spec: |
-    <spec fn="payload_data_availability" fork="gloas" hash="9be717cf">
+    <spec fn="payload_data_availability" fork="gloas" hash="3c04b6ec">
     def payload_data_availability(store: Store, root: Root, available: bool) -> bool:
         """
         Return whether the blob data for the beacon block with root ``root`` is
@@ -9491,7 +9562,7 @@
         if not is_payload_verified(store, root):
             return not available
 
-        votes = [bool(v) for v in store.payload_data_availability_vote[root] if v is not None]
+        votes = [bool(vote) for vote in store.payload_data_availability_vote[root] if vote is not None]
         return sum(vote == available for vote in votes) > DATA_AVAILABILITY_TIMELY_THRESHOLD
     </spec>
 
@@ -9502,7 +9573,7 @@
     - file: packages/fork-choice/src/protoArray/protoArray.ts
       search: "  isPayloadNotTimely(blockRoot: RootHex): boolean {"
   spec: |
-    <spec fn="payload_timeliness" fork="gloas" hash="3633a58b">
+    <spec fn="payload_timeliness" fork="gloas" hash="841f53bf">
     def payload_timeliness(store: Store, root: Root, timely: bool) -> bool:
         """
         Return whether the execution payload for the beacon block with root ``root``
@@ -9517,7 +9588,7 @@
         if not is_payload_verified(store, root):
             return not timely
 
-        votes = [bool(v) for v in store.payload_timeliness_vote[root] if v is not None]
+        votes = [bool(vote) for vote in store.payload_timeliness_vote[root] if vote is not None]
         return sum(vote == timely for vote in votes) > PAYLOAD_TIMELY_THRESHOLD
     </spec>
 
@@ -9881,7 +9952,7 @@
     - file: packages/state-transition/src/block/processAttestationsAltair.ts
       search: export function processAttestationsAltair(
   spec: |
-    <spec fn="process_attestation" fork="electra" hash="d0e174f7">
+    <spec fn="process_attestation" fork="electra" hash="d6fe656d">
     def process_attestation(state: BeaconState, attestation: Attestation) -> None:
         data = attestation.data
         assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
@@ -9897,8 +9968,8 @@
             committee = get_beacon_committee(state, data.slot, committee_index)
             committee_attesters = {
                 attester_index
-                for i, attester_index in enumerate(committee)
-                if attestation.aggregation_bits[committee_offset + i]
+                for index, attester_index in enumerate(committee)
+                if attestation.aggregation_bits[committee_offset + index]
             }
             assert len(committee_attesters) > 0
             committee_offset += len(committee)
@@ -9942,7 +10013,7 @@
     - file: packages/state-transition/src/block/processAttestationsAltair.ts
       search: export function processAttestationsAltair(
   spec: |
-    <spec fn="process_attestation" fork="gloas" hash="d78c7941">
+    <spec fn="process_attestation" fork="gloas" hash="485df2d4">
     def process_attestation(
         state: BeaconState,
         attestation: Attestation,
@@ -9963,8 +10034,8 @@
             committee = get_beacon_committee(state, data.slot, committee_index)
             committee_attesters = {
                 attester_index
-                for i, attester_index in enumerate(committee)
-                if attestation.aggregation_bits[committee_offset + i]
+                for index, attester_index in enumerate(committee)
+                if attestation.aggregation_bits[committee_offset + index]
             }
             assert len(committee_attesters) > 0
             committee_offset += len(committee)
@@ -10181,6 +10252,24 @@
         process_sync_aggregate(state, block.body.sync_aggregate)
     </spec>
 
+- name: process_block#heze
+  sources: []
+  spec: |
+    <spec fn="process_block" fork="heze" hash="217d6454">
+    def process_block(state: BeaconState, block: BeaconBlock) -> None:
+        parent_slot = state.latest_block_header.slot
+
+        process_parent_execution_payload(state, block)
+        process_block_header(state, block)
+        process_withdrawals(state)
+        process_execution_payload_bid(state, block.body.signed_execution_payload_bid)
+        process_randao(state, block.body)
+        # [Modified in Heze:EIP8015]
+        # Removed `process_eth1_data`
+        process_operations(state, block.body, parent_slot)
+        process_sync_aggregate(state, block.body.sync_aggregate)
+    </spec>
+
 - name: process_block_header#phase0
   sources:
     - file: packages/state-transition/src/block/processBlockHeader.ts
@@ -10245,13 +10334,13 @@
     - file: packages/state-transition/src/block/processBuilderDepositRequest.ts
       search: export function processBuilderDepositRequest(
   spec: |
-    <spec fn="process_builder_deposit_request" fork="gloas" hash="1d458f9c">
+    <spec fn="process_builder_deposit_request" fork="gloas" hash="f0fb2ad8">
     def process_builder_deposit_request(state: BeaconState, request: BuilderDepositRequest) -> None:
         # Ignore deposits with unexpected withdrawal credential prefixes
         if not is_builder_withdrawal_credential(request.withdrawal_credentials):
             return
 
-        builder_pubkeys = [b.pubkey for b in state.builders]
+        builder_pubkeys = [builder.pubkey for builder in state.builders]
         if request.pubkey not in builder_pubkeys:
             if is_valid_builder_deposit_signature(request):
                 add_builder_to_registry(
@@ -10280,9 +10369,9 @@
     - file: packages/state-transition/src/block/processBuilderExitRequest.ts
       search: export function processBuilderExitRequest(
   spec: |
-    <spec fn="process_builder_exit_request" fork="gloas" hash="144e9faf">
+    <spec fn="process_builder_exit_request" fork="gloas" hash="b9a9fe05">
     def process_builder_exit_request(state: BeaconState, request: BuilderExitRequest) -> None:
-        builder_pubkeys = [b.pubkey for b in state.builders]
+        builder_pubkeys = [builder.pubkey for builder in state.builders]
         if request.pubkey not in builder_pubkeys:
             return
 
@@ -10325,12 +10414,12 @@
     - file: packages/state-transition/src/block/processConsolidationRequest.ts
       search: export function processConsolidationRequest(
   spec: |
-    <spec fn="process_consolidation_request" fork="electra" hash="be045fd3">
+    <spec fn="process_consolidation_request" fork="electra" hash="8524ae3e">
     def process_consolidation_request(
         state: BeaconState, consolidation_request: ConsolidationRequest
     ) -> None:
         if is_valid_switch_to_compounding_request(state, consolidation_request):
-            validator_pubkeys = [v.pubkey for v in state.validators]
+            validator_pubkeys = [validator.pubkey for validator in state.validators]
             request_source_pubkey = consolidation_request.source_pubkey
             source_index = ValidatorIndex(validator_pubkeys.index(request_source_pubkey))
             switch_to_compounding_validator(state, source_index)
@@ -10346,7 +10435,7 @@
         if get_consolidation_churn_limit(state) <= MIN_ACTIVATION_BALANCE:
             return
 
-        validator_pubkeys = [v.pubkey for v in state.validators]
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
         # Verify pubkeys exists
         request_source_pubkey = consolidation_request.source_pubkey
         request_target_pubkey = consolidation_request.target_pubkey
@@ -10698,6 +10787,31 @@
         process_sync_committee_updates(state)
         process_proposer_lookahead(state)
         # [New in Gloas:EIP7732]
+        process_ptc_window(state)
+    </spec>
+
+- name: process_epoch#heze
+  sources: []
+  spec: |
+    <spec fn="process_epoch" fork="heze" hash="782cef80">
+    def process_epoch(state: BeaconState) -> None:
+        process_justification_and_finalization(state)
+        process_inactivity_updates(state)
+        process_rewards_and_penalties(state)
+        process_registry_updates(state)
+        process_slashings(state)
+        # [Modified in Heze:EIP8015]
+        # Removed `process_eth1_data_reset`
+        process_pending_deposits(state)
+        process_pending_consolidations(state)
+        process_builder_pending_payments(state)
+        process_effective_balance_updates(state)
+        process_slashings_reset(state)
+        process_randao_mixes_reset(state)
+        process_historical_summaries_update(state)
+        process_participation_flag_updates(state)
+        process_sync_committee_updates(state)
+        process_proposer_lookahead(state)
         process_ptc_window(state)
     </spec>
 
@@ -11471,6 +11585,30 @@
         for_ops(body.payload_attestations, process_payload_attestation)
     </spec>
 
+- name: process_operations#heze
+  sources: []
+  spec: |
+    <spec fn="process_operations" fork="heze" hash="d70acce9">
+    def process_operations(state: BeaconState, body: BeaconBlockBody, parent_slot: Slot) -> None:
+        def for_ops(operations: Sequence[Any], fn: Callable[..., None], *args: Any) -> None:
+            for operation in operations:
+                fn(state, operation, *args)
+
+        assert len(body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS
+        assert len(body.attester_slashings) <= MAX_ATTESTER_SLASHINGS_ELECTRA
+        assert len(body.attestations) <= MAX_ATTESTATIONS_ELECTRA
+        assert len(body.voluntary_exits) <= MAX_VOLUNTARY_EXITS
+        assert len(body.bls_to_execution_changes) <= MAX_BLS_TO_EXECUTION_CHANGES
+        assert len(body.payload_attestations) <= MAX_PAYLOAD_ATTESTATIONS
+
+        for_ops(body.proposer_slashings, process_proposer_slashing)
+        for_ops(body.attester_slashings, process_attester_slashing)
+        for_ops(body.attestations, process_attestation, parent_slot)
+        for_ops(body.voluntary_exits, process_voluntary_exit)
+        for_ops(body.bls_to_execution_changes, process_bls_to_execution_change)
+        for_ops(body.payload_attestations, process_payload_attestation)
+    </spec>
+
 - name: process_parent_execution_payload#gloas
   sources:
     - file: packages/state-transition/src/block/processParentExecutionPayload.ts
@@ -11572,7 +11710,7 @@
     - file: packages/state-transition/src/epoch/processPendingDeposits.ts
       search: export function processPendingDeposits(
   spec: |
-    <spec fn="process_pending_deposits" fork="electra" hash="0e4a7df9">
+    <spec fn="process_pending_deposits" fork="electra" hash="5494307e">
     def process_pending_deposits(state: BeaconState) -> None:
         next_epoch = get_current_epoch(state) + 1
         available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(
@@ -11606,7 +11744,7 @@
             # Read validator state
             is_validator_exited = False
             is_validator_withdrawn = False
-            validator_pubkeys = [v.pubkey for v in state.validators]
+            validator_pubkeys = [validator.pubkey for validator in state.validators]
             if deposit.pubkey in validator_pubkeys:
                 validator = state.validators[ValidatorIndex(validator_pubkeys.index(deposit.pubkey))]
                 is_validator_exited = validator.exit_epoch < FAR_FUTURE_EPOCH
@@ -11645,7 +11783,7 @@
     - file: packages/state-transition/src/epoch/processPendingDeposits.ts
       search: export function processPendingDeposits(
   spec: |
-    <spec fn="process_pending_deposits" fork="fulu" hash="78b65ccd">
+    <spec fn="process_pending_deposits" fork="fulu" hash="01421c54">
     def process_pending_deposits(state: BeaconState) -> None:
         next_epoch = get_current_epoch(state) + 1
         available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(
@@ -11669,7 +11807,7 @@
             # Read validator state
             is_validator_exited = False
             is_validator_withdrawn = False
-            validator_pubkeys = [v.pubkey for v in state.validators]
+            validator_pubkeys = [validator.pubkey for validator in state.validators]
             if deposit.pubkey in validator_pubkeys:
                 validator = state.validators[ValidatorIndex(validator_pubkeys.index(deposit.pubkey))]
                 is_validator_exited = validator.exit_epoch < FAR_FUTURE_EPOCH
@@ -11708,7 +11846,7 @@
     - file: packages/state-transition/src/epoch/processPendingDeposits.ts
       search: export function processPendingDeposits(
   spec: |
-    <spec fn="process_pending_deposits" fork="gloas" hash="4e47c45b">
+    <spec fn="process_pending_deposits" fork="gloas" hash="514b90de">
     def process_pending_deposits(state: BeaconState) -> None:
         next_epoch = get_current_epoch(state) + 1
         # [Modified in Gloas:EIP8061]
@@ -11732,7 +11870,7 @@
             # Read validator state
             is_validator_exited = False
             is_validator_withdrawn = False
-            validator_pubkeys = [v.pubkey for v in state.validators]
+            validator_pubkeys = [validator.pubkey for validator in state.validators]
             if deposit.pubkey in validator_pubkeys:
                 validator = state.validators[ValidatorIndex(validator_pubkeys.index(deposit.pubkey))]
                 is_validator_exited = validator.exit_epoch < FAR_FUTURE_EPOCH
@@ -11809,54 +11947,6 @@
             )
             signing_root = compute_signing_root(signed_header.message, domain)
             assert bls.Verify(proposer.pubkey, signing_root, signed_header.signature)
-
-        slash_validator(state, header_1.proposer_index)
-    </spec>
-
-- name: process_proposer_slashing#gloas
-  sources:
-    - file: packages/state-transition/src/block/processProposerSlashing.ts
-      search: export function processProposerSlashing(
-  spec: |
-    <spec fn="process_proposer_slashing" fork="gloas" hash="be35ae0b">
-    def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSlashing) -> None:
-        header_1 = proposer_slashing.signed_header_1.message
-        header_2 = proposer_slashing.signed_header_2.message
-
-        # Verify header slots match
-        assert header_1.slot == header_2.slot
-        # Verify header proposer indices match
-        assert header_1.proposer_index == header_2.proposer_index
-        # Verify the headers are different
-        assert header_1 != header_2
-        # Verify the proposer is slashable
-        proposer = state.validators[header_1.proposer_index]
-        assert is_slashable_validator(proposer, get_current_epoch(state))
-        # Verify signatures
-        for signed_header in (proposer_slashing.signed_header_1, proposer_slashing.signed_header_2):
-            domain = get_domain(
-                state, DOMAIN_BEACON_PROPOSER, compute_epoch_at_slot(signed_header.message.slot)
-            )
-            signing_root = compute_signing_root(signed_header.message, domain)
-            assert bls.Verify(proposer.pubkey, signing_root, signed_header.signature)
-
-        # [New in Gloas:EIP7732]
-        # Remove the BuilderPendingPayment corresponding to this proposal if it is
-        # still in the 2-epoch window. Only clear it when the slashed validator is
-        # the proposer associated with the payment; otherwise an unrelated same-slot
-        # equivocation could grief an honest proposer's payment.
-        slot = header_1.slot
-        proposal_epoch = compute_epoch_at_slot(slot)
-        if proposal_epoch == get_current_epoch(state):
-            payment_index = SLOTS_PER_EPOCH + slot % SLOTS_PER_EPOCH
-            payment = state.builder_pending_payments[payment_index]
-            if payment.proposer_index == header_1.proposer_index:
-                state.builder_pending_payments[payment_index] = BuilderPendingPayment.empty()
-        elif proposal_epoch == get_previous_epoch(state):
-            payment_index = slot % SLOTS_PER_EPOCH
-            payment = state.builder_pending_payments[payment_index]
-            if payment.proposer_index == header_1.proposer_index:
-                state.builder_pending_payments[payment_index] = BuilderPendingPayment.empty()
 
         slash_validator(state, header_1.proposer_index)
     </spec>
@@ -12228,7 +12318,7 @@
     - file: packages/state-transition/src/block/processSyncCommittee.ts
       search: export function processSyncAggregate(
   spec: |
-    <spec fn="process_sync_aggregate" fork="altair" hash="cda6498b">
+    <spec fn="process_sync_aggregate" fork="altair" hash="d9888799">
     def process_sync_aggregate(state: BeaconState, sync_aggregate: SyncAggregate) -> None:
         # Verify sync committee aggregate signature signing over the previous slot block root
         committee_pubkeys = state.current_sync_committee.pubkeys
@@ -12278,7 +12368,7 @@
         proposer_reward = participant_reward * PROPOSER_WEIGHT // (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
 
         # Apply participant and proposer rewards
-        all_pubkeys = [v.pubkey for v in state.validators]
+        all_pubkeys = [validator.pubkey for validator in state.validators]
         committee_indices = [
             ValidatorIndex(all_pubkeys.index(pubkey)) for pubkey in state.current_sync_committee.pubkeys
         ]
@@ -12419,7 +12509,7 @@
     - file: packages/state-transition/src/block/processWithdrawalRequest.ts
       search: export function processWithdrawalRequest(
   spec: |
-    <spec fn="process_withdrawal_request" fork="electra" hash="72409a67">
+    <spec fn="process_withdrawal_request" fork="electra" hash="8c3a4a20">
     def process_withdrawal_request(state: BeaconState, withdrawal_request: WithdrawalRequest) -> None:
         amount = withdrawal_request.amount
         is_full_exit_request = amount == FULL_EXIT_REQUEST_AMOUNT
@@ -12431,7 +12521,7 @@
         ):
             return
 
-        validator_pubkeys = [v.pubkey for v in state.validators]
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
         # Verify pubkey exists
         request_pubkey = withdrawal_request.validator_pubkey
         if request_pubkey not in validator_pubkeys:
@@ -13003,6 +13093,47 @@
         increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
     </spec>
 
+- name: slash_validator#gloas
+  sources:
+    - file: packages/state-transition/src/block/slashValidator.ts
+      search: export function slashValidator(
+  spec: |
+    <spec fn="slash_validator" fork="gloas" hash="b6ba992a">
+    def slash_validator(
+        state: BeaconState,
+        slashed_index: ValidatorIndex,
+        whistleblower_index: ValidatorIndex | None = None,
+    ) -> None:
+        """
+        Slash the validator with index ``slashed_index``.
+        """
+        epoch = get_current_epoch(state)
+        initiate_validator_exit(state, slashed_index)
+        validator = state.validators[slashed_index]
+        validator.slashed = Boolean(True)
+        validator.withdrawable_epoch = max(
+            validator.withdrawable_epoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR
+        )
+        state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effective_balance
+        slashing_penalty = validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA
+        decrease_balance(state, slashed_index, slashing_penalty)
+
+        # Apply proposer and whistleblower rewards
+        proposer_index = get_beacon_proposer_index(state)
+        if whistleblower_index is None:
+            whistleblower_index = proposer_index
+        whistleblower_reward = validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
+        proposer_reward = whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR
+        increase_balance(state, proposer_index, proposer_reward)
+        increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
+
+        # [New in Gloas:EIP7732]
+        # Remove pending builder payments for blocks proposed by the slashed validator
+        for payment_index, payment in enumerate(state.builder_pending_payments):
+            if payment.proposer_index == slashed_index:
+                state.builder_pending_payments[payment_index] = BuilderPendingPayment.empty()
+    </spec>
+
 - name: state_transition#phase0
   sources:
     - file: packages/state-transition/src/stateTransition.ts
@@ -13057,7 +13188,7 @@
     - file: packages/state-transition/src/slot/upgradeStateToAltair.ts
       search: function translateParticipation(
   spec: |
-    <spec fn="translate_participation" fork="altair" hash="da05eaba">
+    <spec fn="translate_participation" fork="altair" hash="43ddf49d">
     def translate_participation(
         state: BeaconState, pending_attestations: Sequence[phase0.PendingAttestation]
     ) -> None:
@@ -13073,7 +13204,9 @@
             epoch_participation = state.previous_epoch_participation
             committee = get_beacon_committee(state, data.slot, data.index)
             attesting_indices = {
-                index for i, index in enumerate(committee) if attestation.aggregation_bits[i]
+                validator_index
+                for index, validator_index in enumerate(committee)
+                if attestation.aggregation_bits[index]
             }
             for index in attesting_indices:
                 for flag_index in participation_flag_indices:
@@ -13162,14 +13295,14 @@
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: private addLatestMessage(
   spec: |
-    <spec fn="update_latest_messages" fork="phase0" hash="3da3b413">
+    <spec fn="update_latest_messages" fork="phase0" hash="87826836">
     def update_latest_messages(
         store: Store, attesting_indices: Sequence[ValidatorIndex], attestation: Attestation
     ) -> None:
         target = attestation.data.target
         beacon_block_root = attestation.data.beacon_block_root
         non_equivocating_attesting_indices = [
-            i for i in attesting_indices if i not in store.equivocating_indices
+            index for index in attesting_indices if index not in store.equivocating_indices
         ]
         for i in non_equivocating_attesting_indices:
             if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
@@ -13181,7 +13314,7 @@
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: private addLatestMessage(
   spec: |
-    <spec fn="update_latest_messages" fork="gloas" hash="c7de718c">
+    <spec fn="update_latest_messages" fork="gloas" hash="91f0190f">
     def update_latest_messages(
         store: Store, attesting_indices: Sequence[ValidatorIndex], attestation: Attestation
     ) -> None:
@@ -13189,7 +13322,7 @@
         beacon_block_root = attestation.data.beacon_block_root
         payload_present = attestation.data.index == 1
         non_equivocating_attesting_indices = [
-            i for i in attesting_indices if i not in store.equivocating_indices
+            index for index in attesting_indices if index not in store.equivocating_indices
         ]
         for i in non_equivocating_attesting_indices:
             if i not in store.latest_messages or slot > store.latest_messages[i].slot:
@@ -14402,8 +14535,12 @@
     - file: packages/state-transition/src/slot/upgradeStateToHeze.ts
       search: export function upgradeStateToHeze(
   spec: |
-    <spec fn="upgrade_to_heze" fork="heze" hash="0a9fa4ec">
+    <spec fn="upgrade_to_heze" fork="heze" hash="f1eba363">
     def upgrade_to_heze(pre: gloas.BeaconState) -> BeaconState:
+        # [New in Heze:EIP8015]
+        # Check that the old deposit mechanism has been disabled
+        assert pre.eth1_deposit_index == pre.deposit_requests_start_index
+
         epoch = gloas.get_current_epoch(pre)
         latest_execution_payload_bid = ExecutionPayloadBid(
             parent_block_hash=pre.latest_execution_payload_bid.parent_block_hash,
@@ -14436,9 +14573,12 @@
             block_roots=pre.block_roots,
             state_roots=pre.state_roots,
             historical_roots=pre.historical_roots,
-            eth1_data=pre.eth1_data,
-            eth1_data_votes=pre.eth1_data_votes,
-            eth1_deposit_index=pre.eth1_deposit_index,
+            # [Modified in Heze:EIP8015]
+            # Removed `eth1_data`
+            # [Modified in Heze:EIP8015]
+            # Removed `eth1_data_votes`
+            # [Modified in Heze:EIP8015]
+            # Removed `eth1_deposit_index`
             validators=pre.validators,
             balances=pre.balances,
             randao_mixes=pre.randao_mixes,
@@ -14456,7 +14596,8 @@
             next_withdrawal_index=pre.next_withdrawal_index,
             next_withdrawal_validator_index=pre.next_withdrawal_validator_index,
             historical_summaries=pre.historical_summaries,
-            deposit_requests_start_index=pre.deposit_requests_start_index,
+            # [Modified in Heze:EIP8015]
+            # Removed `deposit_requests_start_index`
             deposit_balance_to_consume=pre.deposit_balance_to_consume,
             exit_balance_to_consume=pre.exit_balance_to_consume,
             earliest_exit_epoch=pre.earliest_exit_epoch,
@@ -17615,7 +17756,7 @@
     - file: packages/beacon-node/src/chain/validation/syncCommitteeContributionAndProof.ts
       search: export async function validateSyncCommitteeGossipContributionAndProof(
   spec: |
-    <spec fn="validate_sync_committee_contribution_and_proof_gossip" fork="altair" hash="416b8ead">
+    <spec fn="validate_sync_committee_contribution_and_proof_gossip" fork="altair" hash="aeda6823">
     def validate_sync_committee_contribution_and_proof_gossip(
         seen: Seen,
         store: Store,
@@ -17707,7 +17848,9 @@
         # and aggregate pubkey derived from the participation info in aggregation_bits
         # for the subcommittee specified by the contribution.subcommittee_index
         participant_pubkeys = [
-            subcommittee_pubkeys[i] for i, bit in enumerate(contribution.aggregation_bits) if bit
+            subcommittee_pubkeys[index]
+            for index, bit in enumerate(contribution.aggregation_bits)
+            if bit
         ]
         domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(contribution.slot))
         signing_root = compute_signing_root(contribution.beacon_block_root, domain)
@@ -18002,6 +18145,40 @@
         # [REJECT] The block contains no deposits
         if len(body.deposits) != 0:
             raise GossipReject("block must not contain deposits")
+
+        # [REJECT] The voluntary exit count is within the limit
+        if len(body.voluntary_exits) > MAX_VOLUNTARY_EXITS:
+            raise GossipReject("too many voluntary exits")
+
+        # [REJECT] The BLS to execution change count is within the limit
+        if len(body.bls_to_execution_changes) > MAX_BLS_TO_EXECUTION_CHANGES:
+            raise GossipReject("too many bls to execution changes")
+
+        # [REJECT] The payload attestation count is within the limit
+        if len(body.payload_attestations) > MAX_PAYLOAD_ATTESTATIONS:
+            raise GossipReject("too many payload attestations")
+    </spec>
+
+- name: verify_block_body_operation_limits#heze
+  sources: []
+  spec: |
+    <spec fn="verify_block_body_operation_limits" fork="heze" hash="e26d062e">
+    def verify_block_body_operation_limits(body: BeaconBlockBody) -> None:
+        """
+        Verify that each block body operation count is within its limit.
+        Raises GossipReject on validation failure.
+        """
+        # [REJECT] The proposer slashing count is within the limit
+        if len(body.proposer_slashings) > MAX_PROPOSER_SLASHINGS:
+            raise GossipReject("too many proposer slashings")
+
+        # [REJECT] The attester slashing count is within the limit
+        if len(body.attester_slashings) > MAX_ATTESTER_SLASHINGS_ELECTRA:
+            raise GossipReject("too many attester slashings")
+
+        # [REJECT] The attestation count is within the limit
+        if len(body.attestations) > MAX_ATTESTATIONS_ELECTRA:
+            raise GossipReject("too many attestations")
 
         # [REJECT] The voluntary exit count is within the limit
         if len(body.voluntary_exits) > MAX_VOLUNTARY_EXITS:
@@ -18386,10 +18563,10 @@
     - file: packages/utils/src/bytes/browser.ts
       search: export function xor(
   spec: |
-    <spec fn="xor" fork="phase0" hash="8548557e">
+    <spec fn="xor" fork="phase0" hash="070b7e83">
     def xor(bytes_1: Bytes32, bytes_2: Bytes32) -> Bytes32:
         """
         Return the exclusive-or of two 32-byte strings.
         """
-        return Bytes32(a ^ b for a, b in zip(bytes_1, bytes_2, strict=True))
+        return Bytes32(byte_1 ^ byte_2 for byte_1, byte_2 in zip(bytes_1, bytes_2, strict=True))
     </spec>
