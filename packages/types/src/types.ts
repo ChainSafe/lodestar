@@ -317,7 +317,7 @@ type TypesByFork = {
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: gloas.SSEPayloadAttributes;
     BlockContents: gloas.BlockContents;
-    SignedBlockContents: fulu.SignedBlockContents;
+    SignedBlockContents: {signedBlock: gloas.SignedBeaconBlock};
     ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
@@ -359,7 +359,7 @@ type TypesByFork = {
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: heze.SSEPayloadAttributes;
     BlockContents: heze.BlockContents;
-    SignedBlockContents: fulu.SignedBlockContents;
+    SignedBlockContents: {signedBlock: heze.SignedBeaconBlock};
     ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
