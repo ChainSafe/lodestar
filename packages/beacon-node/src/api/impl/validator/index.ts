@@ -1940,7 +1940,7 @@ export function getValidatorApi(
           Array.from(new Set(subscriptions.map(({validatorIndex}) => validatorIndex)))
         );
       } catch (e) {
-        logger.error("Error tracking attached validators", {count: subscriptions.length}, e as Error);
+        logger.warn("Error tracking attached validators", {count: subscriptions.length}, e as Error);
       }
 
       notWhileSyncing(chain, sync.state);

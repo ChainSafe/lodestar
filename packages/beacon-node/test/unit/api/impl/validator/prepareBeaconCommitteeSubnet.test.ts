@@ -58,6 +58,6 @@ describe("api/validator - prepareBeaconCommitteeSubnet", () => {
     });
 
     expect(modules.network.prepareBeaconCommitteeSubnets).toHaveBeenCalledOnce();
-    expect(modules.logger.error).toHaveBeenCalledOnce();
+    expect(modules.logger.warn).toHaveBeenCalledOnce();
   });
 });
