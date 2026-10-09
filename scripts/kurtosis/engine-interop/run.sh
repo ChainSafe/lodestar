@@ -61,11 +61,14 @@ $FORKS
   seconds_per_slot: 6
   num_validator_keys_per_node: 64
 additional_services: []
+# fixed host ports below the ephemeral range, so neither the first bind nor a container restart races the kernel for them
 port_publisher:
   el:
     enabled: true
+    public_port_start: 20000
   cl:
     enabled: true
+    public_port_start: 21000
 snooper_params:
   enabled: false
 persistent: true
@@ -108,12 +111,23 @@ snapshot() {
 }
 
 log "starting enclave $ENCLAVE ($EL_IMAGE, lodestar $LODESTAR_IMAGE)"
-kurtosis enclave rm -f "$ENCLAVE" >/dev/null 2>&1 || true
-if ! kurtosis run --enclave "$ENCLAVE" "$ETHEREUM_PACKAGE" --args-file "$OUT_DIR/args.yaml" > "$OUT_DIR/kurtosis-run.log" 2>&1; then
-  log "kurtosis run failed, see kurtosis-run.log"
-  tail -40 "$OUT_DIR/kurtosis-run.log"
-  exit 1
-fi
+# kurtosis occasionally loses track of the short-lived key generation service while bringing the enclave up
+# ("has Docker resources but not a container"), a fresh engine and a second attempt get past it
+for attempt in 1 2; do
+  kurtosis enclave rm -f "$ENCLAVE" >/dev/null 2>&1 || true
+  if kurtosis run --enclave "$ENCLAVE" "$ETHEREUM_PACKAGE" --args-file "$OUT_DIR/args.yaml" > "$OUT_DIR/kurtosis-run.log" 2>&1; then
+    break
+  fi
+  if [ "$attempt" = "2" ]; then
+    log "kurtosis run failed twice, see kurtosis-run.log"
+    tail -40 "$OUT_DIR/kurtosis-run.log"
+    exit 1
+  fi
+  log "kurtosis run failed, restarting the engine and retrying"
+  cp "$OUT_DIR/kurtosis-run.log" "$OUT_DIR/kurtosis-run-attempt1.log"
+  kurtosis enclave rm -f "$ENCLAVE" >/dev/null 2>&1 || true
+  kurtosis engine restart >/dev/null 2>&1 || true
+done
 
 CL1=$(container cl-1-lodestar); CL2=$(container cl-2-lodestar); EL1=$(container el-1-); EL2=$(container el-2-)
 if [ -z "$CL1" ] || [ -z "$CL2" ] || [ -z "$EL1" ] || [ -z "$EL2" ]; then
@@ -144,8 +158,15 @@ if [ "$SCENARIO" = "fulu" ]; then
   log "restarting $EL2 at slot $RESTART_SLOT"
   date -u +%Y-%m-%dT%H:%M:%S.000Z > "$OUT_DIR/restart.time"
   docker restart "$EL2" > /dev/null
-  # the first seconds after a restart may legitimately go over JSON-RPC until REST is probed again
-  sleep 30
+  # judge again once node 2 sees its EL back and in sync, plus one REST re-probe interval
+  start=$(date +%s)
+  until [ "$(beacon /eth/v1/node/syncing | node -pe 'const d=JSON.parse(require("fs").readFileSync(0)).data; d.el_offline === false && d.is_optimistic === false' 2>/dev/null)" = "true" ]; do
+    [ $(( $(date +%s) - start )) -ge 240 ] && { log "$EL2 did not come back within 240s"; exit 1; }
+    sleep 5
+  done
+  sleep 12
+  beacon /eth/v1/beacon/headers/head | node -pe 'JSON.parse(require("fs").readFileSync(0)).data.header.message.slot' > "$OUT_DIR/restart-end.slot"
+  log "$EL2 back after $(( $(date +%s) - start ))s, head slot $(cat "$OUT_DIR/restart-end.slot")"
   snapshot restart
   wait_finalized $(( FINALITY_TARGET + 1 )) 240
   snapshot after-restart

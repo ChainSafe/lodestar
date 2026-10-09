@@ -7,13 +7,16 @@ node 1 is a non-supernode that fetches blobs from its EL, node 2 a supernode) an
 - `fulu`: electra and fulu at genesis, finality 3, then the second EL is restarted and finality has to advance again
 - `gloas`: fulu at genesis and gloas at epoch 2, finality 5, archived payload envelopes rebuilt from EL bodies
 
-Everything before the first finalized epoch is startup noise and is not judged. From then on a run fails when:
+Everything before the first finalized epoch is startup noise and is not judged, and so is the window between the
+EL restart and node 2 reporting its EL back in sync. From then on a run fails when:
 
-- finality is not reached in time, or a slot is missed after the first epoch
-- an engine request errors, or `newPayload` or `forkchoiceUpdated` returns anything but `VALID`
+- finality is not reached in time, or a slot is missed
+- an engine request errors (the capabilities probe aside), or `newPayload` or `forkchoiceUpdated` returns anything but
+  `VALID`
 - the execution module logs a warning or error, including every REST to JSON-RPC fallback
-- a node that negotiated REST sends a request over JSON-RPC, or the two nodes settled on different transports
-- a `getBlobs` call fails, or the supernode never resolved blobs through the engine API
+- the EL advertises REST but a Lodestar build with the REST transport stayed on JSON-RPC, a node that negotiated REST
+  sends a request over JSON-RPC, or the two nodes settled on different transports
+- no blob was included, no `getBlobs` request was made, or a `getBlobs` call fails
 - in `gloas`, the head is not on the gloas fork, or an archived envelope is not rebuilt through EL bodies
 
 The EL images float on purpose, the point is to find interop problems before a release. Logs, metrics snapshots,

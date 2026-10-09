@@ -24,8 +24,6 @@ const RESTART_SLOT = process.env.RESTART_SLOT || "";
 const SLOTS_PER_EPOCH = 8;
 const GLOAS_FORK_EPOCH = 2;
 const ENVELOPE_SLOTS = [16, 17, 18, 19, 20];
-// run.sh gives the restarted EL 30 s before judging again, a proposal of its node in that window is lost
-const RESTART_GRACE_SLOTS = 5;
 
 const failures = [];
 const notes = [];
@@ -96,6 +94,9 @@ const end = [snap("end", 1), snap("end", 2)];
 const startTime = read("snapshot-start.time").trim();
 const restartTime = readOptional("restart.time")?.trim();
 const restartSnapTime = readOptional("snapshot-restart.time")?.trim();
+const restartEndSlot = Number(readOptional("restart-end.slot")?.trim() ?? RESTART_SLOT);
+// the counter only exists in builds with the REST transport, older images cannot be expected to negotiate it
+const buildHasRest = read("metrics-end-cl2.txt").includes("lodestar_execution_engine_api_requests_total");
 
 // identity of the EL, through REST when it has it and JSON-RPC otherwise
 const capabilities = await engineGet("/engine/v1/capabilities");
@@ -123,7 +124,10 @@ const transportOf = (m) => {
 const transports = [transportOf(end[0]), transportOf(end[1])];
 if (transports[0] !== transports[1]) fail(`nodes settled on different transports: ${transports.join(" / ")}`);
 const transport = transports[1];
-if (elHasRest && transport !== "ssz") notes.push("EL advertises REST but Lodestar used JSON-RPC");
+if (elHasRest && transport !== "ssz") {
+  if (buildHasRest) fail("EL advertises REST but Lodestar used JSON-RPC");
+  else notes.push("EL advertises REST but this Lodestar build has no REST transport");
+}
 if (!elHasRest) notes.push(`capabilities probe: ${capabilities.status} ${capabilities.contentType}`);
 
 // request deltas after the first finalized epoch, and again after the restart window
@@ -138,7 +142,8 @@ for (const [name, before, after] of windows) {
       const rpc = delta(b, a, "lodestar_execution_engine_api_requests_total", (k) => label(k, "transport") === "json-rpc");
       if (rpc > 0) fail(`${who}: ${rpc} requests fell back to JSON-RPC`);
     }
-    const errors = delta(b, a, "lodestar_execution_engine_http_client_request_errors_total");
+    // the capabilities probe answers 404 on an EL without REST and is judged through the transport instead
+    const errors = delta(b, a, "lodestar_execution_engine_http_client_request_errors_total", (k) => label(k, "routeId") !== "getCapabilities");
     if (errors > 0) fail(`${who}: ${errors} engine request errors`);
     const badPayloads = delta(b, a, "lodestar_execution_engine_notify_new_payload_result_total", (k) => label(k, "result") !== "VALID");
     if (badPayloads > 0) fail(`${who}: ${badPayloads} newPayload results other than VALID`);
@@ -148,9 +153,12 @@ for (const [name, before, after] of windows) {
     if (failedBlobs > 0) fail(`${who}: ${failedBlobs} getBlobs calls failed`);
   }
 }
-const resolvedBlobs = sum(metric(end[1], "lodestar_data_column_engine_result_total").filter(([k]) => label(k, "result") === "success_resolved"));
-if (resolvedBlobs === 0) notes.push("supernode never resolved blobs through the engine API");
-const nullBlobs = sum(metric(end[0], "lodestar_data_column_engine_result_total").filter(([k]) => label(k, "result") === "null_response"));
+const getBlobsRequests = delta(start[0], end[0], "lodestar_execution_engine_http_client_request_time_seconds_count", (k) => /getBlobs/.test(label(k, "routeId") ?? "")) +
+  delta(start[1], end[1], "lodestar_execution_engine_http_client_request_time_seconds_count", (k) => /getBlobs/.test(label(k, "routeId") ?? ""));
+if (getBlobsRequests === 0) fail("no getBlobs request was made after the first finalized epoch");
+const resolvedBlobs = delta(start[1], end[1], "lodestar_data_column_engine_result_total", (k) => label(k, "result") === "success_resolved");
+if (resolvedBlobs === 0) notes.push("supernode resolved no blobs through the engine API");
+const nullBlobs = delta(start[0], end[0], "lodestar_data_column_engine_result_total", (k) => label(k, "result") === "null_response");
 
 // execution module log lines after the judged window starts, ignoring the restart itself
 const logFailures = (file) => {
@@ -181,7 +189,7 @@ const missed = [];
 for (let slot = 1; slot <= head; slot++) {
   const block = await beacon(API2, `/eth/v2/beacon/blocks/${slot}`);
   if (block.status !== 200) {
-    const inRestartWindow = RESTART_SLOT !== "" && slot >= Number(RESTART_SLOT) && slot <= Number(RESTART_SLOT) + RESTART_GRACE_SLOTS;
+    const inRestartWindow = RESTART_SLOT !== "" && slot >= Number(RESTART_SLOT) && slot <= restartEndSlot;
     if (slot >= SLOTS_PER_EPOCH && !inRestartWindow) missed.push(slot);
     continue;
   }
@@ -194,6 +202,7 @@ for (let slot = 1; slot <= head; slot++) {
   if (commitments.length > 0) blobBlocks[node]++;
 }
 if (missed.length > 0) fail(`missed slots after the first epoch: ${missed.join(",")}`);
+if (blobs === 0) fail("no blob was included, the spammer did not run");
 
 // gloas: the fork happened and archived envelopes are rebuilt from EL bodies
 let envelopes = "";
@@ -224,6 +233,7 @@ const result = {
   verdict,
   transport,
   elHasRest,
+  buildHasRest,
   capabilities: capabilities.json,
   finalized,
   head,
@@ -242,8 +252,8 @@ writeFileSync(path.join(OUT_DIR, "result.json"), JSON.stringify(result, null, 2)
 
 const details = [
   `finality ${finalized}, head ${head}, blocks ${proposals[0]}/${proposals[1]}, ${blobs} blobs in ${blobBlocks[0]}/${blobBlocks[1]} blocks`,
-  `supernode resolved ${resolvedBlobs} getBlobs, non-supernode got ${nullBlobs} null`,
-  RESTART_SLOT ? `EL restarted at slot ${RESTART_SLOT}` : "",
+  `${getBlobsRequests} getBlobs requests, supernode resolved ${resolvedBlobs}, non-supernode got ${nullBlobs} null`,
+  RESTART_SLOT ? `EL restarted at slot ${RESTART_SLOT}, judged again from slot ${restartEndSlot}` : "",
   envelopes,
   ...notes,
 ]
