@@ -9,10 +9,6 @@ on:
         required: true
   schedule:
     - cron: "0 4 * * *" # 4 am UTC, after the ethpandaops images are rebuilt
-  pull_request:
-    paths:
-      - ".github/workflows/engine-interop.yml"
-      - "scripts/kurtosis/engine-interop/**"
 
 concurrency:
   group: engine-interop-${{ github.ref }}
