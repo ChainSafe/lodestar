@@ -1643,6 +1643,10 @@ export class BeaconChain implements IBeaconChain {
         shufflingDependentRoot,
         stateDecisionRoot,
       });
+
+      throw Error(
+        `Shuffling decision root mismatch epoch=${attEpoch} slot=${attHeadBlock.slot} root=${attHeadBlock.blockRoot} expected=${shufflingDependentRoot} actual=${stateDecisionRoot}`
+      );
     }
 
     // resolve the promise to unblock other calls of the same epoch and dependent root
