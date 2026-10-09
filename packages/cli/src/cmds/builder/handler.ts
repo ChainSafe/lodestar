@@ -42,7 +42,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   }
 
   const abortController = new AbortController();
-  const bidRuntime = getBuilderBidOptions(args, config, abortController.signal);
+  const bidRuntime = getBuilderBidOptions(args, config, abortController.signal, logger);
 
   const keypair = await loadBuilderKeypair(logger, args.keystore, args.keystorePassword, args.builderPubkey);
 

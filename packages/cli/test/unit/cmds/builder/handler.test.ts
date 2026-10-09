@@ -87,6 +87,7 @@ describe("cmds / builder / args handler", () => {
     const options = init.mock.calls[0][0];
     expect(options.bidRuntime).toBe(bidRuntime);
     expect(getBidOptions.mock.calls[0][2]).toBe(options.abortController.signal);
+    expect(getBidOptions.mock.calls[0][3]).toBe(options.logger);
     expect(options.abortController.signal.aborted).toBe(true);
   });
 

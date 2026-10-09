@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import {type BuilderBidOptions, EnginePayloadSource, ProportionalBidPolicy} from "@lodestar/builder";
 import type {ChainForkConfig} from "@lodestar/config";
+import type {Logger} from "@lodestar/logger";
 import {MIN_DEPOSIT_AMOUNT} from "@lodestar/params";
 import {fromHex, isValidHttpUrl} from "@lodestar/utils";
 import {YargsError} from "../../util/errors.js";
@@ -11,7 +12,8 @@ import {type IBuilderCliArgs, builderBidDefaultOptions} from "./options.js";
 export function getBuilderBidOptions(
   args: IBuilderCliArgs,
   config: ChainForkConfig,
-  signal: AbortSignal
+  signal: AbortSignal,
+  logger: Logger
 ): BuilderBidOptions | undefined {
   if (!args.bid) return undefined;
   signal.throwIfAborted();
@@ -62,7 +64,7 @@ export function getBuilderBidOptions(
     throw new YargsError("Unable to read jwtSecret. Expected a 256-bit hex JWT secret");
   }
   return {
-    source: new EnginePayloadSource("local", createPayloadSourceEngine({url, jwtSecret, signal})),
+    source: new EnginePayloadSource("local", createPayloadSourceEngine({url, jwtSecret, signal, logger})),
     policy,
     orchestration: {getPayloadTimeout},
     inputs: {deadlineBps, maxInputsPerSlot: 8},
