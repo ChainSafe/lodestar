@@ -333,7 +333,9 @@ export function initializeBeaconStateFromEth1(
     stateElectra.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
       ssz.electra.ExecutionPayloadHeader.defaultViewDU();
-    stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
+    if (fork < ForkSeq.heze) {
+      stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
+    }
   }
 
   if (fork >= ForkSeq.fulu) {

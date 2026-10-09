@@ -375,8 +375,10 @@ describe("Heze EIP-8015 genesis", () => {
     expect(state.validators.length).toBe(1);
     expect(state.randaoMixes.get(0)).toEqual(blockHash);
     expect(state.fork.currentVersion).toEqual(hezeConfig.HEZE_FORK_VERSION);
-    expect(Object.hasOwn(state, "eth1Data")).toBe(false);
-    expect(Object.hasOwn(state.toValue(), "eth1Data")).toBe(false);
+    for (const field of ["eth1Data", "eth1DataVotes", "eth1DepositIndex", "depositRequestsStartIndex"]) {
+      expect(Object.hasOwn(state, field), field).toBe(false);
+      expect(Object.hasOwn(state.toValue(), field), field).toBe(false);
+    }
   });
 
   it("initializeBeaconStateFromEth1 at a Gloas genesis closes the legacy deposit queue for the Heze upgrade", () => {
