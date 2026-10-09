@@ -228,6 +228,9 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get eth1Data(): phase0.Eth1Data {
+    if (this.forkSeq >= ForkSeq.heze) {
+      throw new Error("eth1Data was removed from the beacon state in Heze");
+    }
     if (this.cachedEth1Data === null) {
       this.cachedEth1Data = this.binding.eth1Data;
     }

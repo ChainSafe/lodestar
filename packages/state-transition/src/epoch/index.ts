@@ -140,7 +140,9 @@ export function processEpoch(
     timer?.();
   }
 
-  processEth1DataReset(state, cache);
+  if (fork < ForkSeq.heze) {
+    processEth1DataReset(state, cache);
+  }
 
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
