@@ -1,5 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
+import {Db} from "@lodestar/db";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
 import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
@@ -7,6 +8,7 @@ import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
+import {ProposerPreferencesRepository} from "./repositories/proposerPreferences.js";
 import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
@@ -15,6 +17,7 @@ import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.
 
 export type BuilderModules = {
   opts: BuilderOptions;
+  proposerPreferencesRepository: ProposerPreferencesRepository;
   builderSigner: BuilderSigner;
   blockObserver: BlockObserver;
   builderStatusTracker: BuilderStatusTracker;
@@ -27,6 +30,7 @@ export type BuilderModules = {
 export type BuilderOptions = {
   logger: Logger;
   config: ChainForkConfig;
+  db: Db;
   keypair: Keypair;
   abortController: AbortController;
   api: ApiClient;
@@ -41,6 +45,7 @@ export type BuilderOptions = {
 export class Builder {
   readonly builderSigner: BuilderSigner;
   readonly proposerPreferencesTracker: ProposerPreferencesTracker;
+  private readonly proposerPreferencesRepository: ProposerPreferencesRepository;
   private readonly blockObserver: BlockObserver;
   private readonly builderStatusTracker: BuilderStatusTracker;
   private readonly controller: AbortController;
@@ -52,6 +57,7 @@ export class Builder {
 
   constructor({
     opts,
+    proposerPreferencesRepository,
     builderSigner,
     blockObserver,
     builderStatusTracker,
@@ -60,6 +66,7 @@ export class Builder {
     index,
     payloadStore,
   }: BuilderModules) {
+    this.proposerPreferencesRepository = proposerPreferencesRepository;
     this.builderSigner = builderSigner;
     this.blockObserver = blockObserver;
     this.builderStatusTracker = builderStatusTracker;
@@ -113,12 +120,15 @@ export class Builder {
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
     const blockObserver = new BlockObserver(config, logger, api);
+    const proposerPreferencesRepository = new ProposerPreferencesRepository(config, opts.db);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    await proposerPreferencesTracker.fromPersisted(proposerPreferencesRepository, clock.getCurrentSlot());
 
     const payloadStore = new PayloadStore();
 
     return new Builder({
       opts,
+      proposerPreferencesRepository,
       builderSigner,
       blockObserver,
       builderStatusTracker,
@@ -221,7 +231,9 @@ export class Builder {
     }
   }
 
+  /** Persists in-memory data to the DB, the caller is responsible for closing the DB afterwards */
   async close(): Promise<void> {
     this.controller.abort();
+    await this.proposerPreferencesTracker.toPersisted(this.proposerPreferencesRepository);
   }
 }

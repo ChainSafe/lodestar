@@ -7,6 +7,7 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
 import {Builder, BuilderModules} from "../../src/builder.js";
+import {ProposerPreferencesRepository} from "../../src/repositories/proposerPreferences.js";
 import {BlockObserver, ObservedBlock} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
@@ -14,6 +15,7 @@ import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
 import {ClockMock} from "./utils/clock.js";
+import {startTmpDb} from "./utils/db.js";
 import {getMockedLogger} from "./utils/logger.js";
 import {mockBuiltPayload} from "./utils/payload.js";
 
@@ -26,8 +28,11 @@ describe("Builder", () => {
   let controller: AbortController;
   let clock: ClockMock;
   let modules: BuilderModules;
+  let closeDb: () => Promise<void>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const {db, close} = await startTmpDb();
+    closeDb = close;
     const config = getConfig(ForkName.gloas);
     logger = getMockedLogger();
     api = getApiClientStub();
@@ -40,12 +45,14 @@ describe("Builder", () => {
       opts: {
         logger,
         config,
+        db,
         keypair,
         abortController: controller,
         api,
         executionFeeRecipient: Buffer.alloc(20),
         metrics: null,
       },
+      proposerPreferencesRepository: new ProposerPreferencesRepository(config, db),
       builderSigner: new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair),
       builderStatusTracker: new BuilderStatusTracker(api, logger, 1, null),
       blockObserver: new BlockObserver(config, logger, api),
@@ -56,8 +63,9 @@ describe("Builder", () => {
     };
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     controller.abort();
+    await closeDb();
     vi.restoreAllMocks();
   });
 
@@ -234,6 +242,19 @@ describe("Builder", () => {
     controller.abort();
     new Builder(modules);
     expect(api.events.eventstream).not.toHaveBeenCalled();
+  });
+
+  it("persists the tracked preferences on close", async () => {
+    const builder = new Builder(modules);
+    const {onEvent} = api.events.eventstream.mock.calls[0][0];
+    const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+    preferences.message.proposalSlot = 2;
+    onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: preferences}});
+
+    await builder.close();
+    const persisted = await modules.proposerPreferencesRepository.values();
+    expect(persisted).toHaveLength(1);
+    expect(ssz.gloas.SignedProposerPreferences.equals(persisted[0], preferences)).toBe(true);
   });
 
   it("ignores both topics after shutdown", async () => {

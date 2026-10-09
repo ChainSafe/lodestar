@@ -50,6 +50,7 @@
     "@chainsafe/ssz": "^1.8.1",
     "@lodestar/api": "workspace:^",
     "@lodestar/config": "workspace:^",
+    "@lodestar/db": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/state-transition": "workspace:^",
     "@lodestar/types": "workspace:^",

@@ -2,12 +2,13 @@ import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {RegistryMetricCreator, collectNodeJSMetrics, getHttpMetricsServer} from "@lodestar/beacon-node";
 import {Builder, getMetrics} from "@lodestar/builder";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";
-import {cleanOldLogFiles, onGracefulShutdown, parseFeeRecipient, parseLoggerArgs} from "../../util/index.js";
+import {cleanOldLogFiles, mkdir, onGracefulShutdown, parseFeeRecipient, parseLoggerArgs} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs, builderMetricsDefaultOptions} from "./options.js";
@@ -71,15 +72,25 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
 
   logger.info("Beacon node", {beaconNode: toPrintableUrl(args.beaconNodeUrl), timeoutMs: args.requestTimeout});
 
+  const dbPath = path.join(globalPaths.dataDir, "builder-db");
+  logger.info("Connecting to LevelDB database", {path: dbPath});
+  mkdir(dbPath);
+  const db = await LevelDbController.create({name: dbPath}, {metrics: null, logger});
+
   const builder = await Builder.init({
     keypair,
     logger,
     config,
+    db,
     abortController,
     api,
     executionFeeRecipient: fromHex(executionFeeRecipient),
     metrics,
   });
 
-  onGracefulShutdownCbs.push(() => builder.close());
+  // Close the builder before the database to persist its in-memory data
+  onGracefulShutdownCbs.push(async () => {
+    await builder.close();
+    await db.close();
+  });
 }

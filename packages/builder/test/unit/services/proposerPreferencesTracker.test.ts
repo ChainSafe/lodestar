@@ -1,8 +1,11 @@
 import {describe, expect, it} from "vitest";
+import {config} from "@lodestar/config/default";
 import type {RootHex} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {ProposerPreferencesRepository} from "../../../src/repositories/proposerPreferences.js";
 import {ProposerPreferencesTracker} from "../../../src/services/proposerPreferencesTracker.js";
+import {startTmpDb} from "../utils/db.js";
 
 describe("ProposerPreferencesTracker", () => {
   it("returns preferences only for the exact slot and dependent root", () => {
@@ -49,6 +52,30 @@ describe("ProposerPreferencesTracker", () => {
     expect(tracker.get(4, root(2))).not.toBeNull();
     expect(tracker.get(5, root(3))).not.toBeNull();
     expect(tracker.prune(4)).toBe(0);
+  });
+
+  it("restores the preferences of upcoming slots from the db", async () => {
+    const {db, close} = await startTmpDb();
+    try {
+      const repo = new ProposerPreferencesRepository(config, db);
+      const tracker = new ProposerPreferencesTracker();
+      tracker.onProposerPreferences(preferences(10, 1, 2));
+      tracker.onProposerPreferences(preferences(10, 2, 3));
+      const upcoming = preferences(11, 1, 4);
+      tracker.onProposerPreferences(upcoming);
+      await tracker.toPersisted(repo);
+      expect(await repo.keys()).toHaveLength(3);
+
+      const restored = new ProposerPreferencesTracker();
+      await restored.fromPersisted(repo, 11);
+      expect(restored.getAll()).toHaveLength(1);
+      expect(ssz.gloas.SignedProposerPreferences.equals(restored.getAll()[0], upcoming)).toBe(true);
+
+      await restored.toPersisted(repo);
+      expect(await repo.keys()).toHaveLength(1);
+    } finally {
+      await close();
+    }
   });
 });
 

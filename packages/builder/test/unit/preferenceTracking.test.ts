@@ -1,4 +1,4 @@
-import {describe, expect, it, vi} from "vitest";
+import {describe, expect, it, onTestFinished, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
@@ -7,6 +7,7 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {Builder, BuilderOptions} from "../../src/builder.js";
+import {ProposerPreferencesRepository} from "../../src/repositories/proposerPreferences.js";
 import {BlockObserver} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
@@ -14,10 +15,13 @@ import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
 import {ClockMock} from "./utils/clock.js";
+import {startTmpDb} from "./utils/db.js";
 import {getMockedLogger} from "./utils/logger.js";
 
 describe("Builder preference tracking", () => {
   it("subscribes, retains preferences, prunes on slot ticks and aborts on close", async () => {
+    const {db, close: closeDb} = await startTmpDb();
+    onTestFinished(closeDb);
     const config = getConfig(ForkName.gloas);
     const logger = getMockedLogger();
     const api = getApiClientStub();
@@ -34,6 +38,7 @@ describe("Builder preference tracking", () => {
     const opts: BuilderOptions = {
       logger,
       config,
+      db,
       keypair,
       abortController: controller,
       api,
@@ -43,6 +48,7 @@ describe("Builder preference tracking", () => {
     const clockStart = vi.spyOn(clock, "start");
     const builder = new Builder({
       opts,
+      proposerPreferencesRepository: new ProposerPreferencesRepository(config, db),
       builderSigner,
       blockObserver,
       builderStatusTracker,

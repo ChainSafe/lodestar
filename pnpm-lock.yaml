@@ -396,6 +396,9 @@ importers:
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/db':
+        specifier: workspace:^
+        version: link:../db
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
