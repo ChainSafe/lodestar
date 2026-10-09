@@ -286,10 +286,20 @@ export async function produceBlockBody<T extends BlockType>(
     // this into a completely separate function and have pre/post gloas more separated
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
-    // TODO GLOAS: post-Gloas, proposer feeRecipient is also carried (signed) in
-    // ProposerPreferencesPool. Consider using this unified cache instead
-    // see https://github.com/ChainSafe/lodestar/issues/9379
-    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
+    const pooledPreferences = getPooledProposerPreferences(this, blockSlot, parentBlock.blockRoot);
+    const feeRecipient =
+      requestedFeeRecipient ??
+      (pooledPreferences !== null
+        ? toHex(pooledPreferences.feeRecipient)
+        : this.beaconProposerCache.getOrDefault(proposerIndex));
+    const feeRecipientType = requestedFeeRecipient
+      ? "requested"
+      : pooledPreferences !== null
+        ? "preferences"
+        : this.beaconProposerCache.get(proposerIndex)
+          ? "cached"
+          : "default";
+    Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
     const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
 
@@ -974,9 +984,8 @@ function preparePayloadAttributes(
  * Resolve the proposer's preferred (target) gas limit for the Gloas `PayloadAttributesV4`
  * `targetGasLimit` field (consensus-specs#5235, execution-apis#796).
  *
- * Sourced from the `SignedProposerPreferences` the proposer's VC submitted to the pool
- * (same `(slot, dependent_root)` lookup as gossip bid validation). When no matching
- * preferences are pooled, target the parent payload's gas limit so the gas limit stays
+ * Sourced from the `SignedProposerPreferences` the proposer's VC submitted to the pool. When no
+ * matching preferences are pooled, target the parent payload's gas limit so the gas limit stays
  * unchanged (`is_gas_limit_target_compatible` then requires `gas_limit == parent_gas_limit`).
  *
  * The parent payload's gas_limit is read from fork choice — the variant matching
@@ -991,26 +1000,9 @@ function getProposerTargetGasLimit(
   parentBlockHash: Bytes32
 ): bigint {
   const parentBlockRootHex = toRootHex(parentBlockRoot);
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
-  const dependentRootHex = (() => {
-    if (parentBlock === null) {
-      return null;
-    }
-    try {
-      return getShufflingDependentRoot(
-        chain.forkChoice,
-        computeEpochAtSlot(prepareSlot),
-        computeEpochAtSlot(parentBlock.slot),
-        parentBlock
-      );
-    } catch {
-      return null;
-    }
-  })();
-
-  const pref = dependentRootHex !== null ? chain.proposerPreferencesPool.get(prepareSlot, dependentRootHex) : null;
-  if (pref !== null) {
-    return pref.message.targetGasLimit;
+  const preferences = getPooledProposerPreferences(chain, prepareSlot, parentBlockRootHex);
+  if (preferences !== null) {
+    return preferences.targetGasLimit;
   }
 
   const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
@@ -1020,6 +1012,35 @@ function getProposerTargetGasLimit(
     );
   }
   return BigInt(parentPayloadVariant.executionPayloadGasLimit);
+}
+
+/**
+ * The preferences the proposer of `slot` signed for the branch of `parentBlockRoot`, the same
+ * `(slot, dependent_root)` lookup as gossip bid validation. Null if none are pooled.
+ */
+export function getPooledProposerPreferences(
+  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
+  slot: Slot,
+  parentBlockRootHex: RootHex
+): gloas.ProposerPreferences | null {
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+  if (parentBlock === null) {
+    return null;
+  }
+
+  let dependentRootHex: RootHex;
+  try {
+    dependentRootHex = getShufflingDependentRoot(
+      chain.forkChoice,
+      computeEpochAtSlot(slot),
+      computeEpochAtSlot(parentBlock.slot),
+      parentBlock
+    );
+  } catch {
+    return null;
+  }
+
+  return chain.proposerPreferencesPool.get(slot, dependentRootHex)?.message ?? null;
 }
 
 export async function produceCommonBlockBody<T extends BlockType>(

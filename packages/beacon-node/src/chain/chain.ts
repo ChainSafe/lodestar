@@ -1936,6 +1936,22 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  async updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void> {
+    const previousValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
+
+    for (const validatorIndex of validatorIndices) {
+      this.beaconProposerCache.touch(epoch, validatorIndex);
+    }
+
+    const newValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
+
+    // Only update validator custody if we discovered new validators
+    if (newValidatorCount > previousValidatorCount) {
+      const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+      await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
+    }
+  }
+
   private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithHex): Promise<void> {
     if (this.custodyConfig.targetCustodyGroupCount === this.config.NUMBER_OF_CUSTODY_GROUPS) {
       // Custody requirements can only be increased, we can disable dynamic custody updates

@@ -1943,6 +1943,11 @@ export function getValidatorApi(
         }))
       );
 
+      await chain.updateAttachedValidators(
+        chain.clock.currentEpoch,
+        Array.from(new Set(subscriptions.map(({validatorIndex}) => validatorIndex)))
+      );
+
       // TODO:
       // If the discovery mechanism isn't disabled, attempt to set up a peer discovery for the
       // required subnets.
