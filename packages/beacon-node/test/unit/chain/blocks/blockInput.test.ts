@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkName, ForkPostCapella, ForkPostDeneb, ForkPreGloas} from "@lodestar/params";
+import {ForkName, ForkPostCapella, ForkPostDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {BeaconBlockBody, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -8,6 +8,7 @@ import {
   AddBlob,
   AddBlock,
   BlockInputBlobs,
+  BlockInputColumns,
   BlockInputSource,
   CreateBlockInputMeta,
   ForkBlobsDA,
@@ -120,6 +121,7 @@ describe("BlockInput", () => {
     for (const {name, blobCount, blobsBeforeBlock} of testCases) {
       it(name, () => {
         const {block, rootHex, blobSidecars} = buildBlockAndBlobsTestSet(ForkName.deneb, blobCount);
+        const firstSeenTimestampSec = 1000;
         const testArray: TestCaseArray[] = [];
         for (let i = 0; i < blobsBeforeBlock; i++) {
           const blobSidecar = blobSidecars.shift();
@@ -129,7 +131,7 @@ describe("BlockInput", () => {
             blockRootHex: rootHex,
             daOutOfRange: false,
             forkName: ForkName.deneb,
-            seenTimestampSec: Date.now() / 1000,
+            seenTimestampSec: firstSeenTimestampSec + testArray.length,
             source: BlockInputSource.gossip,
           } as AddBlob & CreateBlockInputMeta);
         }
@@ -139,7 +141,7 @@ describe("BlockInput", () => {
           daOutOfRange: false,
           forkName: ForkName.deneb,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now() / 1000,
+          seenTimestampSec: firstSeenTimestampSec + testArray.length,
         } as AddBlock<ForkBlobsDA> & CreateBlockInputMeta);
         for (const blobSidecar of blobSidecars) {
           testArray.push({
@@ -147,10 +149,11 @@ describe("BlockInput", () => {
             blockRootHex: rootHex,
             daOutOfRange: false,
             forkName: ForkName.deneb,
-            seenTimestampSec: Date.now() / 1000,
+            seenTimestampSec: firstSeenTimestampSec + testArray.length,
             source: BlockInputSource.gossip,
           } as AddBlob & CreateBlockInputMeta);
         }
+        const lastSeenTimestampSec = firstSeenTimestampSec + testArray.length - 1;
 
         let blockInput: BlockInputBlobs;
         let testCaseEntry = testArray.shift();
@@ -185,7 +188,146 @@ describe("BlockInput", () => {
           }
         }
         expect(blockInput.hasAllData()).toBeTruthy();
+        expect(blockInput.getTimeComplete()).toBe(lastSeenTimestampSec);
       });
     }
+
+    it("completes at the blob time when a block seen earlier is added after its blobs", () => {
+      const {block, rootHex, blobSidecars} = buildBlockAndBlobsTestSet(ForkName.deneb, 1);
+      const blockInput = BlockInputBlobs.createFromBlob({
+        blobSidecar: blobSidecars[0],
+        blockRootHex: rootHex,
+        daOutOfRange: false,
+        forkName: ForkName.deneb,
+        seenTimestampSec: 1002,
+        source: BlockInputSource.gossip,
+      });
+      blockInput.addBlock({
+        block: block as SignedBeaconBlock<ForkBlobsDA>,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: 1001,
+      });
+      expect(blockInput.getTimeComplete()).toBe(1002);
+    });
+
+    it("completes at the latest blob time when blobs are added out of order", () => {
+      const {block, rootHex, blobSidecars} = buildBlockAndBlobsTestSet(ForkName.deneb, 2);
+      const blockInput = BlockInputBlobs.createFromBlock({
+        block: block as SignedBeaconBlock<ForkBlobsDA>,
+        blockRootHex: rootHex,
+        daOutOfRange: false,
+        forkName: ForkName.deneb,
+        seenTimestampSec: 1000,
+        source: BlockInputSource.gossip,
+      });
+      blockInput.addBlob({
+        blobSidecar: blobSidecars[1],
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: 1005,
+      });
+      blockInput.addBlob({
+        blobSidecar: blobSidecars[0],
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: 1003,
+      });
+      expect(blockInput.getTimeComplete()).toBe(1005);
+    });
+  });
+
+  describe("Column timing", () => {
+    const firstSeenTimestampSec = 1000;
+
+    function buildColumnsBlockInput(sampledColumns: number[]): {blockInput: BlockInputColumns; rootHex: string} {
+      const {block, rootHex} = buildBlockTestSet(ForkName.fulu);
+      block.message.body.blobKzgCommitments = [Buffer.alloc(48, 0x77)];
+      const blockInput = BlockInputColumns.createFromBlock({
+        block,
+        blockRootHex: rootHex,
+        daOutOfRange: false,
+        forkName: ForkName.fulu,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: firstSeenTimestampSec,
+        sampledColumns,
+        custodyColumns: sampledColumns,
+      });
+      return {blockInput, rootHex};
+    }
+
+    function addColumn(blockInput: BlockInputColumns, rootHex: string, index: number): void {
+      const columnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+      columnSidecar.index = index;
+      blockInput.addColumn({
+        columnSidecar,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: firstSeenTimestampSec + 1 + index,
+      });
+    }
+
+    it("completes when the last sampled column is seen", () => {
+      const sampledColumns = [0, 1, 2, 3];
+      const {blockInput, rootHex} = buildColumnsBlockInput(sampledColumns);
+      for (const index of sampledColumns) {
+        expect(blockInput.hasAllData()).toBeFalsy();
+        addColumn(blockInput, rootHex, index);
+      }
+      expect(blockInput.hasAllData()).toBeTruthy();
+      expect(blockInput.getTimeComplete()).toBe(firstSeenTimestampSec + 1 + 3);
+    });
+
+    it("keeps the completion time when more columns are seen after the reconstruction threshold", () => {
+      const sampledColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i);
+      const {blockInput, rootHex} = buildColumnsBlockInput(sampledColumns);
+      const lastIndexToComplete = NUMBER_OF_COLUMNS / 2 - 1;
+      for (let index = 0; index <= lastIndexToComplete; index++) {
+        addColumn(blockInput, rootHex, index);
+      }
+      expect(blockInput.hasAllData()).toBeTruthy();
+      expect(blockInput.hasComputedAllData()).toBeFalsy();
+      expect(blockInput.getTimeComplete()).toBe(firstSeenTimestampSec + 1 + lastIndexToComplete);
+
+      addColumn(blockInput, rootHex, lastIndexToComplete + 1);
+      expect(blockInput.getTimeComplete()).toBe(firstSeenTimestampSec + 1 + lastIndexToComplete);
+    });
+
+    it("completes at the column time when a block seen earlier is added after its columns", () => {
+      const sampledColumns = [0, 1];
+      const {block, rootHex} = buildBlockTestSet(ForkName.fulu);
+      const kzgCommitment = Buffer.alloc(48, 0x77);
+      block.message.body.blobKzgCommitments = [kzgCommitment];
+      const columnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+      columnSidecar.kzgCommitments = [kzgCommitment];
+      columnSidecar.signedBlockHeader = signedBlockToSignedHeader(config, block);
+      const blockInput = BlockInputColumns.createFromColumn({
+        columnSidecar,
+        blockRootHex: rootHex,
+        daOutOfRange: false,
+        forkName: ForkName.fulu,
+        seenTimestampSec: firstSeenTimestampSec + 1,
+        source: BlockInputSource.gossip,
+        sampledColumns,
+        custodyColumns: sampledColumns,
+      });
+      addColumn(blockInput, rootHex, 0);
+      addColumn(blockInput, rootHex, 1);
+      expect(blockInput.hasAllData()).toBeTruthy();
+      blockInput.addBlock({
+        block,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: firstSeenTimestampSec,
+      });
+      expect(blockInput.getTimeComplete()).toBe(firstSeenTimestampSec + 1 + 1);
+    });
+
+    it("completes at the latest column time when columns are added out of order", () => {
+      const {blockInput, rootHex} = buildColumnsBlockInput([0, 1]);
+      addColumn(blockInput, rootHex, 1);
+      addColumn(blockInput, rootHex, 0);
+      expect(blockInput.getTimeComplete()).toBe(firstSeenTimestampSec + 1 + 1);
+    });
   });
 });

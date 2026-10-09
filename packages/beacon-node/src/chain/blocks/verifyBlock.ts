@@ -289,7 +289,7 @@ export async function verifyBlocksInEpoch(
         const recvTofullyVerifedTime = fullyVerifiedTime / 1000 - opts.seenTimestampSec;
         this.metrics?.gossipBlock.receivedToFullyVerifiedTime.observe(recvTofullyVerifedTime);
 
-        const verifiedToBlobsAvailabiltyTime = Math.max(availableTime - fullyVerifiedTime, 0) / 1000;
+        const verifiedToBlobsAvailabiltyTime = Math.max(availableTime - fullyVerifiedTime / 1000, 0);
         const block = blockInputs[0].getBlock();
         const numBlobs = getBlobKzgCommitments(blockInputs[0].forkName, block as deneb.SignedBeaconBlock).length;
 
