@@ -6,7 +6,7 @@ import {ssz} from "@lodestar/types";
 import {FetchError, TimeoutError, defer} from "@lodestar/utils";
 import {EngineApiMode, ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
 import {getExecutionEngineHttp} from "../../../src/execution/engine/index.js";
-import {ExecutionEngineState} from "../../../src/execution/engine/interface.js";
+import {ExecutionEngineState, ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {JsonRpcHttpClient, JsonRpcHttpClientEvent} from "../../../src/execution/engine/jsonRpcHttpClient.js";
 import {JsonRpcEngineTransport} from "../../../src/execution/engine/jsonRpcTransport.js";
 import {EngineRestHttpClient} from "../../../src/execution/engine/restHttpClient.js";
@@ -322,8 +322,15 @@ describe("REST engine compatibility", () => {
   it("does not downgrade malformed SSZ responses", async () => {
     malformedResponse = true;
     const engine = createEngine();
-    await expect(engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash)).rejects.toThrow();
-    expect(requests).toEqual(["capabilities", "REST forkchoice"]);
+    await expect(engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash)).rejects.toMatchObject({
+      type: {code: "ENGINE_REST_INVALID_RESPONSE", routeId: "forkchoiceUpdated"},
+    });
+    // The execution client answered, it is not offline
+    expect(engine.state).toBe(ExecutionEngineState.SYNCING);
+    const res = await engine.notifyNewPayload(ForkName.bellatrix, ssz.bellatrix.ExecutionPayload.defaultValue());
+    expect(res.status).toBe(ExecutionPayloadStatus.ELERROR);
+    expect(engine.state).toBe(ExecutionEngineState.SYNCING);
+    expect(requests).toEqual(["capabilities", "REST forkchoice", "REST newPayload"]);
   });
 
   it("does not downgrade discovery errors in strict SSZ mode", async () => {

@@ -1,3 +1,4 @@
+import {Type} from "@chainsafe/ssz";
 import {CELLS_PER_EXT_BLOB, ForkName, ForkSeq, isForkPostBellatrix} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, RootHex, capella, deneb, electra, gloas} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
@@ -219,7 +220,7 @@ export class RestEngineTransport implements IEngineTransport {
       {method: "POST", path: "/payloads", executionFork: toExecutionForkName(fork), body, responseType: "ssz"},
       notifyNewPayloadOpts
     );
-    return toPayloadStatusResult(PayloadStatus.deserialize(res.body));
+    return toPayloadStatusResult(deserializeResponse(PayloadStatus, res.body, "notifyNewPayload"));
   }
 
   async forkchoiceUpdated(
@@ -267,7 +268,7 @@ export class RestEngineTransport implements IEngineTransport {
       {method: "POST", path: "/forkchoice", executionFork: toExecutionForkName(fork), body, responseType: "ssz"},
       fcUReqOpts
     );
-    const {payloadStatus, payloadId} = ForkchoiceUpdateResponse.deserialize(res.body);
+    const {payloadStatus, payloadId} = deserializeResponse(ForkchoiceUpdateResponse, res.body, "forkchoiceUpdated");
     return {
       payloadStatus: toPayloadStatusResult(payloadStatus),
       payloadId: payloadId.length > 0 ? toHex(payloadId[0]) : null,
@@ -285,8 +286,11 @@ export class RestEngineTransport implements IEngineTransport {
     );
 
     if (ForkSeq[fork] >= ForkSeq.gloas) {
-      const {payload, blockValue, blobsBundle, executionRequests, shouldOverrideBuilder} =
-        BuiltPayloadGloas.deserialize(res.body);
+      const {payload, blockValue, blobsBundle, executionRequests, shouldOverrideBuilder} = deserializeResponse(
+        BuiltPayloadGloas,
+        res.body,
+        "getPayload"
+      );
       return {
         executionPayload: payload,
         executionPayloadValue: blockValue,
@@ -296,8 +300,10 @@ export class RestEngineTransport implements IEngineTransport {
       };
     }
     if (ForkSeq[fork] >= ForkSeq.fulu) {
-      const {payload, blockValue, blobsBundle, executionRequests, shouldOverrideBuilder} = BuiltPayloadFulu.deserialize(
-        res.body
+      const {payload, blockValue, blobsBundle, executionRequests, shouldOverrideBuilder} = deserializeResponse(
+        BuiltPayloadFulu,
+        res.body,
+        "getPayload"
       );
       return {
         executionPayload: payload,
@@ -308,8 +314,11 @@ export class RestEngineTransport implements IEngineTransport {
       };
     }
     if (ForkSeq[fork] >= ForkSeq.electra) {
-      const {payload, blockValue, blobsBundle, executionRequests, shouldOverrideBuilder} =
-        BuiltPayloadElectra.deserialize(res.body);
+      const {payload, blockValue, blobsBundle, executionRequests, shouldOverrideBuilder} = deserializeResponse(
+        BuiltPayloadElectra,
+        res.body,
+        "getPayload"
+      );
       return {
         executionPayload: payload,
         executionPayloadValue: blockValue,
@@ -319,14 +328,18 @@ export class RestEngineTransport implements IEngineTransport {
       };
     }
     if (ForkSeq[fork] >= ForkSeq.deneb) {
-      const {payload, blockValue, blobsBundle, shouldOverrideBuilder} = BuiltPayloadDeneb.deserialize(res.body);
+      const {payload, blockValue, blobsBundle, shouldOverrideBuilder} = deserializeResponse(
+        BuiltPayloadDeneb,
+        res.body,
+        "getPayload"
+      );
       return {executionPayload: payload, executionPayloadValue: blockValue, blobsBundle, shouldOverrideBuilder};
     }
     if (ForkSeq[fork] >= ForkSeq.capella) {
-      const {payload, blockValue} = BuiltPayloadCapella.deserialize(res.body);
+      const {payload, blockValue} = deserializeResponse(BuiltPayloadCapella, res.body, "getPayload");
       return {executionPayload: payload, executionPayloadValue: blockValue, shouldOverrideBuilder: false};
     }
-    const {payload, blockValue} = BuiltPayloadBellatrix.deserialize(res.body);
+    const {payload, blockValue} = deserializeResponse(BuiltPayloadBellatrix, res.body, "getPayload");
     return {executionPayload: payload, executionPayloadValue: blockValue, shouldOverrideBuilder: false};
   }
 
@@ -361,7 +374,7 @@ export class RestEngineTransport implements IEngineTransport {
       return versionedHashes.map(() => null);
     }
 
-    const {entries} = BlobsV1Response.deserialize(res.body);
+    const {entries} = deserializeResponse(BlobsV1Response, res.body, "getBlobsV1");
     if (entries.length !== versionedHashes.length) {
       throw Error(`Invalid blobs/v1 response length=${entries.length} versionedHashes=${versionedHashes.length}`);
     }
@@ -384,7 +397,7 @@ export class RestEngineTransport implements IEngineTransport {
       return null;
     }
 
-    const {entries} = BlobsV2Response.deserialize(res.body, {reuseBytes: true});
+    const {entries} = deserializeResponse(BlobsV2Response, res.body, "getBlobsV2", {reuseBytes: true});
     if (entries.length !== versionedHashes.length) {
       throw Error(`Invalid blobs/v2 response length=${entries.length} versionedHashes=${versionedHashes.length}`);
     }
@@ -491,16 +504,27 @@ function toPayloadStatusResult(payloadStatus: PayloadStatusSsz): PayloadStatusRe
 
 function deserializeBodiesResponse(fork: ForkName, data: Uint8Array): (ExecutionPayloadBodyV2 | null)[] {
   if (ForkSeq[fork] >= ForkSeq.gloas) {
-    return BodiesResponseGloas.deserialize(data).entries.map((entry) => (entry.available ? entry.body : null));
+    return deserializeResponse(BodiesResponseGloas, data, "getPayloadBodiesByHash").entries.map((entry) =>
+      entry.available ? entry.body : null
+    );
   }
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    return BodiesResponseCapella.deserialize(data).entries.map((entry) =>
+    return deserializeResponse(BodiesResponseCapella, data, "getPayloadBodiesByHash").entries.map((entry) =>
       entry.available ? {...entry.body, blockAccessList: null} : null
     );
   }
-  return BodiesResponseBellatrix.deserialize(data).entries.map((entry) =>
+  return deserializeResponse(BodiesResponseBellatrix, data, "getPayloadBodiesByHash").entries.map((entry) =>
     entry.available ? {transactions: entry.body.transactions, withdrawals: null, blockAccessList: null} : null
   );
+}
+
+/** A 2xx response that does not decode is an execution client error, not an unreachable client */
+function deserializeResponse<T>(type: Type<T>, body: Uint8Array, routeId: string, opts?: {reuseBytes?: boolean}): T {
+  try {
+    return type.deserialize(body, opts);
+  } catch (e) {
+    throw new EngineRestResponseError(routeId, `Invalid SSZ: ${(e as Error).message}`);
+  }
 }
 
 function parseJson(body: Uint8Array, routeId: string): unknown {

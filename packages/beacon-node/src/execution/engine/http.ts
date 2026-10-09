@@ -171,8 +171,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.jsonRpc = jsonRpc;
     this.rest = rest ?? null;
     this.engineApi = opts?.engineApi ?? "auto";
-    this.metrics?.engineApiTransport.set({transport: "ssz"}, 0);
-    this.metrics?.engineApiTransport.set({transport: "json-rpc"}, 0);
 
     if (this.engineApi === "ssz" && this.rest === null) {
       throw Error("REST transport is required for engineApi=ssz");
@@ -440,13 +438,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     fn: (transport: IEngineTransport) => Promise<T>
   ): Promise<T> {
     const transport = await this.getTransport(fork, blobsRevision);
-    this.metrics?.engineApiTransport.set({transport: transport === this.rest ? "ssz" : "json-rpc"}, 1);
+    this.metrics?.engineApiRequests.inc({transport: transport === this.rest ? "ssz" : "json-rpc"});
     try {
       return await fn(transport);
     } catch (e) {
       if (fork !== undefined && transport === this.rest && this.engineApi === "auto" && isUnsupportedForkError(e)) {
         this.disableRestForFork(fork, e);
-        this.metrics?.engineApiTransport.set({transport: "json-rpc"}, 1);
+        this.metrics?.engineApiRequests.inc({transport: "json-rpc"});
         return fn(this.jsonRpc);
       }
       if (transport === this.rest) {

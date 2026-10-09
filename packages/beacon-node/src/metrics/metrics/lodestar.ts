@@ -1176,9 +1176,9 @@ export function createLodestarMetrics(
       help: "The total result of calling notifyForkchoiceUpdate execution engine api",
       labelNames: ["result"],
     }),
-    engineApiTransport: register.gauge<{transport: string}>({
-      name: "lodestar_execution_engine_api_transport",
-      help: "Engine API transports used since startup, 1 for each transport used",
+    engineApiRequests: register.counter<{transport: string}>({
+      name: "lodestar_execution_engine_api_requests_total",
+      help: "Total engine API requests by transport",
       labelNames: ["transport"],
     }),
     opPool: {
