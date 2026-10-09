@@ -315,10 +315,7 @@ describe("BlockDutiesService", () => {
       signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = builderIndex;
       const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
       validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-      validatorStore.signBlock.mockImplementation(async (_, block) => ({
-        message: block,
-        signature: signedBlock.signature,
-      }));
+      validatorStore.signBlock.mockResolvedValue(signedBlock);
       validatorStore.getBuilderSelectionParams.mockReturnValue({
         selection: routes.validator.BuilderSelection.ExecutionOnly,
         boostFactor: BigInt(0),
