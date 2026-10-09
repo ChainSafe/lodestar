@@ -15,7 +15,12 @@ import {processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {increaseBalance} from "../index.js";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
+  CachedBeaconStatePreHeze,
+} from "../types.js";
 import {newFilledArray} from "./array.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
@@ -163,7 +168,7 @@ export function applyDeposits(
     state.eth1Data.depositCount += 1n;
 
     const fork = config.getForkSeq(GENESIS_SLOT);
-    processDeposit(fork, state, deposit);
+    processDeposit(fork, state as CachedBeaconStatePreHeze, deposit);
   }
 
   // Process deposit balance updates

@@ -6,6 +6,7 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
 } from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
@@ -74,7 +75,7 @@ export function processOperations(
   {
     const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processDeposit});
     for (const deposit of body.deposits) {
-      processDeposit(fork, state, deposit);
+      processDeposit(fork, state as CachedBeaconStatePreHeze, deposit);
     }
     timer?.();
   }

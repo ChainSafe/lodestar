@@ -12,6 +12,7 @@ export type {
   CachedBeaconStateGloas,
   CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
+  CachedBeaconStatePreHeze,
 } from "./cache/stateCache.js";
 export type {
   BeaconStateAllForks,

@@ -91,5 +91,6 @@ export type {
   CachedBeaconStateGloas,
   CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
+  CachedBeaconStatePreHeze,
 } from "./types.js";
 export * from "./util/index.js";
