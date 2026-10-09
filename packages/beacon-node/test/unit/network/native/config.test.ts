@@ -45,6 +45,21 @@ async function fixture() {
 }
 
 describe("native configuration boundary", () => {
+  it("builds the active send startup policy", async () => {
+    const node = await fixture();
+    expect(node.create().gossipPolicy).toMatchObject({
+      activeSendTimeoutMs: 6000n,
+      activeSendItems: {beacon_block: 8, blob_sidecar: 32, data_column_sidecar: 256},
+    });
+    const application = node.create({
+      native: {gossipActiveSendTimeoutMs: 4000, gossipActiveSendItems: {beacon_block: 4}},
+    });
+    expect(application.gossipPolicy).toMatchObject({activeSendTimeoutMs: 4000n, activeSendItems: {beacon_block: 4}});
+    for (const timeout of [0, -1, 1.5, 86400001]) {
+      expect(() => node.create({native: {gossipActiveSendTimeoutMs: timeout}})).toThrow(NativeNetworkError);
+    }
+  });
+
   it.each([0, 1, 1_000_000, Number.MAX_SAFE_INTEGER])(
     "rejects unsupported forks scheduled at epoch %s before startup",
     async (epoch) => {

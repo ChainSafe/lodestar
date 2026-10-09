@@ -1,8 +1,14 @@
+import {NativeTopicKind} from "@chainsafe/lodestar-z/network";
+
 export type NativeBackendOptions = {
   profile?: "small" | "beaconNode";
   nativeBudgetBytes?: number;
   bridgeBudgetBytes?: number;
   receiveBudgetBytes?: number;
+  /** Absolute active-frame lifetime, including stalled writes. Defaults to 6000 ms. */
+  gossipActiveSendTimeoutMs?: number;
+  /** Distinct large payloads per kind: 8 by default, 32 blob sidecars, 256 data columns. */
+  gossipActiveSendItems?: Partial<Record<NativeTopicKind, number>>;
   hostGossipItems?: number;
   hostGossipBytes?: number;
   discovery?: {

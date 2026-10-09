@@ -417,7 +417,7 @@ export function createNativeConfig(
       handshakingCapacity: Math.min(connections, small ? 8 : 32),
       dialingCapacity: small ? 4 : 32,
       receiveBudgetBytes: opts.native?.receiveBudgetBytes ?? (small ? 64 : 512) * MiB,
-      nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? (small ? 512 : 768) * MiB,
+      nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? (small ? 768 : 1024) * MiB,
       bridgeBudgetBytes: opts.native?.bridgeBudgetBytes ?? 512 * MiB,
     },
     gossipPolicy: {
@@ -430,6 +430,21 @@ export function createNativeConfig(
       validationTombstoneMs: 30000n,
       pressureTimeoutMs: 30000n,
       txTimeoutMs: 30000n,
+      activeSendTimeoutMs: BigInt(
+        nativeInteger(opts.native?.gossipActiveSendTimeoutMs ?? 6000, "gossip active send timeout", 86400000, 1)
+      ),
+      activeSendItems: Object.fromEntries(
+        kinds.map((kind) => [
+          kind,
+          nativeInteger(
+            opts.native?.gossipActiveSendItems?.[kind] ??
+              (kind === "data_column_sidecar" ? 256 : kind === "blob_sidecar" ? 32 : 8),
+            `active sends for ${kind}`,
+            256,
+            1
+          ),
+        ])
+      ) as Record<NativeTopicKind, number>,
       largeFrameTimeoutMs: 30000n,
       seenTtlMs: BigInt(config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2),
       retainedScoreMs: BigInt(score.retainScore),

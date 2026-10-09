@@ -34,6 +34,30 @@ import {computeMaxGloasDataColumnSidecarSize} from "../../../../src/util/sszByte
 import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("network / gossip / topic", () => {
+  it("bounds Fulu columns by the blob parameters for their topic boundary", () => {
+    const config = createBeaconConfig(
+      {
+        ...chainConfig,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: Infinity,
+        BLOB_SCHEDULE: [
+          {EPOCH: 0, MAX_BLOBS_PER_BLOCK: 21},
+          {EPOCH: 10, MAX_BLOBS_PER_BLOCK: 33},
+        ],
+      },
+      ZERO_HASH
+    );
+    for (const [epoch, blobs] of [
+      [0, 21],
+      [10, 33],
+    ]) {
+      const topic = {type: GossipType.data_column_sidecar, subnet: 0, boundary: {fork: ForkName.fulu, epoch}} as const;
+      expect(getGossipSSZMaxSize(topic, config, ssz.fulu.DataColumnSidecar)).toBe(
+        ssz.fulu.DataColumnSidecar.minSize + blobs * (BYTES_PER_CELL + 96)
+      );
+    }
+  });
+
   const config = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
   const maxDataColumnSidecarSize = computeMaxGloasDataColumnSidecarSize(config);
@@ -328,15 +352,14 @@ describe("network / gossip / topic", () => {
     } as const;
     const fuluTopicStr = stringifyGossipTopic(config, fuluTopic);
     gossipTopicCache.setTopic(fuluTopicStr, fuluTopic);
-    const fuluMaxSize = Math.min(getGossipSSZType(fuluTopic).maxSize, config.MAX_PAYLOAD_SIZE);
-    expect(fuluMaxSize).toBeGreaterThan(maxDataColumnSidecarSize);
-    expect(() => transform.outboundTransform(fuluTopicStr, new Uint8Array(maxDataColumnSidecarSize + 1))).not.toThrow();
+    const fuluMaxSize = getGossipSSZMaxSize(fuluTopic, config, getGossipSSZType(fuluTopic));
+    expect(() => transform.outboundTransform(fuluTopicStr, new Uint8Array(fuluMaxSize))).not.toThrow();
     expect(() => transform.outboundTransform(fuluTopicStr, new Uint8Array(fuluMaxSize + 1))).toThrow(
       `ssz_snappy encoded data length ${fuluMaxSize + 1}`
     );
-    expect(
-      transform.inboundTransform(fuluTopicStr, snappyWasm.compress(new Uint8Array(maxDataColumnSidecarSize + 1))).length
-    ).toBe(maxDataColumnSidecarSize + 1);
+    expect(transform.inboundTransform(fuluTopicStr, snappyWasm.compress(new Uint8Array(fuluMaxSize))).length).toBe(
+      fuluMaxSize
+    );
   });
 
   it("should use MAX_BLOBS_PER_BLOCK_ELECTRA when the blob schedule is empty", () => {

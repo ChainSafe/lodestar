@@ -155,6 +155,10 @@ export function getGossipSSZMaxSize(topic: GossipTopic, config: ChainForkConfig,
   if (isForkPostGloas(topic.boundary.fork) && topic.type === GossipType.data_column_sidecar) {
     return Math.min(maxSize, computeMaxGloasDataColumnSidecarSize(config));
   }
+  if (isForkPostFulu(topic.boundary.fork) && topic.type === GossipType.data_column_sidecar) {
+    const perBlob = ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize;
+    return Math.min(maxSize, sszType.minSize + config.getMaxBlobsPerBlock(topic.boundary.epoch) * perBlob);
+  }
   return maxSize;
 }
 
