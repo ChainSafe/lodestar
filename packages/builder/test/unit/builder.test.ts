@@ -77,6 +77,7 @@ describe("Builder", () => {
       topics,
       signal: controller.signal,
       onEvent: expect.any(Function),
+      onOpen: expect.any(Function),
       onError: expect.any(Function),
       onClose: expect.any(Function),
     });
@@ -118,6 +119,46 @@ describe("Builder", () => {
     onEvent({type: EventType.proposerPreferences, message: {version, data: preferences}});
     expect(modules.proposerPreferencesTracker.get(0, root)).toBe(preferences);
     expect(api.events.eventstream).toHaveBeenCalledOnce();
+  });
+
+  it("fetches known preferences on every connection without replacing live entries", async () => {
+    const live = ssz.gloas.SignedProposerPreferences.defaultValue();
+    live.message.proposalSlot = 1;
+    const stale = ssz.gloas.SignedProposerPreferences.clone(live);
+    stale.message.feeRecipient = Buffer.alloc(20, 9);
+    const missed = ssz.gloas.SignedProposerPreferences.clone(live);
+    missed.message.proposalSlot = 2;
+    const root = toRootHex(live.message.dependentRoot);
+    api.beacon.getProposerPreferences.mockResolvedValue(
+      mockApiResponse({data: [stale, missed], meta: {version: ForkName.gloas}})
+    );
+    new Builder(modules);
+    const {onOpen, onEvent, signal} = api.events.eventstream.mock.calls[0][0];
+    expect(api.beacon.getProposerPreferences).not.toHaveBeenCalled();
+
+    onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: live}});
+    onOpen?.();
+    await vi.waitFor(() => expect(modules.proposerPreferencesTracker.get(2, root)).toBe(missed));
+    expect(modules.proposerPreferencesTracker.get(1, root)).toBe(live);
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledExactlyOnceWith({}, {signal});
+
+    // Reconnect
+    onOpen?.();
+    expect(api.beacon.getProposerPreferences).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps live delivery working when fetching preferences fails", async () => {
+    const error = Error("not supported");
+    api.beacon.getProposerPreferences.mockRejectedValue(error);
+    new Builder(modules);
+    const {onOpen, onEvent} = api.events.eventstream.mock.calls[0][0];
+    onOpen?.();
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledWith("Failed to fetch proposer preferences", {}, error));
+
+    const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+    onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: preferences}});
+    expect(modules.proposerPreferencesTracker.get(0, toRootHex(preferences.message.dependentRoot))).toBe(preferences);
+    expect(controller.signal.aborted).toBe(false);
   });
 
   it("does not block preferences while a block consumer is pending", async () => {
