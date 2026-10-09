@@ -25,6 +25,7 @@ const ARTIFACT_FILENAMES = new Set([
 
 export interface SkipOpts {
   skippedTestSuites?: RegExp[];
+  /** Matched against `<fork>/<runner>/<handler>/<suite>/<testCase>` */
   skippedTests?: RegExp[];
   skippedForks?: string[];
   skippedRunners?: string[];
@@ -89,9 +90,8 @@ export const defaultSkipOpts: SkipOpts = {
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
     // TODO-HEZE: temporary. v1.7.0-beta.4 adds EIP-8015 (removes the eth1 fields from the Heze BeaconState and
-    // BeaconBlockBody) and EIP-8365 (apply_pending_deposit), so every Heze vector carrying a state or a block no
-    // longer deserializes. Unskip in the EIP-8015 and EIP-8365 PRs. Containers EIP-8015 does not touch keep
-    // running through ssz_static.
+    // BeaconBlockBody), so every Heze vector carrying a state or a block no longer deserializes. Unskip in the
+    // EIP-8015 PR. Containers EIP-8015 does not touch keep running through ssz_static.
     /^heze\/(?!ssz_static\/).*/,
     /^heze\/ssz_static\/(BeaconState|BeaconBlockBody|BeaconBlock|SignedBeaconBlock)\/.*$/,
   ],
