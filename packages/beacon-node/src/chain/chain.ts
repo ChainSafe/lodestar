@@ -128,7 +128,7 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
-import {ShufflingCache} from "./shufflingCache.js";
+import {ShufflingCache, ShufflingPromiseCancelReason} from "./shufflingCache.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
@@ -244,6 +244,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly blockProcessor: BlockProcessor;
   protected readonly payloadEnvelopeProcessor: PayloadEnvelopeProcessor;
   protected readonly db: IBeaconDb;
+  private genesisStateRoot?: RootHex | null;
   // this is only available if nHistoricalStates is enabled
   private readonly cpStateDatastore?: CPStateDatastore;
   private abortController = new AbortController();
@@ -278,6 +279,7 @@ export class BeaconChain implements IBeaconChain {
       validatorMonitor,
       anchorState,
       isAnchorStateFinalized,
+      earliestAvailableSlot,
       executionEngine,
       executionBuilder,
       builderApiClientOpts,
@@ -297,6 +299,7 @@ export class BeaconChain implements IBeaconChain {
       validatorMonitor: ValidatorMonitor | null;
       anchorState: IBeaconStateView;
       isAnchorStateFinalized: boolean;
+      earliestAvailableSlot: Slot;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
       builderApiClientOpts?: BuilderApiClientOpts;
@@ -325,7 +328,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
-    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
+    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics, logger);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
@@ -362,7 +365,7 @@ export class BeaconChain implements IBeaconChain {
       logger,
     });
 
-    this._earliestAvailableSlot = anchorState.slot;
+    this._earliestAvailableSlot = earliestAvailableSlot;
 
     this.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
       {
@@ -573,7 +576,11 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenBlockInputCache.hasBlock(blockRoot) || this.forkChoice.hasBlockHexUnsafe(blockRoot);
+    return (
+      this.seenBlockInputCache.hasBlock(blockRoot) ||
+      this.seenBlockInputCache.isValidatingBlock(blockRoot) ||
+      this.forkChoice.hasBlockHexUnsafe(blockRoot)
+    );
   }
 
   seenPayloadEnvelope(blockRoot: RootHex): boolean {
@@ -720,6 +727,17 @@ export class BeaconChain implements IBeaconChain {
           executionOptimistic: isOptimisticBlock(finalizedBlock),
           finalized: finalizedCheckpoint.epoch !== GENESIS_EPOCH,
         };
+      }
+    }
+
+    if (this.genesisStateRoot === undefined) {
+      const genesisBlock = await this.db.blockArchive.get(GENESIS_SLOT);
+      this.genesisStateRoot = genesisBlock ? toRootHex(genesisBlock.message.stateRoot) : null;
+    }
+    if (this.genesisStateRoot === stateRoot) {
+      const state = await this.db.stateArchive.getBinary(GENESIS_SLOT);
+      if (state) {
+        return {state, executionOptimistic: false, finalized: finalizedCheckpoint.epoch !== GENESIS_EPOCH};
       }
     }
 
@@ -1524,6 +1542,22 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void {
+    const blockRoot = toRootHex(envelope.beaconBlockRoot);
+    void this.persistSszObject(
+      "ExecutionPayloadEnvelope",
+      ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope),
+      blockRoot,
+      "produced_execution_payload_envelope"
+    ).catch((e) => {
+      this.logger.error(
+        "Error persisting produced execution payload envelope",
+        {slot: envelope.payload.slotNumber, blockRoot},
+        e as Error
+      );
+    });
+  }
+
   /**
    * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
    * persist preState, postState and block for further investigation.
@@ -1595,21 +1629,48 @@ export class BeaconChain implements IBeaconChain {
     const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
 
     let state: IBeaconStateView;
-    if (blockEpoch < attEpoch - 1) {
-      // thanks to one epoch look ahead, we don't need to dial up to attEpoch
-      const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
-      this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
-      state = await this.regen.getBlockSlotState(attHeadBlock, targetSlot, {dontTransferCache: true}, regenCaller);
-    } else if (blockEpoch > attEpoch) {
-      // should not happen, handled inside attestation verification code
-      throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
-    } else {
-      // should use either current or next shuffling of head state
-      // it's not likely to hit this since these shufflings are cached already
-      // so handle just in case
-      this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
-      state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
+    try {
+      if (blockEpoch < attEpoch - 1) {
+        // thanks to one epoch look ahead, we don't need to dial up to attEpoch
+        const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
+        this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
+        state = await this.regen.getBlockSlotState(attHeadBlock, targetSlot, {dontTransferCache: true}, regenCaller);
+      } else if (blockEpoch > attEpoch) {
+        // should not happen, handled inside attestation verification code
+        throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
+      } else {
+        // should use either current or next shuffling of head state
+        // it's not likely to hit this since these shufflings are cached already
+        // so handle just in case
+        this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
+        state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
+      }
+    } catch (e) {
+      this.shufflingCache.cancelPromise(attEpoch, shufflingDependentRoot, ShufflingPromiseCancelReason.regenError);
+      throw e;
     }
+
+    const stateDecisionRoot = state.getShufflingDecisionRoot(attEpoch);
+    if (stateDecisionRoot !== shufflingDependentRoot) {
+      // the promise would never be resolved by the state's shuffling
+      this.shufflingCache.cancelPromise(
+        attEpoch,
+        shufflingDependentRoot,
+        ShufflingPromiseCancelReason.decisionRootMismatch
+      );
+      this.logger.debug("Shuffling decision root mismatch on attestation regen", {
+        slot: attHeadBlock.slot,
+        root: attHeadBlock.blockRoot,
+        epoch: attEpoch,
+        shufflingDependentRoot,
+        stateDecisionRoot,
+      });
+
+      throw Error(
+        `Shuffling decision root mismatch epoch=${attEpoch} slot=${attHeadBlock.slot} root=${attHeadBlock.blockRoot} expected=${shufflingDependentRoot} actual=${stateDecisionRoot}`
+      );
+    }
+
     // resolve the promise to unblock other calls of the same epoch and dependent root
     this.shufflingCache.processState(state);
     return state.getShufflingAtEpoch(attEpoch);
@@ -1719,7 +1780,7 @@ export class BeaconChain implements IBeaconChain {
     // remove date suffixes in file name, and check duplicate to avoid redundant persistence
     await writeIfNotExist(filepath, bytes);
 
-    this.logger.debug("Persisted invalid ssz object", {id: logStr, filepath});
+    this.logger.debug("Persisted SSZ object", {id: logStr, filepath});
   }
 
   private onScrapeMetrics(metrics: Metrics): void {

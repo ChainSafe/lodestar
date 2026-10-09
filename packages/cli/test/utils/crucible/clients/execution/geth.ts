@@ -13,7 +13,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     throw new Error("GETH_BINARY_DIR or GETH_DOCKER_IMAGE must be provided");
   }
 
-  const {id, ttd, address, mining, clientOptions, nodeIndex} = opts;
+  const {id, ttd, address, clientOptions, nodeIndex} = opts;
   const ports = getNodePorts(nodeIndex);
 
   const isDocker = !!process.env.GETH_DOCKER_IMAGE;
@@ -135,7 +135,6 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         // Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
         "--verbosity",
         "5",
-        ...(mining ? ["--mine"] : []),
         ...clientOptions,
       ],
       env: {},

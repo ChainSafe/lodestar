@@ -119,7 +119,7 @@ export class ProposerPreferencesService {
     }
 
     try {
-      await this.api.validator.submitProposerPreferences({signedProposerPreferences: batch});
+      (await this.api.validator.submitProposerPreferences({signedProposerPreferences: batch})).assertOk();
       // Only mark as submitted after the API call succeeds; a thrown error leaves the
       // slot eligible for retry on the next tick.
       for (const {submission, slot: submittedSlot} of pending) {

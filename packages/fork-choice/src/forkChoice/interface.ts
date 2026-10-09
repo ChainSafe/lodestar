@@ -7,6 +7,7 @@ import {
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
 } from "../protoArray/interface.js";
 import {IFastConfirmationSpecStore} from "./fastConfirmation/types.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
@@ -30,6 +31,9 @@ export type CheckpointWithBalance = {
 export type CheckpointWithTotalBalance = CheckpointWithBalance & {
   totalBalance: number;
 };
+
+/** Emitted when the PTC verdict on a block is decided or flips, see getPtcVerdict */
+export type PtcQuorumEvent = PtcQuorum & {blockRoot: RootHex; slot: Slot; verdict: boolean};
 
 export enum EpochDifference {
   current = 0,
@@ -259,6 +263,8 @@ export interface IForkChoice {
     payloadPresentCount: number;
     dataAvailableCount: number;
   } | null;
+  /** Current PTC majority per vote field; `null` for pre-Gloas roots */
+  getPtcQuorum(blockRootHex: RootHex): PtcQuorum | null;
   getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null;
 

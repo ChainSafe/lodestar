@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Root, Slot, gloas} from "@lodestar/types";
+import {Epoch, Root, Slot} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
@@ -16,7 +16,7 @@ import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
-import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
+import {DownloadByRangeError, DownloadByRangeErrorCode, ParentPayload} from "../utils/downloadByRange.js";
 import {getRateLimitedUntilMs} from "../utils/rateLimit.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
@@ -160,7 +160,7 @@ export class SyncChain {
   private readonly clock: IClock;
   private readonly metrics: Metrics | null;
   private readonly custodyConfig: CustodyConfig;
-  private readonly latestBid: gloas.ExecutionPayloadBid | undefined;
+  private readonly parentPayload: ParentPayload | undefined;
 
   constructor(
     initialBatchEpoch: Epoch,
@@ -168,7 +168,7 @@ export class SyncChain {
     syncType: RangeSyncType,
     fns: SyncChainFns,
     modules: SyncChainModules,
-    latestBid: gloas.ExecutionPayloadBid | undefined
+    parentPayload: ParentPayload | undefined
   ) {
     const {config, clock, custodyConfig, logger, metrics} = modules;
     this.firstBatchEpoch = initialBatchEpoch;
@@ -184,7 +184,7 @@ export class SyncChain {
     this.clock = clock;
     this.metrics = metrics;
     this.custodyConfig = custodyConfig;
-    this.latestBid = latestBid;
+    this.parentPayload = parentPayload;
     this.logger = logger;
     this.logId = `${syncType}-${nextChainId++}`;
 
@@ -224,6 +224,9 @@ export class SyncChain {
       this.lastEpochWithProcessBlocks +
       Math.floor((localFinalizedEpoch - this.lastEpochWithProcessBlocks) / EPOCHS_PER_BATCH) * EPOCHS_PER_BATCH;
     this.advanceChain(lastEpochWithProcessBlocksAligned);
+
+    // stopSyncing() cleared the retry timer, but peers can still be in rate limit backoff
+    this.scheduleRateLimitBackoffRetry();
 
     // Potentially download new batches and process pending
     this.triggerBatchDownloader();
@@ -533,8 +536,8 @@ export class SyncChain {
       this.clock,
       this.custodyConfig,
       this.isFirstBatch,
-      // `latestBid` is only meaningful for the first batch's parent-payload check
-      this.isFirstBatch ? this.latestBid : undefined,
+      // `parentPayload` is only meaningful for the first batch
+      this.isFirstBatch ? this.parentPayload : undefined,
       this.target.slot
     );
     this.isFirstBatch = false;
@@ -583,6 +586,8 @@ export class SyncChain {
           case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
           case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
           case DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT:
+          case DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH:
+          case DownloadByRangeErrorCode.INVALID_ENVELOPE_SLOT:
           case DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT:
           case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
           case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
