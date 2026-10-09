@@ -5,6 +5,7 @@ import {
   ForkPostGloas,
   ForkPreBellatrix,
   ForkPreDeneb,
+  ForkPreGloas,
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostGloas,
@@ -296,7 +297,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: blockIdOnlyReq,
       resp: {
-        data: WithVersion((fork) => ssz[fork].SignedBeaconBlock),
+        data: WithVersion((fork) => sszTypesFor(fork).SignedBeaconBlock),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
@@ -362,7 +363,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             body:
               isForkPostDeneb(fork) && !isForkPostGloas(fork)
                 ? sszTypesFor(fork).SignedBlockContents.toJson(
-                    signedBlockContents as SignedBlockContents<ForkPostDeneb>
+                    signedBlockContents as SignedBlockContents<ForkPostDeneb & ForkPreGloas>
                   )
                 : sszTypesFor(fork).SignedBeaconBlock.toJson(
                     signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb | ForkPostGloas>
@@ -380,7 +381,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             signedBlockContents:
               isForkPostDeneb(forkName) && !isForkPostGloas(forkName)
                 ? sszTypesFor(forkName).SignedBlockContents.fromJson(body)
-                : {signedBlock: ssz[forkName].SignedBeaconBlock.fromJson(body)},
+                : ({signedBlock: sszTypesFor(forkName).SignedBeaconBlock.fromJson(body)} as SignedBlockContents<
+                    ForkPreDeneb | ForkPostGloas
+                  >),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
             builderUrl: fromHeaders(headers, MetaHeader.BuilderUrl, false),
           };
@@ -393,7 +396,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             body:
               isForkPostDeneb(fork) && !isForkPostGloas(fork)
                 ? sszTypesFor(fork).SignedBlockContents.serialize(
-                    signedBlockContents as SignedBlockContents<ForkPostDeneb>
+                    signedBlockContents as SignedBlockContents<ForkPostDeneb & ForkPreGloas>
                   )
                 : sszTypesFor(fork).SignedBeaconBlock.serialize(
                     signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb | ForkPostGloas>
@@ -411,7 +414,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             signedBlockContents:
               isForkPostDeneb(forkName) && !isForkPostGloas(forkName)
                 ? sszTypesFor(forkName).SignedBlockContents.deserialize(body)
-                : {signedBlock: ssz[forkName].SignedBeaconBlock.deserialize(body)},
+                : ({signedBlock: sszTypesFor(forkName).SignedBeaconBlock.deserialize(body)} as SignedBlockContents<
+                    ForkPreDeneb | ForkPostGloas
+                  >),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
             builderUrl: fromHeaders(headers, MetaHeader.BuilderUrl, false),
           };
