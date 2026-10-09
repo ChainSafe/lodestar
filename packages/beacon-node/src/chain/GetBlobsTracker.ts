@@ -36,7 +36,7 @@ export class GetBlobsTracker {
   metrics: Metrics | null;
   config: ChainForkConfig;
   activeReconstructions = new Set<string>();
-  failedAttempts = new Map<string, {count: number; lastAttemptMs: number}>();
+  failedAttempts = new Map<string, {count: number; lastAttemptMs: number; retryTimer?: NodeJS.Timeout}>();
   // Preallocate buffers for getBlobsV2 RPC calls
   // See https://github.com/ChainSafe/lodestar/pull/8282 for context
   blobsAndProofsBuffers: {buffers: Uint8Array[]; inUse: boolean}[] = [];
@@ -55,11 +55,21 @@ export class GetBlobsTracker {
     }
 
     const failed = this.failedAttempts.get(input.blockRootHex);
-    if (
-      failed &&
-      (failed.count >= MAX_GET_BLOBS_ATTEMPTS || Date.now() - failed.lastAttemptMs < GET_BLOBS_RETRY_INTERVAL_MS)
-    ) {
-      return;
+    if (failed) {
+      if (failed.count >= MAX_GET_BLOBS_ATTEMPTS) {
+        return;
+      }
+      const waitMs = GET_BLOBS_RETRY_INTERVAL_MS - (Date.now() - failed.lastAttemptMs);
+      if (waitMs > 0) {
+        // Columns tend to arrive in one burst, so keep a single trailing retry instead of relying on a later trigger
+        failed.retryTimer ??= setTimeout(() => {
+          failed.retryTimer = undefined;
+          if (this.failedAttempts.get(input.blockRootHex) === failed && !input.hasAllData()) {
+            this.triggerGetBlobs(input);
+          }
+        }, waitMs).unref();
+        return;
+      }
     }
 
     // The request is sent right away, before block processing issues newPayload: ELs that drop a
@@ -133,8 +143,9 @@ export class GetBlobsTracker {
   }
 
   private recordFailedAttempt(blockRootHex: string): void {
-    const count = (this.failedAttempts.get(blockRootHex)?.count ?? 0) + 1;
-    this.failedAttempts.set(blockRootHex, {count, lastAttemptMs: Date.now()});
+    const failed = this.failedAttempts.get(blockRootHex);
+    clearTimeout(failed?.retryTimer);
+    this.failedAttempts.set(blockRootHex, {count: (failed?.count ?? 0) + 1, lastAttemptMs: Date.now()});
     pruneSetToMax(this.failedAttempts, MAX_TRACKED_BLOCK_ROOTS);
   }
 }

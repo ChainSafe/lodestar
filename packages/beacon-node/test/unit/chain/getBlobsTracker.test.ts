@@ -80,6 +80,22 @@ describe("GetBlobsTracker", () => {
     expect(getBlobs).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps one trailing retry when triggers arrive inside the interval", async () => {
+    const blockInput = createBlockInput(1);
+    tracker.triggerGetBlobs(blockInput);
+    await vi.advanceTimersByTimeAsync(0);
+
+    tracker.triggerGetBlobs(blockInput);
+    tracker.triggerGetBlobs(blockInput);
+    expect(getBlobs).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS);
+    expect(getBlobs).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS);
+    expect(getBlobs).toHaveBeenCalledTimes(2);
+  });
+
   it("stops retrying after the maximum number of null answers", async () => {
     const blockInput = createBlockInput(1);
     for (let i = 0; i < MAX_GET_BLOBS_ATTEMPTS + 2; i++) {
