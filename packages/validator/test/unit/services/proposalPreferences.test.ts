@@ -5,7 +5,8 @@ import {HttpStatusCode, routes} from "@lodestar/api";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {LogLevel, fromHex, toRootHex} from "@lodestar/utils";
+import {gloas, ssz} from "@lodestar/types";
+import {LogLevel, defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ProposalPreferencesService} from "../../../src/services/proposalPreferences.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -158,6 +159,20 @@ describe("ProposalPreferencesService", () => {
     await clock.tickSlotFns(proposalSlot - 1, controller.signal);
     expect(api.validator.submitProposerPreferences).toHaveBeenCalledTimes(2);
     expect(api.validator.submitBuilderPreferences).toHaveBeenCalledOnce();
+  });
+
+  it("submits builder preferences while proposer preferences are still being signed", async () => {
+    const signing = defer<gloas.SignedProposerPreferences>();
+    vi.spyOn(validatorStore, "signProposerPreferences").mockReturnValue(signing.promise);
+    startService(gloasConfig, validatorStore);
+
+    const tick = clock.tickSlotFns(proposalSlot - 1, controller.signal);
+    await vi.waitFor(() => expect(api.validator.submitBuilderPreferences).toHaveBeenCalledOnce());
+    expect(api.validator.submitProposerPreferences).not.toHaveBeenCalled();
+
+    signing.resolve(ssz.gloas.SignedProposerPreferences.defaultValue());
+    await tick;
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
   });
 
   it("submits the preferences of the first gloas proposals before the fork", async () => {

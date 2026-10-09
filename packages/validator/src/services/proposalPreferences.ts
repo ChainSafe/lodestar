@@ -23,6 +23,8 @@ const SUBMIT_BEFORE_PROPOSAL_SLOTS = Math.floor(SLOTS_PER_EPOCH / 4);
 /** Per-epoch tracking of preferences already submitted under the current dependent_root. */
 type SubmittedAtEpoch = {dependentRoot: RootHex; proposerSlots: Set<Slot>; builderSlots: Set<Slot>};
 type PendingSubmission = {submission: SubmittedAtEpoch; slot: Slot};
+/** A local proposal within the submission window along with the tracking of its epoch */
+type UpcomingProposal = {duty: routes.validator.ProposerDuty; submission: SubmittedAtEpoch};
 
 /**
  * Signs and submits the preferences of local proposals within the next `SUBMIT_BEFORE_PROPOSAL_SLOTS`:
@@ -64,47 +66,15 @@ export class ProposalPreferencesService {
       return;
     }
 
-    const currentEpoch = computeEpochAtSlot(slot);
-    const proposerPreferences: gloas.SignedProposerPreferences[] = [];
-    const builderPreferences: routes.validator.BuilderPreferencesEntry[] = [];
-    // Track which `(submission, slot)` pairs are pending an API submission so we can mark
-    // them only after the network call succeeds. Marking before would silently drop a
-    // preference on transient API failure (no retry until dependent_root shifts).
-    const pendingProposerPreferences: PendingSubmission[] = [];
-    const pendingBuilderPreferences: PendingSubmission[] = [];
-
-    for (const epoch of [currentEpoch, currentEpoch + 1]) {
-      const dutiesAtEpoch = this.blockDutiesService.getProposersAtEpoch(epoch);
-      if (!dutiesAtEpoch) continue;
-
-      const submission = this.getSubmissionAtEpoch(epoch, dutiesAtEpoch.dependentRoot);
-
-      for (const duty of dutiesAtEpoch.data) {
-        if (duty.slot <= slot) continue;
-        if (duty.slot > slot + SUBMIT_BEFORE_PROPOSAL_SLOTS) continue;
-        if (!isForkPostGloas(this.config.getForkName(duty.slot))) continue;
-
-        if (!submission.proposerSlots.has(duty.slot)) {
-          const signed = await this.signProposerPreferences(duty, submission.dependentRoot, slot);
-          if (signed !== null) {
-            proposerPreferences.push(signed);
-            pendingProposerPreferences.push({submission, slot: duty.slot});
-          }
-        }
-
-        if (!submission.builderSlots.has(duty.slot)) {
-          const entries = await this.signBuilderPreferences(duty, slot);
-          if (entries.length > 0) {
-            builderPreferences.push(...entries);
-            pendingBuilderPreferences.push({submission, slot: duty.slot});
-          }
-        }
-      }
+    const proposals = this.getUpcomingProposals(slot);
+    if (proposals.length === 0) {
+      return;
     }
 
+    // Signed and submitted independently, a slow signer for one must not delay the other
     await Promise.all([
-      this.submitProposerPreferences(proposerPreferences, pendingProposerPreferences),
-      this.submitBuilderPreferences(builderPreferences, pendingBuilderPreferences),
+      this.submitProposerPreferences(proposals, slot),
+      this.submitBuilderPreferences(proposals, slot),
     ]);
   };
 
@@ -146,68 +116,58 @@ export class ProposalPreferencesService {
     return submission;
   }
 
-  private async signProposerPreferences(
-    duty: routes.validator.ProposerDuty,
-    dependentRoot: RootHex,
-    slot: Slot
-  ): Promise<gloas.SignedProposerPreferences | null> {
-    try {
-      const pubkeyHex = toPubkeyHex(duty.pubkey);
-      return await this.validatorStore.signProposerPreferences(
-        duty,
-        fromHex(dependentRoot),
-        this.validatorStore.getFeeRecipient(pubkeyHex),
-        this.validatorStore.getGasLimit(pubkeyHex, duty.slot, this.logger),
-        slot
-      );
-    } catch (e) {
-      this.logger.error(
-        "Error signing proposer preferences",
-        {slot: duty.slot, validatorIndex: duty.validatorIndex},
-        e as Error
-      );
-      return null;
-    }
-  }
+  private getUpcomingProposals(slot: Slot): UpcomingProposal[] {
+    const currentEpoch = computeEpochAtSlot(slot);
+    const proposals: UpcomingProposal[] = [];
 
-  private async signBuilderPreferences(
-    duty: routes.validator.ProposerDuty,
-    slot: Slot
-  ): Promise<routes.validator.BuilderPreferencesEntry[]> {
-    const pubkeyHex = toPubkeyHex(duty.pubkey);
-    const {selection} = this.validatorStore.getBuilderSelectionParams(pubkeyHex, duty.slot);
-    if (selection === routes.validator.BuilderSelection.ExecutionOnly) {
-      return [];
-    }
+    for (const epoch of [currentEpoch, currentEpoch + 1]) {
+      const dutiesAtEpoch = this.blockDutiesService.getProposersAtEpoch(epoch);
+      if (!dutiesAtEpoch) continue;
 
-    try {
-      // Only submit the entries of a proposal if signing succeeded for all of its builders,
-      // else the proposal is retried on the next tick
-      const entries: routes.validator.BuilderPreferencesEntry[] = [];
-      for (const entry of this.validatorStore.getResolvedBuilderEntries(pubkeyHex)) {
-        const auth = await this.validatorStore.getBuilderRequestAuth(duty.pubkey, entry.authData, duty.slot, slot);
-        entries.push({
-          proposerPubkey: duty.pubkey,
-          url: new TextEncoder().encode(entry.url),
-          auth,
-          maxExecutionPayment: entry.maxExecutionPayment,
-        });
+      const submission = this.getSubmissionAtEpoch(epoch, dutiesAtEpoch.dependentRoot);
+
+      for (const duty of dutiesAtEpoch.data) {
+        if (duty.slot <= slot) continue;
+        if (duty.slot > slot + SUBMIT_BEFORE_PROPOSAL_SLOTS) continue;
+        if (!isForkPostGloas(this.config.getForkName(duty.slot))) continue;
+
+        proposals.push({duty, submission});
       }
-      return entries;
-    } catch (e) {
-      this.logger.error(
-        "Error signing builder preferences",
-        {slot: duty.slot, validatorIndex: duty.validatorIndex},
-        e as Error
-      );
-      return [];
     }
+
+    return proposals;
   }
 
-  private async submitProposerPreferences(
-    signedProposerPreferences: gloas.SignedProposerPreferences[],
-    pending: PendingSubmission[]
-  ): Promise<void> {
+  private async submitProposerPreferences(proposals: UpcomingProposal[], slot: Slot): Promise<void> {
+    const signedProposerPreferences: gloas.SignedProposerPreferences[] = [];
+    // Track which `(submission, slot)` pairs are pending an API submission so we can mark
+    // them only after the network call succeeds. Marking before would silently drop a
+    // preference on transient API failure (no retry until dependent_root shifts).
+    const pending: PendingSubmission[] = [];
+
+    for (const {duty, submission} of proposals) {
+      if (submission.proposerSlots.has(duty.slot)) continue;
+
+      try {
+        const pubkeyHex = toPubkeyHex(duty.pubkey);
+        const signed = await this.validatorStore.signProposerPreferences(
+          duty,
+          fromHex(submission.dependentRoot),
+          this.validatorStore.getFeeRecipient(pubkeyHex),
+          this.validatorStore.getGasLimit(pubkeyHex, duty.slot, this.logger),
+          slot
+        );
+        signedProposerPreferences.push(signed);
+        pending.push({submission, slot: duty.slot});
+      } catch (e) {
+        this.logger.error(
+          "Error signing proposer preferences",
+          {slot: duty.slot, validatorIndex: duty.validatorIndex},
+          e as Error
+        );
+      }
+    }
+
     if (signedProposerPreferences.length === 0) {
       return;
     }
@@ -216,8 +176,8 @@ export class ProposalPreferencesService {
       (await this.api.validator.submitProposerPreferences({signedProposerPreferences})).assertOk();
       // Only mark as submitted after the API call succeeds; a thrown error leaves the
       // slot eligible for retry on the next tick.
-      for (const {submission, slot} of pending) {
-        submission.proposerSlots.add(slot);
+      for (const {submission, slot: submittedSlot} of pending) {
+        submission.proposerSlots.add(submittedSlot);
       }
       this.logger.debug("Submitted signed proposer preferences", {count: signedProposerPreferences.length});
     } catch (e) {
@@ -229,10 +189,44 @@ export class ProposalPreferencesService {
     }
   }
 
-  private async submitBuilderPreferences(
-    builderPreferences: routes.validator.BuilderPreferencesEntry[],
-    pending: PendingSubmission[]
-  ): Promise<void> {
+  private async submitBuilderPreferences(proposals: UpcomingProposal[], slot: Slot): Promise<void> {
+    const builderPreferences: routes.validator.BuilderPreferencesEntry[] = [];
+    const pending: PendingSubmission[] = [];
+
+    for (const {duty, submission} of proposals) {
+      if (submission.builderSlots.has(duty.slot)) continue;
+
+      const pubkeyHex = toPubkeyHex(duty.pubkey);
+      const {selection} = this.validatorStore.getBuilderSelectionParams(pubkeyHex, duty.slot);
+      if (selection === routes.validator.BuilderSelection.ExecutionOnly) continue;
+
+      const builderEntries = this.validatorStore.getResolvedBuilderEntries(pubkeyHex);
+      if (builderEntries.length === 0) continue;
+
+      try {
+        // Collect entries per duty and only add them to the batch if signing
+        // succeeded for all builders, else the duty is retried on the next tick
+        const dutyEntries: routes.validator.BuilderPreferencesEntry[] = [];
+        for (const entry of builderEntries) {
+          const auth = await this.validatorStore.getBuilderRequestAuth(duty.pubkey, entry.authData, duty.slot, slot);
+          dutyEntries.push({
+            proposerPubkey: duty.pubkey,
+            url: new TextEncoder().encode(entry.url),
+            auth,
+            maxExecutionPayment: entry.maxExecutionPayment,
+          });
+        }
+        builderPreferences.push(...dutyEntries);
+        pending.push({submission, slot: duty.slot});
+      } catch (e) {
+        this.logger.error(
+          "Error signing builder preferences",
+          {slot: duty.slot, validatorIndex: duty.validatorIndex},
+          e as Error
+        );
+      }
+    }
+
     if (builderPreferences.length === 0) {
       return;
     }
@@ -242,8 +236,8 @@ export class ProposalPreferencesService {
       // Only mark as submitted after the API call succeeds; a thrown error, including per-entry
       // failures reported by index, leaves all slots eligible for retry on the next tick.
       // Re-submitting preferences a builder already accepted is harmless.
-      for (const {submission, slot} of pending) {
-        submission.builderSlots.add(slot);
+      for (const {submission, slot: submittedSlot} of pending) {
+        submission.builderSlots.add(submittedSlot);
       }
       this.logger.debug("Submitted builder preferences", {count: builderPreferences.length});
     } catch (e) {
