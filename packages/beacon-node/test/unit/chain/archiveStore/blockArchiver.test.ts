@@ -220,6 +220,89 @@ describe("block archiver task", () => {
     ]);
   });
 
+  it("does not treat sibling payload variants of canonical blocks as non-canonical", async () => {
+    // Post-gloas a block has three fork choice nodes (PENDING/EMPTY/FULL) sharing one blockRoot. Fork choice drops
+    // PENDING from nonAncestors, and only one of EMPTY/FULL is on the ancestor walk, so the other sibling shows up in
+    // nonAncestors. Block-level data (block, light client witness/header) must not be pruned for it, while
+    // payload-level data (sidecars) of the losing variant must still be pruned.
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      FULU_FORK_EPOCH: 0,
+      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
+    });
+    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(ssz.fulu.SignedBeaconBlock.defaultValue());
+    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
+    vi.spyOn(dbStub.dataColumnSidecar, "valuesStreamBinary").mockReturnValue(toAsyncIterable([]));
+    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
+    const pruneSpy = vi.spyOn(lightclientServer, "pruneNonCheckpointData").mockResolvedValue(undefined);
+
+    const root = (i: number): string => toHexString(Buffer.alloc(32, i));
+    // The finalized checkpoint at slot 64 builds on the EMPTY variant at slot 32 after skipped slots.
+    // This finalizes the EMPTY payload choice while slot 32 remains a checkpoint block.
+    const finalizedPending = generateProtoBlock({
+      slot: 64,
+      blockRoot: root(4),
+      parentRoot: root(1),
+      payloadStatus: PayloadStatus.PENDING,
+    });
+    const boundaryEmpty = generateProtoBlock({
+      slot: 32,
+      blockRoot: root(1),
+      parentRoot: root(2),
+      payloadStatus: PayloadStatus.EMPTY,
+    });
+    const boundaryFull = generateProtoBlock({
+      slot: 32,
+      blockRoot: root(1),
+      parentRoot: root(2),
+      payloadStatus: PayloadStatus.FULL,
+    });
+    const parentFull = generateProtoBlock({slot: 31, blockRoot: root(2), payloadStatus: PayloadStatus.FULL});
+    const parentEmpty = generateProtoBlock({slot: 31, blockRoot: root(2), payloadStatus: PayloadStatus.EMPTY});
+    const orphan = generateProtoBlock({slot: 30, blockRoot: root(3), payloadStatus: PayloadStatus.FULL});
+    const canonicalBlocks = [finalizedPending, boundaryEmpty, parentFull];
+    const nonCanonicalBlocks = [boundaryFull, parentEmpty, orphan];
+
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: canonicalBlocks,
+      nonAncestors: nonCanonicalBlocks,
+    });
+
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 2, root: fromHexString(finalizedPending.blockRoot), rootHex: finalizedPending.blockRoot},
+      3,
+      null,
+      false
+    );
+
+    // Block-level: delete only the orphan as non-canonical
+    expect(dbStub.block.batchDelete).toBeCalledWith([fromHexString(root(3))]);
+    for (const [i, [roots]] of vi.mocked(dbStub.block.batchDelete).mock.calls.entries()) {
+      const hexes = roots.map((r) => toHexString(r));
+      if (hexes.includes(root(3))) {
+        expect(hexes, `block.batchDelete call ${i} deletes more than the orphan`).toEqual([root(3)]);
+      }
+    }
+
+    // Payload-level: the losing FULL payload of the EMPTY-finalized block and the orphan are pruned
+    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith([
+      {slot: boundaryFull.slot, blockRoot: boundaryFull.blockRoot},
+      {slot: orphan.slot, blockRoot: orphan.blockRoot},
+    ]);
+
+    // Keep light client data of canonical blocks, prune the orphan and the canonical non-checkpoint block
+    expect(pruneSpy).toHaveBeenCalledTimes(1);
+    const pruned = pruneSpy.mock.calls[0][0].map((r) => toHexString(r));
+    expect(pruned).toContain(root(3)); // orphan
+    expect(pruned).toContain(root(2)); // canonical but not an epoch boundary block
+    expect(pruned).not.toContain(root(1)); // canonical epoch boundary block
+  });
+
   it("should delete sidecars only for non-canonical FULL payload variants", async () => {
     const config = createChainForkConfig({
       ...defaultConfig,
