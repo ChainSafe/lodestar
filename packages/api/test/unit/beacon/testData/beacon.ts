@@ -258,21 +258,21 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getPendingDeposits: {
     args: {stateId: "head"},
     res: {
-      data: [ssz.electra.PendingDeposit.defaultValue()],
+      data: [ssz.gloas.PendingDeposit.defaultValue()],
       meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
   getPendingPartialWithdrawals: {
     args: {stateId: "head"},
     res: {
-      data: [ssz.electra.PendingPartialWithdrawal.defaultValue()],
+      data: [ssz.gloas.PendingPartialWithdrawal.defaultValue()],
       meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
   getPendingConsolidations: {
     args: {stateId: "head"},
     res: {
-      data: [ssz.electra.PendingConsolidation.defaultValue()],
+      data: [ssz.gloas.PendingConsolidation.defaultValue()],
       meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
