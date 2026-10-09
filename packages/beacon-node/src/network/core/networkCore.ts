@@ -3,6 +3,7 @@ import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {Connection, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
+import {XrayProbe} from "@xray/probe";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -38,6 +39,7 @@ import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr} from "./types.js";
 
 type Mods = {
+  xray?: XrayProbe;
   libp2p: Libp2p;
   gossip: Eth2Gossipsub;
   reqResp: ReqRespBeaconNode;
@@ -96,6 +98,7 @@ function formatActiveResources(): string {
  * - NetworkProcessor: Must be in the main thread, depends on chain
  */
 export class NetworkCore implements INetworkCore {
+  private readonly xray?: XrayProbe;
   // Internal modules
   private readonly libp2p: Libp2p;
   private readonly attnetsService: IAttnetsService;
@@ -119,6 +122,7 @@ export class NetworkCore implements INetworkCore {
   private closed = false;
 
   constructor(modules: Mods) {
+    this.xray = modules.xray;
     this.libp2p = modules.libp2p;
     this.gossip = modules.gossip;
     this.reqResp = modules.reqResp;
@@ -153,130 +157,156 @@ export class NetworkCore implements INetworkCore {
     initialCustodyGroupCount,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
+      start: false,
       peerStoreDir,
       metrics: Boolean(metricsRegistry),
       metricsRegistry: metricsRegistry ?? undefined,
     });
 
-    const metrics = metricsRegistry ? createNetworkCoreMetrics(metricsRegistry) : null;
-    const peersData = new PeersData();
-    const peerRpcScores = new PeerRpcScoreStore(opts, metrics, logger);
-    const statusCache = new LocalStatusCache(initialStatus);
+    let xray: XrayProbe | undefined;
+    try {
+      const metrics = metricsRegistry ? createNetworkCoreMetrics(metricsRegistry) : null;
+      if (opts.xrayAddress) {
+        xray = new XrayProbe(libp2p, {
+          address: opts.xrayAddress,
+          clientName: `lodestar/${opts.version ?? "unknown"}`,
+          onError: (error) => {
+            metrics?.xrayErrors.inc({code: error.code});
+            logger.warn("Xray capture interrupted", {code: error.code}, error);
+          },
+        });
+        metrics?.xrayBufferedBytes.addCollect(() => metrics.xrayBufferedBytes.set(xray?.bufferedBytes ?? 0));
+        if (opts.xrayWaitForAttach) {
+          await xray.waitForAttach(AbortSignal.timeout(30_000));
+        }
+      }
 
-    // Bind discv5's ENR to local metadata
-    // resolve circular dependency by setting `discv5` variable after the peer manager is instantiated
-    let discv5: Discv5Worker | undefined;
-    const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
-      discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
-    };
-    const peerId = peerIdFromPrivateKey(privateKey);
-    const nodeId = computeNodeId(peerId);
-    const networkConfig: NetworkConfig = {
-      nodeId,
-      config,
-      custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
-    };
-    const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
+      const peersData = new PeersData();
+      const peerRpcScores = new PeerRpcScoreStore(opts, metrics, logger);
+      const statusCache = new LocalStatusCache(initialStatus);
 
-    const reqResp = new ReqRespBeaconNode(
-      {
+      // Bind discv5's ENR to local metadata
+      // resolve circular dependency by setting `discv5` variable after the peer manager is instantiated
+      let discv5: Discv5Worker | undefined;
+      const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
+        discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
+      };
+      const peerId = peerIdFromPrivateKey(privateKey);
+      const nodeId = computeNodeId(peerId);
+      const networkConfig: NetworkConfig = {
+        nodeId,
         config,
+        custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
+      };
+      const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
+
+      const reqResp = new ReqRespBeaconNode(
+        {
+          config,
+          libp2p,
+          metadata,
+          peerRpcScores,
+          logger,
+          events,
+          metrics,
+          peersData,
+          statusCache,
+          getHandler: getReqRespHandler,
+        },
+        opts
+      );
+
+      const gossip = new Eth2Gossipsub(opts, {
+        networkConfig,
         libp2p,
-        metadata,
-        peerRpcScores,
         logger,
-        events,
-        metrics,
+        metricsRegister: metricsRegistry,
+        eth2Context: {
+          activeValidatorCount,
+          currentSlot: clock.currentSlot,
+          currentEpoch: clock.currentEpoch,
+        },
         peersData,
-        statusCache,
-        getHandler: getReqRespHandler,
-      },
-      opts
-    );
+        events,
+      });
 
-    const gossip = new Eth2Gossipsub(opts, {
-      networkConfig,
-      libp2p,
-      logger,
-      metricsRegister: metricsRegistry,
-      eth2Context: {
-        activeValidatorCount,
-        currentSlot: clock.currentSlot,
-        currentEpoch: clock.currentEpoch,
-      },
-      peersData,
-      events,
-    });
+      await libp2p.start();
 
-    // Note: should not be necessary, already called in createNodeJsLibp2p()
-    await libp2p.start();
+      await reqResp.start();
+      // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
+      await gossip.start();
 
-    await reqResp.start();
-    // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
-    await gossip.start();
-
-    const attnetsService = new AttnetsService(
-      config,
-      clock,
-      gossip,
-      metadata,
-      logger,
-      metrics,
-      networkConfig.nodeId,
-      opts
-    );
-    const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
-
-    const peerManager = await PeerManager.init(
-      {
-        privateKey,
-        libp2p,
+      const attnetsService = new AttnetsService(
+        config,
+        clock,
         gossip,
+        metadata,
+        logger,
+        metrics,
+        networkConfig.nodeId,
+        opts
+      );
+      const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
+
+      const peerManager = await PeerManager.init(
+        {
+          privateKey,
+          libp2p,
+          gossip,
+          reqResp,
+          attnetsService,
+          syncnetsService,
+          logger,
+          metrics,
+          clock,
+          peerRpcScores,
+          events,
+          networkConfig,
+          peersData,
+          statusCache,
+        },
+        opts
+      );
+
+      // Network spec decides version changes based on clock epoch, not head epoch
+      const boundary = config.getForkBoundaryAtEpoch(clock.currentEpoch);
+
+      // Register only ReqResp protocols relevant to clock's epoch
+      reqResp.registerProtocolsAtBoundary(boundary);
+
+      // Bind discv5's ENR to local metadata
+      // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
+      discv5 = peerManager["discovery"]?.discv5;
+
+      // Initialize ENR with clock's fork
+      metadata.upstreamValues(clock.currentEpoch);
+
+      return new NetworkCore({
+        xray,
+        libp2p,
         reqResp,
+        gossip,
         attnetsService,
         syncnetsService,
-        logger,
-        metrics,
-        clock,
-        peerRpcScores,
-        events,
+        peerManager,
         networkConfig,
         peersData,
+        metadata,
+        logger,
+        config,
+        clock,
         statusCache,
-      },
-      opts
-    );
-
-    // Network spec decides version changes based on clock epoch, not head epoch
-    const boundary = config.getForkBoundaryAtEpoch(clock.currentEpoch);
-
-    // Register only ReqResp protocols relevant to clock's epoch
-    reqResp.registerProtocolsAtBoundary(boundary);
-
-    // Bind discv5's ENR to local metadata
-    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
-    discv5 = peerManager["discovery"]?.discv5;
-
-    // Initialize ENR with clock's fork
-    metadata.upstreamValues(clock.currentEpoch);
-
-    return new NetworkCore({
-      libp2p,
-      reqResp,
-      gossip,
-      attnetsService,
-      syncnetsService,
-      peerManager,
-      networkConfig,
-      peersData,
-      metadata,
-      logger,
-      config,
-      clock,
-      statusCache,
-      metrics,
-      opts,
-    });
+        metrics,
+        opts,
+      });
+    } catch (error) {
+      try {
+        await libp2p.stop();
+      } finally {
+        await xray?.stop();
+      }
+      throw error;
+    }
   }
 
   /** Destroy this instance. Can only be called once. */
@@ -285,19 +315,23 @@ export class NetworkCore implements INetworkCore {
 
     this.clock.off(ClockEvent.epoch, this.onEpoch);
 
-    // Must goodbye and disconnect before stopping libp2p
-    await this.peerManager.goodbyeAndDisconnectAllPeers();
-    this.logger.debug("network sent goodbye to all peers");
-    await this.peerManager.close();
-    this.logger.debug("network peerManager closed");
-    await this.gossip.stop();
-    this.logger.debug("network gossip closed");
-    await this.reqResp.stop();
-    await this.reqResp.unregisterAllProtocols();
-    this.logger.debug("network reqResp closed");
-    this.attnetsService.close();
-    this.syncnetsService.close();
-    await this.libp2p.stop();
+    try {
+      // Must goodbye and disconnect before stopping libp2p
+      await this.peerManager.goodbyeAndDisconnectAllPeers();
+      this.logger.debug("network sent goodbye to all peers");
+      await this.peerManager.close();
+      this.logger.debug("network peerManager closed");
+      await this.gossip.stop();
+      this.logger.debug("network gossip closed");
+      await this.reqResp.stop();
+      await this.reqResp.unregisterAllProtocols();
+      this.logger.debug("network reqResp closed");
+      this.attnetsService.close();
+      this.syncnetsService.close();
+      await this.libp2p.stop();
+    } finally {
+      await this.xray?.stop();
+    }
     // Diagnostic for the shutdown hang, this thread can spin in `Environment::CleanupHandles()` on
     // a handle that never closes and `Worker.terminate()` then never resolves. Diffing this list
     // between a clean and a stuck shutdown should narrow down which handle it is

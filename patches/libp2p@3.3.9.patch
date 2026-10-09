@@ -1,0 +1,175 @@
+diff --git a/dist/src/libp2p.d.ts b/dist/src/libp2p.d.ts
+index f95d4f95fb63098e8cb293cb5d8b8545724ff3c8..36dbae4e4970b1bb640734e8124b5f2afcf2b5b4 100644
+--- a/dist/src/libp2p.d.ts
++++ b/dist/src/libp2p.d.ts
+@@ -47,7 +47,9 @@ export declare class Libp2p<T extends ServiceMap = ServiceMap> extends TypedEven
+     unhandle(protocols: string[] | string, options?: AbortOptions): Promise<void>;
+     register(protocol: string, topology: Topology, options?: AbortOptions): Promise<string>;
+     unregister(id: string): void;
++    use(middleware: StreamMiddleware): void;
+     use(protocol: string, middleware: StreamMiddleware | StreamMiddleware[]): void;
++    unuse(middleware: StreamMiddleware): void;
+     unuse(protocol: string): void;
+     isDialable(multiaddr: Multiaddr, options?: IsDialableOptions): Promise<boolean>;
+ }
+diff --git a/dist/src/libp2p.js b/dist/src/libp2p.js
+index 237c0366c6708cc2616f3855f94abaef84f981a7..80787de37bd2a9030897a4324e83855498e5dc78 100644
+--- a/dist/src/libp2p.js
++++ b/dist/src/libp2p.js
+@@ -311,6 +311,13 @@ export class Libp2p extends TypedEventEmitter {
+         this.components.registrar.unregister(id);
+     }
+     use(protocol, middleware) {
++        if (typeof protocol === 'function') {
++            this.components.registrar.use(protocol);
++            return;
++        }
++        if (middleware == null) {
++            throw new InvalidParametersError('Protocol middleware is required');
++        }
+         this.components.registrar.use(protocol, Array.isArray(middleware) ? middleware : [middleware]);
+     }
+     unuse(protocol) {
+diff --git a/dist/src/registrar.d.ts b/dist/src/registrar.d.ts
+index 4ed8c327c55c08611595438d31345c2554389748..60e6aec80bb3838004747d8d1cd79d9e8a249116 100644
+--- a/dist/src/registrar.d.ts
++++ b/dist/src/registrar.d.ts
+@@ -20,6 +20,7 @@ export declare class Registrar implements RegistrarInterface {
+     private readonly handlers;
+     private readonly components;
+     private readonly middleware;
++    private globalMiddleware;
+     constructor(components: RegistrarComponents);
+     readonly [Symbol.toStringTag] = "@libp2p/registrar";
+     getProtocols(): string[];
+@@ -42,7 +43,9 @@ export declare class Registrar implements RegistrarInterface {
+      * Unregister topology
+      */
+     unregister(id: string): void;
++    use(middleware: StreamMiddleware): void;
+     use(protocol: string, middleware: StreamMiddleware[]): void;
++    unuse(middleware: StreamMiddleware): void;
+     unuse(protocol: string): void;
+     getMiddleware(protocol: string): StreamMiddleware[];
+     /**
+diff --git a/dist/src/registrar.js b/dist/src/registrar.js
+index 0132f23274b4d3833404e9de9145ab86d35986fb..dfd707bd78fa0dff00ea3feb0d072cd8fd9cea30 100644
+--- a/dist/src/registrar.js
++++ b/dist/src/registrar.js
+@@ -12,6 +12,7 @@ export class Registrar {
+     handlers;
+     components;
+     middleware;
++    globalMiddleware = [];
+     constructor(components) {
+         this.components = components;
+         this.log = components.logger.forComponent('libp2p:registrar');
+@@ -124,13 +125,25 @@ export class Registrar {
+         }
+     }
+     use(protocol, middleware) {
++        if (typeof protocol === 'function') {
++            this.globalMiddleware.push(protocol);
++            return;
++        }
++        if (middleware == null) {
++            throw new InvalidParametersError('Protocol middleware is required');
++        }
+         this.middleware.set(protocol, middleware);
+     }
+     unuse(protocol) {
+-        this.middleware.delete(protocol);
++        if (typeof protocol === 'function') {
++            this.globalMiddleware = this.globalMiddleware.filter(item => item !== protocol);
++        }
++        else {
++            this.middleware.delete(protocol);
++        }
+     }
+     getMiddleware(protocol) {
+-        return this.middleware.get(protocol) ?? [];
++        return [...this.globalMiddleware, ...(this.middleware.get(protocol) ?? [])];
+     }
+     /**
+      * Remove a disconnected peer from the record
+diff --git a/src/libp2p.ts b/src/libp2p.ts
+index d69de3af19f568177916185e2856cd42b2efeb97..ed742df7fb58eaaa42b47fdd3b2f4908e92d8cab 100644
+--- a/src/libp2p.ts
++++ b/src/libp2p.ts
+@@ -405,11 +405,24 @@ export class Libp2p<T extends ServiceMap = ServiceMap> extends TypedEventEmitter
+     this.components.registrar.unregister(id)
+   }
+ 
+-  use (protocol: string, middleware: StreamMiddleware | StreamMiddleware[]): void {
++  use (middleware: StreamMiddleware): void
++  use (protocol: string, middleware: StreamMiddleware | StreamMiddleware[]): void
++  use (protocol: string | StreamMiddleware, middleware?: StreamMiddleware | StreamMiddleware[]): void {
++    if (typeof protocol === 'function') {
++      this.components.registrar.use(protocol)
++      return
++    }
++
++    if (middleware == null) {
++      throw new InvalidParametersError('Protocol middleware is required')
++    }
++
+     this.components.registrar.use(protocol, Array.isArray(middleware) ? middleware : [middleware])
+   }
+ 
+-  unuse (protocol: string): void {
++  unuse (middleware: StreamMiddleware): void
++  unuse (protocol: string): void
++  unuse (protocol: string | StreamMiddleware): void {
+     this.components.registrar.unuse(protocol)
+   }
+ 
+diff --git a/src/registrar.ts b/src/registrar.ts
+index 01549f2334e01968a47921aacf7bef8febbd5618..ed545665d17fca18d6042897aa66acb5142208d2 100644
+--- a/src/registrar.ts
++++ b/src/registrar.ts
+@@ -26,6 +26,7 @@ export class Registrar implements RegistrarInterface {
+   private readonly handlers: Map<string, StreamHandlerRecord>
+   private readonly components: RegistrarComponents
+   private readonly middleware: Map<string, StreamMiddleware[]>
++  private globalMiddleware: StreamMiddleware[] = []
+ 
+   constructor (components: RegistrarComponents) {
+     this.components = components
+@@ -165,16 +166,33 @@ export class Registrar implements RegistrarInterface {
+     }
+   }
+ 
+-  use (protocol: string, middleware: StreamMiddleware[]): void {
++  use (middleware: StreamMiddleware): void
++  use (protocol: string, middleware: StreamMiddleware[]): void
++  use (protocol: string | StreamMiddleware, middleware?: StreamMiddleware[]): void {
++    if (typeof protocol === 'function') {
++      this.globalMiddleware.push(protocol)
++      return
++    }
++
++    if (middleware == null) {
++      throw new InvalidParametersError('Protocol middleware is required')
++    }
++
+     this.middleware.set(protocol, middleware)
+   }
+ 
+-  unuse (protocol: string): void {
+-    this.middleware.delete(protocol)
++  unuse (middleware: StreamMiddleware): void
++  unuse (protocol: string): void
++  unuse (protocol: string | StreamMiddleware): void {
++    if (typeof protocol === 'function') {
++      this.globalMiddleware = this.globalMiddleware.filter(item => item !== protocol)
++    } else {
++      this.middleware.delete(protocol)
++    }
+   }
+ 
+   getMiddleware (protocol: string): StreamMiddleware[] {
+-    return this.middleware.get(protocol) ?? []
++    return [...this.globalMiddleware, ...(this.middleware.get(protocol) ?? [])]
+   }
+ 
+   /**

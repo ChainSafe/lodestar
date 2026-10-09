@@ -45,4 +45,6 @@ overrides:
   sigstore: "4.0.0"
 
 patchedDependencies:
+  "@libp2p/interface@3.3.0": patches/@libp2p__interface@3.3.0.patch
+  libp2p@3.3.9: patches/libp2p@3.3.9.patch
   sigstore@4.0.0: patches/sigstore@4.0.0.patch

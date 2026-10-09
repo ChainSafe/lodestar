@@ -31,6 +31,7 @@ RUN corepack enable
 # source code changes will only invalidate the build layer.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
+COPY .xray/probe-0.1.0.tgz ./.xray/probe-0.1.0.tgz
 COPY packages/api/package.json packages/api/
 COPY packages/beacon-node/package.json packages/beacon-node/
 COPY packages/builder/package.json packages/builder/

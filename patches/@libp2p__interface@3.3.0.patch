@@ -1,0 +1,108 @@
+diff --git a/dist/src/index.d.ts b/dist/src/index.d.ts
+index 872825aa9c13cf7bc944ce4c814de82d4fd7c858..60e4afd4d6f36de5f8042f2d9d797facb0ec3b32 100644
+--- a/dist/src/index.d.ts
++++ b/dist/src/index.d.ts
+@@ -705,8 +705,25 @@ export interface Libp2p<T extends ServiceMap = ServiceMap> extends Startable, Ty
+      */
+     unregister(id: string): void;
+     /**
+-     * Registers one or more middleware implementations that will be invoked for
+-     * incoming and outgoing protocol streams that match the passed protocol.
++     * Appends global middleware invoked for every incoming and outgoing negotiated
++     * protocol stream, before protocol-specific middleware. This does not register
++     * a stream handler or advertise support for a protocol.
++     *
++     * @example
++     *
++     * ```TypeScript
++     * const observer: StreamMiddleware = (stream, connection, next) => {
++     *   next(stream, connection)
++     * }
++     * libp2p.use(observer)
++     * libp2p.unuse(observer)
++     * ```
++     */
++    use(middleware: StreamMiddleware): void;
++    /**
++     * Registers one or more middleware implementations for incoming and outgoing
++     * streams matching the passed protocol, replacing any previously registered
++     * middleware for that protocol. Protocol strings are matched literally.
+      *
+      * @example
+      *
+@@ -719,13 +736,18 @@ export interface Libp2p<T extends ServiceMap = ServiceMap> extends Startable, Ty
+      */
+     use(protocol: string, middleware: StreamMiddleware | StreamMiddleware[]): void;
+     /**
+-     * Deregisters all middleware for the passed protocol.
++     * Deregisters all global registrations of the given middleware, preserving
++     * other global observers and all protocol-specific middleware.
++     */
++    unuse(middleware: StreamMiddleware): void;
++    /**
++     * Deregisters all middleware for the passed protocol. Global middleware is retained.
+      *
+      * @example
+      *
+      * ```TypeScript
+      * libp2p.unuse('/my/protocol/1.0.0')
+-     * // any previously registered middleware will no longer be invoked
++     * // any previously registered protocol-specific middleware will no longer be invoked
+      * ```
+      */
+     unuse(protocol: string): void;
+diff --git a/src/index.ts b/src/index.ts
+index 0d19701288a8125cde546dfbe81525db8aec4a75..d2238d0cf0be80b27aadef82b110c552f98ca366 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -789,8 +789,26 @@ export interface Libp2p<T extends ServiceMap = ServiceMap> extends Startable, Ty
+   unregister(id: string): void
+ 
+   /**
+-   * Registers one or more middleware implementations that will be invoked for
+-   * incoming and outgoing protocol streams that match the passed protocol.
++   * Appends global middleware invoked for every incoming and outgoing negotiated
++   * protocol stream, before protocol-specific middleware. This does not register
++   * a stream handler or advertise support for a protocol.
++   *
++   * @example
++   *
++   * ```TypeScript
++   * const observer: StreamMiddleware = (stream, connection, next) => {
++   *   next(stream, connection)
++   * }
++   * libp2p.use(observer)
++   * libp2p.unuse(observer)
++   * ```
++   */
++  use (middleware: StreamMiddleware): void
++
++  /**
++   * Registers one or more middleware implementations for incoming and outgoing
++   * streams matching the passed protocol, replacing any previously registered
++   * middleware for that protocol. Protocol strings are matched literally.
+    *
+    * @example
+    *
+@@ -804,13 +822,19 @@ export interface Libp2p<T extends ServiceMap = ServiceMap> extends Startable, Ty
+   use (protocol: string, middleware: StreamMiddleware | StreamMiddleware[]): void
+ 
+   /**
+-   * Deregisters all middleware for the passed protocol.
++   * Deregisters all global registrations of the given middleware, preserving
++   * other global observers and all protocol-specific middleware.
++   */
++  unuse (middleware: StreamMiddleware): void
++
++  /**
++   * Deregisters all middleware for the passed protocol. Global middleware is retained.
+    *
+    * @example
+    *
+    * ```TypeScript
+    * libp2p.unuse('/my/protocol/1.0.0')
+-   * // any previously registered middleware will no longer be invoked
++   * // any previously registered protocol-specific middleware will no longer be invoked
+    * ```
+    */
+   unuse (protocol: string): void
