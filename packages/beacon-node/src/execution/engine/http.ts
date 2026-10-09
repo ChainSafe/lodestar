@@ -121,8 +121,8 @@ const REST_PROBE_RETRY_MS = 12_000;
  *
  * In `auto` mode a capabilities response from a server without the REST API, a 4xx other than
  * 401/403, selects JSON-RPC until the EL reconnects. Transient discovery failures use JSON-RPC while
- * awaiting another probe; authentication failures and malformed capabilities fail visibly. Forks and
- * blob revisions the EL does not advertise also use JSON-RPC.
+ * awaiting another probe; authentication failures fail visibly, malformed capabilities fall back to
+ * JSON-RPC with a warning. Forks and blob revisions the EL does not advertise also use JSON-RPC.
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
@@ -549,6 +549,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
               status: e.status,
               type: e.type ?? "unknown",
             });
+          } else if (this.engineApi === "auto" && e instanceof EngineRestResponseError) {
+            // The REST API answered but cannot be trusted, auto mode must keep the node on a working transport
+            this.restSupport = {state: "unsupported"};
+            this.logger.warn("Invalid engine API capabilities, using JSON-RPC until reconnect", {}, e);
           } else {
             const transient = isRetryableEngineRestError(e);
             this.restSupport = {state: "pending", error: this.engineApi === "auto" && transient ? undefined : e};

@@ -283,9 +283,30 @@ describe("REST engine compatibility", () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
-  it.each([null, {supported_forks: "paris"}])("rejects malformed capabilities %j without downgrading", async (body) => {
+  it.each([null, {supported_forks: "paris"}])(
+    "falls back to JSON-RPC until reconnect on malformed capabilities %j",
+    async (body) => {
+      const now = vi.spyOn(Date, "now").mockReturnValue(100_000);
+      discovery = {status: 200, body};
+      const engine = createEngine();
+      await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+      now.mockReturnValue(200_000);
+      discovery = {status: 200, body: capabilities};
+      await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+      expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
+      expect(logger.warn).toHaveBeenCalledOnce();
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Invalid engine API capabilities, using JSON-RPC until reconnect",
+        {},
+        expect.objectContaining({type: expect.objectContaining({code: "ENGINE_REST_INVALID_RESPONSE"})})
+      );
+      expect(logger.error).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([null, {supported_forks: "paris"}])("rejects malformed capabilities %j in strict SSZ mode", async (body) => {
     discovery = {status: 200, body};
-    const engine = createEngine();
+    const engine = createEngine("ssz");
     await expect(engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash)).rejects.toThrow();
     expect(requests).toEqual(["capabilities"]);
   });
