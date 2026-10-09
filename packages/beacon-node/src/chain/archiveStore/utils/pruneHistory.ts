@@ -11,8 +11,10 @@ export async function pruneHistory(
   logger: Logger,
   metrics: Metrics | null | undefined,
   finalizedEpoch: Epoch,
-  currentEpoch: Epoch
-): Promise<Slot> {
+  currentEpoch: Epoch,
+  statePruneFromSlot: Slot,
+  beforePrune: (blockCutoffSlot: Slot) => Promise<void>
+): Promise<{blockCutoffSlot: Slot; stateCutoffSlot: Slot}> {
   const blockCutoffEpoch = Math.min(
     // set by config, with underflow protection
     Math.max(currentEpoch - config.MIN_EPOCHS_FOR_BLOCK_REQUESTS, 0),
@@ -28,6 +30,7 @@ export async function pruneHistory(
     currentEpoch,
     finalizedEpoch,
     blockCutoffEpoch,
+    statePruneFromSlot,
     stateCutoffSlot,
   });
 
@@ -35,7 +38,7 @@ export async function pruneHistory(
   const [blocks, envelopes, states] = await Promise.all([
     db.blockArchive.keys({gte: 0, lt: blockCutoffSlot}),
     db.executionPayloadEnvelopeArchive.keys({gte: 0, lt: blockCutoffSlot}),
-    db.stateArchive.keys({gte: 0, lt: stateCutoffSlot}),
+    stateCutoffSlot > statePruneFromSlot ? db.stateArchive.keys({gte: statePruneFromSlot, lt: stateCutoffSlot}) : [],
   ]);
   step0?.();
 
@@ -48,6 +51,8 @@ export async function pruneHistory(
     envelopeSlots: prettyPrintIndices(envelopes),
     stateSlots: prettyPrintIndices(states),
   });
+
+  await beforePrune(blockCutoffSlot);
 
   const step1 = metrics?.pruneHistory.pruneKeys.startTimer();
   await Promise.all([
@@ -64,5 +69,5 @@ export async function pruneHistory(
 
   metrics?.pruneHistory.pruneCount.inc();
 
-  return blockCutoffSlot;
+  return {blockCutoffSlot, stateCutoffSlot};
 }

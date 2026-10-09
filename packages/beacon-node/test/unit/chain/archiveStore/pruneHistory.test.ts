@@ -1,21 +1,37 @@
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {pruneHistory} from "../../../../src/chain/archiveStore/utils/pruneHistory.js";
 import {BeaconDb} from "../../../../src/db/index.js";
-import {startTmpBeaconDb} from "../../../utils/db.js";
+import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 
 describe("chain / archiveStore / pruneHistory", () => {
   let db: BeaconDb;
+  let closeDb: () => Promise<void>;
 
   beforeEach(async () => {
-    db = await startTmpBeaconDb(config);
+    ({db, close: closeDb} = await startIsolatedTmpBeaconDb(config, "lodestar-prune-history-"));
   });
 
   afterEach(async () => {
-    await db.close();
+    vi.restoreAllMocks();
+    await closeDb();
+  });
+
+  it("does not delete history if persisting the boundary fails", async () => {
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    await db.blockArchive.add(block);
+    const beforePrune = vi.fn().mockRejectedValue(new Error("boundary write failed"));
+    const currentEpoch = config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 10;
+
+    await expect(
+      pruneHistory(config, db, testLogger(), null, currentEpoch - 2, currentEpoch, 0, beforePrune)
+    ).rejects.toThrow("boundary write failed");
+
+    expect(await db.blockArchive.keys()).toEqual([0]);
+    expect(beforePrune).toHaveBeenCalledExactlyOnceWith(computeStartSlotAtEpoch(10));
   });
 
   it("prunes blocks and execution payload envelopes older than MIN_EPOCHS_FOR_BLOCK_REQUESTS", async () => {
@@ -39,7 +55,16 @@ describe("chain / archiveStore / pruneHistory", () => {
       })
     );
 
-    const blockCutoffSlot = await pruneHistory(config, db, testLogger(), null, finalizedEpoch, currentEpoch);
+    const {blockCutoffSlot} = await pruneHistory(
+      config,
+      db,
+      testLogger(),
+      null,
+      finalizedEpoch,
+      currentEpoch,
+      0,
+      vi.fn().mockResolvedValue(undefined)
+    );
 
     expect(blockCutoffSlot).toBe(cutoffSlot);
     expect(await db.blockArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
@@ -54,7 +79,16 @@ describe("chain / archiveStore / pruneHistory", () => {
 
     await Promise.all(slots.map((slot) => db.stateArchive.putBinary(slot, new Uint8Array([1]))));
 
-    await pruneHistory(config, db, testLogger(), null, finalizedEpoch, currentEpoch);
+    await pruneHistory(
+      config,
+      db,
+      testLogger(),
+      null,
+      finalizedEpoch,
+      currentEpoch,
+      0,
+      vi.fn().mockResolvedValue(undefined)
+    );
 
     expect(await db.stateArchive.keys()).toEqual([finalizedSlot]);
   });
@@ -67,7 +101,72 @@ describe("chain / archiveStore / pruneHistory", () => {
 
     await Promise.all(slots.map((slot) => db.stateArchive.putBinary(slot, new Uint8Array([1]))));
 
-    await pruneHistory(config, db, testLogger(), null, finalizedEpoch, currentEpoch);
+    await pruneHistory(
+      config,
+      db,
+      testLogger(),
+      null,
+      finalizedEpoch,
+      currentEpoch,
+      0,
+      vi.fn().mockResolvedValue(undefined)
+    );
+
+    expect(await db.stateArchive.keys()).toEqual([lastArchivedSlot]);
+  });
+
+  it("skips state scans until the cutoff advances", async () => {
+    const lastArchivedSlot = computeStartSlotAtEpoch(90);
+    await db.stateArchive.putBinary(lastArchivedSlot, new Uint8Array([1]));
+    await pruneHistory(config, db, testLogger(), null, 98, 100, 0, vi.fn().mockResolvedValue(undefined));
+    const keys = vi.spyOn(db.stateArchive, "keys");
+
+    await pruneHistory(config, db, testLogger(), null, 99, 101, lastArchivedSlot, vi.fn().mockResolvedValue(undefined));
+
+    expect(keys.mock.calls.filter(([opts]) => opts?.gte !== undefined)).toEqual([]);
+    expect(await db.stateArchive.keys()).toEqual([lastArchivedSlot]);
+  });
+
+  it("resumes at the previous cutoff and prunes the previous restart anchor", async () => {
+    const lastArchivedSlot = computeStartSlotAtEpoch(90);
+    const nextArchivedSlot = computeStartSlotAtEpoch(100);
+    await db.stateArchive.putBinary(lastArchivedSlot, new Uint8Array([1]));
+    await pruneHistory(config, db, testLogger(), null, 98, 100, 0, vi.fn().mockResolvedValue(undefined));
+    await db.stateArchive.putBinary(nextArchivedSlot, new Uint8Array([2]));
+    const keys = vi.spyOn(db.stateArchive, "keys");
+
+    await pruneHistory(
+      config,
+      db,
+      testLogger(),
+      null,
+      102,
+      104,
+      lastArchivedSlot,
+      vi.fn().mockResolvedValue(undefined)
+    );
+
+    expect(keys.mock.calls.filter(([opts]) => opts?.gte !== undefined)).toEqual([
+      [{gte: lastArchivedSlot, lt: nextArchivedSlot}],
+    ]);
+    expect(await db.stateArchive.keys()).toEqual([nextArchivedSlot]);
+  });
+
+  it("skips the state scan when the archive is empty", async () => {
+    const keys = vi.spyOn(db.stateArchive, "keys");
+
+    await pruneHistory(config, db, testLogger(), null, 98, 100, 0, vi.fn().mockResolvedValue(undefined));
+
+    expect(keys.mock.calls.filter(([opts]) => opts?.gte !== undefined)).toEqual([]);
+  });
+
+  it("scans from zero on startup even after earlier pruning", async () => {
+    const lastArchivedSlot = computeStartSlotAtEpoch(90);
+    await db.stateArchive.putBinary(lastArchivedSlot, new Uint8Array([1]));
+    await pruneHistory(config, db, testLogger(), null, 98, 100, 0, vi.fn().mockResolvedValue(undefined));
+    await db.stateArchive.putBinary(0, new Uint8Array([2]));
+
+    await pruneHistory(config, db, testLogger(), null, 99, 101, 0, vi.fn().mockResolvedValue(undefined));
 
     expect(await db.stateArchive.keys()).toEqual([lastArchivedSlot]);
   });

@@ -41,7 +41,10 @@ export async function expectNoProgressiveBalancesMismatches(
   expect(mismatches, `${testCaseName} incremented ${progressiveBalancesMismatchesMetricName}`).toBe(0);
 }
 
-export function expectValidProgressiveBalances(state: IBeaconStateView, metrics: BeaconStateTransitionMetrics): void {
+export function expectValidProgressiveBalances(
+  state: IBeaconStateView,
+  metrics: BeaconStateTransitionMetrics | null
+): void {
   const cachedState = (state as BeaconStateView).cachedState;
   expect(cachedState, "progressive balance validation expects a BeaconStateView").toBeDefined();
   beforeProcessEpoch(cachedState.clone(true), metrics);

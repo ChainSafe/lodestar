@@ -1,6 +1,7 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
@@ -47,6 +48,8 @@ export class ArchiveStore {
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private archiveDataEpochs?: number;
+  // Finalized state writes are monotonic; reset on restart to include the newly persisted anchor.
+  private statePruneFromSlot: Slot = 0;
   private readonly statesArchiverStrategy: StateArchiveStrategy;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
@@ -103,20 +106,22 @@ export class ArchiveStore {
     if (this.opts.pruneHistory) {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
-      const blockCutoffSlot = await callFnWhenAwait(
+      const {stateCutoffSlot} = await callFnWhenAwait(
         pruneHistory(
           this.chain.config,
           this.db,
           this.logger,
           this.metrics,
           this.opts.anchorState.finalizedCheckpoint.epoch,
-          this.chain.clock.currentEpoch
+          this.chain.clock.currentEpoch,
+          this.statePruneFromSlot,
+          this.advanceEarliestAvailableSlot
         ),
         () => this.logger.info("Still pruning historical data, please wait..."),
         30_000,
         this.signal
       );
-      this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
+      this.statePruneFromSlot = stateCutoffSlot;
     }
 
     if (this.opts.serveHistoricalState) {
@@ -125,7 +130,7 @@ export class ArchiveStore {
           genesisTime: this.chain.clock.genesisTime,
           dbLocation: this.opts.dbName,
           dataColumnDir: this.opts.dataColumnDir,
-          nativeStateView: this.opts.nativeStateView ?? false,
+          nativeStateTransition: this.opts.nativeStateTransition ?? false,
         },
         config: this.chain.config,
         metrics: this.metrics,
@@ -134,6 +139,18 @@ export class ArchiveStore {
       });
     }
   }
+
+  /**
+   * The CLI owns the initial value; this only advances it during pruneHistory.
+   * Persisted before any deletion so a crash mid-prune never leaves the floor below deleted data.
+   */
+  private advanceEarliestAvailableSlot = async (blockCutoffSlot: Slot): Promise<void> => {
+    const earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
+    if (earliestAvailableSlot !== this.chain.earliestAvailableSlot) {
+      await this.db.earliestAvailableSlot.set(earliestAvailableSlot);
+      this.chain.earliestAvailableSlot = earliestAvailableSlot;
+    }
+  };
 
   async close(): Promise<void> {
     await this.historicalStateRegen?.close();
@@ -236,15 +253,17 @@ export class ArchiveStore {
 
       if (this.opts.pruneHistory) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-        const blockCutoffSlot = await pruneHistory(
+        const {stateCutoffSlot} = await pruneHistory(
           this.chain.config,
           this.db,
           this.logger,
           this.metrics,
           finalizedEpoch,
-          this.chain.clock.currentEpoch
+          this.chain.clock.currentEpoch,
+          this.statePruneFromSlot,
+          this.advanceEarliestAvailableSlot
         );
-        this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
+        this.statePruneFromSlot = stateCutoffSlot;
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 
