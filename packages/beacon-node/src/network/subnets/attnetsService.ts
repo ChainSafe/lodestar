@@ -3,6 +3,7 @@ import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, SubnetID, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
+import {HALF_SLOT_BPS} from "../../constants/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {getActiveForkBoundaries} from "../forks.js";
@@ -163,9 +164,13 @@ export class AttnetsService implements IAttnetsService {
    */
   private onSlot = (clockSlot: Slot): void => {
     try {
-      setTimeout(() => {
-        this.onHalfSlot(clockSlot);
-      }, this.config.SLOT_DURATION_MS * 0.5);
+      const fork = this.config.getForkName(clockSlot);
+      setTimeout(
+        () => {
+          this.onHalfSlot(clockSlot);
+        },
+        this.config.getSlotComponentDurationMs(fork, HALF_SLOT_BPS)
+      );
 
       for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
         if (dutiedSlot === clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {

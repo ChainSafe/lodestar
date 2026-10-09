@@ -5,6 +5,7 @@ import {
   IBeaconStateView,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
@@ -140,21 +141,21 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 }
 
 function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTime: boolean): number {
-  const msPerSlot = config.SLOT_DURATION_MS;
-  const msPerHalfSlot = msPerSlot / 2;
-  const msFromGenesis = Date.now() - chain.genesisTime * 1000;
-  const msToNextSlot =
-    msFromGenesis < 0
-      ? // For future genesis time, calculate time left in the slot
-        -msFromGenesis % msPerSlot
-      : // For past genesis time, calculate time until the next slot
-        msPerSlot - (msFromGenesis % msPerSlot);
+  const currentSlot = chain.clock.currentSlot;
+  const nextSlotTimeSec = computeTimeAtSlot(config, currentSlot + 1, chain.genesisTime);
+  const nowMs = Date.now();
+
   if (isFirstTime) {
-    // at the 1st time we may miss middle of the current clock slot
-    return msToNextSlot > msPerHalfSlot ? msToNextSlot - msPerHalfSlot : msToNextSlot + msPerHalfSlot;
+    const currentSlotTimeSec = computeTimeAtSlot(config, currentSlot, chain.genesisTime);
+    const currentMidpointMs = ((currentSlotTimeSec + nextSlotTimeSec) / 2) * 1000;
+    if (currentMidpointMs > nowMs) {
+      return currentMidpointMs - nowMs;
+    }
   }
-  // after the 1st time always wait until middle of next clock slot
-  return msToNextSlot + msPerHalfSlot;
+
+  const nextSlotEndTimeSec = computeTimeAtSlot(config, currentSlot + 2, chain.genesisTime);
+  const nextMidpointMs = ((nextSlotTimeSec + nextSlotEndTimeSec) / 2) * 1000;
+  return Math.max(0, nextMidpointMs - nowMs);
 }
 
 function getHeadExecutionInfo(

@@ -92,6 +92,7 @@ export class PrepareNextSlotScheduler {
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     const isEpochTransition = prepareEpoch === nextEpoch;
     const fork = this.config.getForkName(prepareSlot);
+    const currentFork = this.config.getForkName(clockSlot);
 
     // Early return if we are pre-genesis
     //  or we are pre-bellatrix and this is not an epoch transition
@@ -102,7 +103,7 @@ export class PrepareNextSlotScheduler {
     try {
       // At PREPARE_NEXT_SLOT_BPS (~67%) of the current slot we prepare payload for the next slot
       // or precompute epoch transition
-      await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
+      await sleep(this.config.getSlotComponentDurationMs(currentFork, PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
@@ -357,7 +358,7 @@ export class PrepareNextSlotScheduler {
             // skip when we're the next-slot proposer — don't compete with block-production prep.
             feeRecipient === undefined
           ) {
-            const maxDurationMs = this.config.getSlotComponentDurationMs(BUILDER_PREVERIFY_LIMIT_BPS);
+            const maxDurationMs = this.config.getSlotComponentDurationMs(currentFork, BUILDER_PREVERIFY_LIMIT_BPS);
             const preVerifyTimer = this.metrics?.builderDepositPreVerify.duration.startTimer();
             const result = headState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT, maxDurationMs);
             preVerifyTimer?.();
@@ -411,7 +412,10 @@ export class PrepareNextSlotScheduler {
    * later in the slot, connecting at PREPARE_NEXT_SLOT_BPS would go cold before bids are requested.
    */
   private checkBuilderStatusBeforeSlot(prepareSlot: Slot): void {
-    const msBeforeSlot = this.config.getSlotComponentDurationMs(BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS);
+    const msBeforeSlot = this.config.getSlotComponentDurationMs(
+      this.config.getForkName(prepareSlot),
+      BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS
+    );
     const msUntilCheck = -this.chain.clock.msFromSlot(prepareSlot) - msBeforeSlot;
     sleep(Math.max(0, msUntilCheck), this.signal)
       .then(() => this.chain.builderApiClient.checkStatus())

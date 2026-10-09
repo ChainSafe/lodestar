@@ -1,15 +1,17 @@
 import {MetricValueWithName} from "prom-client";
-import {describe, expect, it, vi} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
-import {RootHexCache, ValidatorMonitor, createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
+import {OpSource, RootHexCache, ValidatorMonitor, createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
 import {RegistryMetricCreator} from "../../../src/metrics/index.js";
+import {getMockedLogger} from "../../mocks/loggerMock.js";
 
 describe("ValidatorMonitor", () => {
+  afterEach(() => vi.restoreAllMocks());
   // Use phase0 config (no altair) to avoid needing full state with block roots
   const config = createChainForkConfig({
     ...defaultChainConfig,
@@ -34,6 +36,49 @@ describe("ValidatorMonitor", () => {
     expect(cachedState.epochCtx.proposersPrevEpoch).toBeNull();
     return new BeaconStateView(cachedState);
   }
+
+  it.each([
+    {epoch: 0, attestation: "no_aggregate_inclusion", proposal: "orphaned"},
+    {epoch: 1, attestation: "late_submit_no_aggregate_inclusion", proposal: "orphaned_missed_late"},
+    {epoch: 2, attestation: "no_aggregate_inclusion", proposal: "orphaned_missed"},
+  ])("uses epoch $epoch's duration for lateness summaries", ({epoch, attestation, proposal}) => {
+    const timingConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
+    timingConfig.getSlotDurationMs = (fork) =>
+      fork === ForkName.phase0 ? 12000 : fork === ForkName.altair ? 6000 : 24000;
+    const logger = getMockedLogger();
+    const monitor = createValidatorMonitor(null, timingConfig, genesisTime, logger, {});
+    const slot = epoch * SLOTS_PER_EPOCH;
+    const headState = createMockHeadState(slot + SLOTS_PER_EPOCH);
+    vi.spyOn(headState, "forkName", "get").mockReturnValue(ForkName.fulu);
+    vi.spyOn(headState, "previousProposers", "get").mockReturnValue([1]);
+    vi.spyOn(headState, "getPreviousEpochParticipation").mockReturnValue(0);
+    monitor.registerLocalValidator(1);
+
+    const block = timingConfig.getForkTypes(slot).BeaconBlock.defaultValue();
+    block.slot = slot;
+    block.proposerIndex = 1;
+    monitor.registerBeaconBlock(OpSource.api, 2, block);
+    const indexedAttestation = ssz.phase0.IndexedAttestation.defaultValue();
+    indexedAttestation.attestingIndices = [1];
+    indexedAttestation.data.slot = slot;
+    indexedAttestation.data.target.epoch = epoch;
+    const seenTimestamp =
+      genesisTime + slot * 12 + timingConfig.getAttestationDueMs(timingConfig.getForkName(slot)) / 1000 + 4;
+    monitor.onPoolSubmitUnaggregatedAttestation(seenTimestamp, indexedAttestation, 0, 1);
+
+    monitor.onceEveryEndOfEpoch(headState);
+    expect(logger.debug).toHaveBeenCalledWith("Previous epoch attestation", {
+      validator: 1,
+      epoch,
+      summary: attestation,
+    });
+    expect(logger.debug).toHaveBeenCalledWith("Previous epoch block proposal", {
+      validator: 1,
+      slot,
+      epoch,
+      summary: proposal,
+    });
+  });
 
   describe("registerLocalValidator", () => {
     it("should register new validators and track them", () => {

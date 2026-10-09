@@ -1,7 +1,12 @@
-import {ChainConfig} from "@lodestar/config";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
+
+/** Slot duration in ms for a given slot */
+export function getSlotDurationMs(config: ChainForkConfig, slot: Slot): number {
+  return config.getSlotDurationMs(config.getForkName(slot));
+}
 
 export function getSlotsSinceGenesis(config: ChainConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;

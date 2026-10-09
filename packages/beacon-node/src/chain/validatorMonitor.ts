@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkName, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   IBeaconStateView,
   ParticipationFlags,
@@ -776,13 +776,14 @@ export function createValidatorMonitor(
 
       if (isStatePostAltair(headState)) {
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
+        const prevEpochFork = config.getForkName(prevEpochStartSlot);
         const prevEpochTargetRoot = toRootHex(headState.getBlockRootAtSlot(prevEpochStartSlot));
 
         // Check attestation performance
         for (const [index, validator] of validators.entries()) {
           const flags = parseParticipationFlags(headState.getPreviousEpochParticipation(index));
           const attestationSummary = validator.attestations.get(prevEpoch)?.get(prevEpochTargetRoot);
-          const summary = renderAttestationSummary(config, rootCache, attestationSummary, flags);
+          const summary = renderAttestationSummary(config, prevEpochFork, rootCache, attestationSummary, flags);
           validatorMonitorMetrics?.prevEpochAttestationSummary.inc({summary});
           log("Previous epoch attestation", {
             validator: index,
@@ -941,6 +942,7 @@ export function createValidatorMonitor(
  */
 function renderAttestationSummary(
   config: ChainForkConfig,
+  fork: ForkName,
   rootCache: RootHexCache,
   summary: AttestationSummary | undefined,
   flags: ParticipationFlags
@@ -1043,7 +1045,7 @@ function renderAttestationSummary(
   }
 
   const submittedLate =
-    summary.poolSubmitDelayMinSec > config.getSlotComponentDurationMs(LATE_ATTESTATION_SUBMISSION_BPS) / 1000;
+    summary.poolSubmitDelayMinSec > config.getSlotComponentDurationMs(fork, LATE_ATTESTATION_SUBMISSION_BPS) / 1000;
 
   const aggregateInclusion = summary.aggregateInclusionDelaysSec.length > 0;
 
@@ -1178,7 +1180,8 @@ function renderBlockProposalSummary(
 
   if (
     proposal.poolSubmitDelaySec !== null &&
-    proposal.poolSubmitDelaySec > config.getSlotComponentDurationMs(LATE_BLOCK_SUBMISSION_BPS) / 1000
+    proposal.poolSubmitDelaySec >
+      config.getSlotComponentDurationMs(config.getForkName(proposalSlot), LATE_BLOCK_SUBMISSION_BPS) / 1000
   ) {
     out += "_late";
   }
