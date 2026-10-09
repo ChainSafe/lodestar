@@ -918,16 +918,17 @@ export class BlockInputSync {
    * Poll unknown payloads of the current slot.
    */
   private async pollPayloadsAtSlot(slot: Slot, signal: AbortSignal): Promise<void> {
+    const fork = this.config.getForkName(slot);
     // fixed tick count so the loop cannot outlive its slot: for mainnet, it's 6 ticks
     const tickCount = Math.floor(
-      (this.config.SLOT_DURATION_MS - this.config.getPayloadDueMs()) / PAYLOAD_POLL_INTERVAL_MS
+      (this.config.getSlotDurationMs(fork) - this.config.getPayloadDueMs(fork)) / PAYLOAD_POLL_INTERVAL_MS
     );
     // a root still missing on several ticks is searched on each of them, recorded once
     const searchedRoots = new Set<RootHex>();
     let polls = 0;
 
     try {
-      await sleep(Math.max(0, this.config.getPayloadDueMs() - this.chain.clock.msFromSlot(slot)), signal);
+      await sleep(Math.max(0, this.config.getPayloadDueMs(fork) - this.chain.clock.msFromSlot(slot)), signal);
 
       for (polls = 0; polls < tickCount; polls++) {
         let importedCount = 0;

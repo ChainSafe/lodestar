@@ -3,6 +3,7 @@ import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, SubnetID, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
+import {HALF_SLOT_BPS} from "../../constants/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {getActiveForkBoundaries} from "../forks.js";
@@ -15,9 +16,6 @@ import {CommitteeSubscription, GossipSubscriber, IAttnetsService, NodeId, Subnet
 import {computeSubscribedSubnet} from "./util.js";
 
 const gossipType = GossipType.beacon_attestation;
-
-/** Half slot in basis points (5000 BPS = 50% of slot) */
-const HALF_SLOT_BPS = 5000;
 
 export enum SubnetSource {
   committee = "committee",

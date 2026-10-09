@@ -146,7 +146,6 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
   const nowMs = Date.now();
   const msToNextSlot = Math.max(0, nextSlotTimeSec * 1000 - nowMs);
 
-  // Get the current slot's duration for half-slot calculation
   const currentSlotTimeSec = computeTimeAtSlot(config, currentSlot, chain.genesisTime);
   const msPerSlot = (nextSlotTimeSec - currentSlotTimeSec) * 1000;
   const msPerHalfSlot = msPerSlot / 2;

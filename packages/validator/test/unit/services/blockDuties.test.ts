@@ -6,7 +6,7 @@ import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHex} from "@lodestar/utils";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ChainHeaderTracker, HeadEventData} from "../../../src/services/chainHeaderTracker.js";
@@ -51,7 +51,32 @@ describe("BlockDutiesService", () => {
       onNewHeadCallback = callback;
     });
   });
-  afterEach(() => controller.abort());
+  afterEach(() => {
+    controller.abort();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it.each([6000, 24000])(
+    "polls before the boundary using the current duration, next duration %i ms",
+    async (nextDuration) => {
+      vi.useFakeTimers({now: 0});
+      const config = createChainForkConfig({ALTAIR_FORK_EPOCH: 1});
+      config.getSlotDurationMs = (fork) => (fork === ForkName.phase0 ? 12000 : nextDuration);
+      const clock = new ClockMock();
+      clock.msToSlot = () => 12000 - Date.now();
+      api.validator.getProposerDuties.mockResolvedValue(
+        mockApiResponse({data: [], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+      );
+      new BlockDutiesService(config, loggerVc, api, clock, validatorStore, chainHeaderTracker, null);
+
+      await clock.tickSlotFns(SLOTS_PER_EPOCH - 1, controller.signal);
+      await vi.advanceTimersByTimeAsync(10999);
+      expect(api.validator.getProposerDuties).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(api.validator.getProposerDuties).toHaveBeenCalledExactlyOnceWith({epoch: 1});
+    }
+  );
 
   it("Should fetch and persist block duties on epoch tick, notify on slot tick", async () => {
     const slot = 0;

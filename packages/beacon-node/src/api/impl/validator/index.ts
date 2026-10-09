@@ -1500,9 +1500,9 @@ export function getValidatorApi(
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
       const startSlot = computeStartSlotAtEpoch(epoch);
-      const startFork = config.getForkName(startSlot);
+      const prepareFork = config.getForkName(computeStartSlotAtEpoch(nextEpoch) - 1);
       const prepareNextSlotLookAheadMs =
-        config.getSlotDurationMs(startFork) - config.getSlotComponentDurationMs(startFork, PREPARE_NEXT_SLOT_BPS);
+        config.getSlotDurationMs(prepareFork) - config.getSlotComponentDurationMs(prepareFork, PREPARE_NEXT_SLOT_BPS);
       const toNextEpochMs = msToNextEpoch();
       const nearNextEpoch = toNextEpochMs < prepareNextSlotLookAheadMs;
       // Post-Fulu the proposer lookahead is deterministic and known a full epoch ahead, so

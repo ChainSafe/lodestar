@@ -7,3 +7,4 @@ export const ZERO_HASH = Buffer.alloc(32, 0);
 export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
 export const GRAFFITI_SIZE = 32;
+export const HALF_SLOT_BPS = 5000;

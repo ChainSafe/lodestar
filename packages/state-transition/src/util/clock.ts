@@ -160,7 +160,6 @@ export class Clock implements IClock {
       return Math.max(0, nextSlotTimeSec * 1000 - Date.now());
     }
 
-    // For epoch: find the next epoch boundary slot
     const currentEpoch = computeEpochAtSlot(currentSlot);
     const nextEpochSlot = (currentEpoch + 1) * SLOTS_PER_EPOCH;
     const nextEpochTimeSec = computeTimeAtSlot(this.config, nextEpochSlot, this.genesisTime);
@@ -172,14 +171,12 @@ export class Clock implements IClock {
  * Same to the spec but we use Math.round instead of Math.floor.
  */
 export function getCurrentSlotAround(config: ChainForkConfig, genesisTime: TimeSeconds): Slot {
-  // Get floor slot first, then check if we're closer to the next slot
   const floorSlot = getCurrentSlot(config, genesisTime);
   const slotStartSec = computeTimeAtSlot(config, floorSlot, genesisTime);
   const slotDurationMs = getSlotDurationMs(config, floorSlot);
   const slotDurationSec = slotDurationMs / 1000;
   const elapsed = Date.now() / 1000 - slotStartSec;
 
-  // If more than half the slot has passed, round up
   return elapsed >= slotDurationSec / 2 ? floorSlot + 1 : floorSlot;
 }
 
