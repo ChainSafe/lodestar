@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.78a93a4a.css">
-<script src="/lodestar/assets/js/runtime~main.50e8bd00.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.ce50d4a8.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.70fdd464.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -52,7 +52,7 @@
 <li><code>default</code>: Default setting for Lodestar set at <code>--builder.boostFactor=90</code>. This default setting will have a local block boost of ~10%. Note that this value might change in the future depending on what we think is the most appropriate value to help improve censorship resistance of Ethereum.</li>
 <li><code>maxprofit</code>: An alias of <code>--builder.boostFactor=100</code>, which will always choose the more profitable block. Using this option, you may customize your <code>--builder.boostFactor</code> to your preference. Examples of its usage are below.</li>
 <li><code>executionalways</code>: An alias of <code>--builder.boostFactor=0</code>, which will select the local execution block, unless it fails to produce due to an error or a delay in the response from the execution client.</li>
-<li><code>executiononly</code>: Pre-Gloas only. The beacon node will produce a local execution block even if builder relays are configured and will error if it cannot produce one. Starting with Gloas, this is treated as <code>executionalways</code> so a viable builder bid can prevent a missed proposal when local production fails or is delayed.</li>
+<li><code>executiononly</code>: The beacon node will produce a local execution block and will error if it cannot produce one. Before Gloas, this applies even if the beacon node has builder relays configured. Starting with Gloas, builder bids are never used, neither bids received over p2p nor from builder APIs, so the proposal fails if the local execution payload is not produced in time. It can&#x27;t be combined with <a href="/lodestar/next/run/validator-management/validator-cli#--builderurls"><code>--builder.urls</code></a> or <code>builders</code> in the <a href="/lodestar/next/run/validator-management/proposer-config">proposer configuration file</a>.</li>
 <li><code>builderalways</code>: An alias of <code>--builder.boostFactor=18446744073709551615</code> (2**64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it&#x27;s not available, not timely or there is an indication of censorship via <code>shouldOverrideBuilder</code> from the execution payload response.</li>
 </ul>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="calculating-builder-boost-factor-with-examples">Calculating builder boost factor with examples<a href="#calculating-builder-boost-factor-with-examples" class="hash-link" aria-label="Direct link to Calculating builder boost factor with examples" title="Direct link to Calculating builder boost factor with examples">​</a></h4>
