@@ -25,6 +25,7 @@ const ARTIFACT_FILENAMES = new Set([
 
 export interface SkipOpts {
   skippedTestSuites?: RegExp[];
+  /** Matched against `<fork>/<runner>/<handler>/<suite>/<testCase>` */
   skippedTests?: RegExp[];
   skippedForks?: string[];
   skippedRunners?: string[];
@@ -91,7 +92,26 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // TODO-HEZE: remove once the spec tests are bumped to v1.7.0-beta.4. EIP-8365 (consensus-specs #5713) skips
+    // pending deposits that would create a validator with BLS withdrawal credentials. These v1.7.0-beta.3 vectors
+    // still onboard new validators with the pre-#5713 default BLS credentials and expect them to be created.
+    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_correct_sig_but_forked_state$/,
+    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_effective_deposit_with_genesis_fork_version$/,
+    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_min_activation$/,
+    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_over_min_activation$/,
+    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_over_min_activation_next_increment$/,
+    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/apply_pending_deposit_under_min_activation$/,
+    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/process_pending_deposits_eth1_bridge_transition_complete$/,
+    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/process_pending_deposits_multiple_for_new_validator$/,
+    /^heze\/epoch_processing\/pending_deposits\/pyspec_tests\/process_pending_deposits_not_finalized$/,
+    /^heze\/sanity\/slots\/pyspec_tests\/multiple_pending_deposits_same_pubkey$/,
+    /^heze\/sanity\/slots\/pyspec_tests\/multiple_pending_deposits_same_pubkey_above_upward_threshold$/,
+    /^heze\/sanity\/slots\/pyspec_tests\/multiple_pending_deposits_same_pubkey_below_upward_threshold$/,
+    /^heze\/sanity\/slots\/pyspec_tests\/multiple_pending_deposits_same_pubkey_different_signature$/,
+    /^heze\/sanity\/slots\/pyspec_tests\/pending_deposit_extra_gwei$/,
+    /^heze\/fork_choice\/deposit_with_reorg\/pyspec_tests\/new_validator_deposit_with_multiple_epoch_transitions$/,
+  ],
   skippedRunners: [],
   // Gossip handlers not implemented in the spec runner.
   skippedHandlers: [
