@@ -24,6 +24,8 @@ const RESTART_SLOT = process.env.RESTART_SLOT || "";
 const SLOTS_PER_EPOCH = 8;
 const GLOAS_FORK_EPOCH = 2;
 const ENVELOPE_SLOTS = [16, 17, 18, 19, 20];
+// run.sh gives the restarted EL 30 s before judging again, a proposal of its node in that window is lost
+const RESTART_GRACE_SLOTS = 5;
 
 const failures = [];
 const notes = [];
@@ -179,7 +181,8 @@ const missed = [];
 for (let slot = 1; slot <= head; slot++) {
   const block = await beacon(API2, `/eth/v2/beacon/blocks/${slot}`);
   if (block.status !== 200) {
-    if (slot >= SLOTS_PER_EPOCH) missed.push(slot);
+    const inRestartWindow = RESTART_SLOT !== "" && slot >= Number(RESTART_SLOT) && slot <= Number(RESTART_SLOT) + RESTART_GRACE_SLOTS;
+    if (slot >= SLOTS_PER_EPOCH && !inRestartWindow) missed.push(slot);
     continue;
   }
   const message = block.body.data.message;
