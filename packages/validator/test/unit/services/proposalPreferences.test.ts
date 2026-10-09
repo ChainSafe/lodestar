@@ -9,6 +9,7 @@ import {gloas, ssz} from "@lodestar/types";
 import {LogLevel, defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ProposalPreferencesService} from "../../../src/services/proposalPreferences.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
@@ -49,7 +50,8 @@ describe("ProposalPreferencesService", () => {
   }
 
   function startService(config: ChainForkConfig, store: ValidatorStore): void {
-    new ProposalPreferencesService(config, loggerVc, api, clock, store, blockDutiesService, null);
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    new ProposalPreferencesService(config, loggerVc, api, clock, store, blockDutiesService, syncingStatusTracker, null);
   }
 
   beforeAll(async () => {
@@ -67,6 +69,9 @@ describe("ProposalPreferencesService", () => {
     mockDuties(0, dependentRoot, duties);
     api.validator.submitProposerPreferences.mockResolvedValue(mockApiResponse({}));
     api.validator.submitBuilderPreferences.mockResolvedValue(mockApiResponse({}));
+    api.node.getSyncingStatus.mockResolvedValue(
+      mockApiResponse({data: {headSlot: 0, syncDistance: 0, isSyncing: false, isOptimistic: false, elOffline: false}})
+    );
   });
 
   afterEach(() => {
@@ -159,6 +164,22 @@ describe("ProposalPreferencesService", () => {
     await clock.tickSlotFns(proposalSlot - 1, controller.signal);
     expect(api.validator.submitProposerPreferences).toHaveBeenCalledTimes(2);
     expect(api.validator.submitBuilderPreferences).toHaveBeenCalledOnce();
+  });
+
+  it("resubmits the preferences within the window after the beacon node resynced", async () => {
+    startService(gloasConfig, validatorStore);
+
+    await clock.tickSlotFns(proposalSlot - 3, controller.signal);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
+
+    // The beacon node is unreachable for a slot, e.g. while it restarts
+    api.node.getSyncingStatus.mockRejectedValueOnce(new Error("fetch failed"));
+    await clock.tickSlotFns(proposalSlot - 2, controller.signal);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
+
+    await clock.tickSlotFns(proposalSlot - 1, controller.signal);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledTimes(2);
+    expect(api.validator.submitBuilderPreferences).toHaveBeenCalledTimes(2);
   });
 
   it("submits builder preferences while proposer preferences are still being signed", async () => {

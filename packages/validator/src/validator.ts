@@ -319,7 +319,16 @@ export class Validator {
       }
     );
 
-    new ProposalPreferencesService(config, loggerVc, api, clock, validatorStore, blockDutiesService, metrics);
+    new ProposalPreferencesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      blockDutiesService,
+      syncingStatusTracker,
+      metrics
+    );
 
     return new Validator({
       opts,
