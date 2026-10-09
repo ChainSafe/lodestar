@@ -1,8 +1,8 @@
-import {ApiClient} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
-import {Logger, toHex, toRootHex} from "@lodestar/utils";
+import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
@@ -75,8 +75,7 @@ export class Builder {
     this.clock.runEverySlot(async (slot) => this.onSlot(slot));
     this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
     this.clock.start(this.controller.signal);
-    this.blockObserver.start(this.controller.signal);
-    this.proposerPreferencesTracker.start(this.controller.signal);
+    this.subscribeToEvents(opts.api);
 
     this.logger.info("Builder client initialized", {
       index: this.index,
@@ -114,7 +113,7 @@ export class Builder {
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
     const blockObserver = new BlockObserver(config, logger, api);
-    const proposerPreferencesTracker = new ProposerPreferencesTracker(api, logger);
+    const proposerPreferencesTracker = new ProposerPreferencesTracker();
 
     const payloadStore = new PayloadStore();
 
@@ -133,6 +132,93 @@ export class Builder {
   private async onSlot(slot: number): Promise<void> {
     this.payloadStore.prune(slot);
     this.proposerPreferencesTracker.prune(slot);
+  }
+
+  private subscribeToEvents(api: ApiClient): void {
+    const signal = this.controller.signal;
+    if (signal.aborted) return;
+
+    const topics = [routes.events.EventType.block, routes.events.EventType.proposerPreferences];
+    this.logger.verbose("Subscribing to builder events", {topics: topics.join(",")});
+    api.events
+      .eventstream({
+        topics,
+        signal,
+        onEvent: (event) => {
+          void this.onEvent(event);
+        },
+        onOpen: () => {
+          void this.fetchProposerPreferences(api);
+        },
+        onError: (error) => {
+          if (!signal.aborted) this.logger.error("Failed to receive builder event", {topics: topics.join(",")}, error);
+        },
+        onClose: () => {
+          if (signal.aborted) {
+            this.logger.verbose("Closed builder event stream", {topics: topics.join(",")});
+          } else {
+            this.logger.error("Builder event stream closed unexpectedly", {topics: topics.join(",")});
+          }
+        },
+      })
+      .catch((error: unknown) => {
+        if (!signal.aborted && !isErrorAborted(error)) {
+          this.logger.error(
+            "Failed to subscribe to builder events",
+            {topics: topics.join(",")},
+            error instanceof Error ? error : Error(String(error))
+          );
+        }
+      });
+  }
+
+  /**
+   * Proposer preferences are only broadcast once per proposal slot, fetch the ones the beacon node
+   * already knows to cover those missed while not connected, e.g. after a restart
+   */
+  private async fetchProposerPreferences(api: ApiClient): Promise<void> {
+    const signal = this.controller.signal;
+
+    try {
+      const preferences = (await api.beacon.getProposerPreferences({}, {signal})).value();
+      for (const signedProposerPreferences of preferences) {
+        // Does not replace preferences already received from the event stream
+        this.proposerPreferencesTracker.onProposerPreferences(signedProposerPreferences);
+      }
+      this.logger.verbose("Fetched proposer preferences", {count: preferences.length});
+    } catch (error) {
+      if (!signal.aborted && !isErrorAborted(error)) {
+        this.logger.warn(
+          "Failed to fetch proposer preferences",
+          {},
+          error instanceof Error ? error : Error(String(error))
+        );
+      }
+    }
+  }
+
+  private async onEvent(event: routes.events.BeaconEvent): Promise<void> {
+    const signal = this.controller.signal;
+    if (signal.aborted) return;
+
+    try {
+      switch (event.type) {
+        case routes.events.EventType.block:
+          await this.blockObserver.processBlockEvent(event.message, signal);
+          break;
+        case routes.events.EventType.proposerPreferences:
+          this.proposerPreferencesTracker.onProposerPreferences(event.message.data);
+          break;
+      }
+    } catch (error) {
+      if (!signal.aborted && !isErrorAborted(error)) {
+        this.logger.warn(
+          "Failed to process builder event",
+          {eventType: event.type},
+          error instanceof Error ? error : Error(String(error))
+        );
+      }
+    }
   }
 
   async close(): Promise<void> {

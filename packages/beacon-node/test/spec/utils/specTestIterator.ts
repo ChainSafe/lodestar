@@ -2,9 +2,18 @@ import fs from "node:fs";
 import path from "node:path";
 import {beforeEach, describe, it} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
+import {nativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
+
+let nativeStateTransitionPromise: Promise<typeof import("@chainsafe/lodestar-z/state-transition")> | null = null;
+
+async function resetNativeStateTransition(): Promise<void> {
+  nativeStateTransitionPromise ??= import("@chainsafe/lodestar-z/state-transition");
+  const nativeStateTransition = await nativeStateTransitionPromise;
+  nativeStateTransition.deinitReusedEpochTransitionCache();
+}
 
 const ARTIFACT_FILENAMES = new Set([
   // MacOS artifacts
@@ -16,6 +25,7 @@ const ARTIFACT_FILENAMES = new Set([
 
 export interface SkipOpts {
   skippedTestSuites?: RegExp[];
+  /** Matched against `<fork>/<runner>/<handler>/<suite>/<testCase>` */
   skippedTests?: RegExp[];
   skippedForks?: string[];
   skippedRunners?: string[];
@@ -79,8 +89,11 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
-    // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
-    /^heze\/fork_choice\/on_inclusion_list\/.*$/,
+    // TODO-HEZE: temporary. v1.7.0-beta.4 adds EIP-8015 (removes the eth1 fields from the Heze BeaconState and
+    // BeaconBlockBody), so every Heze vector carrying a state or a block no longer deserializes. Unskip in the
+    // EIP-8015 PR. Containers EIP-8015 does not touch keep running through ssz_static.
+    /^heze\/(?!ssz_static\/).*/,
+    /^heze\/ssz_static\/(BeaconState|BeaconBlockBody|BeaconBlock|SignedBeaconBlock)\/.*$/,
   ],
   skippedTests: [],
   skippedRunners: [],
@@ -128,13 +141,15 @@ export function specTestIterator(
   opts: SkipOpts = defaultSkipOpts
 ): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
+    const fork = forkStr as ForkName;
     if (
       opts?.skippedForks?.includes(forkStr) ||
+      // lodestar-z does not support Gloas state transition yet
+      (nativeStateTransition && isForkPostGloas(fork)) ||
       (process.env.SPEC_FILTER_FORK && forkStr !== process.env.SPEC_FILTER_FORK)
     ) {
       continue;
     }
-    const fork = forkStr as ForkName;
 
     const forkDirpath = path.join(configDirpath, forkStr);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {
@@ -196,7 +211,10 @@ export function specTestIterator(
               describeDirectorySpecTest(
                 testId,
                 testSuiteDirpath,
-                (testCase, directoryName, testCaseName) => {
+                async (testCase, directoryName, testCaseName) => {
+                  if (nativeStateTransition) {
+                    await resetNativeStateTransition();
+                  }
                   pubkeyCache.reset();
                   return testFunction(testCase, directoryName, testCaseName);
                 },

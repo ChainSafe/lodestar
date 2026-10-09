@@ -240,4 +240,101 @@ describe("PtcService", () => {
 
     expect(ptcDutiesService.getDutiesAtSlot(slot + 1)).toEqual([reorgedDuty]);
   });
+
+  it("Should not poll PTC duties before the first Gloas epoch", async () => {
+    const clock = new ClockMock();
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 1});
+    api.validator.getPtcDuties.mockResolvedValue(
+      mockApiResponse({data: [], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
+
+    new PtcDutiesService(config, loggerVc, api, clock, validatorStore, chainHeadTracker, syncingStatusTracker, null);
+
+    await clock.tickEpochFns(0, controller.signal);
+    expect(api.validator.getPtcDuties).not.toHaveBeenCalled();
+
+    await clock.tickEpochFns(1, controller.signal);
+    expect(api.validator.getPtcDuties).toHaveBeenCalledWith({epoch: 1, indices: [0]});
+    expect(api.validator.getPtcDuties).toHaveBeenCalledWith({epoch: 2, indices: [0]});
+  });
+
+  it("Should not wait for the payload at a slot without duties", async () => {
+    const clock = new ClockMock();
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0});
+    const ptcService = new PtcService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      emitter,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
+    const waitForCanonicalPayload = vi.fn().mockResolvedValue(undefined);
+    ptcService["waitForCanonicalPayload"] = waitForCanonicalPayload;
+
+    await clock.tickSlotFns(1, controller.signal);
+
+    expect(waitForCanonicalPayload).not.toHaveBeenCalled();
+    expect(api.validator.producePayloadAttestationData).not.toHaveBeenCalled();
+  });
+
+  it("Should perform duties of the first Gloas slot polled after the slot started", async () => {
+    const clock = new ClockMock();
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 1});
+    const slot = SLOTS_PER_EPOCH;
+    const ptcService = new PtcService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      emitter,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
+
+    const duty: routes.validator.PtcDuty = {
+      slot,
+      validatorIndex: 0,
+      pubkey: pubkeys[0],
+    };
+    const payloadAttestationData = ssz.gloas.PayloadAttestationData.defaultValue();
+    const payloadAttestationMessage: gloas.PayloadAttestationMessage = {
+      validatorIndex: duty.validatorIndex,
+      data: payloadAttestationData,
+      signature: ZERO_HASH,
+    };
+
+    api.validator.getPtcDuties.mockImplementation(async ({epoch}) =>
+      mockApiResponse({
+        data: [{...duty, slot: epoch * SLOTS_PER_EPOCH}],
+        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
+    let onPayloadAvailable!: () => void;
+    ptcService["waitForCanonicalPayload"] = vi.fn().mockReturnValue(
+      new Promise<void>((resolve) => {
+        onPayloadAvailable = resolve;
+      })
+    );
+    api.validator.producePayloadAttestationData.mockResolvedValue(
+      mockApiResponse({data: payloadAttestationData, meta: {version: config.getForkName(slot)}})
+    );
+    validatorStore.signPayloadAttestation.mockResolvedValue(payloadAttestationMessage);
+    api.beacon.submitPayloadAttestationMessages.mockResolvedValue(mockApiResponse({}));
+
+    // Slot task starts before duties of the epoch are polled
+    const slotTask = clock.tickSlotFns(slot, controller.signal);
+    await clock.tickEpochFns(1, controller.signal);
+    onPayloadAvailable();
+    await slotTask;
+
+    expect(api.beacon.submitPayloadAttestationMessages).toHaveBeenCalledWith({
+      payloadAttestationMessages: [payloadAttestationMessage],
+    });
+  });
 });

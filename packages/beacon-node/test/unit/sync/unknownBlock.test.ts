@@ -12,7 +12,7 @@ import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
-import {PayloadError, PayloadErrorCode} from "../../../src/chain/blocks/importExecutionPayload.js";
+import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
@@ -907,6 +907,73 @@ describe("UnknownBlockSync", () => {
 
       svc.close();
     });
+
+    it("retries a rate-limited download when the backoff expires around the retry timer", async () => {
+      const peerA = await getRandPeerIdStr();
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      block.message.parentRoot = Buffer.alloc(32, 0xaa);
+      const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+      const peerB = await getRandPeerIdStr();
+      const rateLimitedUntilMs = 1_000_000;
+
+      // Once the retry timer is due, the clock stays 1ms before the backoff expiry for a number of reads and
+      // then passes it. The retry must not depend on which read is the first to see the backoff expired,
+      // nor on another peer still being in backoff
+      for (const otherPeerInBackoff of [false, true]) {
+        for (let readsBeforeExpiry = 0; readsBeforeExpiry <= 12; readsBeforeExpiry++) {
+          vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+          let retryTimerDue = false;
+          let reads = 0;
+          const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+            if (!retryTimerDue) return rateLimitedUntilMs - 1000;
+            return reads++ < readsBeforeExpiry ? rateLimitedUntilMs - 1 : rateLimitedUntilMs;
+          });
+          const sendBeaconBlocksByRoot = vi
+            .fn()
+            .mockRejectedValueOnce(new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs}))
+            .mockRejectedValue(new Error("no block"));
+          const {service: svc, chainEmitter} = setupBlockSyncTest({
+            processBlock: vi.fn(),
+            sendBeaconBlocksByRoot,
+            peer: peerA,
+          });
+
+          try {
+            chainEmitter.emit(ChainEvent.unknownBlockRoot, {
+              rootHex: blockRootHex,
+              peer: peerA,
+              source: BlockInputSource.gossip,
+            });
+            await vi.advanceTimersByTimeAsync(0);
+            expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+            if (otherPeerInBackoff) {
+              const peerBalancer = (svc as unknown as {peerBalancer: UnknownBlockPeerBalancer}).peerBalancer;
+              peerBalancer.onPeerConnected(peerB, {
+                peerId: peerB,
+                client: "retention-test-client",
+                custodyColumns: [],
+                earliestAvailableSlot: 0,
+              });
+              peerBalancer.onRateLimited(peerB, rateLimitedUntilMs + 60_000);
+            }
+
+            retryTimerDue = true;
+            await vi.advanceTimersByTimeAsync(1100);
+
+            expect(
+              sendBeaconBlocksByRoot.mock.calls.length,
+              `otherPeerInBackoff=${otherPeerInBackoff} readsBeforeExpiry=${readsBeforeExpiry}`
+            ).toBeGreaterThan(1);
+          } finally {
+            svc.close();
+            dateNowSpy.mockRestore();
+            vi.useRealTimers();
+          }
+        }
+      }
+    });
   });
 
   describe("payload sync flows", () => {
@@ -1070,6 +1137,65 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
       expect(payloadInput.hasPayloadEnvelope()).toBe(true);
       expect(payloadInput.hasAllData()).toBe(true);
+    });
+
+    it("retries a rate-limited payload download when the backoff expires around the retry timer", async () => {
+      const peer = await getRandPeerIdStr();
+      const otherPeer = await getRandPeerIdStr();
+      const rateLimitedUntilMs = 1_000_000;
+
+      // Once the retry timer is due, the clock stays 1ms before the backoff expiry for a number of reads and
+      // then passes it. The retry must not depend on which read is the first to see the backoff expired,
+      // nor on another peer still being in backoff
+      for (const otherPeerInBackoff of [false, true]) {
+        for (let readsBeforeExpiry = 0; readsBeforeExpiry <= 12; readsBeforeExpiry++) {
+          vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+          let retryTimerDue = false;
+          let reads = 0;
+          const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+            if (!retryTimerDue) return rateLimitedUntilMs - 1000;
+            return reads++ < readsBeforeExpiry ? rateLimitedUntilMs - 1 : rateLimitedUntilMs;
+          });
+          const {payloadInput} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+          const sendExecutionPayloadEnvelopesByRoot = vi
+            .fn()
+            .mockRejectedValueOnce(new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs}))
+            .mockRejectedValue(new Error("no envelope"));
+          const {emitter} = setupPayloadSyncTest({
+            networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+            peers: [{peerId: peer}],
+          });
+
+          try {
+            emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+            await vi.advanceTimersByTimeAsync(0);
+            expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+
+            if (otherPeerInBackoff) {
+              const peerBalancer = (service as unknown as {peerBalancer: UnknownBlockPeerBalancer}).peerBalancer;
+              peerBalancer.onPeerConnected(otherPeer, {
+                peerId: otherPeer,
+                client: "payload-test-client",
+                custodyColumns: [],
+                earliestAvailableSlot: 0,
+              });
+              peerBalancer.onRateLimited(otherPeer, rateLimitedUntilMs + 60_000);
+            }
+
+            retryTimerDue = true;
+            await vi.advanceTimersByTimeAsync(1100);
+
+            expect(
+              sendExecutionPayloadEnvelopesByRoot.mock.calls.length,
+              `otherPeerInBackoff=${otherPeerInBackoff} readsBeforeExpiry=${readsBeforeExpiry}`
+            ).toBeGreaterThan(1);
+          } finally {
+            service.close();
+            dateNowSpy.mockRestore();
+            vi.useRealTimers();
+          }
+        }
+      }
     });
 
     it("fetches immediately for a slot-less envelope search", async () => {
@@ -2354,7 +2480,15 @@ describe("UnknownBlockSync", () => {
       expect(seenPayloadPrune).not.toHaveBeenCalled();
     });
 
-    it("removes pending descendants after invalid parent payload", async () => {
+    it.each<PayloadErrorType>([
+      {code: PayloadErrorCode.INVALID_SIGNATURE},
+      {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
+      {
+        code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+        execStatus: ExecutionPayloadStatus.INVALID,
+        errorMessage: "invalid payload",
+      },
+    ])("removes pending descendants and evicts the envelope after invalid parent payload $code", async (errorType) => {
       const peer = await getRandPeerIdStr();
       const parentPayloadHash = Buffer.alloc(32, 0x33);
       const {
@@ -2383,13 +2517,10 @@ describe("UnknownBlockSync", () => {
       });
 
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
-      const processExecutionPayload = vi.fn().mockRejectedValue(
-        new PayloadError({slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput, {
-          code: PayloadErrorCode.INVALID_SIGNATURE,
-        })
-      );
+      const processExecutionPayload = vi.fn().mockRejectedValue(new PayloadError(payloadInput, errorType));
       const processBlock = vi.fn().mockResolvedValue(undefined);
       const seenPayloadPrune = vi.fn();
+      const seenPayloadRemoveInvalid = vi.fn();
       const {emitter} = setupPayloadSyncTest({
         chainOverrides: {
           processExecutionPayload,
@@ -2401,6 +2532,7 @@ describe("UnknownBlockSync", () => {
               .fn()
               .mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
             prune: seenPayloadPrune,
+            removeInvalid: seenPayloadRemoveInvalid,
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -2428,6 +2560,7 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processBlock).not.toHaveBeenCalled();
       expect(seenPayloadPrune).not.toHaveBeenCalled();
+      expect(seenPayloadRemoveInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
 
       emitter.emit(routes.events.EventType.executionPayload, {
         slot: 99,

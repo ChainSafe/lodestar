@@ -20,6 +20,7 @@ import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
+import type {ShufflingPromiseCancelReason} from "../../chain/shufflingCache.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import type {FlatFileStoreOperation} from "../../db/flatFileStore/metrics.js";
@@ -1176,6 +1177,11 @@ export function createLodestarMetrics(
       help: "The total result of calling notifyForkchoiceUpdate execution engine api",
       labelNames: ["result"],
     }),
+    engineApiRequests: register.counter<{transport: string}>({
+      name: "lodestar_execution_engine_api_requests_total",
+      help: "Total engine API requests by transport",
+      labelNames: ["transport"],
+    }),
     opPool: {
       aggregatedAttestationPool: {
         size: register.gauge({
@@ -1280,6 +1286,10 @@ export function createLodestarMetrics(
           seenCommittees: register.gauge({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_seen_committees_total",
             help: "Total number of committees for which all members are seen when producing packed attestations",
+          }),
+          missingShufflingCommittees: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_missing_shuffling_committees_total",
+            help: "Total number of committees skipped due to missing shuffling when producing packed attestations",
           }),
         },
       },
@@ -1613,6 +1623,19 @@ export function createLodestarMetrics(
       size: register.gauge({
         name: "lodestar_shuffling_cache_size",
         help: "Shuffling cache size",
+      }),
+      epochs: register.gauge({
+        name: "lodestar_shuffling_cache_epochs",
+        help: "Number of epochs in shuffling cache",
+      }),
+      prunedShufflings: register.counter({
+        name: "lodestar_shuffling_cache_pruned_shufflings_total",
+        help: "Total number of shufflings pruned from shuffling cache",
+      }),
+      cancelledPromises: register.counter<{reason: ShufflingPromiseCancelReason}>({
+        name: "lodestar_shuffling_cache_cancelled_promises_total",
+        help: "Total number of shuffling promises resolved with null",
+        labelNames: ["reason"],
       }),
       insertPromiseCount: register.gauge({
         name: "lodestar_shuffling_cache_insert_promise_count",

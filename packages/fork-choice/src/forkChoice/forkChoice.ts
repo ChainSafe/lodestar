@@ -45,7 +45,9 @@ import {
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
   VoteIndex,
+  getPtcVerdict,
   isGloasBlock,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
@@ -1090,7 +1092,20 @@ export class ForkChoice implements IForkChoice {
     payloadPresent: boolean,
     blobDataAvailable: boolean
   ): void {
+    const before = this.protoArray.getPtcQuorum(blockRoot);
     this.protoArray.notifyPtcMessages(blockRoot, slot, ptcIndices, payloadPresent, blobDataAvailable);
+    const after = this.protoArray.getPtcQuorum(blockRoot);
+    if (before === null || after === null) {
+      return;
+    }
+    const verdict = getPtcVerdict(after);
+    if (verdict === null || verdict === getPtcVerdict(before)) {
+      return;
+    }
+
+    this.metrics?.forkChoice.ptcQuorum.inc({verdict: verdict ? "true" : "false"});
+    this.logger?.verbose("PTC quorum reached", {slot, blockRoot, verdict, ...after});
+    this.fcStore.notifyPtcQuorum?.({blockRoot, slot, verdict, ...after});
   }
 
   /**
@@ -1221,6 +1236,10 @@ export class ForkChoice implements IForkChoice {
     dataAvailableCount: number;
   } | null {
     return this.protoArray.getPTCVoteCounts(blockRootHex);
+  }
+
+  getPtcQuorum(blockRootHex: RootHex): PtcQuorum | null {
+    return this.protoArray.getPtcQuorum(blockRootHex);
   }
 
   getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null {
@@ -2163,7 +2182,11 @@ export class ForkChoice implements IForkChoice {
     }
 
     const existingNextSlot = this.voteNextSlots[validatorIndex];
-    if (existingNextSlot === INIT_VOTE_SLOT || computeEpochAtSlot(nextSlot) > computeEpochAtSlot(existingNextSlot)) {
+    // Pre-Gloas a vote is only replaced by one from a later epoch, from Gloas by one from a later slot
+    const isNewerVote = isForkPostGloas(this.config.getForkName(nextSlot))
+      ? nextSlot > existingNextSlot
+      : computeEpochAtSlot(nextSlot) > computeEpochAtSlot(existingNextSlot);
+    if (existingNextSlot === INIT_VOTE_SLOT || isNewerVote) {
       // nextIndex is transfered to currentIndex in computeDeltas()
       this.voteNextIndices[validatorIndex] = nextIndex;
       this.voteNextSlots[validatorIndex] = nextSlot;
@@ -2384,9 +2407,21 @@ export class ForkChoice implements IForkChoice {
         if (nextIndex === undefined || nextIndex === NULL_VOTE_INDEX) {
           return null;
         }
+        // The vote is tracked by node index, so the node already is the message's supported node
         const node = this.protoArray.nodes[nextIndex];
         if (!node) return null;
-        return {root: node.blockRoot, epoch: computeEpochAtSlot(this.voteNextSlots[validatorIndex])};
+        return {
+          root: node.blockRoot,
+          payloadStatus: node.payloadStatus,
+          epoch: computeEpochAtSlot(this.voteNextSlots[validatorIndex]),
+        };
+      },
+      getParentNodePayloadStatus: (blockRoot: RootHex) => {
+        const nodeIndex = this.protoArray.getDefaultNodeIndex(blockRoot);
+        if (nodeIndex === undefined) return null;
+        const parentIndex = this.protoArray.nodes[nodeIndex]?.parent;
+        if (parentIndex === undefined) return null;
+        return this.protoArray.nodes[parentIndex]?.payloadStatus ?? null;
       },
       getUnrealizedJustified: () => ({
         checkpoint: this.fcStore.unrealizedJustified.checkpoint,

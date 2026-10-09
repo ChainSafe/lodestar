@@ -9,6 +9,7 @@ export function getApiClientStub(): ApiClientStub {
       getGenesis: vi.fn(),
       getStateBuilders: vi.fn(),
       getBlockV2: vi.fn(),
+      getProposerPreferences: vi.fn(),
     },
     events: {
       eventstream: vi.fn(),

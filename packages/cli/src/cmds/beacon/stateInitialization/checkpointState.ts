@@ -186,6 +186,16 @@ function prepareCheckpointInitialization(
   const {isFinalized, ignoreWeakSubjectivityCheck} = policy;
   const config = createBeaconConfig(chainForkConfig, metadata.genesisValidatorsRoot);
   const archivedWithinWeakSubjectivityPeriod = useArchived ? archived.isWithinWeakSubjectivityPeriod : null;
+  const passedValidation =
+    archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
+  // Fast-fail stale checkpoints before deserializing the state or reserving pubkey-cache capacity.
+  if (!passedValidation && !ignoreWeakSubjectivityCheck) {
+    const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, weakSubjectivity.genesisTime));
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.STALE_CHECKPOINT},
+      `The selected state with epoch ${weakSubjectivity.checkpointEpoch} is not within weak subjectivity period of ${weakSubjectivity.period} epochs from the current epoch ${clockEpoch}. Please verify your checkpoint source`
+    );
+  }
   // DB-selected anchors need no persistence, including at slot zero.
   const shouldPersist = isFinalized && !useArchived;
   return {
@@ -195,15 +205,6 @@ function prepareCheckpointInitialization(
     validate(state) {
       // A supplied checkpoint must match even when the period check is ignored.
       if (expectedCheckpoint !== null) assertStateMatchesCheckpoint(state, expectedCheckpoint);
-      const passedValidation =
-        archivedWithinWeakSubjectivityPeriod ?? isWithinWeakSubjectivityPeriodFromSummary(config, weakSubjectivity);
-      if (!passedValidation && !ignoreWeakSubjectivityCheck) {
-        const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, weakSubjectivity.genesisTime));
-        throw new StateInitializationError(
-          {code: StateInitializationErrorCode.STALE_CHECKPOINT},
-          `The selected state with epoch ${weakSubjectivity.checkpointEpoch} is not within weak subjectivity period of ${weakSubjectivity.period} epochs from the current epoch ${clockEpoch}. Please verify your checkpoint source`
-        );
-      }
       assertAnchorStateForkMatchesConfig(config, state);
       if (isFinalized) {
         const source = useArchived ? "db" : "checkpoint";
@@ -222,8 +223,22 @@ function prepareCheckpointInitialization(
         }
       }
     },
+    async initializeEarliestAvailableSlot(state) {
+      const stored = await db.earliestAvailableSlot.get();
+      const floor = useArchived ? (stored ?? state.slot) : Math.max(stored ?? 0, state.slot);
+      if (stored !== floor) {
+        await db.earliestAvailableSlot.set(floor);
+      }
+      logger.verbose("Initialized earliest available slot", {
+        source,
+        anchorSlot: state.slot,
+        previousSlot: stored,
+        earliestAvailableSlot: floor,
+      });
+      return floor;
+    },
     persist: shouldPersist ? (state, bytes) => persistAnchorState(config, db, state, bytes) : null,
-    log(state) {
+    log(state, nativeStateTransition) {
       const {checkpoint} = state.computeAnchorCheckpoint();
       logger.info("Initialized checkpoint state", {
         source,
@@ -233,6 +248,7 @@ function prepareCheckpointInitialization(
         stateRoot: toRootHex(state.hashTreeRoot()),
         checkpointRoot: toRootHex(checkpoint.root),
         isFinalized,
+        nativeStateTransition,
         ...(isFinalized ? {} : {lastProcessedSlot: state.latestBlockHeader.slot}),
       });
     },

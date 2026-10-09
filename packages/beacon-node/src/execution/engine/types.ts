@@ -20,7 +20,6 @@ import {
   bellatrix,
   capella,
   deneb,
-  electra,
   gloas,
   ssz,
 } from "@lodestar/types";
@@ -89,14 +88,7 @@ export type EngineApiRpcParamTypes = {
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
-  engine_getPayloadBodiesByHashV1: DATA[][];
   engine_getPayloadBodiesByHashV2: DATA[][];
-
-  /**
-   *  1. start: QUANTITY, 64 bits - Starting block number
-   *  2. count: QUANTITY, 64 bits - Number of blocks to return
-   */
-  engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
 
   /**
    * Object - Instance of ClientVersion
@@ -149,10 +141,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV5: ExecutionPayloadResponse;
   engine_getPayloadV6: ExecutionPayloadResponse;
 
-  engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
   engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyV2Rpc | null)[];
-
-  engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getClientVersionV1: ClientVersionRpc[];
 
@@ -542,55 +531,6 @@ function prefixRequests(requestsBytes: Uint8Array, requestType: ExecutionRequest
   return prefixedRequests;
 }
 
-function serializeDepositRequests(depositRequests: electra.DepositRequests): DepositRequestsRpc {
-  const requestsBytes = ssz.electra.DepositRequests.serialize(depositRequests);
-  return bytesToData(prefixRequests(requestsBytes, DEPOSIT_REQUEST_TYPE));
-}
-
-function deserializeDepositRequests(serialized: DepositRequestsRpc): electra.DepositRequests {
-  return ssz.electra.DepositRequests.deserialize(dataToBytes(serialized, null));
-}
-
-function serializeWithdrawalRequests(withdrawalRequests: electra.WithdrawalRequests): WithdrawalRequestsRpc {
-  const requestsBytes = ssz.electra.WithdrawalRequests.serialize(withdrawalRequests);
-  return bytesToData(prefixRequests(requestsBytes, WITHDRAWAL_REQUEST_TYPE));
-}
-
-function deserializeWithdrawalRequests(serialized: WithdrawalRequestsRpc): electra.WithdrawalRequests {
-  return ssz.electra.WithdrawalRequests.deserialize(dataToBytes(serialized, null));
-}
-
-function serializeConsolidationRequests(
-  consolidationRequests: electra.ConsolidationRequests
-): ConsolidationRequestsRpc {
-  const requestsBytes = ssz.electra.ConsolidationRequests.serialize(consolidationRequests);
-  return bytesToData(prefixRequests(requestsBytes, CONSOLIDATION_REQUEST_TYPE));
-}
-
-function deserializeConsolidationRequests(serialized: ConsolidationRequestsRpc): electra.ConsolidationRequests {
-  return ssz.electra.ConsolidationRequests.deserialize(dataToBytes(serialized, null));
-}
-
-function serializeBuilderDepositRequests(
-  builderDepositRequests: gloas.BuilderDepositRequests
-): BuilderDepositRequestsRpc {
-  const requestsBytes = ssz.gloas.BuilderDepositRequests.serialize(builderDepositRequests);
-  return bytesToData(prefixRequests(requestsBytes, BUILDER_DEPOSIT_REQUEST_TYPE));
-}
-
-function deserializeBuilderDepositRequests(serialized: BuilderDepositRequestsRpc): gloas.BuilderDepositRequests {
-  return ssz.gloas.BuilderDepositRequests.deserialize(dataToBytes(serialized, null));
-}
-
-function serializeBuilderExitRequests(builderExitRequests: gloas.BuilderExitRequests): BuilderExitRequestsRpc {
-  const requestsBytes = ssz.gloas.BuilderExitRequests.serialize(builderExitRequests);
-  return bytesToData(prefixRequests(requestsBytes, BUILDER_EXIT_REQUEST_TYPE));
-}
-
-function deserializeBuilderExitRequests(serialized: BuilderExitRequestsRpc): gloas.BuilderExitRequests {
-  return ssz.gloas.BuilderExitRequests.deserialize(dataToBytes(serialized, null));
-}
-
 /**
  * This is identical to get_execution_requests_list in
  * https://github.com/ethereum/consensus-specs/blob/v1.5.0-alpha.8/specs/electra/beacon-chain.md#new-get_execution_requests_list
@@ -598,62 +538,65 @@ function deserializeBuilderExitRequests(serialized: BuilderExitRequestsRpc): glo
  * Gloas extends the list with builder deposits (0x03) and builder exits (0x04) per
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#modified-get_execution_requests_list
  */
-export function serializeExecutionRequests(fork: ForkName, executionRequests: ExecutionRequests): ExecutionRequestsRpc {
+export function serializeExecutionRequestsToBytes(fork: ForkName, executionRequests: ExecutionRequests): Uint8Array[] {
   const {deposits, withdrawals, consolidations} = executionRequests;
-  const result: ExecutionRequestsRpc = [];
+  const result: Uint8Array[] = [];
 
   if (deposits.length !== 0) {
-    result.push(serializeDepositRequests(deposits));
+    result.push(prefixRequests(ssz.electra.DepositRequests.serialize(deposits), DEPOSIT_REQUEST_TYPE));
   }
 
   if (withdrawals.length !== 0) {
-    result.push(serializeWithdrawalRequests(withdrawals));
+    result.push(prefixRequests(ssz.electra.WithdrawalRequests.serialize(withdrawals), WITHDRAWAL_REQUEST_TYPE));
   }
 
   if (consolidations.length !== 0) {
-    result.push(serializeConsolidationRequests(consolidations));
+    result.push(
+      prefixRequests(ssz.electra.ConsolidationRequests.serialize(consolidations), CONSOLIDATION_REQUEST_TYPE)
+    );
   }
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
     const {builderDeposits, builderExits} = executionRequests as gloas.ExecutionRequests;
 
     if (builderDeposits.length !== 0) {
-      result.push(serializeBuilderDepositRequests(builderDeposits));
+      result.push(
+        prefixRequests(ssz.gloas.BuilderDepositRequests.serialize(builderDeposits), BUILDER_DEPOSIT_REQUEST_TYPE)
+      );
     }
 
     if (builderExits.length !== 0) {
-      result.push(serializeBuilderExitRequests(builderExits));
+      result.push(prefixRequests(ssz.gloas.BuilderExitRequests.serialize(builderExits), BUILDER_EXIT_REQUEST_TYPE));
     }
   }
 
   return result;
 }
 
-export function deserializeExecutionRequests(fork: ForkName, serialized: ExecutionRequestsRpc): ExecutionRequests {
+export function serializeExecutionRequests(fork: ForkName, executionRequests: ExecutionRequests): ExecutionRequestsRpc {
+  return serializeExecutionRequestsToBytes(fork, executionRequests).map(bytesToData);
+}
+
+export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized: Uint8Array[]): ExecutionRequests {
   const result: ExecutionRequests =
     ForkSeq[fork] >= ForkSeq.gloas
       ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: []}
       : {deposits: [], withdrawals: [], consolidations: []};
 
-  if (serialized.length === 0) {
-    return result;
-  }
-
   let prevRequestType: ExecutionRequestType | undefined;
 
-  for (let prefixedRequests of serialized) {
-    // Slice out 0x so it is easier to extract request type
-    if (prefixedRequests.startsWith("0x")) {
-      prefixedRequests = prefixedRequests.slice(2);
+  for (const prefixedRequests of serialized) {
+    if (prefixedRequests.length === 0) {
+      throw Error("Invalid request type, request must be prefixed with its type");
     }
 
-    const currentRequestType = parseInt(prefixedRequests.substring(0, 2), 16);
+    const currentRequestType = prefixedRequests[0];
 
     if (!isExecutionRequestType(currentRequestType)) {
-      throw Error(`Invalid request type currentRequestType=${prefixedRequests.substring(0, 2)}`);
+      throw Error(`Invalid request type currentRequestType=${currentRequestType}`);
     }
 
-    const requests = prefixedRequests.slice(2);
+    const requests = prefixedRequests.subarray(1);
 
     if (requests.length === 0) {
       throw Error(
@@ -669,29 +612,29 @@ export function deserializeExecutionRequests(fork: ForkName, serialized: Executi
 
     switch (currentRequestType) {
       case DEPOSIT_REQUEST_TYPE: {
-        result.deposits = deserializeDepositRequests(requests);
+        result.deposits = ssz.electra.DepositRequests.deserialize(requests);
         break;
       }
       case WITHDRAWAL_REQUEST_TYPE: {
-        result.withdrawals = deserializeWithdrawalRequests(requests);
+        result.withdrawals = ssz.electra.WithdrawalRequests.deserialize(requests);
         break;
       }
       case CONSOLIDATION_REQUEST_TYPE: {
-        result.consolidations = deserializeConsolidationRequests(requests);
+        result.consolidations = ssz.electra.ConsolidationRequests.deserialize(requests);
         break;
       }
       case BUILDER_DEPOSIT_REQUEST_TYPE: {
         if (ForkSeq[fork] < ForkSeq.gloas) {
           throw Error(`Builder deposit request is not supported pre-gloas fork=${fork}`);
         }
-        (result as gloas.ExecutionRequests).builderDeposits = deserializeBuilderDepositRequests(requests);
+        (result as gloas.ExecutionRequests).builderDeposits = ssz.gloas.BuilderDepositRequests.deserialize(requests);
         break;
       }
       case BUILDER_EXIT_REQUEST_TYPE: {
         if (ForkSeq[fork] < ForkSeq.gloas) {
           throw Error(`Builder exit request is not supported pre-gloas fork=${fork}`);
         }
-        (result as gloas.ExecutionRequests).builderExits = deserializeBuilderExitRequests(requests);
+        (result as gloas.ExecutionRequests).builderExits = ssz.gloas.BuilderExitRequests.deserialize(requests);
         break;
       }
     }
@@ -699,6 +642,13 @@ export function deserializeExecutionRequests(fork: ForkName, serialized: Executi
   }
 
   return result;
+}
+
+export function deserializeExecutionRequests(fork: ForkName, serialized: ExecutionRequestsRpc): ExecutionRequests {
+  return deserializeExecutionRequestsFromBytes(
+    fork,
+    serialized.map((data) => dataToBytes(data, null))
+  );
 }
 
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
