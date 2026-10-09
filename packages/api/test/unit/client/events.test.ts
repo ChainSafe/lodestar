@@ -14,6 +14,8 @@ describe("event stream cancellation", () => {
     class {
       close = close;
       addEventListener = addEventListener;
+      onopen: (() => void) | null = null;
+      onerror: ((error: {message?: string; status?: number}) => void) | null = null;
     }
   );
   const EventSourceConstructor = EventSourceMock as unknown as typeof EventSource;
@@ -73,5 +75,36 @@ describe("event stream cancellation", () => {
     expect(close).toHaveBeenCalledOnce();
     expect(onClose).toHaveBeenCalledOnce();
     expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
+  });
+
+  it("reports reconnects separately from decoding failures and ignores callbacks after shutdown", async () => {
+    const onOpen = vi.fn();
+    const onDisconnect = vi.fn();
+    const onError = vi.fn();
+    await client.eventstream({
+      topics: [EventType.block],
+      signal: controller.signal,
+      onEvent: vi.fn(),
+      onOpen,
+      onDisconnect,
+      onError,
+    });
+    const source = EventSourceMock.mock.instances[0];
+    expect(onOpen).not.toHaveBeenCalled();
+    source.onopen?.();
+    source.onerror?.({message: "ECONNREFUSED"});
+    source.onopen?.();
+    expect(onOpen).toHaveBeenCalledTimes(2);
+    expect(onDisconnect).toHaveBeenCalledOnce();
+    expect(onError).not.toHaveBeenCalled();
+    const receive = addEventListener.mock.calls[0][1] as (event: {data: string}) => void;
+    receive({data: "invalid JSON"});
+    expect(onError).toHaveBeenCalledOnce();
+    expect(onDisconnect).toHaveBeenCalledOnce();
+    controller.abort();
+    source.onopen?.();
+    source.onerror?.({message: "late failure"});
+    expect(onOpen).toHaveBeenCalledTimes(2);
+    expect(onDisconnect).toHaveBeenCalledOnce();
   });
 });

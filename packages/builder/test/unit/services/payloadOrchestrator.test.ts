@@ -183,7 +183,7 @@ describe("PayloadOrchestrator", () => {
 
     const resultPromise = orchestrator.run(buildJob());
     const resultExpectation = expect(resultPromise).rejects.toMatchObject({
-      type: {code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: "slot-1-full"},
+      type: {code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: "slot-1-full", lastError: null},
     });
     await vi.advanceTimersByTimeAsync(100);
     await resultExpectation;
@@ -291,12 +291,19 @@ describe("PayloadOrchestrator", () => {
   it("does not extend the preparation deadline while retrying", async () => {
     const source = new StubPayloadSource();
     source.prepareImpl = async () => {
-      throw new PayloadSourceError({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id});
+      throw new PayloadSourceError(
+        {code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id},
+        `No payload ID on attempt ${source.prepareCalls.length}`
+      );
     };
     const orchestrator = createOrchestrator(source);
     const result = orchestrator.run(buildJob("deadline", NOW + 250));
     const assertion = expect(result).rejects.toMatchObject({
-      type: {code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: "deadline"},
+      type: {
+        code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT,
+        jobId: "deadline",
+        lastError: "No payload ID on attempt 3",
+      },
     });
 
     await vi.advanceTimersByTimeAsync(250);

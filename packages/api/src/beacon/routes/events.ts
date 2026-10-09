@@ -270,8 +270,12 @@ type EventstreamArgs = {
   topics: EventType[];
   signal: AbortSignal;
   onEvent: (event: BeaconEvent) => void;
+  /** Called every time the connection is established, including reconnects */
+  onOpen?: () => void;
   onError?: (err: Error) => void;
   onClose?: () => void;
+  /** Connection interruption, distinct from an event decoding or consumer error. */
+  onDisconnect?: () => void;
 };
 
 export type Endpoints = {
