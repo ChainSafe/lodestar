@@ -43,10 +43,6 @@ export class BeaconProposerCache {
     }
   }
 
-  getDefault(): string {
-    return this.opts.suggestedFeeRecipient;
-  }
-
   getOrDefault(proposerIndex: number): string {
     return this.feeRecipientByValidatorIndex.get(proposerIndex)?.feeRecipient ?? this.opts.suggestedFeeRecipient;
   }

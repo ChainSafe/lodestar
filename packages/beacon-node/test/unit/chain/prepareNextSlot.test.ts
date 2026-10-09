@@ -218,7 +218,7 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.getHeadState.mockReturnValue(headState);
     regenStub.getBlockSlotState.mockResolvedValue(makeState(SLOTS_PER_EPOCH - 1));
     beaconProposerCacheStub.has.mockReturnValue(true);
-    beaconProposerCacheStub.getDefault.mockReturnValue("0x fee recipient address");
+    beaconProposerCacheStub.getOrDefault.mockReturnValue("0x fee recipient address");
     (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 
     await Promise.all([
@@ -276,7 +276,7 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.getHeadState.mockReturnValue(headState);
     regenStub.getBlockSlotState.mockResolvedValue(makeState(SLOTS_PER_EPOCH - 1));
     beaconProposerCacheStub.has.mockReturnValue(true);
-    beaconProposerCacheStub.getDefault.mockReturnValue("0x fee recipient address");
+    beaconProposerCacheStub.getOrDefault.mockReturnValue("0x fee recipient address");
     (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 
     await Promise.all([
@@ -351,7 +351,7 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.getHeadState.mockReturnValue(new BeaconStateView(state));
     regenStub.getBlockSlotState.mockResolvedValue(new BeaconStateView(state));
     beaconProposerCacheStub.has.mockReturnValue(true);
-    beaconProposerCacheStub.getDefault.mockReturnValue("0x fee recipient address");
+    beaconProposerCacheStub.getOrDefault.mockReturnValue("0x fee recipient address");
     (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 
     await Promise.all([

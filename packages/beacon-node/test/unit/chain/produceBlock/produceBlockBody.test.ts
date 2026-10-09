@@ -135,7 +135,7 @@ describe("Fulu engine body", () => {
       const {state, modules, chain, attrs, common, parentBlockRoot} = setup();
       const requestedRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
       const cachedRecipient = "0xccccccccccccccccccccccccccccccccccccccbb";
-      modules.chain.beaconProposerCache.get.mockReturnValue(cachedRecipient);
+      modules.chain.beaconProposerCache.getOrDefault.mockReturnValue(cachedRecipient);
       modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
       modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
       modules.chain.executionEngine.getPayload.mockResolvedValue({
@@ -172,14 +172,11 @@ describe("Gloas engine body", () => {
   const requestedRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
   const pooledRecipient = "0xdddddddddddddddddddddddddddddddddddddddd";
   const cachedRecipient = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-  const defaultRecipient = "0xffffffffffffffffffffffffffffffffffffffff";
 
   function setupGloas(pooled: boolean) {
     const context = setup(ForkName.gloas);
     const {modules, attrs} = context;
-    // Registered proposer data is unsigned and ignored for gloas slots
-    modules.chain.beaconProposerCache.get.mockReturnValue(cachedRecipient);
-    modules.chain.beaconProposerCache.getDefault.mockReturnValue(defaultRecipient);
+    modules.chain.beaconProposerCache.getOrDefault.mockReturnValue(cachedRecipient);
     modules.forkChoice.shouldBuildOnFull.mockReturnValue(false);
     modules.forkChoice.getBlockHexDefaultStatus.mockReturnValue(pooled ? attrs.parentBlock : null);
     modules.forkChoice.getDependentRoot.mockReturnValue(attrs.parentBlock.blockRoot);
@@ -209,7 +206,7 @@ describe("Gloas engine body", () => {
   for (const [source, requested, pooled, expected] of [
     ["requested", true, true, requestedRecipient],
     ["pooled", false, true, pooledRecipient],
-    ["default", false, false, defaultRecipient],
+    ["cached", false, false, cachedRecipient],
   ] as const) {
     it(`uses the ${source} fee recipient for payload preparation`, async () => {
       const {state, modules, chain, attrs, common} = setupGloas(pooled);
