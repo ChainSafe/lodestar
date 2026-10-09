@@ -77,7 +77,6 @@ import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from 
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
-import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {ProposerPreferencesPool} from "../opPools/index.js";
@@ -287,11 +286,12 @@ export async function produceBlockBody<T extends BlockType>(
     // this into a completely separate function and have pre/post gloas more separated
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
+    // Proposer data is unsigned, from gloas only the block request or the signed preferences set the fee recipient
     const {feeRecipient, feeRecipientType} = getProposerFeeRecipient(
       requestedFeeRecipient,
       getPooledProposerPreferences(this, blockSlot, parentBlock.blockRoot),
-      this.beaconProposerCache,
-      proposerIndex
+      undefined,
+      this.beaconProposerCache.getDefault()
     );
     Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
@@ -449,8 +449,8 @@ export async function produceBlockBody<T extends BlockType>(
     const {feeRecipient, feeRecipientType} = getProposerFeeRecipient(
       requestedFeeRecipient,
       null,
-      this.beaconProposerCache,
-      proposerIndex
+      this.beaconProposerCache.get(proposerIndex),
+      this.beaconProposerCache.getDefault()
     );
     Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
@@ -1011,8 +1011,8 @@ function getProposerTargetGasLimit(
 function getProposerFeeRecipient(
   requestedFeeRecipient: string | undefined,
   pooledPreferences: gloas.ProposerPreferences | null,
-  beaconProposerCache: BeaconProposerCache,
-  proposerIndex: ValidatorIndex
+  cachedFeeRecipient: string | undefined,
+  defaultFeeRecipient: string
 ): {feeRecipient: string; feeRecipientType: "requested" | "preferences" | "cached" | "default"} {
   if (requestedFeeRecipient !== undefined) {
     return {feeRecipient: requestedFeeRecipient, feeRecipientType: "requested"};
@@ -1020,11 +1020,10 @@ function getProposerFeeRecipient(
   if (pooledPreferences !== null) {
     return {feeRecipient: toHex(pooledPreferences.feeRecipient), feeRecipientType: "preferences"};
   }
-  const cachedFeeRecipient = beaconProposerCache.get(proposerIndex);
   if (cachedFeeRecipient !== undefined) {
     return {feeRecipient: cachedFeeRecipient, feeRecipientType: "cached"};
   }
-  return {feeRecipient: beaconProposerCache.getOrDefault(proposerIndex), feeRecipientType: "default"};
+  return {feeRecipient: defaultFeeRecipient, feeRecipientType: "default"};
 }
 
 /**

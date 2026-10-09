@@ -2006,6 +2006,19 @@ export function getValidatorApi(
     },
 
     async prepareBeaconProposer({proposers}) {
+      if (isForkPostGloas(config.getForkName(chain.clock.currentSlot))) {
+        logger.warn(
+          "Received proposer data post-gloas, the validator client should submit signed proposer preferences instead",
+          {
+            count: proposers.length,
+          }
+        );
+        throw new ApiError(
+          410,
+          "prepareBeaconProposer is deprecated from gloas, submit signed proposer preferences instead"
+        );
+      }
+
       await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
     },
 
@@ -2040,6 +2053,16 @@ export function getValidatorApi(
     },
 
     async registerValidator({registrations}) {
+      if (isForkPostGloas(config.getForkName(chain.clock.currentSlot))) {
+        logger.warn(
+          "Received validator registrations post-gloas, the validator client should submit builder preferences instead",
+          {
+            count: registrations.length,
+          }
+        );
+        throw new ApiError(410, "registerValidator is deprecated from gloas, submit builder preferences instead");
+      }
+
       if (!chain.executionBuilder) {
         throw Error("External builder not configured");
       }

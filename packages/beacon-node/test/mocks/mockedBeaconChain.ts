@@ -210,6 +210,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       getStateBySlot: vi.fn(),
       updateBuilderStatus: vi.fn(),
       updateAttachedValidators: vi.fn(),
+      updateBeaconProposerData: vi.fn(),
       processBlock: vi.fn(),
       processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),

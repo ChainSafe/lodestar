@@ -163,13 +163,16 @@ export class PrepareNextSlotScheduler {
 
         const proposerIndex = await getProposerIndex();
         if (this.chain.beaconProposerCache.has(proposerIndex)) {
-          const pooledPreferences = isForkPostGloas(fork)
-            ? getPooledProposerPreferences(this.chain, prepareSlot, headRoot)
-            : null;
-          feeRecipient =
-            pooledPreferences !== null
-              ? toHex(pooledPreferences.feeRecipient)
-              : this.chain.beaconProposerCache.getOrDefault(proposerIndex);
+          if (isForkPostGloas(fork)) {
+            // Proposer data is unsigned, from gloas only the signed preferences set the fee recipient
+            const pooledPreferences = getPooledProposerPreferences(this.chain, prepareSlot, headRoot);
+            feeRecipient =
+              pooledPreferences !== null
+                ? toHex(pooledPreferences.feeRecipient)
+                : this.chain.beaconProposerCache.getDefault();
+          } else {
+            feeRecipient = this.chain.beaconProposerCache.getOrDefault(proposerIndex);
+          }
         }
 
         // Predict the proposer head of the next slot when either:
