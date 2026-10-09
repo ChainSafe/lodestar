@@ -8,6 +8,7 @@ import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
+import {EarliestAvailableSlotRepository} from "./repositories/earliestAvailableSlot.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
@@ -48,6 +49,7 @@ export class BeaconDb implements IBeaconDb {
 
   stateArchive: StateArchiveRepository;
   checkpointState: CheckpointStateRepository;
+  earliestAvailableSlot: EarliestAvailableSlotRepository;
 
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
@@ -83,6 +85,7 @@ export class BeaconDb implements IBeaconDb {
 
     this.stateArchive = new StateArchiveRepository(config, db);
     this.checkpointState = new CheckpointStateRepository(config, db);
+    this.earliestAvailableSlot = new EarliestAvailableSlotRepository(db);
     this.voluntaryExit = new VoluntaryExitRepository(config, db);
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);
     this.proposerSlashing = new ProposerSlashingRepository(config, db);
