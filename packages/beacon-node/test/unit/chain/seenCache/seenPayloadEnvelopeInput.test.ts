@@ -37,7 +37,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     chainEvents = new ChainEventEmitter();
     abortController = new AbortController();
     forkChoice = {
-      getAllAncestorBlocks: vi.fn(),
+      isDescendant: vi.fn().mockReturnValue(false),
       hasBlockHex: vi.fn(),
     } as unknown as IForkChoice;
     serializedCache = new SerializedCache();
@@ -122,22 +122,27 @@ describe("SeenPayloadEnvelopeInput", () => {
     const newRootHex = addPayloadInput(2);
     const parentBlock = protoBlock(newRootHex, 2);
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, protoBlock(oldRootHex, 1)]);
+    vi.mocked(forkChoice.isDescendant).mockImplementation((ancestorRoot) => ancestorRoot === oldRootHex);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(oldRootHex)).toBeUndefined();
     expect(cache.get(newRootHex)).toBeDefined();
   });
 
-  it("pruneBelowParent keeps ancestor payload inputs whose payload is not yet FULL", () => {
+  it("pruneBelowParent keeps payload inputs whose FULL variant is not an ancestor of the parent", () => {
     const oldRootHex = addPayloadInput(1);
     const newRootHex = addPayloadInput(2);
     const parentBlock = protoBlock(newRootHex, 2);
-    const emptyAncestor: ProtoBlock = {...protoBlock(oldRootHex, 1), payloadStatus: PayloadStatus.EMPTY};
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, emptyAncestor]);
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(false);
     cache.pruneBelowParent(parentBlock);
 
+    expect(forkChoice.isDescendant).toHaveBeenCalledWith(
+      oldRootHex,
+      PayloadStatus.FULL,
+      newRootHex,
+      parentBlock.payloadStatus
+    );
     expect(cache.get(oldRootHex)).toBeDefined();
   });
 
@@ -148,7 +153,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(cache.get(oldRootHex)?.hasComputedAllData()).toBe(false);
 
     const parentBlock = protoBlock(newRootHex, 2);
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, protoBlock(oldRootHex, 1)]);
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(oldRootHex)).toBeDefined();
@@ -158,7 +163,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     const rootHex = addPayloadInput(1);
     const parentBlock = protoBlock(rootHex, 1);
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock]);
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(rootHex)).toBeDefined();

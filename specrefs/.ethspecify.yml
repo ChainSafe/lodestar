@@ -1,4 +1,4 @@
-version: v1.7.0-beta.2
+version: v1.7.0-beta.3
 style: full
 
 specrefs:
@@ -93,7 +93,7 @@ exceptions:
     - get_block_epoch#phase0
     - get_block_slot#phase0
     - get_eth1_vote#phase0
-    - get_filtered_block_tree#phase0
+    - get_filtered_node_tree#phase0
     - get_node_children#phase0
     - get_node_for_root#phase0
     - get_supported_node#phase0
@@ -104,6 +104,10 @@ exceptions:
     - seconds_to_milliseconds#phase0
     - store_target_checkpoint_state#phase0
     - voting_period_start_time#phase0
+
+    # optional fast confirmation restart recovery (not implemented)
+    - block_should_be_finalized#phase0
+    - get_restart_resilient_confirmed_root#phase0
 
     # altair
     - apply_light_client_update#altair
@@ -150,6 +154,8 @@ exceptions:
     - compute_max_request_blob_sidecars#electra
     - compute_max_request_data_column_sidecars#fulu
     - compute_min_epochs_for_block_requests#phase0
+    # The pre-Gloas retention minimum exceeds the reduced Gloas minimum.
+    - compute_min_epochs_for_block_requests#gloas
 
     # heze (not implemented)
     - get_forkchoice_store#heze

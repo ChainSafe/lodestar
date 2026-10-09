@@ -77,7 +77,6 @@ export class Builder {
   private readonly payloadStore: PayloadStore;
   private readonly payloadAttributesConsumer: PayloadAttributesConsumer | undefined;
   private readonly bidLedger: BidLedger | undefined;
-  private readonly metrics: Metrics | null;
 
   constructor({
     opts,
@@ -102,7 +101,6 @@ export class Builder {
     this.payloadStore = payloadStore;
     this.payloadAttributesConsumer = payloadAttributesConsumer;
     this.bidLedger = bidLedger;
-    this.metrics = opts.metrics;
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
@@ -192,7 +190,7 @@ export class Builder {
         {minOperatingBalanceGwei}
       );
       payloadAttributesConsumer = new PayloadAttributesConsumer(
-        {config, clock, preferences: proposerPreferencesTracker, bidder},
+        {config, clock, preferences: proposerPreferencesTracker, bidder, metrics: opts.metrics},
         {...inputs, executionFeeRecipient: opts.executionFeeRecipient}
       );
       const {reveal} = opts.bidRuntime;
@@ -263,10 +261,17 @@ export class Builder {
         onEvent: (event) => {
           void this.onEvent(event);
         },
+        onOpen: () => {
+          void this.fetchProposerPreferences(api);
+        },
+        onDisconnect: () => {
+          this.payloadAttributesConsumer?.onDisconnect();
+        },
         onError: (error) => {
           if (!signal.aborted) this.logger.error("Failed to receive builder event", {topics: topics.join(",")}, error);
         },
         onClose: () => {
+          this.payloadAttributesConsumer?.onDisconnect();
           if (signal.aborted) {
             this.logger.verbose("Closed builder event stream", {topics: topics.join(",")});
           } else {
@@ -283,6 +288,51 @@ export class Builder {
           );
         }
       });
+  }
+
+  /**
+   * Proposer preferences are only broadcast once per proposal slot, fetch the ones the beacon node
+   * already knows to cover those missed while not connected, e.g. after a restart
+   */
+  private async fetchProposerPreferences(api: ApiClient): Promise<void> {
+    const signal = this.controller.signal;
+    if (signal.aborted) return;
+    try {
+      const response = await api.beacon.getProposerPreferences({}, {signal});
+      signal.throwIfAborted();
+      const preferences = response.value();
+      for (const signedProposerPreferences of preferences) {
+        // Does not replace preferences already received from the event stream
+        this.proposerPreferencesTracker.onProposerPreferences(signedProposerPreferences);
+      }
+      this.logger.verbose("Fetched proposer preferences", {count: preferences.length});
+    } catch (error) {
+      if (!signal.aborted && !isErrorAborted(error)) {
+        this.logger.warn(
+          "Failed to fetch proposer preferences",
+          {code: "BUILDER_ERROR_PREFERENCES_RECOVERY"},
+          error instanceof Error ? error : Error(String(error))
+        );
+      }
+      return;
+    }
+
+    try {
+      const result = await this.payloadAttributesConsumer?.onPreferences(signal);
+      if (result?.status === "published") {
+        this.logger.info("Published execution payload bid", result);
+      } else if (result?.status === "not_published") {
+        this.logger.debug("Execution payload bid not published", result);
+      }
+    } catch (error) {
+      if (!signal.aborted && !isErrorAborted(error)) {
+        this.logger.warn(
+          "Failed to build after recovering proposer preferences",
+          {code: "BUILDER_ERROR_RECOVERED_BUILD"},
+          error instanceof Error ? error : Error(String(error))
+        );
+      }
+    }
   }
 
   private async onEvent(event: routes.events.BeaconEvent): Promise<void> {
@@ -304,10 +354,8 @@ export class Builder {
       if (event.type !== routes.events.EventType.block) {
         const result = await this.payloadAttributesConsumer?.onEvent(event, signal);
         if (result?.status === "published") {
-          this.metrics?.bids.inc({result: "published"});
           this.logger.info("Published execution payload bid", result);
         } else if (result?.status === "not_published") {
-          this.metrics?.bids.inc({result: result.reason});
           this.logger.debug("Execution payload bid not published", result);
         } else if (result?.status === "ignored") {
           this.logger.debug("Payload input deferred or ignored", {eventType: event.type, reason: result.reason});

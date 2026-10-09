@@ -79,6 +79,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       anchorState,
       config: beaconConfig,
       isFinalized,
+      earliestAvailableSlot,
     } = await initBeaconState(args, beaconPaths.dataDir, beaconPaths.pubkeysFile, config, db, logger);
 
     const node = await BeaconNode.init({
@@ -94,6 +95,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       isAnchorStateFinalized: isFinalized,
+      earliestAvailableSlot,
     });
 
     // dev debug option to have access to the BN instance
@@ -229,6 +231,12 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
+
+  if (options.chain.nativeStateTransition && config.GLOAS_FORK_EPOCH !== Infinity) {
+    throw Error(
+      `--chain.nativeStateTransition does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
+    );
+  }
 
   return {config, options, beaconPaths, network, version, commit, privateKey, logger};
 }
