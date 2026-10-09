@@ -1177,6 +1177,11 @@ export function createLodestarMetrics(
       help: "The total result of calling notifyForkchoiceUpdate execution engine api",
       labelNames: ["result"],
     }),
+    engineApiRequests: register.counter<{transport: string}>({
+      name: "lodestar_execution_engine_api_requests_total",
+      help: "Total engine API requests by transport",
+      labelNames: ["transport"],
+    }),
     opPool: {
       aggregatedAttestationPool: {
         size: register.gauge({
