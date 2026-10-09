@@ -21,6 +21,7 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
       topics,
       signal,
       onEvent,
+      onOpen,
       onError,
       onClose,
     }): Promise<ApiResponse<Endpoints["eventstream"]>> => {
@@ -38,6 +39,8 @@ export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
         signal.removeEventListener("abort", close);
       };
       signal.addEventListener("abort", close, {once: true});
+
+      eventSource.onopen = () => onOpen?.();
 
       for (const topic of topics) {
         eventSource.addEventListener(topic, (event: MessageEvent) => {

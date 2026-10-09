@@ -1067,6 +1067,8 @@ export class ProtoArray {
 
   private propagateValidExecutionStatusByIndex(validNodeIndex: number): void {
     let nodeIndex: number | undefined = validNodeIndex;
+    // Payloads that transitioned to VALID, their gloas dependents are validated below
+    const validatedPayloadHashes = new Set<RootHex>();
     // propagate till we keep encountering syncing status
     while (nodeIndex !== undefined) {
       const node = this.getNodeFromIndex(nodeIndex);
@@ -1074,7 +1076,35 @@ export class ProtoArray {
         break;
       }
       this.validateNodeByIndex(nodeIndex);
+      if (node.payloadStatus === PayloadStatus.FULL && node.executionPayloadBlockHash !== null) {
+        validatedPayloadHashes.add(node.executionPayloadBlockHash);
+      }
       nodeIndex = node.parent;
+    }
+
+    if (validatedPayloadHashes.size > 0) {
+      this.validatePayloadDependents(validatedPayloadHashes);
+    }
+  }
+
+  /**
+   * Gloas PENDING and EMPTY variants have no payload of their own, they inherit the execution status of
+   * the payload they build on, which is their `executionPayloadBlockHash`. Once that payload is VALID, all
+   * of them are, not only the ones on the chain the validation walked up (e.g. siblings, or blocks
+   * building on a sibling's EMPTY variant).
+   */
+  private validatePayloadDependents(payloadHashes: Set<RootHex>): void {
+    for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++) {
+      const node = this.nodes[nodeIndex];
+      if (
+        node.payloadStatus === PayloadStatus.PENDING &&
+        node.executionStatus === ExecutionStatus.Syncing &&
+        node.executionPayloadBlockHash !== null &&
+        payloadHashes.has(node.executionPayloadBlockHash)
+      ) {
+        // Also flips the sibling EMPTY variant
+        this.validateNodeByIndex(nodeIndex);
+      }
     }
   }
 

@@ -27,8 +27,8 @@ export type IChainOptions = BlockProcessOpts &
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
     blacklistedBlocks?: string[];
-    // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
+    persistProducedPayloadEnvelopes?: boolean;
     /** Archive finalized Gloas payload envelopes as headers (bodies reconstructed from the EL on read) */
     dedupePayloads?: boolean;
     persistInvalidSszObjects?: boolean;

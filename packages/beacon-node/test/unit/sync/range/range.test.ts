@@ -47,6 +47,7 @@ describe("sync / range / per-block processing", () => {
     chain.processExecutionPayload = vi.fn().mockResolvedValue(undefined);
     chain.getHeadState.mockReturnValue({
       forkName: ForkName.gloas,
+      latestBlockHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
       latestExecutionPayloadBid: ssz.gloas.ExecutionPayloadBid.defaultValue(),
     } as IBeaconStateViewGloas);
     const rangeSync = new RangeSync(
@@ -140,6 +141,7 @@ describe.each([{disableProcessAsChainSegment: false}, {disableProcessAsChainSegm
       const chain = getMockedBeaconChain({config: gloasConfig});
       chain.getHeadState.mockReturnValue({
         forkName: ForkName.gloas,
+        latestBlockHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
         latestExecutionPayloadBid: ssz.gloas.ExecutionPayloadBid.defaultValue(),
       } as IBeaconStateViewGloas);
       const rangeSync = new RangeSync(
