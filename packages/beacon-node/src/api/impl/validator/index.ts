@@ -1932,6 +1932,17 @@ export function getValidatorApi(
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {
+      // The subscribing validators use this node for duties regardless of its sync state and
+      // the subscription must not fail on the tracking, e.g. if the finalized state is unavailable
+      try {
+        await chain.updateAttachedValidators(
+          chain.clock.currentEpoch,
+          Array.from(new Set(subscriptions.map(({validatorIndex}) => validatorIndex)))
+        );
+      } catch (e) {
+        logger.error("Error tracking attached validators", {count: subscriptions.length}, e as Error);
+      }
+
       notWhileSyncing(chain, sync.state);
 
       await network.prepareBeaconCommitteeSubnets(
