@@ -284,7 +284,12 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       });
 
       const streamTimer = this.metrics?.streamTime.startTimer({routeId});
-      const bodyText = await res.text();
+      let bodyText: string;
+      try {
+        bodyText = await res.text();
+      } finally {
+        streamTimer?.();
+      }
       this.metrics?.responseBytes.inc({routeId}, bodyText.length);
       if (!res.ok) {
         // Infura errors:
@@ -292,10 +297,12 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         throw new HttpRpcError(res.status, `${res.statusText}: ${bodyText.slice(0, maxStringLengthToPrint)}`);
       }
 
-      const bodyJson = parseJson<R>(bodyText);
-      streamTimer?.();
-
-      return bodyJson;
+      const parseTimer = this.metrics?.responseParseTime.startTimer({routeId, encoding: "json"});
+      try {
+        return parseJson<R>(bodyText);
+      } finally {
+        parseTimer?.();
+      }
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
       if (controller.signal.aborted) {
