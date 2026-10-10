@@ -54,7 +54,7 @@ import {ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {persistInvalidSszObject} from "./blocks/utils/persistInvalidSszObject.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
-import {IBlsVerifier} from "./bls/index.js";
+import {BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainView} from "./chainView/chainView.js";
 import {ChainViewBlock, ChainViewUpdate} from "./chainView/interface.js";
@@ -136,10 +136,8 @@ export class BeaconChain implements IBeaconChain {
 
   readonly anchorStateLatestBlockSlot: Slot;
 
-  // Shared JS BLS verifier for facade-side backfill + DA-sidecar proposer-sig checks (carve-out).
-  get bls(): IBlsVerifier {
-    return this.beaconEngine.chainBls();
-  }
+  // TODO - beacon engine: retained only for pre-Gloas blob and data-column sidecar proposer signatures.
+  readonly bls: IBlsVerifier;
   private readonly chainView: ChainView;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
@@ -224,6 +222,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
+    this.bls = new BlsSingleThreadVerifier({metrics});
     this.genesisTime = anchor.genesisTime;
     this.anchorStateLatestBlockSlot = anchor.latestBlockSlot;
     this.genesisValidatorsRoot = anchor.genesisValidatorsRoot;
@@ -365,6 +364,7 @@ export class BeaconChain implements IBeaconChain {
   async close(): Promise<void> {
     // Engine owns teardown of its resources (historical-state regen + BLS pool).
     await this.beaconEngine.close();
+    await this.bls.close();
     this.beaconEngine.events.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
     this.beaconEngine.events.off(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
 

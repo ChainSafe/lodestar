@@ -49,7 +49,6 @@ import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {IBlsVerifier} from "../bls/index.js";
 import {ChainViewSnapshot} from "../chainView/interface.js";
 import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
@@ -337,13 +336,6 @@ export interface IBeaconEngine {
   getMonitoredValidatorIndices(): Promise<ValidatorIndex[]>;
   scrapeValidatorMonitorMetrics(): Promise<string>;
   regenCanAcceptWork(): boolean;
-  /**
-   * The shared, stateless JS BLS verifier the facade uses for backfill + DA-sidecar proposer-signature
-   * verification. A carve-out to the "methods only, no objects" rule — BLS is shared JS infra, not native
-   * consensus state. `NativeBeaconEngine` returns a JS verifier here and forwards its own internal
-   * (gossip/import) verification to the binding, so chain-bls and engine-internal bls are distinct.
-   */
-  chainBls(): IBlsVerifier;
   /** Backpressure for the engine's internal (gossip/import) BLS pool — the binding's pool under native. */
   blsCanAcceptWork(): boolean;
   initRegen(): Promise<void>;

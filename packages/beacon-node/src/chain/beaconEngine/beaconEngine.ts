@@ -2436,15 +2436,6 @@ export class BeaconEngine implements IBeaconEngine {
     return this.regen.canAcceptWork();
   }
 
-  /**
-   * The shared JS BLS verifier for the facade's backfill + DA-sidecar proposer-signature checks.
-   * NodeJS shares one instance with the engine's internal verification; the Zig engine returns a
-   * separate JS verifier here (see IBeaconEngine.chainBls).
-   */
-  chainBls(): IBlsVerifier {
-    return this.bls;
-  }
-
   /** Whether the engine's internal (gossip/import) BLS pool can accept more work (backpressure). */
   blsCanAcceptWork(): boolean {
     return this.bls.canAcceptWork();
