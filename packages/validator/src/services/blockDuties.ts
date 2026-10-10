@@ -194,7 +194,8 @@ export class BlockDutiesService {
    *   Pre-Gloas  (v1 proposer dep_root(E) = block@startSlot(E) - 1):
    *     currentDutyDependentRoot  ≡ proposer_dep_root(currentEpoch)
    *     (next-epoch proposer dep_root is not exposed; pre-Gloas falls back to the
-   *      `runEverySlotTask` boundary poll.)
+   *      `runEverySlotTask` boundary poll, except for the first Gloas epoch whose v2
+   *      dep_root is the same block as currentDutyDependentRoot.)
    *
    *   Post-Gloas (v2 proposer dep_root(E) = block@startSlot(E - 1) - 1, EIP-7917):
    *     previousDutyDependentRoot ≡ proposer_dep_root(currentEpoch)
@@ -216,6 +217,9 @@ export class BlockDutiesService {
       await this.refetchIfDepRootChanged(currentEpoch + 1, currentDutyDependentRoot);
     } else {
       await this.refetchIfDepRootChanged(currentEpoch, currentDutyDependentRoot);
+      if (isForkPostGloas(this.config.getForkName(computeStartSlotAtEpoch(currentEpoch + 1)))) {
+        await this.refetchIfDepRootChanged(currentEpoch + 1, currentDutyDependentRoot);
+      }
     }
   };
 

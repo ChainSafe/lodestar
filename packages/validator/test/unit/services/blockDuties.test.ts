@@ -271,6 +271,40 @@ describe("BlockDutiesService", () => {
     expect(refetchEpochs.sort()).toEqual([0, 1]);
   });
 
+  it("Pre-Gloas head event in the epoch before the fork refetches the first Gloas epoch as well", async () => {
+    const depRoot = toHex(Buffer.alloc(32, 10));
+    const depRootReorg = toHex(Buffer.alloc(32, 20));
+    const gloasAtEpoch1Config = createChainForkConfig({...getConfig(ForkName.fulu), GLOAS_FORK_EPOCH: 1});
+
+    let currentDepRoot = depRoot;
+    api.validator.getProposerDuties.mockImplementation(async () =>
+      mockApiResponse({data: [], meta: {dependentRoot: currentDepRoot, executionOptimistic: false}})
+    );
+    api.validator.getProposerDutiesV2.mockImplementation(async () =>
+      mockApiResponse({data: [], meta: {dependentRoot: currentDepRoot, executionOptimistic: false}})
+    );
+
+    const clock = new ClockMock();
+    new BlockDutiesService(gloasAtEpoch1Config, loggerVc, api, clock, validatorStore, chainHeaderTracker, null);
+
+    // Epoch 0 is fetched via v1, the first Gloas epoch via v2 ahead of the fork
+    await clock.tickEpochFns(0, controller.signal);
+    expect(api.validator.getProposerDuties).toHaveBeenCalledExactlyOnceWith({epoch: 0});
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledExactlyOnceWith({epoch: 1});
+
+    // A boundary reorg in epoch 0 changes the dependent root of both epochs
+    currentDepRoot = depRootReorg;
+    await onNewHeadCallback({
+      slot: 0,
+      head: ZERO_HASH_HEX,
+      previousDutyDependentRoot: ZERO_HASH_HEX,
+      currentDutyDependentRoot: depRootReorg,
+    });
+
+    expect(api.validator.getProposerDuties).toHaveBeenCalledTimes(2);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+  });
+
   it("Pre-Fulu last slot of epoch schedules a boundary fetch for nextEpoch", async () => {
     const epoch0Duties: routes.validator.ProposerDutyList = [];
     const epoch1Duties: routes.validator.ProposerDutyList = [{slot: 32, validatorIndex: 0, pubkey: pubkeys[0]}];
