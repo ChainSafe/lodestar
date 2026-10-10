@@ -682,6 +682,32 @@ describe("Builder", () => {
       expect(vi.getTimerCount()).toBe(0);
     });
 
+    it.each(["slow", "failed"])("uses resolved identity when the first status poll is %s", async (mode) => {
+      const {events, publish} = prepareStartup();
+      const identity = mockGetStateBuildersResponse(1, {
+        pubkey: modules.opts.keypair.publicKey.toBytes(),
+        balance: MIN_DEPOSIT_AMOUNT + 100,
+      });
+      const poll = defer<Awaited<ReturnType<typeof api.beacon.getStateBuilders>>>();
+      api.beacon.getStateBuilders.mockReset().mockResolvedValueOnce(identity);
+      if (mode === "slow") api.beacon.getStateBuilders.mockReturnValue(poll.promise);
+      else api.beacon.getStateBuilders.mockResolvedValue(await mockApiErrorResponse(500));
+      const builder = await Builder.init(modules.opts);
+      try {
+        const {onEvent} = api.events.eventstream.mock.calls[0][0];
+        onEvent(events.preference);
+        onEvent(events.head);
+        onEvent(events.attributes);
+        await vi.advanceTimersByTimeAsync(modules.opts.config.SLOT_DURATION_MS / 2);
+        expect(publish).toHaveBeenCalledOnce();
+        expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
+      } finally {
+        poll.resolve(identity);
+        await builder.close();
+        await vi.advanceTimersByTimeAsync(0);
+      }
+    });
+
     async function prepareSelection(shouldReveal?: BuilderBidOptions["reveal"]["shouldReveal"]) {
       const {events, payload, publish, options} = prepareStartup();
       options.reveal = {cutoffBps: 5000, shouldReveal};

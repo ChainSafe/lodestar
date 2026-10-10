@@ -2,7 +2,7 @@ import {ApiClient, ApiError, HttpStatusCode, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {IClock, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {BuilderIndex, BuilderStatus} from "@lodestar/types";
+import {BuilderStatus} from "@lodestar/types";
 import {ErrorAborted, Logger, TimeoutError, isFetchError, sleep, toHex} from "@lodestar/utils";
 
 export async function resolveBuilderIdentity(
@@ -12,7 +12,7 @@ export async function resolveBuilderIdentity(
   signal: AbortSignal,
   clock: IClock,
   config: ChainForkConfig
-): Promise<BuilderIndex> {
+): Promise<routes.beacon.BuilderResponse> {
   const builderEntry = await waitForBuilder(api, logger, id, signal, clock, config);
 
   if (builderEntry.builder.version !== PAYLOAD_BUILDER_VERSION) {
@@ -27,7 +27,7 @@ export async function resolveBuilderIdentity(
     slot: clock.getCurrentSlot(),
   });
 
-  return builderEntry.index;
+  return builderEntry;
 }
 
 export async function getBuilderStatus(
