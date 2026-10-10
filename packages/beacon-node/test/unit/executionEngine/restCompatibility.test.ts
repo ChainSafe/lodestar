@@ -29,6 +29,7 @@ describe("REST engine compatibility", () => {
   let restError: {status: number; body: unknown} | undefined;
   let jsonRpcError: {code: number; message: string} | undefined;
   let malformedResponse: boolean;
+  let clientVersionError: boolean;
   let requests: string[];
   let beforePayload: (() => Promise<void>) | undefined;
   let beforeForkchoice: (() => Promise<void>) | undefined;
@@ -41,6 +42,7 @@ describe("REST engine compatibility", () => {
     restError = undefined;
     jsonRpcError = undefined;
     malformedResponse = false;
+    clientVersionError = false;
     beforePayload = undefined;
     beforeForkchoice = undefined;
     requests = [];
@@ -54,7 +56,10 @@ describe("REST engine compatibility", () => {
       requests.push("capabilities");
       return reply.code(discovery.status).send(discovery.body);
     });
-    server.get("/engine/v1/identity", () => [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]);
+    server.get("/engine/v1/identity", (_, reply) => {
+      if (clientVersionError) return reply.code(500).send({});
+      return [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}];
+    });
     server.post("/engine/v1/payloads", async (_, reply) => {
       requests.push("REST newPayload");
       await beforePayload?.();
@@ -68,6 +73,9 @@ describe("REST engine compatibility", () => {
     server.post<{Body: {method: string}}>("/", (req) => {
       const method = req.body.method;
       if (method === "engine_getClientVersionV1") {
+        if (clientVersionError) {
+          return {jsonrpc: "2.0", id: 1, error: {code: -32602, message: "Invalid params"}};
+        }
         return {jsonrpc: "2.0", id: 1, result: [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]};
       }
       requests.push(method);
@@ -137,6 +145,20 @@ describe("REST engine compatibility", () => {
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
     expectCompatibilityLogsAtDebugOnly();
   });
+
+  it.each(["json-rpc", "auto"] as const)(
+    "keeps the engine state when the client version request fails in %s mode",
+    async (engineApi) => {
+      clientVersionError = true;
+      const engine = createEngine(engineApi);
+      await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+      await vi.waitFor(() =>
+        expect(logger.debug).toHaveBeenCalledWith("Unable to get execution client version", {}, expect.any(Error))
+      );
+      expect(engine.state).toBe(ExecutionEngineState.SYNCED);
+      expect(logger.warn).not.toHaveBeenCalled();
+    }
+  );
 
   it("rediscovers REST after the execution client reconnects", async () => {
     discovery = {status: 404, body: {}};
