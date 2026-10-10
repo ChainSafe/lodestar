@@ -19,6 +19,7 @@ import {IBeaconDb} from "../../../../src/db/interface.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NativeGossip} from "../../../../src/network/core/native/gossip.js";
+import {NativePeerReports} from "../../../../src/network/core/native/reports.js";
 import {NetworkEventBus} from "../../../../src/network/events.js";
 import {GossipType} from "../../../../src/network/gossip/interface.js";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
@@ -78,8 +79,15 @@ function fixture() {
     aggregatorTracker: new AggregatorTracker(),
     core: {reportPeer: vi.fn()} as unknown as INetworkCore,
   };
-  const network = {publish: vi.fn(), blockImported: vi.fn(), dropQueuedGossip: vi.fn()};
-  const gossip = new NativeGossip(network, config, modules.events, defaultNetworkOptions, vi.fn());
+  const network = {publish: vi.fn(), blockImported: vi.fn(), dropQueuedGossip: vi.fn(), reportPeer: vi.fn()};
+  const gossip = new NativeGossip(
+    network,
+    config,
+    modules.events,
+    defaultNetworkOptions,
+    vi.fn(),
+    new NativePeerReports(network)
+  );
   const executor = new NativeGossipExecutor(modules, {}, gossip);
   return {order, chain, modules, gossip, executor};
 }
@@ -105,6 +113,7 @@ function message(type: GossipType.beacon_attestation | GossipType.voluntary_exit
   exit.message.validatorIndex = id;
   return {
     connection: {index: 0, generation: 1},
+    endpoint: null,
     peerId: "peer",
     topic: stringifyGossipTopic(config, attestation ? {type, boundary, subnet: 3} : {type, boundary}),
     id: new Uint8Array(20).fill(id),

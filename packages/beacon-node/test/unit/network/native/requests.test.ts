@@ -655,3 +655,37 @@ it("waits for initial credit once and each response before producing the next ch
     await handler.retired;
   }
 });
+
+it("preserves the failed request's origin when reporting a response error", async () => {
+  const key = await generateKeyPair("secp256k1");
+  const origin = {
+    connection: {index: 2, generation: 4},
+    endpoint: {family: 4, address: Uint8Array.of(192, 0, 2, 1), port: 9000},
+  };
+  const failure = Object.assign(new Error("empty"), {
+    code: "NetworkRequestFailed",
+    reason: "negotiation_rejected",
+    phase: "response",
+    origin,
+    peerFault: null,
+  });
+  const response: AsyncIterableIterator<NativeResponseChunk> = {
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    next: () => Promise.reject(failure),
+  };
+  const report = vi.fn();
+  const iterator = outgoingNativeRequest(
+    {request: () => response},
+    {
+      peerId: peerIdFromPublicKey(key.publicKey).toString(),
+      method: ReqRespMethod.BeaconBlocksByRoot,
+      versions: [2],
+      requestData: new Uint8Array(32),
+    },
+    report
+  );
+  await expect(iterator.next()).rejects.toMatchObject({type: {code: RequestErrorCode.DIAL_ERROR}});
+  expect(report).toHaveBeenCalledWith(expect.anything(), RequestErrorCode.DIAL_ERROR, origin);
+});

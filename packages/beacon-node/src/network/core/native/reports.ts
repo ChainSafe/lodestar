@@ -1,4 +1,5 @@
-import {NativeNetwork, NativePeerAction} from "@chainsafe/lodestar-z/network";
+import {GossipMessage, NativeNetwork, NativePeerAction, NativePeerReportContext} from "@chainsafe/lodestar-z/network";
+import type {GossipPeerReport} from "../../gossip/interface.js";
 import {PeerAction} from "../../peers/index.js";
 
 const actions: Record<PeerAction, NativePeerAction> = {
@@ -30,11 +31,30 @@ export class NativePeerReports {
   constructor(private readonly network: Pick<NativeNetwork, "reportPeer">) {}
 
   /** Counts each call that returns normally, including one native merges into a pending report for the same peer. */
-  report(peer: string, action: PeerAction, actionName: string): void {
+  report(peer: string, action: PeerAction, actionName: string, context?: NativePeerReportContext): void {
     const nativeAction = actions[action];
-    this.network.reportPeer(peer, nativeAction);
+    if (context) this.network.reportPeer(peer, nativeAction, context);
+    else this.network.reportPeer(peer, nativeAction);
     const key = reasons.has(actionName) ? actionName : "other";
     this.counts.set(key, (this.counts.get(key) ?? 0) + 1);
+  }
+
+  forGossip(message: Pick<GossipMessage, "peerId" | "connection" | "endpoint">): GossipPeerReport {
+    const peer = message.peerId;
+    const origin = {
+      connection: {...message.connection},
+      endpoint: message.endpoint ? {...message.endpoint, address: new Uint8Array(message.endpoint.address)} : null,
+    };
+    return (action, actionName) =>
+      this.report(peer, action, actionName, {
+        origin,
+        reason:
+          actionName === "ExecutionEngineInvalid" ||
+          actionName === "BadGossipBlock" ||
+          actionName === "BadGossipPayload"
+            ? "gossip_import"
+            : "gossip_validation",
+      });
   }
 
   /** The report counter in exposition format. */

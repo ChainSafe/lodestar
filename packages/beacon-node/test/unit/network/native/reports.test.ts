@@ -86,3 +86,34 @@ describe("native peer reports", () => {
     expect(counts(reports.metrics()).get("BadGossipBlock")).toBe(0);
   });
 });
+
+it("keeps gossip reports attached to their original endpoint after reconnect and deferred import", async () => {
+  const {network, reports} = fixture();
+  const source = {
+    peerId: "peer",
+    connection: {index: 1, generation: 4},
+    endpoint: {family: 4 as const, address: Uint8Array.of(192, 0, 2, 1), port: 9000},
+  };
+  const original = structuredClone(source);
+  const report = reports.forGossip(source);
+  source.connection.generation++;
+  source.endpoint.address[3] = 2;
+  await Promise.resolve();
+  report(PeerAction.Fatal, "INVALID_SIGNATURE");
+  expect(network.reportPeer).toHaveBeenLastCalledWith("peer", "fatal", {
+    origin: {connection: original.connection, endpoint: original.endpoint},
+    reason: "gossip_validation",
+  });
+  report(PeerAction.LowToleranceError, "BadGossipBlock");
+  expect(network.reportPeer).toHaveBeenLastCalledWith("peer", "low_tolerance", {
+    origin: {connection: original.connection, endpoint: original.endpoint},
+    reason: "gossip_import",
+  });
+  reports.forGossip({...source, endpoint: null})(PeerAction.Fatal, "INVALID_SIGNATURE");
+  expect(network.reportPeer).toHaveBeenLastCalledWith("peer", "fatal", {
+    origin: {connection: source.connection, endpoint: null},
+    reason: "gossip_validation",
+  });
+  reports.report("peer", PeerAction.Fatal, "BadSyncBlocks");
+  expect(network.reportPeer).toHaveBeenLastCalledWith("peer", "fatal");
+});

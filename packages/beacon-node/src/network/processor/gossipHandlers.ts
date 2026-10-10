@@ -96,6 +96,7 @@ import {
   BatchGossipHandlers,
   GossipHandlerParamGeneric,
   GossipHandlers,
+  GossipPeerReport,
   GossipType,
   SequentialGossipHandlers,
 } from "../gossip/interface.js";
@@ -625,7 +626,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }
   }
 
-  function handleValidBeaconBlock(blockInput: IBlockInput, peerIdStr: string, seenTimestampSec: number): void {
+  function handleValidBeaconBlock(
+    blockInput: IBlockInput,
+    peerIdStr: string,
+    seenTimestampSec: number,
+    reportPeer?: GossipPeerReport
+  ): void {
+    const report = reportPeer ?? ((action: PeerAction, reason: string) => core.reportPeer(peerIdStr, action, reason));
     const signedBlock = blockInput.getBlock();
     const slot = signedBlock.message.slot;
 
@@ -717,12 +724,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               break;
             case BlockErrorCode.EXECUTION_ENGINE_INVALID:
               // the peer served a bad block
-              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "ExecutionEngineInvalid");
+              report(PeerAction.LowToleranceError, "ExecutionEngineInvalid");
               logLevel = LogLevel.warn;
               break;
             default:
               // TODO: Should it use PeerId or string?
-              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
+              report(PeerAction.LowToleranceError, "BadGossipBlock");
               // Misbehaving peer, but could highlight an issue in another client
               logLevel = LogLevel.warn;
           }
@@ -739,7 +746,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   return {
     [GossipType.beacon_block]: async (
-      {gossipData, topic, peerIdStr, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.beacon_block>,
+      {gossipData, topic, peerIdStr, seenTimestampSec, reportPeer}: GossipHandlerParamGeneric<GossipType.beacon_block>,
       reported?: Promise<void>
     ) => {
       const {serializedData} = gossipData;
@@ -751,7 +758,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         callAfterValidation(reported, () => {
           try {
             chain.serializedCache.set(signedBlock, serializedData);
-            handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+            handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec, reportPeer);
           } catch (e) {
             logger.debug(
               "Error handling gossip block",
@@ -785,7 +792,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           chain.serializedCache.set(signedBlock, serializedData);
           // this is technically not a valid gossip block but gossip validation is a cheap subset of checks
           // this runs the full state transition, so importing an equivocating-but-valid block here is safe.
-          handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+          handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec, reportPeer);
         }
         // rethrow so gossipValidatorFn maps IGNORE -> TopicValidatorResult.Ignore (message not forwarded)
         throw e;
@@ -1250,7 +1257,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
     },
     [GossipType.execution_payload]: async (
-      {gossipData, topic, peerIdStr, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.execution_payload>,
+      {
+        gossipData,
+        topic,
+        peerIdStr,
+        seenTimestampSec,
+        reportPeer,
+      }: GossipHandlerParamGeneric<GossipType.execution_payload>,
       reported?: Promise<void>
     ) => {
       const {serializedData} = gossipData;
@@ -1343,7 +1356,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                 case PayloadErrorCode.INVALID_SIGNATURE:
                 case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
                 case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
-                  core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  if (reportPeer) reportPeer(PeerAction.LowToleranceError, "BadGossipPayload");
+                  else core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
                   // The builder may have signed another envelope that is valid, keeping this one would make
                   // by-root and range sync reuse it and never import the payload
                   chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);

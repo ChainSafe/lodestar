@@ -83,10 +83,17 @@ export class NativeNetworkCore implements INetworkCore {
         initialStatus,
         core.onFailure
       );
-      core.gossip = new NativeGossip(core.network, config, modules.events, core.modules.opts, core.onOperationError);
+      core.reports = new NativePeerReports(core.network);
+      core.gossip = new NativeGossip(
+        core.network,
+        config,
+        modules.events,
+        core.modules.opts,
+        core.onOperationError,
+        core.reports
+      );
       core.peers = new NativePeers(core.network, config, modules.events, core.network.limits.peerCapacity);
       core.requests = new NativeRequests(config, modules.serving, core.network.limits.incomingCapacity, logger);
-      core.reports = new NativePeerReports(core.network);
       void core.network.closed
         .then((result) => {
           if (result.reason === "failed" && !core.failure)
@@ -297,10 +304,10 @@ export class NativeNetworkCore implements INetworkCore {
     return (await this.network.getDirectPeers()).identities;
   }
   sendReqRespRequest(data: OutgoingRequestArgs) {
-    return outgoingNativeRequest(this.network, data, (action, reason) => {
+    return outgoingNativeRequest(this.network, data, (action, reason, origin) => {
       if (this.closed) return;
       try {
-        this.reports.report(data.peerId, action, reason);
+        this.reports.report(data.peerId, action, reason, origin ? {origin, reason: "reqresp_response"} : undefined);
       } catch (error) {
         this.modules.logger.debug("Native request peer report failed", {peer: data.peerId, reason}, error as Error);
       }

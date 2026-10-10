@@ -9,6 +9,7 @@ import {NetworkOptions} from "../../options.js";
 import {PendingGossipsubMessage} from "../../processor/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 import type {NativeGossipExecutor} from "./executor.js";
+import type {NativePeerReports} from "./reports.js";
 
 type GossipExecutor = Pick<NativeGossipExecutor, "check" | "ready" | "execute" | "observe" | "subscribeCapacity">;
 
@@ -28,7 +29,8 @@ export class NativeGossip {
     private readonly config: BeaconConfig,
     private readonly events: NetworkEventBus,
     private readonly opts: NetworkOptions,
-    private readonly onError: (error: unknown) => void
+    private readonly onError: (error: unknown) => void,
+    private readonly reports: Pick<NativePeerReports, "forGossip">
   ) {}
   attach(processor: GossipExecutor): void {
     if (this.closed || this.processor)
@@ -104,6 +106,7 @@ export class NativeGossip {
       msg: {type: "unsigned", topic: message.topic, data: message.data},
       msgId: Buffer.from(message.id).toString("hex"),
       propagationSource: message.peerId,
+      reportPeer: this.reports.forGossip(message),
       clientAgent: "unknown",
       clientVersion: "unknown",
       indexed: message.attestationData ?? undefined,

@@ -1,5 +1,11 @@
 import {peerIdFromString} from "@libp2p/peer-id";
-import {IncomingRequest, NativeNetwork, NativeRequestError, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
+import {
+  IncomingRequest,
+  NativeNetwork,
+  NativePeerOrigin,
+  NativeRequestError,
+  NativeResponseChunk,
+} from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {
@@ -71,7 +77,7 @@ function requestError(error: unknown): unknown {
 export function outgoingNativeRequest(
   network: Pick<NativeNetwork, "request">,
   data: OutgoingRequestArgs,
-  report: (action: PeerAction, reason: string) => void
+  report: (action: PeerAction, reason: string, origin?: NativePeerOrigin) => void
 ): AsyncIterableIterator<ResponseIncoming> {
   nativeInteger(data.versions.length, "request versions", 3, 1);
   let selected: NativeProtocol | undefined;
@@ -118,7 +124,12 @@ export function outgoingNativeRequest(
         // Native owns response-timeout attribution, including when local delays rule out a peer penalty.
         const action =
           mapped.type.code === RequestErrorCode.RESP_TIMEOUT ? null : onOutgoingReqRespError(mapped, data.method);
-        if (action !== null) report(action, mapped.type.code);
+        if (action !== null) {
+          const native = error as NativeRequestError;
+          const origin = native.code === "NetworkRequestFailed" ? native.origin : null;
+          if (origin) report(action, mapped.type.code, origin);
+          else report(action, mapped.type.code);
+        }
       }
       throw mapped;
     }

@@ -8,6 +8,7 @@ import {ForkName} from "@lodestar/params";
 import {defer} from "@lodestar/utils";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NativeGossip} from "../../../../src/network/core/native/gossip.js";
+import {NativePeerReports} from "../../../../src/network/core/native/reports.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
 import {GossipType} from "../../../../src/network/gossip/interface.js";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
@@ -31,12 +32,20 @@ async function fixture(attach = true) {
       pressured: 0,
       duplicate: false,
     })),
+    reportPeer: vi.fn<NativeNetwork["reportPeer"]>(),
     blockImported: vi.fn<NativeNetwork["blockImported"]>(),
     dropQueuedGossip: vi.fn<NativeNetwork["dropQueuedGossip"]>(),
   };
   const events = new NetworkEventBus();
   const onError = vi.fn();
-  const gossip = new NativeGossip(network, config, events, defaultNetworkOptions, onError);
+  const gossip = new NativeGossip(
+    network,
+    config,
+    events,
+    defaultNetworkOptions,
+    onError,
+    new NativePeerReports(network)
+  );
   const pending: PendingGossipsubMessage[] = [];
   const completions = new Map<PendingGossipsubMessage, ReturnType<typeof defer<TopicValidatorResult>>>();
   const processor = {
@@ -69,6 +78,7 @@ async function fixture(attach = true) {
     message(id = 1, messageTopic = topic): GossipMessage {
       return {
         connection: {index: 0, generation: 1},
+        endpoint: null,
         peerId: peerIdFromPublicKey(peer.publicKey).toString(),
         topic: messageTopic,
         id: new Uint8Array(20).fill(id),

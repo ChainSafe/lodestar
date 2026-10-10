@@ -18,7 +18,12 @@ import {Metrics} from "../../../../src/metrics/index.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
-import {BatchGossipHandlerFn, GossipHandlers, GossipType} from "../../../../src/network/gossip/interface.js";
+import {
+  BatchGossipHandlerFn,
+  GossipHandlerFn,
+  GossipHandlers,
+  GossipType,
+} from "../../../../src/network/gossip/interface.js";
 import {INetwork} from "../../../../src/network/interface.js";
 import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 import {PendingGossipsubMessage} from "../../../../src/network/processor/types.js";
@@ -34,7 +39,7 @@ import {createMetricsTest} from "../../metrics/utils.js";
 
 /** An executor over a mocked chain; `stubbed` replaces the gossip handlers with stubs. */
 function fixture(metrics: Metrics | null = null, stubbed = true) {
-  const single = vi.fn(async () => {});
+  const single = vi.fn<GossipHandlerFn>(async () => {});
   const batch = vi.fn<BatchGossipHandlerFn>(async (items) => items.map(() => null));
   const handlers: GossipHandlers = {
     beacon_block: single,
@@ -492,4 +497,27 @@ it.each(["bls", "regen"] as const)("rechecks both validation blockers when %s re
   f.chain.emitter.emit(ChainEvent.validationCapacity);
   expect(f.wake).toHaveBeenCalledTimes(2);
   f.executor.stop();
+});
+
+it("uses each delivery's reporter for individual and batched validation failures", async () => {
+  const f = fixture();
+  try {
+    const first = {...message("first"), reportPeer: vi.fn()};
+    const second = {...message("second", true), reportPeer: vi.fn()};
+    const rejected = new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+    f.single.mockRejectedValueOnce(rejected);
+    expect(await f.executor.execute([first], false, reported)).toEqual([TopicValidatorResult.Reject]);
+    expect(f.single.mock.calls[0][0].reportPeer).toBe(first.reportPeer);
+    expect(first.reportPeer).toHaveBeenCalledTimes(1);
+    expect(second.reportPeer).not.toHaveBeenCalled();
+    f.batch.mockResolvedValueOnce([null, rejected]);
+    expect(await f.executor.execute([message("accepted", true), second], true, reported)).toEqual([
+      TopicValidatorResult.Accept,
+      TopicValidatorResult.Reject,
+    ]);
+    expect(first.reportPeer).toHaveBeenCalledTimes(1);
+    expect(second.reportPeer).toHaveBeenCalledTimes(1);
+  } finally {
+    f.executor.stop();
+  }
 });

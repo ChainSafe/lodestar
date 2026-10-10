@@ -145,6 +145,7 @@ export function getGossipValidatorBatchFn(
           topic: messageInfo.topic,
           peerIdStr: messageInfo.propagationSource,
           seenTimestampSec: messageInfo.seenTimestampSec,
+          ...(messageInfo.reportPeer ? {reportPeer: messageInfo.reportPeer} : {}),
         })),
         reported
       );
@@ -177,7 +178,9 @@ export function getGossipValidatorBatchFn(
             // only beacon_attestation topic is validated in batch
             metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
             const peerAction = rejectPeerAction(type, e.type.code);
-            core.reportPeer(propagationSource, peerAction, e.type.code);
+            const report = messageInfos[i].reportPeer;
+            if (report) report(peerAction, e.type.code);
+            else core.reportPeer(propagationSource, peerAction, e.type.code);
             if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
             logger.debug(
               `Gossip validation ${type} rejected`,
@@ -222,7 +225,7 @@ export function getGossipValidatorFn(
   const {logger, metrics, core} = modules;
 
   return async function gossipValidatorFn(
-    {topic, msg, propagationSource, clientAgent, clientVersion, seenTimestampSec, msgSlot},
+    {topic, msg, propagationSource, clientAgent, clientVersion, seenTimestampSec, msgSlot, reportPeer},
     reported
   ) {
     const type = topic.type;
@@ -234,6 +237,7 @@ export function getGossipValidatorFn(
           topic,
           peerIdStr: propagationSource,
           seenTimestampSec,
+          ...(reportPeer ? {reportPeer} : {}),
         },
         reported
       );
@@ -267,7 +271,8 @@ export function getGossipValidatorFn(
         case GossipAction.REJECT: {
           metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
           const peerAction = rejectPeerAction(type, e.type.code);
-          core.reportPeer(propagationSource, peerAction, e.type.code);
+          if (reportPeer) reportPeer(peerAction, e.type.code);
+          else core.reportPeer(propagationSource, peerAction, e.type.code);
           if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
           logger.debug(
             `Gossip validation ${type} rejected`,
