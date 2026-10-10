@@ -86,7 +86,7 @@ describe("ProposalPreferencesService", () => {
     vi.restoreAllMocks();
   });
 
-  it("signs and submits the preferences of a proposal once within the window", async () => {
+  it("signs and submits the preferences of a proposal once", async () => {
     const signSpy = vi.spyOn(validatorStore, "signProposerPreferences");
     startService(gloasConfig, validatorStore);
 
@@ -127,20 +127,37 @@ describe("ProposalPreferencesService", () => {
     expect(api.validator.submitBuilderPreferences).toHaveBeenCalledTimes(2);
   });
 
-  it("only submits the preferences of proposals within the submission window", async () => {
+  it("submits the preferences of next epoch's proposals from the middle of the current epoch", async () => {
+    const nextEpochProposalSlot = SLOTS_PER_EPOCH + 8;
+    blockDutiesService.getProposersAtEpoch.mockImplementation((epoch) =>
+      epoch === 0
+        ? {dependentRoot, data: duties}
+        : {dependentRoot, data: [{slot: nextEpochProposalSlot, validatorIndex: 0, pubkey: duties[0].pubkey}]}
+    );
     startService(gloasConfig, validatorStore);
 
-    await clock.tickSlotFns(proposalSlot - SLOTS_PER_EPOCH / 4 - 1, controller.signal);
-    expect(api.validator.submitProposerPreferences).not.toHaveBeenCalled();
-    expect(api.validator.submitBuilderPreferences).not.toHaveBeenCalled();
-
-    await clock.tickSlotFns(proposalSlot - SLOTS_PER_EPOCH / 4, controller.signal);
+    // The current epoch's proposal is submitted right away, the next epoch's not yet
+    await clock.tickSlotFns(1, controller.signal);
     expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
-    expect(api.validator.submitBuilderPreferences).toHaveBeenCalledOnce();
+    expect(
+      api.validator.submitProposerPreferences.mock.calls[0][0].signedProposerPreferences.map(
+        (signed) => signed.message.proposalSlot
+      )
+    ).toEqual([proposalSlot]);
 
-    await clock.tickSlotFns(proposalSlot, controller.signal);
+    await clock.tickSlotFns(SLOTS_PER_EPOCH / 2 - 1, controller.signal);
     expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
-    expect(api.validator.submitBuilderPreferences).toHaveBeenCalledOnce();
+
+    await clock.tickSlotFns(SLOTS_PER_EPOCH / 2, controller.signal);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledTimes(2);
+    expect(
+      api.validator.submitProposerPreferences.mock.calls[1][0].signedProposerPreferences.map(
+        (signed) => signed.message.proposalSlot
+      )
+    ).toEqual([nextEpochProposalSlot]);
+
+    await clock.tickSlotFns(nextEpochProposalSlot, controller.signal);
+    expect(api.validator.submitProposerPreferences).toHaveBeenCalledTimes(2);
   });
 
   it("does not submit builder preferences for validators without builders", async () => {
@@ -226,7 +243,7 @@ describe("ProposalPreferencesService", () => {
     expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
   });
 
-  it("resubmits the preferences within the window after the beacon node resynced", async () => {
+  it("resubmits the upcoming preferences after the beacon node resynced", async () => {
     startService(gloasConfig, validatorStore);
 
     await clock.tickSlotFns(proposalSlot - 3, controller.signal);
@@ -256,7 +273,7 @@ describe("ProposalPreferencesService", () => {
     expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
   });
 
-  it("submits the preferences of the first gloas proposals before the fork", async () => {
+  it("submits the preferences of the first gloas proposals from the middle of the epoch before the fork", async () => {
     const config = createChainForkConfig({...gloasConfig, GLOAS_FORK_EPOCH: 1});
     const store = await initValidatorStore(secretKeys, api, config, {
       defaultConfig: {builder: {builders: [{url: builderUrl}]}},
@@ -266,10 +283,10 @@ describe("ProposalPreferencesService", () => {
     mockDuties(1, dependentRoot, [{slot: firstGloasSlot, validatorIndex: 0, pubkey: duties[0].pubkey}]);
     startService(config, store);
 
-    await clock.tickSlotFns(firstGloasSlot - SLOTS_PER_EPOCH / 4 - 1, controller.signal);
+    await clock.tickSlotFns(SLOTS_PER_EPOCH / 2 - 1, controller.signal);
     expect(api.validator.submitProposerPreferences).not.toHaveBeenCalled();
 
-    await clock.tickSlotFns(firstGloasSlot - SLOTS_PER_EPOCH / 4, controller.signal);
+    await clock.tickSlotFns(SLOTS_PER_EPOCH / 2, controller.signal);
     expect(api.validator.submitProposerPreferences).toHaveBeenCalledOnce();
     expect(api.validator.submitBuilderPreferences).toHaveBeenCalledOnce();
   });

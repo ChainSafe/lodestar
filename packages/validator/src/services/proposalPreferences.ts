@@ -1,7 +1,7 @@
 import {ApiClient, ApiError, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
-import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
+import {IClock, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, gloas} from "@lodestar/types";
 import {fromHex, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
@@ -11,24 +11,22 @@ import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 /**
- * Submit the preferences of a proposal this many slots before the proposal slot.
+ * Submit the preferences of next epoch's proposals from this slot of the current epoch on.
  *
- * Earlier submission means more reorg-triggered resubmits (and gossip flood); later
- * submission risks missing the bid-auction window for this proposal slot. The bid for
- * slot S typically arrives at slot S-1, so we want preferences propagated to the network
- * and consumed by builders before then. SLOTS_PER_EPOCH / 4 (8 slots @ 32 SPE, ~96s @ 12s
- * slots) gives ample margin while bounding redundant resubmits.
+ * Their dependent root is the last block of the previous epoch, which a proposer boost reorg
+ * at the epoch boundary can still orphan in the first slots. Preferences of the current epoch
+ * depend on a block one epoch deeper and are submitted as soon as the duties are known.
  */
-const SUBMIT_BEFORE_PROPOSAL_SLOTS = Math.floor(SLOTS_PER_EPOCH / 4);
+const NEXT_EPOCH_SUBMISSION_SLOT = Math.floor(SLOTS_PER_EPOCH / 2);
 
 /** Per-epoch tracking of preferences already submitted under the current dependent_root. */
 type SubmittedAtEpoch = {dependentRoot: RootHex; proposerSlots: Set<Slot>; builderSlots: Set<Slot>};
 type PendingSubmission = {submission: SubmittedAtEpoch; slot: Slot};
-/** A local proposal within the submission window along with the tracking of its epoch */
+/** An upcoming local proposal along with the tracking of its epoch */
 type UpcomingProposal = {duty: routes.validator.ProposerDuty; submission: SubmittedAtEpoch};
 
 /**
- * Signs and submits the preferences of local proposals within the next `SUBMIT_BEFORE_PROPOSAL_SLOTS`:
+ * Signs and submits the preferences of the upcoming local proposals of the current and the next epoch:
  * the `SignedProposerPreferences` the beacon node broadcasts on gossip and the builder preferences
  * it forwards to the builders configured for the validator. Signing the builder request auths here
  * also pre-fills the auth cache used at proposal time.
@@ -38,9 +36,8 @@ type UpcomingProposal = {duty: routes.validator.ProposerDuty; submission: Submit
  * reported by `BlockDutiesService` against the one we last submitted under.
  *
  * Proposers should broadcast their preferences before the fork so the proposer preference caches
- * of beacon nodes and builders are warm for the first Gloas slots. We start submitting
- * as soon as a duty's proposal slot is in Gloas, which is up to `SUBMIT_BEFORE_PROPOSAL_SLOTS`
- * before the fork, so only the first few Gloas slots are affected by this pre-fork submission.
+ * of beacon nodes and builders are warm for the first Gloas slots. The preferences of the first
+ * Gloas epoch are submitted from the middle of the epoch before the fork.
  */
 export class ProposalPreferencesService {
   private readonly submitted = new Map<Epoch, SubmittedAtEpoch>();
@@ -77,10 +74,9 @@ export class ProposalPreferencesService {
   };
 
   private runPreferencesTask = async (slot: Slot): Promise<void> => {
-    // Start running once the submission window (`slot + SUBMIT_BEFORE_PROPOSAL_SLOTS`) reaches
-    // Gloas, i.e. already in the epoch before the fork. This allows builders to prepare and
-    // submit bids for the first Gloas slots.
-    if (!isForkPostGloas(this.config.getForkName(slot + SUBMIT_BEFORE_PROPOSAL_SLOTS))) {
+    // Start running in the epoch before the fork so builders can prepare bids for the first Gloas slots
+    const currentEpoch = computeEpochAtSlot(slot);
+    if (!isForkPostGloas(this.config.getForkName(computeStartSlotAtEpoch(currentEpoch + 1)))) {
       return;
     }
 
@@ -136,9 +132,12 @@ export class ProposalPreferencesService {
 
   private getUpcomingProposals(slot: Slot): UpcomingProposal[] {
     const currentEpoch = computeEpochAtSlot(slot);
+    const nextEpochSubmissionSlot = computeStartSlotAtEpoch(currentEpoch) + NEXT_EPOCH_SUBMISSION_SLOT;
     const proposals: UpcomingProposal[] = [];
 
     for (const epoch of [currentEpoch, currentEpoch + 1]) {
+      if (epoch > currentEpoch && slot < nextEpochSubmissionSlot) continue;
+
       const dutiesAtEpoch = this.blockDutiesService.getProposersAtEpoch(epoch);
       if (!dutiesAtEpoch) continue;
 
@@ -146,7 +145,6 @@ export class ProposalPreferencesService {
 
       for (const duty of dutiesAtEpoch.data) {
         if (duty.slot <= slot) continue;
-        if (duty.slot > slot + SUBMIT_BEFORE_PROPOSAL_SLOTS) continue;
         if (!isForkPostGloas(this.config.getForkName(duty.slot))) continue;
 
         proposals.push({duty, submission});
