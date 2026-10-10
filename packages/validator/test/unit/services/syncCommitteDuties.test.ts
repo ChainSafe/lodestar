@@ -195,6 +195,65 @@ describe("SyncCommitteeDutiesService", () => {
     } as typeof dutiesByIndexByPeriodObj);
   });
 
+  it("Should not let an incremental poll for a subset of indices clobber cached duties", async () => {
+    const duty1: routes.validator.SyncDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: indices[0],
+      validatorSyncCommitteeIndices: [7],
+    };
+    const duty2: routes.validator.SyncDuty = {
+      pubkey: pubkeys[1],
+      validatorIndex: indices[1],
+      validatorSyncCommitteeIndices: [5],
+    };
+    let servedDuties: routes.validator.SyncDuty[] = [duty1];
+    api.validator.getSyncCommitteeDuties.mockImplementation(async ({indices: requestedIndices}) =>
+      mockApiResponse({
+        data: servedDuties.filter((duty) => requestedIndices.includes(duty.validatorIndex)),
+        meta: {executionOptimistic: false},
+      })
+    );
+
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new SyncCommitteeDutiesService(
+      altair0Config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      null
+    );
+
+    await validatorStore.pollValidatorIndices();
+    expect(validatorStore.getAllLocalIndices()).toEqual(indices);
+
+    const periodDuties = () => Object.fromEntries(dutiesService["dutiesByIndexByPeriod"].get(0) ?? []);
+
+    // Full poll: only indices[0] is in the sync committee
+    await dutiesService["pollSyncCommitteesForEpoch"](0, indices);
+    expect(periodDuties()).toEqual({[indices[0]]: {duty: toSyncDutySubnet(duty1)}});
+
+    // Incremental poll for the newly discovered indices[1], which is not in the
+    // sync committee and returns no duties, must not wipe the cached duty
+    await dutiesService["pollSyncCommitteesForEpoch"](0, [indices[1]]);
+    expect(periodDuties()).toEqual({[indices[0]]: {duty: toSyncDutySubnet(duty1)}});
+
+    // An incremental poll that does return a duty merges it with the cached duties
+    servedDuties = [duty1, duty2];
+    await dutiesService["pollSyncCommitteesForEpoch"](0, [indices[1]]);
+    expect(periodDuties()).toEqual({
+      [indices[0]]: {duty: toSyncDutySubnet(duty1)},
+      [indices[1]]: {duty: toSyncDutySubnet(duty2)},
+    });
+
+    // A later full poll stays authoritative for every index it queried (#3572)
+    servedDuties = [duty2];
+    await dutiesService["pollSyncCommitteesForEpoch"](0, indices);
+    expect(periodDuties()).toEqual({[indices[1]]: {duty: toSyncDutySubnet(duty2)}});
+  });
+
   it("Should remove signer from sync committee duties", async () => {
     // Reply with some duties
     const duty1: routes.validator.SyncDuty = {
