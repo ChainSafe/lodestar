@@ -224,16 +224,18 @@ describe("block archiver task", () => {
     // Post-gloas a block has three fork choice nodes (PENDING/EMPTY/FULL) sharing one blockRoot. Fork choice drops
     // PENDING from nonAncestors, and only one of EMPTY/FULL is on the ancestor walk, so the other sibling shows up in
     // nonAncestors. Block-level data (block, light client witness/header) must not be pruned for it, while
-    // payload-level data (sidecars) of the losing variant must still be pruned.
+    // payload-level data (sidecars, execution payload envelopes) of the losing variant must still be pruned.
     const config = createChainForkConfig({
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
     });
     const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(ssz.fulu.SignedBeaconBlock.defaultValue());
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
     vi.spyOn(dbStub.dataColumnSidecar, "valuesStreamBinary").mockReturnValue(toAsyncIterable([]));
     vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
+    vi.spyOn(dbStub.executionPayloadEnvelope, "batchDelete");
     const pruneSpy = vi.spyOn(lightclientServer, "pruneNonCheckpointData").mockResolvedValue(undefined);
 
     const root = (i: number): string => toHexString(Buffer.alloc(32, i));
@@ -293,6 +295,12 @@ describe("block archiver task", () => {
     expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith([
       {slot: boundaryFull.slot, blockRoot: boundaryFull.blockRoot},
       {slot: orphan.slot, blockRoot: orphan.blockRoot},
+    ]);
+    // The envelope of the canonical EMPTY-finalized block is migrated to the cold db instead
+    expect(dbStub.executionPayloadEnvelope.batchDelete).toHaveBeenCalledTimes(1);
+    expect(dbStub.executionPayloadEnvelope.batchDelete).toBeCalledWith([
+      fromHexString(boundaryFull.blockRoot),
+      fromHexString(orphan.blockRoot),
     ]);
 
     // Keep light client data of canonical blocks, prune the orphan and the canonical non-checkpoint block
