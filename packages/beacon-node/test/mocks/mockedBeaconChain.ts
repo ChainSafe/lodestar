@@ -330,8 +330,6 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "getSyncCommitteeDuties",
     "getPtcDuties",
     "getHeadStateAtEpoch",
-    "waitForCheckpointState",
-    "genesisBlockRoot",
     "prepareForNextSlot",
     "getProposerTargetGasLimit",
     // Proposer cache + finalized balances bridges (forward to the mock's collaborators).
