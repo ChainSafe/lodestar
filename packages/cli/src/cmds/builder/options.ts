@@ -78,7 +78,8 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
   },
 
   bid: {
-    description: "Enable experimental Gloas bidding and prompt reveal. Requires an Engine URL and JWT secret.",
+    description:
+      "Enable experimental Gloas bidding and prompt reveal. Requires an Engine URL, JWT secret and per-slot payload attributes from the source BN (--emitPayloadAttributes on Lodestar).",
     type: "boolean",
     default: false,
     group: "bid",

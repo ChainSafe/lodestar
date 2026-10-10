@@ -70,7 +70,12 @@ describe("cmds / builder / args handler", () => {
           reveal: {cutoffBps: 5000},
         }
       : undefined;
-    const getBidOptions = vi.spyOn(runtime, "getBuilderBidOptions").mockReturnValue(bidRuntime);
+    const getBidOptions = vi
+      .spyOn(runtime, "getBuilderBidOptions")
+      .mockImplementation((_args, _config, _signal, logger) => {
+        vi.spyOn(logger, LogLevel.info);
+        return bidRuntime;
+      });
     const failure = Error("stop after runtime construction");
     const init = vi.spyOn(Builder, "init").mockRejectedValue(failure);
 
@@ -89,6 +94,12 @@ describe("cmds / builder / args handler", () => {
     expect(getBidOptions.mock.calls[0][2]).toBe(options.abortController.signal);
     expect(getBidOptions.mock.calls[0][3]).toBe(options.logger);
     expect(options.abortController.signal.aborted).toBe(true);
+    const inputRequirement = [
+      "Bidding requires per-slot payload attributes from the source BN",
+      {lodestarOption: "--emitPayloadAttributes"},
+    ] as const;
+    if (enabled) expect(options.logger.info).toHaveBeenCalledWith(...inputRequirement);
+    else expect(options.logger.info).not.toHaveBeenCalledWith(...inputRequirement);
   });
 
   it("does not repeat cleanup when a signal follows initialization failure", async () => {

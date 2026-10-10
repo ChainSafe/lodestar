@@ -85,6 +85,9 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
 
   logger.info("Beacon node", {beaconNode: toPrintableUrl(args.beaconNodeUrl), timeoutMs: args.requestTimeout});
   if (bidRuntime) {
+    logger.info("Bidding requires per-slot payload attributes from the source BN", {
+      lodestarOption: "--emitPayloadAttributes",
+    });
     logger.info("Builder bidding enabled", {
       executionUrl: toPrintableUrl(args["execution.url"] ?? ""),
       getPayloadAtBps: bidRuntime.inputs.deadlineBps,
