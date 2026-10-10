@@ -207,6 +207,7 @@ export interface IBeaconStateViewAltair extends IBeaconStateView {
   currentSyncCommittee: altair.SyncCommittee;
   nextSyncCommittee: altair.SyncCommittee;
   currentSyncCommitteeIndexed: SyncCommitteeCache;
+  readonly currentSyncCommitteeValidatorIndices: Uint32Array;
   syncProposerReward: number;
   getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
   /** Get indexed sync committee with slot+1 offset for duty lookups */
@@ -341,6 +342,7 @@ export type IBeaconStateViewNative = Omit<
   | "computeBlockRewards"
   | "computeNewStateRoot"
   | "computeSyncCommitteeRewards"
+  | "currentSyncCommitteeValidatorIndices"
   | "eth1Data"
   | "executionPayloadAvailability"
   | "getBeaconCommittee"
@@ -358,6 +360,8 @@ export type IBeaconStateViewNative = Omit<
   | "withParentPayloadApplied"
 > & {
   pendingDeposits: Uint8Array;
+  /** Older native addons expose indices only through currentSyncCommitteeIndexed. */
+  readonly currentSyncCommitteeValidatorIndices?: Uint32Array;
   pendingPartialWithdrawals: Uint8Array;
   pendingConsolidations: Uint8Array;
   proposerLookahead: Uint32Array;
