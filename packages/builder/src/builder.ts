@@ -141,7 +141,7 @@ export class Builder {
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
 
-    const index = await resolveBuilderIdentity(
+    const identity = await resolveBuilderIdentity(
       api,
       logger,
       builderSigner.getPubkeyHex(),
@@ -150,7 +150,11 @@ export class Builder {
       config
     );
 
-    const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
+    const {index} = identity;
+    const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics, {
+      status: identity.status,
+      balance: identity.builder.balance,
+    });
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
 

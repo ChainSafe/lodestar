@@ -80,8 +80,8 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
 
-    const builderIndex = await resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
-    expect(builderIndex).toEqual(index);
+    const identity = await resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
+    expect(identity).toMatchObject({index, status, builder: {pubkey, balance, version}});
   });
 
   it("throws on version mismatch", async () => {
@@ -125,7 +125,7 @@ describe("Identity", () => {
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
     await vi.advanceTimersByTimeAsync(1);
-    expect(await promise).toEqual(index);
+    expect(await promise).toMatchObject({index, status});
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 
@@ -159,7 +159,7 @@ describe("Identity", () => {
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
     await vi.advanceTimersByTimeAsync(1);
-    expect(await promise).toEqual(index);
+    expect(await promise).toMatchObject({index, status});
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 
@@ -188,7 +188,7 @@ describe("Identity", () => {
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
     await vi.advanceTimersByTimeAsync(clock.msToSlot(1));
-    expect(await promise).toEqual(index);
+    expect(await promise).toMatchObject({index, status});
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 
@@ -208,7 +208,7 @@ describe("Identity", () => {
     // Gloas fork reached: the builder queries the beacon node and resolves
     forkClock.currentSlot = SLOTS_PER_EPOCH;
     await vi.advanceTimersByTimeAsync(1);
-    expect(await promise).toEqual(index);
+    expect(await promise).toMatchObject({index, status});
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(1);
   });
 
@@ -236,7 +236,7 @@ describe("Identity", () => {
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
     await vi.advanceTimersByTimeAsync(clock.msToSlot(1));
-    expect(await promise).toEqual(index);
+    expect(await promise).toMatchObject({index, status});
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 
@@ -255,7 +255,7 @@ describe("Identity", () => {
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
     await vi.advanceTimersByTimeAsync(clock.msToSlot(1));
-    expect(await promise).toEqual(index);
+    expect(await promise).toMatchObject({index, status});
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 
