@@ -35,7 +35,12 @@ export type PayloadOrchestratorErrorType =
       getPayloadAt: number;
     }
   | {
-      code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT | PayloadOrchestratorErrorCode.GET_PAYLOAD_TIMEOUT;
+      code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT;
+      jobId: string;
+      lastError: string | null;
+    }
+  | {
+      code: PayloadOrchestratorErrorCode.GET_PAYLOAD_TIMEOUT;
       jobId: string;
     };
 
@@ -73,20 +78,27 @@ export class PayloadOrchestrator {
       );
     }
 
+    let lastPrepareError: string | null = null;
     const handle = await withTimeout(
       (signal = this.signal) =>
         retry(() => this.source.prepare(request, signal), {
           retries: Infinity,
           retryDelay: PREPARE_RETRY_DELAY,
-          shouldRetry: (error) =>
-            error instanceof PayloadSourceError && error.type.code === PayloadSourceErrorCode.NO_PAYLOAD_ID,
+          shouldRetry: (error) => {
+            lastPrepareError = error instanceof Error ? error.message : String(error);
+            return error instanceof PayloadSourceError && error.type.code === PayloadSourceErrorCode.NO_PAYLOAD_ID;
+          },
           signal,
         }),
       prepareTimeout,
       this.signal
     ).catch((error: unknown) => {
       if (error instanceof TimeoutError) {
-        throw new PayloadOrchestratorError({code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: id});
+        throw new PayloadOrchestratorError({
+          code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT,
+          jobId: id,
+          lastError: lastPrepareError,
+        });
       }
       throw error;
     });
