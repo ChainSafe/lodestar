@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {ApiClient, ApiError} from "@lodestar/api";
+import {ApiClient, ApiError, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
@@ -58,6 +58,83 @@ describe("BlockObserver", () => {
     await observer.processBlockEvent(blockEvent(rootHex(1)), controller.signal);
 
     expect(onBlock).toHaveBeenCalledOnce();
+  });
+
+  it.each([8, BUILDER_INDEX_SELF_BUILD])("skips fetching a block for Builder %s", async (builderIndex) => {
+    const observer = new BlockObserver(config, logger, api, {builderIndex: 7});
+    const onBlock = vi.fn();
+    observer.runOnBlock(onBlock);
+    const codec = routes.events.getTypeByEvent(config).block;
+    const event = codec.fromJson({
+      slot: "1",
+      block: rootHex(1),
+      execution_optimistic: false,
+      builder_index: builderIndex === BUILDER_INDEX_SELF_BUILD ? "18446744073709551615" : String(builderIndex),
+      block_hash: rootHex(2),
+    });
+
+    await observer.processBlockEvent(event, controller.signal);
+
+    expect(api.beacon.getBlockV2).not.toHaveBeenCalled();
+    expect(onBlock).not.toHaveBeenCalled();
+  });
+
+  it("fetches an own-builder event even without a known local bid", async () => {
+    const block = gloasBlock();
+    block.message.slot = 1;
+    api.beacon.getBlockV2.mockResolvedValue(blockResponse(block));
+    const observer = new BlockObserver(config, logger, api, {builderIndex: 7, hasBidForSlot: () => false});
+    const onBlock = vi.fn();
+    observer.runOnBlock(onBlock);
+    const event = routes.events.getTypeByEvent(config).block.fromJson({
+      slot: "1",
+      block: rootHex(1),
+      execution_optimistic: false,
+      builder_index: "7",
+      block_hash: rootHex(2),
+    });
+
+    await observer.processBlockEvent(event, controller.signal);
+
+    expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+    expect(onBlock).toHaveBeenCalledWith(
+      expect.objectContaining({block, signedBid: block.message.body.signedExecutionPayloadBid})
+    );
+  });
+
+  it.each([8, BUILDER_INDEX_SELF_BUILD])("fetches competing Builder %s in a locally bid slot", async (builderIndex) => {
+    const block = gloasBlock(builderIndex);
+    block.message.slot = 1;
+    api.beacon.getBlockV2.mockResolvedValue(blockResponse(block));
+    const hasBidForSlot = vi.fn((slot: number) => slot === 1);
+    const observer = new BlockObserver(config, logger, api, {builderIndex: 7, hasBidForSlot});
+    const onBlock = vi.fn();
+    observer.runOnBlock(onBlock);
+    await observer.processBlockEvent(
+      {...blockEvent(rootHex(1), 1), builderIndex, blockHash: rootHex(2)},
+      controller.signal
+    );
+    expect(hasBidForSlot).toHaveBeenCalledWith(1);
+    expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+    expect(onBlock).toHaveBeenCalledOnce();
+  });
+
+  it("does not trust the event in place of the fetched block", async () => {
+    const block = gloasBlock();
+    block.message.slot = 2;
+    api.beacon.getBlockV2.mockResolvedValue(blockResponse(block));
+    const observer = new BlockObserver(config, logger, api, {builderIndex: 7});
+    const onBlock = vi.fn();
+    observer.runOnBlock(onBlock);
+
+    await observer.processBlockEvent(
+      {...blockEvent(rootHex(1), 1), builderIndex: 7, blockHash: rootHex(2)},
+      controller.signal
+    );
+
+    expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+    expect(onBlock).not.toHaveBeenCalled();
+    expect(warnLog).toHaveBeenCalledOnce();
   });
 
   it("returns a fork-correct Gloas block and the exact signed bid reference", async () => {
