@@ -1,12 +1,17 @@
 import {describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {getConfig} from "@lodestar/config/test-utils";
+import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
 import type {StateTransitionOpts} from "../../../src/stateTransition.js";
+import {BeaconStateView} from "../../../src/stateView/beaconStateView.js";
 import {computeNewStateRootStateTransitionOpts} from "../../../src/stateView/computeNewStateRoot.js";
 import type {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
+import {createBeaconStateView} from "../../../src/stateView/stateViewFactory.js";
+import {generateValidators} from "../../utils/validator.js";
 
 describe("NativeBeaconStateView", () => {
   const genesisValidatorsRoot = new Uint8Array(32);
@@ -15,6 +20,58 @@ describe("NativeBeaconStateView", () => {
     {...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0},
     genesisValidatorsRoot
   );
+
+  it.each([
+    {fork: ForkName.phase0, executionState: false},
+    {fork: ForkName.altair, executionState: false},
+    {fork: ForkName.bellatrix, executionState: true},
+    {fork: ForkName.capella, executionState: true},
+    {fork: ForkName.deneb, executionState: true},
+    {fork: ForkName.electra, executionState: true},
+    {fork: ForkName.fulu, executionState: true},
+    {fork: ForkName.gloas, executionState: true},
+  ])("matches TypeScript execution predicates for a $fork state", ({fork, executionState}) => {
+    const config = createBeaconConfig(getConfig(fork), genesisValidatorsRoot);
+    const slot = 3 * SLOTS_PER_EPOCH;
+    const stateType = config.getForkTypes(slot).BeaconState;
+    const state = stateType.defaultValue();
+    state.slot = slot;
+    state.validators = generateValidators(16, {
+      activation: 0,
+      exit: FAR_FUTURE_EPOCH,
+      withdrawableEpoch: FAR_FUTURE_EPOCH,
+      balance: MAX_EFFECTIVE_BALANCE,
+    });
+    state.balances = state.validators.map(() => MAX_EFFECTIVE_BALANCE);
+    if ("inactivityScores" in state) {
+      state.inactivityScores = state.validators.map(() => 0);
+      state.previousEpochParticipation = state.validators.map(() => 0);
+      state.currentEpochParticipation = state.validators.map(() => 0);
+      state.currentSyncCommittee.pubkeys.fill(state.validators[0].pubkey);
+      state.nextSyncCommittee.pubkeys.fill(state.validators[0].pubkey);
+    }
+    if ("latestExecutionPayloadHeader" in state) {
+      state.latestExecutionPayloadHeader.blockHash = new Uint8Array(32).fill(7);
+    }
+    if ("latestBlockHash" in state) state.latestBlockHash = new Uint8Array(32).fill(7);
+    pubkeyCache.ensureCapacity(state.validators.length);
+    const stateBytes = stateType.serialize(state);
+    const tree = createBeaconStateView({nativeStateTransition: false, config, stateBytes});
+    const native = createBeaconStateView({nativeStateTransition: true, config, stateBytes});
+    try {
+      if (!(tree instanceof BeaconStateView) || !(native instanceof NativeBeaconStateView)) {
+        throw Error("Expected TypeScript and native state views");
+      }
+      expect(tree.isExecutionStateType).toBe(executionState);
+      expect(native.isExecutionStateType).toBe(tree.isExecutionStateType);
+      expect(native.isMergeTransitionComplete).toBe(tree.isMergeTransitionComplete);
+      const block = config.getForkTypes(state.slot).BeaconBlock.defaultValue();
+      expect(native.isExecutionEnabled(block)).toBe(tree.isExecutionEnabled(block));
+    } finally {
+      native.release();
+      tree.release();
+    }
+  });
 
   it("rejects Heze before invoking native slot processing or state loading", () => {
     const hezeConfig = createBeaconConfig(
