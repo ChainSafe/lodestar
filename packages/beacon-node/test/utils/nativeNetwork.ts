@@ -104,7 +104,7 @@ export async function nativeNetworkFixture(
       opts: {
         ...defaultNetworkOptions,
         backend,
-        native: {profile: "small", ...native},
+        native: {gossipReceiveBufferBytes: 16 * 1024 * 1024, ...native},
         useWorker: backend === "native",
         tcp: false,
         localMultiaddrs,

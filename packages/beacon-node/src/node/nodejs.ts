@@ -293,9 +293,7 @@ export class BeaconNode {
     const nativeServing = boundedServing
       ? createBoundedServing(
           {db, chain},
-          HostServingBudget.forEnvironment(
-            resolveServingPolicy(config, opts.network.native?.profile === "small" ? 6 : 32, chain.clock.currentSlot)
-          )
+          HostServingBudget.forEnvironment(resolveServingPolicy(config, 32, chain.clock.currentSlot))
         )
       : undefined;
 

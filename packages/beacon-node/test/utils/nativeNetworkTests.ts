@@ -317,7 +317,7 @@ describe("native Lodestar integration", () => {
         localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"],
         maxPeers: 12,
         targetPeers: 8,
-        native: {profile: "small"},
+        native: {gossipReceiveBufferBytes: 16 * 1024 * 1024},
       },
       config,
       await generateKeyPair("secp256k1"),
@@ -571,9 +571,9 @@ describe("native Lodestar integration", () => {
     },
     30000
   );
-  it.each(["small", "beaconNode"] as const)(
-    "initializes the %s runtime from BeaconConfig",
-    async (profile) => {
+  it.each([12, 210])(
+    "initializes a %i-peer runtime from BeaconConfig",
+    async (maxPeers) => {
       const config = createBeaconConfig(
         {
           ALTAIR_FORK_EPOCH: 0,
@@ -593,9 +593,8 @@ describe("native Lodestar integration", () => {
           backend: "native",
           tcp: false,
           localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"],
-          targetPeers: profile === "small" ? 8 : 200,
-          maxPeers: profile === "small" ? 12 : 210,
-          native: {profile},
+          targetPeers: maxPeers - 4,
+          maxPeers,
         },
         config,
         await generateKeyPair("secp256k1"),

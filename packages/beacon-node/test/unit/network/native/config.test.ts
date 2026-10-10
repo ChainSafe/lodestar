@@ -60,6 +60,24 @@ describe("native configuration boundary", () => {
     }
   });
 
+  it("builds the large receive policy with explicit resource overrides", async () => {
+    const node = await fixture();
+    expect(node.create().gossipPolicy).toMatchObject({
+      largeFrameTimeoutMs: 6000n,
+      receiveBufferBytes: 128 * 1024 * 1024,
+    });
+    const application = node.create({
+      native: {gossipLargeFrameTimeoutMs: 4000, gossipReceiveBufferBytes: 64 * 1024 * 1024},
+    });
+    expect(application.gossipPolicy).toMatchObject({largeFrameTimeoutMs: 4000n, receiveBufferBytes: 64 * 1024 * 1024});
+    for (const timeout of [0, -1, 1.5, 86400001]) {
+      expect(() => node.create({native: {gossipLargeFrameTimeoutMs: timeout}})).toThrow(NativeNetworkError);
+    }
+    for (const bytes of [0, -1, 4096.5, 1024 * 1024 * 1024 + 1]) {
+      expect(() => node.create({native: {gossipReceiveBufferBytes: bytes}})).toThrow(NativeNetworkError);
+    }
+  });
+
   it.each([0, 1, 1_000_000, Number.MAX_SAFE_INTEGER])(
     "rejects unsupported forks scheduled at epoch %s before startup",
     async (epoch) => {
@@ -164,12 +182,6 @@ describe("native configuration boundary", () => {
       } finally {
         application.identitySecretKey.fill(0);
       }
-    }
-    const small = node.create({native: {profile: "small"}});
-    try {
-      expect(small.resources.dialingCapacity).toBe(4);
-    } finally {
-      small.identitySecretKey.fill(0);
     }
   });
 

@@ -343,8 +343,7 @@ export function createNativeConfig(
   const boundaries = config.forkBoundariesAscendingEpochOrder.filter(
     (boundary, index, all) => boundary.epoch !== Infinity && boundary.epoch !== all[index + 1]?.epoch
   );
-  const small = opts.native?.profile === "small";
-  const connections = Math.min(256, Math.max(16, opts.maxPeers + (small ? 4 : 32)));
+  const connections = Math.min(256, Math.max(16, opts.maxPeers + 32));
   const listeners = nativeListeners(opts.localMultiaddrs, true);
   const maxSszSizes = Object.fromEntries(kinds.map((kind) => [kind, 0])) as Record<NativeTopicKind, number>;
   for (const boundary of boundaries) {
@@ -400,7 +399,6 @@ export function createNativeConfig(
   ) as Record<NativeTopicKind, NativeGossipProcessorLimit>;
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
     beaconConfig: new bindings.BeaconConfig(config, config.genesisValidatorsRoot),
-    profile: opts.native?.profile ?? "beaconNode",
     bind: listeners,
     discovery: discovery(opts, key),
     initialSlot: BigInt(Math.max(0, slot)),
@@ -412,12 +410,12 @@ export function createNativeConfig(
       targetPeers: opts.targetPeers,
       maxPeers: opts.maxPeers,
       minOutbound: Math.max(1, Math.floor(opts.targetPeers / 4)),
-      outboundReserve: Math.min(small ? 4 : 32, opts.targetPeers),
+      outboundReserve: Math.min(32, opts.targetPeers),
       connectionCapacity: connections,
-      handshakingCapacity: Math.min(connections, small ? 8 : 32),
-      dialingCapacity: small ? 4 : 32,
-      receiveBudgetBytes: opts.native?.receiveBudgetBytes ?? (small ? 64 : 512) * MiB,
-      nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? (small ? 768 : 1024) * MiB,
+      handshakingCapacity: Math.min(connections, 32),
+      dialingCapacity: 32,
+      receiveBudgetBytes: opts.native?.receiveBudgetBytes ?? 512 * MiB,
+      nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? 1024 * MiB,
       bridgeBudgetBytes: opts.native?.bridgeBudgetBytes ?? 512 * MiB,
     },
     gossipPolicy: {
@@ -445,7 +443,15 @@ export function createNativeConfig(
           ),
         ])
       ) as Record<NativeTopicKind, number>,
-      largeFrameTimeoutMs: 30000n,
+      largeFrameTimeoutMs: BigInt(
+        nativeInteger(opts.native?.gossipLargeFrameTimeoutMs ?? 6000, "gossip large frame timeout", 86400000, 1)
+      ),
+      receiveBufferBytes: nativeInteger(
+        opts.native?.gossipReceiveBufferBytes ?? 128 * MiB,
+        "gossip receive buffer bytes",
+        1024 * MiB,
+        4096
+      ),
       seenTtlMs: BigInt(config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2),
       retainedScoreMs: BigInt(score.retainScore),
       opportunisticGraftIntervalMs: 42000n,
