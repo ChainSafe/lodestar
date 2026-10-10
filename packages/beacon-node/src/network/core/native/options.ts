@@ -4,6 +4,8 @@ export type NativeBackendOptions = {
   nativeBudgetBytes?: number;
   bridgeBudgetBytes?: number;
   receiveBudgetBytes?: number;
+  initialCongestionWindowPackets?: number;
+  receiveDatagramsPerTurn?: number;
   /** Shared storage for received gossip bytes. Defaults to 128 MiB. Multiple of 4096. */
   gossipReceiveBufferBytes?: number;
   /** Absolute lifetime of an incomplete large gossip frame. Defaults to 6000 ms. */

@@ -398,6 +398,20 @@ export function createNativeConfig(
     ])
   ) as Record<NativeTopicKind, NativeGossipProcessorLimit>;
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
+    transport: {
+      initialCongestionWindowPackets: nativeInteger(
+        opts.native?.initialCongestionWindowPackets ?? 10,
+        "initial congestion window packets",
+        64,
+        1
+      ),
+      receiveDatagramsPerTurn: nativeInteger(
+        opts.native?.receiveDatagramsPerTurn ?? 32,
+        "receive datagrams per turn",
+        256,
+        1
+      ),
+    },
     beaconConfig: new bindings.BeaconConfig(config, config.genesisValidatorsRoot),
     bind: listeners,
     discovery: discovery(opts, key),

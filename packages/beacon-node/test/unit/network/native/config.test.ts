@@ -405,3 +405,20 @@ describe("native gossip limits", () => {
     expect(resolved).toMatchSnapshot();
   });
 });
+
+it("preserves bounded native transport overrides", async () => {
+  const {create} = await fixture();
+  expect(create().transport).toEqual({initialCongestionWindowPackets: 10, receiveDatagramsPerTurn: 32});
+  expect(create({native: {initialCongestionWindowPackets: 32, receiveDatagramsPerTurn: 128}}).transport).toEqual({
+    initialCongestionWindowPackets: 32,
+    receiveDatagramsPerTurn: 128,
+  });
+  for (const [field, maximum] of [
+    ["initialCongestionWindowPackets", 64],
+    ["receiveDatagramsPerTurn", 256],
+  ] as const) {
+    for (const value of [0, -1, 1.5, maximum + 1, Number.NaN]) {
+      expect(() => create({native: {[field]: value}})).toThrow(NativeNetworkError);
+    }
+  }
+});

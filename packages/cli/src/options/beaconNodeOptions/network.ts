@@ -43,6 +43,9 @@ export function hasGlobalIPv6Address(interfaces = os.networkInterfaces()): boole
 
 export type NetworkArgs = {
   "network.backend"?: "libp2p" | "native";
+  "network.native.receiveBudgetBytes"?: number;
+  "network.native.initialCongestionWindowPackets"?: number;
+  "network.native.receiveDatagramsPerTurn"?: number;
   discv5?: boolean;
   listenAddress?: string;
   port?: number;
@@ -201,6 +204,12 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     }
   }
 
+  const native = {
+    receiveBudgetBytes: args["network.native.receiveBudgetBytes"],
+    initialCongestionWindowPackets: args["network.native.initialCongestionWindowPackets"],
+    receiveDatagramsPerTurn: args["network.native.receiveDatagramsPerTurn"],
+  };
+
   return {
     discv5: enableDiscv5
       ? {
@@ -218,6 +227,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [quicMu, quicMu6, localMu, localMu6].filter(Boolean) as string[],
     backend: args["network.backend"] ?? defaultOptions.network.backend,
+    native: Object.values(native).some((value) => value !== undefined) ? native : undefined,
     subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
@@ -244,6 +254,27 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 }
 
 export const options: CliCommandOptions<NetworkArgs> = {
+  "network.native.receiveBudgetBytes": {
+    type: "number",
+    group: "network",
+    description: "Native QUIC receive flow-control budget shared across connection slots, in bytes",
+    defaultDescription: String(512 * 1024 * 1024),
+    hidden: true,
+  },
+  "network.native.initialCongestionWindowPackets": {
+    type: "number",
+    group: "network",
+    description: "Native QUIC initial congestion window in packets (1-64); congestion control adapts it afterwards",
+    defaultDescription: "10",
+    hidden: true,
+  },
+  "network.native.receiveDatagramsPerTurn": {
+    type: "number",
+    group: "network",
+    description: "Maximum native QUIC datagrams received per network turn (1-256)",
+    defaultDescription: "32",
+    hidden: true,
+  },
   "network.backend": {
     type: "string",
     choices: ["libp2p", "native"],

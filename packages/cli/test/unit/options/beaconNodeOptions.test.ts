@@ -435,3 +435,13 @@ describe("options / network / hasGlobalIPv6Address", () => {
     expect(hasGlobalIPv6Address({eth0: [iface("2003::1", "IPv6")]})).toBe(true);
   });
 });
+
+it("passes native transport knobs through the CLI", () => {
+  expect(
+    parseNetworkArgs({
+      "network.native.receiveBudgetBytes": 1024 ** 3,
+      "network.native.initialCongestionWindowPackets": 32,
+      "network.native.receiveDatagramsPerTurn": 128,
+    }).native
+  ).toEqual({receiveBudgetBytes: 1024 ** 3, initialCongestionWindowPackets: 32, receiveDatagramsPerTurn: 128});
+});
