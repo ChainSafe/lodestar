@@ -16,6 +16,7 @@ import {BeaconChain} from "../../../../src/chain/chain.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import {BeaconDb} from "../../../../src/db/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
+import {createMetrics} from "../../../../src/metrics/index.js";
 import {initDevState} from "../../../../src/node/utils/state.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -56,7 +57,7 @@ describe("bytes-based engine startup", () => {
       clock,
       processShutdownCallback: () => {},
       metrics: null,
-      validatorMonitor: null,
+      validatorMonitorOpts: null,
       anchorStateBytes: state.serialize(),
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),
@@ -73,8 +74,77 @@ describe("bytes-based engine startup", () => {
     await engine?.close();
     chain = undefined;
     engine = undefined;
+    modules.metrics?.close();
+    vi.useRealTimers();
     vi.restoreAllMocks();
     await closeDb();
+  });
+
+  it("owns monitor state and exposes its metrics separately from the facade registry", async () => {
+    const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    modules.metrics = metrics;
+    modules.validatorMonitorOpts = {};
+    const dependencies = await initializeTestChain(opts, modules);
+    chain = new BeaconChain(opts, dependencies);
+    const beaconEngine = dependencies.beaconEngine;
+
+    expect(chain).not.toHaveProperty("validatorMonitor");
+    await beaconEngine.registerLocalValidators([2, 1, 2]);
+    await beaconEngine.registerLocalValidatorsInSyncCommittee([{validatorIndex: 1, untilEpoch: 3}]);
+    expect(await beaconEngine.getMonitoredValidatorIndices()).toEqual([1, 2]);
+    await beaconEngine.registerApiBlock(1, {slot: 0, proposerIndex: 1, blockRoot: toRootHex(stateRoot)});
+    const monitorMetrics = await beaconEngine.scrapeValidatorMonitorMetrics();
+    expect(monitorMetrics).toContain("validator_monitor_validators 2");
+    expect(monitorMetrics).toContain('validator_monitor_beacon_block_total{src="api"} 1');
+    expect(metrics.register.getSingleMetric("validator_monitor_validators")).toBeUndefined();
+  });
+
+  it.each(["abort", "close"])("runs epoch monitoring on the engine clock and cancels it on %s", async (shutdown) => {
+    modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    modules.validatorMonitorOpts = {};
+    const dependencies = await initializeTestChain(opts, modules);
+    const beaconEngine = dependencies.beaconEngine;
+    if (!(beaconEngine instanceof BeaconEngine) || !beaconEngine.validatorMonitor) throw new Error("Missing monitor");
+    const monitorEpoch = vi.spyOn(beaconEngine.validatorMonitor, "onceEveryEndOfEpoch").mockImplementation(() => {});
+    vi.useFakeTimers();
+    const halfSlot = config.SLOT_DURATION_MS / 2;
+
+    clock.emit(ClockEvent.slot, SLOTS_PER_EPOCH - 1);
+    await vi.advanceTimersByTimeAsync(halfSlot - 1);
+    expect(monitorEpoch).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(monitorEpoch).toHaveBeenCalledExactlyOnceWith(beaconEngine.getHeadState());
+
+    clock.emit(ClockEvent.slot, 2 * SLOTS_PER_EPOCH - 1);
+    expect(vi.getTimerCount()).toBe(1);
+    if (shutdown === "abort") dependencies.abortController.abort();
+    else await beaconEngine.close();
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(halfSlot);
+    expect(monitorEpoch).toHaveBeenCalledOnce();
+  });
+
+  it("supports logging without metrics and retains the epoch metrics guard", async () => {
+    modules.validatorMonitorOpts = {validatorMonitorLogs: true};
+    const dependencies = await initializeTestChain(opts, modules);
+    const beaconEngine = dependencies.beaconEngine;
+    if (!(beaconEngine instanceof BeaconEngine) || !beaconEngine.validatorMonitor) throw new Error("Missing monitor");
+    const monitorEpoch = vi.spyOn(beaconEngine.validatorMonitor, "onceEveryEndOfEpoch");
+    await beaconEngine.registerLocalValidators([1]);
+    expect(await beaconEngine.getMonitoredValidatorIndices()).toEqual([1]);
+    expect(await beaconEngine.scrapeValidatorMonitorMetrics()).toBe("");
+    vi.useFakeTimers();
+    clock.emit(ClockEvent.slot, SLOTS_PER_EPOCH - 1);
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
+    expect(monitorEpoch).not.toHaveBeenCalled();
+  });
+
+  it("keeps monitor bridges inactive when monitoring is disabled", async () => {
+    const dependencies = await initializeTestChain(opts, modules);
+    await dependencies.beaconEngine.registerLocalValidators([1]);
+    expect(await dependencies.beaconEngine.getMonitoredValidatorIndices()).toEqual([]);
+    expect(await dependencies.beaconEngine.scrapeValidatorMonitorMetrics()).toBe("");
   });
 
   it("forwards engine payload imports to SSE only for recent payloads", async () => {
@@ -205,7 +275,7 @@ describe("bytes-based engine startup", () => {
     await chain.close();
     expect(clock.listenerCount(ClockEvent.slot)).toBe(1);
   });
-  it("returns plain Gloas bootstrap data and seeds the facade anchor bid", async () => {
+  it("returns plain Gloas bootstrap data and seeds independent engine and facade anchor inputs", async () => {
     const gloasConfig = getConfig(ForkName.gloas);
     const state = initDevState(gloasConfig, 16, {genesisTime: 0});
     state.slot = 1;
@@ -227,6 +297,11 @@ describe("bytes-based engine startup", () => {
     expect(chain.seenPayloadEnvelopeInputCache.get(toRootHex(bootstrap.checkpoint.root))?.getBid()).toEqual(
       bootstrap.gloasAnchor.bid
     );
+    const engineInput = engine?.seenPayloadEnvelopeInputCache.get(toRootHex(bootstrap.checkpoint.root));
+    expect(engineInput?.getBid()).toEqual(bootstrap.gloasAnchor.bid);
+    expect(engineInput?.getBid()).not.toBe(bootstrap.gloasAnchor.bid);
+    expect(engineInput).not.toBe(chain.seenPayloadEnvelopeInputCache.get(toRootHex(bootstrap.checkpoint.root)));
+    expect(engineInput).not.toHaveProperty("columnsCache");
     bootstrap.finalizedCheckpoint.root.fill(42);
     const cached = engine?.blockStateCache.get(toRootHex(bootstrap.stateRoot));
     expect(cached).toBeDefined();

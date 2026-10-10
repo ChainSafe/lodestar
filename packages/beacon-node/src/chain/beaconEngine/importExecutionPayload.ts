@@ -5,7 +5,7 @@ import {
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
-import {ValidatorIndex, gloas, ssz} from "@lodestar/types";
+import {gloas, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -41,7 +41,6 @@ export async function importExecutionPayload(
   this: BeaconEngine,
   // [beacon-engine] deviation: serialized envelope replaces the upstream payload-input object.
   envelopeBytes: Uint8Array,
-  proposerIndex: ValidatorIndex,
   dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportExecutionPayloadOpts
 ): Promise<{executionOptimistic: boolean}> {
@@ -88,6 +87,7 @@ export async function importExecutionPayload(
       verifyExecutionRequestsRoot: !opts.validSignature,
     });
   } catch (e) {
+    this.seenPayloadEnvelopeInputCache.removeInvalid(signedEnvelope);
     throw new PayloadError(
       {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: (e as Error).message},
       `Envelope verification error: ${(e as Error).message}`
@@ -111,11 +111,18 @@ export async function importExecutionPayload(
     ),
     opts.validSignature === true
       ? Promise.resolve(true)
-      : verifyExecutionPayloadEnvelopeSignature(this.config, blockState, signedEnvelope, proposerIndex, this.bls),
+      : verifyExecutionPayloadEnvelopeSignature(
+          this.config,
+          blockState,
+          signedEnvelope,
+          blockState.latestBlockHeader.proposerIndex,
+          this.bls
+        ),
   ]);
   this.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
   this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
   if (!signatureValid) {
+    this.seenPayloadEnvelopeInputCache.removeInvalid(signedEnvelope);
     throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
   }
 
@@ -124,6 +131,7 @@ export async function importExecutionPayload(
       break;
 
     case ExecutionPayloadStatus.INVALID:
+      this.seenPayloadEnvelopeInputCache.removeInvalid(signedEnvelope);
       throw new PayloadError({
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,
@@ -145,6 +153,20 @@ export async function importExecutionPayload(
   }
 
   const {source, seenTimestampSec} = opts;
+  const payloadInput =
+    this.seenPayloadEnvelopeInputCache.get(blockRootHex) ??
+    this.seenPayloadEnvelopeInputCache.addFromBid({
+      blockRootHex,
+      slot: protoBlock.slot,
+      forkName: fork,
+      proposerIndex: blockState.latestBlockHeader.proposerIndex,
+      bid: ssz.gloas.ExecutionPayloadBid.clone(blockState.latestExecutionPayloadBid),
+    });
+  payloadInput.addPayloadEnvelope({
+    envelope: signedEnvelope,
+    source: source ?? PayloadEnvelopeInputSource.engine,
+    seenTimestampSec: seenTimestampSec ?? Date.now() / 1000,
+  });
   if (
     execResult.status === ExecutionPayloadStatus.VALID &&
     source === PayloadEnvelopeInputSource.gossip &&

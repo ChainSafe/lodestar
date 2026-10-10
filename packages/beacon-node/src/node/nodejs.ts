@@ -1,12 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
-import {
-  init as initNativeMetrics,
-  registerLocalValidator as registerNativeLocalValidator,
-  scrapeMetrics as scrapeNativeMetrics,
-  unregisterLocalValidator as unregisterNativeLocalValidator,
-} from "@chainsafe/lodestar-z/metrics";
+import {init as initNativeMetrics, scrapeMetrics as scrapeNativeMetrics} from "@chainsafe/lodestar-z/metrics";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
@@ -27,7 +22,6 @@ import {LightClientServer} from "../chain/lightClient/index.js";
 import {DbCPStateDatastore} from "../chain/stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "../chain/stateCache/datastore/file.js";
 import {StateInitialization} from "../chain/stateInitialization.js";
-import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
@@ -49,7 +43,6 @@ export type BeaconNodeModules = {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
-  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -110,7 +103,6 @@ export class BeaconNode {
   metrics: Metrics | null;
   metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
-  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -127,7 +119,6 @@ export class BeaconNode {
     metrics,
     metricsServer,
     monitoring,
-    validatorMonitor,
     network,
     chain,
     api,
@@ -140,7 +131,6 @@ export class BeaconNode {
     this.metrics = metrics;
     this.metricsServer = metricsServer;
     this.monitoring = monitoring;
-    this.validatorMonitor = validatorMonitor;
     this.db = db;
     this.chain = chain;
     this.api = api;
@@ -199,25 +189,6 @@ export class BeaconNode {
       db.setMetrics(metrics.db, metrics.flatFileStore);
       signal.addEventListener("abort", metrics.close, {once: true});
     }
-
-    // TODO - beacon engine: keep state-dependent monitoring inside the engine or pass derived data
-    // to this shared monitor before introducing a worker.
-    const validatorMonitor =
-      opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs
-        ? createValidatorMonitor(
-            metrics?.register ?? null,
-            config,
-            metadata.genesisTime,
-            logger.child({module: LoggerModule.vmon}),
-            opts.validatorMonitor,
-            opts.chain.nativeStateTransition
-              ? {
-                  registerLocalValidator: registerNativeLocalValidator,
-                  unregisterLocalValidator: unregisterNativeLocalValidator,
-                }
-              : null
-          )
-        : null;
 
     const clock = new Clock({config, genesisTime: metadata.genesisTime, signal});
 
@@ -284,6 +255,9 @@ export class BeaconNode {
       ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
       : undefined;
     const beaconEngine = new BeaconEngine({
+      validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
+      validatorMonitorOpts:
+        opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
       isAnchorStateFinalized: stateInitialization.isFinalized,
       opts: opts.chain,
       config,
@@ -293,7 +267,6 @@ export class BeaconNode {
       dataColumnDir,
       logger: chainLogger,
       metrics,
-      validatorMonitor,
       clock,
       signal: chainController.signal,
       emitter,
@@ -332,7 +305,6 @@ export class BeaconNode {
       logger: chainLogger,
       processShutdownCallback,
       metrics,
-      validatorMonitor,
       executionEngine,
       executionBuilder,
       beaconEngine,
@@ -390,6 +362,7 @@ export class BeaconNode {
             const otherMetrics = await Promise.all([
               network.scrapeMetrics(),
               chain.beaconEngine.scrapeHistoricalStateMetrics(),
+              chain.beaconEngine.scrapeValidatorMonitorMetrics(),
             ]);
             if (opts.chain.nativeStateTransition) {
               try {
@@ -426,7 +399,6 @@ export class BeaconNode {
       metrics,
       metricsServer,
       monitoring,
-      validatorMonitor,
       network,
       chain,
       api,

@@ -138,9 +138,16 @@ export function getBeaconPoolApi({
             }
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
-            chain.validatorMonitor?.onPoolSubmitUnaggregatedAttestation(
+            await chain.beaconEngine.onPoolSubmitUnaggregatedAttestation(
               seenTimestampSec,
-              indexedAttestation,
+              {
+                attestingIndices: indexedAttestation.attestingIndices,
+                data: {
+                  slot: indexedAttestation.data.slot,
+                  index: indexedAttestation.data.index,
+                  target: indexedAttestation.data.target,
+                },
+              },
               subnet,
               sentPeers
             );

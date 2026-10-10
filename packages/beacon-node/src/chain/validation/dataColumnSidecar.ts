@@ -18,7 +18,6 @@ import {Metrics} from "../../metrics/metrics.js";
 import {getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
-import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {
   DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
@@ -227,7 +226,6 @@ export async function validateGossipFuluDataColumnSidecar(
 // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipGloasDataColumnSidecar(
   this: BeaconEngine,
-  payloadInput: PayloadEnvelopeInput,
   dataColumnSidecar: gloas.DataColumnSidecar,
   gossipSubnet: SubnetID,
   metrics: Metrics | null
@@ -256,6 +254,16 @@ export async function validateGossipGloasDataColumnSidecar(
   }
 
   // [REJECT] The sidecar must pass verify_data_column_sidecar against the block commitments
+  const payloadInput =
+    this.seenPayloadEnvelopeInputCache.get(blockRootHex) ??
+    (await this.seenPayloadEnvelopeInputCache.getOrReload(blockRootHex));
+  if (!payloadInput) {
+    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+      code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
+      blockRoot: blockRootHex,
+      slot: dataColumnSidecar.slot,
+    });
+  }
   const kzgCommitments = payloadInput.getBlobKzgCommitments();
   verifyGloasDataColumnSidecar(dataColumnSidecar, kzgCommitments, blockRootHex);
 

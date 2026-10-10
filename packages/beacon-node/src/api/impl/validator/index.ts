@@ -721,7 +721,18 @@ export function getValidatorApi(
             const {indexedAttestation} = res.value;
 
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            chain.validatorMonitor?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            await chain.beaconEngine.onPoolSubmitAggregatedAttestation(
+              seenTimestampSec,
+              {
+                attestingIndices: indexedAttestation.attestingIndices,
+                data: {
+                  slot: indexedAttestation.data.slot,
+                  index: indexedAttestation.data.index,
+                  target: indexedAttestation.data.target,
+                },
+              },
+              sentPeers
+            );
           } catch (e) {
             failures.push({index: i, message: (e as Error).message});
             logger.verbose(`Error on publishAggregateAndProofs [${i}]`, logCtx, e as Error);
@@ -793,23 +804,23 @@ export function getValidatorApi(
     async prepareBeaconCommitteeSubnet({subscriptions}) {
       notWhileSyncing(chain, sync.state);
 
-      await network.prepareBeaconCommitteeSubnets(
-        subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
+      const committeeSubscriptions = subscriptions.map(
+        ({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
           validatorIndex: validatorIndex,
           subnet: computeSubnetForCommitteesAtSlot(slot, committeesAtSlot, committeeIndex),
           slot: slot,
           isAggregator: isAggregator,
-        }))
+        })
       );
+      await chain.beaconEngine.prepareBeaconCommitteeSubnets(committeeSubscriptions);
+      await network.prepareBeaconCommitteeSubnets(committeeSubscriptions);
 
       // TODO:
       // If the discovery mechanism isn't disabled, attempt to set up a peer discovery for the
       // required subnets.
 
       if (metrics) {
-        for (const subscription of subscriptions) {
-          chain.validatorMonitor?.registerLocalValidator(subscription.validatorIndex);
-        }
+        await chain.beaconEngine.registerLocalValidators(subscriptions.map(({validatorIndex}) => validatorIndex));
       }
     },
 
@@ -844,12 +855,9 @@ export function getValidatorApi(
       await network.prepareSyncCommitteeSubnets(subs);
 
       if (metrics) {
-        for (const subscription of subscriptions) {
-          chain.validatorMonitor?.registerLocalValidatorInSyncCommittee(
-            subscription.validatorIndex,
-            subscription.untilEpoch
-          );
-        }
+        await chain.beaconEngine.registerLocalValidatorsInSyncCommittee(
+          subscriptions.map(({validatorIndex, untilEpoch}) => ({validatorIndex, untilEpoch}))
+        );
       }
     },
 

@@ -4,7 +4,10 @@ import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import * as verification from "../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
@@ -33,6 +36,9 @@ describe("BeaconEngine envelope verification", () => {
 
   beforeEach(() => {
     chain = getMockedBeaconChain({config});
+    Object.defineProperty(chain.beaconEngine, "seenPayloadEnvelopeInputCache", {
+      value: new SeenEnginePayloadEnvelopeInput({config, forkChoice: chain.forkChoice, db: {block: {get: vi.fn()}}}),
+    });
     chain.opts.disableImportExecutionFcU = true;
     Object.defineProperty(chain, "db", {
       value: {executionPayloadEnvelope: {putBinary: vi.fn().mockResolvedValue(undefined)}},
@@ -41,6 +47,7 @@ describe("BeaconEngine envelope verification", () => {
     chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
     chain.forkChoice.onExecutionPayload = vi.fn();
     const state = generateState({slot: 1}, config);
+    state.latestBlockHeader.proposerIndex = 7;
     if (!("latestExecutionPayloadBid" in state)) throw Error("Expected Gloas state");
     state.latestExecutionPayloadBid.blobKzgCommitments = ssz.gloas.BlobKzgCommitments.toViewDU(commitments);
     state.commit();
@@ -58,7 +65,6 @@ describe("BeaconEngine envelope verification", () => {
     return BeaconEngine.prototype.importExecutionPayload.call(
       chain.beaconEngine,
       bytes,
-      0,
       DataAvailabilityStatus.Available,
       {validSignature}
     );
@@ -76,6 +82,43 @@ describe("BeaconEngine envelope verification", () => {
     expect(vi.mocked(verification.verifyExecutionPayloadEnvelope).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(chain.executionEngine.notifyNewPayload).mock.invocationCallOrder[0]
     );
+    expect(verification.verifyExecutionPayloadEnvelopeSignature).toHaveBeenCalledWith(
+      config,
+      expect.anything(),
+      envelope,
+      7,
+      chain.bls
+    );
+    const input = chain.beaconEngine.seenPayloadEnvelopeInputCache.get(toRootHex(envelope.message.beaconBlockRoot));
+    expect(input?.getPayloadEnvelope()).toEqual(envelope);
+    expect(input?.getBlobKzgCommitments()).toEqual(commitments.map((commitment) => Uint8Array.from(commitment)));
+  });
+
+  it("retains cached validation on transient EL errors and removes it on a definitive INVALID verdict", async () => {
+    const cache = chain.beaconEngine.seenPayloadEnvelopeInputCache;
+    const root = toRootHex(envelope.message.beaconBlockRoot);
+    const input = cache.addFromBid({
+      blockRootHex: root,
+      slot: 0,
+      forkName: ForkName.gloas,
+      proposerIndex: 7,
+      bid: ssz.gloas.ExecutionPayloadBid.defaultValue(),
+    });
+    input.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+    vi.mocked(chain.executionEngine.notifyNewPayload).mockResolvedValue({
+      status: ExecutionPayloadStatus.UNAVAILABLE,
+      latestValidHash: null,
+      validationError: "unavailable",
+    });
+    await expect(verify()).rejects.toMatchObject({type: {code: PayloadErrorCode.EXECUTION_ENGINE_ERROR}});
+    expect(cache.get(root)).toBe(input);
+    vi.mocked(chain.executionEngine.notifyNewPayload).mockResolvedValue({
+      status: ExecutionPayloadStatus.INVALID,
+      latestValidHash: null,
+      validationError: "invalid",
+    });
+    await expect(verify()).rejects.toMatchObject({type: {code: PayloadErrorCode.EXECUTION_ENGINE_INVALID}});
+    expect(cache.get(root)).toBeUndefined();
   });
 
   it("rejects a missing block instead of waiting for sync", async () => {
@@ -93,7 +136,6 @@ describe("BeaconEngine envelope verification", () => {
         BeaconEngine.prototype.importExecutionPayload.call(
           chain.beaconEngine,
           malformed,
-          0,
           DataAvailabilityStatus.Available,
           {validSignature: false}
         )

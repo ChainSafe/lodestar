@@ -101,7 +101,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           logger,
           processShutdownCallback: () => {},
           metrics: null,
-          validatorMonitor: null,
+          validatorMonitorOpts: null,
           anchorStateBytes: state.serialize(),
           isAnchorStateFinalized: true,
           executionEngine: new ExecutionEngineDisabled(),

@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
+import {AggregatorTracker} from "../../../../src/chain/beaconEngine/aggregatorTracker.js";
 
 describe("AggregatorTracker", () => {
   let aggregatorTracker: AggregatorTracker;

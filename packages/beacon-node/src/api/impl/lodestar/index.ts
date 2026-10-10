@@ -249,7 +249,7 @@ export function getLodestarApi({
 
     async getMonitoredValidatorIndices() {
       return {
-        data: chain.validatorMonitor?.getMonitoredValidatorIndices() ?? [],
+        data: await chain.beaconEngine.getMonitoredValidatorIndices(),
       };
     },
 

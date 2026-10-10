@@ -5,13 +5,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
-import {
-  EFFECTIVE_BALANCE_INCREMENT,
-  type ForkPostFulu,
-  type ForkPostGloas,
-  SLOTS_PER_EPOCH,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, type ForkPostFulu, type ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -31,7 +25,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, fromHex, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
@@ -76,7 +70,6 @@ import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/index.
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
-import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
  * The maximum number of cached produced results to keep in memory.
@@ -112,7 +105,6 @@ export type BeaconChainModules = {
   logger: Logger;
   processShutdownCallback: ProcessShutdownCallback;
   metrics: Metrics | null;
-  validatorMonitor: ValidatorMonitor | null;
   executionEngine: IExecutionEngine;
   executionBuilder?: IExecutionBuilder;
   beaconEngine: IBeaconEngine;
@@ -141,7 +133,6 @@ export class BeaconChain implements IBeaconChain {
   readonly custodyConfig: CustodyConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
-  readonly validatorMonitor: ValidatorMonitor | null;
 
   readonly anchorStateLatestBlockSlot: Slot;
 
@@ -216,7 +207,6 @@ export class BeaconChain implements IBeaconChain {
       logger,
       processShutdownCallback,
       metrics,
-      validatorMonitor,
       executionEngine,
       executionBuilder,
       beaconEngine,
@@ -234,7 +224,6 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
-    this.validatorMonitor = validatorMonitor;
     this.genesisTime = anchor.genesisTime;
     this.anchorStateLatestBlockSlot = anchor.latestBlockSlot;
     this.genesisValidatorsRoot = anchor.genesisValidatorsRoot;
@@ -1083,16 +1072,6 @@ export class BeaconChain implements IBeaconChain {
     // Prune old cached block production artifacts, those are only useful on their slot
     pruneSetToMax(this.blockProductionCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
     this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
-
-    const metrics = this.metrics;
-    if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
-      // On the last slot of the epoch
-      sleep(this.config.SLOT_DURATION_MS / 2)
-        .then(() => this.beaconEngine.validatorMonitorOnceEveryEndOfEpoch())
-        .catch((e) => {
-          if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);
-        });
-    }
   }
 
   private onClockEpoch(epoch: Epoch): void {

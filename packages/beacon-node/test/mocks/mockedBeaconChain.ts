@@ -246,6 +246,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       // @ts-expect-error
       seenBlockInputCache: new SeenBlockInput(),
       seenPayloadEnvelopeInputCache: {
+        add: vi.fn(),
         get: vi.fn(),
         getOrReload: vi.fn(),
         remove: vi.fn(),
@@ -346,6 +347,14 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "getSyncCommitteeContribution",
     "getPoolPayloadAttestations",
     "getPoolProposerPreferences",
+    "registerLocalValidators",
+    "registerLocalValidatorsInSyncCommittee",
+    "registerApiBlock",
+    "registerApiExecutionPayloadEnvelope",
+    "onPoolSubmitUnaggregatedAttestation",
+    "onPoolSubmitAggregatedAttestation",
+    "getMonitoredValidatorIndices",
+    "scrapeValidatorMonitorMetrics",
     // Fork-choice write wrappers (forward to the mock's forkChoice).
     "updateTime",
     "getIrrecoverableError",
@@ -363,6 +372,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
       BeaconEngine.prototype as unknown as Record<string, unknown>
     )[name];
   }
+  chain.beaconEngine.prepareBeaconCommitteeSubnets = vi.fn().mockResolvedValue(undefined);
   for (const [name, forkChoiceName] of Object.entries({
     getHead: "getHead",
     getHeadRoot: "getHeadRoot",

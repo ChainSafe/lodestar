@@ -4,57 +4,29 @@ import {
   getExecutionPayloadEnvelopeSignatureSet,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {Root, RootHex, ValidatorIndex, gloas, ssz} from "@lodestar/types";
+import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 
-// The `bid*` / `proposerIndex` values are read facade-side from the `PayloadEnvelopeInput` (owned by
-// BeaconChain) and passed in as scalars — the engine no longer touches the DA seen cache.
 export async function validateApiExecutionPayloadEnvelope(
   this: BeaconEngine,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
-  proposerIndex: ValidatorIndex,
-  bidBuilderIndex: ValidatorIndex,
-  bidBlockHashHex: RootHex,
-  bidExecutionRequestsRoot: Root
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope.call(
-    this,
-    executionPayloadEnvelope,
-    proposerIndex,
-    bidBuilderIndex,
-    bidBlockHashHex,
-    bidExecutionRequestsRoot
-  );
+  return validateExecutionPayloadEnvelope.call(this, executionPayloadEnvelope);
 }
 
 export async function validateGossipExecutionPayloadEnvelope(
   this: BeaconEngine,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
-  proposerIndex: ValidatorIndex,
-  bidBuilderIndex: ValidatorIndex,
-  bidBlockHashHex: RootHex,
-  bidExecutionRequestsRoot: Root
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope.call(
-    this,
-    executionPayloadEnvelope,
-    proposerIndex,
-    bidBuilderIndex,
-    bidBlockHashHex,
-    bidExecutionRequestsRoot
-  );
+  return validateExecutionPayloadEnvelope.call(this, executionPayloadEnvelope);
 }
 
 async function validateExecutionPayloadEnvelope(
   this: BeaconEngine,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
-  proposerIndex: ValidatorIndex,
-  bidBuilderIndex: ValidatorIndex,
-  bidBlockHashHex: RootHex,
-  bidExecutionRequestsRoot: Root
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
   const {payload} = envelope;
@@ -75,15 +47,22 @@ async function validateExecutionPayloadEnvelope(
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
   const envelopeBlock = this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
 
-  // const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
-  // if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
-  // TODO - beacon engine: unstable also check seenPayloadEnvelopeInputCache but we should not do it
-  // see also https://github.com/ethereum/consensus-specs/pull/5355
+  // [beacon-engine] deviation: cached validation does not suppress gossip until import marks the payload FULL.
   if (envelopeBlock) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,
       slot: payload.slotNumber,
+    });
+  }
+
+  const payloadInput =
+    this.seenPayloadEnvelopeInputCache.get(blockRootHex) ??
+    (await this.seenPayloadEnvelopeInputCache.getOrReload(blockRootHex));
+  if (!payloadInput) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
+      blockRoot: blockRootHex,
     });
   }
 
@@ -114,36 +93,36 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `envelope.builder_index == bid.builder_index`
-  if (envelope.builderIndex !== bidBuilderIndex) {
+  if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
       envelopeBuilderIndex: envelope.builderIndex,
-      bidBuilderIndex,
+      bidBuilderIndex: payloadInput.getBuilderIndex(),
     });
   }
 
   // [REJECT] `payload.block_hash == bid.block_hash`
-  if (toRootHex(payload.blockHash) !== bidBlockHashHex) {
+  if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
       envelopeBlockHash: toRootHex(payload.blockHash),
-      bidBlockHash: bidBlockHashHex,
+      bidBlockHash: payloadInput.getBlockHashHex(),
     });
   }
 
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
   const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
-  if (!byteArrayEquals(requestsRoot, bidExecutionRequestsRoot)) {
+  if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
       envelopeRequestsRoot: toRootHex(requestsRoot),
-      bidRequestsRoot: toRootHex(bidExecutionRequestsRoot),
+      bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
     });
   }
 
@@ -165,7 +144,7 @@ async function validateExecutionPayloadEnvelope(
     this.config,
     blockState,
     executionPayloadEnvelope,
-    proposerIndex
+    payloadInput.proposerIndex
   );
 
   if (!(await this.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {

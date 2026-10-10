@@ -1,15 +1,22 @@
-import {beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {VerifiedBlockBundle, importBlock} from "../../../../src/chain/beaconEngine/importBlock.js";
-import {BlockInputBlobs, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
+import {
+  BlockInputBlobs,
+  BlockInputNoData,
+  BlockInputPreData,
+} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {writeBlockInputToDb} from "../../../../src/chain/blocks/writeBlockInputToDb.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
-import {generateCachedState} from "../../../utils/state.js";
+import {generateCachedState, zeroProtoBlock} from "../../../utils/state.js";
 
 describe("BeaconEngine block persistence", () => {
   const block = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -53,6 +60,49 @@ describe("BeaconEngine block persistence", () => {
       parentBlockSlot: 0,
       seenTimestampSec: 0,
     };
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("seeds Gloas bid metadata before notifying block consumers", async () => {
+    const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    gloasBlock.message.slot = 1;
+    const rootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(gloasBlock.message));
+    vi.spyOn(chain.config, "getForkSeq").mockReturnValue(ForkSeq.gloas);
+    vi.spyOn(chain.config, "getForkName").mockReturnValue(ForkName.gloas);
+    vi.spyOn(chain.config, "getForkTypes").mockReturnValue(
+      createBeaconConfig(getConfig(ForkName.gloas), Buffer.alloc(32)).getForkTypes(1)
+    );
+    const cache = new SeenEnginePayloadEnvelopeInput({
+      config: chain.config,
+      forkChoice: chain.forkChoice,
+      db: {block: {get: vi.fn()}},
+    });
+    Object.defineProperty(chain.beaconEngine, "seenPayloadEnvelopeInputCache", {value: cache});
+    chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
+    chain.forkChoice.onBlock = vi.fn().mockReturnValue({...zeroProtoBlock, blockRoot: rootHex, slot: 1});
+    const afterCache = new Error("stop after cache insertion");
+    chain.regen.processState.mockImplementation(() => {
+      expect(cache.get(rootHex)?.getBid()).toEqual(gloasBlock.message.body.signedExecutionPayloadBid.message);
+      throw afterCache;
+    });
+    const input = BlockInputNoData.createFromBlock({
+      block: gloasBlock,
+      blockRootHex: rootHex,
+      forkName: ForkName.gloas,
+      daOutOfRange: false,
+      source: BlockInputSource.byRange,
+      seenTimestampSec: 0,
+    });
+    await expect(
+      importBlock.call(
+        chain.beaconEngine,
+        {...bundle, blockInput: input, blockBytes: ssz.gloas.SignedBeaconBlock.serialize(gloasBlock)},
+        DataAvailabilityStatus.Available,
+        {}
+      )
+    ).rejects.toBe(afterCache);
+    expect(chain.regen.processState).toHaveBeenCalledOnce();
   });
 
   it("waits for the block write before exposing the block to fork choice", async () => {

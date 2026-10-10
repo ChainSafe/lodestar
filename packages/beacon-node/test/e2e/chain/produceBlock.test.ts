@@ -99,7 +99,7 @@ describe("engine block production", () => {
             logger,
             processShutdownCallback: () => {},
             metrics: null,
-            validatorMonitor: null,
+            validatorMonitorOpts: null,
             anchorStateBytes: state.serialize(),
             isAnchorStateFinalized: true,
             executionEngine,

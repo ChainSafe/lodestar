@@ -59,7 +59,6 @@ import {INetwork} from "./interface.js";
 import {NetworkOptions} from "./options.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {PeerSyncMeta} from "./peers/peersData.js";
-import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
 import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
@@ -79,7 +78,6 @@ type NetworkModules = {
   logger: LoggerNode;
   chain: IBeaconChain;
   networkEventBus: NetworkEventBus;
-  aggregatorTracker: AggregatorTracker;
   networkProcessor: NetworkProcessor;
   core: INetworkCore;
 };
@@ -122,7 +120,6 @@ export class Network implements INetwork {
   // TODO: Review
   private readonly networkProcessor: NetworkProcessor;
   private readonly core: INetworkCore;
-  private readonly aggregatorTracker: AggregatorTracker;
 
   private subscribedToCoreTopics = false;
   private connectedPeersSyncMeta = new Map<PeerIdStr, Omit<PeerSyncMeta, "peerId">>();
@@ -138,7 +135,6 @@ export class Network implements INetwork {
     this.events = modules.networkEventBus;
     this.networkProcessor = modules.networkProcessor;
     this.core = modules.core;
-    this.aggregatorTracker = modules.aggregatorTracker;
 
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -169,7 +165,6 @@ export class Network implements INetwork {
     getReqRespHandler,
   }: NetworkInitModules): Promise<Network> {
     const events = new NetworkEventBus();
-    const aggregatorTracker = new AggregatorTracker();
 
     const activeValidatorCount = chain.beaconEngine.getActiveValidatorCount();
     const initialStatus = chain.getStatus();
@@ -213,7 +208,7 @@ export class Network implements INetwork {
         });
 
     const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
+      {chain, db, config, logger, metrics, events, gossipHandlers, core},
       opts
     );
 
@@ -228,7 +223,6 @@ export class Network implements INetwork {
       logger,
       chain,
       networkEventBus: events,
-      aggregatorTracker,
       networkProcessor,
       core,
     });
@@ -267,13 +261,6 @@ export class Network implements INetwork {
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
-    for (const subscription of subscriptions) {
-      if (subscription.isAggregator) {
-        this.aggregatorTracker.addAggregator(subscription.subnet, subscription.slot);
-      }
-    }
-    this.aggregatorTracker.prune();
-
     return this.core.prepareBeaconCommitteeSubnets(subscriptions);
   }
 
@@ -345,10 +332,6 @@ export class Network implements INetwork {
 
   isSubscribedToGossipCoreTopics(): boolean {
     return this.subscribedToCoreTopics;
-  }
-
-  shouldAggregate(subnet: SubnetID, slot: number): boolean {
-    return this.aggregatorTracker.shouldAggregate(subnet, slot);
   }
 
   // Gossip

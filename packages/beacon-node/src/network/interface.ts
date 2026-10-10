@@ -25,7 +25,6 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
-  Slot,
   SlotRootHex,
   SubnetID,
   altair,
@@ -71,7 +70,6 @@ export interface INetwork extends INetworkCorePublic {
   getConnectedPeerCount(): number;
   isSubscribedToGossipCoreTopics(): boolean;
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
-  shouldAggregate(subnet: SubnetID, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
   searchUnknownBlock(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
   searchUnknownEnvelope(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;

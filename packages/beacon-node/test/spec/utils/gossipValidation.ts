@@ -395,7 +395,7 @@ export async function runGossipValidationTest(
       processShutdownCallback: () => {},
       clock,
       metrics: null,
-      validatorMonitor: null,
+      validatorMonitorOpts: null,
       anchorStateBytes: anchorStateView.serialize(),
       isAnchorStateFinalized: true,
       executionEngine,

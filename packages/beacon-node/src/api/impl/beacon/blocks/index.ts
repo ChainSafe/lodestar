@@ -368,7 +368,11 @@ export function getBeaconBlockApi({
     // TODO: Validate block
     const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
-    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, signedBlock.message);
+    await chain.beaconEngine.registerApiBlock(seenTimestampSec, {
+      slot,
+      proposerIndex: signedBlock.message.proposerIndex,
+      blockRoot,
+    });
 
     chain.logger.info("Publishing block", valLogMeta);
 
@@ -806,17 +810,10 @@ export function getBeaconBlockApi({
         ...(submittedContents !== null ? {submittedBlobs: submittedContents.blobs.length} : {}),
       };
       const validateEnvelope = async (): Promise<void> => {
-        const input = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
-        if (!input) {
-          throw new ApiError(404, `Execution payload envelope input not found for beacon block root ${blockRootHex}`);
-        }
         const result = await chain.beaconEngine.validateApiExecutionPayloadEnvelope(
           ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedExecutionPayloadEnvelope),
           signedExecutionPayloadEnvelope,
-          input.proposerIndex,
-          input.getBuilderIndex(),
-          input.getBlockHashHex(),
-          input.getBid().executionRequestsRoot
+          seenTimestampSec
         );
         if (result.status !== GossipValidationStatus.Accept) {
           throw result.error ?? new ApiError(400, `Invalid execution payload envelope: ${result.code}`);
@@ -993,7 +990,7 @@ export function getBeaconBlockApi({
 
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
-      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.api, delaySec, signedExecutionPayloadEnvelope);
+      await chain.beaconEngine.registerApiExecutionPayloadEnvelope(delaySec, signedExecutionPayloadEnvelope);
 
       chain.logger.info("Publishing execution payload envelope", {
         ...valLogMeta,

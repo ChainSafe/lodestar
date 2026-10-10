@@ -9,6 +9,7 @@ import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {IChainOptions} from "../../src/chain/options.js";
 import {DbCPStateDatastore} from "../../src/chain/stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "../../src/chain/stateCache/datastore/file.js";
+import {ValidatorMonitorOpts} from "../../src/chain/validatorMonitor.js";
 import {BuilderApiClientOpts} from "../../src/execution/builder/apiClient.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/interface.js";
 import {Clock, IClock} from "../../src/util/clock.js";
@@ -26,6 +27,7 @@ export type TestBeaconEngineModules = Omit<
   | "lightClientServer"
   | "builderApiClient"
 > & {
+  validatorMonitorOpts?: ValidatorMonitorOpts | null;
   privateKey: PrivateKey;
   clock?: IClock;
   anchorStateBytes: Uint8Array;
@@ -47,7 +49,6 @@ export function createTestBeaconEngine(
     dataColumnDir,
     logger,
     metrics,
-    validatorMonitor,
     isAnchorStateFinalized,
     executionEngine,
     executionBuilder,
@@ -97,7 +98,7 @@ export function createTestBeaconEngine(
     emitter,
     signal,
     db,
-    validatorMonitor,
+    validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
     lightClientServer,
   });

@@ -41,11 +41,12 @@ import {IBeaconEngineDb} from "../../db/index.js";
 import type {BuilderApiClientOpts} from "../../execution/builder/apiClient.js";
 import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
+import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
 import {BlockRootSlot} from "../../util/sszBytes.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
-import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../blocks/payloadEnvelopeInput/index.js";
+import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {IBlsVerifier} from "../bls/index.js";
@@ -61,7 +62,7 @@ import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
 import {GossipBlockValidationResult} from "../validation/block.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
-import {ValidatorMonitor} from "../validatorMonitor.js";
+import {ValidatorMonitorAttestation, ValidatorMonitorBlock, ValidatorMonitorOpts} from "../validatorMonitor.js";
 import {IBeaconEngineEventBus} from "./events.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
@@ -86,7 +87,8 @@ export type BeaconEngineModules = {
   emitter: ChainEventEmitter;
   signal: AbortSignal;
   db: IBeaconEngineDb;
-  validatorMonitor: ValidatorMonitor | null;
+  validatorMonitorOpts: ValidatorMonitorOpts | null;
+  validatorMonitorLogger?: Logger;
   isAnchorStateFinalized: boolean;
   lightClientServer?: LightClientServer;
 };
@@ -312,7 +314,28 @@ export interface IBeaconEngine {
     pendingPartialWithdrawals: number;
     pendingConsolidations: number;
   } | null;
-  validatorMonitorOnceEveryEndOfEpoch(): void;
+  registerLocalValidators(indices: ValidatorIndex[]): Promise<void>;
+  registerLocalValidatorsInSyncCommittee(
+    subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]
+  ): Promise<void>;
+  registerApiBlock(seenTimestampSec: number, block: ValidatorMonitorBlock): Promise<void>;
+  registerApiExecutionPayloadEnvelope(
+    delaySec: number,
+    signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  ): Promise<void>;
+  onPoolSubmitUnaggregatedAttestation(
+    seenTimestampSec: number,
+    attestation: ValidatorMonitorAttestation,
+    subnet: SubnetID,
+    sentPeers: number
+  ): Promise<void>;
+  onPoolSubmitAggregatedAttestation(
+    seenTimestampSec: number,
+    attestation: ValidatorMonitorAttestation,
+    sentPeers: number
+  ): Promise<void>;
+  getMonitoredValidatorIndices(): Promise<ValidatorIndex[]>;
+  scrapeValidatorMonitorMetrics(): Promise<string>;
   regenCanAcceptWork(): boolean;
   /**
    * The shared, stateless JS BLS verifier the facade uses for backfill + DA-sidecar proposer-signature
@@ -442,7 +465,8 @@ export interface IBeaconEngine {
   validateGossipBlock(
     blockBytes: Uint8Array,
     signedBlock: SignedBeaconBlock,
-    fork: ForkName
+    fork: ForkName,
+    seenTimestampSec?: number
   ): Promise<GossipValidationResult<GossipBlockValidationResult>>;
   validateGossipSyncCommittee(
     syncCommitteeBytes: Uint8Array,
@@ -475,7 +499,6 @@ export interface IBeaconEngine {
   ): Promise<GossipValidationResult<void>>;
   validateGossipGloasDataColumnSidecar(
     dataColumnBytes: Uint8Array,
-    payloadInput: PayloadEnvelopeInput,
     dataColumnSidecar: gloas.DataColumnSidecar,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>>;
@@ -490,8 +513,9 @@ export interface IBeaconEngine {
   validateGossipAttestationsSameAttData(
     fork: ForkName,
     attestations: GossipAttestation[],
-    shouldAddToPool: boolean[]
+    seenTimestampSecs: number[]
   ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}>;
+  prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void>;
   validateApiAttestation(
     fork: ForkName,
     attestationOrBytes: ApiAttestation
@@ -499,30 +523,23 @@ export interface IBeaconEngine {
   validateGossipAggregateAndProof(
     aggregateBytes: Uint8Array,
     fork: ForkName,
-    signedAggregateAndProof: SignedAggregateAndProof
+    signedAggregateAndProof: SignedAggregateAndProof,
+    seenTimestampSec: number
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
   validateApiAggregateAndProof(
     aggregateBytes: Uint8Array,
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
-  // The bid scalars + proposerIndex are looked up facade-side from the `PayloadEnvelopeInput` (the engine
-  // no longer touches the DA seen cache) and passed in.
   validateGossipExecutionPayloadEnvelope(
     envelopeBytes: Uint8Array,
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    proposerIndex: ValidatorIndex,
-    bidBuilderIndex: ValidatorIndex,
-    bidBlockHashHex: RootHex,
-    bidExecutionRequestsRoot: Root
+    source: SourceMeta
   ): Promise<GossipValidationResult<void>>;
   validateApiExecutionPayloadEnvelope(
     envelopeBytes: Uint8Array,
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    proposerIndex: ValidatorIndex,
-    bidBuilderIndex: ValidatorIndex,
-    bidBlockHashHex: RootHex,
-    bidExecutionRequestsRoot: Root
+    seenTimestampSec: number
   ): Promise<GossipValidationResult<void>>;
   validateGossipExecutionPayloadBid(
     bidBytes: Uint8Array,
@@ -635,7 +652,6 @@ export interface IBeaconEngine {
   // The facade supplies DA; the engine verifies, persists and imports the envelope in one call.
   importExecutionPayload(
     envelopeBytes: Uint8Array,
-    proposerIndex: ValidatorIndex,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts
   ): Promise<{executionOptimistic: boolean}>;

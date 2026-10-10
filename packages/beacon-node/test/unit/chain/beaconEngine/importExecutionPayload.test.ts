@@ -8,6 +8,7 @@ import {ssz} from "@lodestar/types";
 import {ErrorAborted, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
+import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import * as payloadVerification from "../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
@@ -50,6 +51,9 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
     chain.executionEngine.notifyNewPayload = vi.fn().mockResolvedValue({status: ExecutionPayloadStatus.VALID});
     putEnvelope.mockReset().mockResolvedValue(undefined);
     Object.defineProperty(chain, "db", {value: {executionPayloadEnvelope: {putBinary: putEnvelope}}});
+    Object.defineProperty(chain.beaconEngine, "seenPayloadEnvelopeInputCache", {
+      value: new SeenEnginePayloadEnvelopeInput({config, forkChoice: chain.forkChoice, db: {block: {get: vi.fn()}}}),
+    });
     emitImported.mockReset();
     chain.beaconEngine.events.on(BeaconEngineEvent.executionPayloadImported, emitImported);
     chain.forkChoice.getBlockHex.mockReturnValue(null);
@@ -94,7 +98,6 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
     return BeaconEngine.prototype.importExecutionPayload.call(
       chain.beaconEngine,
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(candidate),
-      0,
       DataAvailabilityStatus.Available,
       {validSignature: true}
     );

@@ -167,7 +167,7 @@ const fastConfirmationTest =
             processShutdownCallback: () => {},
             clock,
             metrics: null,
-            validatorMonitor: null,
+            validatorMonitorOpts: null,
             anchorStateBytes: cachedState.serialize(),
             isAnchorStateFinalized: true,
             executionEngine,

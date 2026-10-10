@@ -79,7 +79,7 @@ async function importExecutionPayloadInner(
     this.serializedCache.get(signedEnvelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope);
 
   const {source, seenTimestampSec} = payloadInput.getPayloadEnvelopeSource();
-  await this.beaconEngine.importExecutionPayload(envelopeBytes, payloadInput.proposerIndex, dataAvailabilityStatus, {
+  await this.beaconEngine.importExecutionPayload(envelopeBytes, dataAvailabilityStatus, {
     validSignature: opts.validSignature === true,
     source,
     seenTimestampSec,

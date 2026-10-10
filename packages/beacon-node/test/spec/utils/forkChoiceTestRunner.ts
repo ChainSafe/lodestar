@@ -160,7 +160,7 @@ export const forkChoiceTestRunner =
             processShutdownCallback: () => {},
             clock,
             metrics,
-            validatorMonitor: null,
+            validatorMonitorOpts: null,
             anchorStateBytes: cachedState.serialize(),
             isAnchorStateFinalized: true,
             executionEngine,

@@ -1,3 +1,7 @@
+import {
+  registerLocalValidator as registerNativeLocalValidator,
+  unregisterLocalValidator as unregisterNativeLocalValidator,
+} from "@chainsafe/lodestar-z/metrics";
 import type {PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
@@ -16,6 +20,7 @@ import type {LoggerNode} from "@lodestar/logger/node";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
+  ForkPostGloas,
   ForkSeq,
   GENESIS_SLOT,
   MIN_SEED_LOOKAHEAD,
@@ -98,7 +103,8 @@ import {decodeArchivedEnvelope} from "../../db/repositories/index.js";
 import {BuilderApiClient} from "../../execution/builder/apiClient.js";
 import {BuilderStatus} from "../../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
-import {Metrics} from "../../metrics/index.js";
+import {Metrics, RegistryMetricCreator} from "../../metrics/index.js";
+import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {BufferPool} from "../../util/bufferPool.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -117,7 +123,7 @@ import {pruneHistory} from "../archiveStore/utils/pruneHistory.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
-import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
+import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/verifyExecutionPayloadEnvelope.js";
@@ -125,6 +131,7 @@ import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from ".
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
 import {ChainViewSnapshot} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {BlockErrorCode} from "../errors/index.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
 import {persistAnchorState} from "../initState.js";
 import {CommonBlockBody, FindHeadFnName, StateGetOpts} from "../interface.js";
@@ -195,7 +202,14 @@ import {validateApiSyncCommittee, validateGossipSyncCommittee} from "../validati
 import {validateSyncCommitteeGossipContributionAndProof} from "../validation/syncCommitteeContributionAndProof.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {validateApiVoluntaryExit, validateGossipVoluntaryExit} from "../validation/voluntaryExit.js";
-import {ValidatorMonitor} from "../validatorMonitor.js";
+import {
+  OpSource,
+  ValidatorMonitor,
+  ValidatorMonitorAttestation,
+  ValidatorMonitorBlock,
+  createValidatorMonitor,
+} from "../validatorMonitor.js";
+import {AggregatorTracker} from "./aggregatorTracker.js";
 import {ChainViewPublisher} from "./chainView.js";
 import {getPubkeysForIndices} from "./duties.js";
 import {BeaconEngineEvent, BeaconEngineEventBus} from "./events.js";
@@ -229,12 +243,14 @@ import {IBeaconEngineOptions} from "./options.js";
 import {prepareForNextSlot} from "./prepareNextSlot.js";
 import {produceBlockWrapper, produceCommonBlockBody} from "./produceBlock.js";
 import {produceBlockV4, produceEngineOrBuilderBlock} from "./produceEngineOrBuilderBlock.js";
+import {SeenEnginePayloadEnvelopeInput} from "./seenEnginePayloadEnvelopeInput.js";
 import {verifyBlocks} from "./verifyBlock.js";
 
 const MAX_VERIFIED_PROPOSER_SIGNATURES = 3 * SLOTS_PER_EPOCH;
 
 /** Owns consensus state. Anchor preparation precedes validation and runtime initialization. */
 export class BeaconEngine implements IBeaconEngine {
+  private readonly aggregatorTracker = new AggregatorTracker();
   readonly config: BeaconConfig;
   readonly opts: IBeaconEngineOptions;
   readonly logger: Logger;
@@ -278,6 +294,7 @@ export class BeaconEngine implements IBeaconEngine {
   beaconProposerCache!: BeaconProposerCache;
 
   // Consensus gossip seen-caches
+  seenPayloadEnvelopeInputCache!: SeenEnginePayloadEnvelopeInput;
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
@@ -291,7 +308,13 @@ export class BeaconEngine implements IBeaconEngine {
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
 
   private readonly verifiedProposerSignatures = new Map<RootHex, BLSSignature>();
-  readonly validatorMonitor: ValidatorMonitor | null;
+  validatorMonitor: ValidatorMonitor | null = null;
+  private validatorMonitorMetrics: RegistryMetricCreator | null = null;
+  private validatorMonitorTimeout?: ReturnType<typeof setTimeout>;
+  private readonly onValidatorMonitorAbort = (): void => {
+    clearTimeout(this.validatorMonitorTimeout);
+    this.validatorMonitorTimeout = undefined;
+  };
   // Engine owns envelope writes; the facade retains direct DB reads for API/reqresp serving.
   readonly db: IBeaconEngineDb;
   // Engine owns state archival (states DB). Finalized-state archive runs inside migrateFinalized; the
@@ -349,7 +372,6 @@ export class BeaconEngine implements IBeaconEngine {
     this.clock = clock;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     this.pubkeyCache = pubkeyCache;
-    this.validatorMonitor = modules.validatorMonitor;
     this.emitter = modules.emitter;
   }
 
@@ -459,9 +481,26 @@ export class BeaconEngine implements IBeaconEngine {
       emitter,
       signal,
       db,
-      validatorMonitor,
+      validatorMonitorOpts,
       isAnchorStateFinalized,
     } = modules;
+    // Source: unstable@0edec865c8 node/nodejs.ts#init. The monitor and registry stay with engine state.
+    if (validatorMonitorOpts !== null) {
+      this.validatorMonitorMetrics = metrics ? new RegistryMetricCreator() : null;
+      this.validatorMonitor = createValidatorMonitor(
+        this.validatorMonitorMetrics,
+        config,
+        anchorState.genesisTime,
+        modules.validatorMonitorLogger ?? logger,
+        validatorMonitorOpts,
+        opts.nativeStateTransition
+          ? {
+              registerLocalValidator: registerNativeLocalValidator,
+              unregisterLocalValidator: unregisterNativeLocalValidator,
+            }
+          : null
+      );
+    }
     // Engine owns the buffer pool; sized from the anchor state (NodeJS-specific, engine-internal).
     this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
     this.lightClientServer = modules.lightClientServer;
@@ -540,6 +579,17 @@ export class BeaconEngine implements IBeaconEngine {
       logger
     );
 
+    this.seenPayloadEnvelopeInputCache = new SeenEnginePayloadEnvelopeInput({config, forkChoice: this.forkChoice, db});
+    if (isStatePostGloas(anchorState) && anchorState.latestBlockHeader.slot > 0) {
+      this.seenPayloadEnvelopeInputCache.addFromBid({
+        blockRootHex: toRootHex(checkpoint.root),
+        slot: anchorState.latestBlockHeader.slot,
+        forkName: anchorState.forkName,
+        proposerIndex: anchorState.latestBlockHeader.proposerIndex,
+        bid: ssz.gloas.ExecutionPayloadBid.clone(anchorState.latestExecutionPayloadBid),
+      });
+    }
+
     this.regen = new QueuedStateRegenerator({
       config,
       forkChoice: this.forkChoice,
@@ -547,7 +597,7 @@ export class BeaconEngine implements IBeaconEngine {
       checkpointStateCache: this.checkpointStateCache,
       db,
       metrics,
-      validatorMonitor,
+      validatorMonitor: this.validatorMonitor,
       logger,
       emitter,
       signal,
@@ -573,6 +623,20 @@ export class BeaconEngine implements IBeaconEngine {
       this.seenSyncCommitteeMessages.prune(slot);
       this.seenExecutionPayloadBids.prune(slot);
       this.seenAttestationDatas.onSlot(slot);
+
+      // Source: unstable@0edec865c8 chain/chain.ts#onClockSlot.
+      if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0 && !this.closed && !this.signal.aborted) {
+        clearTimeout(this.validatorMonitorTimeout);
+        this.validatorMonitorTimeout = setTimeout(() => {
+          this.validatorMonitorTimeout = undefined;
+          try {
+            this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
+          } catch (e) {
+            if (!isErrorAborted(e))
+              this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e as Error);
+          }
+        }, this.config.SLOT_DURATION_MS / 2);
+      }
     };
     this.onEpoch = (epoch: Epoch) => {
       this.seenAttesters.prune(epoch);
@@ -584,6 +648,7 @@ export class BeaconEngine implements IBeaconEngine {
     };
     this.clock.on(ClockEvent.slot, this.onSlot);
     this.clock.on(ClockEvent.epoch, this.onEpoch);
+    this.signal.addEventListener("abort", this.onValidatorMonitorAbort, {once: true});
     this.emitter.on(ChainEvent.checkpoint, this.checkpointListener);
 
     // The engine reports metrics for its own (internal) op pools.
@@ -1227,12 +1292,74 @@ export class BeaconEngine implements IBeaconEngine {
   // Gossip validation flows. Each method takes the message's SSZ bytes first (unused by this JS impl;
   // present for the native engine's bytes-first contract) and delegates to the validation logic in
   // `../validation/*` rebound onto the engine.
-  validateGossipBlock(
+  async validateGossipBlock(
     _blockBytes: Uint8Array,
     signedBlock: SignedBeaconBlock,
-    fork: ForkName
+    fork: ForkName,
+    // API publication also call this with no seenTimestampSec
+    seenTimestampSec?: number
   ): Promise<GossipValidationResult<GossipBlockValidationResult>> {
-    return runGossipValidation(() => validateGossipBlock.call(this, signedBlock, fork));
+    const payloadBlockRoot = isForkPostGloas(fork)
+      ? toRootHex(this.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message))
+      : null;
+    // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#validateBeaconBlock.
+    // Seed on entry, including blocks whose parent is still unknown.
+    if (payloadBlockRoot !== null) {
+      this.seenPayloadEnvelopeInputCache.add({
+        blockRootHex: payloadBlockRoot,
+        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+        forkName: fork,
+      });
+    }
+    let result: GossipValidationResult<GossipBlockValidationResult>;
+    try {
+      result = await runGossipValidation(() => validateGossipBlock.call(this, signedBlock, fork));
+    } catch (error) {
+      if (payloadBlockRoot !== null && seenTimestampSec !== undefined) {
+        this.seenPayloadEnvelopeInputCache.remove(payloadBlockRoot);
+      }
+      throw error;
+    }
+    if (
+      payloadBlockRoot !== null &&
+      seenTimestampSec !== undefined &&
+      (result.status === GossipValidationStatus.Reject ||
+        (result.status === GossipValidationStatus.Ignore &&
+          result.code === BlockErrorCode.REPEAT_PROPOSAL &&
+          !this.hasObservedBlockRoot(signedBlock.message.slot, signedBlock.message.proposerIndex, payloadBlockRoot)))
+    ) {
+      this.seenPayloadEnvelopeInputCache.remove(payloadBlockRoot);
+    }
+    if (this.validatorMonitor && seenTimestampSec !== undefined) {
+      const {slot, proposerIndex} = signedBlock.message;
+      const blockRoot =
+        payloadBlockRoot ?? toRootHex(this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+      const registerBlock = (): void => {
+        if (this.closed) return;
+        try {
+          this.validatorMonitor?.registerBeaconBlock(OpSource.gossip, this.clock.secFromSlot(slot, seenTimestampSec), {
+            slot,
+            proposerIndex,
+            blockRoot,
+          });
+        } catch (e) {
+          this.logger.debug("Error monitoring gossip block", {slot, root: blockRoot}, e as Error);
+        }
+      };
+      // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#handleValidBeaconBlock.
+      // [beacon-engine] deviation: accepted-block monitoring has its own deferred callback, preceding
+      // the facade import handler. Observed siblings are still monitored before returning IGNORE.
+      if (result.status === GossipValidationStatus.Accept) {
+        callInNextEventLoop(registerBlock);
+      } else if (
+        result.status === GossipValidationStatus.Ignore &&
+        result.code === BlockErrorCode.REPEAT_PROPOSAL &&
+        this.hasObservedBlockRoot(slot, proposerIndex, blockRoot)
+      ) {
+        registerBlock();
+      }
+    }
+    return result;
   }
 
   validateGossipSyncCommittee(
@@ -1304,6 +1431,23 @@ export class BeaconEngine implements IBeaconEngine {
         result.syncCommitteeParticipantIndices.length,
         "gossip"
       );
+      if (this.validatorMonitor) {
+        callInNextEventLoop(() => {
+          if (this.closed) return;
+          try {
+            this.validatorMonitor?.registerGossipSyncContributionAndProof(
+              signedContributionAndProof.message,
+              result.syncCommitteeParticipantIndices
+            );
+          } catch (e) {
+            this.logger.debug(
+              "Error monitoring gossip contribution and proof",
+              {slot: signedContributionAndProof.message.contribution.slot},
+              e as Error
+            );
+          }
+        });
+      }
       return result;
     });
   }
@@ -1366,12 +1510,11 @@ export class BeaconEngine implements IBeaconEngine {
 
   validateGossipGloasDataColumnSidecar(
     _dataColumnBytes: Uint8Array,
-    payloadInput: PayloadEnvelopeInput,
     dataColumnSidecar: gloas.DataColumnSidecar,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
     return runGossipValidation(() =>
-      validateGossipGloasDataColumnSidecar.call(this, payloadInput, dataColumnSidecar, gossipSubnet, this.metrics)
+      validateGossipGloasDataColumnSidecar.call(this, dataColumnSidecar, gossipSubnet, this.metrics)
     );
   }
 
@@ -1444,21 +1587,19 @@ export class BeaconEngine implements IBeaconEngine {
   async validateGossipAttestationsSameAttData(
     fork: ForkName,
     attestations: GossipAttestation[],
-    // Per-attestation `aggregatorTracker.shouldAggregate` decision (facade-computed, plain data): insert into
-    // the pool only for subnets this node aggregates for. Aligned with `attestations`.
-    shouldAddToPool: boolean[]
+    seenTimestampSecs: number[]
   ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}> {
     const {results, batchableBls} = await validateGossipAttestationsSameAttData.call(this, fork, attestations);
     const mapped = results.map(fromResult);
-    // Post-validation side-effects on Accept (moved from the gossip handler): pool insert (gated by the
-    // facade's aggregatorTracker decision), then the fork-choice write. Contain errors — a pool/fork-choice
-    // error must not flip the gossip verdict.
-    for (const [i, res] of mapped.entries()) {
+    // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#getBatchHandlers.
+    // Consult current duties after validation. [beacon-engine] deviation: pool/fork-choice writes
+    // still precede the returned verdict instead of running in the deferred network handler.
+    for (const res of mapped) {
       if (res.status !== GossipValidationStatus.Accept) {
         continue;
       }
       const value = res.value;
-      if (shouldAddToPool[i]) {
+      if (this.aggregatorTracker.shouldAggregate(value.subnet, value.indexedAttestation.data.slot)) {
         try {
           const insertOutcome = this.attestationPool.add(
             value.committeeIndex,
@@ -1484,6 +1625,27 @@ export class BeaconEngine implements IBeaconEngine {
         }
       }
     }
+    // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#getBatchHandlers.
+    if (this.validatorMonitor) {
+      callInNextEventLoop(() => {
+        if (this.closed) return;
+        for (const [i, res] of mapped.entries()) {
+          if (res.status !== GossipValidationStatus.Accept) continue;
+          try {
+            this.validatorMonitor?.registerGossipUnaggregatedAttestation(
+              seenTimestampSecs[i],
+              res.value.indexedAttestation
+            );
+          } catch (e) {
+            this.logger.debug(
+              "Error monitoring gossip attestation",
+              {slot: res.value.indexedAttestation.data.slot},
+              e as Error
+            );
+          }
+        }
+      });
+    }
     return {results: mapped, batchableBls};
   }
 
@@ -1497,7 +1659,8 @@ export class BeaconEngine implements IBeaconEngine {
   validateGossipAggregateAndProof(
     aggregateBytes: Uint8Array,
     fork: ForkName,
-    signedAggregateAndProof: SignedAggregateAndProof
+    signedAggregateAndProof: SignedAggregateAndProof,
+    seenTimestampSec: number
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
     return runGossipValidation(async () => {
       const result = await validateGossipAggregateAndProof.call(this, fork, signedAggregateAndProof, aggregateBytes);
@@ -1522,7 +1685,24 @@ export class BeaconEngine implements IBeaconEngine {
           );
         }
       }
-      // The facade only needs `indexedAttestation` (validator monitor); pool/fork-choice fields consumed above.
+      if (this.validatorMonitor) {
+        callInNextEventLoop(() => {
+          if (this.closed) return;
+          try {
+            this.validatorMonitor?.registerGossipAggregatedAttestation(
+              seenTimestampSec,
+              signedAggregateAndProof,
+              result.indexedAttestation
+            );
+          } catch (e) {
+            this.logger.debug(
+              "Error monitoring gossip aggregate and proof",
+              {slot: result.indexedAttestation.data.slot},
+              e as Error
+            );
+          }
+        });
+      }
       return {indexedAttestation: result.indexedAttestation};
     });
   }
@@ -1549,41 +1729,47 @@ export class BeaconEngine implements IBeaconEngine {
   validateGossipExecutionPayloadEnvelope(
     _envelopeBytes: Uint8Array,
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    proposerIndex: ValidatorIndex,
-    bidBuilderIndex: ValidatorIndex,
-    bidBlockHashHex: RootHex,
-    bidExecutionRequestsRoot: Root
+    source: SourceMeta
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() =>
-      validateGossipExecutionPayloadEnvelope.call(
-        this,
-        executionPayloadEnvelope,
-        proposerIndex,
-        bidBuilderIndex,
-        bidBlockHashHex,
-        bidExecutionRequestsRoot
-      )
-    );
+    return runGossipValidation(async () => {
+      await validateGossipExecutionPayloadEnvelope.call(this, executionPayloadEnvelope);
+      this.seenPayloadEnvelopeInputCache
+        .get(toRootHex(executionPayloadEnvelope.message.beaconBlockRoot))
+        ?.addPayloadEnvelope({
+          envelope: executionPayloadEnvelope,
+          ...source,
+        });
+      // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#execution_payload.
+      if (source.source === PayloadEnvelopeInputSource.gossip && this.validatorMonitor) {
+        const slot = executionPayloadEnvelope.message.payload.slotNumber;
+        try {
+          this.validatorMonitor.registerExecutionPayloadEnvelope(
+            OpSource.gossip,
+            this.clock.secFromSlot(slot, source.seenTimestampSec),
+            executionPayloadEnvelope
+          );
+        } catch (e) {
+          this.logger.debug("Error monitoring gossip execution payload envelope", {slot}, e as Error);
+        }
+      }
+    });
   }
 
   validateApiExecutionPayloadEnvelope(
     _envelopeBytes: Uint8Array,
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    proposerIndex: ValidatorIndex,
-    bidBuilderIndex: ValidatorIndex,
-    bidBlockHashHex: RootHex,
-    bidExecutionRequestsRoot: Root
+    seenTimestampSec: number
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() =>
-      validateApiExecutionPayloadEnvelope.call(
-        this,
-        executionPayloadEnvelope,
-        proposerIndex,
-        bidBuilderIndex,
-        bidBlockHashHex,
-        bidExecutionRequestsRoot
-      )
-    );
+    return runGossipValidation(async () => {
+      await validateApiExecutionPayloadEnvelope.call(this, executionPayloadEnvelope);
+      this.seenPayloadEnvelopeInputCache
+        .get(toRootHex(executionPayloadEnvelope.message.beaconBlockRoot))
+        ?.addPayloadEnvelope({
+          envelope: executionPayloadEnvelope,
+          source: PayloadEnvelopeInputSource.api,
+          seenTimestampSec,
+        });
+    });
   }
 
   validateGossipExecutionPayloadBid(
@@ -1601,6 +1787,25 @@ export class BeaconEngine implements IBeaconEngine {
           Math.floor(this.clock.secFromSlot(signedExecutionPayloadBid.message.slot, seenTimestampSec) * 1000)
         );
         this.metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
+        // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#execution_payload_bid.
+        if (this.validatorMonitor) {
+          callInNextEventLoop(() => {
+            if (this.closed) return;
+            try {
+              this.validatorMonitor?.registerExecutionPayloadBid(
+                OpSource.gossip,
+                result.proposerIndex,
+                signedExecutionPayloadBid.message
+              );
+            } catch (e) {
+              this.logger.debug(
+                "Error monitoring gossip execution payload bid",
+                {slot: signedExecutionPayloadBid.message.slot},
+                e as Error
+              );
+            }
+          });
+        }
       } catch (e) {
         this.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
       }
@@ -1790,6 +1995,16 @@ export class BeaconEngine implements IBeaconEngine {
     return this.payloadAttestationPool.getAll(slot);
   }
 
+  /** Source: unstable@0edec865c8 network/network.ts#prepareBeaconCommitteeSubnets. */
+  async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
+    for (const subscription of subscriptions) {
+      if (subscription.isAggregator) {
+        this.aggregatorTracker.addAggregator(subscription.subnet, subscription.slot);
+      }
+    }
+    this.aggregatorTracker.prune();
+  }
+
   // --- Proposer cache + finalized balances (engine-internal) ---
 
   /** Fee recipient registered for a proposer, or undefined if none (block-production default is
@@ -1819,6 +2034,7 @@ export class BeaconEngine implements IBeaconEngine {
 
   /** Prune the (internal) op pool + seen-block-proposers on finalization — driven by the facade's finalized event. */
   async pruneOnFinalized(): Promise<void> {
+    this.seenPayloadEnvelopeInputCache.pruneFinalized(this.forkChoice.getFinalizedCheckpoint());
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(this.forkChoice.getFinalizedCheckpoint().epoch));
 
     // TODO: Improve using regen here
@@ -1892,6 +2108,14 @@ export class BeaconEngine implements IBeaconEngine {
     return this.seenBlockProposers.getConflictingBlockRoots(slot, proposerIndex, root);
   }
   async verifyAndObserveBlockProposer(_bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void> {
+    const forkName = this.config.getForkName(block.message.slot);
+    if (isForkPostGloas(forkName)) {
+      this.seenPayloadEnvelopeInputCache.add({
+        blockRootHex: root,
+        block: block as SignedBeaconBlock<ForkPostGloas>,
+        forkName,
+      });
+    }
     await verifyBlockProposerSignature.call(this, block, root);
     this.seenBlockProposers.observeBlockRoot(
       block.message.slot,
@@ -1927,6 +2151,7 @@ export class BeaconEngine implements IBeaconEngine {
     try {
       verifyEnvelopeFields(this.config, state, signedEnvelope.message, {verifyExecutionRequestsRoot: false});
     } catch (e) {
+      this.seenPayloadEnvelopeInputCache.removeInvalid(signedEnvelope);
       this.logger.error(
         "Consensus checks failed while publishing execution payload envelope",
         {slot, blockRoot: blockRootHex},
@@ -1957,6 +2182,15 @@ export class BeaconEngine implements IBeaconEngine {
     opts: BlockProcessOpts & ImportBlockOpts,
     signal: AbortSignal
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
+    for (const blockInput of blockInputs) {
+      if (isForkPostGloas(blockInput.forkName)) {
+        this.seenPayloadEnvelopeInputCache.add({
+          blockRootHex: blockInput.blockRootHex,
+          block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
+          forkName: blockInput.forkName,
+        });
+      }
+    }
     try {
       return await verifyBlocks.call(this, blockBytes, parentBlock, blockInputs, opts, signal);
     } catch (error) {
@@ -1988,11 +2222,10 @@ export class BeaconEngine implements IBeaconEngine {
   /** Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts#importExecutionPayload. */
   async importExecutionPayload(
     envelopeBytes: Uint8Array,
-    proposerIndex: ValidatorIndex,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts
   ): Promise<{executionOptimistic: boolean}> {
-    return importExecutionPayload.call(this, envelopeBytes, proposerIndex, dataAvailabilityStatus, opts);
+    return importExecutionPayload.call(this, envelopeBytes, dataAvailabilityStatus, opts);
   }
 
   discardVerifiedBlocks(blockRootHexes: string[]): void {
@@ -2146,11 +2379,56 @@ export class BeaconEngine implements IBeaconEngine {
     };
   }
 
-  /** Validator-monitor end-of-epoch hook against the head state (facade clock listener drives the timing). */
-  validatorMonitorOnceEveryEndOfEpoch(): void {
-    // TODO - beacon engine: keep state-dependent monitoring inside the engine or pass derived data
-    // to the shared validator monitor before introducing a worker; do not pass live state views across it.
-    this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
+  async registerLocalValidators(indices: ValidatorIndex[]): Promise<void> {
+    for (const index of indices) this.validatorMonitor?.registerLocalValidator(index);
+  }
+
+  async registerLocalValidatorsInSyncCommittee(
+    subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]
+  ): Promise<void> {
+    for (const {validatorIndex, untilEpoch} of subscriptions) {
+      this.validatorMonitor?.registerLocalValidatorInSyncCommittee(validatorIndex, untilEpoch);
+    }
+  }
+
+  async registerApiBlock(seenTimestampSec: number, block: ValidatorMonitorBlock): Promise<void> {
+    this.validatorMonitor?.registerBeaconBlock(
+      OpSource.api,
+      this.clock.secFromSlot(block.slot, seenTimestampSec),
+      block
+    );
+  }
+
+  async registerApiExecutionPayloadEnvelope(
+    delaySec: number,
+    signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  ): Promise<void> {
+    this.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.api, delaySec, signedExecutionPayloadEnvelope);
+  }
+
+  async onPoolSubmitUnaggregatedAttestation(
+    seenTimestampSec: number,
+    attestation: ValidatorMonitorAttestation,
+    subnet: SubnetID,
+    sentPeers: number
+  ): Promise<void> {
+    this.validatorMonitor?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, attestation, subnet, sentPeers);
+  }
+
+  async onPoolSubmitAggregatedAttestation(
+    seenTimestampSec: number,
+    attestation: ValidatorMonitorAttestation,
+    sentPeers: number
+  ): Promise<void> {
+    this.validatorMonitor?.onPoolSubmitAggregatedAttestation(seenTimestampSec, attestation, sentPeers);
+  }
+
+  async getMonitoredValidatorIndices(): Promise<ValidatorIndex[]> {
+    return this.validatorMonitor?.getMonitoredValidatorIndices() ?? [];
+  }
+
+  async scrapeValidatorMonitorMetrics(): Promise<string> {
+    return this.validatorMonitorMetrics?.metrics() ?? "";
   }
 
   /** Whether regen can accept more work (backpressure). */
@@ -2217,6 +2495,8 @@ export class BeaconEngine implements IBeaconEngine {
   /** Tear down engine-owned resources: historical-state worker + BLS pool (graceful shutdown). */
   async close(): Promise<void> {
     this.closed = true;
+    this.onValidatorMonitorAbort();
+    this.signal.removeEventListener("abort", this.onValidatorMonitorAbort);
     await this.pendingPersistence?.catch(() => {});
     this.pendingPersistence = undefined;
     if (this.onSlot) this.clock.off(ClockEvent.slot, this.onSlot);

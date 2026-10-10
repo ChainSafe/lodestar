@@ -12,6 +12,7 @@ import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {importExecutionPayload} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {
   PayloadEnvelopeInput,
@@ -66,6 +67,9 @@ describe("BeaconEngine execution requests persistence", () => {
 
   function setupChain(): void {
     chain = getMockedBeaconChain({config});
+    Object.defineProperty(chain.beaconEngine, "seenPayloadEnvelopeInputCache", {
+      value: new SeenEnginePayloadEnvelopeInput({config, forkChoice: chain.forkChoice, db}),
+    });
     Object.defineProperty(chain, "db", {value: db, configurable: true});
     chain.beaconEngine.getFinalizedBlockSnapshot = BeaconEngine.prototype.getFinalizedBlockSnapshot.bind(
       chain.beaconEngine
@@ -141,7 +145,6 @@ describe("BeaconEngine execution requests persistence", () => {
     const envelope = makeEnvelope();
     await chain.beaconEngine.importExecutionPayload(
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
-      0,
       DataAvailabilityStatus.Available,
       {validSignature: true}
     );
@@ -172,7 +175,6 @@ describe("BeaconEngine execution requests persistence", () => {
     await importExecutionPayload.call(chain, input, DataAvailabilityStatus.Available);
     expect(chain.beaconEngine.importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
-      input.proposerIndex,
       DataAvailabilityStatus.Available,
       {validSignature: false, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0}
     );

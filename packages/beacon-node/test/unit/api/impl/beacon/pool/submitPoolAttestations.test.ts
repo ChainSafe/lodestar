@@ -1,4 +1,4 @@
-import {Mocked, beforeEach, describe, expect, it, vi} from "vitest";
+import {Mocked, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
@@ -7,6 +7,7 @@ import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool/index.js";
+import {GossipValidationResult, accept} from "../../../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {AttestationPool} from "../../../../../../src/chain/opPools/attestationPool.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "../../../../../../src/chain/opPools/types.js";
 import {AttestationValidationResult} from "../../../../../../src/chain/validation/attestation.js";
@@ -18,6 +19,8 @@ vi.mock("../../../../../../src/network/processor/gossipHandlers.js", async (impo
 });
 
 const {validateGossipFnRetryUnknownRoot} = await import("../../../../../../src/network/processor/gossipHandlers.js");
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("api - beacon - submitPoolAttestationsV2", () => {
   const config = createChainForkConfig({
@@ -39,9 +42,6 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     attestationPool = {add: vi.fn().mockReturnValue(InsertOutcome.NewData), getAll: vi.fn()};
     Object.defineProperty(modules.chain, "attestationPool", {value: attestationPool});
     modules.network.publishBeaconAttestation = vi.fn().mockResolvedValue(1);
-    // No aggregator duty registered for this (subnet, slot), ie. the validator client did not send
-    // `is_aggregator: true` in `prepareBeaconCommitteeSubnet`
-    modules.network.shouldAggregate = vi.fn().mockReturnValue(false);
 
     const validationResult: AttestationValidationResult = {
       attestation: ssz.electra.SingleAttestation.defaultValue(),
@@ -52,7 +52,9 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
       validatorCommitteeIndex: 0,
       committeeSize: 64,
     };
-    vi.mocked(validateGossipFnRetryUnknownRoot<AttestationValidationResult>).mockResolvedValue(validationResult);
+    vi.mocked(validateGossipFnRetryUnknownRoot<GossipValidationResult<AttestationValidationResult>>).mockResolvedValue(
+      accept(validationResult)
+    );
 
     api = getBeaconPoolApi(modules);
   });
@@ -78,6 +80,39 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     expect(modules.network.publishBeaconAttestation).toHaveBeenCalledWith(attestation, subnet);
   });
 
+  it("reports publication metadata only after the network returns sentPeers", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(12_000);
+    const report = vi.spyOn(modules.chain.beaconEngine, "onPoolSubmitUnaggregatedAttestation");
+    let finishPublication!: (sentPeers: number) => void;
+    modules.network.publishBeaconAttestation.mockReturnValueOnce(
+      new Promise<number>((resolve) => {
+        finishPublication = resolve;
+      })
+    );
+    const attestation = ssz.electra.SingleAttestation.defaultValue();
+    const pending = api.submitPoolAttestationsV2({signedAttestations: [attestation]});
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    expect(modules.network.publishBeaconAttestation).toHaveBeenCalledOnce();
+    expect(report).not.toHaveBeenCalled();
+    now.mockReturnValue(20_000);
+    finishPublication(4);
+    await pending;
+    expect(report).toHaveBeenCalledWith(
+      12,
+      {
+        attestingIndices: [],
+        data: {slot: 0, index: 0, target: attestation.data.target},
+      },
+      subnet,
+      4
+    );
+    expect(report.mock.calls[0][1]).not.toHaveProperty("signature");
+    report.mockClear();
+    modules.network.publishBeaconAttestation.mockRejectedValueOnce(new Error("publish failed"));
+    await expect(api.submitPoolAttestationsV2({signedAttestations: [attestation]})).rejects.toThrow();
+    expect(report).not.toHaveBeenCalled();
+  });
+
   it("publishes the attestation on the subnet", async () => {
     const attestation = ssz.electra.SingleAttestation.defaultValue();
 
@@ -98,15 +133,17 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     const attestation = {...ssz.electra.SingleAttestation.defaultValue(), committeeIndex};
     const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
     attestation.signature = SecretKey.fromBytes(Buffer.alloc(32, 1)).sign(dataRoot).toBytes();
-    vi.mocked(validateGossipFnRetryUnknownRoot<AttestationValidationResult>).mockResolvedValue({
-      attestation,
-      indexedAttestation: ssz.electra.IndexedAttestation.defaultValue(),
-      subnet,
-      attDataRootHex: toRootHex(dataRoot),
-      committeeIndex,
-      validatorCommitteeIndex,
-      committeeSize,
-    });
+    vi.mocked(validateGossipFnRetryUnknownRoot<GossipValidationResult<AttestationValidationResult>>).mockResolvedValue(
+      accept({
+        attestation,
+        indexedAttestation: ssz.electra.IndexedAttestation.defaultValue(),
+        subnet,
+        attDataRootHex: toRootHex(dataRoot),
+        committeeIndex,
+        validatorCommitteeIndex,
+        committeeSize,
+      })
+    );
 
     await api.submitPoolAttestationsV2({signedAttestations: [attestation]});
 

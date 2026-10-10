@@ -37,7 +37,6 @@ describe("network - publishSignedExecutionPayloadBid", () => {
       networkEventBus: new NetworkEventBus(),
       networkProcessor: {},
       core,
-      aggregatorTracker: {},
     } as any);
 
     const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();

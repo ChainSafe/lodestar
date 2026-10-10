@@ -14,6 +14,7 @@ import {
 import {
   ForkPostAltair,
   ForkPostElectra,
+  ForkPostGloas,
   ForkSeq,
   GENESIS_EPOCH,
   GENESIS_SLOT,
@@ -34,6 +35,7 @@ import {
   BeaconBlock,
   Epoch,
   IndexedAttestation,
+  SignedBeaconBlock,
   altair,
   electra,
   isGloasBeaconBlock,
@@ -142,6 +144,14 @@ export async function importBlock(
     executionStatus,
     dataAvailabilityStatus
   );
+
+  if (isGloasBeaconBlock(block.message)) {
+    this.seenPayloadEnvelopeInputCache.add({
+      blockRootHex,
+      block: block as SignedBeaconBlock<ForkPostGloas>,
+      forkName: this.config.getForkName(blockSlot),
+    });
+  }
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
@@ -292,6 +302,11 @@ export async function importBlock(
   const oldHead = this.forkChoice.getHead();
 
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+
+  if (fork >= ForkSeq.gloas) {
+    const parent = this.forkChoice.getBlockHexDefaultStatus(newHead.parentRoot);
+    if (parent) this.seenPayloadEnvelopeInputCache.pruneBelowParent(parent);
+  }
 
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
@@ -518,8 +533,6 @@ export async function importBlock(
 
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
 
-  // TODO - beacon engine: replace the verified-block handoff with derived monitoring data;
-  // fullyVerifiedBlock contains a live postState that cannot cross the worker boundary.
   this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
 
   if (isStatePostAltair(fullyVerifiedBlock.postState)) {

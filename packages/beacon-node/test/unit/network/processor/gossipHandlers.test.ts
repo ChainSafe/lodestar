@@ -26,7 +26,6 @@ import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NetworkEventBus} from "../../../../src/network/events.js";
 import {GossipType, SequentialGossipHandler} from "../../../../src/network/gossip/interface.js";
 import {PeerAction} from "../../../../src/network/peers/index.js";
-import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 import {getGossipHandlers} from "../../../../src/network/processor/gossipHandlers.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../../src/util/peerId.js";
@@ -189,7 +188,6 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
 
   const handlers = getGossipHandlers(
     {
-      aggregatorTracker: {} as AggregatorTracker,
       chain,
       config,
       core: {reportPeer: vi.fn()} as unknown as INetworkCore,
@@ -270,7 +268,6 @@ async function runBeaconBlockProcessingError(
 
   const handlers = getGossipHandlers(
     {
-      aggregatorTracker: {} as AggregatorTracker,
       chain,
       config,
       core: core as INetworkCore,
@@ -391,7 +388,6 @@ async function runBeaconBlockRepeatProposal(
 
   const handlers = getGossipHandlers(
     {
-      aggregatorTracker: {} as AggregatorTracker,
       chain,
       config,
       core: {reportPeer: vi.fn()} as unknown as INetworkCore,

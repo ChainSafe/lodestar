@@ -85,7 +85,7 @@ export async function getNetworkForTest(
         Math.floor(Date.now() / 1000) - startSlot * (beaconConfig.SLOT_DURATION_MS / 1000)
       ),
       metrics: null,
-      validatorMonitor: null,
+      validatorMonitorOpts: null,
       anchorStateBytes: cachedState.serialize(),
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),

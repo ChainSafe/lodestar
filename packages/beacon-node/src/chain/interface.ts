@@ -45,7 +45,6 @@ import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/produ
 import {ReprocessController} from "./reprocess.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
-import {ValidatorMonitor} from "./validatorMonitor.js";
 
 export {BlockType, type AssembledBlockType, type ProposerPreparationData};
 export type BlockHash = RootHex;
@@ -78,7 +77,6 @@ export interface IBeaconChain extends IChainView {
   readonly custodyConfig: CustodyConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
-  readonly validatorMonitor: ValidatorMonitor | null;
 
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;
