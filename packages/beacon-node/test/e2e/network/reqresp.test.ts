@@ -79,7 +79,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
     const blocks: phase0.SignedBeaconBlock[] = [];
     for (let slot = req.startSlot; slot < req.count; slot++) {
-      const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
+      const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue() as phase0.SignedBeaconBlock;
       block.message.slot = slot;
       blocks.push(block);
     }
@@ -101,7 +101,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     expect(returnedBlocks).toHaveLength(req.count);
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
-      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).toBe(true);
+      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock as phase0.SignedBeaconBlock, blocks[i])).toBe(true);
     }
   });
 

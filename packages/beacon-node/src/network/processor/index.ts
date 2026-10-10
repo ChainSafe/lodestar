@@ -530,7 +530,7 @@ export class NetworkProcessor {
         let search: SearchUnknownRootTarget | null = null;
         if (ForkSeq[fork] >= ForkSeq.gloas) {
           // GLOAS: also check parent envelope, same logic as execution_payload_bid
-          const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data);
+          const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data, fork);
           if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
             const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
             if (protoBlock === null) {

@@ -169,7 +169,6 @@ describe("Gloas EIP-7688 SSZ types", () => {
     const json = ssz.gloas.SignedBeaconBlock.toJson(signedBlock);
 
     expect(ssz.gloas.Deposits.maxSize).toBe(0);
-    expect(ssz.heze.BeaconBlockBody.fields.deposits).toBe(ssz.gloas.Deposits);
     expect(() => ssz.gloas.SignedBeaconBlock.deserialize(serialized)).toThrow("Invalid list length 1 over limit 0");
     expect(() => ssz.gloas.SignedBeaconBlock.deserializeToViewDU(serialized)).toThrow(
       "Invalid list length 1 over limit 0"

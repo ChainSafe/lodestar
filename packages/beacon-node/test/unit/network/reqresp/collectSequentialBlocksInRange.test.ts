@@ -81,7 +81,11 @@ describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRan
 
   async function* arrToSource(arr: SignedBeaconBlock[]): AsyncGenerator<ResponseIncoming> {
     for (const item of arr) {
-      yield {data: ssz.phase0.SignedBeaconBlock.serialize(item), fork: ForkName.phase0, protocolVersion: 1};
+      yield {
+        data: ssz.phase0.SignedBeaconBlock.serialize(item as phase0.SignedBeaconBlock),
+        fork: ForkName.phase0,
+        protocolVersion: 1,
+      };
     }
   }
 });

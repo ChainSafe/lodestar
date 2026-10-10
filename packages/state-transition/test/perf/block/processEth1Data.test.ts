@@ -2,12 +2,12 @@ import {bench, describe} from "@chainsafe/benchmark";
 import {ACTIVE_PRESET, PresetName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {processEth1Data} from "../../../src/block/processEth1Data.js";
-import {CachedBeaconStateAllForks} from "../../../src/index.js";
+import {CachedBeaconStatePreHeze} from "../../../src/index.js";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../../src/testUtils/util.js";
 import {getBlockAltair} from "./util.js";
 
 type StateEth1Data = {
-  state: CachedBeaconStateAllForks;
+  state: CachedBeaconStatePreHeze;
   eth1Data: phase0.Eth1Data;
 };
 
@@ -42,7 +42,7 @@ describe("altair processEth1Data", () => {
         return {state, eth1Data: block.message.body.eth1Data};
       },
       beforeEach: ({state, eth1Data}) => {
-        const stateCloned = state.clone();
+        const stateCloned = state.clone() as CachedBeaconStatePreHeze;
         // Populate nodes cache of eth1DataVotes array (on the cloned instance)
         stateCloned.eth1DataVotes.getAllReadonly();
         return {state: stateCloned, eth1Data};

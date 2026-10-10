@@ -1,6 +1,7 @@
+import {Type} from "@chainsafe/ssz";
 import {Db, encodeKey} from "@lodestar/db";
 import {ForkAll} from "@lodestar/params";
-import {Root, SSZTypesFor, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {BeaconBlock, Root, SSZTypesFor, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export const rootIndexBucketId = getBucketNameByValue(Bucket.index_blockArchiveRootIndex);
@@ -19,7 +20,8 @@ export async function deleteRootIndex(
   signedBeaconBlockType: SSZTypesFor<ForkAll, "SignedBeaconBlock">,
   block: SignedBeaconBlock
 ): Promise<void> {
-  const beaconBlockType = (signedBeaconBlockType as typeof ssz.phase0.SignedBeaconBlock).fields.message;
+  const beaconBlockType = (signedBeaconBlockType as typeof ssz.phase0.SignedBeaconBlock).fields
+    .message as Type<BeaconBlock>;
   return db.delete(getRootIndexKey(beaconBlockType.hashTreeRoot(block.message)), {bucketId: rootIndexBucketId});
 }
 

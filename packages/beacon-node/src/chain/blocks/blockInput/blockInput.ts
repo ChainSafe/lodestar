@@ -222,7 +222,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
     const state: BlockInputPreDataState = {
       hasBlock: true,
       hasAllData: true,
-      block: props.block,
+      block: props.block as SignedBeaconBlock<ForkPreDeneb>,
       source: {
         source: props.source,
         seenTimestampSec: props.seenTimestampSec,

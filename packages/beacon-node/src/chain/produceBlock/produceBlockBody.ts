@@ -684,12 +684,11 @@ export async function produceBlockBody<T extends BlockType>(
     executionPayloadValue = BigInt(0);
   }
 
-  const {graffiti, attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
+  const {graffiti, attestations, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
 
   Object.assign(logMeta, {
     graffiti: fromGraffitiBytes(graffiti),
     attestations: attestations.length,
-    deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
@@ -1106,16 +1105,22 @@ export async function produceCommonBlockBody<T extends BlockType>(
   });
 
   // Live proposal production is supported from Fulu onward.
-  return {
+  const body: CommonBlockBody = {
     randaoReveal,
     graffiti,
-    eth1Data: currentState.eth1Data,
     proposerSlashings: this.opts.disableProposerSlashings === true ? [] : proposerSlashings,
     attesterSlashings,
     attestations,
-    deposits: [],
     voluntaryExits,
     blsToExecutionChanges,
     syncAggregate,
   };
+
+  if (ForkSeq[fork] < ForkSeq.heze) {
+    // Removed in Heze:EIP8015. The eth1 vote is a no-op since Fulu, so the state's eth1Data is echoed back.
+    body.eth1Data = currentState.eth1Data;
+    body.deposits = [];
+  }
+
+  return body;
 }

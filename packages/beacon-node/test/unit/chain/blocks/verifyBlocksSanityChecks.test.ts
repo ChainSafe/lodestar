@@ -3,7 +3,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
@@ -18,7 +18,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
   let forkChoice: MockedBeaconChain["forkChoice"];
   let clock: ClockStopped;
   let modules: Parameters<typeof verifyBlocksImportSanityChecks>[0];
-  let block: SignedBeaconBlock;
+  let block: phase0.SignedBeaconBlock;
   const currentSlot = 1;
 
   beforeEach(() => {
@@ -191,8 +191,8 @@ function verifyBlocksSanityChecks(
   };
 }
 
-function getValidChain(count: number, initialSlot = 0): SignedBeaconBlock[] {
-  const blocks: SignedBeaconBlock[] = [];
+function getValidChain(count: number, initialSlot = 0): phase0.SignedBeaconBlock[] {
+  const blocks: phase0.SignedBeaconBlock[] = [];
 
   for (let i = 0; i < count; i++) {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -209,7 +209,7 @@ function getValidChain(count: number, initialSlot = 0): SignedBeaconBlock[] {
   return blocks;
 }
 
-function getForkChoice(knownBlocks: SignedBeaconBlock[], finalizedEpoch = 0): IForkChoice {
+function getForkChoice(knownBlocks: phase0.SignedBeaconBlock[], finalizedEpoch = 0): IForkChoice {
   const blocks = new Map<string, ProtoBlock>();
   for (const block of knownBlocks) {
     const protoBlock = toProtoBlock(block);
@@ -229,7 +229,7 @@ function getForkChoice(knownBlocks: SignedBeaconBlock[], finalizedEpoch = 0): IF
   } as Partial<IForkChoice> as IForkChoice;
 }
 
-function toProtoBlock(block: SignedBeaconBlock): ProtoBlock {
+function toProtoBlock(block: phase0.SignedBeaconBlock): ProtoBlock {
   return {
     slot: block.message.slot,
     blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),

@@ -5,8 +5,8 @@ import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
 
-function activeFields(count: number): boolean[] {
-  return Array.from({length: count}, () => true);
+function activeFields(count: number, gaps: number[] = []): boolean[] {
+  return Array.from({length: count}, (_, i) => !gaps.includes(i));
 }
 
 export const InclusionListCommittee = new VectorBasicType(ValidatorIndex, INCLUSION_LIST_COMMITTEE_SIZE);
@@ -60,21 +60,35 @@ export const SignedExecutionPayloadBid = new ContainerType(
 export const DataColumnSidecar = gloasSsz.DataColumnSidecar;
 export const DataColumnSidecars = gloasSsz.DataColumnSidecars;
 
+const {
+  eth1Data: _eth1Data, // Removed in Heze:EIP8015
+  eth1DataVotes: _eth1DataVotes, // Removed in Heze:EIP8015
+  eth1DepositIndex: _eth1DepositIndex, // Removed in Heze:EIP8015
+  depositRequestsStartIndex: _depositRequestsStartIndex, // Removed in Heze:EIP8015
+  ...gloasBeaconStateFields
+} = gloasSsz.BeaconState.fields;
+
 export const BeaconState = new ProgressiveContainerType(
   {
-    ...gloasSsz.BeaconState.fields,
+    ...gloasBeaconStateFields,
     latestExecutionPayloadBid: ExecutionPayloadBid, // [Modified in Heze:EIP7805]
   },
-  activeFields(46),
+  activeFields(46, [8, 9, 10, 28]), // [Modified in Heze:EIP8015]
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
+const {
+  eth1Data: _bodyEth1Data, // Removed in Heze:EIP8015
+  deposits: _deposits, // Removed in Heze:EIP8015
+  ...gloasBeaconBlockBodyFields
+} = gloasSsz.BeaconBlockBody.fields;
+
 export const BeaconBlockBody = new ProgressiveContainerType(
   {
-    ...gloasSsz.BeaconBlockBody.fields,
+    ...gloasBeaconBlockBodyFields,
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // [Modified in Heze:EIP7805]
   },
-  activeFields(13),
+  activeFields(13, [1, 6]), // [Modified in Heze:EIP8015]
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 

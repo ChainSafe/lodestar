@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   BlockInputColumns,
@@ -552,7 +552,9 @@ describe("sync / range / batch", async () => {
         // second round completes the columns
         for (const index of sampledColumns) {
           const columnSidecar = ssz.gloas.DataColumnSidecar.defaultValue();
-          columnSidecar.beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(blockInput.getBlock().message);
+          columnSidecar.beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(
+            blockInput.getBlock().message as gloas.BeaconBlock
+          );
           columnSidecar.slot = blockInput.slot;
           columnSidecar.index = index;
           payloadInput.addColumn({

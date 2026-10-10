@@ -5,7 +5,7 @@ import {config} from "@lodestar/config/default";
 import {encodeKey} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ssz} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {Bucket} from "../../../../../src/db/buckets.js";
@@ -196,7 +196,7 @@ describe("block archive repository", () => {
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByRoot(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).toBe(true);
+    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved as phase0.SignedBeaconBlock, block)).toBe(true);
   });
 
   it("should get slot by parent root", async () => {
@@ -211,7 +211,7 @@ describe("block archive repository", () => {
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).toBe(true);
+    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved as phase0.SignedBeaconBlock, block)).toBe(true);
   });
 
   it("should delete index entries of a pruned range", async () => {

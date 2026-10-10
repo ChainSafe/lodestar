@@ -87,6 +87,7 @@ export interface IBeaconStateView {
   epoch: Epoch;
   genesisTime: number;
   genesisValidatorsRoot: Root;
+  /** Removed from BeaconState in heze (EIP-8015). Throws from heze onwards. */
   eth1Data: phase0.Eth1Data;
   latestBlockHeader: phase0.BeaconBlockHeader;
   previousJustifiedCheckpoint: Checkpoint;

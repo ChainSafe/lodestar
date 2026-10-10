@@ -5,6 +5,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
+  ForkPostDeneb,
   ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
@@ -563,7 +564,7 @@ export function getValidatorApi(
 
         return {
           data: {
-            block,
+            block: block as BeaconBlock<ForkPostDeneb & ForkPreGloas>,
             blobs: blobsBundle.blobs,
             kzgProofs: blobsBundle.proofs,
           },
@@ -574,7 +575,13 @@ export function getValidatorApi(
         };
       }
 
-      return {data: {block}, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
+      return {
+        data: {block: block as BeaconBlock<ForkPreGloas>},
+        version,
+        executionPayloadValue,
+        consensusBlockValue,
+        shouldOverrideBuilder,
+      };
     } finally {
       if (timer) timer({source});
     }

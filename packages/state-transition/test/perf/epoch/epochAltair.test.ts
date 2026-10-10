@@ -20,6 +20,7 @@ import {
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
 import {altairState} from "../../../src/testUtils/params.js";
+import {CachedBeaconStatePreHeze} from "../../../src/types.js";
 import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
 import {getNetworkCachedState} from "../../utils/networkCachedState.js";
 import {StateEpoch} from "../types.js";
@@ -136,7 +137,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   bench({
     id: `${stateId} - altair processEth1DataReset`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEth1DataReset(state, cache.value),
+    fn: (state) => processEth1DataReset(state as CachedBeaconStatePreHeze, cache.value),
   });
 
   bench({

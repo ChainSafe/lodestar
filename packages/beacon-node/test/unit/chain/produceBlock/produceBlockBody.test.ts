@@ -3,7 +3,7 @@ import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostHeze} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
@@ -66,11 +66,10 @@ describe("supported proposal body fields", () => {
         expect(body).toEqual({
           randaoReveal: attrs.randaoReveal,
           graffiti: attrs.graffiti,
-          eth1Data: state.eth1Data,
+          ...(isForkPostHeze(fork) ? {} : {eth1Data: state.eth1Data, deposits: []}),
           proposerSlashings: common.proposerSlashings,
           attesterSlashings: common.attesterSlashings,
           attestations: common.attestations,
-          deposits: [],
           voluntaryExits: common.voluntaryExits,
           blsToExecutionChanges: common.blsToExecutionChanges,
           syncAggregate: common.syncAggregate,

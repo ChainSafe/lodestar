@@ -3,6 +3,7 @@ import {
   ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
+  ForkPreDeneb,
   ForkPreGloas,
   ForkSeq,
   isForkPostBellatrix,
@@ -136,10 +137,10 @@ export function reconstructSignedBlockContents(
       throw Error("Missing blobs bundle to reconstruct post-deneb block contents");
     }
     return {
-      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>,
       kzgProofs: blobsBundle.proofs,
       blobs: blobsBundle.blobs,
     };
   }
-  return {signedBlock};
+  return {signedBlock: signedBlock as SignedBeaconBlock<ForkPreDeneb>};
 }

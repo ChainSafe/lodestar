@@ -672,13 +672,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           if (signedBlocks.length === 0) throw new Error("No blocks provided.");
           const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            body: ArrayOf(ssz[fork].SignedBeaconBlock as Type<SignedBeaconBlock>).toJson(signedBlocks),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[];
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock as Type<SignedBeaconBlock>).fromJson(body);
           assertBlocksMatchFork(signedBlocks, fork);
           return {signedBlocks};
         },
@@ -686,13 +686,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           if (signedBlocks.length === 0) throw new Error("No blocks provided.");
           const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            body: ArrayOf(ssz[fork].SignedBeaconBlock as Type<SignedBeaconBlock>).serialize(signedBlocks),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[];
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock as Type<SignedBeaconBlock>).deserialize(body);
           assertBlocksMatchFork(signedBlocks, fork);
           return {signedBlocks};
         },

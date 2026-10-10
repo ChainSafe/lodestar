@@ -5,6 +5,7 @@ import {
   ForkPostDeneb,
   ForkPostElectra,
   ForkPostGloas,
+  ForkPreGloas,
 } from "@lodestar/params";
 import {SignedExecutionPayloadEnvelope, SignedExecutionPayloadEnvelopeContents} from "../gloas/types.js";
 import {
@@ -74,8 +75,8 @@ export function isDenebBlockContents(
 
 export function isDenebSignedBlockContents(
   data: BeaconBlock | BlockContents | SignedBeaconBlock | SignedBlockContents
-): data is SignedBlockContents<ForkPostDeneb> {
-  return (data as SignedBlockContents<ForkPostDeneb>).kzgProofs !== undefined;
+): data is SignedBlockContents<ForkPostDeneb & ForkPreGloas> {
+  return (data as SignedBlockContents<ForkPostDeneb & ForkPreGloas>).kzgProofs !== undefined;
 }
 
 export function isElectraAttestation(attestation: Attestation): attestation is Attestation<ForkPostElectra> {

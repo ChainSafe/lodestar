@@ -1,6 +1,6 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
-import {ssz} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {BeaconDb} from "../../../../../../src/db/index.js";
 import {startIsolatedTmpBeaconDb} from "../../../../../utils/db.js";
 
@@ -43,6 +43,11 @@ describe("BlockArchiveRepository", () => {
 
     // make sure they are the same except for slot
     savedBlock2.message.slot = sampleBlock.message.slot;
-    expect(ssz.phase0.SignedBeaconBlock.equals(savedBlock1, savedBlock2)).toBe(true);
+    expect(
+      ssz.phase0.SignedBeaconBlock.equals(
+        savedBlock1 as phase0.SignedBeaconBlock,
+        savedBlock2 as phase0.SignedBeaconBlock
+      )
+    ).toBe(true);
   });
 });

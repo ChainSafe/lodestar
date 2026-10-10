@@ -8,6 +8,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
   EpochTransitionCache,
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
@@ -27,7 +28,9 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     const fork = state.config.getForkSeq(state.slot);
     epochFns.processEffectiveBalanceUpdates(fork, state, epochTransitionCache);
   },
-  eth1_data_reset: epochFns.processEth1DataReset,
+  eth1_data_reset: (state, epochTransitionCache) => {
+    epochFns.processEth1DataReset(state as CachedBeaconStatePreHeze, epochTransitionCache);
+  },
   historical_roots_update: epochFns.processHistoricalRootsUpdate,
   inactivity_updates: epochFns.processInactivityUpdates as EpochTransitionFn,
   justification_and_finalization: epochFns.processJustificationAndFinalization,

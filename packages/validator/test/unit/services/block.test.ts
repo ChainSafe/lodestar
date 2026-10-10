@@ -5,7 +5,7 @@ import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
-import {ProducedBlockSource, ssz} from "@lodestar/types";
+import {ProducedBlockSource, SignedBeaconBlock, SignedBlindedBeaconBlock, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
@@ -77,10 +77,13 @@ describe("BlockDutiesService", () => {
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
-      signature: signedBlock.signature,
-    }));
+    validatorStore.signBlock.mockImplementation(
+      async (_, block) =>
+        ({
+          message: block,
+          signature: signedBlock.signature,
+        }) as SignedBeaconBlock | SignedBlindedBeaconBlock
+    );
     validatorStore.getBuilderSelectionParams.mockReturnValue({
       selection: routes.validator.BuilderSelection.MaxProfit,
       boostFactor: BigInt(100),
@@ -160,10 +163,13 @@ describe("BlockDutiesService", () => {
 
     const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
-      signature: signedBlock.signature,
-    }));
+    validatorStore.signBlock.mockImplementation(
+      async (_, block) =>
+        ({
+          message: block,
+          signature: signedBlock.signature,
+        }) as SignedBeaconBlock | SignedBlindedBeaconBlock
+    );
     api.validator.produceBlockV3.mockResolvedValue(
       mockApiResponse({
         data: signedBlock.message,
@@ -231,10 +237,13 @@ describe("BlockDutiesService", () => {
     signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = 1;
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
-      signature: signedBlock.signature,
-    }));
+    validatorStore.signBlock.mockImplementation(
+      async (_, block) =>
+        ({
+          message: block,
+          signature: signedBlock.signature,
+        }) as SignedBeaconBlock | SignedBlindedBeaconBlock
+    );
     validatorStore.getBuilderSelectionParams.mockReturnValue({
       selection: routes.validator.BuilderSelection.ExecutionAlways,
       boostFactor: BigInt(0),
@@ -316,10 +325,13 @@ describe("BlockDutiesService", () => {
       signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = builderIndex;
       const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
       validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-      validatorStore.signBlock.mockImplementation(async (_, block) => ({
-        message: block,
-        signature: signedBlock.signature,
-      }));
+      validatorStore.signBlock.mockImplementation(
+        async (_, block) =>
+          ({
+            message: block,
+            signature: signedBlock.signature,
+          }) as SignedBeaconBlock | SignedBlindedBeaconBlock
+      );
       validatorStore.getBuilderSelectionParams.mockReturnValue({
         selection: routes.validator.BuilderSelection.ExecutionOnly,
         boostFactor: BigInt(0),

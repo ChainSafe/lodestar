@@ -20,6 +20,7 @@ import {
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
 import {capellaState} from "../../../src/testUtils/params.js";
+import {CachedBeaconStatePreHeze} from "../../../src/types.js";
 import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
 import {getNetworkCachedState} from "../../utils/networkCachedState.js";
 import {StateEpoch} from "../types.js";
@@ -115,7 +116,7 @@ function benchmarkCapellaEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks
   bench({
     id: `${stateId} - capella processEth1DataReset`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEth1DataReset(state, cache.value),
+    fn: (state) => processEth1DataReset(state as CachedBeaconStatePreHeze, cache.value),
   });
 
   bench({
