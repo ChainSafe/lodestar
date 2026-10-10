@@ -449,7 +449,7 @@ export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): 
  *   randaoReveal(96) + eth1Data(72) + graffiti(32)
  *   + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + deposits(4) + voluntaryExits(4)
  *   + syncAggregate(160) + blsToExecutionChanges(4) = 384 bytes
- * HEZE removes eth1Data(72) and deposits(4) from the body (EIP-8015) = 308 bytes
+ * HEZE removes eth1Data(72) and deposits(4) from the body = 308 bytes
  *
  * The 4-byte pointer at byte 568 (= 184+384) for GLOAS, or 492 (= 184+308) for HEZE, gives the offset
  * of SignedExecutionPayloadBid within BeaconBlockBody. parentBlockHash is at that bid's byte 100 (after offset+sig).

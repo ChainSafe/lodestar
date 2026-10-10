@@ -9,7 +9,7 @@ import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
 export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBeaconStateHeze {
   const {config} = stateGloas;
 
-  // [New in Heze:EIP8015] Check that the old deposit mechanism has been disabled
+  // The eth1 bridge deposits must be fully processed before the state can drop the eth1 fields
   if (BigInt(stateGloas.eth1DepositIndex) !== stateGloas.depositRequestsStartIndex) {
     throw new Error(
       `Cannot upgrade to Heze: eth1DepositIndex=${stateGloas.eth1DepositIndex} depositRequestsStartIndex=${stateGloas.depositRequestsStartIndex}`

@@ -147,7 +147,7 @@ export function applyDeposits(
   const fork = config.getForkSeq(state.slot);
 
   if (fork >= ForkSeq.heze) {
-    // The eth1 deposit tree no longer exists on the state (EIP-8015), apply the deposit data directly
+    // The eth1 deposit tree no longer exists on the state, so apply the deposit data directly
     for (const deposit of newDeposits) {
       applyDeposit(fork, state, deposit.data);
     }
@@ -359,8 +359,8 @@ export function initializeBeaconStateFromEth1(
       (executionPayloadHeader as CompositeViewDU<typeof ssz.fulu.ExecutionPayloadHeader>) ??
       ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
     if (fork < ForkSeq.heze) {
-      // The eth1 bridge is disabled from Fulu, so mark the transition as complete like the pyspec genesis helper.
-      // Required by the Heze upgrade check (EIP-8015).
+      // The eth1 bridge is disabled from Fulu, so mark the transition as complete like the pyspec genesis helper
+      // does. The Heze upgrade requires it.
       stateFulu.depositRequestsStartIndex = stateFulu.eth1Data.depositCount;
     }
   }

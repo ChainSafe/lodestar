@@ -1117,7 +1117,6 @@ export async function produceCommonBlockBody<T extends BlockType>(
   };
 
   if (ForkSeq[fork] < ForkSeq.heze) {
-    // Removed in Heze:EIP8015. The eth1 vote is a no-op since Fulu, so the state's eth1Data is echoed back.
     body.eth1Data = currentState.eth1Data;
     body.deposits = [];
   }

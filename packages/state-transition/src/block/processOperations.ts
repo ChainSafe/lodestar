@@ -43,7 +43,6 @@ export function processOperations(
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits.
   // From Fulu the eth1 bridge deposit mechanism was removed, so blocks must not contain any deposits.
-  // From Heze the deposits field no longer exists.
   if (fork < ForkSeq.heze) {
     const bodyPreHeze = body as BeaconBlockBody<ForkPreHeze>;
     const maxDeposits = fork >= ForkSeq.fulu ? 0 : getEth1DepositCount(state as CachedBeaconStatePreHeze);

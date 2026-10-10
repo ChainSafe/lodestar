@@ -61,10 +61,10 @@ export const DataColumnSidecar = gloasSsz.DataColumnSidecar;
 export const DataColumnSidecars = gloasSsz.DataColumnSidecars;
 
 const {
-  eth1Data: _eth1Data, // Removed in Heze:EIP8015
-  eth1DataVotes: _eth1DataVotes, // Removed in Heze:EIP8015
-  eth1DepositIndex: _eth1DepositIndex, // Removed in Heze:EIP8015
-  depositRequestsStartIndex: _depositRequestsStartIndex, // Removed in Heze:EIP8015
+  eth1Data: _eth1Data, // [Removed in Heze:EIP8015]
+  eth1DataVotes: _eth1DataVotes, // [Removed in Heze:EIP8015]
+  eth1DepositIndex: _eth1DepositIndex, // [Removed in Heze:EIP8015]
+  depositRequestsStartIndex: _depositRequestsStartIndex, // [Removed in Heze:EIP8015]
   ...gloasBeaconStateFields
 } = gloasSsz.BeaconState.fields;
 
@@ -78,8 +78,8 @@ export const BeaconState = new ProgressiveContainerType(
 );
 
 const {
-  eth1Data: _bodyEth1Data, // Removed in Heze:EIP8015
-  deposits: _deposits, // Removed in Heze:EIP8015
+  eth1Data: _bodyEth1Data, // [Removed in Heze:EIP8015]
+  deposits: _deposits, // [Removed in Heze:EIP8015]
   ...gloasBeaconBlockBodyFields
 } = gloasSsz.BeaconBlockBody.fields;
 

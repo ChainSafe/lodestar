@@ -332,7 +332,7 @@ export type SSZObjectType =
   | "contributionAndProof";
 
 export type CommonBlockBody = Omit<phase0.BeaconBlockBody, "eth1Data" | "deposits"> &
-  // Removed in Heze:EIP8015
+  // Only present pre-heze
   Partial<Pick<phase0.BeaconBlockBody, "eth1Data" | "deposits">> &
   Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
   Pick<altair.BeaconBlockBody, "syncAggregate">;
