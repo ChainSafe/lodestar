@@ -232,9 +232,9 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  if (options.chain.nativeStateTransition && config.GLOAS_FORK_EPOCH !== Infinity) {
+  if (options.chain.nativeStateTransition && config.HEZE_FORK_EPOCH !== Infinity) {
     throw Error(
-      `--chain.nativeStateTransition does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
+      `--chain.nativeStateTransition does not support Heze, which is scheduled at epoch ${config.HEZE_FORK_EPOCH}`
     );
   }
 

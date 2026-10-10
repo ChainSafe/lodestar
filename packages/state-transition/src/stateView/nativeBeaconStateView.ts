@@ -39,6 +39,7 @@ import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
+import {getStateSlotFromBytes} from "../util/sszBytes.js";
 import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
 import {
   BlockSTFInput,
@@ -47,7 +48,14 @@ import {
   IBeaconStateViewGloas,
   IBeaconStateViewLatestFork,
   IBeaconStateViewNative,
+  isStatePostGloas,
 } from "./interface.js";
+
+export function assertNativeForkSupported(config: BeaconConfig, slot: Slot): void {
+  if (config.getForkSeq(slot) > ForkSeq.gloas) {
+    throw Error(`Native state transition does not support ${config.getForkName(slot)}`);
+  }
+}
 
 /**
  * Wraps a native binding (the auto-generated JS interface produced by a `.node`
@@ -114,6 +122,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private cachedPendingConsolidationsCount: number | null = null;
   // fulu
   private cachedProposerLookahead: fulu.ProposerLookahead | null = null;
+  // gloas
+  private cachedLatestBlockHash: Bytes32 | null = null;
+  private cachedExecutionPayloadAvailability: BitArray | null = null;
+  private cachedLatestExecutionPayloadBid: ExecutionPayloadBid | null = null;
+  private cachedPayloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
+  private cachedBuilderPendingPayments: gloas.BuilderPendingPayments | null = null;
+  private cachedBuilderPendingWithdrawals: gloas.BuilderPendingWithdrawals | null = null;
+  private cachedBuildersLength: number | null = null;
   // Per-argument caches for argument-taking methods. The binding is treated as
   // immutable for the view's lifetime, so a given argument always yields the
   // same result. Maps grow only with touched arguments — typical call patterns
@@ -173,7 +189,11 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get executionPayloadAvailability(): BitArray {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    if (this.cachedExecutionPayloadAvailability === null) {
+      const {uint8Array, bitLen} = this.binding.executionPayloadAvailability;
+      this.cachedExecutionPayloadAvailability = new BitArray(uint8Array, bitLen);
+    }
+    return this.cachedExecutionPayloadAvailability;
   }
 
   // ─── phase0 ──────────────────────────────────────────────────────────────
@@ -594,6 +614,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     seedValidatorsBytes?: Uint8Array,
     opts?: {preloadValidatorsAndBalances?: boolean}
   ): IBeaconStateView {
+    assertNativeForkSupported(this.config, getStateSlotFromBytes(stateBytes));
     return new NativeBeaconStateView(this.config, this.binding.loadOtherState(stateBytes, seedValidatorsBytes, opts));
   }
 
@@ -659,6 +680,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     options: StateTransitionOpts,
     _modules: StateTransitionModules
   ): IBeaconStateView {
+    assertNativeForkSupported(this.config, block.message.slot);
     const isBlinded = isBlindedBeaconBlock(block.message);
     const signedBlockBytes =
       ssz ??
@@ -671,6 +693,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, _modules?: StateTransitionModules): IBeaconStateView {
+    assertNativeForkSupported(this.config, slot);
     return new NativeBeaconStateView(this.config, this.binding.processSlots(slot, opts));
   }
 
@@ -818,7 +841,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingDeposits(): electra.PendingDeposits {
     if (this.cachedPendingDeposits === null) {
-      this.cachedPendingDeposits = ssz.electra.PendingDeposits.deserialize(this.binding.pendingDeposits);
+      const type = this.forkSeq >= ForkSeq.gloas ? ssz.gloas.PendingDeposits : ssz.electra.PendingDeposits;
+      this.cachedPendingDeposits = type.deserialize(this.binding.pendingDeposits);
     }
     return this.cachedPendingDeposits;
   }
@@ -832,9 +856,9 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingPartialWithdrawals(): electra.PendingPartialWithdrawals {
     if (this.cachedPendingPartialWithdrawals === null) {
-      this.cachedPendingPartialWithdrawals = ssz.electra.PendingPartialWithdrawals.deserialize(
-        this.binding.pendingPartialWithdrawals
-      );
+      const type =
+        this.forkSeq >= ForkSeq.gloas ? ssz.gloas.PendingPartialWithdrawals : ssz.electra.PendingPartialWithdrawals;
+      this.cachedPendingPartialWithdrawals = type.deserialize(this.binding.pendingPartialWithdrawals);
     }
     return this.cachedPendingPartialWithdrawals;
   }
@@ -848,9 +872,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingConsolidations(): electra.PendingConsolidations {
     if (this.cachedPendingConsolidations === null) {
-      this.cachedPendingConsolidations = ssz.electra.PendingConsolidations.deserialize(
-        this.binding.pendingConsolidations
-      );
+      const type = this.forkSeq >= ForkSeq.gloas ? ssz.gloas.PendingConsolidations : ssz.electra.PendingConsolidations;
+      this.cachedPendingConsolidations = type.deserialize(this.binding.pendingConsolidations);
     }
     return this.cachedPendingConsolidations;
   }
@@ -875,60 +898,94 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     _maxBuilderDeposits: number,
     _maxDurationMs: number
   ): PreVerifyBuilderDepositsResult {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    // The native fork upgrade verifies directly; it does not maintain a warm-up cache.
+    return {
+      validBuilderSignaturesCount: 0,
+      invalidBuilderSignaturesCount: 0,
+      validValidatorSignaturesCount: 0,
+      invalidValidatorSignaturesCount: 0,
+      scannedPendingDeposits: 0,
+      totalCachedDeposits: 0,
+      totalBuilderPubkeys: 0,
+      pendingDepositsCount: this.pendingDepositsCount,
+    };
   }
 
   clearPreGloasBuilderDepositCache(): void {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    // The native implementation has no pre-Gloas deposit cache to clear.
   }
 
   // ─── gloas ───────────────────────────────────────────────────────────────
 
   get latestBlockHash(): Bytes32 {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    if (this.cachedLatestBlockHash === null) {
+      this.cachedLatestBlockHash = this.binding.latestBlockHash;
+    }
+    return this.cachedLatestBlockHash;
   }
 
   get latestExecutionPayloadBid(): ExecutionPayloadBid {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    if (this.cachedLatestExecutionPayloadBid === null) {
+      this.cachedLatestExecutionPayloadBid = this.binding.latestExecutionPayloadBid;
+    }
+    return this.cachedLatestExecutionPayloadBid;
   }
 
   get payloadExpectedWithdrawals(): capella.Withdrawal[] {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    if (this.cachedPayloadExpectedWithdrawals === null) {
+      this.cachedPayloadExpectedWithdrawals = this.binding.payloadExpectedWithdrawals;
+    }
+    return this.cachedPayloadExpectedWithdrawals;
   }
 
   get builderPendingPayments(): gloas.BuilderPendingPayments {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    if (this.cachedBuilderPendingPayments === null) {
+      this.cachedBuilderPendingPayments = this.binding.builderPendingPayments;
+    }
+    return this.cachedBuilderPendingPayments;
   }
 
   get builderPendingWithdrawals(): gloas.BuilderPendingWithdrawals {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    if (this.cachedBuilderPendingWithdrawals === null) {
+      this.cachedBuilderPendingWithdrawals = this.binding.builderPendingWithdrawals;
+    }
+    return this.cachedBuilderPendingWithdrawals;
   }
 
-  getBuilder(_index: BuilderIndex): gloas.Builder {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+  getBuilder(index: BuilderIndex): gloas.Builder {
+    return this.binding.getBuilder(index);
   }
 
   getBuildersLength(): number {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+    if (this.cachedBuildersLength === null) {
+      this.cachedBuildersLength = this.binding.getBuildersLength();
+    }
+    return this.cachedBuildersLength;
   }
 
-  canBuilderCoverBid(_builderIndex: BuilderIndex, _bidAmount: number): boolean {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+  canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
+    return this.binding.canBuilderCoverBid(builderIndex, bidAmount);
   }
 
-  getEpochPTCs(_epoch: Epoch): Uint32Array[] {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+  getEpochPTCs(epoch: Epoch): Uint32Array[] {
+    return this.binding.getEpochPTCs(epoch);
   }
 
-  getPayloadTimelinessCommittee(_slot: Slot): Uint32Array {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+  getPayloadTimelinessCommittee(slot: Slot): Uint32Array {
+    return this.binding.getPayloadTimelinessCommittee(slot);
   }
 
-  getIndicesInPayloadTimelinessCommittee(_validatorIndex: ValidatorIndex, _slot: Slot): number[] {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+  getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[] {
+    return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
   }
 
-  withParentPayloadApplied(_executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
-    throw new Error("NativeBeaconStateView does not support Gloas");
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
+    const bytes = ssz.gloas.ExecutionRequests.serialize(executionRequests);
+    const state = new NativeBeaconStateView(this.config, this.binding.withParentPayloadApplied(bytes));
+    if (!isStatePostGloas(state)) {
+      state.release();
+      throw Error("Expected Gloas state after applying the parent payload");
+    }
+    return state;
   }
 }

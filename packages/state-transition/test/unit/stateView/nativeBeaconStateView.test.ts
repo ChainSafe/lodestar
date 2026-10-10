@@ -16,15 +16,60 @@ describe("NativeBeaconStateView", () => {
     genesisValidatorsRoot
   );
 
-  it("throws for Gloas-only fields while native Gloas is unsupported", () => {
-    const binding = {} as IBeaconStateViewNative;
+  it("rejects Heze before invoking native slot processing or state loading", () => {
+    const hezeConfig = createBeaconConfig(
+      {
+        ...defaultChainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        HEZE_FORK_EPOCH: 0,
+      },
+      genesisValidatorsRoot
+    );
+    const binding = {processSlots: vi.fn(), loadOtherState: vi.fn()} as unknown as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(hezeConfig, binding);
+    expect(() => view.processSlots(0)).toThrow("does not support heze");
+    expect(() => view.loadOtherState(ssz.gloas.BeaconState.serialize(ssz.gloas.BeaconState.defaultValue()))).toThrow(
+      "does not support heze"
+    );
+    expect(binding.processSlots).not.toHaveBeenCalled();
+    expect(binding.loadOtherState).not.toHaveBeenCalled();
+  });
+
+  it("preserves Gloas availability bits and repeated PTC membership", () => {
+    const availability = {uint8Array: new Uint8Array([0b10000101]), bitLen: 8};
+    const binding = {
+      executionPayloadAvailability: availability,
+      getIndicesInPayloadTimelinessCommittee: () => [0, 3, 7],
+    } as unknown as IBeaconStateViewNative;
     const view = new NativeBeaconStateView(config, binding);
 
-    expect(() => view.executionPayloadAvailability).toThrow("NativeBeaconStateView does not support Gloas");
-    expect(() => view.latestBlockHash).toThrow("NativeBeaconStateView does not support Gloas");
-    expect(() => view.getIndicesInPayloadTimelinessCommittee(0, 0)).toThrow(
-      "NativeBeaconStateView does not support Gloas"
-    );
+    expect(view.executionPayloadAvailability.getTrueBitIndexes()).toEqual([0, 2, 7]);
+    expect(view.executionPayloadAvailability).toBe(view.executionPayloadAvailability);
+    expect(view.getIndicesInPayloadTimelinessCommittee(0, 0)).toEqual([0, 3, 7]);
+  });
+
+  it("serializes all parent request lists and returns a separately owned view", () => {
+    const requests = ssz.gloas.ExecutionRequests.defaultValue();
+    requests.builderDeposits.push(ssz.gloas.BuilderDepositRequest.defaultValue());
+    requests.builderExits.push(ssz.gloas.BuilderExitRequest.defaultValue());
+    const postBinding = {forkName: "gloas", release: vi.fn()} as unknown as IBeaconStateViewNative;
+    const binding = {
+      withParentPayloadApplied: vi.fn(() => postBinding),
+      release: vi.fn(),
+    } as unknown as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(config, binding);
+    const post = view.withParentPayloadApplied(requests);
+    const [bytes] = vi.mocked(binding.withParentPayloadApplied).mock.calls[0];
+    expect(ssz.gloas.ExecutionRequests.deserialize(bytes)).toEqual(requests);
+    post.release();
+    expect(postBinding.release).toHaveBeenCalledOnce();
+    expect(binding.release).not.toHaveBeenCalled();
   });
 
   it("caches forwarded properties so the binding is hit once", () => {
