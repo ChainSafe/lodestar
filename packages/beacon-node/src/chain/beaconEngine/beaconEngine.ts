@@ -17,15 +17,7 @@ import {
   UpdateHeadOpt,
 } from "@lodestar/fork-choice";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {
-  ForkName,
-  ForkPostGloas,
-  ForkSeq,
-  GENESIS_SLOT,
-  SLOTS_PER_EPOCH,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ForkName, ForkPostGloas, ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -101,7 +93,7 @@ import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequenc
 import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
-import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
+import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/verifyExecutionPayloadEnvelope.js";
@@ -109,7 +101,6 @@ import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from ".
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
 import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
-import {BlockErrorCode} from "../errors/index.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
 import {persistAnchorState} from "../initState.js";
 import {CommonBlockBody, FindHeadFnName} from "../interface.js";
@@ -145,41 +136,10 @@ import {ShufflingCache} from "../shufflingCache.js";
 import {FIFOBlockStateCache} from "../stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "../stateCache/persistentCheckpointsCache.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
-import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../validation/aggregateAndProof.js";
-import {
-  ApiAttestation,
-  AttestationValidationResult,
-  GossipAttestation,
-  validateApiAttestation,
-  validateGossipAttestationsSameAttData,
-} from "../validation/attestation.js";
-import {validateApiAttesterSlashing, validateGossipAttesterSlashing} from "../validation/attesterSlashing.js";
-import {validateGossipBlobSidecar} from "../validation/blobSidecar.js";
-import {GossipBlockValidationResult, validateGossipBlock, verifyBlockProposerSignature} from "../validation/block.js";
-import {
-  validateApiBlsToExecutionChange,
-  validateGossipBlsToExecutionChange,
-} from "../validation/blsToExecutionChange.js";
-import {
-  validateGossipFuluDataColumnSidecar,
-  validateGossipGloasDataColumnSidecar,
-} from "../validation/dataColumnSidecar.js";
-import {validateApiExecutionPayloadBid, validateGossipExecutionPayloadBid} from "../validation/executionPayloadBid.js";
-import {
-  validateApiExecutionPayloadEnvelope,
-  validateGossipExecutionPayloadEnvelope,
-} from "../validation/executionPayloadEnvelope.js";
-import {
-  PayloadAttestationValidationResult,
-  validateApiPayloadAttestationMessage,
-  validateGossipPayloadAttestationMessage,
-} from "../validation/payloadAttestationMessage.js";
-import {validateGossipProposerPreferences} from "../validation/proposerPreferences.js";
-import {validateApiProposerSlashing, validateGossipProposerSlashing} from "../validation/proposerSlashing.js";
-import {validateApiSyncCommittee, validateGossipSyncCommittee} from "../validation/syncCommittee.js";
-import {validateSyncCommitteeGossipContributionAndProof} from "../validation/syncCommitteeContributionAndProof.js";
+import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
+import {GossipBlockValidationResult, verifyBlockProposerSignature} from "../validation/block.js";
+import * as proposerSlashingValidation from "../validation/proposerSlashing.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
-import {validateApiVoluntaryExit, validateGossipVoluntaryExit} from "../validation/voluntaryExit.js";
 import {
   OpSource,
   ValidatorMonitor,
@@ -217,11 +177,42 @@ import {ChainViewPublisher} from "./chainView.js";
 import {getAttesterDuties, getProposerDuties, getPtcDuties, getSyncCommitteeDuties} from "./duties.js";
 import {BeaconEngineEvent, BeaconEngineEventBus} from "./events.js";
 import {
-  GossipValidationResult,
-  GossipValidationStatus,
-  fromResult,
-  runGossipValidation,
-} from "./gossipValidationResult.js";
+  validateApiAggregateAndProof,
+  validateApiAttestation,
+  validateGossipAggregateAndProof,
+  validateGossipAttestationsSameAttData,
+} from "./gossipValidation/attestation.js";
+import {validateGossipBlobSidecar, validateGossipBlock} from "./gossipValidation/block.js";
+import {
+  validateGossipFuluDataColumnSidecar,
+  validateGossipGloasDataColumnSidecar,
+} from "./gossipValidation/dataColumnSidecar.js";
+import {
+  validateApiExecutionPayloadBid,
+  validateApiExecutionPayloadEnvelope,
+  validateApiPayloadAttestationMessage,
+  validateGossipExecutionPayloadBid,
+  validateGossipExecutionPayloadEnvelope,
+  validateGossipPayloadAttestationMessage,
+} from "./gossipValidation/executionPayload.js";
+import {
+  validateApiAttesterSlashing,
+  validateApiBlsToExecutionChange,
+  validateApiProposerSlashing,
+  validateApiVoluntaryExit,
+  validateGossipAttesterSlashing,
+  validateGossipBlsToExecutionChange,
+  validateGossipProposerPreferences,
+  validateGossipProposerSlashing,
+  validateGossipVoluntaryExit,
+} from "./gossipValidation/operations.js";
+import {
+  validateApiSyncCommittee,
+  validateApiSyncCommitteeContributionAndProof,
+  validateGossipSyncCommittee,
+  validateSyncCommitteeGossipContributionAndProof,
+} from "./gossipValidation/syncCommittee.js";
+import {GossipValidationResult} from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
 import {importExecutionPayload} from "./importExecutionPayload.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
@@ -1090,7 +1081,7 @@ export class BeaconEngine implements IBeaconEngine {
 
   // Gossip validation flows. Each method takes the message's SSZ bytes first (unused by this JS impl;
   // present for the native engine's bytes-first contract) and delegates to the validation logic in
-  // `../validation/*` rebound onto the engine.
+  // `./gossipValidation/*` rebound onto the engine.
   async validateGossipBlock(
     _blockBytes: Uint8Array,
     signedBlock: SignedBeaconBlock,
@@ -1098,67 +1089,7 @@ export class BeaconEngine implements IBeaconEngine {
     // API publication also call this with no seenTimestampSec
     seenTimestampSec?: number
   ): Promise<GossipValidationResult<GossipBlockValidationResult>> {
-    const payloadBlockRoot = isForkPostGloas(fork)
-      ? toRootHex(this.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message))
-      : null;
-    // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#validateBeaconBlock.
-    // Seed on entry, including blocks whose parent is still unknown.
-    if (payloadBlockRoot !== null) {
-      this.seenPayloadEnvelopeInputCache.add({
-        blockRootHex: payloadBlockRoot,
-        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
-        forkName: fork,
-      });
-    }
-    let result: GossipValidationResult<GossipBlockValidationResult>;
-    try {
-      result = await runGossipValidation(() => validateGossipBlock.call(this, signedBlock, fork));
-    } catch (error) {
-      if (payloadBlockRoot !== null && seenTimestampSec !== undefined) {
-        this.seenPayloadEnvelopeInputCache.remove(payloadBlockRoot);
-      }
-      throw error;
-    }
-    if (
-      payloadBlockRoot !== null &&
-      seenTimestampSec !== undefined &&
-      (result.status === GossipValidationStatus.Reject ||
-        (result.status === GossipValidationStatus.Ignore &&
-          result.code === BlockErrorCode.REPEAT_PROPOSAL &&
-          !this.hasObservedBlockRoot(signedBlock.message.slot, signedBlock.message.proposerIndex, payloadBlockRoot)))
-    ) {
-      this.seenPayloadEnvelopeInputCache.remove(payloadBlockRoot);
-    }
-    if (this.validatorMonitor && seenTimestampSec !== undefined) {
-      const {slot, proposerIndex} = signedBlock.message;
-      const blockRoot =
-        payloadBlockRoot ?? toRootHex(this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
-      const registerBlock = (): void => {
-        if (this.closed) return;
-        try {
-          this.validatorMonitor?.registerBeaconBlock(OpSource.gossip, this.clock.secFromSlot(slot, seenTimestampSec), {
-            slot,
-            proposerIndex,
-            blockRoot,
-          });
-        } catch (e) {
-          this.logger.debug("Error monitoring gossip block", {slot, root: blockRoot}, e as Error);
-        }
-      };
-      // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#handleValidBeaconBlock.
-      // [beacon-engine] deviation: accepted-block monitoring has its own deferred callback, preceding
-      // the facade import handler. Observed siblings are still monitored before returning IGNORE.
-      if (result.status === GossipValidationStatus.Accept) {
-        callInNextEventLoop(registerBlock);
-      } else if (
-        result.status === GossipValidationStatus.Ignore &&
-        result.code === BlockErrorCode.REPEAT_PROPOSAL &&
-        this.hasObservedBlockRoot(slot, proposerIndex, blockRoot)
-      ) {
-        registerBlock();
-      }
-    }
-    return result;
+    return validateGossipBlock.call(this, () => this.closed, _blockBytes, signedBlock, fork, seenTimestampSec);
   }
 
   validateGossipSyncCommittee(
@@ -1166,19 +1097,7 @@ export class BeaconEngine implements IBeaconEngine {
     syncCommittee: altair.SyncCommitteeMessage,
     subnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(async () => {
-      const result = await validateGossipSyncCommittee.call(this, syncCommittee, subnet);
-      // Insert for ALL positions this validator holds in the subcommittee (moved from the gossip handler).
-      // The subcommittee indices are consumed here internally; the facade only needs the verdict.
-      try {
-        for (const indexInSubcommittee of result.indicesInSubcommittee) {
-          const insertOutcome = this.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
-          this.metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
-        }
-      } catch (e) {
-        this.logger.debug("Error adding to syncCommittee pool", {subnet}, e as Error);
-      }
-    });
+    return validateGossipSyncCommittee.call(this, _syncCommitteeBytes, syncCommittee, subnet);
   }
 
   // Returns the subnets to broadcast to (the facade publishes). Resolves committee membership + pool insert
@@ -1187,30 +1106,7 @@ export class BeaconEngine implements IBeaconEngine {
     _syncCommitteeBytes: Uint8Array,
     syncCommittee: altair.SyncCommitteeMessage
   ): Promise<GossipValidationResult<{subnets: number[]}>> {
-    return runGossipValidation(async () => {
-      const state = this.getHeadState();
-      // The node's own validators — skip silently if this validator isn't in the sync committee.
-      const indexesInCommittee = isStatePostAltair(state)
-        ? state.getIndexedSyncCommittee(syncCommittee.slot).validatorIndexMap.get(syncCommittee.validatorIndex)
-        : undefined;
-      if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
-        return {subnets: []};
-      }
-      // Verify signature only, all other data is very likely correct since this node produced the signature.
-      await validateApiSyncCommittee.call(this, syncCommittee);
-      // The same validator can appear multiple times in the committee (and per subnet). Insert each position
-      // (priority: allow late API messages into the pool) and collect the subnets for the facade to publish.
-      const subnets: number[] = [];
-      for (const indexInCommittee of indexesInCommittee) {
-        const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
-        const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-        this.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee, true);
-        if (subnets.length === 0 || subnets.at(-1) !== subnet) {
-          subnets.push(subnet);
-        }
-      }
-      return {subnets};
-    });
+    return validateApiSyncCommittee.call(this, _syncCommitteeBytes, syncCommittee);
   }
 
   validateSyncCommitteeGossipContributionAndProof(
@@ -1218,74 +1114,20 @@ export class BeaconEngine implements IBeaconEngine {
     signedContributionAndProof: altair.SignedContributionAndProof,
     skipValidationKnownParticipants = false
   ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
-    return runGossipValidation(async () => {
-      const result = await validateSyncCommitteeGossipContributionAndProof.call(
-        this,
-        signedContributionAndProof,
-        skipValidationKnownParticipants
-      );
-      // Insert into the pool on Accept (moved from the gossip handler).
-      this.insertSyncContributionOnAccept(
-        signedContributionAndProof,
-        result.syncCommitteeParticipantIndices.length,
-        "gossip"
-      );
-      if (this.validatorMonitor) {
-        callInNextEventLoop(() => {
-          if (this.closed) return;
-          try {
-            this.validatorMonitor?.registerGossipSyncContributionAndProof(
-              signedContributionAndProof.message,
-              result.syncCommitteeParticipantIndices
-            );
-          } catch (e) {
-            this.logger.debug(
-              "Error monitoring gossip contribution and proof",
-              {slot: signedContributionAndProof.message.contribution.slot},
-              e as Error
-            );
-          }
-        });
-      }
-      return result;
-    });
+    return validateSyncCommitteeGossipContributionAndProof.call(
+      this,
+      () => this.closed,
+      _contributionBytes,
+      signedContributionAndProof,
+      skipValidationKnownParticipants
+    );
   }
 
   validateApiSyncCommitteeContributionAndProof(
     _contributionBytes: Uint8Array,
     signedContributionAndProof: altair.SignedContributionAndProof
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(async () => {
-      // API path skips the known-participants check (the signature object is produced by this node).
-      const result = await validateSyncCommitteeGossipContributionAndProof.call(this, signedContributionAndProof, true);
-      // Insert into the pool on Accept (moved from the API handler); the facade only needs the verdict.
-      this.insertSyncContributionOnAccept(
-        signedContributionAndProof,
-        result.syncCommitteeParticipantIndices.length,
-        "api"
-      );
-    });
-  }
-
-  /** Shared post-validation pool insert for a valid sync contribution (gossip swallows errors; API does not). */
-  private insertSyncContributionOnAccept(
-    signed: altair.SignedContributionAndProof,
-    syncCommitteeParticipants: number,
-    source: "gossip" | "api"
-  ): void {
-    const metric = this.metrics?.opPool.syncContributionAndProofPool;
-    if (source === "gossip") {
-      try {
-        const insertOutcome = this.syncContributionAndProofPool.add(signed.message, syncCommitteeParticipants);
-        metric?.gossipInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        this.logger.error("Error adding to contributionAndProof pool", {}, e as Error);
-      }
-    } else {
-      // API allows late messages into the pool (priority) and surfaces a pool error as a submit failure.
-      const insertOutcome = this.syncContributionAndProofPool.add(signed.message, syncCommitteeParticipants, true);
-      metric?.apiInsertOutcome.inc({insertOutcome});
-    }
+    return validateApiSyncCommitteeContributionAndProof.call(this, _contributionBytes, signedContributionAndProof);
   }
 
   validateGossipBlobSidecar(
@@ -1294,7 +1136,7 @@ export class BeaconEngine implements IBeaconEngine {
     blobSidecar: deneb.BlobSidecar,
     subnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() => validateGossipBlobSidecar.call(this, fork, blobSidecar, subnet));
+    return validateGossipBlobSidecar.call(this, _blobBytes, fork, blobSidecar, subnet);
   }
 
   validateGossipFuluDataColumnSidecar(
@@ -1302,9 +1144,7 @@ export class BeaconEngine implements IBeaconEngine {
     dataColumnSidecar: fulu.DataColumnSidecar,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() =>
-      validateGossipFuluDataColumnSidecar.call(this, dataColumnSidecar, gossipSubnet, this.metrics)
-    );
+    return validateGossipFuluDataColumnSidecar.call(this, _dataColumnBytes, dataColumnSidecar, gossipSubnet);
   }
 
   validateGossipGloasDataColumnSidecar(
@@ -1312,72 +1152,21 @@ export class BeaconEngine implements IBeaconEngine {
     dataColumnSidecar: gloas.DataColumnSidecar,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() =>
-      validateGossipGloasDataColumnSidecar.call(this, dataColumnSidecar, gossipSubnet, this.metrics)
-    );
+    return validateGossipGloasDataColumnSidecar.call(this, _dataColumnBytes, dataColumnSidecar, gossipSubnet);
   }
 
   validateGossipPayloadAttestationMessage(
     _payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(async () => {
-      const result = await validateGossipPayloadAttestationMessage.call(this, payloadAttestationMessage);
-      // Insert into the pool + notify fork choice on Accept (moved from the gossip handler). The rich result
-      // is consumed here internally; the facade only needs the Accept/Reject verdict, so nothing is returned.
-      // TODO - beacon engine: schedule these side effects after the gossip verdict, as upstream does.
-      try {
-        this.insertPayloadAttestationOnAccept(payloadAttestationMessage, result, "gossip");
-      } catch (e) {
-        this.logger.debug(
-          "Error handling gossip payload attestation message",
-          {slot: payloadAttestationMessage.data.slot, root: toRootHex(payloadAttestationMessage.data.beaconBlockRoot)},
-          e as Error
-        );
-      }
-    });
+    return validateGossipPayloadAttestationMessage.call(this, _payloadAttestationBytes, payloadAttestationMessage);
   }
 
   validateApiPayloadAttestationMessage(
     _payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(async () => {
-      const result = await validateApiPayloadAttestationMessage.call(this, payloadAttestationMessage);
-      // Insert into the pool + notify fork choice on Accept (moved from the API handler); nothing returned.
-      this.insertPayloadAttestationOnAccept(payloadAttestationMessage, result, "api");
-    });
-  }
-
-  /** Shared post-validation side-effects for a valid payload attestation (pool insert + PTC fork-choice notify). */
-  private insertPayloadAttestationOnAccept(
-    message: gloas.PayloadAttestationMessage,
-    result: PayloadAttestationValidationResult,
-    source: "gossip" | "api"
-  ): void {
-    const {attDataRootHex, validatorCommitteeIndices} = result;
-    if (source === "gossip") {
-      const nextSlotProposer = this.getHeadState().getBeaconProposer(message.data.slot + 1);
-      if (this.beaconProposerCache.get(nextSlotProposer) !== undefined) {
-        try {
-          const insertOutcome = this.payloadAttestationPool.add(message, attDataRootHex, validatorCommitteeIndices);
-          this.metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
-        } catch (e) {
-          this.logger.debug("Error adding to payloadAttestation pool", {}, e as Error);
-        }
-      }
-    } else {
-      // API path does not swallow (matches prior handler — a pool error surfaces as a submit failure).
-      const insertOutcome = this.payloadAttestationPool.add(message, attDataRootHex, validatorCommitteeIndices);
-      this.metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
-    }
-    this.forkChoice.notifyPtcMessages(
-      toRootHex(message.data.beaconBlockRoot),
-      message.data.slot,
-      validatorCommitteeIndices,
-      message.data.payloadPresent,
-      message.data.blobDataAvailable
-    );
+    return validateApiPayloadAttestationMessage.call(this, _payloadAttestationBytes, payloadAttestationMessage);
   }
 
   // The batch attestation validator already returns `Result<T>[]` (caught internally, never throws out);
@@ -1388,71 +1177,21 @@ export class BeaconEngine implements IBeaconEngine {
     attestations: GossipAttestation[],
     seenTimestampSecs: number[]
   ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}> {
-    const {results, batchableBls} = await validateGossipAttestationsSameAttData.call(this, fork, attestations);
-    const mapped = results.map(fromResult);
-    // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#getBatchHandlers.
-    // Consult current duties after validation. [beacon-engine] deviation: pool/fork-choice writes
-    // still precede the returned verdict instead of running in the deferred network handler.
-    for (const res of mapped) {
-      if (res.status !== GossipValidationStatus.Accept) {
-        continue;
-      }
-      const value = res.value;
-      if (this.aggregatorTracker.shouldAggregate(value.subnet, value.indexedAttestation.data.slot)) {
-        try {
-          const insertOutcome = this.attestationPool.add(
-            value.committeeIndex,
-            value.attestation,
-            value.attDataRootHex,
-            value.validatorCommitteeIndex,
-            value.committeeSize
-          );
-          this.metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
-        } catch (e) {
-          this.logger.error("Error adding unaggregated attestation to pool", {subnet: value.subnet}, e as Error);
-        }
-      }
-      if (!this.opts.dontSendGossipAttestationsToForkchoice) {
-        try {
-          this.forkChoice.onAttestation(value.indexedAttestation, value.attDataRootHex);
-        } catch (e) {
-          this.logger.debug(
-            "Error adding gossip unaggregated attestation to forkchoice",
-            {subnet: value.subnet},
-            e as Error
-          );
-        }
-      }
-    }
-    // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#getBatchHandlers.
-    if (this.validatorMonitor) {
-      callInNextEventLoop(() => {
-        if (this.closed) return;
-        for (const [i, res] of mapped.entries()) {
-          if (res.status !== GossipValidationStatus.Accept) continue;
-          try {
-            this.validatorMonitor?.registerGossipUnaggregatedAttestation(
-              seenTimestampSecs[i],
-              res.value.indexedAttestation
-            );
-          } catch (e) {
-            this.logger.debug(
-              "Error monitoring gossip attestation",
-              {slot: res.value.indexedAttestation.data.slot},
-              e as Error
-            );
-          }
-        }
-      });
-    }
-    return {results: mapped, batchableBls};
+    return validateGossipAttestationsSameAttData.call(
+      this,
+      () => this.closed,
+      this.aggregatorTracker,
+      fork,
+      attestations,
+      seenTimestampSecs
+    );
   }
 
   validateApiAttestation(
     fork: ForkName,
     attestationOrBytes: ApiAttestation
   ): Promise<GossipValidationResult<AttestationValidationResult>> {
-    return runGossipValidation(() => validateApiAttestation.call(this, fork, attestationOrBytes));
+    return validateApiAttestation.call(this, fork, attestationOrBytes);
   }
 
   validateGossipAggregateAndProof(
@@ -1461,49 +1200,14 @@ export class BeaconEngine implements IBeaconEngine {
     signedAggregateAndProof: SignedAggregateAndProof,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return runGossipValidation(async () => {
-      const result = await validateGossipAggregateAndProof.call(this, fork, signedAggregateAndProof, aggregateBytes);
-      // Insert into the aggregated-attestation pool on Accept (moved from the gossip handler).
-      const insertOutcome = this.aggregatedAttestationPool.add(
-        signedAggregateAndProof.message.aggregate,
-        result.attDataRootHex,
-        result.indexedAttestation.attestingIndices.length,
-        result.committeeValidatorIndices
-      );
-      this.metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
-      // Fork-choice write on Accept (moved from the gossip handler). Contain errors — a fork-choice error
-      // must not flip the gossip verdict.
-      if (!this.opts.dontSendGossipAttestationsToForkchoice) {
-        try {
-          this.forkChoice.onAttestation(result.indexedAttestation, result.attDataRootHex);
-        } catch (e) {
-          this.logger.debug(
-            "Error adding gossip aggregated attestation to forkchoice",
-            {slot: result.indexedAttestation.data.slot},
-            e as Error
-          );
-        }
-      }
-      if (this.validatorMonitor) {
-        callInNextEventLoop(() => {
-          if (this.closed) return;
-          try {
-            this.validatorMonitor?.registerGossipAggregatedAttestation(
-              seenTimestampSec,
-              signedAggregateAndProof,
-              result.indexedAttestation
-            );
-          } catch (e) {
-            this.logger.debug(
-              "Error monitoring gossip aggregate and proof",
-              {slot: result.indexedAttestation.data.slot},
-              e as Error
-            );
-          }
-        });
-      }
-      return {indexedAttestation: result.indexedAttestation};
-    });
+    return validateGossipAggregateAndProof.call(
+      this,
+      () => this.closed,
+      aggregateBytes,
+      fork,
+      signedAggregateAndProof,
+      seenTimestampSec
+    );
   }
 
   validateApiAggregateAndProof(
@@ -1511,18 +1215,7 @@ export class BeaconEngine implements IBeaconEngine {
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return runGossipValidation(async () => {
-      const result = await validateApiAggregateAndProof.call(this, fork, signedAggregateAndProof);
-      // Insert into the aggregated-attestation pool on Accept (moved from the API handler).
-      const insertOutcome = this.aggregatedAttestationPool.add(
-        signedAggregateAndProof.message.aggregate,
-        result.attDataRootHex,
-        result.indexedAttestation.attestingIndices.length,
-        result.committeeValidatorIndices
-      );
-      this.metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
-      return {indexedAttestation: result.indexedAttestation};
-    });
+    return validateApiAggregateAndProof.call(this, _aggregateBytes, fork, signedAggregateAndProof);
   }
 
   validateGossipExecutionPayloadEnvelope(
@@ -1530,28 +1223,7 @@ export class BeaconEngine implements IBeaconEngine {
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
     source: SourceMeta
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(async () => {
-      await validateGossipExecutionPayloadEnvelope.call(this, executionPayloadEnvelope);
-      this.seenPayloadEnvelopeInputCache
-        .get(toRootHex(executionPayloadEnvelope.message.beaconBlockRoot))
-        ?.addPayloadEnvelope({
-          envelope: executionPayloadEnvelope,
-          ...source,
-        });
-      // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#execution_payload.
-      if (source.source === PayloadEnvelopeInputSource.gossip && this.validatorMonitor) {
-        const slot = executionPayloadEnvelope.message.payload.slotNumber;
-        try {
-          this.validatorMonitor.registerExecutionPayloadEnvelope(
-            OpSource.gossip,
-            this.clock.secFromSlot(slot, source.seenTimestampSec),
-            executionPayloadEnvelope
-          );
-        } catch (e) {
-          this.logger.debug("Error monitoring gossip execution payload envelope", {slot}, e as Error);
-        }
-      }
-    });
+    return validateGossipExecutionPayloadEnvelope.call(this, _envelopeBytes, executionPayloadEnvelope, source);
   }
 
   validateApiExecutionPayloadEnvelope(
@@ -1559,16 +1231,7 @@ export class BeaconEngine implements IBeaconEngine {
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(async () => {
-      await validateApiExecutionPayloadEnvelope.call(this, executionPayloadEnvelope);
-      this.seenPayloadEnvelopeInputCache
-        .get(toRootHex(executionPayloadEnvelope.message.beaconBlockRoot))
-        ?.addPayloadEnvelope({
-          envelope: executionPayloadEnvelope,
-          source: PayloadEnvelopeInputSource.api,
-          seenTimestampSec,
-        });
-    });
+    return validateApiExecutionPayloadEnvelope.call(this, _envelopeBytes, executionPayloadEnvelope, seenTimestampSec);
   }
 
   validateGossipExecutionPayloadBid(
@@ -1576,61 +1239,27 @@ export class BeaconEngine implements IBeaconEngine {
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
-    return runGossipValidation(async () => {
-      const result = await validateGossipExecutionPayloadBid.call(this, signedExecutionPayloadBid);
-      // TODO - beacon engine: reconcile deferred gossip side effects with upstream before completing this merge.
-      // Insert into the bid pool on Accept (moved from the gossip handler).
-      try {
-        const insertOutcome = this.executionPayloadBidPool.add(
-          signedExecutionPayloadBid,
-          Math.floor(this.clock.secFromSlot(signedExecutionPayloadBid.message.slot, seenTimestampSec) * 1000)
-        );
-        this.metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
-        // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#execution_payload_bid.
-        if (this.validatorMonitor) {
-          callInNextEventLoop(() => {
-            if (this.closed) return;
-            try {
-              this.validatorMonitor?.registerExecutionPayloadBid(
-                OpSource.gossip,
-                result.proposerIndex,
-                signedExecutionPayloadBid.message
-              );
-            } catch (e) {
-              this.logger.debug(
-                "Error monitoring gossip execution payload bid",
-                {slot: signedExecutionPayloadBid.message.slot},
-                e as Error
-              );
-            }
-          });
-        }
-      } catch (e) {
-        this.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
-      return result;
-    });
+    return validateGossipExecutionPayloadBid.call(
+      this,
+      () => this.closed,
+      _bidBytes,
+      signedExecutionPayloadBid,
+      seenTimestampSec
+    );
   }
 
   validateApiExecutionPayloadBid(
     _bidBytes: Uint8Array,
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() => validateApiExecutionPayloadBid.call(this, signedExecutionPayloadBid));
+    return validateApiExecutionPayloadBid.call(this, _bidBytes, signedExecutionPayloadBid);
   }
 
   async validateGossipProposerPreferences(
     _preferencesBytes: Uint8Array,
     signedProposerPreferences: gloas.SignedProposerPreferences
   ): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() =>
-      validateGossipProposerPreferences.call(this, signedProposerPreferences)
-    );
-    // Insert on Accept — the pool is engine-internal, so the facade (gossip handler / API) no longer adds.
-    if (res.status === GossipValidationStatus.Accept) {
-      this.proposerPreferencesPool.add(signedProposerPreferences);
-    }
-    return res;
+    return validateGossipProposerPreferences.call(this, _preferencesBytes, signedProposerPreferences);
   }
 
   // --- Op pool: gossip validate (+ insert on Accept) / API validate (throws, + insert) / REST reads ---
@@ -1641,66 +1270,31 @@ export class BeaconEngine implements IBeaconEngine {
     attesterSlashing: AttesterSlashing,
     fork: ForkName
   ): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() => validateGossipAttesterSlashing.call(this, attesterSlashing));
-    if (res.status === GossipValidationStatus.Accept) {
-      // Contain insert failures — a pool error must not flip the gossip verdict (matches prior handler).
-      try {
-        this.opPool.insertAttesterSlashing(fork, attesterSlashing, res.value);
-        this.forkChoice.onAttesterSlashing(attesterSlashing);
-      } catch (e) {
-        this.logger.error("Error adding attesterSlashing to pool", {}, e as Error);
-      }
-    }
-    return res.status === GossipValidationStatus.Accept ? {...res, value: undefined} : res;
+    return validateGossipAttesterSlashing.call(this, attesterSlashing, fork);
   }
 
   async validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void> {
-    const verifiedDomains = await validateApiAttesterSlashing.call(this, attesterSlashing);
-    this.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
+    return validateApiAttesterSlashing.call(this, attesterSlashing, fork);
   }
 
   async validateGossipProposerSlashing(
     proposerSlashing: phase0.ProposerSlashing
   ): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() => validateGossipProposerSlashing.call(this, proposerSlashing));
-    if (res.status === GossipValidationStatus.Accept) {
-      try {
-        this.opPool.insertProposerSlashing(proposerSlashing, res.value);
-      } catch (e) {
-        this.logger.error("Error adding proposerSlashing to pool", {}, e as Error);
-      }
-    }
-    return res.status === GossipValidationStatus.Accept ? {...res, value: undefined} : res;
+    return validateGossipProposerSlashing.call(this, proposerSlashing);
   }
 
   async validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    const verifiedDomain = await validateApiProposerSlashing.call(this, proposerSlashing);
-    this.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
+    return validateApiProposerSlashing.call(this, proposerSlashing);
   }
 
   async validateGossipVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() => validateGossipVoluntaryExit.call(this, voluntaryExit));
-    if (res.status === GossipValidationStatus.Accept) {
-      try {
-        this.opPool.insertVoluntaryExit(voluntaryExit);
-      } catch (e) {
-        this.logger.error("Error adding voluntaryExit to pool", {}, e as Error);
-      }
-    }
-    return res;
+    return validateGossipVoluntaryExit.call(this, voluntaryExit);
   }
 
   async validateApiVoluntaryExit(
     voluntaryExit: phase0.SignedVoluntaryExit
   ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}> {
-    const result = await validateApiVoluntaryExit.call(this, voluntaryExit);
-    if (result.status === "deferred")
-      return {
-        ...result,
-        inserted: this.deferredVoluntaryExitPool.insert(voluntaryExit, result.validity, this.clock.currentEpoch),
-      };
-    this.opPool.insertVoluntaryExit(voluntaryExit);
-    return result;
+    return validateApiVoluntaryExit.call(this, voluntaryExit);
   }
 
   drainDeferredVoluntaryExits(): phase0.SignedVoluntaryExit[] {
@@ -1714,23 +1308,14 @@ export class BeaconEngine implements IBeaconEngine {
   async validateGossipBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange
   ): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() => validateGossipBlsToExecutionChange.call(this, blsToExecutionChange));
-    if (res.status === GossipValidationStatus.Accept) {
-      try {
-        this.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-      } catch (e) {
-        this.logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
-      }
-    }
-    return res;
+    return validateGossipBlsToExecutionChange.call(this, blsToExecutionChange);
   }
 
   async validateApiBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
     preCapella: boolean
   ): Promise<void> {
-    await validateApiBlsToExecutionChange.call(this, blsToExecutionChange);
-    this.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
+    return validateApiBlsToExecutionChange.call(this, blsToExecutionChange, preCapella);
   }
 
   getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): gloas.SignedProposerPreferences[] {
@@ -2645,7 +2230,10 @@ export class BeaconEngine implements IBeaconEngine {
       };
 
       try {
-        const verifiedDomain = await validateApiProposerSlashing.call(this, proposerSlashing);
+        const verifiedDomain = await proposerSlashingValidation.validateApiProposerSlashing.call(
+          this,
+          proposerSlashing
+        );
         this.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
       } catch (e) {
         this.logger.debug("Produced proposer slashing is not valid", {slot: blockSlot, proposerIndex}, e as Error);

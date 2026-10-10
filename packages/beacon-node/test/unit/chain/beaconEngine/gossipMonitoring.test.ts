@@ -134,6 +134,23 @@ describe("BeaconEngine gossip monitoring", () => {
     expect(observed).not.toHaveBeenCalled();
   });
 
+  it("skips deferred block monitoring when the engine closes after validation", async () => {
+    vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
+    const observed = vi.spyOn(monitor, "registerBeaconBlock");
+    const result = await engine.validateGossipBlock(
+      new Uint8Array(),
+      ssz.phase0.SignedBeaconBlock.defaultValue(),
+      ForkName.phase0,
+      1
+    );
+
+    expect(result.status).toBe(GossipValidationStatus.Accept);
+    expect(observed).not.toHaveBeenCalled();
+    await engine.close();
+    await vi.runAllTimersAsync();
+    expect(observed).not.toHaveBeenCalled();
+  });
+
   it("isolates block monitor failures from the accepted verdict", async () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
     vi.spyOn(monitor, "registerBeaconBlock").mockImplementation(() => {
