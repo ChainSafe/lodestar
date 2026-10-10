@@ -57,7 +57,7 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainView} from "./chainView/chainView.js";
-import {ChainViewBlock, ChainViewUpdate} from "./chainView/interface.js";
+import {ChainViewBlock, ChainViewUpdate, IChainView} from "./chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -249,6 +249,7 @@ export class BeaconChain implements IBeaconChain {
     this.builderApiClient = modules.builderApiClient;
     this.chainView = new ChainView(beaconEngine.getChainViewSnapshot(), logger);
     beaconEngine.events.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
+    beaconEngine.events.on(BeaconEngineEvent.fatalError, this.onEngineFatalError);
     beaconEngine.events.on(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
@@ -366,6 +367,7 @@ export class BeaconChain implements IBeaconChain {
     await this.beaconEngine.close();
     await this.bls.close();
     this.beaconEngine.events.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
+    this.beaconEngine.events.off(BeaconEngineEvent.fatalError, this.onEngineFatalError);
     this.beaconEngine.events.off(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
 
     // Since we don't persist unfinalized fork-choice,
@@ -379,6 +381,10 @@ export class BeaconChain implements IBeaconChain {
 
   pruneChainView(finalized: CheckpointWithHex): void {
     this.chainView.prune(finalized);
+  }
+
+  getFinalizedBlockSnapshot(root: RootHex): ReturnType<IChainView["getFinalizedBlockSnapshot"]> {
+    return this.chainView.getFinalizedBlockSnapshot(root);
   }
 
   getHead(): ChainViewBlock {
@@ -961,6 +967,10 @@ export class BeaconChain implements IBeaconChain {
     }
   };
 
+  private onEngineFatalError = (error: Error): void => {
+    this.processShutdownCallback(error);
+  };
+
   private onChainViewUpdated = (update: ChainViewUpdate): void => {
     const previousJustified = this.getJustifiedCheckpoint();
     const previousFinalized = this.getFinalizedCheckpoint();
@@ -1063,11 +1073,6 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Clock slot", {slot});
 
     // CRITICAL UPDATE
-    const irrecoverableError = this.beaconEngine.getIrrecoverableError();
-    if (irrecoverableError) {
-      this.processShutdownCallback(irrecoverableError);
-    }
-
     this.beaconEngine.updateTime(slot);
     this.metrics?.clockSlot.set(slot);
 

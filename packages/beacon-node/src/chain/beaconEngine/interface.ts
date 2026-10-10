@@ -3,8 +3,7 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
 import {BeaconConfig} from "@lodestar/config";
-import type {IForkChoice} from "@lodestar/fork-choice";
-import {CheckpointWithHex, PayloadStatus, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {
@@ -43,13 +42,12 @@ import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
-import {BlockRootSlot} from "../../util/sszBytes.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {ChainViewSnapshot} from "../chainView/interface.js";
+import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
 import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {LightClientServer} from "../lightClient/index.js";
@@ -157,6 +155,11 @@ export type ProduceBlockV4Response = ProductionResponse<ProduceBlockV4Result>;
 /** The DA prune parent returned after engine-owned slot preparation. */
 export type PrepareNextSlotResult = {daPruneParent: ProtoBlock};
 
+export enum LateCanonicalBlockReason {
+  SlowImport = "slow_import",
+  LateReceive = "late_receive",
+}
+
 export enum BeaconEngineErrorCode {
   ABORTED = "ABORTED",
   INTERNAL = "INTERNAL",
@@ -167,36 +170,6 @@ export enum BeaconEngineErrorCode {
 export type PrepareNextSlotResponse =
   | {ok: true; data: PrepareNextSlotResult | null}
   | {ok: false; code: BeaconEngineErrorCode; payload: {message: string}};
-
-/**
- * Plain-scalar summary of a finalized proto-block returned from `migrateFinalized`. No `BeaconState`
- * and no live `ProtoBlock` handle crosses the seam — only the fields the facade needs to migrate/prune
- * the DA + light-client artifacts it still owns.
- */
-export type FinalizedProtoSummary = Pick<ProtoBlock, "executionStatus" | "timeliness" | "importedTimely"> & {
-  slot: Slot;
-  /** hex, as ProtoBlock carries it; the facade does `fromHex()` where it needs bytes */
-  blockRoot: RootHex;
-  /** gloas FULL-gate for column/payload-envelope migration (`getForkSeq(slot) < gloas || FULL`) */
-  payloadStatus: PayloadStatus;
-};
-
-/**
- * Canonical/non-canonical block snapshot for a finalized checkpoint, computed by the engine from its
- * own fork choice. The facade drives all DA/light-client cleanup from this (never re-reading fork choice).
- */
-export type FinalizedBlockSnapshot = {
-  /** canonical ancestors of the finalized root, newest→oldest; last = previous-finalized boundary block */
-  canonical: FinalizedProtoSummary[];
-  /** non-canonical (orphaned) blocks pruned by this finalization */
-  nonCanonical: FinalizedProtoSummary[];
-};
-
-export type MigrateFinalizedResult = {
-  snapshot: FinalizedBlockSnapshot;
-  /** fork-choice prune result; facade only reads `.length` for its log */
-  prunedBlocks: ProtoBlock[];
-};
 
 /**
  * The consensus engine seam. Starts minimal and transitional (JS-only); ownership of consensus
@@ -235,7 +208,7 @@ export interface IBeaconEngine {
   getChainViewSnapshot(): ChainViewSnapshot;
   readonly config: BeaconConfig;
 
-  // Engine diagnostics and full parent metadata used by block verification.
+  // Developer API diagnostics only. Operational reads belong to BeaconChain.
   getHeads(): ProtoBlock[];
   getUnrealizedJustifiedCheckpoint(): CheckpointWithHex;
   getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
@@ -247,16 +220,13 @@ export interface IBeaconEngine {
     dataAvailableCount: number;
   } | null;
   getFastConfirmationStore(): ReturnType<IForkChoice["getFastConfirmationStore"]>;
-  pauseFastConfirmation(): void;
-  resumeFastConfirmation(): void;
   getConfirmedBlock(): ProtoBlock | null;
-  getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
-  getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
-  getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   getAllNodes(): ProtoNode[];
 
-  // Engine-owned state reads and fork-choice metadata.
-  getRecentCanonicalRoots(startSlot: Slot, endSlot: Slot): Map<Slot, RootHex | null>;
+  pauseFastConfirmation(): void;
+  resumeFastConfirmation(): void;
+
+  // Engine-owned state reads.
   getSerializedStateByRoot(stateRoot: Uint8Array): Promise<Uint8Array | null>;
   // Cold block-archive writes + reverse-lookup (backfill).
   persistArchiveBlock(
@@ -605,7 +575,6 @@ export interface IBeaconEngine {
   observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): void;
   markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): void;
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
-  isDescendant(root: RootHex, status: PayloadStatus, descendantRoot: RootHex, descendantStatus: PayloadStatus): boolean;
   hasObservedBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): boolean;
   isBlockProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean;
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): RootHex[];
@@ -619,7 +588,6 @@ export interface IBeaconEngine {
 
   verifyBlocks(
     _blockBytes: Uint8Array[],
-    parentBlock: ProtoBlock,
     blockInputs: IBlockInput[],
     opts: BlockProcessOpts & ImportBlockOpts,
     signal: AbortSignal
@@ -635,7 +603,6 @@ export interface IBeaconEngine {
 
   // Fork-choice writes routed through the engine (so the facade never writes fork choice directly).
   updateTime(currentSlot: Slot): void;
-  getIrrecoverableError(): Error | undefined;
 
   // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts.
   // The facade supplies DA; the engine verifies, persists and imports the envelope in one call.
@@ -647,16 +614,9 @@ export interface IBeaconEngine {
 
   // --- DB ownership (blocks + states + payload envelopes) ---
 
-  /**
-   * Process a newly finalized checkpoint: migrate canonical blocks hot→cold, archive the finalized
-   * state, prune fork choice — all engine-owned persistence. Returns the
-   * canonical/non-canonical block snapshot the facade uses to clean the DA + light-client artifacts it
-   * owns. State bytes never cross; archival is internal.
-   */
   // TODO - beacon engine: preserve this ordered archive protocol in the worker implementation.
-  getFinalizedBlockSnapshot(root: RootHex): FinalizedBlockSnapshot;
-  migrateCanonicalBlocks(blocks: BlockRootSlot[]): Promise<Slot[]>;
-  migrateExecutionPayloadEnvelopes(blocks: FinalizedProtoSummary[], dedupePayloads: boolean): Promise<Slot[]>;
+  migrateCanonicalBlocks(): Promise<Slot[]>;
+  migrateExecutionPayloadEnvelopes(): Promise<Slot[]>;
   deleteNonCanonicalExecutionPayloadEnvelopes(roots: Uint8Array[]): Promise<void>;
   persistOrphanedBlocks(blocks: FinalizedProtoSummary[], directory?: string): Promise<void>;
   deleteNonCanonicalBlocks(roots: Uint8Array[]): Promise<void>;

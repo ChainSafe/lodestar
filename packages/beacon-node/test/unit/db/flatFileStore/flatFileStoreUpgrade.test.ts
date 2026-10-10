@@ -92,7 +92,6 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       config,
       clock: {currentEpoch: Math.floor(headSlot / SLOTS_PER_EPOCH)},
       beaconEngine: {
-        getRecentCanonicalRoots: () => new Map(),
         getFinalizedBlockRootBySlot: (slot: number) => db.blockArchive.getRootBySlot(slot),
       },
       custodyConfig: {custodyColumns: [0, 1], custodyColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS).fill(1)},
@@ -164,7 +163,7 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
     expect(await requestRange(20, 1)).toEqual(columns);
   });
 
-  it.each(["fork choice", "head state"])("should preserve skipped slots known to %s", async (source) => {
+  it.each(["fork choice", "archive"])("should preserve skipped slots known to %s", async (source) => {
     await writeColumns(12, "legacy");
     await db.init();
     const chain = makeChain();
@@ -174,7 +173,7 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
         {slot: 9, blockRoot: "0x" + "09".repeat(32), payloadStatus: PayloadStatus.FULL},
       ] as ReturnType<IBeaconChain["getAllAncestorBlocks"]>);
     } else {
-      vi.spyOn(chain.beaconEngine, "getRecentCanonicalRoots").mockReturnValue(new Map([[10, null]]));
+      await writeColumns(9, "flat");
     }
     const archiveRead = vi.spyOn(db.dataColumnSidecarArchive, "getManyBinary");
     expect(await requestRange(10, 1, chain)).toEqual([]);

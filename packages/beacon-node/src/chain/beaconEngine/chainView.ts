@@ -38,6 +38,7 @@ export class ChainViewPublisher {
     return structuredClone({revision: this.revision, blocks, ...this.previousState});
   }
 
+  // TODO - beacon engine: sloppy code, need to review later
   update(blocksChanged = true): ChainViewUpdate | null {
     const blocks: ChainViewBlock[] = [];
     const current = new Map<string, ChainViewBlock>();

@@ -1,9 +1,10 @@
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, deneb, sszTypesFor} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import type {BeaconChain} from "../chain.js";
+import {ChainViewBlock} from "../chainView/interface.js";
 import {BlockProcessOpts} from "../options.js";
 import {DAType, IBlockInput} from "./blockInput/index.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -30,7 +31,7 @@ import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.j
  */
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
-  parentBlock: ProtoBlock,
+  parentBlock: ChainViewBlock,
   blockInputs: IBlockInput[],
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   opts: BlockProcessOpts & ImportBlockOpts
@@ -127,7 +128,7 @@ export async function verifyBlocksInEpoch(
       // [beacon-engine] moved: verifyBlocksInEpoch state-transition/signature/EL verification now lives in
       // packages/beacon-node/src/chain/beaconEngine/verifyBlock.ts#verifyBlocks.
       // On unstable merges, sync that logic there; retain DA verification here.
-      this.beaconEngine.verifyBlocks(blockBytes, parentBlock, blockInputs, opts, abortController.signal),
+      this.beaconEngine.verifyBlocks(blockBytes, blockInputs, opts, abortController.signal),
     ]);
 
     // Observation must follow both consensus verification and the facade DA wait.

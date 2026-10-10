@@ -117,6 +117,16 @@ describe("getDebugForkChoiceV2", () => {
         payloadDataAvailabilityYesCount: node.blockRoot === root(3) ? 1 : 0,
       });
     }
+    protoArray.notifyPtcMessages(root(3), 2, [3], true, true);
+    const {data: updated} = await api.getDebugForkChoiceV2();
+    assert(!(updated instanceof Uint8Array));
+    for (const node of updated.forkChoiceNodes.filter((node) => node.blockRoot === root(3))) {
+      expect(node, `fresh PTC counts for ${node.payloadStatus}`).toMatchObject({
+        payloadAttesterCount: 4,
+        payloadAvailabilityYesCount: 3,
+        payloadDataAvailabilityYesCount: 2,
+      });
+    }
   });
 
   it("does not invent the payload status of a pruned parent", async () => {

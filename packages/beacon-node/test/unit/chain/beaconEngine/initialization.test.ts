@@ -80,6 +80,40 @@ describe("bytes-based engine startup", () => {
     await closeDb();
   });
 
+  it("notifies the facade once when fork choice becomes irrecoverable", async () => {
+    const shutdown = vi.fn();
+    modules.processShutdownCallback = shutdown;
+    const dependencies = await initializeTestChain(opts, modules);
+    chain = new BeaconChain(opts, dependencies);
+    if (!engine) throw Error("Expected initialized engine");
+    const error = new Error("irrecoverable fork-choice response");
+    engine.forkChoice.irrecoverableError = error;
+    engine.publishChainView(false);
+    engine.publishChainView(false);
+    expect(shutdown).toHaveBeenCalledExactlyOnceWith(error);
+  });
+
+  it("reads diagnostics on demand without publishing proposer or clock score changes", async () => {
+    const dependencies = await initializeTestChain(opts, modules);
+    chain = new BeaconChain(opts, dependencies);
+    if (!engine) throw Error("Expected initialized engine");
+    const nodes = engine.forkChoice.getAllNodes();
+    const getAllNodes = vi.spyOn(engine.forkChoice, "getAllNodes");
+    const updated = vi.fn();
+    engine.events.on(BeaconEngineEvent.chainViewUpdated, updated);
+    nodes[0].weight = 42n;
+    vi.spyOn(engine.forkChoice, "updateAndGetHead").mockReturnValue({head: nodes[0]});
+    engine.getProposerHead(0);
+    nodes[0].weight = 84n;
+    engine.updateTime(1);
+    engine.pauseFastConfirmation();
+    engine.resumeFastConfirmation();
+    expect(getAllNodes).not.toHaveBeenCalled();
+    expect(updated).not.toHaveBeenCalled();
+    expect(engine.getAllNodes()[0].weight).toBe(84n);
+    expect(getAllNodes).toHaveBeenCalledOnce();
+  });
+
   it("owns monitor state and exposes its metrics separately from the facade registry", async () => {
     const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.metrics = metrics;

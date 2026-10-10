@@ -227,7 +227,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
     if (
       head.blockRoot !== blockRootHex &&
       !importsBlockAttestations(opts, computeEpochAtSlot(slot), currentEpoch) &&
-      this.beaconEngine.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
+      this.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
     ) {
       // never validated, see processBlocks()
       this.seenPayloadEnvelopeInputCache.remove(blockRootHex);

@@ -125,7 +125,7 @@ describe("facade execution payload envelope serving", () => {
       envelopeBytes
     );
 
-    chain.beaconEngine.getFinalizedBlockSnapshot = vi
+    chain.getFinalizedBlockSnapshot = vi
       .fn()
       .mockReturnValue({canonical: [protoBlock], nonCanonical: [{...protoBlock, blockRoot: toRootHex(orphanRoot)}]});
     chain.beaconEngine.migrateExecutionPayloadEnvelopes = BeaconEngine.prototype.migrateExecutionPayloadEnvelopes.bind(
@@ -135,20 +135,24 @@ describe("facade execution payload envelope serving", () => {
       BeaconEngine.prototype.deleteNonCanonicalExecutionPayloadEnvelopes.bind(chain.beaconEngine);
     chain.beaconEngine.migrateCanonicalBlocks = vi.fn().mockResolvedValue([]);
     chain.beaconEngine.deleteNonCanonicalBlocks = vi.fn().mockResolvedValue(undefined);
+    chain.opts.dedupePayloads = false;
+    chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 1, root, rootHex});
+    chain.forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus.mockReturnValue({
+      ancestors: [protoBlock],
+      nonAncestors: [],
+    });
     await archiveBlocks(
       config,
       db,
       chain.beaconEngine,
+      chain.getFinalizedBlockSnapshot(rootHex),
       undefined,
       chain.logger,
       {epoch: 1, root, rootHex},
       1,
-      null,
-      false,
       undefined,
       false,
-      undefined,
-      false
+      undefined
     );
     expect(await db.executionPayloadEnvelope.get(root)).toBeNull();
     expect(await db.executionPayloadEnvelope.get(orphanRoot)).toBeNull();

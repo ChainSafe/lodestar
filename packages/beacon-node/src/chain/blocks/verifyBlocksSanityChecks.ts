@@ -1,11 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
-import {IBeaconEngine} from "../beaconEngine/index.js";
-import {IChainView} from "../chainView/interface.js";
+import {ChainViewBlock, IChainView} from "../chainView/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IChainOptions} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
@@ -25,8 +23,10 @@ import {ImportBlockOpts} from "./types.js";
  *   - Not already known
  */
 export function verifyBlocksSanityChecks(
-  chain: Pick<IChainView, "getFinalizedCheckpoint" | "hasBlockHex"> & {
-    beaconEngine: IBeaconEngine;
+  chain: Pick<
+    IChainView,
+    "getFinalizedCheckpoint" | "hasBlockHex" | "getBlockHexDefaultStatus" | "getBlockHexAndBlockHash"
+  > & {
     clock: IClock;
     config: ChainForkConfig;
     opts: IChainOptions;
@@ -38,7 +38,7 @@ export function verifyBlocksSanityChecks(
 ): {
   relevantBlocks: IBlockInput[];
   parentSlots: Slot[];
-  parentBlock: ProtoBlock | null;
+  parentBlock: ChainViewBlock | null;
 } {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
@@ -46,7 +46,7 @@ export function verifyBlocksSanityChecks(
 
   const relevantBlocks: IBlockInput[] = [];
   const parentSlots: Slot[] = [];
-  let parentBlock: ProtoBlock | null = null;
+  let parentBlock: ChainViewBlock | null = null;
 
   for (const blockInput of blocks) {
     const block = blockInput.getBlock();
@@ -94,7 +94,7 @@ export function verifyBlocksSanityChecks(
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toRootHex(block.message.parentRoot);
-      const parentBlockDefaultStatus = chain.beaconEngine.getBlockHexDefaultStatus(parentRoot);
+      const parentBlockDefaultStatus = chain.getBlockHexDefaultStatus(parentRoot);
       if (!parentBlockDefaultStatus) {
         throw new BlockError(block, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
       }
@@ -102,7 +102,7 @@ export function verifyBlocksSanityChecks(
       parentBlock = parentBlockDefaultStatus;
       if (isGloasBeaconBlock(block.message)) {
         const parentBlockHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-        const parentBlockWithPayload = chain.beaconEngine.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
+        const parentBlockWithPayload = chain.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
         if (!parentBlockWithPayload) {
           // Checkpoint sync: parent's FULL variant may not be in fork-choice yet because the
           // anchor block is initialized with PENDING+EMPTY only. The parent's payload arrives

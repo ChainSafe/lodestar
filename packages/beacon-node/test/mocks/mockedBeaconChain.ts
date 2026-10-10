@@ -325,7 +325,6 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "observeVerifiedBlocks",
     "markBlockProposersSeen",
     "discardVerifiedBlocks",
-    "isDescendant",
     "getProposerDuties",
     "getAttesterDuties",
     "getSyncCommitteeDuties",
@@ -357,16 +356,16 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "scrapeValidatorMonitorMetrics",
     // Fork-choice write wrappers (forward to the mock's forkChoice).
     "updateTime",
-    "getIrrecoverableError",
-    // Temp forkChoice read pass-throughs (forward to the mock's forkChoice) — BLK-1.
+    // Developer API diagnostics (forward to the engine-owned fork choice).
     "getHeads",
+    "getAllNodes",
+    "getPTCVoteCounts",
     "getUnrealizedJustifiedCheckpoint",
     "getUnrealizedFinalizedCheckpoint",
     "getProposerBoostRoot",
     "getPreviousProposerBoostRoot",
-    "getPTCVoteCounts",
+    "getFastConfirmationStore",
     "getConfirmedBlock",
-    "getAllNodes",
   ] as const) {
     (chain as unknown as Record<string, unknown>)[name] = (
       BeaconEngine.prototype as unknown as Record<string, unknown>
@@ -374,6 +373,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   }
   chain.beaconEngine.prepareBeaconCommitteeSubnets = vi.fn().mockResolvedValue(undefined);
   for (const [name, forkChoiceName] of Object.entries({
+    isDescendant: "isDescendant",
     getHead: "getHead",
     getHeadRoot: "getHeadRoot",
     getFinalizedCheckpoint: "getFinalizedCheckpoint",

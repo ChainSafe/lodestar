@@ -49,6 +49,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
   ])("$name", async ({hasEnvelope, blobCount, expectedPayloadDA}) => {
     const config = createChainForkConfig({...configDef, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     const chain = getMockedBeaconChain({config});
+    chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(generateProtoBlock({slot: 0}));
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
     block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>

@@ -120,7 +120,10 @@ async function* resolveCanonicalDataColumnBlocks(
   const canonicalBlocksBySlot = new Map(headChain.map((block) => [block.slot, block]));
   const oldestForkChoiceSlot = headChain.at(-1)?.slot ?? Number.POSITIVE_INFINITY;
   const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
-  const recentRoots = chain.beaconEngine.getRecentCanonicalRoots(startSlot, Math.min(archiveEnd, oldestForkChoiceSlot));
+  const archiveReadEnd = Math.min(archiveEnd, oldestForkChoiceSlot);
+  const archiveMinSlot = startSlot < archiveReadEnd ? await db.blockArchive.firstKey() : null;
+  const legacyEnd = Math.min(archiveReadEnd, (db.lastLegacyArchiveSlot ?? -1) + 1);
+  const legacySlots = new Set(startSlot < legacyEnd ? await db.blockArchive.keys({gte: startSlot, lt: legacyEnd}) : []);
 
   for (let slot = startSlot; slot < archiveEnd; slot++) {
     if (slot >= oldestForkChoiceSlot) {
@@ -136,12 +139,10 @@ async function* resolveCanonicalDataColumnBlocks(
       continue;
     }
 
-    let blockRoot = recentRoots.get(slot);
-    if (blockRoot === null) continue;
-    if (blockRoot === undefined) {
-      const root = await db.blockArchive.getRootBySlot(slot);
-      blockRoot = root === null ? null : toRootHex(root);
-    }
+    const root = await db.blockArchive.getRootBySlot(slot);
+    const blockRoot = root === null ? null : toRootHex(root);
+    // Missing roots within retained archive history are skipped slots, not legacy column lookups.
+    if (blockRoot === null && archiveMinSlot !== null && slot >= archiveMinSlot && !legacySlots.has(slot)) continue;
     if (blockRoot === null && (db.lastLegacyArchiveSlot === null || slot > db.lastLegacyArchiveSlot)) continue;
     if (
       chain.config.getForkSeq(slot) >= ForkSeq.gloas &&

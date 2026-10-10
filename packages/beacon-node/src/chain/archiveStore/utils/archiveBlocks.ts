@@ -1,54 +1,18 @@
-import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithHex, ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
-import {IBeaconChainDb, IBeaconEngineDb} from "../../../db/index.js";
-import {BlockArchiveBatchPutBinaryItem, encodeArchivedHeaderEnvelope} from "../../../db/repositories/index.js";
-import {Metrics} from "../../../metrics/metrics.js";
-import {ensureDir, writeIfNotExist} from "../../../util/file.js";
-import {toSignedHeaderEnvelope} from "../../../util/headerEnvelope.js";
-import {BlockRootHex} from "../../../util/sszBytes.js";
-import type {FinalizedProtoSummary, IBeaconEngine} from "../../beaconEngine/interface.js";
+import {IBeaconChainDb} from "../../../db/index.js";
+import type {IBeaconEngine} from "../../beaconEngine/interface.js";
+import {FinalizedBlockSnapshot, FinalizedProtoSummary} from "../../chainView/interface.js";
 import {LightClientServer} from "../../lightClient/index.js";
 
-// Process in chunks to avoid OOM
-// this number of blocks per chunk is tested in e2e test blockArchive.test.ts
-// TODO: Review after merge since the size of blocks will increase significantly
-const BLOCK_BATCH_SIZE = 256;
 const BLOB_SIDECAR_BATCH_SIZE = 32;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
-
-/**
- * Why a finalized-canonical block was imported after the attestation cutoff.
- */
-export enum LateCanonicalBlockReason {
-  // received on time, but finished importing after the attestation cutoff
-  SlowImport = "slow_import",
-  // block reached this node late on the network thread
-  LateReceive = "late_receive",
-}
-
-/**
- * Persist orphaned block to disk
- */
-export async function persistOrphanedBlock(
-  slot: Slot,
-  blockRoot: BlockRootHex,
-  bytes: Uint8Array,
-  opts: {
-    persistOrphanedBlocksDir: string;
-  }
-) {
-  const dirpath = path.join(opts.persistOrphanedBlocksDir ?? "orphaned_blocks");
-  const filepath = path.join(dirpath, `${slot}_${blockRoot}.ssz`);
-  await ensureDir(dirpath);
-  await writeIfNotExist(filepath, bytes);
-}
 
 /**
  * Archives finalized blocks from active bucket to archive bucket.
@@ -63,22 +27,17 @@ export async function archiveBlocks(
   config: ChainForkConfig,
   db: IBeaconChainDb,
   engine: IBeaconEngine,
+  snapshot: FinalizedBlockSnapshot,
   lightclientServer: LightClientServer | undefined,
   logger: Logger,
   finalizedCheckpoint: CheckpointWithHex,
   currentEpoch: Epoch,
-  metrics: Metrics | null,
-  isNodeSynced: boolean,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
-  persistOrphanedBlocksDir?: string,
-  dedupePayloads = true
+  persistOrphanedBlocksDir?: string
 ): Promise<void> {
-  // Use fork choice to determine the blocks to archive and delete.
-  // `ancestors` is the canonical walk back from the finalized root, including the previous finalized
-  // block as its last element.
-  const {canonical: finalizedCanonicalBlocks, nonCanonical: finalizedNonCanonicalBlocks} =
-    engine.getFinalizedBlockSnapshot(finalizedCheckpoint.rootHex);
+  // TODO - beacon engine: review this, may let BeaconEngine lead this
+  const {canonical: finalizedCanonicalBlocks, nonCanonical: finalizedNonCanonicalBlocks} = snapshot;
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
@@ -92,39 +51,8 @@ export async function archiveBlocks(
 
   const logCtx = {currentEpoch, finalizedEpoch: finalizedCheckpoint.epoch, finalizedRoot: finalizedCheckpoint.rootHex};
 
-  // `finalizedCanonicalBlocks` is newest -> oldest; its LAST element is the previous-finalized
-  // boundary block, already audited on the prior run, so exclude it to avoid double counting.
-  if (isNodeSynced && finalizedCanonicalBlocks.length > 1) {
-    const lateBlocks = finalizedCanonicalBlocks.slice(0, -1).filter((block) => !block.importedTimely);
-    if (lateBlocks.length > 0) {
-      let slowImport = 0;
-      for (const block of lateBlocks) {
-        // received late => late_receive; otherwise we had it on time but were slow to import => slow_import
-        const reason = block.timeliness ? LateCanonicalBlockReason.SlowImport : LateCanonicalBlockReason.LateReceive;
-        if (block.timeliness) slowImport++;
-        metrics?.importBlock.lateCanonicalBlock.inc({reason});
-      }
-      const lateSlots = lateBlocks.map((block) => block.slot).sort((a, b) => a - b);
-      logger.verbose("Late imported canonical blocks", {
-        ...logCtx,
-        count: lateBlocks.length,
-        slowImport,
-        lateReceive: lateBlocks.length - slowImport,
-        slotRange: prettyPrintIndices(lateSlots),
-      });
-    }
-  }
-
   if (finalizedCanonicalBlockRoots.length > 0) {
-    const migratedSlots = await engine.migrateCanonicalBlocks(finalizedCanonicalBlockRoots);
-    logger.verbose("Migrated blocks from hot DB to cold DB", {
-      ...logCtx,
-      fromSlot: finalizedCanonicalBlockRoots[0].slot,
-      toSlot: finalizedCanonicalBlockRoots.at(-1)?.slot,
-      size: finalizedCanonicalBlockRoots.length,
-      migratedEntries: migratedSlots.length,
-      slotRange: prettyPrintIndices(migratedSlots),
-    });
+    await engine.migrateCanonicalBlocks();
 
     if (finalizedPostDeneb) {
       const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
@@ -156,13 +84,8 @@ export async function archiveBlocks(
 
     if (finalizedPostGloas) {
       // [beacon-engine] Keep upstream's envelope migration at this point in archiveBlocks;
-      // the unchanged helper below now runs through BeaconEngine with its writable DB.
-      const migratedSlots = await engine.migrateExecutionPayloadEnvelopes(finalizedCanonicalBlocks, dedupePayloads);
-      logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {
-        ...logCtx,
-        migratedEntries: migratedSlots.length,
-        slotRange: prettyPrintIndices(migratedSlots),
-      });
+      // the engine selects canonical envelopes from its own fork choice.
+      await engine.migrateExecutionPayloadEnvelopes();
     }
   }
 
@@ -280,57 +203,6 @@ export async function archiveBlocks(
     ...logCtx,
     totalArchived: finalizedCanonicalBlocks.length,
   });
-}
-
-export async function migrateBlocksFromHotToColdDb(
-  db: IBeaconEngineDb,
-  logger: Logger,
-  blocks: BlockRootSlot[]
-): Promise<Slot[]> {
-  // The input includes the previous finalized block as the last ancestor; its SignedBeaconBlock
-  // was archived on a previous run and is no longer in hot db. `getBinary` returning null for any
-  // block in the batch is therefore treated as "already migrated, skip" rather than an error.
-  const migratedSlots: Slot[] = [];
-  for (let i = 0; i < blocks.length; i += BLOCK_BATCH_SIZE) {
-    const toIdx = Math.min(i + BLOCK_BATCH_SIZE, blocks.length);
-    const canonicalBlocks = blocks.slice(i, toIdx);
-
-    if (canonicalBlocks.length === 0) break;
-
-    // load Buffer instead of SignedBeaconBlock to improve performance
-    const canonicalBlockEntries = (
-      await Promise.all(
-        canonicalBlocks.map(async (block): Promise<BlockArchiveBatchPutBinaryItem | null> => {
-          const blockBuffer = await db.block.getBinary(block.root);
-          if (!blockBuffer) {
-            logger.debug("Block in forkchoice but missing in hot db, could be already archived", {
-              slot: block.slot,
-              root: toRootHex(block.root),
-            });
-            return null;
-          }
-          return {
-            key: block.slot,
-            value: blockBuffer,
-            slot: block.slot,
-            blockRoot: block.root,
-            // TODO: Benchmark if faster to slice Buffer or fromHex()
-            parentRoot: getParentRootFromSignedBlock(blockBuffer),
-          };
-        })
-      )
-    ).filter((entry): entry is BlockArchiveBatchPutBinaryItem => entry !== null);
-
-    if (canonicalBlockEntries.length === 0) continue;
-
-    await Promise.all([
-      db.blockArchive.batchPutBinary(canonicalBlockEntries),
-      db.block.batchDelete(canonicalBlockEntries.map((entry) => entry.blockRoot)),
-    ]);
-    for (const entry of canonicalBlockEntries) migratedSlots.push(entry.slot);
-  }
-  // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
-  return migratedSlots.sort((a, b) => a - b);
 }
 
 /**
@@ -458,96 +330,6 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 
   // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
   return migratedSlots.sort((a, b) => a - b);
-}
-
-/**
- * Source: unstable@1bf214377e chain/archiveStore/utils/archiveBlocks.ts, same helper.
- * [beacon-engine] Only the DB owner changes; preserve the upstream migration body.
- *
- * Post-gloas given a finalized checkpoint at a block root, payload of that block root
- * is not considered finalized, hence they are archived in the next run.
- *
- * With `dedupePayloads` (default), execution-valid envelopes are archived as header envelopes. Envelopes of
- * still-optimistic blocks are archived in full, since the EL may not serve their bodies, and are not
- * converted later. Archive put + hot delete are one atomic db batch.
- */
-export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
-  config: ChainForkConfig,
-  db: IBeaconEngineDb,
-  logger: Logger,
-  canonicalBlocks: FinalizedProtoSummary[],
-  dedupePayloads: boolean
-): Promise<Slot[]> {
-  const payloadBlocks = canonicalBlocks.filter(
-    (block) => config.getForkSeq(block.slot) >= ForkSeq.gloas && block.payloadStatus === PayloadStatus.FULL
-  );
-  if (payloadBlocks.length === 0) return [];
-
-  const migratedSlots: Slot[] = [];
-
-  // Process in chunks to bound memory: after a long non-finality period the ancestor walk can span
-  // thousands of blocks, and each full envelope is a few hundred KB when deserialized.
-  for (let i = 0; i < payloadBlocks.length; i += BLOCK_BATCH_SIZE) {
-    const batch = payloadBlocks.slice(i, i + BLOCK_BATCH_SIZE);
-    // Only header envelopes need deserializing; full ones are copied as bytes
-    const archivedBytesArray = await Promise.all(
-      batch.map(async (block) => {
-        const root = fromHex(block.blockRoot);
-        if (dedupePayloads && block.executionStatus === ExecutionStatus.Valid) {
-          const envelope = await db.executionPayloadEnvelope.get(root);
-          return envelope === null ? null : encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(envelope));
-        }
-        return db.executionPayloadEnvelope.getBinary(root);
-      })
-    );
-
-    const entries: {slot: Slot; archivedBytes: Uint8Array; hotKey: Uint8Array}[] = [];
-    for (let j = 0; j < batch.length; j++) {
-      const block = batch[j];
-      const archivedBytes = archivedBytesArray[j];
-      if (archivedBytes === null) {
-        logger.debug("ExecutionPayloadEnvelope in forkchoice but missing in hot db, could be already archived", {
-          slot: block.slot,
-          root: block.blockRoot,
-        });
-        continue;
-      }
-
-      entries.push({
-        slot: block.slot,
-        archivedBytes,
-        hotKey: db.executionPayloadEnvelope.encodeKey(fromHex(block.blockRoot)),
-      });
-      migratedSlots.push(block.slot);
-    }
-
-    if (entries.length > 0) {
-      await db.executionPayloadEnvelopeArchive.batchArchiveAndDeleteHot(entries);
-    }
-  }
-
-  // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
-  return migratedSlots.sort((a, b) => a - b);
-}
-
-/**
- * ```
- * class SignedBeaconBlock(Container):
- *   message: BeaconBlock [offset - 4 bytes]
- *   signature: BLSSignature [fixed - 96 bytes]
- *
- * class BeaconBlock(Container):
- *   slot: Slot [fixed - 8 bytes]
- *   proposer_index: ValidatorIndex [fixed - 8 bytes]
- *   parent_root: Root [fixed - 32 bytes]
- *   state_root: Root
- *   body: BeaconBlockBody
- * ```
- * From byte: `4 + 96 + 8 + 8 = 116`
- * To byte: `116 + 32 = 148`
- */
-export function getParentRootFromSignedBlock(bytes: Uint8Array): Uint8Array {
-  return bytes.slice(116, 148);
 }
 
 /**

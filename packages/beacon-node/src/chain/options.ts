@@ -21,8 +21,6 @@ export type IChainOptions = IBeaconEngineOptions &
     persistProducedBlocks?: boolean;
     persistProducedPayloadEnvelopes?: boolean;
     skipCreateStateCacheIfAvailable?: boolean;
-    /** Archive execution-valid envelopes as headers. */
-    dedupePayloads?: boolean;
     graffitiAppend?: boolean;
     /** Max number of produced blobs by local validators to cache */
     maxCachedBlobSidecars?: number;

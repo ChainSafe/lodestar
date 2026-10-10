@@ -255,7 +255,7 @@ export function getBeaconBlockApi({
       case routes.beacon.BroadcastValidation.consensus: {
         // check if this beacon node produced the block else run validations
         if (!blockLocallyProduced) {
-          const parentBlock = chain.beaconEngine.getBlockDefaultStatus(signedBlock.message.parentRoot);
+          const parentBlock = chain.getBlockDefaultStatus(signedBlock.message.parentRoot);
           if (parentBlock === null) {
             chain.emitter.emit(ChainEvent.blockUnknownParent, {
               blockInput: blockForImport,

@@ -42,6 +42,7 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
       executionEngine: new ExecutionEngineDisabled(),
     });
     engine.forkChoice = modules.chain.forkChoice;
+    modules.chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
     engine.regen = modules.chain.regen;
     engine.seenPayloadEnvelopeInputCache = new SeenEnginePayloadEnvelopeInput({
       config,
@@ -137,9 +138,7 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
       }
       throw new Error("pre-state unavailable");
     });
-    await expect(
-      engine.verifyBlocks([], zeroProtoBlock, inputs, {}, new AbortController().signal)
-    ).rejects.toMatchObject({
+    await expect(engine.verifyBlocks([], inputs, {}, new AbortController().signal)).rejects.toMatchObject({
       type: {code: BlockErrorCode.PRESTATE_MISSING},
     });
     expect(engine.seenPayloadEnvelopeInputCache.size()).toBe(2);

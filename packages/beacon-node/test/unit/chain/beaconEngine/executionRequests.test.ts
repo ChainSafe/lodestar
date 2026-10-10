@@ -71,9 +71,6 @@ describe("BeaconEngine execution requests persistence", () => {
       value: new SeenEnginePayloadEnvelopeInput({config, forkChoice: chain.forkChoice, db}),
     });
     Object.defineProperty(chain, "db", {value: db, configurable: true});
-    chain.beaconEngine.getFinalizedBlockSnapshot = BeaconEngine.prototype.getFinalizedBlockSnapshot.bind(
-      chain.beaconEngine
-    );
     chain.beaconEngine.getParentExecutionRequests = BeaconEngine.prototype.getParentExecutionRequests.bind(
       chain.beaconEngine
     );

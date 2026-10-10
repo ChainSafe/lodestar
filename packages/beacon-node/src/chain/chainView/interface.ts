@@ -17,6 +17,13 @@ export type ChainViewBlock = Pick<
   | "finalizedRoot"
 > & {executionPayloadNumber?: number};
 
+export type FinalizedProtoSummary = Pick<ChainViewBlock, "slot" | "blockRoot" | "payloadStatus" | "executionStatus">;
+
+export type FinalizedBlockSnapshot = {
+  canonical: FinalizedProtoSummary[];
+  nonCanonical: FinalizedProtoSummary[];
+};
+
 export type ChainViewState = {
   head: ChainViewBlock;
   justified: CheckpointWithHex;
@@ -32,6 +39,7 @@ export type ChainViewSnapshot = ChainViewState & {
 export type ChainViewUpdate = ChainViewSnapshot;
 
 export interface IChainView {
+  getFinalizedBlockSnapshot(root: RootHex): FinalizedBlockSnapshot;
   getHead(): ChainViewBlock;
   getHeadRoot(): RootHex;
   getFinalizedCheckpoint(): CheckpointWithHex;

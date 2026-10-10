@@ -1,7 +1,8 @@
 // Consensus verification stays engine-owned; the facade observes verified blocks only after its DA join.
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
-import {IndexedAttestation} from "@lodestar/types";
+import {IndexedAttestation, isGloasBeaconBlock} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../blocks/blockInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
@@ -20,7 +21,6 @@ export async function verifyBlocks(
   this: BeaconEngine,
   // [beacon-engine] deviation: bytes/POJO seam leaves DA verification in the facade.
   blockBytes: Uint8Array[],
-  parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts,
   signal: AbortSignal
@@ -29,6 +29,13 @@ export async function verifyBlocks(
   const blocks = blockInputs.map((bi) => bi.getBlock());
   const block0 = blocks[0];
   if (!block0) throw Error("Empty blockInputs");
+  const parentRoot = toRootHex(block0.message.parentRoot);
+  let parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRoot);
+  if (!parentBlock) throw new BlockError(block0, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
+  if (isGloasBeaconBlock(block0.message)) {
+    const parentBlockHash = toRootHex(block0.message.body.signedExecutionPayloadBid.message.parentBlockHash);
+    parentBlock = this.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash) ?? parentBlock;
+  }
   const block0Epoch = computeEpochAtSlot(block0.message.slot);
   const fork = this.config.getForkSeq(block0.message.slot);
 

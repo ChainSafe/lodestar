@@ -59,6 +59,8 @@ export interface IBeaconChainDb {
   blockArchive: Pick<
     BlockArchiveRepository,
     | "getBinary"
+    | "firstKey"
+    | "keys"
     | "getBinaryEntryByRoot"
     | "getRootBySlot"
     | "getSlotByRoot"

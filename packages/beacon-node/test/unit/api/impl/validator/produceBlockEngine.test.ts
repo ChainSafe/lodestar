@@ -25,7 +25,7 @@ describe("validator production engine boundary", () => {
   const request = {slot: 1, randaoReveal: Buffer.alloc(96), graffiti: "test"};
   beforeEach(() => {
     modules = getApiTestModules({config});
-    vi.spyOn(modules.chain.beaconEngine, "getHead");
+    vi.spyOn(modules.chain, "getHead");
     modules.chain.persistBlock = vi.fn().mockResolvedValue(undefined);
   });
 
@@ -69,7 +69,7 @@ describe("validator production engine boundary", () => {
       modules.chain.blockProductionCache.get(toRootHex(config.getForkTypes(1).BeaconBlock.hashTreeRoot(block)))
     ).toBe(produceResult);
     expect(modules.chain.persistBlock).toHaveBeenCalledWith(block, "produced_engine_block");
-    expect(modules.chain.beaconEngine.getHead).not.toHaveBeenCalled();
+    expect(modules.chain.getHead).not.toHaveBeenCalled();
   });
 
   it("makes one V4 call and stores the returned DA artifacts", async () => {
@@ -177,6 +177,6 @@ describe("validator production engine boundary", () => {
     const api = getValidatorApi(defaultApiOptions, modules);
     await expect(api.produceBlockV3({...request, slot})).rejects.toBeInstanceOf(NodeIsSyncing);
     expect(modules.chain.beaconEngine.produceBlock).not.toHaveBeenCalled();
-    expect(modules.chain.beaconEngine.getHead).toHaveBeenCalledOnce();
+    expect(modules.chain.getHead).toHaveBeenCalledOnce();
   });
 });

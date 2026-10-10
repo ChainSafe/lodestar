@@ -1,16 +1,32 @@
 import {describe, expect, it, vi} from "vitest";
-import {CheckpointWithHex, ExecutionStatus, PayloadStatus, ProtoNode} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, PayloadStatus, ProtoArray, ProtoNode} from "@lodestar/fork-choice";
 import {toRootHex} from "@lodestar/utils";
 import {ChainViewPublisher} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {ChainView} from "../../../../src/chain/chainView/chainView.js";
 import {zeroProtoBlock} from "../../../utils/state.js";
+import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 function setup() {
   const root = Buffer.alloc(32, 1);
   const anchor = {...zeroProtoBlock, blockRoot: toRootHex(root)} as ProtoNode;
   const checkpoint: CheckpointWithHex = {epoch: 0, root, rootHex: anchor.blockRoot};
   const forkChoice = {
+    getUnrealizedJustifiedCheckpoint: vi.fn(() => checkpoint),
+    getUnrealizedFinalizedCheckpoint: vi.fn(() => checkpoint),
+    getProposerBoostRoot: vi.fn(() => anchor.blockRoot),
+    getPreviousProposerBoostRoot: vi.fn(() => anchor.blockRoot),
+    getPTCVoteCounts: vi.fn(
+      (): {attesterCount: number; payloadPresentCount: number; dataAvailableCount: number} | null => null
+    ),
+    getFastConfirmationStore: vi.fn(() => ({
+      confirmedRoot: anchor.blockRoot,
+      previousEpochObservedJustifiedCheckpoint: checkpoint,
+      currentEpochObservedJustifiedCheckpoint: checkpoint,
+      previousEpochGreatestUnrealizedCheckpoint: checkpoint,
+      previousSlotHead: anchor.blockRoot,
+      currentSlotHead: anchor.blockRoot,
+    })),
     getAllNodes: vi.fn(() => [anchor]),
     getHead: vi.fn(() => anchor),
     getJustifiedCheckpoint: vi.fn(() => checkpoint),
@@ -61,12 +77,12 @@ describe("ChainViewPublisher", () => {
     forkChoice.getFinalizedCheckpoint.mockReturnValue(finalized);
     const update = publish(false);
     expect(update?.blocks).toEqual([]);
+    expect(publisher.update(false)).toBeNull();
     finalized.root.fill(9);
     for (const view of views) {
       expect(view.getFinalizedCheckpoint().epoch, "replicated finality").toBe(1);
       expect(view.getFinalizedCheckpoint().root[0], "detached checkpoint bytes").toBe(1);
     }
-    expect(publisher.update(false)).toBeNull();
   });
 
   it("does not scan blocks or consume a revision for unchanged clock updates", () => {
@@ -79,5 +95,133 @@ describe("ChainViewPublisher", () => {
     forkChoice.getHead.mockReturnValue(head);
     expect(publish(false)?.revision).toBe(1);
     expect(publish(false)).toBeNull();
+  });
+  it("does not read or publish diagnostic-only changes", () => {
+    const {anchor, forkChoice, publish} = setup();
+    anchor.weight = 42n;
+    anchor.bestChild = 1;
+    forkChoice.getPTCVoteCounts.mockReturnValue({attesterCount: 3, payloadPresentCount: 2, dataAvailableCount: 1});
+    forkChoice.getProposerBoostRoot.mockReturnValue(toRootHex(Buffer.alloc(32, 9)));
+    expect(publish()).toBeNull();
+    expect(publish(false)).toBeNull();
+    for (const name of [
+      "getPTCVoteCounts",
+      "getProposerBoostRoot",
+      "getPreviousProposerBoostRoot",
+      "getUnrealizedJustifiedCheckpoint",
+      "getUnrealizedFinalizedCheckpoint",
+      "getFastConfirmationStore",
+    ] as const) {
+      expect(forkChoice[name], `diagnostic read ${name}`).not.toHaveBeenCalled();
+    }
+  });
+
+  it("does not access timing audit fields when publishing ChainView metadata", () => {
+    const {anchor, publisher} = setup();
+    for (const field of ["timeliness", "importedTimely"] as const) {
+      Object.defineProperty(anchor, field, {
+        get: () => {
+          throw Error(`ChainView accessed ${field}`);
+        },
+      });
+    }
+    const snapshot = publisher.snapshot();
+    expect(snapshot.blocks[0]).not.toHaveProperty("timeliness");
+    expect(snapshot.head).not.toHaveProperty("importedTimely");
+    expect(publisher.update()).toBeNull();
+  });
+
+  it("matches archival traversal across Gloas variants and independent pruning", () => {
+    const {forkChoice} = setup();
+    const root = (n: number) => toRootHex(Buffer.alloc(32, n));
+    const anchor = generateProtoBlock({
+      blockRoot: root(1),
+      slot: 0,
+      executionPayloadBlockHash: root(11),
+      executionStatus: ExecutionStatus.Valid,
+      executionPayloadNumber: 0,
+      executionPayloadGasLimit: 30_000_000,
+    });
+    const protoArray = ProtoArray.initialize(anchor, 0);
+    const add = (n: number, slot: number, parent: number, hash: number) =>
+      protoArray.onBlock(
+        {
+          ...anchor,
+          blockRoot: root(n),
+          slot,
+          parentRoot: root(parent),
+          parentBlockHash: root(hash),
+          executionPayloadBlockHash: root(hash),
+          executionStatus: ExecutionStatus.Valid,
+          executionPayloadNumber: slot,
+          executionPayloadGasLimit: 30_000_000,
+        },
+        slot,
+        null
+      );
+    add(2, 1, 1, 11);
+    protoArray.onExecutionPayload(
+      root(2),
+      1,
+      root(12),
+      1,
+      30_000_000,
+      null,
+      ExecutionStatus.Valid,
+      anchor.dataAvailabilityStatus
+    );
+    add(3, 2, 1, 11);
+    add(4, 3, 2, 12);
+    forkChoice.getAllNodes.mockImplementation(() => protoArray.nodes);
+    forkChoice.getHead.mockImplementation(() => {
+      const head = protoArray.nodes.at(-1);
+      if (!head) throw Error("Expected proto-array head");
+      return head;
+    });
+    const publisher = new ChainViewPublisher(forkChoice);
+    const view = new ChainView(publisher.snapshot());
+    const summarize = ({slot, blockRoot, payloadStatus, executionStatus}: ProtoNode) => ({
+      slot,
+      blockRoot,
+      payloadStatus,
+      executionStatus,
+    });
+    const expected = protoArray.getAllAncestorAndNonAncestorNodes(root(4), PayloadStatus.PENDING);
+    expect(view.getFinalizedBlockSnapshot(root(4))).toEqual({
+      canonical: expected.ancestors.map(summarize),
+      nonCanonical: expected.nonAncestors.map(summarize),
+    });
+    forkChoice.getHead.mockReturnValue(forkChoice.getHead());
+    protoArray.onExecutionPayload(
+      root(3),
+      2,
+      root(13),
+      2,
+      30_000_000,
+      null,
+      ExecutionStatus.Valid,
+      anchor.dataAvailabilityStatus
+    );
+    const payloadUpdate = publisher.update();
+    if (!payloadUpdate) throw Error("Expected payload update");
+    view.applyUpdate(payloadUpdate);
+    expect(
+      view.getFinalizedBlockSnapshot(root(4)),
+      "exclude payload variants imported after the finalized node"
+    ).toEqual({
+      canonical: expected.ancestors.map(summarize),
+      nonCanonical: expected.nonAncestors.map(summarize),
+    });
+    view.prune({epoch: 1, root: Buffer.alloc(32, 2), rootHex: root(2)});
+    const snapshot = view.getFinalizedBlockSnapshot(root(4));
+    expect(snapshot.canonical.map((block) => [block.blockRoot, block.payloadStatus])).toEqual([
+      [root(4), PayloadStatus.PENDING],
+      [root(2), PayloadStatus.FULL],
+    ]);
+    expect(snapshot.nonCanonical.some((block) => block.blockRoot === root(3))).toBe(false);
+    protoArray.pruneThreshold = 0;
+    protoArray.maybePrune(root(2));
+    expect(publisher.update()).toBeNull();
+    expect(view.getFinalizedBlockSnapshot(root(4))).toEqual(snapshot);
   });
 });

@@ -3,7 +3,7 @@ import {NotReorgedReason} from "@lodestar/fork-choice";
 import {StateHashTreeRootSource} from "@lodestar/state-transition";
 import {ArchiveStoreTask} from "../../chain/archiveStore/interface.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
-import type {LateCanonicalBlockReason} from "../../chain/archiveStore/utils/archiveBlocks.js";
+import type {LateCanonicalBlockReason} from "../../chain/beaconEngine/interface.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {
   PayloadEnvelopeInputPruneReason,

@@ -4,11 +4,13 @@ import {StrictEventEmitterSingleArg} from "../../util/strictEvents.js";
 import {ChainViewUpdate} from "../chainView/interface.js";
 
 export enum BeaconEngineEvent {
+  fatalError = "fatalError",
   executionPayloadImported = "executionPayloadImported",
   chainViewUpdated = "chainViewUpdated",
 }
 
 export type BeaconEngineEventData = {
+  [BeaconEngineEvent.fatalError]: Error;
   [BeaconEngineEvent.executionPayloadImported]: routes.events.EventData[routes.events.EventType.executionPayload];
   [BeaconEngineEvent.chainViewUpdated]: ChainViewUpdate;
 };

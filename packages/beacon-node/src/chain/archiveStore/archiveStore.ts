@@ -1,6 +1,5 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconChainDb} from "../../db/index.js";
@@ -55,8 +54,8 @@ export class ArchiveStore {
       signal,
     });
 
-    // State archival (finalized + temp + shutdown) is engine-owned; the ArchiveStore keeps only the
-    // event wiring and the DA/light-client cleanup driven by the engine's finalization snapshot.
+    // State archival is engine-owned. ArchiveStore coordinates it with BeaconChain's DA/light-client cleanup
+    // and keeps fork choice and ChainView available until all dependent work completes.
 
     if (!opts.disableArchiveOnCheckpoint) {
       this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
@@ -151,29 +150,30 @@ export class ArchiveStore {
     });
   };
 
+  /**
+   * The facade orchestrates finalization because blocks, envelopes, states and fork choice belong to BeaconEngine,
+   * while columns and ChainView belong to BeaconChain. Keep these steps awaited in the checkpoint queue:
+   * neither owner may prune its fork-choice metadata before the other has finished using it for archival
+   * and cleanup. The detailed cross-owner ordering is documented in beaconEngine/processFinalizedCheckpoint.ts.
+   */
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
-
-      // we want to track late imported canonical blocks, but it's not nice to do it at syncig time
-      const isNodeSynced = this.chain.clock.currentSlot - this.chain.getHead().slot <= SLOTS_PER_EPOCH;
 
       let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await archiveBlocks(
         this.chain.config,
         this.db,
         this.chain.beaconEngine,
+        this.chain.getFinalizedBlockSnapshot(finalized.rootHex),
         this.chain.lightClientServer,
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,
-        this.metrics,
-        isNodeSynced,
         this.archiveDataEpochs,
         this.chain.opts.persistOrphanedBlocks,
-        this.chain.opts.persistOrphanedBlocksDir,
-        this.chain.opts.dedupePayloads
+        this.chain.opts.persistOrphanedBlocksDir
       );
       timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
@@ -187,6 +187,8 @@ export class ArchiveStore {
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 
+      // Prune fork choice and ChainView last. completeFinalization first awaits state archival, then prunes
+      // fork choice; await its success before removing the corresponding metadata from ChainView.
       const prunedBlockCount = await this.chain.beaconEngine.completeFinalization(finalized);
       this.chain.pruneChainView(finalized);
 
