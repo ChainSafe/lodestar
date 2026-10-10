@@ -1993,7 +1993,7 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).not.toHaveBeenCalled();
     });
 
-    it("processes incomplete payload envelope input without network fetch", async () => {
+    it("processes duplicate incomplete payload events once without network fetch", async () => {
       const peer = await getRandPeerIdStr();
       const {payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
       payloadInput.addPayloadEnvelope({
@@ -2025,6 +2025,11 @@ describe("UnknownBlockSync", () => {
         },
       });
 
+      emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+        payloadInput,
+        peer,
+        source: BlockInputSource.gossip,
+      });
       emitter.emit(ChainEvent.incompletePayloadEnvelope, {
         payloadInput,
         peer,

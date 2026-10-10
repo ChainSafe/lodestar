@@ -149,6 +149,30 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
+  const incompletePayloadWaits = new WeakSet<PayloadEnvelopeInput>();
+
+  function scheduleIncompletePayloadEnvelope(payloadInput: PayloadEnvelopeInput, peer: string): void {
+    if (payloadInput.isComplete() || incompletePayloadWaits.has(payloadInput)) {
+      return;
+    }
+    incompletePayloadWaits.add(payloadInput);
+
+    const cutoffTimeMs = getCutoffTimeMs(chain, payloadInput.slot, config.getPayloadDueMs());
+    payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch(() => {
+      if (
+        payloadInput.isComplete() ||
+        chain.seenPayloadEnvelopeInputCache.get(payloadInput.blockRootHex) !== payloadInput
+      ) {
+        return;
+      }
+      chain.logger.debug("Payload envelope incomplete at payload deadline", payloadInput.getLogMeta());
+      chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+        payloadInput,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+    });
+  }
 
   /**
    * Add a gossip block to the seen caches. The proposer signature of the block MUST be verified.
@@ -901,25 +925,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
             // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
 
-            if (!payloadInput.isComplete()) {
-              const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
-              // do not await here to not delay gossip validation
-              payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch((_e) => {
-                chain.logger.debug(
-                  "Waited for envelope and data after receiving gossip column. Cut-off reached so emitting incompletePayloadEnvelope",
-                  {
-                    dataColumnIndex: index,
-                    ...payloadInputMeta,
-                  }
-                );
-                // TODO GLOAS: UnknownBlockSync to handle this event
-                chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
-                  payloadInput,
-                  peer: peerIdStr,
-                  source: BlockInputSource.gossip,
-                });
-              });
-            }
+            scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
           } catch (e) {
             logger.debug(
               "Error handling gossip data column",
@@ -1328,6 +1334,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             seenTimestampSec,
             peerIdStr,
           });
+
+          scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
 
           chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
             slot,

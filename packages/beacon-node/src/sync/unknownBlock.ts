@@ -300,10 +300,12 @@ export class BlockInputSync {
 
   private onIncompletePayloadEnvelope = (data: ChainEventData[ChainEvent.incompletePayloadEnvelope]): void => {
     try {
-      this.addByPayloadInput(data.payloadInput, data.peer);
-      this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.INCOMPLETE_PAYLOAD_ENVELOPE});
-      this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
+      const isNewRoot = this.addByPayloadInput(data.payloadInput, data.peer);
+      if (isNewRoot) {
+        this.triggerUnknownBlockSearch();
+        this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.INCOMPLETE_PAYLOAD_ENVELOPE});
+        this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
+      }
     } catch (e) {
       this.logger.debug("Error handling incompletePayloadEnvelope event", {}, e as Error);
     }
@@ -603,21 +605,25 @@ export class BlockInputSync {
     payloadInput: PayloadEnvelopeInput,
     peerIdStr?: PeerIdStr,
     envelope?: gloas.SignedExecutionPayloadEnvelope
-  ): void => {
+  ): boolean => {
     if (this.knownBadBlocks.has(payloadInput.blockRootHex)) {
       this.logger.debug("Ignoring payload input for known bad block root", {
         slot: payloadInput.slot,
         root: payloadInput.blockRootHex,
         peerIdStr,
       });
-      return;
+      return false;
     }
 
-    const pendingPayload = this.toPendingPayloadInput(
-      payloadInput,
-      this.pendingPayloads.get(payloadInput.blockRootHex),
-      envelope
-    );
+    const existingPayload = this.pendingPayloads.get(payloadInput.blockRootHex);
+    if (existingPayload) {
+      if (peerIdStr && existingPayload.peerIdStrings.size < MAX_PEERS_PER_ROOT) {
+        existingPayload.peerIdStrings.add(peerIdStr);
+      }
+      return false;
+    }
+
+    const pendingPayload = this.toPendingPayloadInput(payloadInput, undefined, envelope);
 
     if (peerIdStr && pendingPayload.peerIdStrings.size < MAX_PEERS_PER_ROOT) {
       pendingPayload.peerIdStrings.add(peerIdStr);
@@ -636,6 +642,7 @@ export class BlockInputSync {
       this.metrics?.blockInputSync.removedPayloads.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
       this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingPayloads`);
     }
+    return true;
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
