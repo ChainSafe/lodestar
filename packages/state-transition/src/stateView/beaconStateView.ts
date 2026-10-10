@@ -611,6 +611,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedState.epochCtx.currentSyncCommitteeIndexed;
   }
 
+  get currentSyncCommitteeValidatorIndices(): Uint32Array {
+    return this.cachedState.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
+  }
+
   get syncProposerReward(): number {
     return this.cachedState.epochCtx.syncProposerReward;
   }

@@ -77,6 +77,83 @@ describe("NativeBeaconStateView", () => {
     expect(binding.release).toHaveBeenCalledOnce();
   });
 
+  describe("current sync committee indices", () => {
+    const indices = new Uint32Array([3, 1, 3]);
+    const committee = {
+      validatorIndices: indices,
+      validatorIndexMap: new Map([
+        [3, [0, 2]],
+        [1, [1]],
+      ]),
+    };
+
+    it("caches indices without requesting the full committee map", () => {
+      const getIndices = vi.fn(() => indices);
+      const getCommittee = vi.fn(() => committee);
+      const binding = {
+        get currentSyncCommitteeValidatorIndices() {
+          return getIndices();
+        },
+        get currentSyncCommitteeIndexed() {
+          return getCommittee();
+        },
+      } as unknown as IBeaconStateViewNative;
+      const view = new NativeBeaconStateView(config, binding);
+
+      expect(view.currentSyncCommitteeValidatorIndices).toBe(indices);
+      expect(view.currentSyncCommitteeValidatorIndices).toBe(indices);
+      expect(getIndices).toHaveBeenCalledOnce();
+      expect(getCommittee).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the full cache for older addons", () => {
+      const getCommittee = vi.fn(() => committee);
+      const binding = {
+        get currentSyncCommitteeIndexed() {
+          return getCommittee();
+        },
+      } as unknown as IBeaconStateViewNative;
+      const view = new NativeBeaconStateView(config, binding);
+
+      expect(view.currentSyncCommitteeValidatorIndices).toBe(indices);
+      expect(view.currentSyncCommitteeValidatorIndices).toBe(indices);
+      expect(view.currentSyncCommitteeIndexed).toBe(committee);
+      expect(getCommittee).toHaveBeenCalledOnce();
+    });
+
+    it("reuses indices from an already loaded full committee", () => {
+      const getIndices = vi.fn(() => indices);
+      const binding = {
+        currentSyncCommitteeIndexed: committee,
+        get currentSyncCommitteeValidatorIndices() {
+          return getIndices();
+        },
+      } as unknown as IBeaconStateViewNative;
+      const view = new NativeBeaconStateView(config, binding);
+
+      expect(view.currentSyncCommitteeIndexed).toBe(committee);
+      expect(view.currentSyncCommitteeValidatorIndices).toBe(indices);
+      expect(getIndices).not.toHaveBeenCalled();
+    });
+
+    it("propagates native errors without falling back", () => {
+      const error = new Error("InvalidState");
+      const getCommittee = vi.fn(() => committee);
+      const binding = {
+        get currentSyncCommitteeValidatorIndices(): Uint32Array {
+          throw error;
+        },
+        get currentSyncCommitteeIndexed() {
+          return getCommittee();
+        },
+      } as unknown as IBeaconStateViewNative;
+      const view = new NativeBeaconStateView(config, binding);
+
+      expect(() => view.currentSyncCommitteeValidatorIndices).toThrow(error);
+      expect(getCommittee).not.toHaveBeenCalled();
+    });
+  });
+
   it("delegates pass-through getters and methods to the binding", () => {
     const binding = {
       slot: 123,
