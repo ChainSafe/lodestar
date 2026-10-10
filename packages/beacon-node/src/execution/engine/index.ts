@@ -70,7 +70,8 @@ export function getExecutionEngineHttp(
             jwtId: opts.jwtId,
             clientVersion: formatClientVersionHeader(getLodestarClientVersion(opts)),
             metrics,
-          })
+          }),
+          metrics
         );
 
   modules.logger.info("Execution client", {urls: opts.urls.map(toPrintableUrl).toString(), engineApi});
