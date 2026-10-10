@@ -4,6 +4,7 @@ import {
   ForkName,
   ForkPostFulu,
   ForkPostGloas,
+  ForkPreDeneb,
   ForkPreGloas,
   SLOTS_PER_EPOCH,
   isForkPostDeneb,
@@ -240,7 +241,7 @@ export class SeenBlockInput {
       } else if (!isForkPostDeneb(forkName)) {
         // Pre-deneb
         blockInput = BlockInputPreData.createFromBlock({
-          block,
+          block: block as SignedBeaconBlock<ForkPreDeneb>,
           blockRootHex,
           daOutOfRange,
           forkName,

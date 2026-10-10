@@ -6,6 +6,7 @@ import {altair, phase0, ssz} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
   ZERO_HASH,
   computeDomain,
   computeEpochAtSlot,
@@ -199,7 +200,8 @@ export function getBlockAltair(preState: CachedBeaconStateAltair, opts: BlockAlt
  * Generate valid deposits with valid signatures and valid merkle proofs.
  * NOTE: Mutates `preState` to add the new `eth1Data.depositRoot`
  */
-function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0.Deposit[] {
+function getDeposits(preStateAllForks: CachedBeaconStateAllForks, count: number): phase0.Deposit[] {
+  const preState = preStateAllForks as CachedBeaconStatePhase0;
   const depositRootViewDU = ssz.phase0.DepositDataRootList.toViewDU([]);
   const depositCount = Number(preState.eth1Data.depositCount);
   const withdrawalCredentials = Buffer.alloc(32, 0xee);

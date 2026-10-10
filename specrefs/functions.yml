@@ -10255,7 +10255,9 @@
     </spec>
 
 - name: process_block#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/block/index.ts
+      search: export function processBlock(
   spec: |
     <spec fn="process_block" fork="heze" hash="217d6454">
     def process_block(state: BeaconState, block: BeaconBlock) -> None:
@@ -10793,7 +10795,9 @@
     </spec>
 
 - name: process_epoch#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/epoch/index.ts
+      search: export function processEpoch(
   spec: |
     <spec fn="process_epoch" fork="heze" hash="782cef80">
     def process_epoch(state: BeaconState) -> None:
@@ -11588,7 +11592,9 @@
     </spec>
 
 - name: process_operations#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/block/processOperations.ts
+      search: export function processOperations(
   spec: |
     <spec fn="process_operations" fork="heze" hash="d70acce9">
     def process_operations(state: BeaconState, body: BeaconBlockBody, parent_slot: Slot) -> None:
@@ -18162,7 +18168,9 @@
     </spec>
 
 - name: verify_block_body_operation_limits#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const BeaconBlockBody = new ProgressiveContainerType(
   spec: |
     <spec fn="verify_block_body_operation_limits" fork="heze" hash="e26d062e">
     def verify_block_body_operation_limits(body: BeaconBlockBody) -> None:

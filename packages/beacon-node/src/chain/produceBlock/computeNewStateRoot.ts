@@ -1,5 +1,12 @@
 import {EMPTY_SIGNATURE, IBeaconStateView, StateHashTreeRootSource} from "@lodestar/state-transition";
-import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
+import {
+  BeaconBlock,
+  BlindedBeaconBlock,
+  Gwei,
+  Root,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
+} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 
 /**
@@ -13,7 +20,7 @@ export function computeNewStateRoot(
   block: BeaconBlock | BlindedBeaconBlock
 ): {newStateRoot: Root; proposerReward: Gwei; postState: IBeaconStateView} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
-  const signedBlock = {message: block, signature: EMPTY_SIGNATURE};
+  const signedBlock = {message: block, signature: EMPTY_SIGNATURE} as SignedBeaconBlock | SignedBlindedBeaconBlock;
   const {newStateRoot, proposerReward, postState, hashTreeRootTime} = state.computeNewStateRoot(
     {block: signedBlock},
     {metrics: metrics?.stateTransition}

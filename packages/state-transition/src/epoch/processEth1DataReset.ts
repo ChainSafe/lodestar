@@ -1,13 +1,13 @@
 import {EPOCHS_PER_ETH1_VOTING_PERIOD} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
+import {CachedBeaconStatePreHeze, EpochTransitionCache} from "../types.js";
 
 /**
  * Reset eth1DataVotes tree every `EPOCHS_PER_ETH1_VOTING_PERIOD`.
  *
  * PERF: Almost no (constant) cost
  */
-export function processEth1DataReset(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+export function processEth1DataReset(state: CachedBeaconStatePreHeze, cache: EpochTransitionCache): void {
   const nextEpoch = cache.currentEpoch + 1;
 
   // reset eth1 data votes

@@ -11,6 +11,7 @@ import {
   Slot,
   ValidatorIndex,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {
   EmptyArgs,
@@ -672,13 +673,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           if (signedBlocks.length === 0) throw new Error("No blocks provided.");
           const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            body: ArrayOf(sszTypesFor(fork).SignedBeaconBlock).toJson(signedBlocks as SignedBeaconBlock<typeof fork>[]),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[];
+          const signedBlocks = ArrayOf(sszTypesFor(fork).SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[];
           assertBlocksMatchFork(signedBlocks, fork);
           return {signedBlocks};
         },
@@ -686,13 +687,15 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           if (signedBlocks.length === 0) throw new Error("No blocks provided.");
           const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            body: ArrayOf(sszTypesFor(fork).SignedBeaconBlock).serialize(
+              signedBlocks as SignedBeaconBlock<typeof fork>[]
+            ),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[];
+          const signedBlocks = ArrayOf(sszTypesFor(fork).SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[];
           assertBlocksMatchFork(signedBlocks, fork);
           return {signedBlocks};
         },

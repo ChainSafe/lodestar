@@ -47,8 +47,6 @@ exceptions:
 
     # heze (not implemented)
     - SignedInclusionLists#heze
-    # heze EIP-8015 (not implemented)
-    - BeaconBlockBody#heze
 
   dataclasses:
     # phase0
@@ -158,12 +156,6 @@ exceptions:
     - compute_min_epochs_for_block_requests#phase0
     # The pre-Gloas retention minimum exceeds the reduced Gloas minimum.
     - compute_min_epochs_for_block_requests#gloas
-
-    # heze EIP-8015 (not implemented)
-    - process_block#heze
-    - process_epoch#heze
-    - process_operations#heze
-    - verify_block_body_operation_limits#heze
 
     # heze (not implemented)
     - get_forkchoice_store#heze

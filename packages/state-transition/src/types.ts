@@ -26,5 +26,6 @@ export type {
   BeaconStateGloas,
   BeaconStateHeze,
   BeaconStatePhase0,
+  BeaconStatePreHeze,
   ShufflingGetter,
 } from "./cache/types.js";

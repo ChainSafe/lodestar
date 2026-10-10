@@ -11,12 +11,13 @@ import {
   UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
 import {Bytes32, Root, TimeSeconds, phase0, ssz} from "@lodestar/types";
-import {processDeposit} from "../block/processDeposit.js";
+import {applyDeposit, processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {increaseBalance} from "../index.js";
 import {
   BeaconStateAllForks,
+  BeaconStatePreHeze,
   CachedBeaconStateAllForks,
   CachedBeaconStateElectra,
   CachedBeaconStatePreHeze,
@@ -92,7 +93,9 @@ export function getGenesisBeaconState(
   state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU(latestBlockHeader);
 
   // Ethereum 1.0 chain data
-  state.eth1Data = ssz.phase0.Eth1Data.toViewDU(genesisEth1Data);
+  if (config.getForkSeq(GENESIS_SLOT) < ForkSeq.heze) {
+    (state as BeaconStatePreHeze).eth1Data = ssz.phase0.Eth1Data.toViewDU(genesisEth1Data);
+  }
   state.randaoMixes = ssz.phase0.RandaoMixes.toViewDU(randaoMixes);
 
   return state;
@@ -105,7 +108,9 @@ export function getGenesisBeaconState(
  * @param eth1BlockHash eth1 block hash
  */
 export function applyEth1BlockHash(state: CachedBeaconStateAllForks, eth1BlockHash: Bytes32): void {
-  state.eth1Data.blockHash = eth1BlockHash;
+  if (state.config.getForkSeq(state.slot) < ForkSeq.heze) {
+    (state as CachedBeaconStatePreHeze).eth1Data.blockHash = eth1BlockHash;
+  }
   state.randaoMixes = ssz.phase0.RandaoMixes.toViewDU(newFilledArray(EPOCHS_PER_HISTORICAL_VECTOR, eth1BlockHash));
 }
 
@@ -139,36 +144,41 @@ export function applyDeposits(
   fullDepositDataRootList?: DepositDataRootViewDU
 ): {activatedValidatorCount: number} {
   const fork = config.getForkSeq(state.slot);
-  const depositDataRootList: Root[] = [];
-
-  const fullDepositDataRootArr = fullDepositDataRootList ? fullDepositDataRootList.getAllReadonlyValues() : null;
-
-  if (fullDepositDataRootArr) {
-    const depositCount = Number(state.eth1Data.depositCount);
-    for (let index = 0; index < depositCount; index++) {
-      depositDataRootList.push(fullDepositDataRootArr[index]);
+  if (fork >= ForkSeq.heze) {
+    // Genesis deposits do not use the removed legacy deposit tree.
+    for (const deposit of newDeposits) {
+      applyDeposit(fork, state, deposit.data);
     }
-  }
+  } else {
+    const statePreHeze = state as CachedBeaconStatePreHeze;
+    const depositDataRootList: Root[] = [];
+    const fullDepositDataRootArr = fullDepositDataRootList ? fullDepositDataRootList.getAllReadonlyValues() : null;
 
-  const initDepositCount = depositDataRootList.length;
-  const depositDatas = fullDepositDataRootList ? null : newDeposits.map((deposit) => deposit.data);
-  const {DepositData, DepositDataRootList} = ssz.phase0;
-
-  for (const [index, deposit] of newDeposits.entries()) {
     if (fullDepositDataRootArr) {
-      depositDataRootList.push(fullDepositDataRootArr[index + initDepositCount]);
-      state.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(depositDataRootList);
-    } else if (depositDatas) {
-      const depositDataList = depositDatas.slice(0, index + 1);
-      state.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(
-        depositDataList.map((d) => DepositData.hashTreeRoot(d))
-      );
+      const depositCount = Number(statePreHeze.eth1Data.depositCount);
+      for (let index = 0; index < depositCount; index++) {
+        depositDataRootList.push(fullDepositDataRootArr[index]);
+      }
     }
 
-    state.eth1Data.depositCount += 1n;
+    const initDepositCount = depositDataRootList.length;
+    const depositDatas = fullDepositDataRootList ? null : newDeposits.map((deposit) => deposit.data);
+    const {DepositData, DepositDataRootList} = ssz.phase0;
 
-    const fork = config.getForkSeq(GENESIS_SLOT);
-    processDeposit(fork, state as CachedBeaconStatePreHeze, deposit);
+    for (const [index, deposit] of newDeposits.entries()) {
+      if (fullDepositDataRootArr) {
+        depositDataRootList.push(fullDepositDataRootArr[index + initDepositCount]);
+        statePreHeze.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(depositDataRootList);
+      } else if (depositDatas) {
+        const depositDataList = depositDatas.slice(0, index + 1);
+        statePreHeze.eth1Data.depositRoot = DepositDataRootList.hashTreeRoot(
+          depositDataList.map((d) => DepositData.hashTreeRoot(d))
+        );
+      }
+
+      statePreHeze.eth1Data.depositCount += 1n;
+      processDeposit(fork, statePreHeze, deposit);
+    }
   }
 
   // Process deposit balance updates
@@ -321,7 +331,9 @@ export function initializeBeaconStateFromEth1(
     stateElectra.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
       ssz.electra.ExecutionPayloadHeader.defaultViewDU();
-    stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
+    if (fork < ForkSeq.heze) {
+      stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
+    }
   }
 
   if (fork >= ForkSeq.fulu) {
@@ -331,6 +343,10 @@ export function initializeBeaconStateFromEth1(
     stateFulu.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.fulu.ExecutionPayloadHeader>) ??
       ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
+    if (fork < ForkSeq.heze) {
+      // Fulu retires the legacy bridge after the genesis deposits.
+      stateFulu.depositRequestsStartIndex = BigInt(stateFulu.eth1DepositIndex);
+    }
   }
 
   if (fork >= ForkSeq.gloas) {

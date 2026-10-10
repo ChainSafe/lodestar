@@ -525,7 +525,9 @@
     </spec>
 
 - name: BeaconBlockBody#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const BeaconBlockBody =
   spec: |
     <spec container="BeaconBlockBody" fork="heze" hash="7137bf03">
     class BeaconBlockBody(ProgressiveContainer):

@@ -115,7 +115,7 @@ function benchmarkCapellaEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks
   bench({
     id: `${stateId} - capella processEth1DataReset`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEth1DataReset(state, cache.value),
+    fn: (state) => processEth1DataReset(state as CachedBeaconStateCapella, cache.value),
   });
 
   bench({

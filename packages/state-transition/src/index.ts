@@ -80,6 +80,7 @@ export type {
   BeaconStateHeze,
   // Non-cached states
   BeaconStatePhase0,
+  BeaconStatePreHeze,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
