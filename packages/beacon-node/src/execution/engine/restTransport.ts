@@ -1,4 +1,4 @@
-import {Type} from "@chainsafe/ssz";
+import {BitArray, Type} from "@chainsafe/ssz";
 import {CELLS_PER_EXT_BLOB, ForkName, ForkSeq, isForkPostBellatrix} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, RootHex, capella, deneb, electra, gloas} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
@@ -228,7 +228,9 @@ export class RestEngineTransport implements IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    custodyColumns?: BitArray | null,
+    opts?: ReqOpts
   ): Promise<ForkchoiceUpdatedResult> {
     const forkchoiceState = {
       headBlockHash: fromHex(headBlockHash),
@@ -241,7 +243,7 @@ export class RestEngineTransport implements IEngineTransport {
       body = ForkchoiceUpdateGloas.serialize({
         forkchoiceState,
         payloadAttributes: payloadAttributes ? [toPayloadAttributesGloas(fork, payloadAttributes)] : [],
-        custodyColumns: [],
+        custodyColumns: custodyColumns == null ? [] : [custodyColumns],
       });
     } else if (ForkSeq[fork] >= ForkSeq.deneb) {
       body = ForkchoiceUpdateDeneb.serialize({
@@ -266,7 +268,7 @@ export class RestEngineTransport implements IEngineTransport {
 
     const res = await this.client.request(
       {method: "POST", path: "/forkchoice", executionFork: toExecutionForkName(fork), body, responseType: "ssz"},
-      fcUReqOpts
+      {...fcUReqOpts, ...opts}
     );
     const {payloadStatus, payloadId} = deserializeResponse(ForkchoiceUpdateResponse, res.body, "forkchoiceUpdated");
     return {
@@ -275,14 +277,14 @@ export class RestEngineTransport implements IEngineTransport {
     };
   }
 
-  async getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult> {
+  async getPayload(fork: ForkName, payloadId: PayloadId, opts?: ReqOpts): Promise<GetPayloadResult> {
     if (!PAYLOAD_ID_REGEX.test(payloadId)) {
       throw Error(`Invalid payloadId=${payloadId}, expected 0x prefixed 8 bytes hex`);
     }
 
     const res = await this.client.request(
       {method: "GET", path: `/payloads/${payloadId}`, executionFork: toExecutionForkName(fork), responseType: "ssz"},
-      getPayloadOpts
+      {...getPayloadOpts, ...opts}
     );
 
     if (ForkSeq[fork] >= ForkSeq.gloas) {

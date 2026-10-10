@@ -11,6 +11,7 @@ import {cleanOldLogFiles, onGracefulShutdown, parseFeeRecipient, parseLoggerArgs
 import {getVersionData} from "../../util/version.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs, builderMetricsDefaultOptions} from "./options.js";
+import {getBuilderBidOptions} from "./runtime.js";
 
 const ZERO_ADDRESS = "0x" + "0".repeat(40);
 
@@ -40,14 +41,27 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     throw Error("Cannot put zero address as an executionFeeRecipient");
   }
 
+  const abortController = new AbortController();
+  const bidRuntime = getBuilderBidOptions(args, config, abortController.signal, logger);
+
   const keypair = await loadBuilderKeypair(logger, args.keystore, args.keystorePassword, args.builderPubkey);
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
-  onGracefulShutdown(async () => {
-    for (const cb of onGracefulShutdownCbs) await cb();
-  }, logger.info.bind(logger));
+  let shutdownPromise: Promise<void> | undefined;
+  const shutdown = (): Promise<void> => {
+    shutdownPromise ??= (async () => {
+      for (const cb of onGracefulShutdownCbs) {
+        try {
+          await cb();
+        } catch (error) {
+          logger.error("Failed to shut down Builder resource", {}, error as Error);
+        }
+      }
+    })();
+    return shutdownPromise;
+  };
+  onGracefulShutdown(shutdown, logger.info.bind(logger));
 
-  const abortController = new AbortController();
   onGracefulShutdownCbs.push(async () => abortController.abort());
 
   const register = args.metrics ? new RegistryMetricCreator() : null;
@@ -70,6 +84,18 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   );
 
   logger.info("Beacon node", {beaconNode: toPrintableUrl(args.beaconNodeUrl), timeoutMs: args.requestTimeout});
+  if (bidRuntime) {
+    logger.info("Bidding requires per-slot payload attributes from the source BN", {
+      lodestarOption: "--emitPayloadAttributes",
+    });
+    logger.info("Builder bidding enabled", {
+      executionUrl: toPrintableUrl(args["execution.url"] ?? ""),
+      getPayloadAtBps: bidRuntime.inputs.deadlineBps,
+      getPayloadTimeout: bidRuntime.orchestration.getPayloadTimeout,
+      revealCutoffBps: bidRuntime.reveal.cutoffBps,
+      minOperatingBalanceGwei: bidRuntime.minOperatingBalanceGwei,
+    });
+  }
 
   const builder = await Builder.init({
     keypair,
@@ -79,7 +105,15 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     api,
     executionFeeRecipient: fromHex(executionFeeRecipient),
     metrics,
+    bidRuntime,
+  }).catch(async (error: unknown) => {
+    await shutdown();
+    throw error;
   });
 
-  onGracefulShutdownCbs.push(() => builder.close());
+  if (abortController.signal.aborted) {
+    await builder.close();
+  } else {
+    onGracefulShutdownCbs.push(() => builder.close());
+  }
 }

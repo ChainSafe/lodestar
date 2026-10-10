@@ -24,6 +24,21 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     .set(gitData, 1);
 
   return {
+    bids: register.counter<{result: string}>({
+      name: "bc_bids_total",
+      help: "Bid attempts by result",
+      labelNames: ["result"],
+    }),
+    bidSelections: register.counter<{result: "won" | "lost"}>({
+      name: "bc_bid_selections_total",
+      help: "Imported bid selections in slots with local participation",
+      labelNames: ["result"],
+    }),
+    reveals: register.counter<{result: "published" | "duplicate" | "cutoff" | "withheld" | "expired" | "failed"}>({
+      name: "bc_reveals_total",
+      help: "Payload reveal outcomes",
+      labelNames: ["result"],
+    }),
     builderStatus: register.gauge({
       name: "bc_builder_status",
       help: "Current builder status: pending=0, active=1, exited=2",

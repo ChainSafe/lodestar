@@ -2,16 +2,29 @@ import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
-import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
+import {BidLedger} from "./services/bidLedger.js";
+import type {BidPolicy} from "./services/bidPolicy.js";
+import {BidPublisher} from "./services/bidPublisher.js";
+import {BidSelector} from "./services/bidSelector.js";
 import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
+import {EnvelopePublisher} from "./services/envelopePublisher.js";
+import {
+  PayloadAttributesConsumer,
+  type PayloadAttributesConsumerOptions,
+} from "./services/payloadAttributesConsumer.js";
+import {PayloadOrchestrator, type PayloadOrchestratorOptions} from "./services/payloadOrchestrator.js";
+import type {PayloadSource} from "./services/payloadSource.js";
 import {PayloadStore} from "./services/payloadStore.js";
 import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
+import {Revealer, type RevealerOptions} from "./services/revealer.js";
+import {SlotBidder} from "./services/slotBidder.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
@@ -22,6 +35,18 @@ export type BuilderModules = {
   clock: IClock;
   index: BuilderIndex;
   payloadStore: PayloadStore;
+  payloadAttributesConsumer?: PayloadAttributesConsumer;
+  bidLedger?: BidLedger;
+};
+
+/** Opt-in runtime using the source BN's Gloas payload-attributes events. */
+export type BuilderBidOptions = {
+  source: PayloadSource;
+  policy: BidPolicy;
+  orchestration: PayloadOrchestratorOptions;
+  inputs: Omit<PayloadAttributesConsumerOptions, "executionFeeRecipient">;
+  minOperatingBalanceGwei: number;
+  reveal: RevealerOptions;
 };
 
 export type BuilderOptions = {
@@ -33,6 +58,7 @@ export type BuilderOptions = {
   clock?: ClockOptions;
   executionFeeRecipient: ExecutionAddress;
   metrics: Metrics | null;
+  bidRuntime?: BuilderBidOptions;
 };
 
 /**
@@ -49,6 +75,8 @@ export class Builder {
   private readonly logger: Logger;
   private readonly executionFeeRecipient: ExecutionAddress;
   private readonly payloadStore: PayloadStore;
+  private readonly payloadAttributesConsumer: PayloadAttributesConsumer | undefined;
+  private readonly bidLedger: BidLedger | undefined;
 
   constructor({
     opts,
@@ -59,6 +87,8 @@ export class Builder {
     clock,
     index,
     payloadStore,
+    payloadAttributesConsumer,
+    bidLedger,
   }: BuilderModules) {
     this.builderSigner = builderSigner;
     this.blockObserver = blockObserver;
@@ -69,6 +99,8 @@ export class Builder {
     this.logger = opts.logger;
     this.index = index;
     this.payloadStore = payloadStore;
+    this.payloadAttributesConsumer = payloadAttributesConsumer;
+    this.bidLedger = bidLedger;
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
@@ -85,6 +117,13 @@ export class Builder {
 
   static async init(opts: BuilderOptions): Promise<Builder> {
     const {api, logger} = opts;
+    if (opts.bidRuntime) {
+      const {reveal} = opts.bidRuntime;
+      if (!reveal) throw new LodestarError({code: "BUILDER_REVEAL_REQUIRED"});
+      if (!Number.isSafeInteger(reveal.cutoffBps) || reveal.cutoffBps <= 0 || reveal.cutoffBps >= 10_000) {
+        throw new LodestarError({code: "BUILDER_REVEAL_INVALID_CUTOFF"});
+      }
+    }
     const genesis = await waitForGenesis(api, logger, opts.abortController.signal);
     logger.info("Genesis fetched from the beacon node", {
       genesisValidatorsRoot: toRootHex(genesis.genesisValidatorsRoot),
@@ -102,7 +141,7 @@ export class Builder {
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
 
-    const index = await resolveBuilderIdentity(
+    const identity = await resolveBuilderIdentity(
       api,
       logger,
       builderSigner.getPubkeyHex(),
@@ -111,11 +150,83 @@ export class Builder {
       config
     );
 
-    const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
+    const {index} = identity;
+    const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics, {
+      status: identity.status,
+      balance: identity.builder.balance,
+    });
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
 
     const payloadStore = new PayloadStore();
+    let bidLedger: BidLedger | undefined;
+    let payloadAttributesConsumer: PayloadAttributesConsumer | undefined;
+    if (opts.bidRuntime) {
+      const {source, policy, orchestration, inputs, minOperatingBalanceGwei} = opts.bidRuntime;
+      bidLedger = new BidLedger();
+      const publisher = new BidPublisher({
+        api,
+        config,
+        signer: builderSigner,
+        ledger: bidLedger,
+        builderIndex: index,
+        hasPayload: (identity) => {
+          const stored = payloadStore.get(identity.blockHash);
+          return (
+            stored !== null &&
+            stored.slot === identity.slot &&
+            toRootHex(stored.parentBlockRoot) === identity.parentBlockRoot &&
+            toRootHex(stored.payload.executionPayload.parentHash) === identity.parentBlockHash &&
+            toRootHex(stored.payload.executionPayload.blockHash) === identity.blockHash
+          );
+        },
+      });
+      const bidder = new SlotBidder(
+        {
+          buildPayload: (job, signal) => new PayloadOrchestrator(source, orchestration, signal).run(job),
+          store: payloadStore,
+          policy,
+          ledger: bidLedger,
+          publisher,
+          builderIndex: index,
+          builderStatusTracker,
+        },
+        {minOperatingBalanceGwei}
+      );
+      payloadAttributesConsumer = new PayloadAttributesConsumer(
+        {config, clock, preferences: proposerPreferencesTracker, bidder, metrics: opts.metrics},
+        {...inputs, executionFeeRecipient: opts.executionFeeRecipient}
+      );
+      const {reveal} = opts.bidRuntime;
+      const ledger = bidLedger;
+      const selector = new BidSelector({
+        config,
+        ledger,
+        builderIndex: index,
+      });
+      const envelopePublisher = new EnvelopePublisher({
+        api,
+        signer: builderSigner,
+        ledger,
+        builderIndex: index,
+      });
+      const revealer = new Revealer(
+        {
+          config,
+          clock,
+          logger,
+          metrics: opts.metrics,
+          builderIndex: index,
+          ledger,
+          selector,
+          publisher: envelopePublisher,
+          store: payloadStore,
+        },
+        reveal
+      );
+      blockObserver.runOnBlock((observed) => revealer.onBlock(observed, opts.abortController.signal));
+    }
+    opts.abortController.signal.throwIfAborted();
 
     return new Builder({
       opts,
@@ -126,10 +237,14 @@ export class Builder {
       clock,
       index,
       payloadStore,
+      bidLedger,
+      payloadAttributesConsumer,
     });
   }
 
   private async onSlot(slot: number): Promise<void> {
+    this.payloadAttributesConsumer?.onSlot(slot);
+    this.bidLedger?.prune(slot);
     this.payloadStore.prune(slot);
     this.proposerPreferencesTracker.prune(slot);
   }
@@ -139,6 +254,9 @@ export class Builder {
     if (signal.aborted) return;
 
     const topics = [routes.events.EventType.block, routes.events.EventType.proposerPreferences];
+    if (this.payloadAttributesConsumer) {
+      topics.push(routes.events.EventType.headV2, routes.events.EventType.payloadAttributes);
+    }
     this.logger.verbose("Subscribing to builder events", {topics: topics.join(",")});
     api.events
       .eventstream({
@@ -150,10 +268,14 @@ export class Builder {
         onOpen: () => {
           void this.fetchProposerPreferences(api);
         },
+        onDisconnect: () => {
+          this.payloadAttributesConsumer?.onDisconnect();
+        },
         onError: (error) => {
           if (!signal.aborted) this.logger.error("Failed to receive builder event", {topics: topics.join(",")}, error);
         },
         onClose: () => {
+          this.payloadAttributesConsumer?.onDisconnect();
           if (signal.aborted) {
             this.logger.verbose("Closed builder event stream", {topics: topics.join(",")});
           } else {
@@ -178,9 +300,11 @@ export class Builder {
    */
   private async fetchProposerPreferences(api: ApiClient): Promise<void> {
     const signal = this.controller.signal;
-
+    if (signal.aborted) return;
     try {
-      const preferences = (await api.beacon.getProposerPreferences({}, {signal})).value();
+      const response = await api.beacon.getProposerPreferences({}, {signal});
+      signal.throwIfAborted();
+      const preferences = response.value();
       for (const signedProposerPreferences of preferences) {
         // Does not replace preferences already received from the event stream
         this.proposerPreferencesTracker.onProposerPreferences(signedProposerPreferences);
@@ -190,7 +314,25 @@ export class Builder {
       if (!signal.aborted && !isErrorAborted(error)) {
         this.logger.warn(
           "Failed to fetch proposer preferences",
-          {},
+          {code: "BUILDER_ERROR_PREFERENCES_RECOVERY"},
+          error instanceof Error ? error : Error(String(error))
+        );
+      }
+      return;
+    }
+
+    try {
+      const result = await this.payloadAttributesConsumer?.onPreferences(signal);
+      if (result?.status === "published") {
+        this.logger.info("Published execution payload bid", result);
+      } else if (result?.status === "not_published") {
+        this.logger.debug("Execution payload bid not published", result);
+      }
+    } catch (error) {
+      if (!signal.aborted && !isErrorAborted(error)) {
+        this.logger.warn(
+          "Failed to build after recovering proposer preferences",
+          {code: "BUILDER_ERROR_RECOVERED_BUILD"},
           error instanceof Error ? error : Error(String(error))
         );
       }
@@ -209,6 +351,19 @@ export class Builder {
         case routes.events.EventType.proposerPreferences:
           this.proposerPreferencesTracker.onProposerPreferences(event.message.data);
           break;
+        case routes.events.EventType.headV2:
+        case routes.events.EventType.payloadAttributes:
+          break;
+      }
+      if (event.type !== routes.events.EventType.block) {
+        const result = await this.payloadAttributesConsumer?.onEvent(event, signal);
+        if (result?.status === "published") {
+          this.logger.info("Published execution payload bid", result);
+        } else if (result?.status === "not_published") {
+          this.logger.debug("Execution payload bid not published", result);
+        } else if (result?.status === "ignored") {
+          this.logger.debug("Payload input deferred or ignored", {eventType: event.type, reason: result.reason});
+        }
       }
     } catch (error) {
       if (!signal.aborted && !isErrorAborted(error)) {
@@ -223,5 +378,6 @@ export class Builder {
 
   async close(): Promise<void> {
     this.controller.abort();
+    this.payloadAttributesConsumer?.close();
   }
 }

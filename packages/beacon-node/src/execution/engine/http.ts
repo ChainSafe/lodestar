@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/logger";
 import {
   ForkName,
@@ -11,7 +12,7 @@ import {
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {isErrorAborted} from "@lodestar/utils";
+import {ErrorAborted, isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
@@ -27,12 +28,12 @@ import {
   PayloadId,
   VersionedHashes,
 } from "./interface.js";
-import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClientEvent} from "./jsonRpcHttpClient.js";
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClientEvent, ReqOpts} from "./jsonRpcHttpClient.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {EngineRestError, EngineRestResponseError, isRetryableEngineRestError} from "./restHttpClient.js";
 import {EngineCapabilities, RestEngineTransport} from "./restTransport.js";
 import {executionForkName} from "./sszTypes.js";
-import {IEngineTransport, PayloadStatusResult} from "./transport.js";
+import {ForkchoiceUpdatedResult, IEngineTransport, PayloadStatusResult} from "./transport.js";
 import {ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -330,14 +331,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const {
       payloadStatus: {status, validationError},
       payloadId,
-    } = await this.enqueue(() =>
-      this.withTransport(fork, undefined, (transport) =>
-        transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes)
-      )
-    );
-
-    this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
-    this.metrics?.engineNotifyForkchoiceUpdateResult.inc({result: status});
+    } = await this.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes);
 
     switch (status) {
       case ExecutionPayloadStatus.VALID:
@@ -372,6 +366,40 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }
   }
 
+  /** Returns the Engine status without applying beacon-node payload preparation policy. */
+  async forkchoiceUpdated(
+    fork: ForkName,
+    headBlockHash: RootHex,
+    safeBlockHash: RootHex,
+    finalizedBlockHash: RootHex,
+    payloadAttributes?: PayloadAttributes,
+    custodyColumns?: BitArray | null,
+    opts?: ReqOpts
+  ): Promise<ForkchoiceUpdatedResult> {
+    const result = await this.enqueue(
+      () =>
+        this.withTransport(
+          fork,
+          undefined,
+          (transport) =>
+            transport.forkchoiceUpdated(
+              fork,
+              headBlockHash,
+              safeBlockHash,
+              finalizedBlockHash,
+              payloadAttributes,
+              custodyColumns,
+              opts
+            ),
+          opts?.signal
+        ),
+      opts?.signal
+    );
+    this.updateEngineState(getExecutionEngineState({payloadStatus: result.payloadStatus.status, oldState: this.state}));
+    this.metrics?.engineNotifyForkchoiceUpdateResult.inc({result: result.payloadStatus.status});
+    return result;
+  }
+
   /**
    * `engine_getPayloadV1`
    *
@@ -381,7 +409,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async getPayload(
     fork: ForkName,
-    payloadId: PayloadId
+    payloadId: PayloadId,
+    opts?: ReqOpts
   ): Promise<{
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
@@ -389,7 +418,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
-    return this.withTransport(fork, undefined, (transport) => transport.getPayload(fork, payloadId));
+    return this.withTransport(
+      fork,
+      undefined,
+      (transport) => transport.getPayload(fork, payloadId, opts),
+      opts?.signal
+    );
   }
 
   async prunePayloadIdCache(): Promise<void> {
@@ -423,8 +457,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return this.withTransport(undefined, "v1", (transport) => transport.getBlobsV1(versionedHashes));
   }
 
-  private enqueue<T>(job: () => Promise<T>): Promise<T> {
-    return this.queue.push(job) as Promise<T>;
+  private enqueue<T>(job: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    if (signal?.aborted) return Promise.reject(new ErrorAborted());
+    return waitForEngineRequest(this.queue.push(job) as Promise<T>, signal);
   }
 
   /**
@@ -435,9 +470,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private async withTransport<T>(
     fork: ForkName | undefined,
     blobsRevision: "v1" | "v2" | undefined,
-    fn: (transport: IEngineTransport) => Promise<T>
+    fn: (transport: IEngineTransport) => Promise<T>,
+    signal?: AbortSignal
   ): Promise<T> {
-    const transport = await this.getTransport(fork, blobsRevision);
+    if (signal?.aborted) throw new ErrorAborted();
+    const transport = await waitForEngineRequest(this.getTransport(fork, blobsRevision), signal);
+    if (signal?.aborted) throw new ErrorAborted();
     this.metrics?.engineApiRequests.inc({transport: transport === this.rest ? "ssz" : "json-rpc"});
     try {
       return await fn(transport);
@@ -629,6 +667,21 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }
 
     this.state = newState;
+  }
+}
+
+async function waitForEngineRequest<T>(request: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return request;
+  let onAbort: () => void = () => {};
+  const aborted = new Promise<never>((_, reject) => {
+    onAbort = () => reject(new ErrorAborted());
+    signal.addEventListener("abort", onAbort, {once: true});
+    if (signal.aborted) onAbort();
+  });
+  try {
+    return await Promise.race([request, aborted]);
+  } finally {
+    signal.removeEventListener("abort", onAbort);
   }
 }
 
