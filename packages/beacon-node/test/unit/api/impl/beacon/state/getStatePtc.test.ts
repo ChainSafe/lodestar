@@ -2,13 +2,16 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateGloas, BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/index.js";
 import {BeaconEngine} from "../../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {RegenCaller} from "../../../../../../src/chain/regen/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateCachedElectraState, generateState} from "../../../../../utils/state.js";
+import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 describe("getStatePtc", () => {
   const stateSlot = 3 * SLOTS_PER_EPOCH + 7;
@@ -17,7 +20,7 @@ describe("getStatePtc", () => {
   const stateId = `0x${"12".repeat(32)}`;
   const validators = ssz.gloas.PayloadTimelinessCommittee.defaultValue();
   validators.splice(0, 3, 7, 2, 7);
-  const resolveStateForApi = vi.fn();
+  const getState = vi.fn();
   let modules: ApiTestModules;
   let api: ReturnType<typeof getBeaconStateApi>;
 
@@ -32,18 +35,26 @@ describe("getStatePtc", () => {
       createCachedBeaconState(state, {config: createBeaconConfig(config, state.genesisValidatorsRoot), pubkeyCache})
     );
     modules = getApiTestModules({config});
+    modules.forkChoice.getFinalizedBlock.mockReturnValue(generateProtoBlock());
+    modules.forkChoice.getFinalizedCheckpoint.mockReturnValue({
+      epoch: 1,
+      root: new Uint8Array(32),
+      rootHex: `0x${"00".repeat(32)}`,
+    });
+    modules.forkChoice.getBlockDefaultStatus.mockReturnValue(
+      generateProtoBlock({executionStatus: ExecutionStatus.Syncing})
+    );
+    modules.db.blockArchive.get.mockResolvedValue(null);
     Object.assign(modules.chain, {
       beaconEngine: Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, {
         config: modules.config,
-        resolveStateForApi,
+        forkChoice: modules.forkChoice,
+        db: modules.db,
+        regen: {getState},
       }),
     });
     api = getBeaconStateApi(modules);
-    resolveStateForApi.mockResolvedValue({
-      state: view,
-      executionOptimistic: true,
-      finalized: false,
-    });
+    getState.mockResolvedValue(view);
   });
 
   afterEach(() => vi.restoreAllMocks());
@@ -53,7 +64,7 @@ describe("getStatePtc", () => {
       data: {slot: stateSlot, validators},
       meta: {executionOptimistic: true, finalized: false},
     });
-    expect(resolveStateForApi).toHaveBeenCalledWith(stateId);
+    expect(getState).toHaveBeenCalledWith(stateId, RegenCaller.restApi);
   });
 
   it.each([firstSlot, stateSlot + 1, lastSlot])("serves slot %i within the state's PTC window", async (slot) => {
@@ -83,16 +94,17 @@ describe("getStatePtc", () => {
     const view = new BeaconStateView(
       createCachedBeaconState(state, {config: createBeaconConfig(config, state.genesisValidatorsRoot), pubkeyCache})
     );
-    resolveStateForApi.mockResolvedValue({
-      state: view,
-      executionOptimistic: false,
-      finalized: true,
-    });
+    getState.mockResolvedValue(view);
+    modules.forkChoice.getBlockDefaultStatus.mockReturnValue(
+      generateProtoBlock({executionStatus: ExecutionStatus.Valid})
+    );
     const genesisModules = getApiTestModules({config});
     Object.assign(genesisModules.chain, {
       beaconEngine: Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, {
         config,
-        resolveStateForApi,
+        forkChoice: modules.forkChoice,
+        db: modules.db,
+        regen: {getState},
       }),
     });
     const genesisApi = getBeaconStateApi(genesisModules);
@@ -103,11 +115,7 @@ describe("getStatePtc", () => {
   });
 
   it("rejects pre-Gloas states", async () => {
-    resolveStateForApi.mockResolvedValue({
-      state: new BeaconStateView(generateCachedElectraState()),
-      executionOptimistic: false,
-      finalized: true,
-    });
+    getState.mockResolvedValue(new BeaconStateView(generateCachedElectraState()));
     await expect(api.getStatePtc({stateId})).rejects.toMatchObject({statusCode: 400});
   });
 });

@@ -28,11 +28,13 @@ describe("getStateValidators status filtering with ids", () => {
       rootHex: "0xbb",
       epoch: 0,
     });
+    modules.chain.regen.getStateSync.mockReturnValue(state);
     Object.assign(modules.chain, {
       beaconEngine: Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, {
         config: modules.config,
         pubkeyCache: state.cachedState.epochCtx.pubkeyCache,
-        resolveStateForApi: async () => ({state, executionOptimistic: false, finalized: false}),
+        forkChoice: modules.forkChoice,
+        regen: modules.chain.regen,
       }),
     });
   });
