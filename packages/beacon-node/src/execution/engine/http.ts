@@ -177,7 +177,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }
 
     // REST errors are handled in withTransport after compatibility fallback.
-    this.jsonRpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
+    this.jsonRpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({payload, error}) => {
+      // The client version call is optional and handles its own errors, it must not drive the engine state
+      if (isClientVersionRequest(payload)) return;
       this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}), error);
     });
 
@@ -435,7 +437,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private async withTransport<T>(
     fork: ForkName | undefined,
     blobsRevision: "v1" | "v2" | undefined,
-    fn: (transport: IEngineTransport) => Promise<T>
+    fn: (transport: IEngineTransport) => Promise<T>,
+    updateStateOnError = true
   ): Promise<T> {
     const transport = await this.getTransport(fork, blobsRevision);
     this.metrics?.engineApiRequests.inc({transport: transport === this.rest ? "ssz" : "json-rpc"});
@@ -447,7 +450,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         this.metrics?.engineApiRequests.inc({transport: "json-rpc"});
         return fn(this.jsonRpc);
       }
-      if (transport === this.rest) {
+      if (transport === this.rest && updateStateOnError) {
         this.updateEngineState(getExecutionEngineState({payloadError: e, oldState: this.state}), e as Error);
       }
       throw e;
@@ -576,8 +579,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
-    const clientVersions = await this.withTransport(undefined, undefined, (transport) =>
-      transport.getClientVersion(clientVersion)
+    const clientVersions = await this.withTransport(
+      undefined,
+      undefined,
+      (transport) => transport.getClientVersion(clientVersion),
+      false
     );
 
     if (clientVersions.length === 0) {
@@ -660,4 +666,8 @@ function isRestApiAbsent(e: Error): e is EngineRestError {
 
 function isUnsupportedForkError(e: unknown): e is EngineRestError {
   return e instanceof EngineRestError && e.status === 400 && e.type === "/engine-api/errors/unsupported-fork";
+}
+
+function isClientVersionRequest(payload: unknown): boolean {
+  return (payload as {method?: unknown} | undefined)?.method === "engine_getClientVersionV1";
 }
