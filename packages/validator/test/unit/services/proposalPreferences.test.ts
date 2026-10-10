@@ -156,6 +156,8 @@ describe("ProposalPreferencesService", () => {
       )
     ).toEqual([nextEpochProposalSlot]);
 
+    // Nothing is resubmitted once the next epoch becomes the current one
+    await clock.tickSlotFns(SLOTS_PER_EPOCH + 1, controller.signal);
     await clock.tickSlotFns(nextEpochProposalSlot, controller.signal);
     expect(api.validator.submitProposerPreferences).toHaveBeenCalledTimes(2);
   });

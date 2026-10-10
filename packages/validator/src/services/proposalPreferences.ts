@@ -60,8 +60,7 @@ export class ProposalPreferencesService {
 
   /**
    * A beacon node that was unreachable or syncing may have restarted and lost the preferences it
-   * accepted, it keeps them in memory only. Submit everything within the window again, the beacon
-   * node ignores preferences it still has.
+   * accepted. Submit all upcoming preferences again, the beacon node ignores the ones it still has.
    */
   private onResynced = async (slot: Slot): Promise<void> => {
     if (this.submitted.size === 0) {
