@@ -55,7 +55,8 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
     execution_payload_bid: single,
     proposer_preferences: single,
   };
-  const base = getMockedBeaconChain();
+  const config = createBeaconConfig({}, new Uint8Array(32));
+  const base = getMockedBeaconChain({config});
   const chain = {
     ...base,
     clock: new ClockStopped(64),
@@ -70,7 +71,6 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
   const result = vi.fn();
   events.on(NetworkEvent.gossipMessageValidationResult, result);
   const wake = vi.fn();
-  const config = createBeaconConfig({}, new Uint8Array(32));
   const logger = getMockedLogger();
   const executor = new NativeGossipExecutor(
     {
@@ -310,13 +310,25 @@ describe("native gossip host execution", () => {
     f.chain.emitter.on(ChainEvent.blockUnknownParent, recovery);
     f.chain.emitter.on(ChainEvent.unknownBlockRoot, search);
     try {
+      f.chain.bls.verifySignatureSets.mockResolvedValue(false);
+      await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Reject]);
+      expect(recovery).not.toHaveBeenCalled();
+      expect(f.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+
+      f.chain.bls.verifySignatureSets.mockResolvedValue(true);
       await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Ignore]);
+      expect(f.chain.bls.verifySignatureSets).toHaveBeenCalledTimes(2);
       expect(recovery).toHaveBeenCalledOnce();
       expect(recovery).toHaveBeenCalledWith(expect.objectContaining({blockInput, peer: "peer"}));
       expect(search).not.toHaveBeenCalled();
+      await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Ignore]);
+      expect(recovery).toHaveBeenCalledOnce();
+
       // A known parent at the block's slot fails validation.
+      signedBlock.message.slot = 3;
+      block.msg.data = ssz.phase0.SignedBeaconBlock.serialize(signedBlock);
       f.chain.forkChoice.getBlockHexDefaultStatus.mockImplementation((root) =>
-        root === blockInput.parentRootHex ? ({slot: 2} as ProtoBlock) : null
+        root === blockInput.parentRootHex ? ({slot: 3} as ProtoBlock) : null
       );
       await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Reject]);
       expect(recovery).toHaveBeenCalledOnce();

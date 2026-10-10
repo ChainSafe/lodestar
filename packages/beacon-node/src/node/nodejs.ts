@@ -14,6 +14,7 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {IBeaconStateView, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
 import {defer, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
@@ -64,6 +65,7 @@ export type BeaconNodeInitModules = {
   peerStoreDir?: string;
   anchorState: IBeaconStateView;
   isAnchorStateFinalized: boolean;
+  earliestAvailableSlot: Slot;
   metricsRegistries?: Registry[];
 };
 
@@ -163,6 +165,7 @@ export class BeaconNode {
     peerStoreDir,
     anchorState,
     isAnchorStateFinalized,
+    earliestAvailableSlot,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
     if (hasher.name !== "hashtree") {
@@ -272,6 +275,7 @@ export class BeaconNode {
       validatorMonitor,
       anchorState,
       isAnchorStateFinalized,
+      earliestAvailableSlot,
       executionEngine: initializeExecutionEngine(executionEngineOpts, {
         metrics,
         signal,

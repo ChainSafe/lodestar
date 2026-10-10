@@ -93,6 +93,7 @@ export async function nativeNetworkFixture(
         validatorMonitor: null,
         anchorState: new BeaconStateView(cached),
         isAnchorStateFinalized: true,
+        earliestAvailableSlot: cached.slot,
         executionEngine: new ExecutionEngineDisabled(),
       }
     );

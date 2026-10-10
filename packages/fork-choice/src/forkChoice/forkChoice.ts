@@ -45,7 +45,9 @@ import {
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
   VoteIndex,
+  getPtcVerdict,
   isGloasBlock,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
@@ -646,7 +648,12 @@ export class ForkChoice implements IForkChoice {
       // splitting them would let the two passes update weights and recompute best child/descendant
       // once at the end.
       // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#new-should_apply_proposer_boost
-      this.protoArray.applyScoreChanges({attestationDeltas, proposerBoost: null, ...checkpoints});
+      this.protoArray.applyScoreChanges({
+        attestationDeltas,
+        proposerBoost: null,
+        proposerBoostRoot: this.proposerBoostRoot,
+        ...checkpoints,
+      });
       const proposerBoost = this.shouldApplyProposerBoost() ? this.getProposerBoost() : null;
       // The first pass already rolled back the previous boost and left a coherent tree, so a
       // withheld boost needs no second pass
@@ -1090,7 +1097,20 @@ export class ForkChoice implements IForkChoice {
     payloadPresent: boolean,
     blobDataAvailable: boolean
   ): void {
+    const before = this.protoArray.getPtcQuorum(blockRoot);
     this.protoArray.notifyPtcMessages(blockRoot, slot, ptcIndices, payloadPresent, blobDataAvailable);
+    const after = this.protoArray.getPtcQuorum(blockRoot);
+    if (before === null || after === null) {
+      return;
+    }
+    const verdict = getPtcVerdict(after);
+    if (verdict === null || verdict === getPtcVerdict(before)) {
+      return;
+    }
+
+    this.metrics?.forkChoice.ptcQuorum.inc({verdict: verdict ? "true" : "false"});
+    this.logger?.verbose("PTC quorum reached", {slot, blockRoot, verdict, ...after});
+    this.fcStore.notifyPtcQuorum?.({blockRoot, slot, verdict, ...after});
   }
 
   /**
@@ -1221,6 +1241,10 @@ export class ForkChoice implements IForkChoice {
     dataAvailableCount: number;
   } | null {
     return this.protoArray.getPTCVoteCounts(blockRootHex);
+  }
+
+  getPtcQuorum(blockRootHex: RootHex): PtcQuorum | null {
+    return this.protoArray.getPtcQuorum(blockRootHex);
   }
 
   getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null {
@@ -2388,9 +2412,21 @@ export class ForkChoice implements IForkChoice {
         if (nextIndex === undefined || nextIndex === NULL_VOTE_INDEX) {
           return null;
         }
+        // The vote is tracked by node index, so the node already is the message's supported node
         const node = this.protoArray.nodes[nextIndex];
         if (!node) return null;
-        return {root: node.blockRoot, epoch: computeEpochAtSlot(this.voteNextSlots[validatorIndex])};
+        return {
+          root: node.blockRoot,
+          payloadStatus: node.payloadStatus,
+          epoch: computeEpochAtSlot(this.voteNextSlots[validatorIndex]),
+        };
+      },
+      getParentNodePayloadStatus: (blockRoot: RootHex) => {
+        const nodeIndex = this.protoArray.getDefaultNodeIndex(blockRoot);
+        if (nodeIndex === undefined) return null;
+        const parentIndex = this.protoArray.nodes[nodeIndex]?.parent;
+        if (parentIndex === undefined) return null;
+        return this.protoArray.nodes[parentIndex]?.payloadStatus ?? null;
       },
       getUnrealizedJustified: () => ({
         checkpoint: this.fcStore.unrealizedJustified.checkpoint,

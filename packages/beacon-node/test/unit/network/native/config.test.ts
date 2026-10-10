@@ -361,9 +361,27 @@ it.each([16, 1_000_000])(
 describe("native gossip limits", () => {
   const key = privateKeyFromRaw(new Uint8Array(32).fill(7));
 
-  it.each(["mainnet", "hoodi"] as const)("resolves the %s gossip limits", (network) => {
+  it("rejects Hoodi's scheduled Gloas fork", () => {
     const beaconConfig = createBeaconConfig(
-      networksChainConfig[network],
+      networksChainConfig.hoodi,
+      fromHex(genesisData.hoodi.genesisValidatorsRoot)
+    );
+    expect(() =>
+      createNativeConfig(
+        {...defaultNetworkOptions, tcp: false},
+        beaconConfig,
+        key,
+        0,
+        ssz.fulu.Status.defaultValue(),
+        beaconConfig.CUSTODY_REQUIREMENT,
+        16
+      )
+    ).toThrow("Unsupported native fork gloas");
+  });
+
+  it.each(["mainnet", "hoodi"] as const)("resolves the %s gossip limits through Fulu", (network) => {
+    const beaconConfig = createBeaconConfig(
+      {...networksChainConfig[network], GLOAS_FORK_EPOCH: Infinity, GAS_LIMIT_SCHEDULE: []},
       fromHex(genesisData[network].genesisValidatorsRoot)
     );
     const resolved = [16, 1_000_000].map((validators) => {

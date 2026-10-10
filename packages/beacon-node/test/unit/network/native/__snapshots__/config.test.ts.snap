@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`native gossip limits > resolves the hoodi gossip limits 1`] = `
+exports[`native gossip limits > resolves the hoodi gossip limits through Fulu 1`] = `
 [
   {
     "limits": {
@@ -275,7 +275,7 @@ exports[`native gossip limits > resolves the hoodi gossip limits 1`] = `
 ]
 `;
 
-exports[`native gossip limits > resolves the mainnet gossip limits 1`] = `
+exports[`native gossip limits > resolves the mainnet gossip limits through Fulu 1`] = `
 [
   {
     "limits": {
