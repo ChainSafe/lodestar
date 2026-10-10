@@ -197,8 +197,8 @@ export interface IBeaconChain extends IChainView {
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
 
-  regenCanAcceptWork(): boolean;
-  blsThreadPoolCanAcceptWork(): boolean;
+  beaconEngineRegenCanAcceptWork(): boolean;
+  beaconEngineBlsThreadPoolCanAcceptWork(): boolean;
 }
 
 export type SSZObjectType =

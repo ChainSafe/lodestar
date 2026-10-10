@@ -1089,11 +1089,11 @@ export class NetworkProcessor {
    * Return null if chain can accept work, otherwise return the reason why it cannot accept work
    */
   private checkAcceptWork(): null | CannotAcceptWorkReason {
-    if (!this.chain.blsThreadPoolCanAcceptWork()) {
+    if (!this.chain.beaconEngineBlsThreadPoolCanAcceptWork()) {
       return CannotAcceptWorkReason.bls;
     }
 
-    if (!this.chain.regenCanAcceptWork()) {
+    if (!this.chain.beaconEngineRegenCanAcceptWork()) {
       return CannotAcceptWorkReason.regen;
     }
 

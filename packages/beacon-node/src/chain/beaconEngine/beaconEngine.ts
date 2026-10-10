@@ -2431,16 +2431,6 @@ export class BeaconEngine implements IBeaconEngine {
     return this.validatorMonitorMetrics?.metrics() ?? "";
   }
 
-  /** Whether regen can accept more work (backpressure). */
-  regenCanAcceptWork(): boolean {
-    return this.regen.canAcceptWork();
-  }
-
-  /** Whether the engine's internal (gossip/import) BLS pool can accept more work (backpressure). */
-  blsCanAcceptWork(): boolean {
-    return this.bls.canAcceptWork();
-  }
-
   /**
    * On each checkpoint, warm the shuffling cache. Re-fetches the checkpoint state from regen (it was just
    * added to the checkpoint-state cache before the event fired) so the state never rides on the event.

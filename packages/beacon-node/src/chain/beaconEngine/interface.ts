@@ -335,9 +335,6 @@ export interface IBeaconEngine {
   ): Promise<void>;
   getMonitoredValidatorIndices(): Promise<ValidatorIndex[]>;
   scrapeValidatorMonitorMetrics(): Promise<string>;
-  regenCanAcceptWork(): boolean;
-  /** Backpressure for the engine's internal (gossip/import) BLS pool — the binding's pool under native. */
-  blsCanAcceptWork(): boolean;
   initRegen(): Promise<void>;
   /** Tear down engine-owned resources (historical-state regen worker, BLS pool, …). */
   close(): Promise<void>;
