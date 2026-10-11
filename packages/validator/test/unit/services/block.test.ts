@@ -190,12 +190,11 @@ describe("BlockDutiesService", () => {
     ]);
   });
 
-  it("checks fee recipient for a Heze block", async () => {
-    const fork = ForkName.heze;
+  it.each([ForkName.gloas, ForkName.heze] as const)("checks fee recipient for a %s block", async (fork) => {
     const config = createChainForkConfig({
       ...mainnetConfig,
       GLOAS_FORK_EPOCH: 0,
-      HEZE_FORK_EPOCH: 0,
+      HEZE_FORK_EPOCH: fork === ForkName.heze ? 0 : Infinity,
     });
     const slot = 0;
     api.validator.getProposerDuties.mockResolvedValue(
