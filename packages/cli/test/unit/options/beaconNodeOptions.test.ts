@@ -439,9 +439,15 @@ describe("options / network / hasGlobalIPv6Address", () => {
 it("passes native transport knobs through the CLI", () => {
   expect(
     parseNetworkArgs({
+      "network.native.traceGossip": true,
       "network.native.receiveBudgetBytes": 1024 ** 3,
       "network.native.initialCongestionWindowPackets": 32,
       "network.native.receiveDatagramsPerTurn": 128,
     }).native
-  ).toEqual({receiveBudgetBytes: 1024 ** 3, initialCongestionWindowPackets: 32, receiveDatagramsPerTurn: 128});
+  ).toEqual({
+    traceGossip: true,
+    receiveBudgetBytes: 1024 ** 3,
+    initialCongestionWindowPackets: 32,
+    receiveDatagramsPerTurn: 128,
+  });
 });

@@ -1,6 +1,8 @@
 import {NativeTopicKind} from "@chainsafe/lodestar-z/network";
 
 export type NativeBackendOptions = {
+  /** Emit bounded block and sampled column lifecycle logs. Defaults to false. */
+  traceGossip?: boolean;
   nativeBudgetBytes?: number;
   bridgeBudgetBytes?: number;
   receiveBudgetBytes?: number;

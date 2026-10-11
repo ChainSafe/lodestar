@@ -398,6 +398,7 @@ export function createNativeConfig(
     ])
   ) as Record<NativeTopicKind, NativeGossipProcessorLimit>;
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
+    traceGossip: opts.native?.traceGossip ?? false,
     transport: {
       initialCongestionWindowPackets: nativeInteger(
         opts.native?.initialCongestionWindowPackets ?? 10,
