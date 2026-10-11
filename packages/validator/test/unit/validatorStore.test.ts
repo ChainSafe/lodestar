@@ -3,8 +3,10 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {DOMAIN_BUILDER_REQUEST_AUTH, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {getConfig} from "@lodestar/config/test-utils";
+import {DOMAIN_BEACON_PROPOSER, DOMAIN_BUILDER_REQUEST_AUTH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ZERO_HASH, computeDomain, computeEpochAtSlot, computeSigningRoot} from "@lodestar/state-transition";
 import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
@@ -379,6 +381,20 @@ describe("ValidatorStore", () => {
     // Per-key builders replace the default entries
     store.setBuilderConfig(pubkey, {builders: []});
     expect(store.getResolvedBuilderEntries(pubkey)).toEqual([]);
+  });
+
+  it("signs a Heze block over the fork-specific block root", async () => {
+    const hezeChainConfig = getConfig(ForkName.heze);
+    const config = createBeaconConfig(hezeChainConfig, Buffer.alloc(32, 0xdd));
+    const store = await initValidatorStore(secretKeys, api, hezeChainConfig);
+    const block = ssz.heze.BeaconBlock.defaultValue();
+    block.slot = 32;
+    block.body.graffiti.fill(1);
+    const signedBlock = await store.signBlock(pubkeys[0], block, block.slot);
+    const domain = config.getDomain(block.slot, DOMAIN_BEACON_PROPOSER);
+    const signingRoot = computeSigningRoot(ssz.heze.BeaconBlock, block, domain);
+    expect(signedBlock.signature).toEqual(secretKeys[0].sign(signingRoot).toBytes());
+    expect(signedBlock.message).toEqual(block);
   });
 });
 
