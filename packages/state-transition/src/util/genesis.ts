@@ -15,7 +15,12 @@ import {processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {increaseBalance} from "../index.js";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
+  CachedBeaconStateGloas,
+} from "../types.js";
 import {newFilledArray} from "./array.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
@@ -178,7 +183,11 @@ export function applyDeposits(
       }
       increaseBalance(state, validatorIndex, amount);
     }
-    stateElectra.pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+    if (fork >= ForkSeq.gloas) {
+      (state as CachedBeaconStateGloas).pendingDeposits = ssz.gloas.PendingDeposits.defaultViewDU();
+    } else {
+      stateElectra.pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+    }
   }
 
   // Process activations
