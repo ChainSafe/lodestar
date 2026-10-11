@@ -18,6 +18,7 @@ import {
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   SLOTS_PER_EPOCH,
   isForkPostFulu,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {Status} from "@lodestar/types";
 import {CustodyConfig} from "../../../util/dataColumns.js";
@@ -256,9 +257,6 @@ function nativeListeners(addresses: readonly string[], quic: boolean): IpEndpoin
 }
 
 function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
-  for (const fork of config.forksAscendingEpochOrder) {
-    if (fork.epoch !== Infinity) nativeFork(fork.name);
-  }
   if (opts.tcp !== false || opts.quic === false) {
     throw new NativeNetworkError({
       code: NativeNetworkErrorCode.CONFIGURATION,
@@ -341,7 +339,8 @@ export function createNativeConfig(
     ...computeGossipPeerScoreParamsByKind(config, activeValidatorCount),
   };
   const boundaries = config.forkBoundariesAscendingEpochOrder.filter(
-    (boundary, index, all) => boundary.epoch !== Infinity && boundary.epoch !== all[index + 1]?.epoch
+    (boundary, index, all) =>
+      boundary.epoch !== Infinity && !isForkPostGloas(boundary.fork) && boundary.epoch !== all[index + 1]?.epoch
   );
   const connections = Math.min(256, Math.max(16, opts.maxPeers + 32));
   const listeners = nativeListeners(opts.localMultiaddrs, true);
