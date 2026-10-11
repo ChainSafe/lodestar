@@ -11,6 +11,13 @@ describe("getBlockRoot", () => {
   let modules: ApiTestModules;
   let api: ReturnType<typeof getBeaconBlockApi>;
 
+  function getRootHex(res: Awaited<ReturnType<typeof api.getBlockRoot>>): string {
+    if (res.data instanceof Uint8Array) {
+      throw Error("Expected root response object");
+    }
+    return toRootHex(res.data.root);
+  }
+
   beforeEach(() => {
     modules = getApiTestModules();
     api = getBeaconBlockApi(modules);
@@ -22,12 +29,12 @@ describe("getBlockRoot", () => {
     });
     modules.chain.getHeadState.mockReturnValue({
       getBlockRootAtSlot: vi.fn().mockReturnValue(slotZeroRoot),
-    } as unknown as ReturnType<ApiTestModules["chain"]["getHeadState"]>);
+    } as never);
   });
 
   it("returns the head root for the head id and for the head slot", async () => {
-    expect(toRootHex((await api.getBlockRoot({blockId: "head"})).data.root)).toBe(headRoot);
-    expect(toRootHex((await api.getBlockRoot({blockId: 10})).data.root)).toBe(headRoot);
+    expect(getRootHex(await api.getBlockRoot({blockId: "head"}))).toBe(headRoot);
+    expect(getRootHex(await api.getBlockRoot({blockId: 10}))).toBe(headRoot);
     expect(modules.chain.getBlockByRoot).not.toHaveBeenCalled();
   });
 
@@ -38,7 +45,7 @@ describe("getBlockRoot", () => {
     const res = await api.getBlockRoot({blockId: 3});
 
     expect(modules.chain.getHeadState().getBlockRootAtSlot).toHaveBeenCalledWith(3);
-    expect(res.data.root).toBe(recentRoot);
+    expect(getRootHex(res)).toBe(toRootHex(recentRoot));
     expect(res.meta.finalized).toBe(true);
     expect(modules.chain.getBlockByRoot).not.toHaveBeenCalled();
   });
@@ -51,7 +58,7 @@ describe("getBlockRoot", () => {
     const res = await api.getBlockRoot({blockId});
 
     expect(modules.chain.getBlockByRoot).toHaveBeenCalledWith(blockId);
-    expect(toRootHex(res.data.root)).toBe(
+    expect(getRootHex(res)).toBe(
       toRootHex(modules.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message))
     );
   });
@@ -64,10 +71,10 @@ describe("getBlockRoot", () => {
     const res = await api.getBlockRoot({blockId});
 
     expect(modules.chain.getBlockByRoot).toHaveBeenCalledWith(blockId);
-    expect(toRootHex(res.data.root)).toBe(
+    expect(getRootHex(res)).toBe(
       toRootHex(modules.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message))
     );
-    expect(res.data.root).not.toEqual(slotZeroRoot);
+    expect(getRootHex(res)).not.toBe(toRootHex(slotZeroRoot));
   });
 
   it("loads a slot older than the historical root window from the block archive", async () => {
