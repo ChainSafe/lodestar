@@ -1,5 +1,5 @@
 import {ssz} from "@lodestar/types";
-import {beforeAll, describe, expect, it} from "vitest";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import bindings from "../src/index.js";
 import {pubkeyCache} from "../src/pubkeys.js";
 import {createStfState, stfConfig} from "./stfFixture.js";
@@ -25,7 +25,52 @@ beforeAll(() => {
   state = bindings.BeaconStateView.createFromBytes(ssz.fulu.BeaconState.serialize(value), config);
 });
 
+afterAll(() => state?.release());
+
 describe("sync committee cache bindings", () => {
+  it("returns only indices in committee order, including repeated validators", () => {
+    const expectedIndices = new Uint32Array(512);
+    for (const position of currentPositions) expectedIndices[position] = 1;
+    const indices = state.currentSyncCommitteeValidatorIndices;
+    expect(indices).toBeInstanceOf(Uint32Array);
+    expect(indices).toEqual(expectedIndices);
+    expect(indices).toEqual(state.currentSyncCommitteeIndexed.validatorIndices);
+
+    indices.fill(15);
+    expect(state.currentSyncCommitteeValidatorIndices).toEqual(expectedIndices);
+    expectCache(state.currentSyncCommitteeIndexed, 0, 1, currentPositions);
+  });
+
+  it("keeps returned indices usable after release and rejects further access", () => {
+    const clone = state.processSlots(state.slot);
+    let indices: Uint32Array;
+    try {
+      indices = clone.currentSyncCommitteeValidatorIndices;
+    } finally {
+      clone.release();
+    }
+    expect(indices).toEqual(state.currentSyncCommitteeValidatorIndices);
+    expect(() => clone.currentSyncCommitteeValidatorIndices).toThrowError(
+      expect.objectContaining({code: "InvalidState"})
+    );
+  });
+
+  it("rejects indices access before Altair", () => {
+    const value = ssz.phase0.BeaconState.defaultValue();
+    const {validators, balances} = createStfState();
+    value.validators = validators;
+    value.balances = balances;
+    const config = new bindings.BeaconConfig(stfConfig, new Uint8Array(32));
+    const phase0State = bindings.BeaconStateView.createFromBytes(ssz.phase0.BeaconState.serialize(value), config);
+    try {
+      expect(() => phase0State.currentSyncCommitteeValidatorIndices).toThrowError(
+        expect.objectContaining({code: "NO_SYNC_COMMITTEE"})
+      );
+    } finally {
+      phase0State.release();
+    }
+  });
+
   it.each([
     ["current", () => state.currentSyncCommitteeIndexed],
     ["epoch", () => state.getIndexedSyncCommitteeAtEpoch(state.epoch)],

@@ -289,6 +289,8 @@ export declare class BeaconStateView {
   currentSyncCommittee: SyncCommittee;
   nextSyncCommittee: SyncCommittee;
   currentSyncCommitteeIndexed: SyncCommitteeCache;
+  /** Returns an owned copy in committee order, including repeated validators. */
+  readonly currentSyncCommitteeValidatorIndices: Uint32Array;
   syncProposerReward: number;
   getIndexedSyncCommitteeAtEpoch(epoch: number): SyncCommitteeCache;
   getIndexedSyncCommittee(slot: number): SyncCommitteeCache;

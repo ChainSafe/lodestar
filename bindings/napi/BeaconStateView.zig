@@ -54,6 +54,7 @@ pub const js_meta = js.class(.{ .properties = .{
     .previousProposers = js.prop(.{ .get = true, .set = false }),
     .currentSyncCommittee = js.prop(.{ .get = true, .set = false }),
     .currentSyncCommitteeIndexed = js.prop(.{ .get = true, .set = false }),
+    .currentSyncCommitteeValidatorIndices = js.prop(.{ .get = true, .set = false }),
     .nextSyncCommittee = js.prop(.{ .get = true, .set = false }),
     .syncProposerReward = js.prop(.{ .get = true, .set = false }),
     .effectiveBalanceIncrements = js.prop(.{ .get = true, .set = false }),
@@ -669,6 +670,16 @@ pub fn currentSyncCommitteeIndexed(self: *BeaconStateView) !js_types.IndexedSync
     defer self.finishState();
     const sync_committee_cache = cached_state.epoch_cache.current_sync_committee_indexed.get();
     return indexedSyncCommitteeToNapiValue(&sync_committee_cache);
+}
+
+pub fn currentSyncCommitteeValidatorIndices(self: *BeaconStateView) !js.Uint32Array {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const sync_committee_cache = cached_state.epoch_cache.current_sync_committee_indexed.get();
+    const validator_indices = sync_committee_cache.getValidatorIndices() catch {
+        return throwNullAs(js.Uint32Array, "NO_SYNC_COMMITTEE", "Sync committee not available for pre-Altair state");
+    };
+    return .{ .val = try numberSliceToNapiValue(js.env(), u64, validator_indices, .{ .typed_array = .uint32 }) };
 }
 
 fn indexedSyncCommitteeToNapiValue(sync_committee_cache: *const st.SyncCommitteeCache) !js_types.IndexedSyncCommittee {
