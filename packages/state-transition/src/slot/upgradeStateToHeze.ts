@@ -7,7 +7,7 @@ import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
  * Spec: heze/fork.md `upgrade_to_heze`.
  */
 export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBeaconStateHeze {
-  // [New in Heze:EIP8015] the old deposit mechanism must be fully drained before the fork
+  // In Heze, the old deposit mechanism must be fully drained before the fork
   if (BigInt(stateGloas.eth1DepositIndex) !== stateGloas.depositRequestsStartIndex) {
     throw new Error(
       `Cannot upgrade to Heze: legacy deposit mechanism still active eth1DepositIndex=${stateGloas.eth1DepositIndex} depositRequestsStartIndex=${stateGloas.depositRequestsStartIndex}`
