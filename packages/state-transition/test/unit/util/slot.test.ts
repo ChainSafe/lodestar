@@ -64,6 +64,7 @@ describe("slot duration schedule", () => {
     expect(computeTimeAtSlot(config, boundarySlot - 1, genesisTime)).toBe(boundaryTime - 12);
     expect(computeTimeAtSlot(config, boundarySlot, genesisTime)).toBe(boundaryTime);
     expect(computeTimeAtSlot(config, boundarySlot + 1, genesisTime)).toBe(boundaryTime + 10);
+    expect(computeTimeAtSlot(config, -1, genesisTime)).toBe(genesisTime - 12);
   });
 
   it("computeSlotAtTimeMs inverts computeTimeAtSlot", () => {
@@ -83,6 +84,8 @@ describe("slot duration schedule", () => {
     expect(getSlotDurationMsAtEpoch(genesisHezeConfig, 0)).toBe(10000);
     expect(computeTimeAtSlot(genesisHezeConfig, 2, genesisTime)).toBe(genesisTime + 20);
     expect(computeSlotAtTimeMs(genesisHezeConfig, (genesisTime + 20) * 1000, genesisTime * 1000)).toBe(2);
+    expect(computeTimeAtSlot(genesisHezeConfig, -1, genesisTime)).toBe(genesisTime - 10);
+    expect(computeSlotAtTimeMs(genesisHezeConfig, (genesisTime - 10) * 1000, genesisTime * 1000)).toBe(-1);
   });
 });
 

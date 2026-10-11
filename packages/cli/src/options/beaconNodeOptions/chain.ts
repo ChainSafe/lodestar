@@ -314,7 +314,7 @@ Will double processing times. Use only for debugging purposes.",
   "chain.archiveDataEpochs": {
     alias: "chain.archiveBlobEpochs",
     description:
-      "Number of epochs to retain finalized blobs/columns (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS/MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)",
+      "Number of epochs to retain finalized blobs/columns (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS for blobs and the MIN_BLOB_DATA_RETENTION_MS window for columns)",
     type: "number",
     group: "chain",
   },

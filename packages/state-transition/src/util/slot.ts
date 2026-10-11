@@ -41,7 +41,8 @@ export function computeTimeAtSlotMs(config: ChainConfig, slot: Slot, genesisTime
       endSlot = forkSlot;
     }
   }
-  return timeMs;
+  // Pre-genesis slots extrapolate linearly so the clock keeps ticking before genesis
+  return timeMs + (endSlot - GENESIS_SLOT) * getSlotDurationMsAtEpoch(config, GENESIS_EPOCH);
 }
 
 export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: TimeSeconds): TimeSeconds {
@@ -51,7 +52,7 @@ export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: 
 export function computeSlotAtTimeMs(config: ChainConfig, timeMs: number, genesisTimeMs: number): Slot {
   let startSlot = GENESIS_SLOT;
   let startTimeMs = genesisTimeMs;
-  let slotDurationMs = config.SLOT_DURATION_MS;
+  let slotDurationMs = getSlotDurationMsAtEpoch(config, GENESIS_EPOCH);
   for (const [forkEpoch, forkSlotDurationMs] of getSlotDurations(config)) {
     const forkSlot = computeStartSlotAtEpoch(forkEpoch);
     const forkTimeMs = computeTimeAtSlotMs(config, forkSlot, genesisTimeMs);
