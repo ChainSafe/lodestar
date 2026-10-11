@@ -40,7 +40,7 @@ import {
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
-  CachedBeaconStatePhase0,
+  CachedBeaconStatePreHeze,
   createCachedBeaconState,
   isStateValidatorsNodesPopulated,
 } from "../cache/stateCache.js";
@@ -149,7 +149,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     if (this.forkSeq >= ForkSeq.heze) {
       throw new Error("eth1Data was removed from the beacon state in Heze");
     }
-    return (this.cachedState as CachedBeaconStatePhase0).eth1Data;
+    return (this.cachedState as CachedBeaconStatePreHeze).eth1Data;
   }
 
   get latestBlockHeader(): phase0.BeaconBlockHeader {

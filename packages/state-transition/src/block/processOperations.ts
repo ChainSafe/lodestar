@@ -6,6 +6,7 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
 } from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
@@ -41,10 +42,9 @@ export function processOperations(
   metrics?: BeaconStateTransitionMetrics | null
 ): void {
   if (fork < ForkSeq.heze) {
-    // verify that outstanding deposits are processed up to the maximum number of deposits.
     // From Fulu the eth1 bridge deposit mechanism was removed, so blocks must not contain any deposits.
     const deposits = (body as BeaconBlockBody<ForkPreHeze>).deposits;
-    const maxDeposits = fork >= ForkSeq.fulu ? 0 : getEth1DepositCount(state);
+    const maxDeposits = fork >= ForkSeq.fulu ? 0 : getEth1DepositCount(state as CachedBeaconStatePreHeze);
     if (deposits.length !== maxDeposits) {
       throw new Error(
         `Block contains incorrect number of deposits: depositCount=${deposits.length} expected=${maxDeposits}`
@@ -77,7 +77,7 @@ export function processOperations(
   if (fork < ForkSeq.heze) {
     const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processDeposit});
     for (const deposit of (body as BeaconBlockBody<ForkPreHeze>).deposits) {
-      processDeposit(fork, state, deposit);
+      processDeposit(fork, state as CachedBeaconStatePreHeze, deposit);
     }
     timer?.();
   }

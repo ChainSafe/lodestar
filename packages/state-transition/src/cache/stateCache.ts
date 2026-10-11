@@ -140,6 +140,16 @@ export type CachedBeaconStateFulu = CachedBeaconState<BeaconStateFulu>;
 export type CachedBeaconStateGloas = CachedBeaconState<BeaconStateGloas>;
 export type CachedBeaconStateHeze = CachedBeaconState<BeaconStateHeze>;
 
+export type CachedBeaconStatePreHeze =
+  | CachedBeaconStatePhase0
+  | CachedBeaconStateAltair
+  | CachedBeaconStateBellatrix
+  | CachedBeaconStateCapella
+  | CachedBeaconStateDeneb
+  | CachedBeaconStateElectra
+  | CachedBeaconStateFulu
+  | CachedBeaconStateGloas;
+
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
 /**

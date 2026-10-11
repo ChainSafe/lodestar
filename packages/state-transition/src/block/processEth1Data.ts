@@ -2,7 +2,7 @@ import {Node} from "@chainsafe/persistent-merkle-tree";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {BeaconStateAllForks, BeaconStatePhase0, CachedBeaconStateAllForks, CachedBeaconStatePhase0} from "../types.js";
+import {BeaconStatePreHeze, CachedBeaconStatePreHeze} from "../types.js";
 
 /**
  * Store vote counts for every eth-execution block that has votes; if any eth-execution block wins majority support within a 1024-slot
@@ -12,16 +12,15 @@ import {BeaconStateAllForks, BeaconStatePhase0, CachedBeaconStateAllForks, Cache
  * - Best case: Vote is already decided, zero work. See becomesNewEth1Data conditions
  * - Worst case: 1023 votes and no majority vote yet.
  */
-export function processEth1Data(state: CachedBeaconStateAllForks, eth1Data: phase0.Eth1Data): void {
-  const statePhase0 = state as CachedBeaconStatePhase0;
+export function processEth1Data(state: CachedBeaconStatePreHeze, eth1Data: phase0.Eth1Data): void {
   // Convert to view first to hash once and compare hashes
   const eth1DataView = ssz.phase0.Eth1Data.toViewDU(eth1Data);
 
   if (becomesNewEth1Data(state, eth1DataView)) {
-    statePhase0.eth1Data = eth1DataView;
+    state.eth1Data = eth1DataView;
   }
 
-  statePhase0.eth1DataVotes.push(eth1DataView);
+  state.eth1DataVotes.push(eth1DataView);
 }
 
 /**
@@ -29,19 +28,18 @@ export function processEth1Data(state: CachedBeaconStateAllForks, eth1Data: phas
  * result in a change to `state.eth1Data`.
  */
 export function becomesNewEth1Data(
-  state: BeaconStateAllForks,
+  state: BeaconStatePreHeze,
   newEth1Data: CompositeViewDU<typeof ssz.phase0.Eth1Data>
 ): boolean {
-  const statePhase0 = state as BeaconStatePhase0;
   const SLOTS_PER_ETH1_VOTING_PERIOD = EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH;
 
   // If there are not more than 50% votes, then we do not have to count to find a winner.
-  if ((statePhase0.eth1DataVotes.length + 1) * 2 <= SLOTS_PER_ETH1_VOTING_PERIOD) {
+  if ((state.eth1DataVotes.length + 1) * 2 <= SLOTS_PER_ETH1_VOTING_PERIOD) {
     return false;
   }
 
   // Nothing to do if the state already has this as eth1data (happens a lot after majority vote is in)
-  if (isEqualEth1DataView(statePhase0.eth1Data, newEth1Data)) {
+  if (isEqualEth1DataView(state.eth1Data, newEth1Data)) {
     return false;
   }
 
@@ -51,7 +49,7 @@ export function becomesNewEth1Data(
   // than doing structural equality, which requires tree -> value conversions
   let sameVotesCount = 0;
   // biome-ignore lint/complexity/noForEach: ssz api
-  statePhase0.eth1DataVotes.forEach((eth1DataVote) => {
+  state.eth1DataVotes.forEach((eth1DataVote) => {
     if (isEqualEth1DataView(eth1DataVote, newEth1Data)) {
       sameVotesCount++;
     }

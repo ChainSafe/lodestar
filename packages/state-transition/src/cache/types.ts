@@ -13,6 +13,16 @@ export type BeaconStateFulu = CompositeViewDU<SSZTypesFor<ForkName.fulu, "Beacon
 export type BeaconStateGloas = CompositeViewDU<SSZTypesFor<ForkName.gloas, "BeaconState">>;
 export type BeaconStateHeze = CompositeViewDU<SSZTypesFor<ForkName.heze, "BeaconState">>;
 
+export type BeaconStatePreHeze =
+  | BeaconStatePhase0
+  | BeaconStateAltair
+  | BeaconStateBellatrix
+  | BeaconStateCapella
+  | BeaconStateDeneb
+  | BeaconStateElectra
+  | BeaconStateFulu
+  | BeaconStateGloas;
+
 export type BeaconStateAllForks = CompositeViewDU<SSZTypesFor<ForkAll, "BeaconState">>;
 export type BeaconStateExecutions = CompositeViewDU<SSZTypesFor<ForkPostBellatrix & ForkPreGloas, "BeaconState">>;
 

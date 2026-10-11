@@ -216,7 +216,11 @@ describe("Heze EIP-8015 state transition", () => {
     it(`upgradeStateToHeze rejects a pending legacy deposit transition (start index ${startIndex})`, () => {
       const pre = buildGloasState();
       pre.depositRequestsStartIndex = startIndex;
+      const node = pre.node;
       expect(() => upgradeStateToHeze(pre)).toThrow("legacy deposit mechanism");
+      expect(pre.node).toBe(node);
+      expect(pre.depositRequestsStartIndex).toBe(startIndex);
+      expect(pre.fork.currentVersion).toEqual(config.GLOAS_FORK_VERSION);
     });
   }
 
@@ -239,12 +243,17 @@ describe("Heze EIP-8015 state transition", () => {
     expect(state.pendingDeposits.getReadonly(0).pubkey).toEqual(requests.deposits[0].pubkey);
   });
 
-  it("processOperations still rejects Gloas blocks carrying deposits", () => {
-    const state = buildGloasState(SLOTS_PER_EPOCH - 1);
-    const body = ssz.gloas.BeaconBlockBody.defaultValue();
-    body.deposits.push(ssz.phase0.Deposit.defaultValue());
-    expect(() => processOperations(ForkSeq.gloas, state, body, 0)).toThrow("incorrect number of deposits");
-  });
+  it.each([ForkName.fulu, ForkName.gloas] as const)(
+    "processOperations still rejects %s blocks carrying deposits",
+    (fork) => {
+      const state = createCachedBeaconStateTest(ssz[fork].BeaconState.defaultViewDU(), getConfig(fork), {
+        skipSyncCommitteeCache: true,
+      });
+      const body = ssz[fork].BeaconBlockBody.defaultValue();
+      body.deposits.push(ssz.phase0.Deposit.defaultValue());
+      expect(() => processOperations(ForkSeq[fork], state, body, 0)).toThrow("incorrect number of deposits");
+    }
+  );
 
   it("processEpoch tops up an existing validator across the Eth1 voting period boundary", () => {
     const slot = EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH - 1;

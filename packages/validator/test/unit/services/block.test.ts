@@ -190,8 +190,12 @@ describe("BlockDutiesService", () => {
     ]);
   });
 
-  it("Should pass strict fee recipient check when producing a Gloas block", async () => {
-    const gloasConfig = createChainForkConfig({...mainnetConfig, GLOAS_FORK_EPOCH: 0});
+  it.each([ForkName.gloas, ForkName.heze] as const)("checks fee recipient for a %s block", async (fork) => {
+    const config = createChainForkConfig({
+      ...mainnetConfig,
+      GLOAS_FORK_EPOCH: 0,
+      HEZE_FORK_EPOCH: fork === ForkName.heze ? 0 : Infinity,
+    });
     const slot = 0;
     api.validator.getProposerDuties.mockResolvedValue(
       mockApiResponse({
@@ -202,7 +206,7 @@ describe("BlockDutiesService", () => {
 
     const clock = new ClockMock();
     const dutiesService = new BlockDutiesService(
-      gloasConfig,
+      config,
       loggerVc,
       api,
       clock,
@@ -210,22 +214,13 @@ describe("BlockDutiesService", () => {
       chainHeaderTracker,
       null
     );
-    const blockService = new BlockProposingService(
-      gloasConfig,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      dutiesService,
-      null,
-      {
-        broadcastValidation: routes.beacon.BroadcastValidation.consensus,
-        blindedLocal: false,
-        payloadLocal: false,
-      }
-    );
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
+      broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+      blindedLocal: false,
+      payloadLocal: false,
+    });
 
-    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz[fork].SignedBeaconBlock.defaultValue();
     signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = 1;
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
@@ -244,7 +239,7 @@ describe("BlockDutiesService", () => {
       mockApiResponse({
         data: signedBlock.message,
         meta: {
-          version: ForkName.gloas,
+          version: fork,
           executionPayloadValue: BigInt(1),
           consensusBlockValue: BigInt(1),
           executionPayloadIncluded: false,
