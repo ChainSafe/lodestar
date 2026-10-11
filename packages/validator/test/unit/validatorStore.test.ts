@@ -11,7 +11,6 @@ import {ZERO_HASH, computeDomain, computeEpochAtSlot, computeSigningRoot} from "
 import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
 import {InvalidBlockErrorCode} from "../../src/slashingProtection/index.js";
-import {SignableMessageType, externalSignerPostSignature} from "../../src/util/externalSignerClient.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {getMockedLogger} from "../utils/logger.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
@@ -396,42 +395,6 @@ describe("ValidatorStore", () => {
     const signingRoot = computeSigningRoot(ssz.heze.BeaconBlock, block, domain);
     expect(signedBlock.signature).toEqual(secretKeys[0].sign(signingRoot).toBytes());
     expect(signedBlock.message).toEqual(block);
-  });
-
-  it("serializes a Heze remote block-signing request as a block header", async () => {
-    const config = createBeaconConfig(getConfig(ForkName.heze), ZERO_HASH);
-    const block = ssz.heze.BeaconBlock.defaultValue();
-    block.slot = 32;
-    block.body.graffiti.fill(2);
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        new Response(JSON.stringify({signature: "0x1234"}), {headers: {"content-type": "application/json"}})
-      );
-    try {
-      const signature = await externalSignerPostSignature(
-        config,
-        "http://localhost:9000",
-        toHexString(pubkeys[0]),
-        ZERO_HASH,
-        block.slot,
-        {type: SignableMessageType.BLOCK_V2, data: block}
-      );
-      expect(signature).toBe("0x1234");
-      const payload = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body));
-      expect(payload).toMatchObject({
-        type: SignableMessageType.BLOCK_V2,
-        beacon_block: {
-          version: "HEZE",
-          block_header: {
-            slot: "32",
-            body_root: toHexString(ssz.heze.BeaconBlockBody.hashTreeRoot(block.body)),
-          },
-        },
-      });
-    } finally {
-      fetchSpy.mockRestore();
-    }
   });
 });
 

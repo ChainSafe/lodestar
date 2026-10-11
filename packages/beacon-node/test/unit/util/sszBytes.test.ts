@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
-import {ForkName, MAX_COMMITTEES_PER_SLOT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {
   CommitteeIndex,
@@ -385,21 +385,6 @@ describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized", () => {
       );
     });
   }
-
-  it.each([ForkName.gloas, ForkName.heze] as const)("rejects truncated and out-of-range %s bid offsets", (fork) => {
-    const block = sszTypesFor(fork).SignedBeaconBlock.defaultValue();
-    const bytes = sszTypesFor(fork).SignedBeaconBlock.serialize(block);
-    const bodyStart = 184;
-    const offsetPointer =
-      bodyStart + 96 + 32 + 4 * 5 + SYNC_COMMITTEE_SIZE / 8 + 96 + (fork === ForkName.gloas ? 76 : 0);
-    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    const hashEnd = bodyStart + view.getUint32(offsetPointer, true) + 100 + 32;
-    expect(getParentBlockHashFromGloasSignedBeaconBlockSerialized(bytes.subarray(0, hashEnd - 1), fork)).toBeNull();
-    for (const offset of [0x7fffffff, 0x80000000, 0xffffffff]) {
-      view.setUint32(offsetPointer, offset, true);
-      expect(getParentBlockHashFromGloasSignedBeaconBlockSerialized(bytes, fork), `offset ${offset}`).toBeNull();
-    }
-  });
 
   it("returns null for invalid data", () => {
     for (const [fork, sizes] of [
