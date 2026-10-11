@@ -1,10 +1,10 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
