@@ -173,7 +173,7 @@ export class Eth2Gossipsub {
       mcacheLength: 6,
       mcacheGossip: 3,
       // this should be in ms
-      // Conservative across slot duration changes (Heze:EIP8198): use the largest configured duration
+      // use the largest configured slot duration so the TTL stays conservative across duration changes
       seenTTL: Math.max(...getSlotDurations(config).map(([, slotDurationMs]) => slotDurationMs)) * SLOTS_PER_EPOCH * 2,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,

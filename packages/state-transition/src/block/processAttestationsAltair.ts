@@ -141,7 +141,7 @@ export function processAttestationsAltair(
 
     // Do the discrete math inside the loop to ensure a deterministic result
     const totalIncrements = totalBalanceIncrementsWithWeight;
-    // Heze:EIP8198: the proposer reward is priced at the attestation's target epoch
+    // [Modified in Heze:EIP8198] the proposer reward is priced at the attestation's target epoch
     const proposerRewardNumerator =
       totalIncrements *
       (inCurrentEpoch ? state.epochCtx.baseRewardPerIncrement : state.epochCtx.baseRewardPerIncrementPrevEpoch);

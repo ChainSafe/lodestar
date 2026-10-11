@@ -74,7 +74,7 @@ export function getCurrentSlot(config: ChainConfig, genesisTime: TimeSeconds): S
 
 /**
  * Start epoch of the blob data retention window, preserving its wall-clock length
- * across slot duration changes (Heze:EIP8198 compute_blob_data_retention_start_epoch)
+ * across slot duration changes [New in Heze:EIP8198]
  */
 export function getBlobDataRetentionStartEpoch(config: ChainConfig, epoch: Epoch): Epoch {
   const windowMs = config.MIN_BLOB_DATA_RETENTION_MS;

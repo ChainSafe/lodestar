@@ -70,7 +70,7 @@ export function getRewardsAndPenaltiesAltair(
   const inactivityPenalityMultiplier =
     fork === ForkSeq.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
   let penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenalityMultiplier;
-  // Heze:EIP8198: the penalty pays for the previous epoch and scales with the square of its slot duration
+  // [Modified in Heze:EIP8198] the penalty pays for the previous epoch and scales with the square of its slot duration
   const genesisSlotDurationMs = getSlotDurationMsAtEpoch(config, GENESIS_EPOCH);
   const prevEpochSlotDurationMs = getSlotDurationMsAtEpoch(config, Math.max(epochCtx.epoch - 1, GENESIS_EPOCH));
   if (prevEpochSlotDurationMs !== genesisSlotDurationMs) {

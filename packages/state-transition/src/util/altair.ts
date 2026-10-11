@@ -13,7 +13,7 @@ export function computeBaseRewardPerIncrement(
   epoch: Epoch,
   totalActiveStakeByIncrement: number
 ): number {
-  // Heze:EIP8198: priced at the slot duration in effect at epoch, dividing last so the exact ratio applies
+  // [Modified in Heze:EIP8198] divide last so the exact slot duration ratio applies
   const numerator = Math.floor(
     (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR * getSlotDurationMsAtEpoch(config, epoch)) /
       getSlotDurationMsAtEpoch(config, GENESIS_EPOCH)

@@ -178,7 +178,7 @@ export class EpochCache {
    * Update freq: once per epoch after `process_effective_balance_updates()`
    */
   baseRewardPerIncrement: number;
-  /** As baseRewardPerIncrement but priced at the previous epoch's slot duration (Heze:EIP8198) */
+  /** As baseRewardPerIncrement but priced at the previous epoch's slot duration [New in Heze:EIP8198] */
   baseRewardPerIncrementPrevEpoch: number;
   /**
    * Total active balance for current epoch, to be used instead of getTotalBalance()
