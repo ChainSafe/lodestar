@@ -384,7 +384,7 @@ export function beforeProcessEpoch(
   }
 
   // SPEC: function getBaseRewardPerIncrement()
-  // [Modified in Heze:EIP8198] flag deltas pay for the previous epoch, so they are priced at its slot duration
+  // Flag deltas pay for the previous epoch, so they are priced at its slot duration
   const baseRewardPerIncrement = computeBaseRewardPerIncrement(config, prevEpoch, totalActiveStakeByIncrement);
 
   // To optimize process_registry_updates():

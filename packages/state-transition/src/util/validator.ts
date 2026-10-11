@@ -103,7 +103,7 @@ export function getActivationChurnLimit(epochCtx: EpochCache): number {
     config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS,
     Math.max(churnByBalance, config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA)
   );
-  // [Modified in Heze:EIP8198] scale by the slot duration ratio, rounding to the increment once after scaling
+  // Scale by the slot duration ratio, rounding to the increment once after scaling
   const scaled = Math.floor(
     (churn * getSlotDurationMsAtEpoch(config, epoch)) / getSlotDurationMsAtEpoch(config, GENESIS_EPOCH)
   );
@@ -119,7 +119,7 @@ export function getExitChurnLimit(epochCtx: EpochCache): number {
     (totalActiveBalanceIncrements / config.CHURN_LIMIT_QUOTIENT_GLOAS) * EFFECTIVE_BALANCE_INCREMENT
   );
   const churn = Math.max(churnByBalance, config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA);
-  // [Modified in Heze:EIP8198] scale by the slot duration ratio, rounding to the increment once after scaling
+  // Scale by the slot duration ratio, rounding to the increment once after scaling
   const scaled = Math.floor(
     (churn * getSlotDurationMsAtEpoch(config, epoch)) / getSlotDurationMsAtEpoch(config, GENESIS_EPOCH)
   );
@@ -137,7 +137,7 @@ export function getConsolidationChurnLimit(fork: ForkSeq, epochCtx: EpochCache):
     const churn = Math.floor(
       (totalActiveBalanceIncrements / config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT) * EFFECTIVE_BALANCE_INCREMENT
     );
-    // [Modified in Heze:EIP8198] scale by the slot duration ratio, rounding to the increment once after scaling
+    // Scale by the slot duration ratio, rounding to the increment once after scaling
     const scaled = Math.floor(
       (churn * getSlotDurationMsAtEpoch(config, epoch)) / getSlotDurationMsAtEpoch(config, GENESIS_EPOCH)
     );
