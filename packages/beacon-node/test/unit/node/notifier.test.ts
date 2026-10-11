@@ -8,7 +8,7 @@ import {getApiTestModules} from "../../utils/api.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {generateState, zeroProtoBlock} from "../../utils/state.js";
 
-// The slot-time helper will support changing durations in #9933.
+// mocked so slot durations can differ across the fork boundary
 vi.mock("@lodestar/state-transition", async (importActual) => ({
   ...(await importActual<typeof import("@lodestar/state-transition")>()),
   computeTimeAtSlot: vi.fn(),

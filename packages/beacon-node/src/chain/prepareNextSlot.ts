@@ -413,7 +413,7 @@ export class PrepareNextSlotScheduler {
    */
   private checkBuilderStatusBeforeSlot(prepareSlot: Slot): void {
     const msBeforeSlot = this.config.getSlotComponentDurationMs(
-      this.config.getForkName(prepareSlot),
+      this.config.getForkName(prepareSlot - 1),
       BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS
     );
     const msUntilCheck = -this.chain.clock.msFromSlot(prepareSlot) - msBeforeSlot;
