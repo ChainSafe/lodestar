@@ -327,8 +327,6 @@ export class BeaconEngine implements IBeaconEngine {
   };
   // Engine owns envelope writes; the facade retains direct DB reads for API/reqresp serving.
   readonly db: IBeaconEngineDb;
-  // Engine owns state archival (states DB). Finalized-state archive runs inside migrateFinalized; the
-  // facade delegates temp-state (onCheckpoint) and shutdown persistence to engine methods.
   private stateArchiveStrategy!: StateArchiveStrategy;
   // Finalized writes are monotonic; restart from zero to include the newly persisted anchor.
   private statePruneFromSlot: Slot = 0;
@@ -798,6 +796,8 @@ export class BeaconEngine implements IBeaconEngine {
   getConfirmedBlock(): ProtoBlock | null {
     return this.forkChoice.getConfirmedBlock();
   }
+
+  // this is for debug apis only
   getAllNodes(): ProtoNode[] {
     return this.forkChoice.getAllNodes();
   }
@@ -1644,7 +1644,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.stateArchiveStrategy.archiveState(this.forkChoice.getFinalizedCheckpoint());
   }
 
-  async archiveStateOnCheckpoint(): Promise<void> {
+  private async archiveStateOnCheckpoint(): Promise<void> {
     const headStateRoot = this.forkChoice.getHead().stateRoot;
     this.regen.onCheckpoint(
       this.forkChoice.getFinalizedCheckpoint().epoch,
@@ -1772,13 +1772,19 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   /**
-   * On each checkpoint, warm the shuffling cache. Re-fetches the checkpoint state from regen (it was just
+   * On each checkpoint, maintain regen caches and warm shuffling. Re-fetches the checkpoint state from regen (it was just
    * added to the checkpoint-state cache before the event fired) so the state never rides on the event.
    */
   private onCheckpoint(cp: phase0.Checkpoint): void {
     const state = this.regen.getCheckpointStateSync({epoch: cp.epoch, rootHex: toRootHex(cp.root)});
     // Defer to not block other checkpoint event handlers, which can cause lightclient update delays
     if (state) callInNextEventLoop(() => this.shufflingCache.processState(state));
+
+    if (!this.opts.disableArchiveOnCheckpoint && !this.closed && !this.signal.aborted) {
+      this.archiveStateOnCheckpoint().catch((err) => {
+        this.logger.error("Error during state archive", {}, err);
+      });
+    }
   }
 
   /** Initialize regen caches from disk (startup). */

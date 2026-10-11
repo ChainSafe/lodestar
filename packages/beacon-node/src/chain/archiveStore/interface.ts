@@ -28,10 +28,10 @@ export interface StatesArchiveOpts {
    * Strategy to store archive states
    */
   archiveMode: ArchiveMode;
+  disableArchiveOnCheckpoint?: boolean;
 }
 
 export type ArchiveStoreOpts = StatesArchiveOpts & {
-  disableArchiveOnCheckpoint?: boolean;
   archiveDataEpochs?: number;
   pruneHistory?: boolean;
   serveHistoricalState?: boolean;

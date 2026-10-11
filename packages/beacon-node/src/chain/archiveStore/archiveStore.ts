@@ -59,13 +59,11 @@ export class ArchiveStore {
 
     if (!opts.disableArchiveOnCheckpoint) {
       this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-      this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
 
       this.signal.addEventListener(
         "abort",
         () => {
           this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-          this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
         },
         {once: true}
       );
@@ -140,13 +138,6 @@ export class ArchiveStore {
           );
         }
       }
-    });
-  };
-
-  private onCheckpoint = (): void => {
-    // Engine prunes regen caches and archives a temp checkpoint state (states DB is engine-owned).
-    this.chain.beaconEngine.archiveStateOnCheckpoint().catch((err) => {
-      this.logger.error("Error during state archive", {}, err);
     });
   };
 

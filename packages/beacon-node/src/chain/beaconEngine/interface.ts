@@ -626,12 +626,6 @@ export interface IBeaconEngine {
   /** Persist the latest finalized state to the (engine-owned) archive DB — used on graceful shutdown. */
   persistFinalizedStateToDisk(): Promise<void>;
 
-  /**
-   * On a new checkpoint: prune regen caches and archive a temp checkpoint state (engine-owned states DB).
-   * The facade keeps only the event listener + error handling.
-   */
-  archiveStateOnCheckpoint(): Promise<void>;
-
   /** Prune finalized blocks, states and envelopes below the retention window. */
   pruneHistory(finalizedEpoch: Epoch, currentEpoch: Epoch): Promise<Slot>;
 
