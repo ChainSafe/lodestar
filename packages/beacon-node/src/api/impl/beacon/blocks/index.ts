@@ -6,6 +6,7 @@ import {
   ForkPostBellatrix,
   ForkPostFulu,
   ForkPostGloas,
+  ForkPreBellatrix,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -674,7 +675,7 @@ export function getBeaconBlockApi({
       return {
         data: isForkPostBellatrix(fork)
           ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix & ForkPreGloas>)
-          : block,
+          : (block as SignedBeaconBlock<ForkPreBellatrix>),
         meta: {
           executionOptimistic,
           finalized,

@@ -1,6 +1,6 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {routes} from "@lodestar/api";
-import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkSeq, NUMBER_OF_COLUMNS, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
@@ -528,9 +528,9 @@ export class NetworkProcessor {
       const parentRoot = getParentRootFromSignedBeaconBlockSerialized(message.msg.data);
       if (parentRoot) {
         let search: SearchUnknownRootTarget | null = null;
-        if (ForkSeq[fork] >= ForkSeq.gloas) {
+        if (isForkPostGloas(fork)) {
           // GLOAS: also check parent envelope, same logic as execution_payload_bid
-          const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data);
+          const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data, fork);
           if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
             const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
             if (protoBlock === null) {
