@@ -109,6 +109,7 @@ describe("block archiver task", () => {
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
+      MIN_BLOB_DATA_RETENTION_MS: 2 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
     const block = ssz.fulu.SignedBeaconBlock.defaultValue();
     const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
@@ -167,6 +168,7 @@ describe("block archiver task", () => {
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
+      MIN_BLOB_DATA_RETENTION_MS: 4 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
     const block = ssz.fulu.SignedBeaconBlock.defaultValue();
     const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
@@ -260,6 +262,7 @@ describe("block archiver task", () => {
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
+      MIN_BLOB_DATA_RETENTION_MS: 4 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
 
     vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({

@@ -23,7 +23,7 @@ export type EpochSlotOpts = {
   genesisTime: number;
   secondsPerSlot: number;
   slotsPerEpoch: number;
-  /** Slot durations by activation epoch, for networks that change the slot duration at a fork */
+  /** Slot durations by activation epoch, ascending */
   slotDurations?: [epoch: number, secondsPerSlot: number][];
 };
 export enum TimestampFormatCode {
