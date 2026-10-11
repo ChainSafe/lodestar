@@ -22,7 +22,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
-import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
+import {Logger, fromHex, isErrorAborted, sleep, toHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {PayloadAttributes} from "../execution/index.js";
@@ -31,7 +31,11 @@ import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {IBeaconChain} from "./interface.js";
-import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {
+  getPayloadAttributesForSSE,
+  getPooledProposerPreferences,
+  prepareExecutionPayload,
+} from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
 
 // TODO GLOAS: re-evaluate this timing
@@ -158,7 +162,15 @@ export class PrepareNextSlotScheduler {
         };
 
         const proposerIndex = await getProposerIndex();
-        feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
+        if (this.chain.beaconProposerCache.has(proposerIndex)) {
+          const pooledPreferences = isForkPostGloas(fork)
+            ? getPooledProposerPreferences(this.chain, prepareSlot, headRoot)
+            : null;
+          feeRecipient =
+            pooledPreferences !== null
+              ? toHex(pooledPreferences.feeRecipient)
+              : this.chain.beaconProposerCache.getOrDefault(proposerIndex);
+        }
 
         // Predict the proposer head of the next slot when either:
         //  - we are proposing the next slot (single-slot proposer-boost-reorg), or
