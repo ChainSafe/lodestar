@@ -20,6 +20,7 @@ import {
   BeaconStatePreHeze,
   CachedBeaconStateAllForks,
   CachedBeaconStateElectra,
+  CachedBeaconStateGloas,
   CachedBeaconStatePreHeze,
 } from "../types.js";
 import {newFilledArray} from "./array.js";
