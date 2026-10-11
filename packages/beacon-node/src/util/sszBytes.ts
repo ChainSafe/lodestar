@@ -8,7 +8,6 @@ import {
   ForkPostDeneb,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
-  SYNC_COMMITTEE_SIZE,
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -58,7 +57,8 @@ const ATTESTATION_DATA_SIZE = 128;
 // MAX_COMMITTEES_PER_SLOT is in bit, need to convert to byte
 const COMMITTEE_BITS_SIZE = Math.max(Math.ceil(MAX_COMMITTEES_PER_SLOT / 8), 1);
 const SIGNATURE_SIZE = 96;
-const SYNC_AGGREGATE_SIZE = SYNC_COMMITTEE_SIZE / 8 + SIGNATURE_SIZE;
+// SyncAggregate is a fixed-size container, so minSize is its serialized size
+const SYNC_AGGREGATE_SIZE = ssz.altair.SyncAggregate.minSize;
 const SINGLE_ATTESTATION_ATTDATA_OFFSET = 8 + 8;
 const SINGLE_ATTESTATION_SLOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET;
 const SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET = 0;
@@ -449,9 +449,9 @@ export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): 
  * BeaconBlockBody (GLOAS) fixed section before signedExecutionPayloadBid offset pointer:
  *   randaoReveal(96) + eth1Data(72) + graffiti(32)
  *   + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + deposits(4) + voluntaryExits(4)
- *   + syncAggregate(SYNC_COMMITTEE_SIZE/8 + 96) + blsToExecutionChanges(4) = 384 bytes (mainnet preset)
+ *   + syncAggregate(SyncAggregate.minSize) + blsToExecutionChanges(4) = 384 bytes (mainnet preset)
  *
- * The 4-byte pointer at byte 568 (= 184+384) gives the offset of SignedExecutionPayloadBid
+ * The 4-byte pointer at byte 568 (= 184+384, mainnet preset) gives the offset of SignedExecutionPayloadBid
  * within BeaconBlockBody. parentBlockHash is at that bid's byte 100 (after offset+sig).
  */
 // BeaconBlock body starts after: msg_offset(4) + sig(96) + slot(8) + proposer_index(8) + parent_root(32) + state_root(32) + body_offset_ptr(4)
@@ -459,7 +459,7 @@ const GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK =
   VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + SLOT_SIZE + 8 + ROOT_SIZE + ROOT_SIZE + VARIABLE_FIELD_OFFSET; // = 184
 const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY = 96 + 72 + 32 + 4 + 4 + 4 + 4 + 4 + SYNC_AGGREGATE_SIZE + 4; // = 384 at mainnet preset
 const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK =
-  GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY; // = 568
+  GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY; // = 568 at mainnet preset
 // Within SignedExecutionPayloadBid, parentBlockHash is at byte 100 (msg_offset:4 + sig:96)
 const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // = 100
 
