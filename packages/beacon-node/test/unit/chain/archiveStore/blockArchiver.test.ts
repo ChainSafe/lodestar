@@ -1,5 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
@@ -320,6 +321,7 @@ describe("block archiver task", () => {
         DENEB_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: 0,
         MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
+        MIN_BLOB_DATA_RETENTION_MS: 2 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
       });
 
       const block = ssz.fulu.SignedBeaconBlock.defaultValue();

@@ -107,7 +107,7 @@ function computeWeakSubjectivityPeriodFromActiveValidators(
 ): number {
   const fork = config.getForkName(slot);
 
-  const churnLimitsGloas = getGloasChurnLimits(config, totalActiveBalanceIncrements);
+  const churnLimitsGloas = getGloasChurnLimits(config, computeEpochAtSlot(slot), totalActiveBalanceIncrements);
 
   return isForkPostGloas(fork)
     ? computeWeakSubjectivityPeriodFromConstituentsGloas(
