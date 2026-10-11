@@ -15,7 +15,6 @@ import {
   ForkPostFulu,
   ForkPostGloas,
   ForkPreGloas,
-  ForkPreHeze,
   ForkSeq,
   INCLUSION_LIST_COMMITTEE_SIZE,
   isForkPostAltair,
@@ -695,10 +694,6 @@ export async function produceBlockBody<T extends BlockType>(
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
   });
-
-  if (!isForkPostHeze(fork)) {
-    Object.assign(logMeta, {deposits: (blockBody as BeaconBlockBody<ForkPreHeze>).deposits.length});
-  }
 
   if (isForkPostAltair(fork)) {
     const {syncAggregate} = blockBody as altair.BeaconBlockBody;
