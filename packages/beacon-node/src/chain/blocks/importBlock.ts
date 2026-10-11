@@ -407,9 +407,8 @@ export async function importBlock(
     const proposalSlot = blockSlot + 1;
     try {
       const proposerIndex = postState.getBeaconProposer(proposalSlot);
-      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
 
-      if (feeRecipient) {
+      if (this.beaconProposerCache.has(proposerIndex)) {
         // We would set this to true if
         //  1) This is a gossip block
         //  2) We are proposer of next slot

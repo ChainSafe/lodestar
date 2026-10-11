@@ -193,7 +193,11 @@ export function applyDeposits(
       }
       increaseBalance(state, validatorIndex, amount);
     }
-    stateElectra.pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+    if (fork >= ForkSeq.gloas) {
+      (state as CachedBeaconStateGloas).pendingDeposits = ssz.gloas.PendingDeposits.defaultViewDU();
+    } else {
+      stateElectra.pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+    }
   }
 
   // Process activations

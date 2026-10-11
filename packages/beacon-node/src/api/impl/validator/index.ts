@@ -1947,6 +1947,17 @@ export function getValidatorApi(
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {
+      // The subscribing validators use this node for duties regardless of its sync state and
+      // the subscription must not fail on the tracking, e.g. if the finalized state is unavailable
+      try {
+        await chain.updateAttachedValidators(
+          chain.clock.currentEpoch,
+          Array.from(new Set(subscriptions.map(({validatorIndex}) => validatorIndex)))
+        );
+      } catch (e) {
+        logger.warn("Error tracking attached validators", {count: subscriptions.length}, e as Error);
+      }
+
       notWhileSyncing(chain, sync.state);
 
       await network.prepareBeaconCommitteeSubnets(
@@ -2010,6 +2021,13 @@ export function getValidatorApi(
     },
 
     async prepareBeaconProposer({proposers}) {
+      if (isForkPostGloas(config.getForkName(chain.clock.currentSlot))) {
+        throw new ApiError(
+          410,
+          "prepareBeaconProposer is no longer supported from gloas, submit signed proposer preferences via POST /eth/v1/validator/proposer_preferences instead"
+        );
+      }
+
       await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
     },
 
@@ -2044,6 +2062,13 @@ export function getValidatorApi(
     },
 
     async registerValidator({registrations}) {
+      if (isForkPostGloas(config.getForkName(chain.clock.currentSlot))) {
+        throw new ApiError(
+          410,
+          "registerValidator is no longer supported from gloas, submit builder preferences via POST /eth/v1/validator/builder_preferences instead"
+        );
+      }
+
       if (!chain.executionBuilder) {
         throw Error("External builder not configured");
       }
@@ -2079,11 +2104,14 @@ export function getValidatorApi(
 
     async submitProposerPreferences({signedProposerPreferences}) {
       const failures: FailureList = [];
+      // Preferences submitted here are signed by validators using this node, gossiped ones are not
+      const attachedValidatorIndices: ValidatorIndex[] = [];
 
       await Promise.all(
         signedProposerPreferences.map(async (signed, i) => {
           try {
             await validateGossipProposerPreferences(chain, signed);
+            attachedValidatorIndices.push(signed.message.validatorIndex);
 
             chain.proposerPreferencesPool.add(signed);
             await network.publishProposerPreferences(signed);
@@ -2099,6 +2127,7 @@ export function getValidatorApi(
             };
 
             if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+              attachedValidatorIndices.push(signed.message.validatorIndex);
               logger.debug("Ignoring known signed proposer preferences", logCtx);
               return;
             }
@@ -2111,6 +2140,14 @@ export function getValidatorApi(
           }
         })
       );
+
+      if (attachedValidatorIndices.length > 0) {
+        try {
+          await chain.updateAttachedValidators(chain.clock.currentEpoch, attachedValidatorIndices);
+        } catch (e) {
+          logger.warn("Error tracking attached validators", {count: attachedValidatorIndices.length}, e as Error);
+        }
+      }
 
       if (failures.length > 0) {
         throw new IndexedError("Error processing signed proposer preferences", failures);
