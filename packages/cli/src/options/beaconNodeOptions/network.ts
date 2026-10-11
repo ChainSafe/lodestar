@@ -44,6 +44,7 @@ export function hasGlobalIPv6Address(interfaces = os.networkInterfaces()): boole
 export type NetworkArgs = {
   "network.backend"?: "libp2p" | "native";
   "network.native.traceGossip"?: boolean;
+  "network.native.traceTurns"?: boolean;
   "network.native.receiveBudgetBytes"?: number;
   "network.native.initialCongestionWindowPackets"?: number;
   "network.native.receiveDatagramsPerTurn"?: number;
@@ -207,6 +208,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 
   const native = {
     traceGossip: args["network.native.traceGossip"],
+    traceTurns: args["network.native.traceTurns"],
     receiveBudgetBytes: args["network.native.receiveBudgetBytes"],
     initialCongestionWindowPackets: args["network.native.initialCongestionWindowPackets"],
     receiveDatagramsPerTurn: args["network.native.receiveDatagramsPerTurn"],
@@ -256,6 +258,13 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 }
 
 export const options: CliCommandOptions<NetworkArgs> = {
+  "network.native.traceTurns": {
+    type: "boolean",
+    group: "network",
+    description: "Log native network phase timing totals at most once per 50 ms",
+    defaultDescription: "false",
+    hidden: true,
+  },
   "network.native.traceGossip": {
     type: "boolean",
     group: "network",

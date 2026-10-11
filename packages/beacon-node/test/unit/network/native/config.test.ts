@@ -49,6 +49,8 @@ describe("native configuration boundary", () => {
     const node = await fixture();
     expect(node.create().traceGossip).toBe(false);
     expect(node.create({native: {traceGossip: true}}).traceGossip).toBe(true);
+    expect(node.create().traceTurns).toBe(false);
+    expect(node.create({native: {traceTurns: true}}).traceTurns).toBe(true);
     expect(node.create().gossipPolicy).toMatchObject({
       activeSendTimeoutMs: 6000n,
       activeSendItems: {beacon_block: 8, blob_sidecar: 32, data_column_sidecar: 256},
