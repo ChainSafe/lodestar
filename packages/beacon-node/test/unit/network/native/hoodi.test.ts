@@ -19,7 +19,7 @@ it("starts on Hoodi before its scheduled Gloas fork", async () => {
     120_000 * SLOTS_PER_EPOCH,
     ssz.fulu.Status.defaultValue(),
     scheduled.CUSTODY_REQUIREMENT,
-    16
+    3_000_000
   );
   const network = createSettlingNetwork(application);
   try {

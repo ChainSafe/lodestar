@@ -429,7 +429,7 @@ export function createNativeConfig(
       handshakingCapacity: Math.min(connections, 32),
       dialingCapacity: 32,
       receiveBudgetBytes: opts.native?.receiveBudgetBytes ?? 512 * MiB,
-      nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? 1024 * MiB,
+      nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? 2048 * MiB,
       bridgeBudgetBytes: opts.native?.bridgeBudgetBytes ?? 512 * MiB,
     },
     gossipPolicy: {
