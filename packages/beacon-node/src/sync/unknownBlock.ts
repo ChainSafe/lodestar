@@ -297,8 +297,15 @@ export class BlockInputSync {
   private onIncompletePayloadEnvelope = (data: ChainEventData[ChainEvent.incompletePayloadEnvelope]): void => {
     try {
       const isNewRoot = this.addByPayloadInput(data.payloadInput, data.peer);
-      if (isNewRoot) {
+      const pendingPayload = this.pendingPayloads.get(data.payloadInput.blockRootHex);
+      if (
+        pendingPayload &&
+        pendingPayload.status !== PendingPayloadInputStatus.fetching &&
+        pendingPayload.status !== PendingPayloadInputStatus.processing
+      ) {
         this.triggerUnknownBlockSearch();
+      }
+      if (isNewRoot) {
         this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.INCOMPLETE_PAYLOAD_ENVELOPE});
         this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
       }
@@ -597,11 +604,7 @@ export class BlockInputSync {
     return this.chain.seenPayloadEnvelopeInputCache.get(rootHex)?.slot;
   }
 
-  private addByPayloadInput = (
-    payloadInput: PayloadEnvelopeInput,
-    peerIdStr?: PeerIdStr,
-    envelope?: gloas.SignedExecutionPayloadEnvelope
-  ): boolean => {
+  private addByPayloadInput = (payloadInput: PayloadEnvelopeInput, peerIdStr?: PeerIdStr): boolean => {
     if (this.knownBadBlocks.has(payloadInput.blockRootHex)) {
       this.logger.debug("Ignoring payload input for known bad block root", {
         slot: payloadInput.slot,
@@ -611,34 +614,34 @@ export class BlockInputSync {
       return false;
     }
 
-    const existingPayload = this.pendingPayloads.get(payloadInput.blockRootHex);
-    if (existingPayload) {
-      if (peerIdStr && existingPayload.peerIdStrings.size < MAX_PEERS_PER_ROOT) {
-        existingPayload.peerIdStrings.add(peerIdStr);
-      }
-      return false;
-    }
+    let pendingPayload = this.pendingPayloads.get(payloadInput.blockRootHex);
+    const isNewRoot = pendingPayload === undefined;
+    // Envelope-only entries must go through reconciliation to validate their speculative envelope.
+    if (
+      !pendingPayload ||
+      pendingPayload.status === PendingPayloadInputStatus.pending ||
+      pendingPayload.status === PendingPayloadInputStatus.downloaded
+    ) {
+      pendingPayload = this.toPendingPayloadInput(payloadInput, pendingPayload);
+      this.pendingPayloads.set(payloadInput.blockRootHex, pendingPayload);
 
-    const pendingPayload = this.toPendingPayloadInput(payloadInput, undefined, envelope);
+      this.logger.verbose("Added payloadInput to BlockInputSync.pendingPayloads", {
+        slot: payloadInput.slot,
+        root: payloadInput.blockRootHex,
+        delaySec: this.chain.clock.secFromSlot(payloadInput.slot),
+      });
+    }
 
     if (peerIdStr && pendingPayload.peerIdStrings.size < MAX_PEERS_PER_ROOT) {
       pendingPayload.peerIdStrings.add(peerIdStr);
     }
-
-    this.pendingPayloads.set(payloadInput.blockRootHex, pendingPayload);
-
-    this.logger.verbose("Added payloadInput to BlockInputSync.pendingPayloads", {
-      slot: payloadInput.slot,
-      root: payloadInput.blockRootHex,
-      delaySec: this.chain.clock.secFromSlot(payloadInput.slot),
-    });
 
     const prunedItemCount = pruneSetToMax(this.pendingPayloads, this.maxPendingBlocks);
     if (prunedItemCount > 0) {
       this.metrics?.blockInputSync.removedPayloads.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
       this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingPayloads`);
     }
-    return true;
+    return isNewRoot;
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
@@ -1261,6 +1264,9 @@ export class BlockInputSync {
     }
 
     const payloadInput = await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
+    if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
+      return;
+    }
     if (!payloadInput) {
       this.logger.debug("PayloadEnvelopeInput not yet reloadable for imported block, will retry", {
         root: rootHex,
@@ -1272,6 +1278,9 @@ export class BlockInputSync {
       const validationResult = await wrapError(
         validateGossipExecutionPayloadEnvelope(this.chain, pendingPayload.envelope)
       );
+      if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
+        return;
+      }
       if (validationResult.err) {
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
@@ -1339,14 +1348,13 @@ export class BlockInputSync {
     payload.status = PendingPayloadInputStatus.fetching;
 
     const res = await wrapError(this.fetchPayloadInput(payload));
+    if (this.pendingPayloads.get(rootHex) !== payload) {
+      this.logger.verbose("Dropping downloaded payload, entry changed during fetch", logCtx);
+      return;
+    }
     if (!res.err) {
       const pendingPayload = res.result;
       const resultRootHex = getPayloadSyncCacheItemRootHex(pendingPayload);
-      // finalization may have deleted this entry while we were awaiting the network, do not resurrect it via the set below
-      if (!this.pendingPayloads.has(resultRootHex)) {
-        this.logger.verbose("Dropping downloaded payload, entry pruned during fetch", logCtx);
-        return;
-      }
       this.pendingPayloads.set(resultRootHex, pendingPayload);
       const result = isPendingPayloadEnvelope(pendingPayload)
         ? DownloadResult.WaitingForBlock
@@ -1409,6 +1417,9 @@ export class BlockInputSync {
     this.logger.debug("Processing downloaded payload", logCtx);
 
     const res = await wrapError(this.chain.processExecutionPayload(pendingPayload.payloadInput));
+    if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
+      return;
+    }
     if (!res.err) {
       this.logger.debug("Processed payload from unknown sync", logCtx);
       this.pendingPayloads.delete(rootHex);
