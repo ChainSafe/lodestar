@@ -22,6 +22,7 @@ import {
   RootCache,
   computeEpochAtSlot,
   computeTimeAtSlot,
+  getBeaconCommittees,
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
@@ -44,7 +45,7 @@ import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
-import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
@@ -334,7 +335,8 @@ export async function importBlock(
       this.metrics.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      if (delaySec < (SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000) {
+      const headFork = this.config.getForkName(newHead.slot);
+      if (delaySec < (SLOTS_PER_EPOCH * this.config.getSlotDurationMs(headFork)) / 1000) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
         const cutOffSec = this.config.getAttestationDueMs(this.config.getForkName(blockSlot)) / 1000;
         if (delaySec > cutOffSec) {
@@ -406,9 +408,8 @@ export async function importBlock(
     const proposalSlot = blockSlot + 1;
     try {
       const proposerIndex = postState.getBeaconProposer(proposalSlot);
-      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
 
-      if (feeRecipient) {
+      if (this.beaconProposerCache.has(proposerIndex)) {
         // We would set this to true if
         //  1) This is a gossip block
         //  2) We are proposer of next slot
@@ -586,7 +587,7 @@ export async function importBlock(
     this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
-      fullyVerifiedBlock.postState.currentSyncCommitteeIndexed.validatorIndices
+      fullyVerifiedBlock.postState.currentSyncCommitteeValidatorIndices
     );
   }
 
@@ -600,7 +601,10 @@ export async function importBlock(
     }
   }
 
-  const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
+  const reprocessGuardSec =
+    this.config.getSlotComponentDurationMs(this.config.getForkName(blockSlot), REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS) /
+    1000;
+  const advancedSlot = this.clock.slotWithFutureTolerance(reprocessGuardSec);
 
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
@@ -663,8 +667,12 @@ export function addAttestationPostElectra(
   } else {
     const attSlot = attestation.data.slot;
     const attEpoch = computeEpochAtSlot(attSlot);
-    const decisionRoot = state.getShufflingDecisionRoot(attEpoch);
-    const committees = this.shufflingCache.getBeaconCommittees(attEpoch, decisionRoot, attSlot, committeeIndices);
+    // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
+    // we should have the shuffling inside ShufflingCache most of the time
+    const shuffling =
+      this.shufflingCache.getSync(attEpoch, state.getShufflingDecisionRoot(attEpoch)) ??
+      state.getShufflingAtEpoch(attEpoch);
+    const committees = getBeaconCommittees(shuffling, attSlot, committeeIndices);
     const aggregationBools = attestation.aggregationBits.toBoolArray();
     let offset = 0;
     for (let i = 0; i < committees.length; i++) {

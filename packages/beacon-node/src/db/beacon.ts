@@ -22,6 +22,7 @@ import {
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
+  ProposerPreferencesRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -53,6 +54,7 @@ export class BeaconDb implements IBeaconDb {
 
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
+  proposerPreferences: ProposerPreferencesRepository;
   attesterSlashing: AttesterSlashingRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
 
@@ -89,6 +91,7 @@ export class BeaconDb implements IBeaconDb {
     this.voluntaryExit = new VoluntaryExitRepository(config, db);
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);
     this.proposerSlashing = new ProposerSlashingRepository(config, db);
+    this.proposerPreferences = new ProposerPreferencesRepository(config, db);
     this.attesterSlashing = new AttesterSlashingRepository(config, db);
 
     // lightclient

@@ -17,6 +17,7 @@ import {
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
+  ProposerPreferencesRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -52,6 +53,7 @@ export interface IBeaconDb {
   // op pool
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
+  proposerPreferences: ProposerPreferencesRepository;
   attesterSlashing: AttesterSlashingRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
 

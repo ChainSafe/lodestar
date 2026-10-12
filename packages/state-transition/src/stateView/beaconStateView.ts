@@ -40,6 +40,7 @@ import {
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
   createCachedBeaconState,
   isStateValidatorsNodesPopulated,
 } from "../cache/stateCache.js";
@@ -145,7 +146,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get eth1Data(): phase0.Eth1Data {
-    return this.cachedState.eth1Data;
+    if (this.forkSeq >= ForkSeq.heze) {
+      throw new Error("eth1Data was removed from the beacon state in Heze");
+    }
+    return (this.cachedState as CachedBeaconStatePreHeze).eth1Data;
   }
 
   get latestBlockHeader(): phase0.BeaconBlockHeader {
@@ -609,6 +613,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   get currentSyncCommitteeIndexed(): SyncCommitteeCache {
     return this.cachedState.epochCtx.currentSyncCommitteeIndexed;
+  }
+
+  get currentSyncCommitteeValidatorIndices(): Uint32Array {
+    return this.cachedState.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
   }
 
   get syncProposerReward(): number {

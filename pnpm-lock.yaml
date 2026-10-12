@@ -348,6 +348,9 @@ importers:
         specifier: 1.0.2
         version: 1.0.2
     devDependencies:
+      '@ethereumjs/rlp':
+        specifier: ^4.0.1
+        version: 4.0.1
       '@libp2p/interface-internal':
         specifier: ^3.1.12
         version: 3.1.12
