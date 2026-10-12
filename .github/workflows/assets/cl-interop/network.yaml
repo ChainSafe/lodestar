@@ -1,0 +1,30 @@
+participants:
+  - el_type: geth
+    el_image: ${EL_IMAGE}
+    cl_type: lodestar
+    cl_image: ${LODESTAR_IMAGE}
+    supernode: true
+    validator_count: 0
+  - el_type: geth
+    el_image: ${EL_IMAGE}
+    cl_type: ${BN_TYPE}
+    cl_image: ${BN_IMAGE}
+    supernode: true
+    vc_type: lodestar
+    vc_image: ${LODESTAR_IMAGE}
+  - el_type: geth
+    el_image: ${EL_IMAGE}
+    cl_type: lodestar
+    cl_image: ${LODESTAR_IMAGE}
+    supernode: true
+    vc_type: ${VC_TYPE}
+    vc_image: ${VC_IMAGE}
+    use_remote_signer: ${VC_REMOTE_SIGNER}
+network_params:
+  preset: minimal
+  electra_fork_epoch: 0
+  fulu_fork_epoch: 0
+additional_services:
+  - assertoor
+assertoor_params:
+  image: ethpandaops/assertoor:master

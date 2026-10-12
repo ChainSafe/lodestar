@@ -1,0 +1,130 @@
+name: Consensus client interop
+
+on:
+  workflow_dispatch:
+    inputs:
+      lodestar_image:
+        description: "Lodestar image to test"
+        default: "chainsafe/lodestar:next"
+        required: true
+      el_image:
+        description: "geth image behind every beacon node"
+        default: "ethpandaops/geth:master"
+        required: true
+  schedule:
+    - cron: "0 5 * * *" # 5 am UTC
+  pull_request:
+    paths:
+      - ".github/workflows/cl-interop.yml"
+      - ".github/workflows/assets/cl-interop/**"
+
+concurrency:
+  group: cl-interop-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  LODESTAR_IMAGE: ${{ inputs.lodestar_image || 'chainsafe/lodestar:next' }}
+  EL_IMAGE: ${{ inputs.el_image || 'ethpandaops/geth:master' }}
+  KURTOSIS_VERSION: "1.20.0"
+  ENCLAVE: cl-interop
+
+jobs:
+  interop:
+    name: ${{ matrix.client }}
+    runs-on: warp-ubuntu-2204-x64-4x
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - client: lighthouse
+            bn_type: lighthouse
+            bn_image: ethpandaops/lighthouse:unstable
+            vc_type: lighthouse
+            vc_image: ethpandaops/lighthouse:unstable
+          - client: prysm
+            bn_type: prysm
+            bn_image: ethpandaops/prysm-beacon-chain:develop-minimal
+            vc_type: prysm
+            vc_image: ethpandaops/prysm-validator:develop-minimal
+          - client: teku
+            bn_type: teku
+            bn_image: ethpandaops/teku:master
+            vc_type: teku
+            vc_image: ethpandaops/teku:master
+          - client: nimbus
+            bn_type: nimbus
+            bn_image: ethpandaops/nimbus-eth2:unstable-minimal
+            vc_type: nimbus
+            vc_image: ethpandaops/nimbus-validator-client:unstable-minimal
+          - client: grandine
+            bn_type: grandine
+            bn_image: ethpandaops/grandine:develop-minimal
+            vc_type: lodestar
+            vc_image: chainsafe/lodestar:next
+          - client: vero
+            bn_type: lodestar
+            bn_image: chainsafe/lodestar:next
+            vc_type: vero
+            vc_image: ghcr.io/serenita-org/vero:master
+            vc_remote_signer: true
+    env:
+      BN_TYPE: ${{ matrix.bn_type }}
+      BN_IMAGE: ${{ matrix.bn_image }}
+      VC_TYPE: ${{ matrix.vc_type }}
+      VC_IMAGE: ${{ matrix.vc_image }}
+      VC_REMOTE_SIGNER: ${{ matrix.vc_remote_signer || false }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Render network config
+        run: |
+          mkdir -p temp
+          envsubst < .github/workflows/assets/cl-interop/network.yaml > temp/network.yaml
+          cat temp/network.yaml
+
+      - name: Start devnet
+        id: testnet
+        uses: ethpandaops/kurtosis-assertoor-github-action@f64942cbc780df731a731ea9f45765b161d2c8df # v1.0.1
+        with:
+          kurtosis_version: ${{ env.KURTOSIS_VERSION }}
+          kurtosis_extra_args: "--image-download always"
+          ethereum_package_args: temp/network.yaml
+          enclave_name: ${{ env.ENCLAVE }}
+          await_assertoor_tests: "false"
+          enclave_dump: "false"
+
+      - name: Interop
+        run: >
+          .github/workflows/assets/cl-interop/run-test.sh
+          "${{ fromJson(steps.testnet.outputs.services).assertoor.http.url }}"
+          .github/workflows/assets/cl-interop/interop.yaml
+
+      - name: Restart both beacon nodes with validators
+        run: |
+          for node in 2 3; do
+            svc=$(kurtosis enclave inspect "$ENCLAVE" | awk '{print $2}' | grep "^cl-${node}-")
+            kurtosis service stop "$ENCLAVE" "$svc"
+            sleep 30
+            kurtosis service start "$ENCLAVE" "$svc"
+            sleep 60
+          done
+
+      - name: Recovery
+        run: >
+          .github/workflows/assets/cl-interop/run-test.sh
+          "${{ fromJson(steps.testnet.outputs.services).assertoor.http.url }}"
+          .github/workflows/assets/cl-interop/recovery.yaml
+
+      - name: Dump enclave
+        if: always()
+        run: kurtosis enclave dump "$ENCLAVE" "temp/dump" || true
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cl-interop-${{ matrix.client }}
+          path: temp/
+          if-no-files-found: ignore
+          retention-days: 14

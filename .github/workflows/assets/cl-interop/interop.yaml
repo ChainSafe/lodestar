@@ -1,0 +1,68 @@
+id: cl-interop
+name: "Lodestar crossed with another consensus client"
+timeout: 40m
+tasks:
+  - name: check_clients_are_healthy
+    title: "All three nodes are healthy"
+    timeout: 5m
+    config:
+      minClientCount: 3
+
+  - name: check_consensus_slot_range
+    title: "Skip startup epochs"
+    timeout: 5m
+    config:
+      minEpochNumber: 2
+
+  - name: run_task_background
+    title: "Interop under blob load"
+    config:
+      onBackgroundComplete: fail
+      backgroundTask:
+        name: generate_blob_transactions
+        title: "Send 2 blob transactions per block"
+        config:
+          childWallets: 10
+          walletSeed: "cl-interop"
+          limitPending: 10
+          limitPerBlock: 2
+          randomTarget: true
+          amount: 1000000
+          blobSidecars: 1
+        configVars:
+          privateKey: "walletPrivkey"
+      foregroundTask:
+        name: run_tasks_concurrent
+        title: "Check the crossed pairs"
+        timeout: 30m
+        config:
+          tasks:
+            - name: check_consensus_block_proposals
+              title: "Other beacon node + Lodestar VC proposes a block with blobs"
+              config:
+                validatorNamePattern: "^2-"
+                minBlobCount: 1
+            - name: check_consensus_block_proposals
+              title: "Lodestar beacon node + other VC proposes a block with blobs"
+              config:
+                validatorNamePattern: "^3-"
+                minBlobCount: 1
+            - name: check_consensus_attestation_stats
+              title: "Target and head votes from both pairs"
+              config:
+                minTargetPercent: 98
+                minHeadPercent: 80
+                minCheckedEpochs: 3
+                failOnCheckMiss: true
+            - name: check_consensus_reorgs
+              title: "No reorg storms"
+              config:
+                maxReorgsPerEpoch: 1
+                minCheckEpochCount: 3
+            - name: check_consensus_finality
+              title: "Chain finalizes"
+              config:
+                minFinalizedEpochs: 3
+                maxUnfinalizedEpochs: 3
+            - name: check_consensus_sync_status
+              title: "All beacon nodes synced"

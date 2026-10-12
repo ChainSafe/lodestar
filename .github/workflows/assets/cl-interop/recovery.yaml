@@ -1,0 +1,34 @@
+id: cl-interop-recovery
+name: "Crossed pairs recover after beacon node restarts"
+timeout: 20m
+tasks:
+  - name: check_clients_are_healthy
+    title: "All three nodes are healthy again"
+    timeout: 5m
+    config:
+      minClientCount: 3
+
+  - name: run_tasks_concurrent
+    title: "Check the crossed pairs after the restarts"
+    timeout: 15m
+    config:
+      tasks:
+        - name: check_consensus_sync_status
+          title: "All beacon nodes synced"
+        - name: check_consensus_block_proposals
+          title: "Other beacon node + Lodestar VC proposes again"
+          config:
+            validatorNamePattern: "^2-"
+        - name: check_consensus_block_proposals
+          title: "Lodestar beacon node + other VC proposes again"
+          config:
+            validatorNamePattern: "^3-"
+        - name: check_consensus_attestation_stats
+          title: "Target votes from both pairs again"
+          config:
+            minTargetPercent: 98
+            minCheckedEpochs: 2
+        - name: check_consensus_finality
+          title: "Finality advances again"
+          config:
+            maxUnfinalizedEpochs: 3
