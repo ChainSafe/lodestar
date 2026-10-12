@@ -182,7 +182,15 @@ on_exit() {
 }
 trap 'on_exit $?' EXIT
 
-container() { docker ps --filter "network=kt-$ENCLAVE" --format '{{.Names}}' | grep "^$1" | head -1 || true; }
+container() { docker ps -a --filter "network=kt-$ENCLAVE" --format '{{.Names}}' | grep "^$1" | head -1 || true; }
+# a validator client that exited explains a dead half of the network better than any chain metric
+container_states() {
+  local out="" name
+  for name in "$BN_TYPE bn:$CL_X" "lodestar vc:$VC_LS" "lodestar bn:$CL_LS" "$VC_TYPE vc:$VC_X"; do
+    out="$out${out:+, }${name%%:*} $(docker inspect -f '{{.State.Status}}{{if ne .State.ExitCode 0}} exit {{.State.ExitCode}}{{end}}' "${name#*:}" 2>/dev/null || echo gone)"
+  done
+  echo "$out"
+}
 port() { docker port "$1" "$2/tcp" | head -1 | sed 's/.*://'; }
 json() { node -pe "const d=JSON.parse(require('fs').readFileSync(0)); $1"; }
 beacon() { curl -sf --max-time 5 "http://127.0.0.1:$1$2"; }
@@ -196,7 +204,7 @@ wait_finalized() {
     [ "${fin:-0}" -ge "$target" ] && return 0
     if [ $(( $(date +%s) - start )) -ge "$budget" ]; then
       log "finalized epoch $fin after ${budget}s, wanted $target"
-      echo "finalized epoch $fin after ${budget}s, wanted $target (head $(head_slot "$API_LS") on lodestar bn, $(head_slot "$API_X") on $BN_TYPE bn)" > "$OUT_DIR/abort.reason"
+      echo "finalized epoch $fin after ${budget}s, wanted $target (head $(head_slot "$API_LS") on lodestar bn, $(head_slot "$API_X") on $BN_TYPE bn; $(container_states))" > "$OUT_DIR/abort.reason"
       return 1
     fi
     sleep 10
