@@ -226,8 +226,6 @@ export interface IBeaconEngine {
   pauseFastConfirmation(): void;
   resumeFastConfirmation(): void;
 
-  // Engine-owned state reads.
-  getSerializedStateByRoot(stateRoot: Uint8Array): Promise<Uint8Array | null>;
   // Cold block-archive writes + reverse-lookup (backfill).
   persistArchiveBlock(
     slot: Slot,
@@ -313,9 +311,6 @@ export interface IBeaconEngine {
   // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
   loadHistoricalStateRegen(): Promise<void>;
   scrapeHistoricalStateMetrics(): Promise<string>;
-  getHistoricalStateBySlot(
-    slot: Slot
-  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
   // API state queries — the engine resolves the state internally (no IBeaconStateView crosses). `id` is
   // the resolved stateId (root / slot / checkpoint); the API keeps `resolveStateId` (400 on bad input).
   getSerializedState(
