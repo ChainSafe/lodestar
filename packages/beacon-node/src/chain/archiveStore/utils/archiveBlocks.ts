@@ -176,7 +176,7 @@ export async function archiveBlocks(
 
   // Key by root so each orphaned Gloas block is persisted,
   // deleted and counted only once across FULL and EMPTY variants.
-  const nonCanonicalBlockByRoot = new Map<RootHex, ProtoBlock>();
+  const nonCanonicalSlotByRoot = new Map<RootHex, Slot>();
 
   const orphanedPayloadBlocks: ProtoBlock[] = [];
 
@@ -185,7 +185,7 @@ export async function archiveBlocks(
     // only when no variant with this root is on the
     // canonical path.
     if (!canonicalBlockRootHexes.has(block.blockRoot)) {
-      nonCanonicalBlockByRoot.set(block.blockRoot, block);
+      nonCanonicalSlotByRoot.set(block.blockRoot, block.slot);
     }
     // Only an off-path FULL variant has payload data.
     // Collect those for pruning.
@@ -193,8 +193,7 @@ export async function archiveBlocks(
       orphanedPayloadBlocks.push(block);
     }
   }
-  const nonCanonicalBlocks = Array.from(nonCanonicalBlockByRoot.values());
-  const nonCanonicalBlockRoots = nonCanonicalBlocks.map((block) => fromHex(block.blockRoot));
+  const nonCanonicalBlockRoots = Array.from(nonCanonicalSlotByRoot.keys(), (rootHex) => fromHex(rootHex));
 
   if (orphanedPayloadBlocks.length > 0) {
     const orphanedPayloadRoots = orphanedPayloadBlocks.map((block) => fromHex(block.blockRoot));
@@ -228,21 +227,20 @@ export async function archiveBlocks(
     }
   }
 
-  if (nonCanonicalBlocks.length > 0) {
+  if (nonCanonicalSlotByRoot.size > 0) {
     if (persistOrphanedBlocks) {
       // Persist orphaned blocks to disk before deleting them from hot db
       await Promise.all(
-        nonCanonicalBlockRoots.map(async (root, index) => {
-          const block = nonCanonicalBlocks[index];
-          const blockBytes = await db.block.getBinary(root);
-          const blockLogCtx = {slot: block.slot, root: block.blockRoot};
+        Array.from(nonCanonicalSlotByRoot, async ([rootHex, slot]) => {
+          const blockBytes = await db.block.getBinary(fromHex(rootHex));
+          const blockLogCtx = {slot, root: rootHex};
           if (blockBytes) {
-            await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
+            await persistOrphanedBlock(slot, rootHex, blockBytes, {
               persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
             });
             logger.verbose("Persisted orphaned block", {...logCtx, ...blockLogCtx});
           } else {
-            logger.warn("Tried to persist orphaned block but no block found", {...logCtx, ...blockLogCtx});
+            logger.debug("Tried to persist orphaned block but no block found", {...logCtx, ...blockLogCtx});
           }
         })
       );
@@ -251,8 +249,8 @@ export async function archiveBlocks(
     await db.block.batchDelete(nonCanonicalBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", {
       ...logCtx,
-      count: nonCanonicalBlocks.length,
-      slotRange: prettyPrintIndices(nonCanonicalBlocks.map((block) => block.slot).sort((a, b) => a - b)),
+      count: nonCanonicalSlotByRoot.size,
+      slotRange: prettyPrintIndices(Array.from(nonCanonicalSlotByRoot.values()).sort((a, b) => a - b)),
     });
   }
 
