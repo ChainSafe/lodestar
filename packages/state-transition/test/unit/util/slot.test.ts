@@ -1,6 +1,8 @@
 import {describe, expect, it} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {computeSlotsSinceEpochStart} from "../../../src/util/index.js";
+import {computeSlotsSinceEpochStart, getSlotDurationMs} from "../../../src/util/index.js";
 
 describe("computeSlotsSinceEpochStart", () => {
   const pairs = [
@@ -23,5 +25,15 @@ describe("computeSlotsSinceEpochStart", () => {
     const result = computeSlotsSinceEpochStart(slot, epoch);
     // 70 - NUM_SLOT_PER_EPOCH
     expect(result).toEqual(38);
+  });
+});
+
+describe("getSlotDurationMs", () => {
+  it("uses the configured duration on either side of a fork", () => {
+    const config = createChainForkConfig({ALTAIR_FORK_EPOCH: 1});
+    config.getSlotDurationMs = (fork) => (fork === ForkName.phase0 ? 12000 : 6000);
+
+    expect(getSlotDurationMs(config, SLOTS_PER_EPOCH - 1)).toBe(12000);
+    expect(getSlotDurationMs(config, SLOTS_PER_EPOCH)).toBe(6000);
   });
 });

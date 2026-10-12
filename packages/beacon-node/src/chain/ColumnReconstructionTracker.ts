@@ -46,16 +46,11 @@ export class ColumnReconstructionTracker {
 
   private readonly queue = new Map<RootHex, QueuedReconstruction>();
 
-  private readonly minDelayMs: number;
-  private readonly maxDelayMs: number;
-
   constructor(init: ColumnReconstructionTrackerInit) {
     this.logger = init.logger;
     this.emitter = init.emitter;
     this.metrics = init.metrics;
     this.config = init.config;
-    this.minDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MIN_BPS);
-    this.maxDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MAX_BPS);
   }
 
   triggerColumnReconstruction(input: ColumnReconstructionInput): void {
@@ -80,7 +75,10 @@ export class ColumnReconstructionTracker {
     next.value.started = true;
     const {input, queuedAtMs} = next.value;
     const logCtx = {slot: input.slot, root: input.blockRootHex};
-    const delay = this.minDelayMs + Math.random() * (this.maxDelayMs - this.minDelayMs);
+    const fork = this.config.getForkName(input.slot);
+    const minDelayMs = this.config.getSlotComponentDurationMs(fork, RECONSTRUCTION_DELAY_MIN_BPS);
+    const maxDelayMs = this.config.getSlotComponentDurationMs(fork, RECONSTRUCTION_DELAY_MAX_BPS);
+    const delay = minDelayMs + Math.random() * (maxDelayMs - minDelayMs);
 
     // The delay gives gossip a chance to deliver the remaining columns, so time already spent in the
     // queue behind another root counts towards it

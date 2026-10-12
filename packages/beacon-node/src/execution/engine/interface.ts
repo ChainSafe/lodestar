@@ -170,7 +170,7 @@ export interface IExecutionEngine {
     shouldOverrideBuilder?: boolean;
   }>;
 
-  /** Amsterdam: payload bodies including the block access list (null if the EL no longer has it) */
+  /** Amsterdam: includes the block access list; REST returns null for bodies outside the Amsterdam era. */
   getPayloadBodiesByHashV2(blockHash: DATA[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
 
   getBlobs(

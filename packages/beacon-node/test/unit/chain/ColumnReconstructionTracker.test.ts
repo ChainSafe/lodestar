@@ -1,6 +1,8 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {toRootHex} from "@lodestar/utils";
 import {BlockInputColumns} from "../../../src/chain/blocks/blockInput/index.js";
 import {ColumnReconstructionTracker} from "../../../src/chain/ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "../../../src/chain/emitter.js";
@@ -17,7 +19,7 @@ function fakeInput(blockRootHex: string, slot: number, columnCount = NUMBER_OF_C
 }
 
 describe("ColumnReconstructionTracker", () => {
-  const maxDelayMs = config.getSlotComponentDurationMs(1000);
+  const maxDelayMs = config.getSlotComponentDurationMs(config.getForkName(0), 1000);
   let tracker: ColumnReconstructionTracker;
   let recover: ReturnType<typeof vi.fn>;
 
@@ -39,6 +41,7 @@ describe("ColumnReconstructionTracker", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -112,5 +115,31 @@ describe("ColumnReconstructionTracker", () => {
     await vi.advanceTimersByTimeAsync(maxDelayMs);
 
     expect(reconstructedRoots()).toEqual(["0xaa", "0xaa"]);
+  });
+
+  it.each([0, 1])("uses each input's fork for reconstruction delay, random=%i", async (random) => {
+    vi.spyOn(Math, "random").mockReturnValue(random);
+    const forkConfig = createChainForkConfig({FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 1});
+    forkConfig.getSlotDurationMs = (fork) => (fork === ForkName.fulu ? 12000 : 6000);
+    const emitter = new ChainEventEmitter();
+    const forkTracker = new ColumnReconstructionTracker({
+      config: forkConfig,
+      emitter,
+      metrics: null,
+      logger: getMockedLogger(),
+    });
+
+    for (const slot of [SLOTS_PER_EPOCH - 1, SLOTS_PER_EPOCH]) {
+      const fork = forkConfig.getForkName(slot);
+      const input = fakeInput(toRootHex(Buffer.alloc(32, slot)), slot);
+      const delay = fork === ForkName.fulu ? (random === 0 ? 800 : 1200) : random === 0 ? 400 : 600;
+      recover.mockClear();
+
+      forkTracker.triggerColumnReconstruction(input);
+      await vi.advanceTimersByTimeAsync(delay - 1);
+      expect(recover, `before reconstruction in slot ${slot}`).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(recover, `reconstruction in slot ${slot}`).toHaveBeenCalledExactlyOnceWith(input, emitter, null);
+    }
   });
 });

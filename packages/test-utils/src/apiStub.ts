@@ -26,9 +26,12 @@ export function mockApiResponse<T, M, E extends Endpoint<any, any, any, T, M>>({
   return apiResponse;
 }
 
-export async function mockApiErrorResponse<E extends Endpoint>(status: HttpStatusCode): Promise<ApiResponse<E>> {
+export async function mockApiErrorResponse<E extends Endpoint>(
+  status: HttpStatusCode,
+  body?: unknown
+): Promise<ApiResponse<E>> {
   // biome-ignore lint/suspicious/noExplicitAny: mock does not use the route definition
-  const res = new ApiResponse<E>({} as any, null, new Response(null, {status}));
+  const res = new ApiResponse<E>({} as any, body === undefined ? null : JSON.stringify(body), {status});
   await res.errorBody();
   return res;
 }
