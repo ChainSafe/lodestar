@@ -4,7 +4,8 @@ Nightly check of Lodestar against the default-branch image of every other consen
 `.github/workflows/cl-interop.yml`. Each client gets a three-node kurtosis devnet (minimal preset, geth behind every
 node, blob spam) with Lodestar and the other client crossed over:
 
-- node 1: a Lodestar beacon node without validators, the bootnode a restarted node finds the others through again
+- node 1: a Lodestar beacon node without validators, the bootnode of the package and a second Lodestar view of the
+  other client
 - node 2: the other client's beacon node, a Lodestar validator client
 - node 3: Lodestar beacon node, the other client's validator client
 
@@ -15,12 +16,10 @@ client as node 2, a client the package cannot run as a separate validator client
 sides of node 3. The nightly runs the `fulu` scenario, `gloas` is ready in the script and joins once the other
 clients are ready for it:
 
-- `fulu`: electra and fulu at genesis, finality 3, then the two beacon nodes with validators are restarted one after
-  the other and finality has to advance again
+- `fulu`: electra and fulu at genesis, finality 4
 - `gloas`: fulu at genesis and gloas at epoch 2, finality 5
 
-Everything before the first finalized epoch is startup noise and is not judged, and so is the window from a restart
-until the restarted beacon node reports itself in sync again. From then on a run fails when:
+Everything before the first finalized epoch is startup noise and is not judged. From then on a run fails when:
 
 - finality is not reached in time, or a slot is missed (reported with the proposer's pair), or one node proposes no
   block at all
@@ -33,8 +32,6 @@ until the restarted beacon node reports itself in sync again. From then on a run
   ready at the end, or logs a warning or error
 - the two beacon nodes disagree on finality or their heads are more than a slot apart, they are not connected to each
   other at the end, or the other beacon node reports syncing at the end
-- a restarted beacon node is not back in sync and connected to the other one within two minutes (the Lodestar beacon
-  node is then told to dial the other one so the rest of the run can still be judged)
 - no blob was included
 - in `gloas`, either head is not on the gloas fork, or the Lodestar beacon node does not serve an archived envelope
 

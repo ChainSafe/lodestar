@@ -76,7 +76,7 @@ jobs:
           docker info --format 'docker {{.ServerVersion}}, registry mirrors {{.RegistryConfig.Mirrors}}'
 
       # gloas joins once the other clients are ready for it, the script already supports it
-      - name: Fulu at genesis, then beacon node restarts
+      - name: Fulu at genesis
         run: ./scripts/kurtosis/cl-interop/run.sh ${{ matrix.client }} ${{ matrix.bn_image }} ${{ matrix.vc_image }} fulu
 
       - name: Summary

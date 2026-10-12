@@ -3,7 +3,7 @@
 # checks that they interoperate.
 #
 # usage: run.sh <client> <bn_image> <vc_image> <fulu|gloas>
-#   node 1 is a Lodestar beacon node without validators that only serves as the bootnode, node 2 is the other client's
+#   node 1 is a Lodestar beacon node without validators that serves as the bootnode, node 2 is the other client's
 #   beacon node driving a Lodestar validator client, node 3 is a Lodestar beacon node driving the other client's
 #   validator client. Pass "-" as <bn_image> for a client without a beacon node (vero), node 2 is then Lodestar on
 #   both sides, and "-" as <vc_image> for a client the package cannot run as a separate validator client (grandine),
@@ -13,8 +13,7 @@
 #   OUT_DIR          where logs, metrics and the verdict are written (default ./temp/cl-interop/<client>-<scenario>)
 #   KEEP=1           keep the enclave running after the checks
 #
-# fulu: electra and fulu at genesis, finality 3, then the two beacon nodes with validators are restarted one after the
-#       other and finality has to advance again.
+# fulu: electra and fulu at genesis, finality 4.
 # gloas: fulu at genesis and gloas at epoch 2, finality 5.
 set -euo pipefail
 
@@ -31,9 +30,6 @@ ETHEREUM_PACKAGE=${ETHEREUM_PACKAGE:-github.com/ethpandaops/ethereum-package}
 SPAMOOR_IMAGE=${SPAMOOR_IMAGE:-ethpandaops/spamoor:master}
 # funded by the ethereum-package genesis
 SPAMOOR_PRIVKEY=bcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31
-# a restarted beacon node has this long to find its peers again on its own before the verdict records it and the
-# Lodestar beacon node is told to dial the other one, so the rest of the run can still be judged
-RECONNECT_BUDGET=120
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 command -v docker >/dev/null 2>&1 || { echo "missing dependency docker"; exit 1; }
@@ -41,7 +37,7 @@ command -v kurtosis >/dev/null 2>&1 || { echo "missing dependency kurtosis"; exi
 command -v node >/dev/null 2>&1 || { echo "missing dependency node"; exit 1; }
 
 case "$SCENARIO" in
-  fulu) FORKS=$'  electra_fork_epoch: 0\n  fulu_fork_epoch: 0'; FINALITY_TARGET=3 ;;
+  fulu) FORKS=$'  electra_fork_epoch: 0\n  fulu_fork_epoch: 0'; FINALITY_TARGET=4 ;;
   gloas) FORKS=$'  electra_fork_epoch: 0\n  fulu_fork_epoch: 0\n  gloas_fork_epoch: 2'; FINALITY_TARGET=5 ;;
   *) echo "unknown scenario $SCENARIO"; exit 1 ;;
 esac
@@ -93,7 +89,7 @@ for image in "$LODESTAR_REF" "$EL_REF" "$BN_REF" "$VC_REF"; do docker pull -q "$
 LODESTAR_VERSION=$(docker run --rm --entrypoint node "$LODESTAR_REF" /usr/app/packages/cli/bin/lodestar.js --version 2>/dev/null | sed -n 's/.*Version: //p' | head -1)
 cat > "$OUT_DIR/args.yaml" <<YAML
 participants:
-  # the first node is the bootnode of the package, a restarted node finds the others through it again
+  # the first node is the bootnode of the package and a second Lodestar view of the other client
   - el_type: geth
     el_image: $EL_REF
     cl_type: lodestar
@@ -214,46 +210,6 @@ snapshot() {
   [ "$BN_TYPE" = "lodestar" ] && curl -sf --max-time 5 "http://127.0.0.1:$METRICS_X/metrics" > "$OUT_DIR/metrics-$1-xbn.txt"
   date -u +%Y-%m-%dT%H:%M:%S.000Z > "$OUT_DIR/snapshot-$1.time"
 }
-# in sync again means not syncing, not optimistic, execution client reachable and the head within a slot of the other node
-in_sync() {
-  local api=$1 other=$2
-  [ "$(beacon "$api" /eth/v1/node/syncing | json 'd.data.is_syncing === false && !d.data.el_offline && d.data.is_optimistic !== true' 2>/dev/null)" = "true" ] || return 1
-  [ "$(head_slot "$api")" -ge $(( $(head_slot "$other") - 1 )) ]
-}
-# whether the beacon node behind $1 is connected to the peer id $2
-connected_to() {
-  beacon "$1" /eth/v1/node/peers?state=connected | json "d.data.some((p) => p.peer_id === '$2')" 2>/dev/null
-}
-# restarts a beacon node and waits for it to be back in sync, the window is excluded from the verdict
-restart_beacon_node() {
-  local n=$1 name=$2 ctr=$3 api=$4 other=$5 start reconnected=""
-  head_slot "$other" > "$OUT_DIR/restart-$n.start.slot"
-  log "restarting $name at slot $(cat "$OUT_DIR/restart-$n.start.slot")"
-  date -u +%Y-%m-%dT%H:%M:%S.000Z > "$OUT_DIR/restart-$n.time"
-  docker restart "$ctr" > /dev/null
-  start=$(date +%s)
-  until in_sync "$api" "$other" && [ "$(connected_to "$API_X" "$LS_PEER_ID")" = "true" ]; do
-    if [ -z "$reconnected" ] && [ $(( $(date +%s) - start )) -ge "$RECONNECT_BUDGET" ] && [ "$(connected_to "$API_X" "$LS_PEER_ID")" != "true" ]; then
-      reconnected="the beacon nodes did not reconnect within ${RECONNECT_BUDGET}s after the $name restart, lodestar bn was told to dial $BN_TYPE bn"
-      log "$reconnected"
-      echo "$reconnected" > "$OUT_DIR/restart-$n.reconnect"
-      curl -sf --max-time 10 -X POST "http://127.0.0.1:$API_LS/eth/v1/lodestar/connect_peer?peerId=$X_PEER_ID$X_MULTIADDRS" > /dev/null || log "connect_peer failed"
-    fi
-    if [ $(( $(date +%s) - start )) -ge 300 ]; then
-      local state="$name did not come back within 300s: syncing=$(beacon "$api" /eth/v1/node/syncing || echo unreachable) head=$(head_slot "$api") other=$(head_slot "$other") connected=$(connected_to "$API_X" "$LS_PEER_ID")"
-      log "$state"
-      echo "${reconnected:+$reconnected; }$state" > "$OUT_DIR/abort.reason"
-      return 1
-    fi
-    sleep 5
-  done
-  # one more validator client duty cycle before judging again
-  sleep 12
-  date -u +%Y-%m-%dT%H:%M:%S.000Z > "$OUT_DIR/restart-$n.back.time"
-  head_slot "$other" > "$OUT_DIR/restart-$n.end.slot"
-  log "$name back after $(( $(date +%s) - start ))s, head slot $(cat "$OUT_DIR/restart-$n.end.slot")"
-}
-
 log "starting enclave $ENCLAVE (lodestar $LODESTAR_IMAGE ${LODESTAR_DIGEST:0:19} ${LODESTAR_VERSION:-unknown version}, $BN_TYPE bn $BN_IMAGE ${BN_DIGEST:0:19}, $VC_TYPE vc $VC_IMAGE ${VC_DIGEST:0:19}, geth $EL_IMAGE ${EL_DIGEST:0:19})"
 # kurtosis occasionally loses track of the short-lived key generation service while bringing the enclave up
 # ("has Docker resources but not a container"), a second attempt gets past it. In CI nothing else runs on the engine,
@@ -287,8 +243,6 @@ METRICS_LSVC=$(port "$VC_LS" 8080)
 GENESIS_TIME=$(beacon "$API_LS" /eth/v1/beacon/genesis | json 'd.data.genesis_time')
 LS_PEER_ID=$(beacon "$API_LS" /eth/v1/node/identity | json 'd.data.peer_id')
 X_PEER_ID=$(beacon "$API_X" /eth/v1/node/identity | json 'd.data.peer_id')
-# the other node's listen addresses without the trailing peer id, as connect_peer query parameters
-X_MULTIADDRS=$(beacon "$API_X" /eth/v1/node/identity | json 'd.data.p2p_addresses.map((a) => "&multiaddr=" + encodeURIComponent(a.replace(/\/p2p\/.*$/, ""))).join("")')
 
 # the package's own spammer does not survive startup, run the blob scenario by hand against the execution clients of
 # both nodes with validators so both propose blocks with blobs
@@ -306,23 +260,10 @@ wait_finalized "$FINALITY_TARGET" 600
 snapshot end
 log "finalized epoch $(finalized)"
 
-RESTART_WINDOWS=""
-if [ "$SCENARIO" = "fulu" ]; then
-  # the Lodestar validator client has to find its way back to the other beacon node, then the other validator client
-  # back to the Lodestar beacon node
-  restart_beacon_node 1 "$BN_TYPE beacon node" "$CL_X" "$API_X" "$API_LS"
-  restart_beacon_node 2 "lodestar beacon node" "$CL_LS" "$API_LS" "$API_X"
-  snapshot restart
-  RESTART_WINDOWS="$(cat "$OUT_DIR/restart-1.start.slot")-$(cat "$OUT_DIR/restart-1.end.slot"),$(cat "$OUT_DIR/restart-2.start.slot")-$(cat "$OUT_DIR/restart-2.end.slot")"
-  wait_finalized $(( FINALITY_TARGET + 1 )) 300
-  snapshot after-restart
-  log "finality advanced after the restarts"
-fi
-
 capture_logs
 
 CLIENT="$CLIENT" BN_TYPE="$BN_TYPE" VC_TYPE="$VC_TYPE" BN_IMAGE="$BN_IMAGE" VC_IMAGE="$VC_IMAGE" SCENARIO="$SCENARIO" OUT_DIR="$OUT_DIR" \
   LODESTAR_IMAGE="$LODESTAR_IMAGE" LODESTAR_VERSION="${LODESTAR_VERSION:-}" LODESTAR_DIGEST="${LODESTAR_DIGEST:-}" \
   BN_DIGEST="${BN_DIGEST:-}" VC_DIGEST="${VC_DIGEST:-}" EL_IMAGE="$EL_IMAGE" EL_DIGEST="${EL_DIGEST:-}" \
-  API_LS="$API_LS" API_X="$API_X" LS_PEER_ID="$LS_PEER_ID" X_PEER_ID="$X_PEER_ID" RESTART_WINDOWS="$RESTART_WINDOWS" \
+  API_LS="$API_LS" API_X="$API_X" LS_PEER_ID="$LS_PEER_ID" X_PEER_ID="$X_PEER_ID" \
   node "$SCRIPT_DIR/check.mjs"

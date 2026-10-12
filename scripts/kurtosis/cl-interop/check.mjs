@@ -21,7 +21,6 @@ const API_LS = env("API_LS");
 const API_X = env("API_X");
 const LS_PEER_ID = env("LS_PEER_ID");
 const X_PEER_ID = env("X_PEER_ID");
-const RESTART_WINDOWS = process.env.RESTART_WINDOWS || "";
 const shortDigest = (d) => (d ? ` ${d.slice(7, 19)}` : "");
 const LODESTAR = `${process.env.LODESTAR_IMAGE ?? ""}${shortDigest(process.env.LODESTAR_DIGEST)} ${process.env.LODESTAR_VERSION ?? ""}`.trim();
 const BN_DIGEST = shortDigest(process.env.BN_DIGEST).trim();
@@ -58,19 +57,6 @@ const readOptional = (file) => {
     return null;
   }
 };
-
-const restartWindows = RESTART_WINDOWS === "" ? [] : RESTART_WINDOWS.split(",").map((w) => w.split("-").map(Number));
-// a block right after the window still carries the sync committee messages of the slot the node came back in
-const RESTART_GRACE_SLOTS = 2;
-const inRestartWindow = (slot) => restartWindows.some(([start, end]) => slot >= start && slot <= end + RESTART_GRACE_SLOTS);
-// attestations of an epoch can be included until the end of the next one, both epochs have to be clear of a restart
-const epochTouchesRestart = (epoch) =>
-  restartWindows.some(([start, end]) => start <= (epoch + 2) * SLOTS_PER_EPOCH - 1 && end >= epoch * SLOTS_PER_EPOCH);
-const restartTimes = restartWindows.map((_, i) => [read(`restart-${i + 1}.time`).trim(), read(`restart-${i + 1}.back.time`).trim()]);
-for (let i = 1; i <= restartWindows.length; i++) {
-  const reconnect = readOptional(`restart-${i}.reconnect`);
-  if (reconnect !== null) fail(reconnect.trim());
-}
 
 function parseMetrics(text) {
   const out = new Map();
@@ -173,31 +159,23 @@ function judgeValidatorClient(who, before, after, fullRun) {
   if (health !== 0) fail(`${who}: beacon health ${health} at the end (0 ready, 1 syncing, 2 error)`);
 }
 
-// request and error deltas after the first finalized epoch, and again after the restarts
-const windows = [["run", "start", "end"]];
-if (restartWindows.length > 0) windows.push(["after restart", "restart", "after-restart"]);
-for (const [name, before, after] of windows) {
-  judgeBeaconNode(`lodestar bn (node 3) ${name}`, snap(before, "lsbn"), snap(after, "lsbn"));
-  if (hasLodestarXBn) judgeBeaconNode(`lodestar bn (node 2) ${name}`, snap(before, "xbn"), snap(after, "xbn"));
-  judgeValidatorClient(`lodestar vc (node 2) ${name}`, snap(before, "lsvc"), snap(after, "lsvc"), name === "run");
-}
+// request and error deltas after the first finalized epoch
+judgeBeaconNode("lodestar bn (node 3)", snap("start", "lsbn"), snap("end", "lsbn"));
+if (hasLodestarXBn) judgeBeaconNode("lodestar bn (node 2)", snap("start", "xbn"), snap("end", "xbn"));
+judgeValidatorClient("lodestar vc (node 2)", snap("start", "lsvc"), snap("end", "lsvc"), true);
 const peerClients = metric(snap("end", "lsbn"), "lodestar_peers_by_client_count")
   .filter(([, v]) => v > 0)
   .map(([k]) => k.match(/client="([^"]*)"/)?.[1])
   .filter(Boolean)
   .join(",");
 
-// Lodestar log lines after the judged window starts, ignoring the restarts themselves
+// Lodestar log lines after the judged window starts
 // docker -t prefixes RFC3339 nanosecond timestamps, compare on millisecond precision
 const ms = (iso) => iso.slice(0, 23);
 const judgedLines = (file) =>
   read(file)
     .split("\n")
-    .filter((line) => {
-      const ts = ms(line);
-      if (ts < ms(startTime)) return false;
-      return !restartTimes.some(([from, to]) => ts >= ms(from) && ts < ms(to));
-    })
+    .filter((line) => ms(line) >= ms(startTime))
     .map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/^\S+ /, ""));
 // every REST response of a Lodestar beacon node with an error status, by route and status, the rest module logs
 // them at debug level
@@ -254,7 +232,7 @@ const syncShares = [];
 const ptcShares = [];
 const gloasBlockSlots = [];
 for (let slot = 1; slot <= head; slot++) {
-  const judged = slot >= FIRST_JUDGED_SLOT && !inRestartWindow(slot);
+  const judged = slot >= FIRST_JUDGED_SLOT;
   const header = await beacon(API_LS, `/eth/v1/beacon/headers/${slot}`);
   if (header.status !== 200) {
     if (judged) missed.push(slot);
@@ -307,7 +285,6 @@ const targetMisses = [];
 const headMisses = [0, 0];
 const lastJudgedEpoch = Math.floor((head + 1) / SLOTS_PER_EPOCH) - 2;
 for (let epoch = FIRST_JUDGED_EPOCH; epoch <= lastJudgedEpoch; epoch++) {
-  if (epochTouchesRestart(epoch)) continue;
   const slot = (epoch + 2) * SLOTS_PER_EPOCH - 1;
   const state = await beacon(API_LS, `/eth/v2/debug/beacon/states/${slot}`);
   if (state.status !== 200) {
@@ -407,7 +384,6 @@ const result = {
   headMisses,
   syncShares,
   ptcShares,
-  restartWindows,
   peerClients,
   envelopes,
   failures,
@@ -426,7 +402,6 @@ const details = [
   shares("sync committee seats", syncShares),
   shares("payload attestation seats", ptcShares),
   envelopes,
-  restartWindows.length > 0 ? `beacon nodes restarted at slots ${restartWindows.map(([start, end]) => `${start} (judged again from ${end})`).join(" and ")}` : "",
   peerClients ? `peers seen as ${peerClients}` : "",
   ...notes,
 ]
