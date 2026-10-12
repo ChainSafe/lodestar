@@ -44,8 +44,8 @@ The SDK requires its `supports_capture_gaps` handshake capability. The SDK chang
 in `clients/js/src/stream.ts` add native events on the existing ingest/replay
 implementation; no new collector format or Ethereum decoder is needed.
 
-`probe-0.1.0.tgz` packages that SDK's source and compiled output until it is
-published. Regenerate it from the companion checkout:
+`probe-0.1.0.tgz` packages the SDK at commit `7ce6801`, including bounded batches
+of socket writes. Regenerate it from the companion checkout:
 
 ```sh
 cd /path/to/xray/clients/js
