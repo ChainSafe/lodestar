@@ -39,6 +39,7 @@ const sidebars: SidebarsConfig = {
           items: [
             "run/validator-management/vc-configuration",
             "run/validator-management/validator-cli",
+            "run/validator-management/attestation-performance",
             "run/validator-management/external-signer",
             "run/validator-management/proposer-config",
           ],
