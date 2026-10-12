@@ -20,7 +20,7 @@ decodes gossip and attributes request/response bytes by protocol. Configure its
 genesis timestamp and slot duration for the chain; supply active Gloas fork
 digests with `--gloas-fork-digests` when applicable.
 
-The native owner copies bytes to a 16 MiB ring with 8192 event entries. Metadata
+The native owner copies bytes to a 16 MiB ring with 65536 event entries. Metadata
 and drain storage scale with configured connections and streams and are charged
 to the native memory budget. JavaScript drains up to four batches every 5 ms,
 each at most 1 MiB or 512 events. Overflow drops buffered trace data and pauses
