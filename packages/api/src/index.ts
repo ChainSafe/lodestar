@@ -1,6 +1,6 @@
 // Re-exporting beacon only for backwards compatibility
 export * from "./beacon/index.js";
-export {ApiError} from "./utils/client/error.js";
+export {ApiError, type ApiFailure} from "./utils/client/error.js";
 export type {
   ApiClientMethods,
   HttpClientModules,

@@ -25,6 +25,7 @@ const ARTIFACT_FILENAMES = new Set([
 
 export interface SkipOpts {
   skippedTestSuites?: RegExp[];
+  /** Matched against `<fork>/<runner>/<handler>/<suite>/<testCase>` */
   skippedTests?: RegExp[];
   skippedForks?: string[];
   skippedRunners?: string[];

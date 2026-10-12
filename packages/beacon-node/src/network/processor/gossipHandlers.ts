@@ -1396,7 +1396,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const delaySec = chain.clock.secFromSlot(payloadAttestationMessage.data.slot, seenTimestampSec);
           metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
           const nextSlotProposer = chain.getHeadState().getBeaconProposer(payloadAttestationMessage.data.slot + 1);
-          const isNextSlotProposer = chain.beaconProposerCache.get(nextSlotProposer) !== undefined;
+          const isNextSlotProposer = chain.beaconProposerCache.has(nextSlotProposer);
 
           if (isNextSlotProposer) {
             try {
@@ -1530,7 +1530,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // passed validation under clock disparity is untimely. Late lists are still stored, marked untimely
       const secFromSlot = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.inclusionListArrivalTime.observe(secFromSlot);
-      const isTimely = secFromSlot >= 0 && secFromSlot * 1000 < config.getInclusionListDueMs();
+      const isTimely = secFromSlot >= 0 && secFromSlot * 1000 < config.getInclusionListDueMs(config.getForkName(slot));
 
       const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
       metrics?.opPool.inclusionListStore.insertOutcome.inc({insertOutcome});

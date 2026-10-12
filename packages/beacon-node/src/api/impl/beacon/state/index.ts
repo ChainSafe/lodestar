@@ -16,7 +16,14 @@ import {
   isStatePostFulu,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {ValidatorIndex, getBuilderStatus, getValidatorStatus, mapToGeneralStatus, ssz} from "@lodestar/types";
+import {
+  ValidatorIndex,
+  getBuilderStatus,
+  getValidatorStatus,
+  mapToGeneralStatus,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
@@ -413,7 +420,9 @@ export function getBeaconStateApi({
       const pendingDeposits = state.pendingDeposits;
 
       return {
-        data: context?.returnBytes ? ssz.electra.PendingDeposits.serialize(pendingDeposits) : pendingDeposits,
+        data: context?.returnBytes
+          ? sszTypesFor(state.forkName).PendingDeposits.serialize(pendingDeposits)
+          : pendingDeposits,
         meta: {executionOptimistic, finalized, version: fork},
       };
     },
@@ -430,7 +439,7 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes
-          ? ssz.electra.PendingPartialWithdrawals.serialize(pendingPartialWithdrawals)
+          ? sszTypesFor(state.forkName).PendingPartialWithdrawals.serialize(pendingPartialWithdrawals)
           : pendingPartialWithdrawals,
         meta: {executionOptimistic, finalized, version: fork},
       };
@@ -448,7 +457,7 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes
-          ? ssz.electra.PendingConsolidations.serialize(pendingConsolidations)
+          ? sszTypesFor(state.forkName).PendingConsolidations.serialize(pendingConsolidations)
           : pendingConsolidations,
         meta: {executionOptimistic, finalized, version: fork},
       };

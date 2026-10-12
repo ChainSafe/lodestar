@@ -168,6 +168,15 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         add: vi.fn(),
         getBestBid: vi.fn(),
       },
+      proposerPreferencesPool: {
+        add: vi.fn(),
+        get: vi.fn(),
+        getAll: vi.fn(),
+        isKnown: vi.fn(),
+        prune: vi.fn(),
+        fromPersisted: vi.fn(),
+        toPersisted: vi.fn(),
+      },
       builderApiClient: {
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
         submitBuilderPreferences: vi.fn(),
@@ -181,6 +190,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       payloadAttestationPool: {
         add: vi.fn(),
         getAll: vi.fn(),
+        getPayloadAttestationsForBlock: vi.fn().mockReturnValue([]),
       },
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
@@ -207,6 +217,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       getHeadState: vi.fn(),
       getStateBySlot: vi.fn(),
       updateBuilderStatus: vi.fn(),
+      updateAttachedValidators: vi.fn(),
       processBlock: vi.fn(),
       processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),

@@ -51,7 +51,10 @@ export class InclusionListService {
     // Spec: broadcast by get_inclusion_list_due_ms(), built against the slot's block if processed, else the
     // local head. Wait until the beacon node reports the slot's payload available, which it emits before
     // execution validation, or fall back to the deadline for empty or late slots.
-    const dueMs = Math.max(0, this.config.getInclusionListDueMs() - this.clock.msFromSlot(slot));
+    const dueMs = Math.max(
+      0,
+      this.config.getInclusionListDueMs(this.config.getForkName(slot)) - this.clock.msFromSlot(slot)
+    );
     // Publish ahead of the deadline so the list still counts as timely for peers
     const beforeDueMs = 1000;
     let resolvePayloadAvailable = (): void => {};

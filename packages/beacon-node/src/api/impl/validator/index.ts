@@ -5,6 +5,8 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPreDeneb,
   ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
@@ -116,14 +118,13 @@ import {
  * Post this time, race execution and builder to pick whatever resolves first.
  *
  * Empirically the builder block resolves in ~1 second, and execution block resolves in <500 ms.
- * A cutoff of 2 seconds gives enough time and if there are unexpected delays it ensures we publish
- * in time as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
+ * A cutoff of 1667 BPS (2 seconds for 12s slots) gives enough time and if there are unexpected delays
+ * it ensures we publish in time as proposals after the attestation deadline will likely be orphaned
+ * due to proposer boost reorg.
  *
  * TODO GLOAS: re-evaluate cutoff timing due to attestation deadline changes in gloas
  */
-const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
-/** Overall timeout for execution and block production apis */
-const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
+const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
 /** Rejection message of the bid block branch when there is no viable bid to commit to */
 const NO_BID_AVAILABLE = "No builder bid available";
 
@@ -172,8 +173,8 @@ function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
 }
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
-  data: BlockContents;
-  version: ForkName;
+  data: BlockContents<ForkPreGloas>;
+  version: ForkPreGloas;
 };
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlindedBeaconBlock;
@@ -306,8 +307,8 @@ export function getValidatorApi(
    */
   function msToNextEpoch(): number {
     const nextEpoch = chain.clock.currentEpoch + 1;
-    const secPerEpoch = (SLOTS_PER_EPOCH * config.SLOT_DURATION_MS) / 1000;
-    const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
+    const nextEpochSlot = computeStartSlotAtEpoch(nextEpoch);
+    const nextEpochStartSec = computeTimeAtSlot(config, nextEpochSlot, chain.genesisTime);
     return nextEpochStartSec * 1000 - Date.now();
   }
 
@@ -516,6 +517,10 @@ export function getValidatorApi(
       parentBlock: ProtoBlock;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
+    const version = config.getForkName(slot);
+    if (isForkPostGloas(version)) {
+      throw Error(`produceEngineBlockContents called for post-gloas fork=${version}`);
+    }
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
@@ -530,7 +535,6 @@ export function getValidatorApi(
         feeRecipient,
         commonBlockBodyPromise,
       });
-      const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
         const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
         if (blockFeeRecipient !== feeRecipient) {
@@ -568,7 +572,7 @@ export function getValidatorApi(
 
         return {
           data: {
-            block,
+            block: block as BeaconBlock<ForkPostDeneb & ForkPreGloas>,
             blobs: blobsBundle.blobs,
             kzgProofs: blobsBundle.proofs,
           },
@@ -579,7 +583,13 @@ export function getValidatorApi(
         };
       }
 
-      return {data: {block}, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
+      return {
+        data: {block: block as BeaconBlock<ForkPreDeneb>},
+        version,
+        executionPayloadValue,
+        consensusBlockValue,
+        shouldOverrideBuilder,
+      };
     } finally {
       if (timer) timer({source});
     }
@@ -685,17 +695,21 @@ export function getValidatorApi(
     });
 
     // Calculate cutoff time based on start of the slot
-    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
+    const cutoffMs = Math.max(
+      0,
+      config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS) - chain.clock.msFromSlot(slot)
+    );
+    const blockProductionTimeoutMs = config.getSlotDurationMs(fork);
 
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,
       cutoffMs,
-      timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      timeoutMs: blockProductionTimeoutMs,
     });
 
     const blockProductionRacePromise = resolveOrRacePromises([builderPromise, enginePromise], {
       resolveTimeoutMs: cutoffMs,
-      raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      raceTimeoutMs: blockProductionTimeoutMs,
       signal: controller.signal,
     });
 
@@ -883,6 +897,10 @@ export function getValidatorApi(
 
   return {
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
+      const forkName = config.getForkName(slot);
+      if (isForkPostGloas(forkName)) {
+        throw new ApiError(400, `produceBlockV3 not supported for post-gloas fork=${forkName}, use produceBlockV4`);
+      }
       const {data, ...meta} = await produceEngineOrBuilderBlock(
         slot,
         randaoReveal,
@@ -1125,7 +1143,10 @@ export function getValidatorApi(
 
       // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
       // not delay the proposal when a builder bid block is available (and vice versa)
-      const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
+      const cutoffMs = Math.max(
+        0,
+        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS) - chain.clock.msFromSlot(slot)
+      );
 
       // use abort controller to stop waiting for the bid block if the engine block will be selected
       const controller = new AbortController();
@@ -1153,7 +1174,7 @@ export function getValidatorApi(
 
       const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
         resolveTimeoutMs: cutoffMs,
-        raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+        raceTimeoutMs: config.getSlotDurationMs(fork),
         signal: controller.signal,
       });
 
@@ -1447,7 +1468,7 @@ export function getValidatorApi(
       // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
       // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
       // the input's creation time.
-      const payloadDueSec = config.getPayloadDueMs() / 1000;
+      const payloadDueSec = config.getPayloadDueMs(fork) / 1000;
       const payloadSeenSec =
         payloadInput?.hasPayloadEnvelope() === true
           ? chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec)
@@ -1524,8 +1545,9 @@ export function getValidatorApi(
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
       const startSlot = computeStartSlotAtEpoch(epoch);
+      const prepareFork = config.getForkName(computeStartSlotAtEpoch(nextEpoch) - 1);
       const prepareNextSlotLookAheadMs =
-        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
+        config.getSlotDurationMs(prepareFork) - config.getSlotComponentDurationMs(prepareFork, PREPARE_NEXT_SLOT_BPS);
       const toNextEpochMs = msToNextEpoch();
       const nearNextEpoch = toNextEpochMs < prepareNextSlotLookAheadMs;
       // Post-Fulu the proposer lookahead is deterministic and known a full epoch ahead, so
@@ -1962,6 +1984,17 @@ export function getValidatorApi(
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {
+      // The subscribing validators use this node for duties regardless of its sync state and
+      // the subscription must not fail on the tracking, e.g. if the finalized state is unavailable
+      try {
+        await chain.updateAttachedValidators(
+          chain.clock.currentEpoch,
+          Array.from(new Set(subscriptions.map(({validatorIndex}) => validatorIndex)))
+        );
+      } catch (e) {
+        logger.warn("Error tracking attached validators", {count: subscriptions.length}, e as Error);
+      }
+
       notWhileSyncing(chain, sync.state);
 
       await network.prepareBeaconCommitteeSubnets(
@@ -2025,6 +2058,13 @@ export function getValidatorApi(
     },
 
     async prepareBeaconProposer({proposers}) {
+      if (isForkPostGloas(config.getForkName(chain.clock.currentSlot))) {
+        throw new ApiError(
+          410,
+          "prepareBeaconProposer is no longer supported from gloas, submit signed proposer preferences via POST /eth/v1/validator/proposer_preferences instead"
+        );
+      }
+
       await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
     },
 
@@ -2059,6 +2099,13 @@ export function getValidatorApi(
     },
 
     async registerValidator({registrations}) {
+      if (isForkPostGloas(config.getForkName(chain.clock.currentSlot))) {
+        throw new ApiError(
+          410,
+          "registerValidator is no longer supported from gloas, submit builder preferences via POST /eth/v1/validator/builder_preferences instead"
+        );
+      }
+
       if (!chain.executionBuilder) {
         throw Error("External builder not configured");
       }
@@ -2094,11 +2141,14 @@ export function getValidatorApi(
 
     async submitProposerPreferences({signedProposerPreferences}) {
       const failures: FailureList = [];
+      // Preferences submitted here are signed by validators using this node, gossiped ones are not
+      const attachedValidatorIndices: ValidatorIndex[] = [];
 
       await Promise.all(
         signedProposerPreferences.map(async (signed, i) => {
           try {
             await validateGossipProposerPreferences(chain, signed);
+            attachedValidatorIndices.push(signed.message.validatorIndex);
 
             chain.proposerPreferencesPool.add(signed);
             await network.publishProposerPreferences(signed);
@@ -2114,6 +2164,7 @@ export function getValidatorApi(
             };
 
             if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+              attachedValidatorIndices.push(signed.message.validatorIndex);
               logger.debug("Ignoring known signed proposer preferences", logCtx);
               return;
             }
@@ -2126,6 +2177,14 @@ export function getValidatorApi(
           }
         })
       );
+
+      if (attachedValidatorIndices.length > 0) {
+        try {
+          await chain.updateAttachedValidators(chain.clock.currentEpoch, attachedValidatorIndices);
+        } catch (e) {
+          logger.warn("Error tracking attached validators", {count: attachedValidatorIndices.length}, e as Error);
+        }
+      }
 
       if (failures.length > 0) {
         throw new IndexedError("Error processing signed proposer preferences", failures);
@@ -2261,7 +2320,8 @@ export function getValidatorApi(
       }
 
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
-      const isTimely = secFromSlot >= 0 && secFromSlot * 1000 < chain.config.getInclusionListDueMs();
+      const isTimely =
+        secFromSlot >= 0 && secFromSlot * 1000 < chain.config.getInclusionListDueMs(chain.config.getForkName(slot));
       chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {
