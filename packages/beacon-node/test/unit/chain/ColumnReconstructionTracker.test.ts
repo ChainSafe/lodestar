@@ -37,6 +37,7 @@ describe("ColumnReconstructionTracker", () => {
       emitter: new ChainEventEmitter(),
       metrics: null,
       config,
+      signal: new AbortController().signal,
     });
   });
 
@@ -127,6 +128,7 @@ describe("ColumnReconstructionTracker", () => {
       emitter,
       metrics: null,
       logger: getMockedLogger(),
+      signal: new AbortController().signal,
     });
 
     for (const slot of [SLOTS_PER_EPOCH - 1, SLOTS_PER_EPOCH]) {
