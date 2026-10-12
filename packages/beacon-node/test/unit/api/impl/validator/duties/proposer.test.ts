@@ -37,7 +37,7 @@ describe("get proposers api impl", () => {
     modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(new BeaconStateView(cachedState));
     modules.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
     modules.forkChoice.getFinalizedBlock.mockReturnValue(zeroProtoBlock);
-    modules.db.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
+    modules.db.block.get.mockResolvedValue(ssz.fulu.SignedBeaconBlock.defaultValue());
 
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
   });
@@ -67,8 +67,41 @@ describe("get proposers api impl", () => {
   }
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
+
+  it.each([6000, 24000])(
+    "uses the preparing slot for the lookahead when the requested duration is %i ms",
+    async (nextDuration) => {
+      const nextEpoch = currentEpoch + 1;
+      const boundarySlot = nextEpoch * SLOTS_PER_EPOCH;
+      initializeState(boundarySlot);
+      modules.chain.regen.getCheckpointStateSync.mockReturnValue(new BeaconStateView(cachedState));
+      vi.spyOn(config, "getForkName").mockImplementation((slot) =>
+        slot < boundarySlot ? ForkName.fulu : ForkName.gloas
+      );
+      vi.spyOn(config, "getSlotDurationMs").mockImplementation((fork) =>
+        fork === ForkName.fulu ? 12000 : nextDuration
+      );
+
+      vi.setSystemTime(boundarySlot * 12000 - 4001);
+      await expect(api.getProposerDutiesV2({epoch: nextEpoch + 1})).rejects.toThrow("must not be more than 3");
+      expect(modules.chain.regen.getCheckpointStateSync).not.toHaveBeenCalled();
+
+      vi.setSystemTime(boundarySlot * 12000 - 3999);
+      const result = await api.getProposerDutiesV2({epoch: nextEpoch + 1});
+      expect(result.data).toEqual(
+        Array.from({length: SLOTS_PER_EPOCH}, (_, i) =>
+          expect.objectContaining({slot: (nextEpoch + 1) * SLOTS_PER_EPOCH + i})
+        )
+      );
+      expect(modules.chain.regen.getCheckpointStateSync).toHaveBeenCalledWith({
+        epoch: nextEpoch,
+        rootHex: zeroProtoBlock.blockRoot,
+      });
+    }
+  );
 
   it("should raise error if node head is behind", async () => {
     vi.advanceTimersByTime((SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH + 1) * config.SLOT_DURATION_MS);

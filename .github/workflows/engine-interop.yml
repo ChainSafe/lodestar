@@ -1,0 +1,96 @@
+name: Engine API interop
+
+on:
+  workflow_dispatch:
+    inputs:
+      lodestar_image:
+        description: "Lodestar image to test"
+        default: "chainsafe/lodestar:next"
+        required: true
+  schedule:
+    - cron: "0 4 * * *" # 4 am UTC, after the ethpandaops images are rebuilt
+
+concurrency:
+  group: engine-interop-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  LODESTAR_IMAGE: ${{ inputs.lodestar_image || 'chainsafe/lodestar:next' }}
+  # Pinned by hand so a red run means a client change, not an upstream Kurtosis release
+  KURTOSIS_VERSION: "1.20.0"
+
+jobs:
+  interop:
+    name: ${{ matrix.el }}
+    runs-on: warp-ubuntu-2204-x64-4x
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # default-branch images, rebuilt nightly by ethpandaops, so every run sees the latest client code
+          - el: geth
+            image: ethpandaops/geth:master
+          - el: nethermind
+            image: ethpandaops/nethermind:master
+          - el: reth
+            image: ethpandaops/reth:main
+          - el: besu
+            image: ethpandaops/besu:main
+          - el: erigon
+            image: ethpandaops/erigon:main
+          - el: ethrex
+            image: ethpandaops/ethrex:main
+            extra_params: '["--http.api=eth,net,web3,admin"]'
+          - el: nimbus
+            image: ethpandaops/nimbus-eth1:master
+    env:
+      EL_EXTRA_PARAMS: ${{ matrix.extra_params || '[]' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Set up Kurtosis
+        run: |
+          echo "deb [trusted=yes] https://sdk.kurtosis.com/kurtosis-cli-release-artifacts/ /" \
+            | sudo tee /etc/apt/sources.list.d/kurtosis.list
+          sudo apt-get update
+          sudo apt-get install -y "kurtosis-cli=${KURTOSIS_VERSION}"
+          kurtosis analytics disable
+          docker info --format 'docker {{.ServerVersion}}, registry mirrors {{.RegistryConfig.Mirrors}}'
+
+      - name: Fulu at genesis, then EL restart
+        id: fulu
+        run: ./scripts/kurtosis/engine-interop/run.sh ${{ matrix.el }} ${{ matrix.image }} fulu
+
+      - name: Gloas at epoch 2
+        id: gloas
+        if: always() && steps.fulu.conclusion != 'skipped'
+        run: ./scripts/kurtosis/engine-interop/run.sh ${{ matrix.el }} ${{ matrix.image }} gloas
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "| EL | image | scenario | EL REST | transport | result | details |"
+            echo "| --- | --- | --- | --- | --- | --- | --- |"
+            cat temp/engine-interop/*/summary.md 2>/dev/null || echo "| ${{ matrix.el }} | \`${{ matrix.image }}\` | | | | ❌ fail | no verdict produced, see the run log |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: engine-interop-${{ matrix.el }}
+          path: temp/engine-interop/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kurtosis clean -a || true
+          kurtosis engine stop || true

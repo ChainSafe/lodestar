@@ -6,7 +6,14 @@ import {
   assertEqualParams,
   createBeaconConfig,
 } from "@lodestar/config";
-import {Clock, ClockOptions, IClock, computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {
+  Clock,
+  ClockOptions,
+  IClock,
+  computeEpochAtSlot,
+  getCurrentSlot,
+  getSlotDurations,
+} from "@lodestar/state-transition";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger, prettyGweiToEth, toPrintableUrl, toRootHex} from "@lodestar/utils";
@@ -202,7 +209,9 @@ export class Validator {
           globalInit: {
             signal: controller.signal,
             ...globalInit,
-            timeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
+            timeoutMs:
+              globalInit?.timeoutMs ??
+              Math.min(...getSlotDurations(config).map(([, slotDurationMs]) => slotDurationMs)),
           },
         },
         {config, logger, metrics: metrics?.restApiClient}
@@ -319,7 +328,16 @@ export class Validator {
       }
     );
 
-    new ProposalPreferencesService(config, loggerVc, api, clock, validatorStore, blockDutiesService, metrics);
+    new ProposalPreferencesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      blockDutiesService,
+      syncingStatusTracker,
+      metrics
+    );
 
     return new Validator({
       opts,
@@ -357,7 +375,8 @@ export class Validator {
         urls: urls.map(toPrintableUrl).toString(),
         requestWireFormat: globalInit?.requestWireFormat ?? defaultInit.requestWireFormat,
         responseWireFormat: globalInit?.responseWireFormat ?? defaultInit.responseWireFormat,
-        requestTimeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
+        requestTimeoutMs:
+          globalInit?.timeoutMs ?? Math.min(...getSlotDurations(config).map(([, slotDurationMs]) => slotDurationMs)),
       });
     } else {
       api = clientOrUrls;
