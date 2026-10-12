@@ -1,3 +1,4 @@
+import {Type} from "@chainsafe/ssz";
 import {
   BUILDER_DEPOSIT_REQUEST_TYPE,
   BUILDER_EXIT_REQUEST_TYPE,
@@ -535,14 +536,15 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
 }
 
 /**
- * Prepend a single-byte requestType to requestsBytes
+ * Serialize requests prefixed with a single-byte requestType in one allocation
  */
-function prefixRequests(requestsBytes: Uint8Array, requestType: ExecutionRequestType): Uint8Array {
-  const prefixedRequests = new Uint8Array(1 + requestsBytes.length);
-  prefixedRequests[0] = requestType;
-  prefixedRequests.set(requestsBytes, 1);
+function serializePrefixedRequests<T>(type: Type<T>, requests: T, requestType: ExecutionRequestType): Uint8Array {
+  const uint8Array = new Uint8Array(1 + type.value_serializedSize(requests));
+  const dataView = new DataView(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
+  uint8Array[0] = requestType;
+  type.value_serializeToBytes({uint8Array, dataView}, 1, requests);
 
-  return prefixedRequests;
+  return uint8Array;
 }
 
 /**
@@ -557,16 +559,16 @@ export function serializeExecutionRequestsToBytes(fork: ForkName, executionReque
   const result: Uint8Array[] = [];
 
   if (deposits.length !== 0) {
-    result.push(prefixRequests(ssz.electra.DepositRequests.serialize(deposits), DEPOSIT_REQUEST_TYPE));
+    result.push(serializePrefixedRequests(ssz.electra.DepositRequests, deposits, DEPOSIT_REQUEST_TYPE));
   }
 
   if (withdrawals.length !== 0) {
-    result.push(prefixRequests(ssz.electra.WithdrawalRequests.serialize(withdrawals), WITHDRAWAL_REQUEST_TYPE));
+    result.push(serializePrefixedRequests(ssz.electra.WithdrawalRequests, withdrawals, WITHDRAWAL_REQUEST_TYPE));
   }
 
   if (consolidations.length !== 0) {
     result.push(
-      prefixRequests(ssz.electra.ConsolidationRequests.serialize(consolidations), CONSOLIDATION_REQUEST_TYPE)
+      serializePrefixedRequests(ssz.electra.ConsolidationRequests, consolidations, CONSOLIDATION_REQUEST_TYPE)
     );
   }
 
@@ -575,12 +577,12 @@ export function serializeExecutionRequestsToBytes(fork: ForkName, executionReque
 
     if (builderDeposits.length !== 0) {
       result.push(
-        prefixRequests(ssz.gloas.BuilderDepositRequests.serialize(builderDeposits), BUILDER_DEPOSIT_REQUEST_TYPE)
+        serializePrefixedRequests(ssz.gloas.BuilderDepositRequests, builderDeposits, BUILDER_DEPOSIT_REQUEST_TYPE)
       );
     }
 
     if (builderExits.length !== 0) {
-      result.push(prefixRequests(ssz.gloas.BuilderExitRequests.serialize(builderExits), BUILDER_EXIT_REQUEST_TYPE));
+      result.push(serializePrefixedRequests(ssz.gloas.BuilderExitRequests, builderExits, BUILDER_EXIT_REQUEST_TYPE));
     }
   }
 
