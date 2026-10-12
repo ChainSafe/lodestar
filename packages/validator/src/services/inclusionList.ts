@@ -43,9 +43,7 @@ export class InclusionListService {
   }
 
   private runInclusionListTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {
-    // Fetch info first so a potential delay is absorbed by the sleep() below
-    const duties = this.dutiesService.getDutiesAtSlot(slot);
-    if (duties.length === 0) {
+    if (this.dutiesService.getDutiesAtSlot(slot).length === 0) {
       return;
     }
     // Spec: broadcast by get_inclusion_list_due_ms(), built against the slot's block if processed, else the
@@ -78,6 +76,12 @@ export class InclusionListService {
     // Empty lists are ignored by gossip validation (consensus-specs#5576)
     if (inclusionListTransactions.length === 0) {
       this.logger.debug("Produced inclusion list has no transactions, skipping publish", {slot});
+      return;
+    }
+
+    // Read the duties after the wait, a reorg handled meanwhile may have changed the dependent root
+    const duties = this.dutiesService.getDutiesAtSlot(slot);
+    if (duties.length === 0) {
       return;
     }
 
