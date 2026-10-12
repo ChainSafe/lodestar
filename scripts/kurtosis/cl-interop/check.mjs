@@ -73,7 +73,7 @@ const RESULT = {pass: "✅ pass", "known issues": "⚠️ known issues", fail: "
 const writeSummaryRow = (bn, vc, verdict, lines) =>
   writeFileSync(
     path.join(OUT_DIR, "summary.md"),
-    `| ${CLIENT} | ${bn} | ${vc} | ${SCENARIO} | ${RESULT[verdict]} | ${lines.join("<br>").replace(/\|/g, "\\|")} |\n`
+    `| ${CLIENT} | ${bn} | ${vc} | ${SCENARIO} | ${RESULT[verdict]} | ${lines.join("<br>").replace(/\\/g, "\\\\").replace(/\|/g, "\\|")} |\n`
   );
 
 // run.sh hands over the reason when the run aborted before the verdict, the row then carries only that reason
