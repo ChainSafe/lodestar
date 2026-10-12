@@ -111,7 +111,7 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
   },
   [ReqRespMethod.InclusionListsByIndices]: {
     // Peers only backfill what gossip missed, so a small per-slot allowance is enough
-    byPeer: {quota: 5, quotaTimeMs: 12_000},
+    byPeer: {quota: 5, quotaTimeMs: config.getSlotDurationMs(fork)},
   },
   [ReqRespMethod.LightClientOptimisticUpdate]: {
     // Optimistic updates should not be requested more than once per slot.
