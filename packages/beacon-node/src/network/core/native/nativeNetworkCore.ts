@@ -1,5 +1,4 @@
 import {PublishOpts} from "@libp2p/gossipsub/types";
-import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {ENR} from "@chainsafe/enr";
 import {NativeHost, NativeNetwork, createNativeNetwork} from "@chainsafe/lodestar-z/network";
 import {BitArray} from "@chainsafe/ssz";
@@ -26,7 +25,6 @@ import {NativePeers, formatNativePeer} from "./peers.js";
 import {RememberedPeersWriter, readRememberedPeers} from "./rememberedPeers.js";
 import {NativePeerReports} from "./reports.js";
 import {NativeRequests, outgoingNativeRequest} from "./requests.js";
-import {NativeXray} from "./xray.js";
 
 /** The binding renders its metric families, and the adapter adds its serving reservation gauges and report counter. */
 type NativeNetworkInit = Omit<BaseNetworkInit, "metricsRegistry" | "getReqRespHandler"> & {serving: BoundedServing};
@@ -40,7 +38,6 @@ export class NativeNetworkCore implements INetworkCore {
   private network!: NativeNetwork;
   private logs!: NativeLogs;
   private remembered: RememberedPeersWriter | undefined;
-  private xray: NativeXray | undefined;
   private closed = false;
   private failure: Error | undefined;
   private closePromise: Promise<void> | undefined;
@@ -71,22 +68,12 @@ export class NativeNetworkCore implements INetworkCore {
       },
     });
     try {
-      if (opts.xrayAddress) {
-        core.xray = new NativeXray(
-          opts.xrayAddress,
-          peerIdFromPrivateKey(privateKey).toMultihash().bytes,
-          `lodestar-z/${opts.version ?? "unknown"}`,
-          logger
-        );
-        if (opts.xrayWaitForAttach) await core.xray.waitForAttach();
-      }
       const rememberedPeers = peerStoreDir
         ? readRememberedPeers(peerStoreDir, config.genesisValidatorsRoot, logger)
         : null;
       core.logs = new NativeLogs(modules.logger.child({module: "native"}));
       // The factory calls the host only from later macrotasks, so every consumer below attaches first.
       core.network = createNativeNetwork({...application, rememberedPeers, logLevel: core.logs.level}, core.host);
-      core.xray?.attach(core.network);
       core.intent = new NativeIntent(
         core.network,
         application,
@@ -254,11 +241,6 @@ export class NativeNetworkCore implements INetworkCore {
       } catch (error) {
         errors.push(error);
       }
-      try {
-        await this.xray?.close();
-      } catch (error) {
-        errors.push(error);
-      }
       if (errors.length === 1) throw errors[0];
       if (errors.length > 1) throw new AggregateError(errors, "Native network cleanup failed");
     })().then(() => completion.resolve(), completion.reject);
@@ -363,7 +345,7 @@ export class NativeNetworkCore implements INetworkCore {
     };
   }
   async scrapeMetrics(): Promise<string> {
-    return this.network.metrics() + this.requests.metrics() + this.reports.metrics() + (this.xray?.metrics() ?? "");
+    return this.network.metrics() + this.requests.metrics() + this.reports.metrics();
   }
   private unavailable(resource: string): Promise<never> {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));

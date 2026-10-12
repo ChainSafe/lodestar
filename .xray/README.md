@@ -8,7 +8,8 @@ xray --ingest=/tmp/xray.sock --listen=127.0.0.1:9100 --static-dir=/path/to/xray/
 ```
 
 Omit `--network.xrayWaitForAttach` to start without an attached collector. The
-optional startup barrier times out after 30 seconds. TCP ingest uses `host:port`.
+optional startup barrier times out after 30 seconds. Native TCP ingest uses a
+numeric `IP:port` (IPv6 uses `[IP]:port`).
 The collector endpoint receives plaintext streams, peer IDs and addresses; use
 an operator-controlled Unix socket or private endpoint.
 
@@ -22,11 +23,14 @@ digests with `--gloas-fork-digests` when applicable.
 
 The native owner copies bytes to a 16 MiB ring with 65536 event entries. Metadata
 and drain storage scale with configured connections and streams and are charged
-to the native memory budget. JavaScript drains up to four batches every 5 ms,
-each at most 1 MiB or 512 events. Overflow drops buffered trace data and pauses
+to the native memory budget. A dedicated Zig thread drains the ring, encodes
+events and writes batches of up to 1 MiB or 512 events to the collector.
+Capture export does not run on the JavaScript event loop. Overflow drops
+buffered trace data and pauses
 capture until the next drain supplies a complete live metadata snapshot. It does
 not wait for collector I/O or change peer/network policy. The native probe keeps
-64 MiB of encoded replay to absorb supernode block and column bursts; the libp2p
+64 MiB of encoded replay, also charged to the native memory budget, to absorb
+supernode block and column bursts; the libp2p
 probe uses the SDK's 16 MiB default. These are best-effort traces, not a durable
 audit log.
 
@@ -34,19 +38,21 @@ Reconnect replays retained events. After either capture or replay overflow,
 existing streams are marked `capture_incomplete` until they close; new streams
 remain decodable. Metrics expose `lodestar_xray_buffered_bytes`,
 `lodestar_xray_errors_total{code}`, and, for native capture,
-`lodestar_xray_dropped_bytes_total`. Capture is disabled and allocates no buffers
+`lodestar_xray_dropped_bytes_total`, `lodestar_xray_sent_bytes_total`,
+`lodestar_xray_pending_events` and `lodestar_xray_connected`. Capture is disabled
+and allocates no buffers
 unless an address is supplied.
 
 ## Dependencies
 
 Build the collector from the companion Xray checkout based on
 [ethp2p/xray #1](https://github.com/ethp2p/xray/pull/1), commit `8816f48` or later.
-The SDK requires its `supports_capture_gaps` handshake capability. The SDK changes
-in `clients/js/src/stream.ts` add native events on the existing ingest/replay
-implementation; no new collector format or Ethereum decoder is needed.
+Both probes require its `supports_capture_gaps` handshake capability. Native
+capture speaks the same ingest protocol directly from Zig. The JS SDK serves
+the libp2p backend.
 
-`probe-7ce6801.tgz` packages the SDK at commit `7ce6801`, including bounded batches
-of socket writes. Regenerate it from the companion checkout:
+`probe-983ccc7.tgz` packages the libp2p SDK at commit `983ccc7`. Regenerate it
+from the companion checkout:
 
 ```sh
 cd /path/to/xray/clients/js
@@ -68,7 +74,7 @@ The two libp2p patches carry
 fallback backend: global middleware registration and per-stream middleware
 arrays. Replace the archive and patches with registry versions once released.
 
-The catalog pins Lodestar-z with `traceStreams` and `drainStreamTrace()`.
+The catalog pins Lodestar-z with native Xray export configured at initialization.
 For native development, link the adjacent checkout and rebuild its addon.
 
 ## Validation

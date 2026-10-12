@@ -49,8 +49,12 @@ describe("native configuration boundary", () => {
     const node = await fixture();
     expect(node.create().traceGossip).toBe(false);
     expect(node.create({native: {traceGossip: true}}).traceGossip).toBe(true);
-    expect(node.create().traceStreams).toBe(false);
-    expect(node.create({xrayAddress: "/tmp/xray.sock"}).traceStreams).toBe(true);
+    expect(node.create().xray).toBeUndefined();
+    expect(node.create({xrayAddress: "/tmp/xray.sock"}).xray).toEqual({
+      address: "/tmp/xray.sock",
+      waitForAttach: false,
+    });
+    expect(node.create({xrayAddress: "/tmp/xray.sock", xrayWaitForAttach: true}).xray?.waitForAttach).toBe(true);
     expect(node.create().traceTurns).toBe(false);
     expect(node.create({native: {traceTurns: true}}).traceTurns).toBe(true);
     expect(node.create().gossipPolicy).toMatchObject({

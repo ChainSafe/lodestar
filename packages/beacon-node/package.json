@@ -139,7 +139,7 @@
     "@lodestar/utils": "workspace:^",
     "@lodestar/validator": "workspace:^",
     "@multiformats/multiaddr": "^13.0.1",
-    "@xray/probe": "file:../../.xray/probe-7ce6801.tgz",
+    "@xray/probe": "file:../../.xray/probe-983ccc7.tgz",
     "datastore-core": "^12.0.1",
     "deepmerge": "^4.3.1",
     "fastify": "^5.8.1",

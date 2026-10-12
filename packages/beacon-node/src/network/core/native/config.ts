@@ -399,7 +399,7 @@ export function createNativeConfig(
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
     traceGossip: opts.native?.traceGossip ?? false,
     traceTurns: opts.native?.traceTurns ?? false,
-    traceStreams: Boolean(opts.xrayAddress),
+    ...(opts.xrayAddress ? {xray: {address: opts.xrayAddress, waitForAttach: opts.xrayWaitForAttach ?? false}} : {}),
     transport: {
       initialCongestionWindowPackets: nativeInteger(
         opts.native?.initialCongestionWindowPackets ?? 10,
