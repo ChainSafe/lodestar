@@ -25,9 +25,10 @@ and drain storage scale with configured connections and streams and are charged
 to the native memory budget. JavaScript drains up to four batches every 5 ms,
 each at most 1 MiB or 512 events. Overflow drops buffered trace data and pauses
 capture until the next drain supplies a complete live metadata snapshot. It does
-not wait for collector I/O or change peer/network policy. The SDK separately
-retains at most 16 MiB of encoded replay. These are best-effort traces, not a
-durable audit log.
+not wait for collector I/O or change peer/network policy. The native probe keeps
+64 MiB of encoded replay to absorb supernode block and column bursts; the libp2p
+probe uses the SDK's 16 MiB default. These are best-effort traces, not a durable
+audit log.
 
 Reconnect replays retained events. After either capture or replay overflow,
 existing streams are marked `capture_incomplete` until they close; new streams

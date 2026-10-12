@@ -20,6 +20,7 @@ export class NativeXray {
       address,
       peerId,
       clientName,
+      maxBufferBytes: 64 * 1024 * 1024,
       transport: "quic-v1",
       security: "tls",
       muxer: "quic-v1",
