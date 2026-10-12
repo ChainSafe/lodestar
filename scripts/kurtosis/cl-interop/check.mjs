@@ -2,6 +2,7 @@
 // environment, the verdict goes to stdout, result.json and summary.md in OUT_DIR, and the exit code is 1 on any failure.
 import {readFileSync, writeFileSync} from "node:fs";
 import path from "node:path";
+import {knownIssues} from "./known-issues.mjs";
 
 const env = (name) => {
   const value = process.env[name];
@@ -15,12 +16,6 @@ const BN_IMAGE = env("BN_IMAGE");
 const VC_IMAGE = env("VC_IMAGE");
 const SCENARIO = env("SCENARIO");
 const OUT_DIR = env("OUT_DIR");
-// node 3, the Lodestar beacon node driving the other validator client
-const API_LS = env("API_LS");
-// node 2, the other beacon node driving the Lodestar validator client
-const API_X = env("API_X");
-const LS_PEER_ID = env("LS_PEER_ID");
-const X_PEER_ID = env("X_PEER_ID");
 const shortDigest = (d) => (d ? ` ${d.slice(7, 19)}` : "");
 const LODESTAR = `${process.env.LODESTAR_IMAGE ?? ""}${shortDigest(process.env.LODESTAR_DIGEST)} ${process.env.LODESTAR_VERSION ?? ""}`.trim();
 const BN_DIGEST = shortDigest(process.env.BN_DIGEST).trim();
@@ -34,9 +29,9 @@ const PTC_SIZE = 16;
 const GLOAS_FORK_EPOCH = 2;
 const TIMELY_TARGET_FLAG = 1 << 1;
 const TIMELY_HEAD_FLAG = 1 << 2;
-// everything before this is startup noise
-const FIRST_JUDGED_SLOT = SLOTS_PER_EPOCH;
+// everything before this is startup noise, validator clients still pick up their first duties in epoch 1
 const FIRST_JUDGED_EPOCH = 2;
+const FIRST_JUDGED_SLOT = FIRST_JUDGED_EPOCH * SLOTS_PER_EPOCH;
 // a committee filling fewer of its seats in a block means one side stopped delivering
 const MIN_COMMITTEE_SHARE = 0.75;
 // the bootnode has no validators, node 2 holds the first 64 and node 3 the next 64
@@ -57,6 +52,45 @@ const readOptional = (file) => {
     return null;
   }
 };
+
+// a failure with a known upstream cause is reported with its note and does not fail the run, see known-issues.mjs
+const matchesKnownIssue = (failure, issue) =>
+  issue.client === CLIENT &&
+  issue.failure.test(failure) &&
+  (issue.evidence === undefined || issue.evidence[1].test(readOptional(issue.evidence[0]) ?? ""));
+const classify = (all) => {
+  const failures = [];
+  const known = [];
+  for (const failure of all) {
+    const issue = knownIssues.find((candidate) => matchesKnownIssue(failure, candidate));
+    if (issue) known.push(`known issue: ${failure} (${issue.note}${issue.issue ? `, ${issue.issue}` : ""})`);
+    else failures.push(failure);
+  }
+  return {failures, known};
+};
+const verdictOf = (failures, known) => (failures.length > 0 ? "fail" : known.length > 0 ? "known issues" : "pass");
+const RESULT = {pass: "✅ pass", "known issues": "⚠️ known issues", fail: "❌ fail"};
+const writeSummaryRow = (bn, vc, verdict, lines) =>
+  writeFileSync(
+    path.join(OUT_DIR, "summary.md"),
+    `| ${CLIENT} | ${bn} | ${vc} | ${SCENARIO} | ${RESULT[verdict]} | ${lines.join("<br>").replace(/\|/g, "\\|")} |\n`
+  );
+
+// run.sh hands over the reason when the run aborted before the verdict, the row then carries only that reason
+if (process.env.ABORT_REASON !== undefined) {
+  const {failures, known} = classify([process.env.ABORT_REASON.trim()]);
+  const verdict = verdictOf(failures, known);
+  writeSummaryRow(`\`${BN_IMAGE}\` ${BN_DIGEST}`, `\`${VC_IMAGE}\` ${VC_DIGEST}`, verdict, [...failures, ...known]);
+  console.log(`${verdict.toUpperCase()} ${CLIENT}/${SCENARIO}: ${[...failures, ...known].join("; ")}`);
+  process.exit(failures.length === 0 ? 0 : 1);
+}
+
+// node 3, the Lodestar beacon node driving the other validator client
+const API_LS = env("API_LS");
+// node 2, the other beacon node driving the Lodestar validator client
+const API_X = env("API_X");
+const LS_PEER_ID = env("LS_PEER_ID");
+const X_PEER_ID = env("X_PEER_ID");
 
 function parseMetrics(text) {
   const out = new Map();
@@ -360,7 +394,8 @@ if (SCENARIO === "gloas") {
   envelopes = `envelopes served ${served[0]}/${slots.length} by lodestar bn, ${served[1]}/${slots.length} by ${BN_TYPE} bn${statusesX.size > 0 ? ` (${[...statusesX].join(",")})` : ""}`;
 }
 
-const verdict = failures.length === 0 ? "pass" : "fail";
+const {failures: unresolved, known} = classify(failures);
+const verdict = verdictOf(unresolved, known);
 const result = {
   client: CLIENT,
   bnType: BN_TYPE,
@@ -386,7 +421,8 @@ const result = {
   ptcShares,
   peerClients,
   envelopes,
-  failures,
+  failures: unresolved,
+  known,
   notes,
 };
 writeFileSync(path.join(OUT_DIR, "result.json"), JSON.stringify(result, null, 2));
@@ -407,9 +443,8 @@ const details = [
 ]
   .filter(Boolean)
   .join("; ");
-const row = `| ${CLIENT} | \`${BN_IMAGE}\` ${BN_DIGEST} ${versionX} | \`${VC_IMAGE}\` ${VC_DIGEST} | ${SCENARIO} | ${verdict === "pass" ? "✅ pass" : "❌ fail"} | ${[...failures, details].join("<br>")} |`;
-writeFileSync(path.join(OUT_DIR, "summary.md"), `${row}\n`);
+writeSummaryRow(`\`${BN_IMAGE}\` ${BN_DIGEST} ${versionX}`, `\`${VC_IMAGE}\` ${VC_DIGEST}`, verdict, [...unresolved, ...known, details]);
 
 console.log(`${verdict.toUpperCase()} ${CLIENT}/${SCENARIO}: ${details}`);
-for (const f of failures) console.log(`  - ${f}`);
-process.exit(failures.length === 0 ? 0 : 1);
+for (const line of [...unresolved, ...known]) console.log(`  - ${line}`);
+process.exit(unresolved.length === 0 ? 0 : 1);

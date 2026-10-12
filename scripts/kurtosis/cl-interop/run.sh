@@ -165,12 +165,16 @@ on_exit() {
     if [ ! -f "$OUT_DIR/summary.md" ]; then
       local reason="run aborted before the verdict, see the run log"
       if [ -f "$OUT_DIR/abort.reason" ]; then
-        reason=$(sed 's/|/\\|/g' "$OUT_DIR/abort.reason")
+        reason=$(cat "$OUT_DIR/abort.reason")
       elif [ -f "$OUT_DIR/kurtosis-run.log" ] && ! grep -q "starting enclave done" "$OUT_DIR/.progress" 2>/dev/null; then
         # the service that failed and the first error from its own logs, not the generic Starlark wrapper lines
-        reason="enclave did not start: $(grep -oE "starting or updating the following services: '[^']*'|(ValueError|fail|panic|Error|error): [^\"]{0,200}" "$OUT_DIR/kurtosis-run.log" | grep -vE "Starlark|instruction \(number|starting or updating.*\] *$" | head -2 | tr '\n' ' ' | sed 's/|/\\|/g')"
+        reason="enclave did not start: $(grep -oE "starting or updating the following services: '[^']*'|(ValueError|fail|panic|Error|error): [^\"]{0,200}" "$OUT_DIR/kurtosis-run.log" | grep -vE "Starlark|instruction \(number|starting or updating.*\] *$" | head -2 | tr '\n' ' ')"
       fi
-      echo "| $CLIENT | \`$BN_IMAGE\` | \`$VC_IMAGE\` | $SCENARIO | ❌ fail | $reason |" > "$OUT_DIR/summary.md"
+      # the reason becomes the summary row, a known issue of the other client keeps the job green
+      if CLIENT="$CLIENT" BN_TYPE="${BN_TYPE:-}" VC_TYPE="${VC_TYPE:-}" BN_IMAGE="$BN_IMAGE" VC_IMAGE="$VC_IMAGE" SCENARIO="$SCENARIO" OUT_DIR="$OUT_DIR" \
+        BN_DIGEST="${BN_DIGEST:-}" VC_DIGEST="${VC_DIGEST:-}" ABORT_REASON="$reason" node "$SCRIPT_DIR/check.mjs"; then
+        code=0
+      fi
     fi
     kurtosis enclave dump "$ENCLAVE" "$OUT_DIR/enclave-dump" >/dev/null 2>&1 || true
   fi
