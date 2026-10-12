@@ -175,9 +175,10 @@ describe("Heze self-build parent variant", () => {
       modules.chain.getParentExecutionRequests = vi.fn().mockResolvedValue(ssz.gloas.ExecutionRequests.defaultValue());
       modules.chain.payloadAttestationPool.getPayloadAttestationsForBlock = vi.fn().mockReturnValue([]);
       modules.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
-      modules.forkChoice.getBlockHexAndBlockHash.mockImplementation((_root, hash) =>
-        hash === toRootHex(fullParentHash) ? fullParent : emptyParent
-      );
+      modules.forkChoice.getBlockHexAndBlockHash.mockImplementation((root, hash) => {
+        if (root !== toRootHex(parentBlockRoot)) return null;
+        return hash === toRootHex(fullParentHash) ? fullParent : emptyParent;
+      });
       // The proposer head is the FULL parent; once its verdict is rejected fork choice selects EMPTY
       modules.forkChoice.shouldBuildOnFull.mockImplementation((parent) => parent.payloadStatus === PayloadStatus.FULL);
       modules.forkChoice.recordPayloadInclusionListSatisfaction.mockReturnValue(verdictChanged);
