@@ -333,19 +333,17 @@ export async function produceBlockBody<T extends BlockType>(
     };
 
     let prepared = await prepareOnParent(parentBlock);
-    // An inclusion list verdict recorded while preparing, by this forkchoiceUpdated or a concurrent
-    // one, can make fork choice select the parent's EMPTY variant; the proposal must build on that
-    const head = this.forkChoice.getHead();
-    if (
-      prepared.isBuildingOnFull &&
-      head.blockRoot === parentBlock.blockRoot &&
-      head.payloadStatus === PayloadStatus.EMPTY
-    ) {
-      this.logger.warn("Fork choice no longer extends the parent payload, rebuilding on its EMPTY variant", {
-        slot: blockSlot,
-        parentBlockRoot: parentBlock.blockRoot,
-      });
-      prepared = await prepareOnParent(head);
+    // Post-heze an inclusion list verdict recorded while preparing, by this forkchoiceUpdated or a
+    // concurrent one, can make fork choice select the parent's EMPTY variant; the proposal must build on that
+    if (ForkSeq[fork] >= ForkSeq.heze && prepared.isBuildingOnFull) {
+      const head = this.forkChoice.getHead();
+      if (head.blockRoot === parentBlock.blockRoot && head.payloadStatus === PayloadStatus.EMPTY) {
+        this.logger.warn("Fork choice no longer extends the parent payload, rebuilding on its EMPTY variant", {
+          slot: blockSlot,
+          parentBlockRoot: parentBlock.blockRoot,
+        });
+        prepared = await prepareOnParent(head);
+      }
     }
     const {isBuildingOnFull, parentBlockHash, parentExecutionRequests, stateAfterParentPayload, prepareRes} = prepared;
 
