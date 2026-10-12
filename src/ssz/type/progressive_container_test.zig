@@ -79,8 +79,8 @@ test "ProgressiveContainerType - variable" {
     _ = Foo.serializeIntoBytes(&f, f_buf);
 
     var f2: Foo.Type = Foo.default_value;
-    try Foo.deserializeFromBytes(allocator, f_buf, &f2);
     defer Foo.deinit(allocator, &f2);
+    try Foo.deserializeFromBytes(allocator, f_buf, &f2);
 }
 
 fn expectProgressiveFromValuePoolExhaustionReclaimsNodes(

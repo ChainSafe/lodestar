@@ -12,6 +12,7 @@ const VariableContainerType = @import("container.zig").VariableContainerType;
 const TypeTestCase = @import("test_utils.zig").TypeTestCase;
 const FixedVectorType = @import("vector.zig").FixedVectorType;
 const VariableVectorType = @import("vector.zig").VariableVectorType;
+const ByteListType = @import("byte_list.zig").ByteListType;
 
 test "FixedVectorType - canonical boolean tree deserialization" {
     const allocator = std.testing.allocator;
@@ -685,4 +686,38 @@ test "variable vector streaming hashes need no scratch allocation" {
         std.mem.writeInt(u32, bytes[0..4], 0, .little);
         try std.testing.expectError(error.zeroOffset, Vector.serialized.hashTreeRoot(failing.allocator(), bytes, &root));
     }
+}
+
+test "memory_safety: VariableVector deserializeFromBytes leaves out deinit-safe on malformed input" {
+    const Vector = VariableVectorType(ByteListType(2), 3);
+    const cases = .{
+        // Element 0 decodes into an allocation before the third offset (12) falls below the
+        // second (13).
+        .{ &[_]u8{ 12, 0, 0, 0, 13, 0, 0, 0, 12, 0, 0, 0, 1 }, error.offsetNotIncreasing },
+        // Element 0 decodes into an allocation; element 1 holds three bytes, over its limit of two.
+        .{ &[_]u8{ 12, 0, 0, 0, 13, 0, 0, 0, 16, 0, 0, 0, 1, 2, 3, 4 }, error.invalidLength },
+    };
+    inline for (cases) |case| {
+        var out = Vector.default_value;
+        defer Vector.deinit(std.testing.allocator, &out);
+        try std.testing.expectError(
+            case[1],
+            Vector.deserializeFromBytes(std.testing.allocator, case[0], &out),
+        );
+    }
+}
+
+test "memory_safety: VariableVector deserializeFromBytes leaves out deinit-safe on OOM" {
+    const Vector = VariableVectorType(ByteListType(2), 2);
+    const serialized = [_]u8{ 8, 0, 0, 0, 9, 0, 0, 0, 1, 2, 3 };
+
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, struct {
+        fn run(allocator: std.mem.Allocator, bytes: []const u8) !void {
+            var out = Vector.default_value;
+            defer Vector.deinit(allocator, &out);
+            try Vector.deserializeFromBytes(allocator, bytes, &out);
+            try std.testing.expectEqualSlices(u8, &.{1}, out[0].items);
+            try std.testing.expectEqualSlices(u8, &.{ 2, 3 }, out[1].items);
+        }
+    }.run, .{&serialized});
 }

@@ -594,8 +594,8 @@ test "loadState scenarios" {
                 },
                 .trim_struct => |m| {
                     var trimmed = types.electra.BeaconState.default_value;
-                    try types.electra.BeaconState.deserializeFromBytes(allocator, seed_bytes, &trimmed);
                     defer types.electra.BeaconState.deinit(allocator, &trimmed);
+                    try types.electra.BeaconState.deserializeFromBytes(allocator, seed_bytes, &trimmed);
 
                     trimmed.validators.shrinkRetainingCapacity(m.new_len);
                     trimmed.balances.shrinkRetainingCapacity(m.new_len);

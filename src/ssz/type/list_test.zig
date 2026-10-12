@@ -1503,23 +1503,37 @@ test "memory_safety: VariableList clone should keep destination deinit-safe on a
     try std.testing.expectEqual(@as(usize, 0), backing.live.count());
 }
 
-test "memory_safety: VariableList deserializeFromBytes should free offsets on malformed later offset" {
-    const ListType = VariableListType(ByteListType(8), 4);
-    // Offset 8 declares two elements, so decoding allocates the output list.
-    // Offset 4 then moves backward, triggering offsetNotIncreasing after allocation.
-    const serialized = [_]u8{ 8, 0, 0, 0, 4, 0, 0, 0 };
-    var tracking = std.testing.FailingAllocator.init(std.testing.allocator, .{});
-    const allocator = tracking.allocator();
+test "memory_safety: VariableList deserializeFromBytes leaves out deinit-safe on malformed input" {
+    const List = VariableListType(ByteListType(2), 4);
+    const cases = .{
+        // Offset 8 declares two elements, so `out` is resized before offset 4 moves backward.
+        .{ &[_]u8{ 8, 0, 0, 0, 4, 0, 0, 0 }, error.offsetNotIncreasing },
+        // Element 0 decodes into an allocation; element 1 holds three bytes, over its limit of two.
+        .{ &[_]u8{ 8, 0, 0, 0, 9, 0, 0, 0, 1, 2, 3, 4 }, error.invalidLength },
+    };
+    inline for (cases) |case| {
+        var out = List.default_value;
+        defer List.deinit(std.testing.allocator, &out);
+        try std.testing.expectError(
+            case[1],
+            List.deserializeFromBytes(std.testing.allocator, case[0], &out),
+        );
+    }
+}
 
-    var out = ListType.default_value;
-    defer out.deinit(allocator);
+test "memory_safety: VariableList deserializeFromBytes leaves out deinit-safe on OOM" {
+    const List = VariableListType(ByteListType(2), 4);
+    const serialized = [_]u8{ 8, 0, 0, 0, 9, 0, 0, 0, 1, 2, 3 };
 
-    try std.testing.expectError(
-        error.offsetNotIncreasing,
-        ListType.deserializeFromBytes(allocator, &serialized, &out),
-    );
-    // The partially initialized output must not leak after malformed input is rejected.
-    try std.testing.expectEqual(tracking.allocated_bytes, tracking.freed_bytes);
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, struct {
+        fn run(allocator: std.mem.Allocator, bytes: []const u8) !void {
+            var out = List.default_value;
+            defer List.deinit(allocator, &out);
+            try List.deserializeFromBytes(allocator, bytes, &out);
+            try std.testing.expectEqualSlices(u8, &.{1}, out.items[0].items);
+            try std.testing.expectEqualSlices(u8, &.{ 2, 3 }, out.items[1].items);
+        }
+    }.run, .{&serialized});
 }
 
 test "memory_safety: TreeView composite list fromValue - pool exhaustion leaves no orphan nodes" {

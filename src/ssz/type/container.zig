@@ -615,6 +615,7 @@ pub fn VariableContainerType(comptime ST: type) type {
             return variable_index;
         }
 
+        /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
         pub fn deserializeFromBytes(allocator: std.mem.Allocator, data: []const u8, out: *Type) !void {
             if (data.len > max_size or data.len < min_size) {
                 return error.InvalidSize;
@@ -799,6 +800,7 @@ pub fn VariableContainerType(comptime ST: type) type {
                 return try Node.fillWithContents(pool, &nodes, chunk_depth);
             }
 
+            /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
             pub fn toValue(allocator: std.mem.Allocator, node: Node.Id, pool: *Node.Pool, out: *Type) !void {
                 var nodes: [chunk_count]Node.Id = undefined;
                 try node.getNodesAtDepth(pool, chunk_depth, 0, &nodes);
@@ -873,6 +875,7 @@ pub fn VariableContainerType(comptime ST: type) type {
             try writer.endObject();
         }
 
+        /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
         pub fn deserializeFromJson(allocator: std.mem.Allocator, source: *std.json.Scanner, out: *Type) !void {
             // start object token "{"
             switch (try source.next()) {

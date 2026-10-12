@@ -74,8 +74,8 @@ test "BitListType serialized forms should enforce padding and limit" {
         try std.testing.expectEqualSlices(u8, tc.expected_hex, serialized);
 
         var deserialized: Bits.Type = Bits.default_value;
-        try Bits.deserializeFromBytes(allocator, serialized, &deserialized);
         defer deserialized.deinit(allocator);
+        try Bits.deserializeFromBytes(allocator, serialized, &deserialized);
 
         var deserialized_bools = try allocator.alloc(bool, deserialized.bit_len);
         defer allocator.free(deserialized_bools);
@@ -129,14 +129,14 @@ test "BitListType - tree roundtrip" {
 
     for (test_cases) |tc| {
         var value: Bits.Type = Bits.default_value;
-        try Bits.deserializeFromBytes(allocator, tc.serialized, &value);
         defer value.deinit(allocator);
+        try Bits.deserializeFromBytes(allocator, tc.serialized, &value);
 
         const tree_node = try Bits.tree.fromValue(&pool, &value);
 
         var value_from_tree: Bits.Type = Bits.default_value;
-        try Bits.tree.toValue(allocator, tree_node, &pool, &value_from_tree);
         defer value_from_tree.deinit(allocator);
+        try Bits.tree.toValue(allocator, tree_node, &pool, &value_from_tree);
 
         try std.testing.expect(Bits.equals(&value, &value_from_tree));
 

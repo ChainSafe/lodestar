@@ -795,16 +795,13 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
             try writer.endArray();
         }
 
+        /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
         pub fn deserializeFromBytes(allocator: std.mem.Allocator, data: []const u8, out: *Type) !void {
             var elements = try VariableElementIterator(Self).init(data);
             const len = elements.len;
 
             try out.resize(allocator, len);
             @memset(out.items[0..len], Element.default_value);
-            errdefer {
-                Self.deinit(allocator, out);
-                out.* = default_value;
-            }
 
             var i: usize = 0;
             while (try elements.next()) |element_bytes| : (i += 1) {
