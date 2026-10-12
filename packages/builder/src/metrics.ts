@@ -47,10 +47,17 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
 
       streamTime: register.histogram<{routeId: string}>({
         name: "bc_rest_api_client_stream_time_seconds",
-        help: "Histogram of REST API client streaming time by routeId",
+        help: "Histogram of REST API client response body consumption time, including failures and excluding parsing",
         labelNames: ["routeId"],
         // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
         buckets: [0.01, 0.1, 1, 2, 5],
+      }),
+
+      responseParseTime: register.histogram<{routeId: string; encoding: "json" | "ssz"}>({
+        name: "bc_rest_api_client_response_parse_time_seconds",
+        help: "Histogram of REST API client JSON.parse or SSZ deserialize time, including failures, excluding body reads and subsequent value conversion",
+        labelNames: ["routeId", "encoding"],
+        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
       }),
 
       requestErrors: register.gauge<{routeId: string; baseUrl: string}>({

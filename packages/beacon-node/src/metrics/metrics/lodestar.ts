@@ -2118,10 +2118,16 @@ export function createLodestarMetrics(
       }),
       streamTime: register.histogram<{routeId: string}>({
         name: "lodestar_builder_http_client_stream_time_seconds",
-        help: "Builder api - streaming time by routeId",
+        help: "Builder api - response body consumption time, including failures and excluding parsing",
         labelNames: ["routeId"],
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      responseParseTime: register.histogram<{routeId: string; encoding: "json" | "ssz"}>({
+        name: "lodestar_builder_http_client_response_parse_time_seconds",
+        help: "Builder api - JSON.parse or SSZ deserialize time, including failures, excluding body reads and subsequent value conversion",
+        labelNames: ["routeId", "encoding"],
+        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
       }),
       requestErrors: register.gauge<{routeId: string; baseUrl: string}>({
         name: "lodestar_builder_http_client_request_errors_total",

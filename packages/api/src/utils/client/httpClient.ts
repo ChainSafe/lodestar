@@ -369,7 +369,7 @@ export class HttpClient implements IHttpClient {
       this.logger?.debug("API request", {routeId, requestWireFormat, responseWireFormat});
       const {url, requestInit} = createApiRequest(definition, args, init);
       const response = await this.fetch(url, requestInit);
-      const apiResponse = new ApiResponse(definition, response.body, response);
+      const apiResponse = new ApiResponse(definition, response.body, response, this.metrics);
 
       if (!apiResponse.ok) {
         await apiResponse.errorBody();
@@ -378,18 +378,13 @@ export class HttpClient implements IHttpClient {
         return apiResponse;
       }
 
-      const streamTimer = this.metrics?.streamTime.startTimer({routeId});
-      try {
-        await apiResponse.rawBody();
-        this.logger?.debug("API response success", {
-          routeId,
-          status: apiResponse.status,
-          wireFormat: apiResponse.wireFormat(),
-        });
-        return apiResponse;
-      } finally {
-        streamTimer?.();
-      }
+      await apiResponse.rawBody();
+      this.logger?.debug("API response success", {
+        routeId,
+        status: apiResponse.status,
+        wireFormat: apiResponse.wireFormat(),
+      });
+      return apiResponse;
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId, baseUrl: printableUrl});
 

@@ -3,6 +3,7 @@ import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";
 import {WireFormat, getWireFormat} from "../wireFormat.js";
 import {ApiError, ApiFailure} from "./error.js";
+import {Metrics} from "./metrics.js";
 import {RouteDefinitionExtra} from "./request.js";
 
 export type RawBody =
@@ -17,10 +18,17 @@ export class ApiResponse<E extends Endpoint> extends Response {
   private _errorBody?: string;
   private _meta?: E["meta"];
   private _value?: E["return"];
+  private readonly metrics: Metrics | null;
 
-  constructor(definition: RouteDefinitionExtra<E>, body?: BodyInit | null, init?: ResponseInit) {
+  constructor(
+    definition: RouteDefinitionExtra<E>,
+    body?: BodyInit | null,
+    init?: ResponseInit,
+    metrics?: Metrics | null
+  ) {
     super(body, init);
     this.definition = definition;
+    this.metrics = metrics ?? null;
   }
 
   wireFormat(): WireFormat | null {
@@ -61,16 +69,18 @@ export class ApiResponse<E extends Endpoint> extends Response {
 
     if (!this._rawBody) {
       switch (this.wireFormat()) {
-        case WireFormat.json:
+        case WireFormat.json: {
+          const text = await this.readBody(() => this.text());
           this._rawBody = {
             type: WireFormat.json,
-            value: await super.json(),
+            value: this.parseBody("json", () => JSON.parse(text)),
           };
           break;
+        }
         case WireFormat.ssz:
           this._rawBody = {
             type: WireFormat.ssz,
-            value: new Uint8Array(await this.arrayBuffer()),
+            value: new Uint8Array(await this.readBody(() => this.arrayBuffer())),
           };
           break;
         default:
@@ -116,7 +126,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
           break;
         }
         case WireFormat.ssz:
-          this._value = this.definition.resp.data.deserialize(rawBody.value, meta);
+          this._value = this.parseBody("ssz", () => this.definition.resp.data.deserialize(rawBody.value, meta));
           break;
       }
     }
@@ -168,9 +178,27 @@ export class ApiResponse<E extends Endpoint> extends Response {
 
   async errorBody(): Promise<string> {
     if (this._errorBody === undefined) {
-      this._errorBody = await this.text();
+      this._errorBody = await this.readBody(() => this.text());
     }
     return this._errorBody;
+  }
+
+  private async readBody<T>(read: () => Promise<T>): Promise<T> {
+    const timer = this.metrics?.streamTime.startTimer({routeId: this.definition.operationId});
+    try {
+      return await read();
+    } finally {
+      timer?.();
+    }
+  }
+
+  private parseBody<T>(encoding: "json" | "ssz", parse: () => T): T {
+    const timer = this.metrics?.responseParseTime.startTimer({routeId: this.definition.operationId, encoding});
+    try {
+      return parse();
+    } finally {
+      timer?.();
+    }
   }
 
   private resolvedRawBody(): RawBody {

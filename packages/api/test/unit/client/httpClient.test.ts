@@ -6,6 +6,7 @@ import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
 import {WireFormat} from "../../../src/index.js";
 import {addSszContentTypeParser} from "../../../src/server/index.js";
 import {HttpClient, RouteDefinitionExtra} from "../../../src/utils/client/index.js";
+import {Metrics} from "../../../src/utils/client/metrics.js";
 import {
   AnyEndpoint,
   EmptyArgs,
@@ -92,6 +93,41 @@ describe("httpClient json client", () => {
 
     expect(res.status).toBe(HttpStatusCode.OK);
     expect(res.value()).toEqual({test: 1});
+  });
+
+  it("should record body and parse timings of a response", async () => {
+    const url = "/test-timing";
+    const testTimingDefinition: RouteDefinitionExtra<
+      Endpoint<"GET", EmptyArgs, EmptyRequest, {test: number}, EmptyMeta>
+    > = {
+      url,
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+      operationId: "testTiming",
+      urlFormatter: compileRouteUrlFormatter(url),
+    };
+    const histogram = () => ({startTimer: vi.fn(() => () => 0), observe: vi.fn(), reset: vi.fn()});
+    const gauge = () => ({inc: vi.fn(), dec: vi.fn(), set: vi.fn(), reset: vi.fn(), addCollect: vi.fn()});
+    const metrics = {
+      requestTime: histogram(),
+      streamTime: histogram(),
+      responseParseTime: histogram(),
+      requestErrors: gauge(),
+      requestToFallbacks: gauge(),
+      urlsScore: gauge(),
+    };
+    const {baseUrl} = await getServer({url, method: "GET", handler: async () => ({data: {test: 1}})});
+    const httpClient = new HttpClient({baseUrl}, {metrics: metrics as unknown as Metrics});
+
+    const res = await httpClient.request(testTimingDefinition, undefined);
+
+    expect(res.value()).toEqual({test: 1});
+    expect(metrics.streamTime.startTimer).toHaveBeenCalledExactlyOnceWith({routeId: "testTiming"});
+    expect(metrics.responseParseTime.startTimer).toHaveBeenCalledExactlyOnceWith({
+      routeId: "testTiming",
+      encoding: "json",
+    });
   });
 
   it("should handle successful POST request correctly", async () => {
