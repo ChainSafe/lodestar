@@ -35,10 +35,10 @@ Everything before the first finalized epoch is startup noise and is not judged. 
 - no blob was included
 - in `gloas`, either head is not on the gloas fork, or the Lodestar beacon node does not serve an archived envelope
 
-A failure with a known cause on the other client's side is listed in `known-issues.mjs`: the client, a pattern for the
-failure text, optionally a log file and a pattern that has to confirm the cause, a note and the link to the upstream
-issue. A matching failure shows up as a known issue in the summary row and does not fail the job, anything else on that
-pair still does. Remove the entry once the fix is in the client's default-branch image.
+A failure with a known cause, on either side, is listed in `known-issues.mjs`: the client, a pattern for the failure
+text, optionally a log file and a pattern that has to confirm the cause, a note and the link to the issue. A matching
+failure shows up as a known issue in the summary row and does not fail the job, anything else on that pair still does.
+Remove the entry once the fix is in the image the nightly runs.
 
 The client images float on purpose, the point is to find interop problems before a release. Logs of every container,
 metrics snapshots of the Lodestar beacon node and validator client and the verdict of every run are uploaded as

@@ -53,7 +53,7 @@ const readOptional = (file) => {
   }
 };
 
-// a failure with a known upstream cause is reported with its note and does not fail the run, see known-issues.mjs
+// a failure with a known cause is reported with its note and does not fail the run, see known-issues.mjs
 const matchesKnownIssue = (failure, issue) =>
   issue.client === CLIENT &&
   issue.failure.test(failure) &&
