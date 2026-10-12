@@ -786,10 +786,7 @@ export async function prepareExecutionPayload(
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
-  // Computed before the cache lookup: inclusion lists keep arriving after a payload was prepared in
-  // advance, and a payload built without them would not satisfy the constraints
-  const attributes: PayloadAttributes =
-    payloadAttributes ??
+  const buildPayloadAttributes = (): PayloadAttributes =>
     preparePayloadAttributes(fork, chain, {
       prepareState: state,
       prepareSlot: state.slot,
@@ -798,13 +795,20 @@ export async function prepareExecutionPayload(
       feeRecipient: suggestedFeeRecipient,
     });
 
+  // Post-heze the attributes feed the cache key: inclusion lists keep arriving after a payload was
+  // prepared in advance, and a payload built without them would not satisfy the constraints
+  let attributes = payloadAttributes;
+  if (attributes === undefined && ForkSeq[fork] >= ForkSeq.heze) {
+    attributes = buildPayloadAttributes();
+  }
+
   const payloadIdCached = chain.executionEngine.payloadIdCache.get({
     headBlockHash: toRootHex(parentBlockHash),
     finalizedBlockHash,
     timestamp: numToQuantity(timestamp),
     prevRandao: toHex(prevRandao),
     suggestedFeeRecipient,
-    inclusionListTransactions: attributes.inclusionListTransactions
+    inclusionListTransactions: attributes?.inclusionListTransactions
       ? serializeInclusionList(attributes.inclusionListTransactions)
       : undefined,
   });
@@ -832,7 +836,7 @@ export async function prepareExecutionPayload(
       toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
-      attributes
+      attributes ?? buildPayloadAttributes()
     );
     payloadId = forkchoiceUpdate.payloadId;
     const parentVariant =
