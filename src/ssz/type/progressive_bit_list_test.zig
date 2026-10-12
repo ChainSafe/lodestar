@@ -16,10 +16,12 @@ test "ProgressiveBitListType - sanity" {
     defer allocator.free(b_buf);
 
     _ = Bits.serializeIntoBytes(&b, b_buf);
-    try Bits.deserializeFromBytes(allocator, b_buf, &b);
+    var decoded = Bits.default_value;
+    defer Bits.deinit(allocator, &decoded);
+    try Bits.deserializeFromBytes(allocator, b_buf, &decoded);
 
-    try std.testing.expect(try b.get(0) == false);
-    try std.testing.expect(try b.get(2) == true);
+    try std.testing.expect(try decoded.get(0) == false);
+    try std.testing.expect(try decoded.get(2) == true);
 }
 
 test "ProgressiveBitListType - shrinking clears truncated bits" {

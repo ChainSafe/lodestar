@@ -24,7 +24,8 @@ test "BitVectorType - sanity" {
 
     var b_buf: [Bits.fixed_size]u8 = undefined;
     _ = Bits.serializeIntoBytes(&b, &b_buf);
-    try Bits.deserializeFromBytes(&b_buf, &b);
+    var b_decoded = Bits.default_value;
+    try Bits.deserializeFromBytes(&b_buf, &b_decoded);
 }
 
 test "clone" {

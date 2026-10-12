@@ -52,7 +52,8 @@ test "UintType - sanity" {
     var u: Uint8.Type = undefined;
     var u_buf: [Uint8.fixed_size]u8 = undefined;
     _ = Uint8.serializeIntoBytes(&u, &u_buf);
-    try Uint8.deserializeFromBytes(&u_buf, &u);
+    var u_decoded = Uint8.default_value;
+    try Uint8.deserializeFromBytes(&u_buf, &u_decoded);
 
     // Deserialize "255" into u;
     const input_json = "\"255\"";

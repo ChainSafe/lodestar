@@ -81,7 +81,8 @@ test "vector - sanity" {
     var b0: Bytes32.Type = undefined;
     var b0_buf: [Bytes32.fixed_size]u8 = undefined;
     _ = Bytes32.serializeIntoBytes(&b0, &b0_buf);
-    try Bytes32.deserializeFromBytes(&b0_buf, &b0);
+    var b0_decoded = Bytes32.default_value;
+    try Bytes32.deserializeFromBytes(&b0_buf, &b0_decoded);
 }
 
 test "clone FixedVectorType" {

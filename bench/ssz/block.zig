@@ -49,15 +49,20 @@ const DeserializeBlock = struct {
     bytes: []const u8,
     pub fn run(self: *DeserializeBlock, allocator: std.mem.Allocator) void {
         const out = allocator.create(BeaconBlock.Type) catch unreachable;
+        defer allocator.destroy(out);
         out.* = BeaconBlock.default_value;
+        defer BeaconBlock.deinit(allocator, out);
         BeaconBlock.deserializeFromBytes(allocator, self.bytes, out) catch unreachable;
     }
 };
 
-const DeserializeBlockNoAlloc = struct {
+// Only the outer struct is preallocated; each run allocates and releases its decoded fields.
+const DeserializeBlockPreallocatedStruct = struct {
     bytes: []const u8,
     out: *BeaconBlock.Type,
-    pub fn run(self: *DeserializeBlockNoAlloc, allocator: std.mem.Allocator) void {
+    pub fn run(self: *DeserializeBlockPreallocatedStruct, allocator: std.mem.Allocator) void {
+        self.out.* = BeaconBlock.default_value;
+        defer BeaconBlock.deinit(allocator, self.out);
         BeaconBlock.deserializeFromBytes(allocator, self.bytes, self.out) catch unreachable;
     }
 };
@@ -128,7 +133,9 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(block_bytes);
 
     const block = allocator.create(BeaconBlock.Type) catch unreachable;
+    defer allocator.destroy(block);
     block.* = BeaconBlock.default_value;
+    defer BeaconBlock.deinit(allocator, block);
     BeaconBlock.deserializeFromBytes(allocator, block_bytes, block) catch unreachable;
 
     const serialize_block = SerializeBlock{ .block = block };
@@ -140,8 +147,11 @@ pub fn main(init: std.process.Init) !void {
     const deserialize_block = DeserializeBlock{ .bytes = block_bytes };
     try bench.addParam("deserialize block", &deserialize_block, .{});
 
-    const deserialize_block_no_alloc = DeserializeBlockNoAlloc{ .bytes = block_bytes, .out = block };
-    try bench.addParam("deserialize block prealloc", &deserialize_block_no_alloc, .{});
+    const decoded = try allocator.create(BeaconBlock.Type);
+    defer allocator.destroy(decoded);
+
+    const deserialize_block_preallocated = DeserializeBlockPreallocatedStruct{ .bytes = block_bytes, .out = decoded };
+    try bench.addParam("deserialize block prealloc struct", &deserialize_block_preallocated, .{});
 
     const validate_block = ValidateBlock{ .bytes = block_bytes };
     try bench.addParam("validate block", &validate_block, .{});

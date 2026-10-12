@@ -352,7 +352,7 @@ test "ByteListType - tree.zeros" {
     }
 }
 
-test "memory_safety: ByteListType tree reads need only output capacity" {
+test "memory_safety: ByteListType tree reads allocate only fresh output" {
     const allocator = std.testing.allocator;
     const List = ByteListType(1025);
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 1024 });
@@ -365,20 +365,25 @@ test "memory_safety: ByteListType tree reads need only output capacity" {
         const node = try List.tree.fromValue(&pool, &value);
         defer pool.unref(node);
         const before = node.getRoot(&pool).*;
-        var failing = std.testing.FailingAllocator.init(allocator, .{});
-        var out = List.default_value;
-        defer List.deinit(failing.allocator(), &out);
-        try out.ensureTotalCapacity(failing.allocator(), List.limit);
-        failing.fail_index = failing.alloc_index;
-        failing.resize_fail_index = failing.resize_index;
-        try List.tree.toValue(failing.allocator(), node, &pool, &out);
-        try std.testing.expect(List.equals(&value, &out));
-        try std.testing.expectEqualSlices(u8, &before, node.getRoot(&pool));
         const zero = try List.tree.zeros(&pool, len);
         defer pool.unref(zero);
-        try List.tree.toValue(failing.allocator(), zero, &pool, &out);
-        var root: [32]u8 = undefined;
-        try List.hashTreeRoot(allocator, &out, &root);
-        try std.testing.expectEqualSlices(u8, zero.getRoot(&pool), &root);
+        for ([_]Node.Id{ node, zero }, 0..) |input, input_index| {
+            var failing = std.testing.FailingAllocator.init(allocator, .{
+                .fail_index = @intFromBool(len != 0),
+                .resize_fail_index = 0,
+            });
+            var out = List.default_value;
+            defer List.deinit(failing.allocator(), &out);
+            try List.tree.toValue(failing.allocator(), input, &pool, &out);
+            if (input_index == 0) {
+                try std.testing.expect(List.equals(&value, &out));
+                try std.testing.expectEqualSlices(u8, &before, node.getRoot(&pool));
+            } else {
+                var root: [32]u8 = undefined;
+                try List.hashTreeRoot(allocator, &out, &root);
+                try std.testing.expectEqualSlices(u8, zero.getRoot(&pool), &root);
+            }
+            try std.testing.expect(!failing.has_induced_failure);
+        }
     }
 }

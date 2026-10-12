@@ -50,15 +50,20 @@ const DeserializeAttestation = struct {
     bytes: []const u8,
     pub fn run(self: *DeserializeAttestation, allocator: std.mem.Allocator) void {
         const out = allocator.create(Attestation.Type) catch unreachable;
+        defer allocator.destroy(out);
         out.* = Attestation.default_value;
+        defer Attestation.deinit(allocator, out);
         Attestation.deserializeFromBytes(allocator, self.bytes, out) catch unreachable;
     }
 };
 
-const DeserializeAttestationNoAlloc = struct {
+// Only the outer struct is preallocated; each run allocates and releases its decoded fields.
+const DeserializeAttestationPreallocatedStruct = struct {
     bytes: []const u8,
     out: *Attestation.Type,
-    pub fn run(self: *DeserializeAttestationNoAlloc, allocator: std.mem.Allocator) void {
+    pub fn run(self: *DeserializeAttestationPreallocatedStruct, allocator: std.mem.Allocator) void {
+        self.out.* = Attestation.default_value;
+        defer Attestation.deinit(allocator, self.out);
         Attestation.deserializeFromBytes(allocator, self.bytes, self.out) catch unreachable;
     }
 };
@@ -137,7 +142,9 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(block_bytes);
 
     const block = allocator.create(SignedBeaconBlock.Type) catch unreachable;
+    defer allocator.destroy(block);
     block.* = SignedBeaconBlock.default_value;
+    defer SignedBeaconBlock.deinit(allocator, block);
     try SignedBeaconBlock.deserializeFromBytes(allocator, block_bytes, block);
 
     const attestation = &block.message.body.attestations.items[0];
@@ -154,8 +161,11 @@ pub fn main(init: std.process.Init) !void {
     const deserialize_attestation = DeserializeAttestation{ .bytes = attestation_bytes };
     try bench.addParam("deserialize attestation", &deserialize_attestation, .{});
 
-    const deserialize_attestation_no_alloc = DeserializeAttestationNoAlloc{ .bytes = attestation_bytes, .out = attestation };
-    try bench.addParam("deserialize attestation prealloc", &deserialize_attestation_no_alloc, .{});
+    const decoded = try allocator.create(Attestation.Type);
+    defer allocator.destroy(decoded);
+
+    const deserialize_attestation_preallocated = DeserializeAttestationPreallocatedStruct{ .bytes = attestation_bytes, .out = decoded };
+    try bench.addParam("deserialize attestation prealloc struct", &deserialize_attestation_preallocated, .{});
 
     const validate_attestation = ValidateAttestation{ .bytes = attestation_bytes };
     try bench.addParam("validate attestation", &validate_attestation, .{});

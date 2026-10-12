@@ -49,15 +49,20 @@ const DeserializeState = struct {
     bytes: []const u8,
     pub fn run(self: *DeserializeState, allocator: std.mem.Allocator) void {
         const out = allocator.create(BeaconState.Type) catch unreachable;
+        defer allocator.destroy(out);
         out.* = BeaconState.default_value;
+        defer BeaconState.deinit(allocator, out);
         BeaconState.deserializeFromBytes(allocator, self.bytes, out) catch unreachable;
     }
 };
 
-const DeserializeStateNoAlloc = struct {
+// Only the outer struct is preallocated; each run allocates and releases its decoded fields.
+const DeserializeStatePreallocatedStruct = struct {
     bytes: []const u8,
     out: *BeaconState.Type,
-    pub fn run(self: *DeserializeStateNoAlloc, allocator: std.mem.Allocator) void {
+    pub fn run(self: *DeserializeStatePreallocatedStruct, allocator: std.mem.Allocator) void {
+        self.out.* = BeaconState.default_value;
+        defer BeaconState.deinit(allocator, self.out);
         BeaconState.deserializeFromBytes(allocator, self.bytes, self.out) catch unreachable;
     }
 };
@@ -125,7 +130,9 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(state_bytes);
 
     const state = allocator.create(BeaconState.Type) catch unreachable;
+    defer allocator.destroy(state);
     state.* = BeaconState.default_value;
+    defer BeaconState.deinit(allocator, state);
     BeaconState.deserializeFromBytes(allocator, state_bytes, state) catch unreachable;
 
     const serialize_state = SerializeState{ .state = state };
@@ -137,8 +144,11 @@ pub fn main(init: std.process.Init) !void {
     const deserialize_state = DeserializeState{ .bytes = state_bytes };
     try bench.addParam("deserialize state", &deserialize_state, .{});
 
-    const deserialize_state_no_alloc = DeserializeStateNoAlloc{ .bytes = state_bytes, .out = state };
-    try bench.addParam("deserialize state prealloc", &deserialize_state_no_alloc, .{});
+    const decoded = try allocator.create(BeaconState.Type);
+    defer allocator.destroy(decoded);
+
+    const deserialize_state_preallocated = DeserializeStatePreallocatedStruct{ .bytes = state_bytes, .out = decoded };
+    try bench.addParam("deserialize state prealloc struct", &deserialize_state_preallocated, .{});
 
     const validate_state = ValidateState{ .bytes = state_bytes };
     try bench.addParam("validate state", &validate_state, .{});

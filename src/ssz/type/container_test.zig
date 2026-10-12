@@ -30,7 +30,8 @@ test "ContainerType - sanity" {
     var c_buf: [Checkpoint.fixed_size]u8 = undefined;
 
     _ = Checkpoint.serializeIntoBytes(&c, &c_buf);
-    try Checkpoint.deserializeFromBytes(&c_buf, &c);
+    var c_decoded = Checkpoint.default_value;
+    try Checkpoint.deserializeFromBytes(&c_buf, &c_decoded);
 
     // create a variable container type and instance and round-trip serialize
     const allocator = std.testing.allocator;
@@ -53,7 +54,9 @@ test "ContainerType - sanity" {
     const f_buf = try allocator.alloc(u8, Foo.serializedSize(&f));
     defer allocator.free(f_buf);
     _ = Foo.serializeIntoBytes(&f, f_buf);
-    try Foo.deserializeFromBytes(allocator, f_buf, &f);
+    var f_decoded = Foo.default_value;
+    defer Foo.deinit(allocator, &f_decoded);
+    try Foo.deserializeFromBytes(allocator, f_buf, &f_decoded);
 }
 
 test "clone FixedContainerType" {
