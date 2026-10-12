@@ -3,7 +3,7 @@ import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
@@ -44,7 +44,9 @@ vi.mock("../../../../src/chain/validation/dataColumnSidecar.js", async (importAc
   validateGossipGloasDataColumnSidecar: vi.fn().mockResolvedValue(undefined),
 }));
 
-describe("incomplete payload gossip", () => {
+describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload gossip %s", (fork) => {
+  const forkTypes = sszTypesFor(fork);
+
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -64,22 +66,23 @@ describe("incomplete payload gossip", () => {
         ELECTRA_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: 0,
         GLOAS_FORK_EPOCH: 0,
+        HEZE_FORK_EPOCH: fork === ForkName.heze ? 0 : Infinity,
         PAYLOAD_DUE_BPS: 7500,
       },
       new Uint8Array(32)
     );
-    vi.setSystemTime(config.SLOT_DURATION_MS);
-    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    vi.setSystemTime(config.getSlotDurationMs(fork));
+    const block = forkTypes.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
     block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from(
       {length: blobCount},
       () => new Uint8Array(48)
     );
-    const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+    const blockRoot = forkTypes.BeaconBlock.hashTreeRoot(block.message);
     const payloadInput = PayloadEnvelopeInput.createFromBlock({
       block,
       blockRootHex: toRootHex(blockRoot),
-      forkName: ForkName.gloas,
+      forkName: fork,
       sampledColumns: [0, 1],
       custodyColumns: [0, 1],
       daOutOfRange: false,
@@ -124,12 +127,12 @@ describe("incomplete payload gossip", () => {
     ] as SequentialGossipHandler<GossipType.data_column_sidecar>;
 
     async function sendEnvelope(): Promise<void> {
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      const envelope = forkTypes.SignedExecutionPayloadEnvelope.defaultValue();
       envelope.message.beaconBlockRoot = blockRoot;
       envelope.message.payload.slotNumber = 1;
       await envelopeHandler({
-        gossipData: {serializedData: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)},
-        topic: {boundary: {fork: ForkName.gloas, epoch: 0}, type: GossipType.execution_payload},
+        gossipData: {serializedData: forkTypes.SignedExecutionPayloadEnvelope.serialize(envelope)},
+        topic: {boundary: {fork, epoch: 0}, type: GossipType.execution_payload},
         peerIdStr,
         seenTimestampSec: Date.now() / 1000,
       });
@@ -137,13 +140,13 @@ describe("incomplete payload gossip", () => {
     }
 
     async function sendColumn(index: number): Promise<void> {
-      const column = ssz.gloas.DataColumnSidecar.defaultValue();
+      const column = forkTypes.DataColumnSidecar.defaultValue();
       column.beaconBlockRoot = blockRoot;
       column.slot = 1;
       column.index = index;
       await columnHandler({
-        gossipData: {serializedData: ssz.gloas.DataColumnSidecar.serialize(column)},
-        topic: {boundary: {fork: ForkName.gloas, epoch: 0}, type: GossipType.data_column_sidecar, subnet: 0},
+        gossipData: {serializedData: forkTypes.DataColumnSidecar.serialize(column)},
+        topic: {boundary: {fork, epoch: 0}, type: GossipType.data_column_sidecar, subnet: 0},
         peerIdStr,
         seenTimestampSec: Date.now() / 1000,
       });
@@ -156,7 +159,7 @@ describe("incomplete payload gossip", () => {
   it("requests missing columns at the configured payload deadline when only the envelope arrives", async () => {
     const {config, payloadInput, onIncomplete, peerIdStr, sendEnvelope} = setup();
     await sendEnvelope();
-    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs() - 1);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork) - 1);
     expect(onIncomplete).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(onIncomplete).toHaveBeenCalledExactlyOnceWith({
@@ -170,7 +173,7 @@ describe("incomplete payload gossip", () => {
     const {config, onIncomplete, sendColumn} = setup();
     await sendColumn(0);
     await sendColumn(1);
-    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs() - 1);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork) - 1);
     expect(onIncomplete).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(onIncomplete).toHaveBeenCalledOnce();
@@ -188,7 +191,7 @@ describe("incomplete payload gossip", () => {
       await sendColumn(0);
       await sendEnvelope();
     }
-    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs());
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork));
     expect(onIncomplete).toHaveBeenCalledOnce();
   });
 
@@ -198,7 +201,7 @@ describe("incomplete payload gossip", () => {
     await sendColumn(0);
     await sendColumn(1);
     expect(payloadInput.isComplete()).toBe(true);
-    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs());
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork));
     expect(onIncomplete).not.toHaveBeenCalled();
   });
 
@@ -207,13 +210,13 @@ describe("incomplete payload gossip", () => {
     await sendEnvelope();
     expect(payloadInput.isComplete()).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
-    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs());
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork));
     expect(onIncomplete).not.toHaveBeenCalled();
   });
 
   it("emits once when the first message arrives after the deadline", async () => {
     const {config, onIncomplete, sendEnvelope, sendColumn} = setup();
-    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs() + 1);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork) + 1);
     await sendEnvelope();
     await vi.advanceTimersByTimeAsync(1);
     expect(onIncomplete).toHaveBeenCalledOnce();
@@ -226,7 +229,7 @@ describe("incomplete payload gossip", () => {
     const {config, onIncomplete, getPayloadInput, sendColumn} = setup();
     await sendColumn(0);
     getPayloadInput.mockReturnValue(undefined);
-    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs());
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork));
     expect(onIncomplete).not.toHaveBeenCalled();
   });
 });
@@ -264,8 +267,8 @@ describe("getGossipHandlers", () => {
   });
 
   it("imports a signature-verified REPEAT_PROPOSAL (equivocating) block into fork choice but keeps IGNORE", async () => {
-    const {processBlock, threw, removeBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: true});
-    expect(removeBlockInput).not.toHaveBeenCalled();
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: true});
+    expect(getByBlock).toHaveBeenCalledOnce();
 
     // imported so LMD-GHOST can weigh it ...
     expect(processBlock).toHaveBeenCalledOnce();
@@ -273,25 +276,33 @@ describe("getGossipHandlers", () => {
     expect(threw).toBe(true);
   });
 
-  it("removes only the rejected block's own cache entry on gossip REJECT", async () => {
-    const {processBlock, threw, removeBlockInput, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {
+  it("does not cache a block rejected by gossip validation", async () => {
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(denebConfig, {
       recorded: false,
       reject: true,
     });
     expect(threw).toBe(true);
     expect(processBlock).not.toHaveBeenCalled();
-    expect(removeBlockInput).toHaveBeenCalledOnce();
-    expect(pruneBlockInput).not.toHaveBeenCalled();
+    expect(getByBlock).not.toHaveBeenCalled();
   });
 
   it("does not import a REPEAT_PROPOSAL block whose root was not recorded (unverified 3rd+ proposal)", async () => {
-    const {processBlock, threw, removeBlockInput, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(denebConfig, {
       recorded: false,
     });
-    // the block is not kept around, sync re-downloads it if it ever becomes relevant. Only its own entry goes,
-    // an unverified block must not be able to evict the ancestors it claims
-    expect(removeBlockInput).toHaveBeenCalledOnce();
-    expect(pruneBlockInput).not.toHaveBeenCalled();
+    // the block is not kept around, sync re-downloads it if it ever becomes relevant
+    expect(getByBlock).not.toHaveBeenCalled();
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
+  });
+
+  it("does not import a signature-verified REPEAT_PROPOSAL block whose parent is unknown", async () => {
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(denebConfig, {
+      recorded: true,
+      parentKnown: false,
+    });
+    expect(getByBlock).not.toHaveBeenCalled();
 
     expect(processBlock).not.toHaveBeenCalled();
     expect(threw).toBe(true);
@@ -437,6 +448,8 @@ async function runBeaconBlockProcessingError(
     seenBlockProposers: new SeenBlockProposers(),
     seenBlockInputCache: {
       getByBlock: vi.fn().mockReturnValue(blockInput),
+      markValidatingBlock: vi.fn(),
+      unmarkValidatingBlock: vi.fn(),
       prune: vi.fn(),
     } as unknown as SeenBlockInput,
     seenPayloadEnvelopeInputCache: {
@@ -483,12 +496,11 @@ async function runBeaconBlockProcessingError(
 
 async function runBeaconBlockRepeatProposal(
   config: BeaconConfig,
-  {recorded, reject = false}: {recorded: boolean; reject?: boolean}
+  {recorded, reject = false, parentKnown = true}: {recorded: boolean; reject?: boolean; parentKnown?: boolean}
 ): Promise<{
   processBlock: ReturnType<typeof vi.fn>;
   threw: boolean;
-  removeBlockInput: ReturnType<typeof vi.fn>;
-  pruneBlockInput: ReturnType<typeof vi.fn>;
+  getByBlock: ReturnType<typeof vi.fn>;
 }> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
@@ -536,12 +548,12 @@ async function runBeaconBlockRepeatProposal(
   }
 
   const processBlock = vi.fn().mockResolvedValue(undefined);
-  const removeBlockInput = vi.fn();
-  const pruneBlockInput = vi.fn();
+  const getByBlock = vi.fn().mockReturnValue(blockInput);
   const chain = {
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
+    forkChoice: {getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {} : null)},
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
     persistInvalidSszValue: vi.fn(),
@@ -549,10 +561,10 @@ async function runBeaconBlockRepeatProposal(
     processProposerEquivocation: vi.fn(),
     seenBlockProposers,
     seenBlockInputCache: {
-      getByBlock: vi.fn().mockReturnValue(blockInput),
-      get: vi.fn().mockReturnValue(blockInput),
-      remove: removeBlockInput,
-      prune: pruneBlockInput,
+      getByBlock,
+      markValidatingBlock: vi.fn(),
+      unmarkValidatingBlock: vi.fn(),
+      prune: vi.fn(),
     } as unknown as SeenBlockInput,
     seenPayloadEnvelopeInputCache: {
       add: vi.fn(),
@@ -596,7 +608,7 @@ async function runBeaconBlockRepeatProposal(
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {processBlock, threw, removeBlockInput, pruneBlockInput};
+  return {processBlock, threw, getByBlock};
 }
 
 function getExecutionBlockError(

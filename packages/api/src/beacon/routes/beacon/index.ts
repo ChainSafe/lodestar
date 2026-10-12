@@ -31,6 +31,7 @@ export type {
   ValidatorIdentities,
   ValidatorResponse,
   ValidatorStatus,
+  ValidatorStatusFilter,
 } from "./state.js";
 
 const SignedProposerPreferencesListType = ArrayOf(ssz.gloas.SignedProposerPreferences);

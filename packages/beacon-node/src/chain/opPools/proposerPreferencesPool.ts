@@ -1,5 +1,7 @@
 import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {toHex, toRootHex} from "@lodestar/utils";
+import {IBeaconDb} from "../../db/index.js";
+import {persistDiff} from "./utils.js";
 
 /**
  * Pool of validated `SignedProposerPreferences` indexed by `(slot, dependent_root)`.
@@ -63,5 +65,22 @@ export class ProposerPreferencesPool {
     for (const slot of this.bySlot.keys()) {
       if (slot < currentSlot) this.bySlot.delete(slot);
     }
+  }
+
+  /** Restore the preferences of upcoming slots, they were validated before they were persisted */
+  async fromPersisted(db: IBeaconDb, currentSlot: Slot): Promise<void> {
+    for (const signed of await db.proposerPreferences.values()) {
+      if (signed.message.proposalSlot >= currentSlot) {
+        this.add(signed);
+      }
+    }
+  }
+
+  async toPersisted(db: IBeaconDb): Promise<void> {
+    await persistDiff(
+      db.proposerPreferences,
+      this.getAll().map((signed) => ({key: db.proposerPreferences.getId(signed), value: signed})),
+      toHex
+    );
   }
 }

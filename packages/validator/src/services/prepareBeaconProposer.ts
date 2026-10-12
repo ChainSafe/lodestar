@@ -14,7 +14,8 @@ const REGISTRATION_CHUNK_SIZE = 512;
  * the engine for building execution payload with transactions.
  *
  * This needs to be done every epoch because the BN will cache it at most for
- * two epochs.
+ * two epochs. From gloas the beacon node takes the fee recipient from the signed
+ * proposer preferences and the validators using it from the committee subscriptions.
  */
 export function pollPrepareBeaconProposer(
   config: BeaconConfig,
@@ -27,6 +28,9 @@ export function pollPrepareBeaconProposer(
   async function prepareBeaconProposer(epoch: Epoch): Promise<void> {
     // Before bellatrix we don't need to update this data on bn/builder
     if (epoch < config.BELLATRIX_FORK_EPOCH - 1) return;
+
+    // Proposer data is pre-gloas only, replaced by proposer preferences and committee subscriptions
+    if (config.getForkSeq(epoch * SLOTS_PER_EPOCH) >= ForkSeq.gloas) return;
 
     // prepareBeaconProposer is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.prepareBeaconProposer once

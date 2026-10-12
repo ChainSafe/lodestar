@@ -40,7 +40,7 @@ export const hoodiChainConfig: ChainConfig = {
   FULU_FORK_EPOCH: 50688,
   // Gloas
   GLOAS_FORK_VERSION: b("0x80000910"),
-  GLOAS_FORK_EPOCH: Infinity,
+  GLOAS_FORK_EPOCH: 132352,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -62,6 +62,15 @@ export const hoodiChainConfig: ChainConfig = {
     {
       EPOCH: 54016,
       MAX_BLOBS_PER_BLOCK: 21,
+    },
+  ],
+
+  // Gas Limit Scheduling
+  // ---------------------------------------------------------------
+  GAS_LIMIT_SCHEDULE: [
+    {
+      EPOCH: 132352,
+      GAS_LIMIT: 200000000,
     },
   ],
 };

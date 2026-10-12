@@ -1,14 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
-import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
-import {IBeaconStateView, IBeaconStateViewGloas, isStatePostGloas} from "../stateView/interface.js";
+import {phase0, ssz} from "@lodestar/types";
+import {IBeaconStateView} from "../stateView/interface.js";
 import {
   ISignatureSet,
   SignatureSetType,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  convertValidatorIndexToBuilderIndex,
-  isBuilderIndex,
   verifySignatureSet,
 } from "../util/index.js";
 
@@ -28,35 +25,8 @@ export function getVoluntaryExitSignatureSet(
   state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
-  const fork = config.getForkSeq(state.slot);
-
-  if (fork >= ForkSeq.gloas && isBuilderVoluntaryExit(signedVoluntaryExit)) {
-    if (!isStatePostGloas(state)) {
-      throw new Error(`Expected gloas+ state for builder voluntary exit signature, got fork=${state.forkName}`);
-    }
-    return getBuilderVoluntaryExitSignatureSet(config, state, signedVoluntaryExit);
-  }
-
-  return getValidatorVoluntaryExitSignatureSet(config, state.slot, signedVoluntaryExit);
-}
-
-export function getVoluntaryExitsSignatureSets(
-  config: BeaconConfig,
-  state: IBeaconStateView,
-  signedBlock: SignedBeaconBlock
-): ISignatureSet[] {
-  return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
-    getVoluntaryExitSignatureSet(config, state, voluntaryExit)
-  );
-}
-
-export function getValidatorVoluntaryExitSignatureSet(
-  config: BeaconConfig,
-  stateSlot: Slot,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit
-): ISignatureSet {
   const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = config.getDomainForVoluntaryExit(stateSlot, messageSlot);
+  const domain = config.getDomainForVoluntaryExit(state.slot, messageSlot);
 
   return {
     type: SignatureSetType.indexed,
@@ -64,26 +34,4 @@ export function getValidatorVoluntaryExitSignatureSet(
     signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
     signature: signedVoluntaryExit.signature,
   };
-}
-
-export function getBuilderVoluntaryExitSignatureSet(
-  config: BeaconConfig,
-  state: IBeaconStateViewGloas,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit
-): ISignatureSet {
-  const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = config.getDomainForVoluntaryExit(state.slot, messageSlot);
-  const builderIndex = convertValidatorIndexToBuilderIndex(signedVoluntaryExit.message.validatorIndex);
-  const builder = state.getBuilder(builderIndex);
-
-  return {
-    type: SignatureSetType.single,
-    pubkey: builder.pubkey,
-    signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
-    signature: signedVoluntaryExit.signature,
-  };
-}
-
-export function isBuilderVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit): boolean {
-  return isBuilderIndex(signedVoluntaryExit.message.validatorIndex);
 }

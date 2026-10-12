@@ -1,15 +1,23 @@
 import {Logger} from "@lodestar/logger";
-import {ForkName, ForkPostFulu, ForkPreFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPreFulu,
+  ForkSeq,
+  SLOTS_PER_EPOCH,
+  isForkPostBellatrix,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {strip0xPrefix} from "@lodestar/utils";
+import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
+import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {
-  ClientCode,
   ClientVersion,
   ExecutePayloadResponse,
   ExecutionEngineState,
@@ -19,32 +27,14 @@ import {
   PayloadId,
   VersionedHashes,
 } from "./interface.js";
-import {
-  ErrorJsonRpcResponse,
-  HttpRpcError,
-  IJsonRpcHttpClient,
-  JsonRpcHttpClientEvent,
-  ReqOpts,
-} from "./jsonRpcHttpClient.js";
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClientEvent} from "./jsonRpcHttpClient.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
-import {
-  BLOB_AND_PROOF_V2_RPC_BYTES,
-  EngineApiRpcParamTypes,
-  EngineApiRpcReturnTypes,
-  ExecutionPayloadBodyV2,
-  assertReqSizeLimit,
-  deserializeBlobAndProofs,
-  deserializeBlobAndProofsV2,
-  deserializeBlobAndProofsV2IntoBytes,
-  deserializeExecutionPayloadBodyV2,
-  parseExecutionPayload,
-  serializeBeaconBlockRoot,
-  serializeExecutionPayload,
-  serializeExecutionRequests,
-  serializePayloadAttributes,
-  serializeVersionedHashes,
-} from "./types.js";
-import {bytesToData, getExecutionEngineState} from "./utils.js";
+import {EngineRestError, EngineRestResponseError, isRetryableEngineRestError} from "./restHttpClient.js";
+import {EngineCapabilities, RestEngineTransport} from "./restTransport.js";
+import {executionForkName} from "./sszTypes.js";
+import {IEngineTransport, PayloadStatusResult} from "./transport.js";
+import {ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
+import {getExecutionEngineState} from "./utils.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -52,11 +42,21 @@ export type ExecutionEngineModules = {
   logger: Logger;
 };
 
+/**
+ * Engine API transport selection
+ * - `auto`: negotiate REST with one execution URL; use JSON-RPC for multiple URLs or unadvertised features
+ * - `ssz`: always use the REST API with SSZ encoding
+ * - `json-rpc`: always use the legacy JSON-RPC API
+ */
+export type EngineApiMode = "auto" | "ssz" | "json-rpc";
+export const engineApiModes: EngineApiMode[] = ["auto", "ssz", "json-rpc"];
+
 export type ExecutionEngineHttpOpts = {
   urls: string[];
   retries: number;
   retryDelay: number;
   timeout?: number;
+  engineApi?: EngineApiMode;
   /**
    * 256 bit jwt secret in hex format without the leading 0x. If provided, the execution engine
    * rpc requests will be bundled by an authorization header having a fresh jwt token on each
@@ -92,7 +92,18 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   retries: 2,
   retryDelay: 2000,
   timeout: 12000,
+  engineApi: "auto",
 };
+
+export type ExecutionEngineTransports = {
+  jsonRpc: IEngineTransport;
+  rest?: RestEngineTransport;
+};
+
+type RestSupport =
+  | {state: "pending"; error?: Error}
+  | {state: "unsupported"}
+  | {state: "supported"; capabilities: EngineCapabilities};
 
 /**
  * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
@@ -100,30 +111,18 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  */
 const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
 
-/**
- * Maximum number of version hashes that can be sent in a getBlobs request
- * Clients must support at least 128 versionedHashes, so we avoid sending more
- * https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#specification-3
- */
-const MAX_VERSIONED_HASHES = 128;
-
-// Define static options once to prevent extra allocations
-const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
-const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
-const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
-const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
-const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
-const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
-const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
+/** Minimum delay between capabilities probes while the execution client is unreachable */
+const REST_PROBE_RETRY_MS = 12_000;
 
 /**
- * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
- * - Supported communication protocols (HTTP and WebSocket)
- * - Message format and encoding notation
- * - Error codes improvement proposal
+ * Drives the execution client over the engine API, either the legacy `engine_*` JSON-RPC methods
+ * or the REST API with SSZ encoded bodies.
+ * https://github.com/ethereum/execution-apis/tree/main/src/engine
  *
- * Client software MUST expose Engine API at a port independent from JSON-RPC API. The default port for the Engine API is 8550 for HTTP and 8551 for WebSocket.
- * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
+ * In `auto` mode a capabilities response from a server without the REST API, a 4xx other than
+ * 401/403, selects JSON-RPC until the EL reconnects. Transient discovery failures use JSON-RPC while
+ * awaiting another probe; authentication failures fail visibly, malformed capabilities fall back to
+ * JSON-RPC with a warning. Forks and blob revisions the EL does not advertise also use JSON-RPC.
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
@@ -147,42 +146,55 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * the order of new payloads and fcUs is pretty important to EL, this queue will serialize the calls in the
    * order with which we make them.
    */
-  private readonly rpcFetchQueue: JobItemQueue<[EngineRequest], EngineResponse>;
+  private readonly queue: JobItemQueue<[() => Promise<unknown>], unknown>;
 
-  private jobQueueProcessor = async ({method, params, methodOpts}: EngineRequest): Promise<EngineResponse> => {
-    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-      {method, params},
-      methodOpts
-    );
-  };
+  private readonly jsonRpc: IEngineTransport;
+  private readonly rest: RestEngineTransport | null;
+  private readonly engineApi: EngineApiMode;
+  private restSupport: RestSupport = {state: "pending"};
+  private restProbe: Promise<RestSupport> | null = null;
+  private lastRestProbeMs = Number.NEGATIVE_INFINITY;
+  private readonly loggedRestFallbacks = new Set<ForkName | "v1" | "v2">();
 
   constructor(
-    private readonly rpc: IJsonRpcHttpClient,
+    {jsonRpc, rest}: ExecutionEngineTransports,
     {metrics, signal, logger}: ExecutionEngineModules,
     private readonly opts?: ExecutionEngineHttpOpts
   ) {
-    this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
-      this.jobQueueProcessor,
+    this.queue = new JobItemQueue<[() => Promise<unknown>], unknown>(
+      (job) => job(),
       {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, noYieldIfOneItem: true, signal},
       metrics?.engineHttpProcessorQueue
     );
     this.logger = logger;
     this.metrics = metrics ?? null;
+    this.jsonRpc = jsonRpc;
+    this.rest = rest ?? null;
+    this.engineApi = opts?.engineApi ?? "auto";
 
-    this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
-      this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}));
+    if (this.engineApi === "ssz" && this.rest === null) {
+      throw Error("REST transport is required for engineApi=ssz");
+    }
+
+    // REST errors are handled in withTransport after compatibility fallback.
+    this.jsonRpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
+      this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}), error);
     });
 
-    this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
-      if (this.clientVersion === undefined) {
-        this.clientVersion = null;
-        // This statement should only be called first time receiving response after startup
-        this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
-          this.logger.debug("Unable to get execution client version", {}, e);
-        });
-      }
-      this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
-    });
+    for (const transport of [this.jsonRpc, this.rest]) {
+      transport?.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
+        if (this.clientVersion === undefined) {
+          this.clientVersion = null;
+          // This statement should only be called first time receiving response after startup
+          this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
+            this.logger.debug("Unable to get execution client version", {}, e);
+          });
+        }
+        this.updateEngineState(
+          getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state})
+        );
+      });
+    }
   }
 
   /**
@@ -214,20 +226,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     parentBlockRoot?: Root,
     executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse> {
-    const method =
-      ForkSeq[fork] >= ForkSeq.gloas
-        ? "engine_newPayloadV5"
-        : ForkSeq[fork] >= ForkSeq.electra
-          ? "engine_newPayloadV4"
-          : ForkSeq[fork] >= ForkSeq.deneb
-            ? "engine_newPayloadV3"
-            : ForkSeq[fork] >= ForkSeq.capella
-              ? "engine_newPayloadV2"
-              : "engine_newPayloadV1";
-
-    const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
-
-    let engineRequest: EngineRequest;
+    // Validate before queueing, argument errors must not be reported as an unavailable execution client
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       if (versionedHashes === undefined) {
         throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
@@ -235,49 +234,31 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       if (parentBlockRoot === undefined) {
         throw Error(`parentBlockRoot required in notifyNewPayload for fork=${fork}`);
       }
-
-      const serializedVersionedHashes = serializeVersionedHashes(versionedHashes);
-      const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
-
-      if (ForkSeq[fork] >= ForkSeq.electra) {
-        if (executionRequests === undefined) {
-          throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
-        }
-        const serializedExecutionRequests = serializeExecutionRequests(fork, executionRequests);
-        engineRequest = {
-          method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
-          params: [
-            serializedExecutionPayload,
-            serializedVersionedHashes,
-            parentBeaconBlockRoot,
-            serializedExecutionRequests,
-          ],
-          methodOpts: notifyNewPayloadOpts,
-        };
-      } else {
-        engineRequest = {
-          method: "engine_newPayloadV3",
-          params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
-          methodOpts: notifyNewPayloadOpts,
-        };
+      if (ForkSeq[fork] >= ForkSeq.electra && executionRequests === undefined) {
+        throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
       }
-    } else {
-      const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
-      engineRequest = {
-        method,
-        params: [serializedExecutionPayload],
-        methodOpts: notifyNewPayloadOpts,
-      };
     }
 
-    const {status, latestValidHash, validationError} = await (
-      this.rpcFetchQueue.push(engineRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
-    ).catch((e: Error) => {
-      if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
-        return {status: ExecutionPayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
-      }
-      return {status: ExecutionPayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
-    });
+    let result: PayloadStatusResult;
+    try {
+      result = await this.enqueue(() =>
+        this.withTransport(fork, undefined, (transport) =>
+          transport.newPayload(fork, executionPayload, versionedHashes, parentBlockRoot, executionRequests)
+        )
+      );
+    } catch (e) {
+      const status = isEngineResponseError(e as Error)
+        ? ExecutionPayloadStatus.ELERROR
+        : ExecutionPayloadStatus.UNAVAILABLE;
+      // Only newPayload treats an unreachable execution client, including a timeout, as offline
+      const newState =
+        status === ExecutionPayloadStatus.UNAVAILABLE && !isErrorAborted(e) && !isQueueErrorAborted(e)
+          ? getExecutionEngineState({payloadStatus: status, oldState: this.state})
+          : getExecutionEngineState({payloadError: e, oldState: this.state});
+      this.updateEngineState(newState, e as Error);
+      return {status, latestValidHash: null, validationError: (e as Error).message};
+    }
+    const {status, latestValidHash, validationError} = result;
 
     this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
 
@@ -346,32 +327,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId | null> {
-    // Once on capella, should this need to be permanently switched to v2 when payload attrs
-    // not provided
-    const method =
-      ForkSeq[fork] >= ForkSeq.gloas
-        ? "engine_forkchoiceUpdatedV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_forkchoiceUpdatedV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_forkchoiceUpdatedV2"
-            : "engine_forkchoiceUpdatedV1";
-    const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
-    // If we are just fcUing and not asking execution for payload, retry is not required
-    // and we can move on, as the next fcU will be issued soon on the new slot
-    const fcUReqOpts =
-      payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retries: 0};
-
-    const request = this.rpcFetchQueue.push({
-      method,
-      params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc],
-      methodOpts: fcUReqOpts,
-    }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
-
     const {
-      payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
+      payloadStatus: {status, validationError},
       payloadId,
-    } = await request;
+    } = await this.enqueue(() =>
+      this.withTransport(fork, undefined, (transport) =>
+        transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes)
+      )
+    );
 
     this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
     this.metrics?.engineNotifyForkchoiceUpdateResult.inc({result: status});
@@ -379,15 +342,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (status) {
       case ExecutionPayloadStatus.VALID:
         // if payloadAttributes are provided, a valid payloadId is expected
-        if (payloadAttributesRpc) {
-          if (!payloadId || payloadId === "0x") {
+        if (payloadAttributes) {
+          if (payloadId === null) {
             throw Error(`Received invalid payloadId=${payloadId}`);
           }
 
+          const payloadAttributesRpc = serializePayloadAttributes(payloadAttributes);
           this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...payloadAttributesRpc}, payloadId);
           void this.prunePayloadIdCache();
         }
-        return payloadId !== "0x" ? payloadId : null;
+        return payloadId;
 
       case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
@@ -425,40 +389,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
-    let method: keyof EngineApiRpcReturnTypes;
-    switch (fork) {
-      case ForkName.phase0:
-      case ForkName.altair:
-      case ForkName.bellatrix:
-        method = "engine_getPayloadV1";
-        break;
-      case ForkName.capella:
-        method = "engine_getPayloadV2";
-        break;
-      case ForkName.deneb:
-        method = "engine_getPayloadV3";
-        break;
-      case ForkName.electra:
-        method = "engine_getPayloadV4";
-        break;
-      case ForkName.fulu:
-        method = "engine_getPayloadV5";
-        break;
-      default:
-        method = "engine_getPayloadV6";
-        break;
-    }
-    const payloadResponse = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >(
-      {
-        method,
-        params: [payloadId],
-      },
-      getPayloadOpts
-    );
-    return parseExecutionPayload(fork, payloadResponse);
+    return this.withTransport(fork, undefined, (transport) => transport.getPayload(fork, payloadId));
   }
 
   async prunePayloadIdCache(): Promise<void> {
@@ -466,13 +397,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]> {
-    const method = "engine_getPayloadBodiesByHashV2";
-    assertReqSizeLimit(blockHashes.length, 32);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
-    return response.map(deserializeExecutionPayloadBodyV2);
+    return this.withTransport(ForkName.gloas, undefined, (transport) =>
+      transport.getPayloadBodiesByHashV2(blockHashes)
+    );
   }
 
   async getBlobs(
@@ -490,95 +417,168 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     versionedHashes: VersionedHashes,
     buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
-    assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
-    const versionedHashesHex = versionedHashes.map(bytesToData);
     if (isForkPostFulu(fork)) {
-      return await this.getBlobsV2(versionedHashesHex, buffers);
+      return this.withTransport(undefined, "v2", (transport) => transport.getBlobsV2(versionedHashes, buffers));
     }
-    return await this.getBlobsV1(versionedHashesHex);
+    return this.withTransport(undefined, "v1", (transport) => transport.getBlobsV1(versionedHashes));
   }
 
-  private async getBlobsV1(versionedHashesHex: string[]) {
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes["engine_getBlobsV1"],
-      EngineApiRpcParamTypes["engine_getBlobsV1"]
-    >(
-      {
-        method: "engine_getBlobsV1",
-        params: [versionedHashesHex],
-      },
-      getBlobsV1Opts
-    );
-
-    const invalidLength = response.length !== versionedHashesHex.length;
-
-    if (invalidLength) {
-      const error = `Invalid engine_getBlobsV1 response length=${response.length} versionedHashes=${versionedHashesHex.length}`;
-      this.logger.error(error);
-      throw Error(error);
-    }
-
-    return response.map(deserializeBlobAndProofs);
+  private enqueue<T>(job: () => Promise<T>): Promise<T> {
+    return this.queue.push(job) as Promise<T>;
   }
 
-  private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {
-    if (buffers) {
-      // Callers preallocate one buffer per max blobs of the epoch, only the first entries are used
-      if (buffers.length < versionedHashesHex.length) {
-        throw Error(`Not enough buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
+  /**
+   * Run a call on the selected transport. An execution client that advertises a fork in its
+   * capabilities but rejects it with `unsupported-fork` is not spec compliant, keep the node
+   * functional by serving that fork over JSON-RPC from then on.
+   */
+  private async withTransport<T>(
+    fork: ForkName | undefined,
+    blobsRevision: "v1" | "v2" | undefined,
+    fn: (transport: IEngineTransport) => Promise<T>
+  ): Promise<T> {
+    const transport = await this.getTransport(fork, blobsRevision);
+    this.metrics?.engineApiRequests.inc({transport: transport === this.rest ? "ssz" : "json-rpc"});
+    try {
+      return await fn(transport);
+    } catch (e) {
+      if (fork !== undefined && transport === this.rest && this.engineApi === "auto" && isUnsupportedForkError(e)) {
+        this.disableRestForFork(fork, e);
+        this.metrics?.engineApiRequests.inc({transport: "json-rpc"});
+        return fn(this.jsonRpc);
       }
+      if (transport === this.rest) {
+        this.updateEngineState(getExecutionEngineState({payloadError: e, oldState: this.state}), e as Error);
+      }
+      throw e;
+    }
+  }
 
-      for (const [i, buffer] of buffers.entries()) {
-        if (buffer.length !== BLOB_AND_PROOF_V2_RPC_BYTES) {
-          throw Error(`Invalid buffer[${i}] length=${buffer.length} expected=${BLOB_AND_PROOF_V2_RPC_BYTES}`);
+  private disableRestForFork(fork: ForkName, e: EngineRestError): void {
+    const executionFork = isForkPostBellatrix(fork) ? executionForkName[fork] : null;
+    if (this.restSupport.state === "supported" && executionFork !== null) {
+      this.restSupport.capabilities.supportedForks.delete(executionFork);
+    }
+    if (!this.loggedRestFallbacks.has(fork)) {
+      this.loggedRestFallbacks.add(fork);
+      this.logger.debug("REST engine API rejected an advertised fork, using JSON-RPC until reconnect", {
+        fork,
+        executionFork,
+        status: e.status,
+        type: e.type,
+        detail: e.detail,
+      });
+    }
+  }
+
+  /**
+   * Pick the transport for a call. Fork-scoped calls only go over REST if the execution client
+   * advertises that fork, blob requests only if it serves the needed `/blobs/vN` revision.
+   */
+  private async getTransport(fork?: ForkName, blobsRevision?: "v1" | "v2"): Promise<IEngineTransport> {
+    if (this.rest === null || this.engineApi === "json-rpc") {
+      return this.jsonRpc;
+    }
+    const restSupport = await this.probeRestSupport(this.rest);
+    if (restSupport.state === "pending" && restSupport.error) {
+      this.updateEngineState(
+        getExecutionEngineState({payloadError: restSupport.error, oldState: this.state}),
+        restSupport.error
+      );
+      throw restSupport.error;
+    }
+    if (this.engineApi === "ssz") {
+      return this.rest;
+    }
+    if (restSupport.state !== "supported") {
+      return this.jsonRpc;
+    }
+
+    if (fork !== undefined) {
+      const executionFork = isForkPostBellatrix(fork) ? executionForkName[fork] : null;
+      if (executionFork === null || !restSupport.capabilities.supportedForks.has(executionFork)) {
+        if (!this.loggedRestFallbacks.has(fork)) {
+          this.loggedRestFallbacks.add(fork);
+          this.logger.debug("Using JSON-RPC for a fork not advertised by the REST engine API", {fork, executionFork});
         }
+        return this.jsonRpc;
       }
     }
-
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes["engine_getBlobsV2"],
-      EngineApiRpcParamTypes["engine_getBlobsV2"]
-    >(
-      {
-        method: "engine_getBlobsV2",
-        params: [versionedHashesHex],
-      },
-      getBlobsV2Opts
-    );
-
-    // engine_getBlobsV2 does not return partial responses. It returns null if any blob is not found
-    const invalidLength = !!response && response.length !== versionedHashesHex.length;
-
-    if (invalidLength) {
-      const error = `Invalid engine_getBlobsV2 response length=${response?.length ?? "null"} versionedHashes=${versionedHashesHex.length}`;
-      this.logger.error(error);
-      throw Error(error);
+    if (blobsRevision !== undefined && !restSupport.capabilities.blobsRevisions.has(blobsRevision)) {
+      if (!this.loggedRestFallbacks.has(blobsRevision)) {
+        this.loggedRestFallbacks.add(blobsRevision);
+        this.logger.debug("Using JSON-RPC for a blob revision not advertised by the REST engine API", {blobsRevision});
+      }
+      return this.jsonRpc;
     }
 
-    if (response == null) {
-      return null;
+    return this.rest;
+  }
+
+  private probeRestSupport(rest: RestEngineTransport): Promise<RestSupport> {
+    if (this.restSupport.state !== "pending") {
+      return Promise.resolve(this.restSupport);
+    }
+    if (this.restProbe !== null) {
+      return this.restProbe;
+    }
+    // Transport errors keep the probe pending, do not retry on every call while the EL is down
+    if (Date.now() - this.lastRestProbeMs < REST_PROBE_RETRY_MS) {
+      return Promise.resolve(this.restSupport);
     }
 
-    if (buffers) {
-      // getBlobsV2() is designed to called once per slot so we expect to have buffers
-      return response.map((data, i) => deserializeBlobAndProofsV2IntoBytes(data, buffers[i]));
-    }
+    this.restProbe = rest
+      .getCapabilities()
+      .then(
+        (capabilities): RestSupport => {
+          this.restSupport = {state: "supported", capabilities};
+          this.loggedRestFallbacks.clear();
+          this.logger.debug("Discovered REST engine API capabilities", {
+            supportedForks: Array.from(capabilities.supportedForks).join(","),
+            blobsRevisions: Array.from(capabilities.blobsRevisions).join(","),
+            ...capabilities.limits,
+          });
+          return this.restSupport;
+        },
+        (e: Error): RestSupport => {
+          if (this.engineApi === "auto" && isRestApiAbsent(e)) {
+            this.restSupport = {state: "unsupported"};
+            this.logger.debug("Execution client does not support engine API over REST, using JSON-RPC", {
+              status: e.status,
+              type: e.type ?? "unknown",
+            });
+          } else if (this.engineApi === "auto" && e instanceof EngineRestResponseError) {
+            // The REST API answered but cannot be trusted, auto mode must keep the node on a working transport
+            this.restSupport = {state: "unsupported"};
+            this.logger.warn("Invalid engine API capabilities, using JSON-RPC until reconnect", {}, e);
+          } else {
+            const transient = isRetryableEngineRestError(e);
+            this.restSupport = {state: "pending", error: this.engineApi === "auto" && transient ? undefined : e};
+            this.logger.debug(
+              "Unable to probe engine API capabilities",
+              {
+                engineApi: this.engineApi,
+                fallback: this.restSupport.error ? "none" : "json-rpc",
+                retryAfterMs: REST_PROBE_RETRY_MS,
+              },
+              e
+            );
+          }
+          return this.restSupport;
+        }
+      )
+      .finally(() => {
+        this.restProbe = null;
+        this.lastRestProbeMs = Date.now();
+      });
 
-    return response.map(deserializeBlobAndProofsV2);
+    return this.restProbe;
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
-    const method = "engine_getClientVersionV1";
-
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]}, getClientVersionOpts);
-
-    const clientVersions = response.map((cv) => {
-      const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
-      return {code, name: cv.name, version: cv.version, commit: strip0xPrefix(cv.commit)};
-    });
+    const clientVersions = await this.withTransport(undefined, undefined, (transport) =>
+      transport.getClientVersion(clientVersion)
+    );
 
     if (clientVersions.length === 0) {
       throw Error("Received empty client versions array");
@@ -590,7 +590,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return clientVersions;
   }
 
-  private updateEngineState(newState: ExecutionEngineState): void {
+  private updateEngineState(newState: ExecutionEngineState, error?: Error): void {
     const oldState = this.state;
 
     if (oldState === newState) return;
@@ -598,22 +598,33 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (newState) {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
+        if (oldState === ExecutionEngineState.AUTH_FAILED) {
+          this.restSupport = {state: "pending"};
+          this.lastRestProbeMs = Number.NEGATIVE_INFINITY;
+        }
         this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
           this.logger.debug("Unable to get execution client version", {}, e);
           this.clientVersion = null;
         });
         break;
       case ExecutionEngineState.OFFLINE:
-        this.logger.error("Execution client went offline", {oldState, newState});
+        // Reprobe before choosing a transport for the next call after a disconnect.
+        this.restSupport = {state: "pending"};
+        this.lastRestProbeMs = Number.NEGATIVE_INFINITY;
+        this.logger.error("Execution client went offline", {oldState, newState}, error);
         break;
       case ExecutionEngineState.SYNCED:
         this.logger.info("Execution client is synced", {oldState, newState});
         break;
       case ExecutionEngineState.SYNCING:
-        this.logger.warn("Execution client is syncing", {oldState, newState});
+        this.logger.warn(
+          error ? "Execution client request failed" : "Execution client is syncing",
+          {oldState, newState},
+          error
+        );
         break;
       case ExecutionEngineState.AUTH_FAILED:
-        this.logger.error("Execution client authentication failed", {oldState, newState});
+        this.logger.error("Execution client authentication failed", {oldState, newState}, error);
         break;
     }
 
@@ -621,10 +632,32 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 }
 
-type EngineRequestKey = keyof EngineApiRpcParamTypes;
-type EngineRequestByKey = {
-  [K in EngineRequestKey]: {method: K; params: EngineApiRpcParamTypes[K]; methodOpts: ReqOpts};
-};
-type EngineRequest = EngineRequestByKey[EngineRequestKey];
-type EngineResponseByKey = {[K in EngineRequestKey]: EngineApiRpcReturnTypes[K]};
-type EngineResponse = EngineResponseByKey[EngineRequestKey];
+/** The execution client answered, as opposed to being unreachable */
+function isEngineResponseError(e: Error): boolean {
+  return (
+    e instanceof HttpRpcError ||
+    e instanceof ErrorJsonRpcResponse ||
+    e instanceof EngineRestError ||
+    e instanceof EngineRestResponseError
+  );
+}
+
+/**
+ * Legacy JSON-RPC servers and proxies reject the capabilities probe in different ways, a 404 or
+ * another client error such as 405. Neither serves the REST API. Authentication failures and
+ * transient client errors say nothing about REST support.
+ */
+function isRestApiAbsent(e: Error): e is EngineRestError {
+  return (
+    e instanceof EngineRestError &&
+    e.status >= 400 &&
+    e.status < 500 &&
+    e.status !== 401 &&
+    e.status !== 403 &&
+    !isRetryableEngineRestError(e)
+  );
+}
+
+function isUnsupportedForkError(e: unknown): e is EngineRestError {
+  return e instanceof EngineRestError && e.status === 400 && e.type === "/engine-api/errors/unsupported-fork";
+}
