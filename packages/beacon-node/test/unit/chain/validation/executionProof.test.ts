@@ -38,6 +38,7 @@ describe("validateGossipExecutionProof", () => {
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(
       generateProtoBlock({slot: blockSlot, blockRoot: blockRootHex})
     );
+    chain.forkChoice.hasPayloadHexUnsafe.mockReturnValue(true);
     const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
     vi.mocked(chain.seenPayloadEnvelopeInputCache.getOrReload).mockResolvedValue({
       slot: blockSlot,
@@ -63,7 +64,7 @@ describe("validateGossipExecutionProof", () => {
   });
 
   it("accepts a valid proof and hands the proof engine the public input", async () => {
-    await expect(validateGossipExecutionProof(chain, signedProof)).resolves.toBeUndefined();
+    await expect(validateGossipExecutionProof(chain, signedProof)).resolves.toEqual({blockSlot});
 
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
     expect(chain.proofEngine.verifyExecutionProof).toHaveBeenCalledOnce();
@@ -72,10 +73,21 @@ describe("validateGossipExecutionProof", () => {
     expect(proof.proofData).toBe(signedProof.message.proofData);
     expect(proof.publicInput.chainId).toBe(config.DEPOSIT_CHAIN_ID);
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 1, 3)).toBe(true);
+    expect(chain.seenExecutionProofs.hasVerified(blockRootHex, 1)).toBe(true);
+  });
+
+  it("ignores a proof whose payload is seen but not yet imported into fork choice", async () => {
+    chain.forkChoice.hasPayloadHexUnsafe.mockReturnValue(false);
+
+    await expect(validateGossipExecutionProof(chain, signedProof)).rejects.toMatchObject({
+      type: {code: ExecutionProofErrorCode.PAYLOAD_UNAVAILABLE},
+    });
+    expect(chain.seenPayloadEnvelopeInputCache.getOrReload).not.toHaveBeenCalled();
+    expect(chain.regen.getState).not.toHaveBeenCalled();
   });
 
   it("ignores a proof for a block root and proof type that already has a verified proof", async () => {
-    chain.seenExecutionProofs.addVerified(blockRootHex, blockSlot, signedProof.message);
+    chain.seenExecutionProofs.addVerified(blockRootHex, blockSlot, 1);
 
     await expect(validateGossipExecutionProof(chain, signedProof)).rejects.toMatchObject({
       type: {code: ExecutionProofErrorCode.PROOF_ALREADY_KNOWN},
@@ -150,7 +162,7 @@ describe("validateGossipExecutionProof", () => {
     expect(chain.proofEngine.verifyExecutionProof).not.toHaveBeenCalled();
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 1, 3)).toBe(false);
 
-    await expect(validateGossipExecutionProof(chain, signedProof)).resolves.toBeUndefined();
+    await expect(validateGossipExecutionProof(chain, signedProof)).resolves.toEqual({blockSlot});
   });
 
   it("rejects an invalid proof and remembers the prover attempt", async () => {

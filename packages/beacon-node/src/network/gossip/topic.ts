@@ -91,6 +91,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.payload_attestation_message:
     case GossipType.execution_payload_bid:
     case GossipType.proposer_preferences:
+    case GossipType.execution_proof:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -144,6 +145,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.proposer_preferences:
       return ssz.gloas.SignedProposerPreferences;
+    case GossipType.execution_proof:
+      return ssz.eip8025.SignedExecutionProofEnvelope;
   }
 }
 
@@ -235,6 +238,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.payload_attestation_message:
       case GossipType.execution_payload_bid:
       case GossipType.proposer_preferences:
+      case GossipType.execution_proof:
         return {type: gossipTypeStr, boundary, encoding};
     }
 
@@ -274,7 +278,12 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
 export function getCoreTopicsAtFork(
   networkConfig: NetworkConfig,
   fork: ForkName,
-  opts: {subscribeAllSubnets?: boolean; subscribeAllColumnSubnets?: boolean; disableLightClientServer?: boolean}
+  opts: {
+    subscribeAllSubnets?: boolean;
+    subscribeAllColumnSubnets?: boolean;
+    disableLightClientServer?: boolean;
+    executionProofAware?: boolean;
+  }
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   // Common topics for all forks
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
@@ -290,6 +299,9 @@ export function getCoreTopicsAtFork(
     topics.push({type: GossipType.payload_attestation_message});
     topics.push({type: GossipType.execution_payload_bid});
     topics.push({type: GossipType.proposer_preferences});
+    if (opts.executionProofAware) {
+      topics.push({type: GossipType.execution_proof});
+    }
   }
 
   // After fulu also track data_column_sidecar_{index}
@@ -349,6 +361,7 @@ export function getAllowedTopics(networkConfig: NetworkConfig): Set<string> {
       subscribeAllSubnets: true,
       subscribeAllColumnSubnets: true,
       disableLightClientServer: false,
+      executionProofAware: true,
     });
     for (const topic of topics) {
       allowedTopics.add(stringifyGossipTopic(config, {...topic, boundary}));
@@ -409,6 +422,7 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.payload_attestation_message]: true,
   [GossipType.execution_payload_bid]: true,
   [GossipType.proposer_preferences]: true,
+  [GossipType.execution_proof]: true,
 };
 
 /**
@@ -447,4 +461,5 @@ export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
   [GossipType.payload_attestation_message]: false,
   [GossipType.execution_payload_bid]: false,
   [GossipType.proposer_preferences]: false,
+  [GossipType.execution_proof]: false,
 };

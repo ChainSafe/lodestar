@@ -11,6 +11,7 @@ import {
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE,
   SLOTS_PER_EPOCH,
   ZERO_HASH,
 } from "@lodestar/params";
@@ -208,6 +209,16 @@ describe("network / gossip / topic", () => {
         topicStr: "/eth2/a41d57bd/proposer_preferences/ssz_snappy",
       },
     ],
+    [GossipType.execution_proof]: [
+      {
+        topic: {
+          type: GossipType.execution_proof,
+          boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/a41d57bd/execution_proof/ssz_snappy",
+      },
+    ],
   };
 
   for (const topics of Object.values(testCases)) {
@@ -277,11 +288,13 @@ describe("network / gossip / topic", () => {
         boundary,
         encoding,
       }),
+      [GossipType.execution_proof]: getMaxSize({type: GossipType.execution_proof, boundary, encoding}),
     }).toEqual({
       [GossipType.beacon_block]: config.MAX_PAYLOAD_SIZE,
       [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
       [GossipType.attester_slashing]: MAX_ATTESTER_SLASHING_SIZE,
       [GossipType.execution_payload_bid]: MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+      [GossipType.execution_proof]: MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE,
     });
   });
 
@@ -456,11 +469,25 @@ describe("network / gossip / topic", () => {
       return boundary;
     };
 
+    it("subscribes execution_proof only when the node is execution proof-aware", () => {
+      const hasExecutionProof = (opts: Parameters<typeof getCoreTopicsAtFork>[2]): boolean =>
+        getCoreTopicsAtFork(networkConfig, ForkName.gloas, opts).some((t) => t.type === GossipType.execution_proof);
+
+      expect(hasExecutionProof({})).toBe(false);
+      expect(hasExecutionProof({executionProofAware: true})).toBe(true);
+      expect(
+        getCoreTopicsAtFork(networkConfig, ForkName.fulu, {executionProofAware: true}).some(
+          (t) => t.type === GossipType.execution_proof
+        )
+      ).toBe(false);
+    });
+
     it("is a superset of every topic the node may subscribe to across all forks", () => {
       for (const boundary of allForksConfig.forkBoundariesAscendingEpochOrder) {
         const topics = getCoreTopicsAtFork(networkConfig, boundary.fork, {
           subscribeAllSubnets: true,
           disableLightClientServer: false,
+          executionProofAware: true,
         });
         for (const topic of topics) {
           const topicStr = stringifyGossipTopic(allForksConfig, {...topic, boundary});
