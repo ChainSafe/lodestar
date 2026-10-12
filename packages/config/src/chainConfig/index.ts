@@ -1,4 +1,4 @@
-import {ACTIVE_PRESET, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {defaultChainConfig} from "./default.js";
 import {ChainConfig} from "./types.js";
 
@@ -30,10 +30,13 @@ export function createChainConfig(input: Partial<ChainConfig>): ChainConfig {
     config.SLOT_DURATION_MS = config.SECONDS_PER_SLOT * 1000;
   }
 
-  // Preserve the epoch-count retention window for configs that predate MIN_BLOB_DATA_RETENTION_MS
-  if (input.MIN_BLOB_DATA_RETENTION_MS === undefined) {
-    config.MIN_BLOB_DATA_RETENTION_MS =
-      config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS * SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
+  for (const [name, slotDurationMs] of [
+    ["SLOT_DURATION_MS", config.SLOT_DURATION_MS],
+    ["SLOT_DURATION_MS_HEZE", config.SLOT_DURATION_MS_HEZE],
+  ] as const) {
+    if (slotDurationMs <= 0 || slotDurationMs % 1000 !== 0) {
+      throw Error(`Invalid ${name} ${slotDurationMs} must be a positive multiple of 1000`);
+    }
   }
 
   // Assert that the preset matches the active preset
