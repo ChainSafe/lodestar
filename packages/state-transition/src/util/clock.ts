@@ -133,7 +133,7 @@ export class Clock implements IClock {
         if (timeItem === TimeItem.Slot) {
           if (nextSlot > slot + 1) {
             // It's not very likely that we skip more than one slot as HTTP timeout is set
-            // to SLOT_DURATION_MS so we will fail task before skipping another slot.
+            // to at most one slot duration so we will fail task before skipping another slot.
             this.logger.warn("Skipped slot due to task taking more than one slot to run", {
               skippedSlot: slot + 1,
             });
