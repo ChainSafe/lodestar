@@ -105,6 +105,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private cachedPreviousEpochParticipation: Uint8Array | null = null;
   private cachedCurrentEpochParticipation: Uint8Array | null = null;
   private cachedCurrentSyncCommitteeIndexed: SyncCommitteeCache | null = null;
+  private cachedCurrentSyncCommitteeValidatorIndices: Uint32Array | null = null;
   private cachedSyncProposerReward: number | null = null;
   // bellatrix
   private cachedLatestExecutionPayloadHeader: ExecutionPayloadHeader | null = null;
@@ -248,6 +249,9 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get eth1Data(): phase0.Eth1Data {
+    if (this.forkSeq >= ForkSeq.heze) {
+      throw new Error("eth1Data was removed from the beacon state in Heze");
+    }
     if (this.cachedEth1Data === null) {
       this.cachedEth1Data = this.binding.eth1Data;
     }
@@ -740,6 +744,16 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this.cachedCurrentSyncCommitteeIndexed = this.binding.currentSyncCommitteeIndexed;
     }
     return this.cachedCurrentSyncCommitteeIndexed;
+  }
+
+  get currentSyncCommitteeValidatorIndices(): Uint32Array {
+    if (this.cachedCurrentSyncCommitteeValidatorIndices === null) {
+      this.cachedCurrentSyncCommitteeValidatorIndices =
+        this.cachedCurrentSyncCommitteeIndexed?.validatorIndices ??
+        this.binding.currentSyncCommitteeValidatorIndices ??
+        this.currentSyncCommitteeIndexed.validatorIndices;
+    }
+    return this.cachedCurrentSyncCommitteeValidatorIndices;
   }
 
   get syncProposerReward(): number {
