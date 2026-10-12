@@ -44,22 +44,24 @@ The SDK requires its `supports_capture_gaps` handshake capability. The SDK chang
 in `clients/js/src/stream.ts` add native events on the existing ingest/replay
 implementation; no new collector format or Ethereum decoder is needed.
 
-`probe-0.1.0.tgz` packages the SDK at commit `7ce6801`, including bounded batches
+`probe-7ce6801.tgz` packages the SDK at commit `7ce6801`, including bounded batches
 of socket writes. Regenerate it from the companion checkout:
 
 ```sh
 cd /path/to/xray/clients/js
+xray_revision=$(git rev-parse --short HEAD)
 npm ci
 npm run build
 npm pack --pack-destination /path/to/lodestar/.xray
 cd /path/to/lodestar
-mv .xray/xray-probe-0.1.0.tgz .xray/probe-0.1.0.tgz
-pnpm --filter @lodestar/beacon-node add ../../.xray/probe-0.1.0.tgz --ignore-scripts
+mv .xray/xray-probe-0.1.0.tgz ".xray/probe-$xray_revision.tgz"
+pnpm --filter @lodestar/beacon-node add "../../.xray/probe-$xray_revision.tgz" --ignore-scripts
 ```
 
-Refresh the archive integrity in `pnpm-lock.yaml` when replacing the package.
-Keep `tarball: file:.xray/probe-0.1.0.tgz` in its resolution so frozen installs
-resolve the local archive. Docker copies `.xray` before installing dependencies.
+Use a different archive filename for each SDK commit; pnpm can retain an installed
+file dependency when only its contents change. Keep the local `tarball` path in
+its lockfile resolution so frozen installs resolve the archive. Docker copies
+`.xray` before installing dependencies.
 The two libp2p patches carry
 [libp2p/js-libp2p #3650](https://github.com/libp2p/js-libp2p/pull/3650) for the
 fallback backend: global middleware registration and per-stream middleware
