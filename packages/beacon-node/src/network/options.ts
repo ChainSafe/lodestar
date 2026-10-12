@@ -24,6 +24,8 @@ export interface NetworkOptions
    * Both peers must configure each other as direct peers for the feature to work properly.
    */
   directPeers?: string[];
+  xrayAddress?: string;
+  xrayWaitForAttach?: boolean;
   subscribeAllSubnets?: boolean;
   mdns?: boolean;
   connectToDiscv5Bootnodes?: boolean;

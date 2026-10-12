@@ -185,11 +185,11 @@ export class Network implements INetwork {
       logger.info("running libp2p instance in worker thread");
     }
 
-    // Native construction and consumer attachment stay in one JS turn, before notifications run.
+    // Native construction and consumer attachment stay together after any optional collector barrier.
     let core: INetworkCore;
     if (opts.backend === "native") {
       if (!nativeServing) throw new ServingConfigurationError("Native network requires bounded serving handlers");
-      core = NativeNetworkCore.init({
+      core = await NativeNetworkCore.init({
         opts,
         config,
         privateKey,

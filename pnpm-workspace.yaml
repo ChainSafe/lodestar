@@ -14,7 +14,7 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
-  "@chainsafe/lodestar-z": "github:ChainSafe/lodestar-z#a6f1c661b87a3179d18f76eabf106958d0c20b84"
+  "@chainsafe/lodestar-z": "github:ChainSafe/lodestar-z#66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
@@ -44,4 +44,6 @@ overrides:
   sigstore: "4.0.0"
 
 patchedDependencies:
+  "@libp2p/interface@3.3.0": patches/@libp2p__interface@3.3.0.patch
+  libp2p@3.3.9: patches/libp2p@3.3.9.patch
   sigstore@4.0.0: patches/sigstore@4.0.0.patch

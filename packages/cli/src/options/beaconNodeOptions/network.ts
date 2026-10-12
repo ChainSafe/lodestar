@@ -42,6 +42,8 @@ export function hasGlobalIPv6Address(interfaces = os.networkInterfaces()): boole
 }
 
 export type NetworkArgs = {
+  "network.xrayAddress"?: string;
+  "network.xrayWaitForAttach"?: boolean;
   "network.backend"?: "libp2p" | "native";
   "network.native.traceGossip"?: boolean;
   "network.native.traceTurns"?: boolean;
@@ -187,6 +189,10 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const localMu6 = listenAddress6 && tcp ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
   const quicMu6 = listenAddress6 && quic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
+  const xrayAddress = args["network.xrayAddress"]?.trim() || undefined;
+  if (args["network.xrayWaitForAttach"] && !xrayAddress) {
+    throw new YargsError("network.xrayWaitForAttach requires network.xrayAddress");
+  }
   const targetPeers = args.targetPeers;
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
   if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
@@ -215,6 +221,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   };
 
   return {
+    xrayAddress,
+    xrayWaitForAttach: args["network.xrayWaitForAttach"],
     discv5: enableDiscv5
       ? {
           config: {},
@@ -258,6 +266,16 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 }
 
 export const options: CliCommandOptions<NetworkArgs> = {
+  "network.xrayAddress": {
+    description: "Xray collector ingest address (Unix socket path or host:port). Enables application stream capture",
+    type: "string",
+    group: "network",
+  },
+  "network.xrayWaitForAttach": {
+    description: "Wait up to 30 seconds for the Xray collector before starting networking",
+    type: "boolean",
+    group: "network",
+  },
   "network.native.traceTurns": {
     type: "boolean",
     group: "network",

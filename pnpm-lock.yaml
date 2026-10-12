@@ -7,7 +7,7 @@ settings:
 catalogs:
   default:
     '@chainsafe/lodestar-z':
-      specifier: github:ChainSafe/lodestar-z#a6f1c661b87a3179d18f76eabf106958d0c20b84
+      specifier: github:ChainSafe/lodestar-z#66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
       version: 1.1.0
     '@vitest/browser':
       specifier: ^4.0.7
@@ -30,6 +30,8 @@ overrides:
   sigstore: 4.0.0
 
 patchedDependencies:
+  '@libp2p/interface@3.3.0': e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593
+  libp2p@3.3.9: 4459ede331c793037df5ec1c6881709c4c938432c219435c92f5bf4a3047e10a
   sigstore@4.0.0: 0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32
 
 importers:
@@ -41,7 +43,7 @@ importers:
         version: link:packages/cli
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
     devDependencies:
       '@actions/core':
         specifier: ^1.11.1
@@ -102,7 +104,7 @@ importers:
         version: 9.1.5
       libp2p:
         specifier: 3.3.9
-        version: 3.3.9
+        version: 3.3.9(patch_hash=4459ede331c793037df5ec1c6881709c4c938432c219435c92f5bf4a3047e10a)
       node-gyp:
         specifier: ^9.4.0
         version: 9.4.1
@@ -202,7 +204,7 @@ importers:
         version: 2.1.5
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -247,7 +249,7 @@ importers:
         version: 4.1.13
       '@libp2p/interface':
         specifier: ^3.3.0
-        version: 3.3.0
+        version: 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/mdns':
         specifier: ^12.0.30
         version: 12.0.30
@@ -302,6 +304,9 @@ importers:
       '@multiformats/multiaddr':
         specifier: ^13.0.1
         version: 13.0.3
+      '@xray/probe':
+        specifier: file:../../.xray/probe-0.1.0.tgz
+        version: file:.xray/probe-0.1.0.tgz(@libp2p/interface@3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593))
       datastore-core:
         specifier: ^12.0.1
         version: 12.0.1
@@ -322,7 +327,7 @@ importers:
         version: 0.5.6
       libp2p:
         specifier: 3.3.9
-        version: 3.3.9
+        version: 3.3.9(patch_hash=4459ede331c793037df5ec1c6881709c4c938432c219435c92f5bf4a3047e10a)
       multiformats:
         specifier: ^13.4.2
         version: 13.4.2
@@ -389,7 +394,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
       '@chainsafe/ssz':
         specifier: ^1.8.1
         version: 1.8.1
@@ -435,7 +440,7 @@ importers:
         version: 6.0.2
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -450,7 +455,7 @@ importers:
         version: 5.1.23
       '@libp2p/interface':
         specifier: ^3.3.0
-        version: 3.3.0
+        version: 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-id':
         specifier: ^6.0.15
         version: 6.0.15
@@ -589,7 +594,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
       '@chainsafe/ssz':
         specifier: ^1.8.1
         version: 1.8.1
@@ -608,7 +613,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -699,7 +704,7 @@ importers:
         version: 0.5.2
       '@libp2p/interface':
         specifier: ^3.3.0
-        version: 3.3.0
+        version: 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/utils':
         specifier: ^7.4.0
         version: 7.4.1
@@ -739,7 +744,7 @@ importers:
         version: link:../types
       libp2p:
         specifier: 3.3.9
-        version: 3.3.9
+        version: 3.3.9(patch_hash=4459ede331c793037df5ec1c6881709c4c938432c219435c92f5bf4a3047e10a)
 
   packages/spec-test-util:
     dependencies:
@@ -769,7 +774,7 @@ importers:
         version: 1.2.5
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -803,7 +808,7 @@ importers:
         version: 3.1.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -877,7 +882,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8
       '@chainsafe/ssz':
         specifier: ^1.8.1
         version: 1.8.1
@@ -1092,6 +1097,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@bufbuild/protobuf@2.16.0':
+    resolution: {integrity: sha512-FWa0sPlqYGJgpTs6OxBRcL/AW4JT0OIO+W1ajerluoTVh8CV0B7XM1qsNCRgnkSCkRCgOICKHRQlY17jrsm0+Q==}
+
   '@chainsafe/as-chacha20poly1305@0.1.0':
     resolution: {integrity: sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==}
 
@@ -1229,8 +1237,8 @@ packages:
     resolution: {integrity: sha512-U/4P2ApgPVAEC7PCfUgtneCQvmdLiPSFNYkbK1OTXj23Vpguk2rKQFSp9onfT/wEbOGTwWwBs53wgT/NToOKSw==}
     engines: {node: '>= 22'}
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84':
-    resolution: {tarball: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84}
+  '@chainsafe/lodestar-z@https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8':
+    resolution: {tarball: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8}
     version: 1.1.0
 
   '@chainsafe/netmask@2.0.0':
@@ -3051,6 +3059,13 @@ packages:
 
   '@vitest/utils@4.0.7':
     resolution: {integrity: sha512-HNrg9CM/Z4ZWB6RuExhuC6FPmLipiShKVMnT9JlQvfhwR47JatWLChA6mtZqVHqypE6p/z6ofcjbyWpM7YLxPQ==}
+
+  '@xray/probe@file:.xray/probe-0.1.0.tgz':
+    resolution: {integrity: sha512-XDhyS5ozO+TJ2VaXWgV9Yznlm2OGBIkPFWsdwuon+YK2Y8oEj3D54crY2ihKt2MOF38OjKwdyVMa0waKQBa6zQ==, tarball: file:.xray/probe-0.1.0.tgz}
+    version: 0.1.0
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@libp2p/interface': ^3.3.0
 
   abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}
@@ -6572,6 +6587,8 @@ snapshots:
   '@biomejs/cli-win32-x64@2.2.2':
     optional: true
 
+  '@bufbuild/protobuf@2.16.0': {}
+
   '@chainsafe/as-chacha20poly1305@0.1.0': {}
 
   '@chainsafe/as-sha256@1.2.5': {}
@@ -6630,7 +6647,7 @@ snapshots:
       '@chainsafe/enr': 6.0.2
       '@ethereumjs/rlp': 10.1.1
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-id': 6.0.15
       '@multiformats/multiaddr': 13.0.3
       '@noble/hashes': 2.0.1
@@ -6644,7 +6661,7 @@ snapshots:
     dependencies:
       '@ethereumjs/rlp': 10.1.1
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-id': 6.0.15
       '@multiformats/multiaddr': 13.0.3
       '@scure/base': 2.0.0
@@ -6688,7 +6705,7 @@ snapshots:
       '@chainsafe/as-chacha20poly1305': 0.1.0
       '@chainsafe/as-sha256': 1.2.5
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-id': 6.0.15
       '@libp2p/utils': 7.4.1
       '@noble/ciphers': 2.1.1
@@ -6723,7 +6740,7 @@ snapshots:
   '@chainsafe/libp2p-quic@2.1.5':
     dependencies:
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-id': 6.0.15
       '@libp2p/utils': 7.4.1
       '@multiformats/multiaddr': 13.0.3
@@ -6739,7 +6756,7 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.5
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.5
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/a6f1c661b87a3179d18f76eabf106958d0c20b84':
+  '@chainsafe/lodestar-z@https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/66c3602ec744ae3cbe4bf8b37476eb5c004bf9d8':
     dependencies:
       '@chainsafe/zapi': 4.1.0
 
@@ -7574,7 +7591,7 @@ snapshots:
 
   '@libp2p/bootstrap@12.0.30':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/interface-internal': 3.1.12
       '@libp2p/peer-id': 6.0.15
       '@multiformats/multiaddr': 13.0.3
@@ -7583,7 +7600,7 @@ snapshots:
 
   '@libp2p/crypto@5.1.23':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
       multiformats: 14.0.5
@@ -7594,7 +7611,7 @@ snapshots:
   '@libp2p/gossipsub@17.1.2':
     dependencies:
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/interface-internal': 3.1.13
       '@libp2p/peer-id': 6.0.15
       '@libp2p/utils': 7.4.1
@@ -7611,7 +7628,7 @@ snapshots:
   '@libp2p/identify@4.1.13':
     dependencies:
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/interface-internal': 3.1.12
       '@libp2p/peer-id': 6.0.15
       '@libp2p/peer-record': 9.0.16
@@ -7627,19 +7644,19 @@ snapshots:
 
   '@libp2p/interface-internal@3.1.12':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-collections': 7.0.28
       '@multiformats/multiaddr': 13.0.3
       progress-events: 1.1.0
 
   '@libp2p/interface-internal@3.1.13':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-collections': 7.0.28
       '@multiformats/multiaddr': 13.0.3
       progress-events: 1.1.0
 
-  '@libp2p/interface@3.3.0':
+  '@libp2p/interface@3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)':
     dependencies:
       '@multiformats/dns': 1.0.13
       '@multiformats/multiaddr': 13.0.3
@@ -7650,7 +7667,7 @@ snapshots:
 
   '@libp2p/logger@6.2.13':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@multiformats/multiaddr': 13.0.3
       interface-datastore: 10.0.1
       multiformats: 14.0.5
@@ -7658,7 +7675,7 @@ snapshots:
 
   '@libp2p/mdns@12.0.30':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/interface-internal': 3.1.12
       '@libp2p/peer-id': 6.0.15
       '@libp2p/utils': 7.4.1
@@ -7670,7 +7687,7 @@ snapshots:
 
   '@libp2p/mplex@12.0.30':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/utils': 7.4.1
       it-pushable: 3.2.3
       uint8-varint: 3.0.0
@@ -7679,7 +7696,7 @@ snapshots:
 
   '@libp2p/multistream-select@7.0.27':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/utils': 7.4.1
       it-length-prefixed: 11.0.1
       uint8arraylist: 3.0.2
@@ -7687,7 +7704,7 @@ snapshots:
 
   '@libp2p/peer-collections@7.0.28':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-id': 6.0.15
       '@libp2p/utils': 7.4.1
       multiformats: 14.0.5
@@ -7695,14 +7712,14 @@ snapshots:
   '@libp2p/peer-id@6.0.15':
     dependencies:
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       multiformats: 14.0.5
       uint8arrays: 6.1.1
 
   '@libp2p/peer-record@9.0.16':
     dependencies:
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-id': 6.0.15
       '@multiformats/multiaddr': 13.0.3
       multiformats: 14.0.5
@@ -7714,7 +7731,7 @@ snapshots:
   '@libp2p/peer-store@12.0.27':
     dependencies:
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/peer-collections': 7.0.28
       '@libp2p/peer-id': 6.0.15
       '@libp2p/peer-record': 9.0.16
@@ -7730,12 +7747,12 @@ snapshots:
 
   '@libp2p/prometheus-metrics@5.0.28':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       prom-client: 15.1.3
 
   '@libp2p/tcp@11.0.27':
     dependencies:
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/utils': 7.4.1
       '@multiformats/multiaddr': 13.0.3
       '@multiformats/multiaddr-matcher': 3.0.2
@@ -7748,7 +7765,7 @@ snapshots:
     dependencies:
       '@chainsafe/is-ip': 2.1.0
       '@chainsafe/netmask': 2.0.0
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/logger': 6.2.13
       '@multiformats/multiaddr': 13.0.3
       '@multiformats/multiaddr-matcher': 3.0.2
@@ -7777,7 +7794,7 @@ snapshots:
   '@multiformats/dns@1.0.13':
     dependencies:
       '@dnsquery/dns-packet': 6.1.1
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       hashlru: 2.3.0
       p-queue: 9.1.0
       progress-events: 1.1.0
@@ -8714,6 +8731,11 @@ snapshots:
     dependencies:
       '@vitest/pretty-format': 4.0.7
       tinyrainbow: 3.0.3
+
+  '@xray/probe@file:.xray/probe-0.1.0.tgz(@libp2p/interface@3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593))':
+    dependencies:
+      '@bufbuild/protobuf': 2.16.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
 
   abbrev@1.1.1: {}
 
@@ -10391,12 +10413,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  libp2p@3.3.9:
+  libp2p@3.3.9(patch_hash=4459ede331c793037df5ec1c6881709c4c938432c219435c92f5bf4a3047e10a):
     dependencies:
       '@chainsafe/is-ip': 2.1.0
       '@chainsafe/netmask': 2.0.0
       '@libp2p/crypto': 5.1.23
-      '@libp2p/interface': 3.3.0
+      '@libp2p/interface': 3.3.0(patch_hash=e24d850b21dc1159077375c6fc07e08f28856890fe6fa61bd66826487dc00593)
       '@libp2p/interface-internal': 3.1.12
       '@libp2p/logger': 6.2.13
       '@libp2p/multistream-select': 7.0.27
