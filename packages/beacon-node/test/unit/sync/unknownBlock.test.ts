@@ -237,7 +237,7 @@ function buildIncompleteGloasBlockInput({
 
 describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
   const logger = testLogger();
-  const slotSec = 0.3;
+  const slotSec = 1;
   const config = createBeaconConfig(
     {
       ...minimalConfig,
