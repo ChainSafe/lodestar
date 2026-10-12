@@ -221,7 +221,7 @@ pub fn stateTransition(
         return error.InvalidBlockForkForState;
     }
     // Note: time only on success
-    var timer = time.start(io);
+    const process_block_timer = time.start(io);
     switch (post_state.forkSeq()) {
         inline else => |f| {
             switch (block.blockType()) {
@@ -255,20 +255,19 @@ pub fn stateTransition(
             }
         },
     }
-    metrics.state_transition.process_block.observe(time.durationSeconds(time.since(io, timer)));
+    const commit_timer = time.start(io);
+    try post_state.commit();
+    metrics.state_transition.process_block_commit.observe(time.durationSeconds(time.since(io, commit_timer)));
+    metrics.state_transition.process_block.observe(time.durationSeconds(time.since(io, process_block_timer)));
 
     const proposer_rewards = post_cached_state.proposer_rewards;
     try metrics.state_transition.proposer_rewards.set(.{ .type = .attestation }, proposer_rewards.attestations);
     try metrics.state_transition.proposer_rewards.set(.{ .type = .sync_aggregate }, proposer_rewards.sync_aggregate);
     try metrics.state_transition.proposer_rewards.set(.{ .type = .slashing }, proposer_rewards.slashing);
 
-    timer = time.start(io);
-    try post_state.commit();
-    metrics.state_transition.process_block_commit.observe(time.durationSeconds(time.since(io, timer)));
-
     // Verify state root
     if (opts.verify_state_root) {
-        timer = time.start(io);
+        const timer = time.start(io);
         const post_state_root = try post_state.hashTreeRoot();
         try metrics.state_transition.state_hash_tree_root.observe(.{ .source = .state_transition }, time.durationSeconds(time.since(io, timer)));
 
