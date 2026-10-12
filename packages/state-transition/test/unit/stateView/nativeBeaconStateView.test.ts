@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
 import type {StateTransitionOpts} from "../../../src/stateTransition.js";
@@ -25,6 +25,32 @@ describe("NativeBeaconStateView", () => {
     expect(() => view.getIndicesInPayloadTimelinessCommittee(0, 0)).toThrow(
       "NativeBeaconStateView does not support Gloas"
     );
+  });
+
+  it("allows pre-Gloas transitions but refuses to cross into Gloas", () => {
+    const scheduled = createBeaconConfig(
+      {...defaultChainConfig, GLOAS_FORK_EPOCH: defaultChainConfig.FULU_FORK_EPOCH + 1},
+      genesisValidatorsRoot
+    );
+    const binding = {
+      processSlots: vi.fn(() => binding),
+      stateTransition: vi.fn(() => binding),
+    } as unknown as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(scheduled, binding);
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+    block.message.slot = scheduled.GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH - 1;
+    view.processSlots(block.message.slot);
+    view.stateTransition({block}, computeNewStateRootStateTransitionOpts, {});
+    expect(binding.processSlots).toHaveBeenCalledOnce();
+    expect(binding.stateTransition).toHaveBeenCalledOnce();
+
+    block.message.slot = scheduled.GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH;
+    expect(() => view.processSlots(block.message.slot)).toThrow("NativeBeaconStateView does not support Gloas");
+    expect(() => view.stateTransition({block}, computeNewStateRootStateTransitionOpts, {})).toThrow(
+      "NativeBeaconStateView does not support Gloas"
+    );
+    expect(binding.processSlots).toHaveBeenCalledOnce();
+    expect(binding.stateTransition).toHaveBeenCalledOnce();
   });
 
   it("caches forwarded properties so the binding is hit once", () => {
