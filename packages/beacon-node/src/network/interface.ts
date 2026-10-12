@@ -31,6 +31,7 @@ import {
   altair,
   capella,
   deneb,
+  eip8025,
   fulu,
   gloas,
   heze,
@@ -122,6 +123,7 @@ export interface INetwork extends INetworkCorePublic {
   publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
   publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number>;
   publishInclusionList(signedInclusionList: heze.SignedInclusionList): Promise<number>;
+  publishExecutionProof(signedProofEnvelope: eip8025.SignedExecutionProofEnvelope, blockSlot: Slot): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;

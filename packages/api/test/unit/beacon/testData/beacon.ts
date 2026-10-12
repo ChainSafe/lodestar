@@ -177,6 +177,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {payloadAttestationMessages: [ssz.gloas.PayloadAttestationMessage.defaultValue()]},
     res: undefined,
   },
+  submitExecutionProofs: {
+    args: {signedExecutionProofEnvelopes: [ssz.eip8025.SignedExecutionProofEnvelope.defaultValue()]},
+    res: undefined,
+  },
 
   // state
 

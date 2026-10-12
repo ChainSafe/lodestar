@@ -8,6 +8,7 @@ import {
   SingleAttestation,
   Slot,
   capella,
+  eip8025,
   electra,
   phase0,
   ssz,
@@ -26,6 +27,7 @@ import {toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js";
+import {WireFormat} from "../../../utils/wireFormat.js";
 
 const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const SingleAttestationListTypeElectra = ArrayOf(ssz.electra.SingleAttestation);
@@ -41,6 +43,12 @@ const PayloadAttestationListType = new ProgressiveListCompositeType(ssz.gloas.Pa
   typeName: "PayloadAttestations",
 });
 const PayloadAttestationMessageListType = ArrayOf(ssz.gloas.PayloadAttestationMessage, PTC_SIZE);
+const SignedExecutionProofEnvelopeListType = new ProgressiveListCompositeType(
+  ssz.eip8025.SignedExecutionProofEnvelope,
+  {
+    typeName: "SignedExecutionProofEnvelopes",
+  }
+);
 
 type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
@@ -56,6 +64,7 @@ type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeL
 type SyncCommitteeMessageList = ValueOf<typeof SyncCommitteeMessageListType>;
 type PayloadAttestationList = ValueOf<typeof PayloadAttestationListType>;
 type PayloadAttestationMessageList = ValueOf<typeof PayloadAttestationMessageListType>;
+export type SignedExecutionProofEnvelopeList = eip8025.SignedExecutionProofEnvelope[];
 
 export type Endpoints = {
   /**
@@ -218,6 +227,19 @@ export type Endpoints = {
     "POST",
     {payloadAttestationMessages: PayloadAttestationMessageList},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Submit EIP-8025 execution proofs
+   * Validates each signed proof envelope against the gossip rules, then broadcasts it. Already processed
+   * proofs are not errors. SSZ only: proofs run to megabytes.
+   */
+  submitExecutionProofs: Endpoint<
+    "POST",
+    {signedExecutionProofEnvelopes: SignedExecutionProofEnvelopeList},
+    {body: unknown},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -463,6 +485,29 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           body: Schema.ObjectArray,
           headers: {[MetaHeader.Version]: Schema.String},
         },
+      },
+      resp: EmptyResponseCodec,
+    },
+    submitExecutionProofs: {
+      url: "/eth/v1/beacon/execution_proofs",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedExecutionProofEnvelopes}) => ({
+          body: SignedExecutionProofEnvelopeListType.toJson(signedExecutionProofEnvelopes),
+        }),
+        parseReqJson: ({body}) => ({
+          signedExecutionProofEnvelopes: SignedExecutionProofEnvelopeListType.fromJson(body),
+        }),
+        writeReqSsz: ({signedExecutionProofEnvelopes}) => ({
+          body: SignedExecutionProofEnvelopeListType.serialize(signedExecutionProofEnvelopes),
+        }),
+        parseReqSsz: ({body}) => ({
+          signedExecutionProofEnvelopes: SignedExecutionProofEnvelopeListType.deserialize(body),
+        }),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+        onlySupport: WireFormat.ssz,
       },
       resp: EmptyResponseCodec,
     },

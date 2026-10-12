@@ -120,6 +120,7 @@ export type PeerManagerModules = {
   networkConfig: NetworkConfig;
   peersData: PeersData;
   statusCache: StatusCache;
+  executionProofAware?: boolean;
 };
 
 export type PeerRequestedSubnetType = SubnetType | "column";
