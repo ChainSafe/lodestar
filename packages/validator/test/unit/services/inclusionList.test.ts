@@ -75,20 +75,20 @@ describe("InclusionListService", () => {
     return {task: clock.tickSlotFns(slot, controller.signal)};
   }
 
-  it("removes the payload listener once the slot's payload is available", async () => {
+  it("removes the payload listener once the slot's payload is imported", async () => {
     const config = createChainForkConfig({...chainConfig, HEZE_FORK_EPOCH: 0});
     const emitter = new ValidatorEventEmitter();
 
     const {task} = await startSlotTask(config, emitter);
     // The duties service's own slot hook runs first, so the listener is registered a few microtasks later
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(emitter.listenerCount(ValidatorEvent.executionPayloadAvailable)).toBe(1);
+    expect(emitter.listenerCount(ValidatorEvent.executionPayloadImported)).toBe(1);
 
-    emitter.emit(ValidatorEvent.executionPayloadAvailable, {slot, blockRoot: ZERO_HASH_HEX});
+    emitter.emit(ValidatorEvent.executionPayloadImported, {slot, blockRoot: ZERO_HASH_HEX});
     await task;
 
     expect(api.validator.produceInclusionList).toHaveBeenCalledWith({slot});
-    expect(emitter.listenerCount(ValidatorEvent.executionPayloadAvailable)).toBe(0);
+    expect(emitter.listenerCount(ValidatorEvent.executionPayloadImported)).toBe(0);
   });
 
   it("removes the payload listener when the deadline wins", async () => {
@@ -99,6 +99,6 @@ describe("InclusionListService", () => {
     await task;
 
     expect(api.validator.produceInclusionList).toHaveBeenCalledWith({slot});
-    expect(emitter.listenerCount(ValidatorEvent.executionPayloadAvailable)).toBe(0);
+    expect(emitter.listenerCount(ValidatorEvent.executionPayloadImported)).toBe(0);
   });
 });

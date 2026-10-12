@@ -6,7 +6,7 @@ import {sleep} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
 import {LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
-import {ExecutionPayloadAvailableEventData, ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
+import {ExecutionPayloadImportedEventData, ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 import {InclusionListDutiesService} from "./inclusionListDuties.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -47,28 +47,29 @@ export class InclusionListService {
       return;
     }
     // Spec: broadcast by get_inclusion_list_due_ms(), built against the slot's block if processed, else the
-    // local head. Wait until the beacon node reports the slot's payload available, which it emits before
-    // execution validation, or fall back to the deadline for empty or late slots.
+    // local head. Wait until the beacon node imported the slot's payload, emitted once the execution client
+    // verified it and the fork choice update was queued, so the list is built from a mempool without that
+    // payload's transactions. Fall back to the deadline for empty or late slots.
     const dueMs = Math.max(
       0,
       this.config.getInclusionListDueMs(this.config.getForkName(slot)) - this.clock.msFromSlot(slot)
     );
     // Publish ahead of the deadline so the list still counts as timely for peers
     const beforeDueMs = 1000;
-    let resolvePayloadAvailable = (): void => {};
-    const payloadAvailable = new Promise<void>((resolve) => {
-      resolvePayloadAvailable = resolve;
+    let resolvePayloadImported = (): void => {};
+    const payloadImported = new Promise<void>((resolve) => {
+      resolvePayloadImported = resolve;
     });
-    const onPayloadAvailable = (payload: ExecutionPayloadAvailableEventData): void => {
+    const onPayloadImported = (payload: ExecutionPayloadImportedEventData): void => {
       if (payload.slot === slot) {
-        resolvePayloadAvailable();
+        resolvePayloadImported();
       }
     };
-    this.emitter.on(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable);
+    this.emitter.on(ValidatorEvent.executionPayloadImported, onPayloadImported);
     try {
-      await Promise.race([sleep(Math.max(0, dueMs - beforeDueMs), signal), payloadAvailable]);
+      await Promise.race([sleep(Math.max(0, dueMs - beforeDueMs), signal), payloadImported]);
     } finally {
-      this.emitter.off(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable);
+      this.emitter.off(ValidatorEvent.executionPayloadImported, onPayloadImported);
     }
 
     const inclusionListTransactions = await this.produceInclusionList(slot);
