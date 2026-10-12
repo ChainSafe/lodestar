@@ -143,6 +143,13 @@ export async function validateGossipInclusionList(
     throw new InclusionListError(GossipAction.REJECT, {code: InclusionListErrorCode.INVALID_SIGNATURE});
   }
 
+  // Check again after the async validation so concurrent lists of the same validator cannot all pass
+  if (chain.inclusionListStore.seenTwice(slot, dependentRootHex, validatorIndex)) {
+    throw new InclusionListError(GossipAction.IGNORE, {
+      code: InclusionListErrorCode.MORE_THAN_TWO,
+      validatorIndex,
+    });
+  }
   chain.inclusionListStore.markSeen(slot, dependentRootHex, validatorIndex);
 
   return {committeeIndices, totalBytes};
