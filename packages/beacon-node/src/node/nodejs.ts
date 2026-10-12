@@ -1,6 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
+import * as executionProofVerifier from "@chainsafe/lodestar-z/execution-proof-verifier";
 import {
   init as initNativeMetrics,
   registerLocalValidator as registerNativeLocalValidator,
@@ -19,6 +20,7 @@ import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
+import {NativeProofEngine} from "../chain/proofEngine/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
@@ -254,6 +256,12 @@ export class BeaconNode {
       };
     }
 
+    const executionProofVerifiers = opts.chain.executionProofVerifiers ?? [];
+    const proofEngine =
+      executionProofVerifiers.length > 0
+        ? new NativeProofEngine(executionProofVerifier, executionProofVerifiers, metrics)
+        : undefined;
+
     const chain = new BeaconChain(opts.chain, {
       privateKey,
       config,
@@ -283,6 +291,7 @@ export class BeaconNode {
         // Sent with all builder api requests, unless the node runs in private mode
         userAgent: opts.executionBuilder.userAgent,
       },
+      proofEngine,
     });
 
     // Load persisted data from disk to in-memory caches

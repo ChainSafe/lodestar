@@ -1,5 +1,14 @@
-import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions} from "@lodestar/utils";
+import fs from "node:fs";
+import {
+  ArchiveMode,
+  DEFAULT_ARCHIVE_MODE,
+  EXECUTION_PROOF_ZKVMS,
+  ExecutionProofVerifierKey,
+  ExecutionProofZkvm,
+  IBeaconNodeOptions,
+  defaultOptions,
+} from "@lodestar/beacon-node";
+import {CliCommandOptions, toHex} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
 import {CircuitBreakerArgs} from "./builder.js";
 
@@ -42,7 +51,24 @@ export type ChainArgs = {
   "chain.maxCPStateEpochsOnDisk"?: number;
 
   "chain.pruneHistory"?: boolean;
+  "chain.executionProofVerifiers"?: string[];
 };
+
+/** `<proofType>:<zkvm>:<programVkPath>`, e.g. `1:sp1:/keys/stateless-validator-sp1.vk` */
+export function parseExecutionProofVerifierArg(arg: string): ExecutionProofVerifierKey {
+  const [proofTypeStr, zkvm, ...programVkPathParts] = arg.split(":");
+  const programVkPath = programVkPathParts.join(":");
+  const proofType = Number(proofTypeStr);
+  if (!Number.isInteger(proofType) || proofType < 0 || proofType > 255 || programVkPath === "") {
+    throw Error(`Invalid execution proof verifier '${arg}', expected <proofType 0-255>:<zkvm>:<programVkPath>`);
+  }
+  if (!EXECUTION_PROOF_ZKVMS.includes(zkvm as ExecutionProofZkvm)) {
+    throw Error(
+      `Unknown zkvm '${zkvm}' in execution proof verifier '${arg}', expected ${EXECUTION_PROOF_ZKVMS.join("|")}`
+    );
+  }
+  return {proofType, zkvm: zkvm as ExecutionProofZkvm, programVk: toHex(fs.readFileSync(programVkPath))};
+}
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
   return {
@@ -89,6 +115,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
     pruneHistory: args["chain.pruneHistory"],
+    executionProofVerifiers: args["chain.executionProofVerifiers"]?.map(parseExecutionProofVerifierArg),
   };
 }
 
@@ -356,6 +383,16 @@ Will double processing times. Use only for debugging purposes.",
       "Max number of checkpoint state epochs to keep on disk. Default (Infinity) uses tiered pruning to bound disk usage during long non-finality; set a finite N to keep only the last N epochs instead (previous behavior)",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsOnDisk,
+    group: "chain",
+  },
+
+  "chain.executionProofVerifiers": {
+    type: "array",
+    string: true,
+    description:
+      "EIP-8025 execution proof types this node verifies and relays, as <proofType>:<zkvm>:<programVkPath> " +
+      `where zkvm is one of ${EXECUTION_PROOF_ZKVMS.join(", ")} and the file holds the guest program verifying key. ` +
+      "Requires a lodestar-z build with the ere verifier. Unset means the node ignores execution proofs.",
     group: "chain",
   },
 
