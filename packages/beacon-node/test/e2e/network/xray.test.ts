@@ -66,6 +66,7 @@ describe.skipIf(!process.env.XRAY_BINARY)("Xray collector interoperability", () 
           localMultiaddrs: [transport === "tcp" ? "/ip4/127.0.0.1/tcp/0" : "/ip4/127.0.0.1/udp/0/quic-v1"],
           xrayAddress: address,
           xrayWaitForAttach: true,
+          xrayMaxBufferBytes: 32 * 1024 * 1024,
           version: "xray-interop-test",
         };
         const [a, closeA] = await getNetworkForTest("xray-a", config, {

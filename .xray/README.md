@@ -20,9 +20,12 @@ by protocol. Configure its genesis timestamp and slot duration for custom networ
 For Gloas, also supply `--gloas-fork-digests` as described in the SDK README.
 
 Metrics are `lodestar_xray_buffered_bytes` and `lodestar_xray_errors_total{code}`.
-The replay buffer retains at most 16 MiB. Reconnect replays retained events;
-retention gaps produce a snapshot and label existing streams `capture_incomplete`
-until they close. New streams remain decodable. This is best-effort tracing.
+The replay buffer retains at most 16 MiB by default. Use
+`--network.xrayMaxBufferBytes=134217728` for a 128 MiB buffer when capturing bursts
+from a mainnet supernode. This metric includes retained events already sent to the
+collector. Reconnect replays retained events; retention gaps produce a snapshot
+and label existing streams `capture_incomplete` until they close. New streams
+remain decodable. This is best-effort tracing.
 
 ## Local dependencies
 

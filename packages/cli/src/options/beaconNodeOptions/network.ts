@@ -75,6 +75,7 @@ export type NetworkArgs = {
   "network.useWorker"?: boolean;
   "network.xrayAddress"?: string;
   "network.xrayWaitForAttach"?: boolean;
+  "network.xrayMaxBufferBytes"?: number;
   "network.maxYoungGenerationSizeMb"?: number;
   "network.targetGroupPeers"?: number;
 
@@ -125,6 +126,13 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const xrayAddress = args["network.xrayAddress"]?.trim() || undefined;
   if (args["network.xrayWaitForAttach"] && !xrayAddress) {
     throw new YargsError("network.xrayWaitForAttach requires network.xrayAddress");
+  }
+  const xrayMaxBufferBytes = args["network.xrayMaxBufferBytes"];
+  if (
+    xrayMaxBufferBytes !== undefined &&
+    (!Number.isSafeInteger(xrayMaxBufferBytes) || xrayMaxBufferBytes < 128 * 1024)
+  ) {
+    throw new YargsError("network.xrayMaxBufferBytes must be a safe integer of at least 131072 bytes");
   }
   const quic = args.quic ?? defaultOptions.network.quic;
   const tcp = args.tcp ?? defaultOptions.network.tcp;
@@ -239,6 +247,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     useWorker: args["network.useWorker"],
     xrayAddress,
     xrayWaitForAttach: args["network.xrayWaitForAttach"],
+    xrayMaxBufferBytes,
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
     directPeers: args.directPeers,
@@ -254,6 +263,11 @@ export const options: CliCommandOptions<NetworkArgs> = {
   "network.xrayWaitForAttach": {
     description: "Wait up to 30 seconds for the Xray collector before starting networking",
     type: "boolean",
+    group: "network",
+  },
+  "network.xrayMaxBufferBytes": {
+    description: "Maximum bytes retained by the Xray replay buffer (minimum 131072)",
+    type: "number",
     group: "network",
   },
   discv5: {

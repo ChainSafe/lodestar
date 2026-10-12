@@ -170,6 +170,7 @@ export class NetworkCore implements INetworkCore {
         xray = new XrayProbe(libp2p, {
           address: opts.xrayAddress,
           clientName: `lodestar/${opts.version ?? "unknown"}`,
+          maxBufferBytes: opts.xrayMaxBufferBytes,
           onError: (error) => {
             metrics?.xrayErrors.inc({code: error.code});
             logger.warn("Xray capture interrupted", {code: error.code}, error);
