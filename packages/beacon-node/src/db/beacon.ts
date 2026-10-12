@@ -8,6 +8,7 @@ import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
+import {EarliestAvailableSlotRepository} from "./repositories/earliestAvailableSlot.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
@@ -21,6 +22,7 @@ import {
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
+  ProposerPreferencesRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -48,9 +50,11 @@ export class BeaconDb implements IBeaconDb {
 
   stateArchive: StateArchiveRepository;
   checkpointState: CheckpointStateRepository;
+  earliestAvailableSlot: EarliestAvailableSlotRepository;
 
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
+  proposerPreferences: ProposerPreferencesRepository;
   attesterSlashing: AttesterSlashingRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
 
@@ -83,9 +87,11 @@ export class BeaconDb implements IBeaconDb {
 
     this.stateArchive = new StateArchiveRepository(config, db);
     this.checkpointState = new CheckpointStateRepository(config, db);
+    this.earliestAvailableSlot = new EarliestAvailableSlotRepository(db);
     this.voluntaryExit = new VoluntaryExitRepository(config, db);
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);
     this.proposerSlashing = new ProposerSlashingRepository(config, db);
+    this.proposerPreferences = new ProposerPreferencesRepository(config, db);
     this.attesterSlashing = new AttesterSlashingRepository(config, db);
 
     // lightclient
@@ -122,6 +128,8 @@ export class BeaconDb implements IBeaconDb {
   async pruneHotDb(): Promise<void> {
     // Prune all hot blobs
     await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
+    // New columns are persisted in flat files, so this bucket only contains legacy hot data.
+    await this.deleteBucketData(Bucket.allForks_dataColumnSidecars);
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());

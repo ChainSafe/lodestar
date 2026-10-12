@@ -165,19 +165,21 @@ export function getBlockAltair(preState: CachedBeaconStateAltair, opts: BlockAlt
   const emptySig = Buffer.alloc(96);
   const phase0Block = getBlockPhase0(preState, opts);
   const stateEpoch = computeEpochAtSlot(preState.slot);
+  // ParticipationFlags.set() ORs the value in, so flags must be cleared by replacing the whole list
+  const previousEpochParticipation = preState.previousEpochParticipation.getAll();
+  const currentEpochParticipation = preState.currentEpochParticipation.getAll();
   for (const attestation of phase0Block.message.body.attestations) {
     const attEpoch = computeEpochAtSlot(attestation.data.slot);
-    const epochParticipation =
-      attEpoch === stateEpoch ? preState.currentEpochParticipation : preState.previousEpochParticipation;
+    const epochParticipation = attEpoch === stateEpoch ? currentEpochParticipation : previousEpochParticipation;
 
     const committeeindices = preState.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index);
-    const attestingIndices = attestation.aggregationBits.intersectValues(committeeindices);
-
-    // TODO: Is this necessary?
-    for (const index of attestingIndices) {
-      epochParticipation.set(index, 0);
+    for (const index of attestation.aggregationBits.intersectValues(committeeindices)) {
+      epochParticipation[index] = 0;
     }
   }
+  preState.previousEpochParticipation = ssz.altair.EpochParticipation.toViewDU(previousEpochParticipation);
+  preState.currentEpochParticipation = ssz.altair.EpochParticipation.toViewDU(currentEpochParticipation);
+  preState.commit();
   return {
     message: {
       ...phase0Block.message,

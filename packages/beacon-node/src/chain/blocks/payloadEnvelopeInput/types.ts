@@ -22,8 +22,9 @@ export enum PayloadEnvelopeInputSource {
  * - finalized: below the finalized slot
  * - prune: explicit prune by root
  * - cap: insertion-order backstop cap (MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE)
+ * - invalid: the cached envelope failed import with a definitive invalid verdict
  */
-export type PayloadEnvelopeInputPruneReason = "belowParent" | "finalized" | "remove" | "cap";
+export type PayloadEnvelopeInputPruneReason = "belowParent" | "finalized" | "remove" | "cap" | "invalid";
 
 export type SourceMeta = {
   source: PayloadEnvelopeInputSource;

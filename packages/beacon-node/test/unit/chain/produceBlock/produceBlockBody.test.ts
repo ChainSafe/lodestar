@@ -2,10 +2,11 @@ import {describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {
   BlockType,
@@ -167,7 +168,70 @@ describe("Fulu engine body", () => {
   }
 });
 
+describe("Gloas engine body", () => {
+  const requestedRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
+  const pooledRecipient = "0xdddddddddddddddddddddddddddddddddddddddd";
+  const cachedRecipient = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+
+  function setupGloas(pooled: boolean) {
+    const context = setup(ForkName.gloas);
+    const {modules, attrs} = context;
+    modules.chain.beaconProposerCache.getOrDefault.mockReturnValue(cachedRecipient);
+    modules.forkChoice.shouldBuildOnFull.mockReturnValue(false);
+    modules.forkChoice.getBlockHexDefaultStatus.mockReturnValue(pooled ? attrs.parentBlock : null);
+    modules.forkChoice.getDependentRoot.mockReturnValue(attrs.parentBlock.blockRoot);
+    modules.forkChoice.getBlockHexAndBlockHash.mockReturnValue({
+      ...attrs.parentBlock,
+      executionStatus: ExecutionStatus.Valid,
+      executionPayloadBlockHash: toRootHex(new Uint8Array(32)),
+      executionPayloadGasLimit: 30_000_000,
+    } as ProtoBlock);
+    const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+    preferences.message.feeRecipient = fromHex(pooledRecipient);
+    preferences.message.targetGasLimit = 30_000_000n;
+    vi.mocked(modules.chain.proposerPreferencesPool.get).mockReturnValue(pooled ? preferences : null);
+    modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
+    modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
+    const executionPayload = ssz.fulu.ExecutionPayload.defaultValue();
+    executionPayload.blockHash = new Uint8Array(32).fill(9);
+    modules.chain.executionEngine.getPayload.mockResolvedValue({
+      executionPayload,
+      executionPayloadValue: 456n,
+      blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
+      executionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
+    });
+    return context;
+  }
+
+  for (const [source, requested, pooled, expected] of [
+    ["requested", true, true, requestedRecipient],
+    ["pooled", false, true, pooledRecipient],
+    ["cached", false, false, cachedRecipient],
+  ] as const) {
+    it(`uses the ${source} fee recipient for payload preparation`, async () => {
+      const {state, modules, chain, attrs, common} = setupGloas(pooled);
+      await produceBlockBody.call(chain, BlockType.Full, state, {
+        ...attrs,
+        feeRecipient: requested ? requestedRecipient : undefined,
+        proposerIndex: 0,
+        proposerPubKey: new Uint8Array(48),
+        commonBlockBodyPromise: Promise.resolve(common),
+      });
+      expect(modules.chain.executionEngine.notifyForkchoiceUpdate).toHaveBeenCalledExactlyOnceWith(
+        ForkName.gloas,
+        expect.any(String),
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({suggestedFeeRecipient: expected, targetGasLimit: 30_000_000n})
+      );
+    });
+  }
+});
+
 describe("supported payload attributes", () => {
+  const safeBlockHash = toRootHex(new Uint8Array(32).fill(1));
+  const finalizedBlockHash = toRootHex(new Uint8Array(32).fill(2));
+
   it("rejects an unapplied full Gloas parent before preparing withdrawals", () => {
     const {state, chain, slot, parentBlockRoot} = setup(ForkName.gloas);
     const parentBlockHash = new Uint8Array(32).fill(5);
@@ -183,6 +247,8 @@ describe("supported payload attributes", () => {
         prepareSlot: slot,
         parentBlockRoot,
         parentBlockHash,
+        safeBlockHash,
+        finalizedBlockHash,
         feeRecipient: "0xccccccccccccccccccccccccccccccccccccccaa",
       })
     ).toThrow("Expected state with parent execution payload applied for withdrawals");
@@ -223,6 +289,8 @@ describe("supported payload attributes", () => {
           prepareSlot: slot,
           parentBlockRoot,
           parentBlockHash,
+          safeBlockHash,
+          finalizedBlockHash,
           feeRecipient: "0xccccccccccccccccccccccccccccccccccccccaa",
         });
         expect(result.payloadAttributes).toMatchObject({
@@ -234,8 +302,14 @@ describe("supported payload attributes", () => {
         if (fork !== ForkName.fulu) {
           expect(result.payloadAttributes).toMatchObject({slotNumber: slot, targetGasLimit: 30_000_000n});
           expect(result).not.toHaveProperty("parentBlockNumber");
+          expect(result).toMatchObject({
+            safeBlockHash: fromHex(safeBlockHash),
+            finalizedBlockHash: fromHex(finalizedBlockHash),
+          });
         } else {
           expect(result).toHaveProperty("parentBlockNumber", state.payloadBlockNumber);
+          expect(result).not.toHaveProperty("safeBlockHash");
+          expect(result).not.toHaveProperty("finalizedBlockHash");
           expect(result.payloadAttributes).not.toHaveProperty("slotNumber");
         }
         if (fork === ForkName.heze) expect(result.payloadAttributes).toHaveProperty("inclusionListTransactions", []);

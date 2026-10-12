@@ -144,9 +144,9 @@ describe("ValidatorStore", () => {
       selection: routes.validator.BuilderSelection.Default,
       boostFactor: BigInt(90),
     });
-    // Post-gloas executiononly is a backwards-compatible alias for executionalways
+    // Post-gloas executiononly is honored to never use builder bids
     expect(gloasStore.getBuilderSelectionParams(toHexString(pubkeys[0]), gloasSlot)).toEqual({
-      selection: routes.validator.BuilderSelection.ExecutionAlways,
+      selection: routes.validator.BuilderSelection.ExecutionOnly,
       boostFactor: BigInt(0),
     });
 

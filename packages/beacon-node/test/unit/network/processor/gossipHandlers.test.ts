@@ -7,6 +7,9 @@ import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
+import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../../src/chain/blocks/importExecutionPayload.js";
+import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
 import {BlockGossipError, GossipAction} from "../../../../src/chain/errors/index.js";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
@@ -31,6 +34,10 @@ vi.mock("../../../../src/chain/validation/index.js", async (importActual) => {
     validateGossipBlock: vi.fn(),
   };
 });
+
+vi.mock("../../../../src/chain/validation/executionPayloadEnvelope.js", () => ({
+  validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe("getGossipHandlers", () => {
   const denebConfig = createBeaconConfig(
@@ -65,8 +72,8 @@ describe("getGossipHandlers", () => {
   });
 
   it("imports a signature-verified REPEAT_PROPOSAL (equivocating) block into fork choice but keeps IGNORE", async () => {
-    const {processBlock, threw, removeBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: true});
-    expect(removeBlockInput).not.toHaveBeenCalled();
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: true});
+    expect(getByBlock).toHaveBeenCalledOnce();
 
     // imported so LMD-GHOST can weigh it ...
     expect(processBlock).toHaveBeenCalledOnce();
@@ -74,30 +81,143 @@ describe("getGossipHandlers", () => {
     expect(threw).toBe(true);
   });
 
-  it("removes only the rejected block's own cache entry on gossip REJECT", async () => {
-    const {processBlock, threw, removeBlockInput, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {
+  it("does not cache a block rejected by gossip validation", async () => {
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(denebConfig, {
       recorded: false,
       reject: true,
     });
     expect(threw).toBe(true);
     expect(processBlock).not.toHaveBeenCalled();
-    expect(removeBlockInput).toHaveBeenCalledOnce();
-    expect(pruneBlockInput).not.toHaveBeenCalled();
+    expect(getByBlock).not.toHaveBeenCalled();
   });
 
   it("does not import a REPEAT_PROPOSAL block whose root was not recorded (unverified 3rd+ proposal)", async () => {
-    const {processBlock, threw, removeBlockInput, pruneBlockInput} = await runBeaconBlockRepeatProposal(denebConfig, {
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(denebConfig, {
       recorded: false,
     });
-    // the block is not kept around, sync re-downloads it if it ever becomes relevant. Only its own entry goes,
-    // an unverified block must not be able to evict the ancestors it claims
-    expect(removeBlockInput).toHaveBeenCalledOnce();
-    expect(pruneBlockInput).not.toHaveBeenCalled();
+    // the block is not kept around, sync re-downloads it if it ever becomes relevant
+    expect(getByBlock).not.toHaveBeenCalled();
 
     expect(processBlock).not.toHaveBeenCalled();
     expect(threw).toBe(true);
   });
+
+  it("does not import a signature-verified REPEAT_PROPOSAL block whose parent is unknown", async () => {
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(denebConfig, {
+      recorded: true,
+      parentKnown: false,
+    });
+    expect(getByBlock).not.toHaveBeenCalled();
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
+  });
+
+  it.each<PayloadErrorType>([
+    {code: PayloadErrorCode.INVALID_SIGNATURE},
+    {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
+    {
+      code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+      execStatus: ExecutionPayloadStatus.INVALID,
+      errorMessage: "invalid payload",
+    },
+  ])("evicts the cached envelope when payload processing fails with $code", async (errorType) => {
+    const {removeInvalid, payloadInput} = await runExecutionPayloadProcessingError(errorType);
+
+    expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
+  });
+
+  it("keeps the cached envelope when payload processing hits an execution engine error", async () => {
+    const {removeInvalid} = await runExecutionPayloadProcessingError({
+      code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+      execStatus: ExecutionPayloadStatus.ELERROR,
+      errorMessage: "execution engine offline",
+    });
+
+    expect(removeInvalid).not.toHaveBeenCalled();
+  });
 });
+
+async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): Promise<{
+  removeInvalid: ReturnType<typeof vi.fn>;
+  payloadInput: PayloadEnvelopeInput;
+}> {
+  const config = createBeaconConfig(
+    {
+      ...defaultConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    },
+    Buffer.alloc(32, 0)
+  );
+  const logger = testLogger();
+  const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
+  const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+  block.message.slot = 1;
+  const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+  const payloadInput = PayloadEnvelopeInput.createFromBlock({
+    block,
+    blockRootHex: toRootHex(blockRoot),
+    forkName: ForkName.gloas,
+    sampledColumns: [],
+    custodyColumns: [],
+    daOutOfRange: false,
+    source: PayloadEnvelopeInputSource.gossip,
+    seenTimestampSec: 0,
+  });
+  const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+  signedEnvelope.message.beaconBlockRoot = blockRoot;
+  signedEnvelope.message.payload.slotNumber = 1;
+
+  const removeInvalid = vi.fn();
+  const chain = {
+    clock: new ClockStopped(1),
+    emitter: new ChainEventEmitter(),
+    logger,
+    processExecutionPayload: vi.fn().mockRejectedValue(new PayloadError(payloadInput, errorType)),
+    seenPayloadEnvelopeInputCache: {
+      get: vi.fn().mockReturnValue(payloadInput),
+      removeInvalid,
+    } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+    serializedCache: {set: vi.fn()},
+  } as unknown as IBeaconChain;
+
+  const handlers = getGossipHandlers(
+    {
+      aggregatorTracker: {} as AggregatorTracker,
+      chain,
+      config,
+      core: {reportPeer: vi.fn()} as unknown as INetworkCore,
+      events: new NetworkEventBus(),
+      logger,
+      metrics: null,
+    },
+    {}
+  );
+  const executionPayloadHandler = handlers[
+    GossipType.execution_payload
+  ] as SequentialGossipHandler<GossipType.execution_payload>;
+
+  await executionPayloadHandler({
+    gossipData: {serializedData: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope)},
+    peerIdStr,
+    seenTimestampSec: 0,
+    topic: {
+      boundary: {fork: ForkName.gloas, epoch: 0},
+      type: GossipType.execution_payload,
+    },
+  });
+  // The import is deferred via callInNextEventLoop and its catch handler is a further hop, see above
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  return {removeInvalid, payloadInput};
+}
 
 async function runBeaconBlockProcessingError(
   config: BeaconConfig,
@@ -133,6 +253,8 @@ async function runBeaconBlockProcessingError(
     seenBlockProposers: new SeenBlockProposers(),
     seenBlockInputCache: {
       getByBlock: vi.fn().mockReturnValue(blockInput),
+      markValidatingBlock: vi.fn(),
+      unmarkValidatingBlock: vi.fn(),
       prune: vi.fn(),
     } as unknown as SeenBlockInput,
     seenPayloadEnvelopeInputCache: {
@@ -179,12 +301,11 @@ async function runBeaconBlockProcessingError(
 
 async function runBeaconBlockRepeatProposal(
   config: BeaconConfig,
-  {recorded, reject = false}: {recorded: boolean; reject?: boolean}
+  {recorded, reject = false, parentKnown = true}: {recorded: boolean; reject?: boolean; parentKnown?: boolean}
 ): Promise<{
   processBlock: ReturnType<typeof vi.fn>;
   threw: boolean;
-  removeBlockInput: ReturnType<typeof vi.fn>;
-  pruneBlockInput: ReturnType<typeof vi.fn>;
+  getByBlock: ReturnType<typeof vi.fn>;
 }> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
@@ -232,12 +353,12 @@ async function runBeaconBlockRepeatProposal(
   }
 
   const processBlock = vi.fn().mockResolvedValue(undefined);
-  const removeBlockInput = vi.fn();
-  const pruneBlockInput = vi.fn();
+  const getByBlock = vi.fn().mockReturnValue(blockInput);
   const chain = {
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
+    forkChoice: {getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {} : null)},
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
     persistInvalidSszValue: vi.fn(),
@@ -245,10 +366,10 @@ async function runBeaconBlockRepeatProposal(
     processProposerEquivocation: vi.fn(),
     seenBlockProposers,
     seenBlockInputCache: {
-      getByBlock: vi.fn().mockReturnValue(blockInput),
-      get: vi.fn().mockReturnValue(blockInput),
-      remove: removeBlockInput,
-      prune: pruneBlockInput,
+      getByBlock,
+      markValidatingBlock: vi.fn(),
+      unmarkValidatingBlock: vi.fn(),
+      prune: vi.fn(),
     } as unknown as SeenBlockInput,
     seenPayloadEnvelopeInputCache: {
       add: vi.fn(),
@@ -292,7 +413,7 @@ async function runBeaconBlockRepeatProposal(
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {processBlock, threw, removeBlockInput, pruneBlockInput};
+  return {processBlock, threw, getByBlock};
 }
 
 function getExecutionBlockError(

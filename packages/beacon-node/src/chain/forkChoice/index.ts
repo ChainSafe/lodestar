@@ -124,6 +124,7 @@ export function initializeForkChoiceFromFinalizedState(
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
         onFastConfirmation: ({block, slot, currentSlot}) =>
           emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+        onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
       }
     ),
 
@@ -222,6 +223,7 @@ export function initializeForkChoiceFromUnfinalizedState(
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
       onFastConfirmation: ({block, slot, currentSlot}) =>
         emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+      onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
     }
   );
 

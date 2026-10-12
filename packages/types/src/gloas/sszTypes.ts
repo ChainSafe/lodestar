@@ -316,6 +316,7 @@ export const BuilderPendingPayment = new ContainerType(
 );
 
 export const Builders = new ProgressiveListCompositeType(Builder, {typeName: "Builders"});
+export const BuilderPendingPayments = new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH);
 export const BuilderPendingWithdrawals = new ProgressiveListCompositeType(BuilderPendingWithdrawal, {
   typeName: "BuilderPendingWithdrawals",
 });
@@ -721,7 +722,7 @@ export const BeaconState = new ProgressiveContainerType(
     builders: Builders, // New in GLOAS:EIP7732
     nextWithdrawalBuilderIndex: BuilderIndex, // New in GLOAS:EIP7732
     executionPayloadAvailability: new BitVectorType(SLOTS_PER_HISTORICAL_ROOT), // New in GLOAS:EIP7732
-    builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH), // New in GLOAS:EIP7732
+    builderPendingPayments: BuilderPendingPayments, // New in GLOAS:EIP7732
     builderPendingWithdrawals: BuilderPendingWithdrawals, // New in GLOAS:EIP7732
     latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadExpectedWithdrawals: Withdrawals, // New in GLOAS:EIP7732
@@ -769,6 +770,8 @@ export const SSEPayloadAttributes = new ContainerType(
     // parentBlockNumber: UintNum64, // Removed in GLOAS:EIP7732
     parentBlockRoot: Root,
     parentBlockHash: Root,
+    safeBlockHash: Root, // New in GLOAS
+    finalizedBlockHash: Root, // New in GLOAS
     payloadAttributes: PayloadAttributes,
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}

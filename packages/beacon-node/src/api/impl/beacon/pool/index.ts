@@ -170,15 +170,15 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
-      await validateApiAttesterSlashing(chain, attesterSlashing);
+      const verifiedDomains = await validateApiAttesterSlashing(chain, attesterSlashing);
       const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
-      chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
+      chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
       await network.publishAttesterSlashing(attesterSlashing);
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {
-      await validateApiProposerSlashing(chain, proposerSlashing);
-      chain.opPool.insertProposerSlashing(proposerSlashing);
+      const verifiedDomain = await validateApiProposerSlashing(chain, proposerSlashing);
+      chain.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
       await network.publishProposerSlashing(proposerSlashing);
     },
 

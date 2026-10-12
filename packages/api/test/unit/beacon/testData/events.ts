@@ -19,7 +19,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
 };
 
 // Example values from the spec, to make it easy to assert our types match the spec
-// https://github.com/ethereum/beacon-APIs/blob/9cab46ad3c94a4a2779b42fa21f6bb1955b60b56/apis/eventstream/index.yaml#L40
+// https://github.com/ethereum/beacon-APIs/blob/v5.0.0-beta.0/apis/eventstream/index.yaml
 export const eventTestData: EventData = {
   [EventType.head]: {
     slot: 10,
@@ -46,6 +46,8 @@ export const eventTestData: EventData = {
   [EventType.block]: {
     slot: 10,
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+    blockHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    builderIndex: 42,
     executionOptimistic: false,
   },
   [EventType.blockGossip]: {
@@ -189,8 +191,8 @@ export const eventTestData: EventData = {
       "0xac118511474a94f857300b315c50585c32a713e4452e26a6bb98cdb619936370f126ed3b6bb64469259ee92e69791d9e12d324ce6fd90081680ce72f39d85d50b0ff977260a8667465e613362c6d6e6e745e1f9323ec1d6f16041c4e358839ac",
   }),
   [EventType.lightClientOptimisticUpdate]: {
-    version: ForkName.altair,
-    data: ssz.altair.LightClientOptimisticUpdate.fromJson({
+    version: ForkName.gloas,
+    data: ssz.gloas.LightClientOptimisticUpdate.fromJson({
       attested_header: {
         beacon: {
           slot: "1",
@@ -199,6 +201,11 @@ export const eventTestData: EventData = {
           state_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
           body_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         },
+        execution_block_hash: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        execution_branch: Array.from(
+          {length: 11},
+          () => "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+        ),
       },
       sync_aggregate: {
         sync_committee_bits:
@@ -210,8 +217,8 @@ export const eventTestData: EventData = {
     }),
   },
   [EventType.lightClientFinalityUpdate]: {
-    version: ForkName.altair,
-    data: ssz.altair.LightClientFinalityUpdate.fromJson({
+    version: ForkName.gloas,
+    data: ssz.gloas.LightClientFinalityUpdate.fromJson({
       attested_header: {
         beacon: {
           slot: "1",
@@ -220,6 +227,11 @@ export const eventTestData: EventData = {
           state_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
           body_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         },
+        execution_block_hash: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        execution_branch: Array.from(
+          {length: 11},
+          () => "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+        ),
       },
       finalized_header: {
         beacon: {
@@ -229,8 +241,16 @@ export const eventTestData: EventData = {
           state_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
           body_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         },
+        execution_block_hash: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        execution_branch: Array.from(
+          {length: 11},
+          () => "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+        ),
       },
       finality_branch: [
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
@@ -248,14 +268,17 @@ export const eventTestData: EventData = {
     }),
   },
   [EventType.payloadAttributes]: {
-    version: ForkName.electra,
-    data: ssz.electra.SSEPayloadAttributes.fromJson({
+    version: ForkName.gloas,
+    data: ssz.gloas.SSEPayloadAttributes.fromJson({
       proposer_index: "123",
       proposal_slot: "10",
-      parent_block_number: "9",
       parent_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
       parent_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+      safe_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+      finalized_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
       payload_attributes: {
+        slot_number: "10",
+        target_gas_limit: "60000000",
         timestamp: "123456",
         prev_randao: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         suggested_fee_recipient: "0x0000000000000000000000000000000000000000",

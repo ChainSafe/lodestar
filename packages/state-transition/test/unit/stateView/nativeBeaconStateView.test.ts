@@ -1,38 +1,30 @@
-import {describe, expect, it} from "vitest";
-import {BitArray} from "@chainsafe/ssz";
+import {describe, expect, it, vi} from "vitest";
+import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
-import {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
+import {ssz} from "@lodestar/types";
+import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
+import type {StateTransitionOpts} from "../../../src/stateTransition.js";
+import {computeNewStateRootStateTransitionOpts} from "../../../src/stateView/computeNewStateRoot.js";
+import type {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
 describe("NativeBeaconStateView", () => {
-  it("lifts the raw {uint8Array, bitLen} into a BitArray for executionPayloadAvailability", () => {
-    // 0b10100101 — bits at indices 0, 2, 5, 7 are set
-    const uint8Array = new Uint8Array([0b10100101]);
-    const bitLen = 8;
+  const genesisValidatorsRoot = new Uint8Array(32);
+  const config = createBeaconConfig(defaultChainConfig, genesisValidatorsRoot);
+  const bellatrixConfig = createBeaconConfig(
+    {...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0},
+    genesisValidatorsRoot
+  );
 
-    let fetchCount = 0;
-    const binding = {
-      get executionPayloadAvailability() {
-        fetchCount++;
-        return {uint8Array, bitLen};
-      },
-    } as unknown as IBeaconStateViewNative;
+  it("throws for Gloas-only fields while native Gloas is unsupported", () => {
+    const binding = {} as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(config, binding);
 
-    const view = new NativeBeaconStateView(binding);
-    const bits = view.executionPayloadAvailability;
-
-    expect(bits).toBeInstanceOf(BitArray);
-    expect(bits.bitLen).toBe(bitLen);
-    expect(bits.uint8Array).toBe(uint8Array);
-    expect(bits.get(0)).toBe(true);
-    expect(bits.get(1)).toBe(false);
-    expect(bits.get(2)).toBe(true);
-    expect(bits.get(5)).toBe(true);
-    expect(bits.get(7)).toBe(true);
-
-    // Cached: a second access doesn't go back to the binding
-    expect(view.executionPayloadAvailability).toBe(bits);
-    expect(fetchCount).toBe(1);
+    expect(() => view.executionPayloadAvailability).toThrow("NativeBeaconStateView does not support Gloas");
+    expect(() => view.latestBlockHash).toThrow("NativeBeaconStateView does not support Gloas");
+    expect(() => view.getIndicesInPayloadTimelinessCommittee(0, 0)).toThrow(
+      "NativeBeaconStateView does not support Gloas"
+    );
   });
 
   it("caches forwarded properties so the binding is hit once", () => {
@@ -63,7 +55,7 @@ describe("NativeBeaconStateView", () => {
       },
     } as unknown as IBeaconStateViewNative;
 
-    const view = new NativeBeaconStateView(binding);
+    const view = new NativeBeaconStateView(config, binding);
     expect(view.fork).toBe(fakeFork);
     expect(view.fork).toBe(fakeFork);
     expect(view.latestBlockHeader).toBe(fakeHeader);
@@ -75,6 +67,16 @@ describe("NativeBeaconStateView", () => {
     expect(forkSeqAccessCount).toBe(1);
   });
 
+  it("releases the native binding", () => {
+    const binding = {
+      release: vi.fn(),
+    } as unknown as IBeaconStateViewNative;
+
+    new NativeBeaconStateView(config, binding).release();
+
+    expect(binding.release).toHaveBeenCalledOnce();
+  });
+
   it("delegates pass-through getters and methods to the binding", () => {
     const binding = {
       slot: 123,
@@ -84,11 +86,106 @@ describe("NativeBeaconStateView", () => {
       getBalance: (index: number) => 32_000_000_000 + index,
     } as unknown as IBeaconStateViewNative;
 
-    const view = new NativeBeaconStateView(binding);
+    const view = new NativeBeaconStateView(config, binding);
     expect(view.slot).toBe(123);
     expect(view.epoch).toBe(4);
     expect(view.validatorCount).toBe(17);
     expect(view.getBlockRootAtSlot(7)).toEqual(new Uint8Array([7]));
     expect(view.getBalance(2)).toBe(32_000_000_002);
+  });
+
+  it.each([
+    {
+      blockType: "full",
+      block: ssz.bellatrix.SignedBeaconBlock.defaultValue(),
+      isBlinded: false,
+    },
+    {
+      blockType: "blinded",
+      block: ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue(),
+      isBlinded: true,
+    },
+  ])("uses provided bytes and derives the blinded flag for a $blockType block", ({block, isBlinded}) => {
+    const blockBytes = new Uint8Array([1, 2, 3]);
+    const options: StateTransitionOpts = {
+      verifyStateRoot: false,
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
+    };
+    const postBinding = {} as IBeaconStateViewNative;
+    const binding = {
+      stateTransition: vi.fn(() => postBinding),
+    } as unknown as IBeaconStateViewNative;
+
+    const view = new NativeBeaconStateView(config, binding);
+    const postState = view.stateTransition({block, ssz: blockBytes}, options, {});
+
+    expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, isBlinded, options);
+    expect(postState).toBeInstanceOf(NativeBeaconStateView);
+    expect((postState as NativeBeaconStateView).binding).toBe(postBinding);
+  });
+
+  it("serializes blocks for native block reward computation", async () => {
+    const block = ssz.phase0.BeaconBlock.defaultValue();
+    const proposerRewards = {attestations: 1, syncAggregate: 2, slashing: 3};
+    const blockRewards = {
+      proposerIndex: 0,
+      total: 6,
+      attestations: 1,
+      syncAggregate: 2,
+      proposerSlashings: 0,
+      attesterSlashings: 3,
+    };
+    const binding = {
+      computeBlockRewards: vi.fn(() => blockRewards),
+    } as unknown as IBeaconStateViewNative;
+
+    const result = await new NativeBeaconStateView(config, binding).computeBlockRewards(block, proposerRewards);
+
+    expect(binding.computeBlockRewards).toHaveBeenCalledWith(
+      ssz.phase0.SignedBeaconBlock.serialize({message: block, signature: new Uint8Array(96)}),
+      false,
+      proposerRewards
+    );
+    expect(result).toBe(blockRewards);
+  });
+
+  it.each([
+    {
+      blockType: "full",
+      block: ssz.phase0.SignedBeaconBlock.defaultValue(),
+      isBlinded: false,
+      config,
+      expectedBytes: ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
+    },
+    {
+      blockType: "blinded",
+      block: ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue(),
+      isBlinded: true,
+      config: bellatrixConfig,
+      expectedBytes: ssz.bellatrix.SignedBlindedBeaconBlock.serialize(
+        ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue()
+      ),
+    },
+  ])("serializes a $blockType block when bytes are not provided", ({block, isBlinded, config, expectedBytes}) => {
+    const stateRoot = new Uint8Array(32).fill(1);
+    const postBinding = {
+      proposerRewards: {attestations: 1, syncAggregate: 2, slashing: 3},
+      hashTreeRoot: () => stateRoot,
+    } as unknown as IBeaconStateViewNative;
+    const binding = {
+      stateTransition: vi.fn(() => postBinding),
+    } as unknown as IBeaconStateViewNative;
+
+    const result = new NativeBeaconStateView(config, binding).computeNewStateRoot({block}, {});
+
+    expect(binding.stateTransition).toHaveBeenCalledWith(
+      expectedBytes,
+      isBlinded,
+      computeNewStateRootStateTransitionOpts
+    );
+    expect(result.newStateRoot).toBe(stateRoot);
+    expect(result.proposerReward).toBe(6n);
+    expect(result.postState).toBeInstanceOf(NativeBeaconStateView);
   });
 });
