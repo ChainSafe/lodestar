@@ -16,6 +16,7 @@ import {
   GENESIS_EPOCH,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   IBeaconStateView,
@@ -471,6 +472,9 @@ export async function importBlock(
       this.executionEngine
         .notifyForkchoiceUpdate(this.config.getForkName(fcuHead.slot), headBlockHash, safeBlockHash, finalizedBlockHash)
         .then(({inclusionListSatisfied}) => {
+          if (!isForkPostHeze(this.config.getForkName(fcuHead.slot))) {
+            return;
+          }
           if (recordHeadPayloadInclusionListVerdict(this.forkChoice, fcuHead, inclusionListSatisfied)) {
             this.recomputeForkChoiceHead(ForkchoiceCaller.inclusionListVerdict);
           }

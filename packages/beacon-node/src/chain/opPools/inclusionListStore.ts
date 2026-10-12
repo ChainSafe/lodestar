@@ -76,9 +76,6 @@ export class InclusionListStore {
     }
 
     const dependentRoot = toRootHex(inclusionList.dependentRoot);
-    const counts = this.validatorIlCounts.getOrDefault(slot).getOrDefault(dependentRoot);
-    counts.set(validatorIndex, (counts.get(validatorIndex) ?? 0) + 1);
-
     const stored = this.inclusionLists.getOrDefault(slot).getOrDefault(dependentRoot);
 
     const entry = stored.get(validatorIndex);
@@ -96,6 +93,12 @@ export class InclusionListStore {
 
     stored.set(validatorIndex, {signedInclusionList, committeeIndices, timely});
     return InclusionListInsertOutcome.New;
+  }
+
+  /** Count a valid message of `validatorIndex` for the first-or-second message gossip rule */
+  markSeen(slot: Slot, dependentRoot: RootHex, validatorIndex: ValidatorIndex): void {
+    const counts = this.validatorIlCounts.getOrDefault(slot).getOrDefault(dependentRoot);
+    counts.set(validatorIndex, (counts.get(validatorIndex) ?? 0) + 1);
   }
 
   /** Gossip rule: at most two valid messages per validator for a `(slot, dependent_root)` */

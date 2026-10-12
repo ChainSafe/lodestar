@@ -15,6 +15,7 @@ import {IBeaconStateView} from "../stateView/interface.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {EpochShuffling} from "./epochShuffling.js";
+import {InclusionListCommittee} from "./inclusionListCommittee.js";
 
 /**
  * Block root that decided the proposer shuffling for `proposalEpoch` (keys that shuffling).
@@ -196,9 +197,23 @@ export function getBeaconCommittee(epochShuffling: EpochShuffling, slot: Slot, i
   return getBeaconCommittees(epochShuffling, slot, [index])[0];
 }
 
+/** Inclusion list committees of a shuffling by slot index, computed on first use and freed with the shuffling */
+const inclusionListCommitteesByShuffling = new WeakMap<EpochShuffling, InclusionListCommittee[]>();
+
 /** Spec get_inclusion_list_committee: cycle over the slot's concatenated beacon committees */
-export function getInclusionListCommittee(epochShuffling: EpochShuffling, slot: Slot): Uint32Array {
-  return computeInclusionListCommittee(epochShuffling.committees[slot % SLOTS_PER_EPOCH]);
+export function getInclusionListCommittee(epochShuffling: EpochShuffling, slot: Slot): InclusionListCommittee {
+  let committees = inclusionListCommitteesByShuffling.get(epochShuffling);
+  if (committees === undefined) {
+    committees = [];
+    inclusionListCommitteesByShuffling.set(epochShuffling, committees);
+  }
+  const slotIndex = slot % SLOTS_PER_EPOCH;
+  let committee = committees[slotIndex];
+  if (committee === undefined) {
+    committee = new InclusionListCommittee(computeInclusionListCommittee(epochShuffling.committees[slotIndex]));
+    committees[slotIndex] = committee;
+  }
+  return committee;
 }
 
 function computeInclusionListCommittee(slotCommittees: Uint32Array[]): Uint32Array {

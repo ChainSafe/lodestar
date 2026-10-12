@@ -66,7 +66,7 @@ import {
 } from "../../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
-import {validateGossipInclusionList} from "../../chain/validation/inclusionList.js";
+import {InclusionListValidationResult, validateGossipInclusionList} from "../../chain/validation/inclusionList.js";
 import {
   AggregateAndProofValidationResult,
   GossipAttestation,
@@ -1519,26 +1519,37 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       );
 
       const timer = metrics?.inclusionListsValidationTime.startTimer();
-      let committeeIndices: number[];
+      let validationResult: InclusionListValidationResult;
       try {
-        ({committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList));
+        validationResult = await validateGossipInclusionList(chain, signedInclusionList);
       } finally {
         timer?.({source: InclusionListSource.gossip});
       }
+      const {committeeIndices, totalBytes} = validationResult;
 
-      // Timely only if received within its own slot before the deadline, so a list for the next slot that
-      // passed validation under clock disparity is untimely. Late lists are still stored, marked untimely
-      const secFromSlot = chain.clock.secFromSlot(slot, seenTimestampSec);
-      metrics?.inclusionListArrivalTime.observe(secFromSlot);
-      const isTimely = secFromSlot >= 0 && secFromSlot * 1000 < config.getInclusionListDueMs(config.getForkName(slot));
+      // Handler - deferred to next event loop so the validation result propagates first
+      callInNextEventLoop(() => {
+        try {
+          metrics?.inclusionListsValid.inc({source: InclusionListSource.gossip});
+          metrics?.inclusionListsValidSize.inc(totalBytes);
+          // Timely only if received within its own slot before the deadline, so a list for the next slot that
+          // passed validation under clock disparity is untimely. Late lists are still stored, marked untimely
+          const secFromSlot = chain.clock.secFromSlot(slot, seenTimestampSec);
+          metrics?.inclusionListArrivalTime.observe(secFromSlot);
+          const isTimely =
+            secFromSlot >= 0 && secFromSlot * 1000 < config.getInclusionListDueMs(config.getForkName(slot));
 
-      const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
-      metrics?.opPool.inclusionListStore.insertOutcome.inc({insertOutcome});
-      metrics?.opPool.inclusionListStore.size.set(chain.inclusionListStore.size);
+          const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
+          metrics?.opPool.inclusionListStore.insertOutcome.inc({insertOutcome});
+          metrics?.opPool.inclusionListStore.size.set(chain.inclusionListStore.size);
 
-      chain.emitter.emit(routes.events.EventType.inclusionList, {
-        version: config.getForkName(slot),
-        data: signedInclusionList,
+          chain.emitter.emit(routes.events.EventType.inclusionList, {
+            version: config.getForkName(slot),
+            data: signedInclusionList,
+          });
+        } catch (e) {
+          logger.debug("Error handling gossip inclusion list", {slot}, e as Error);
+        }
       });
     },
   };

@@ -835,10 +835,10 @@ export async function prepareExecutionPayload(
       attributes
     );
     payloadId = forkchoiceUpdate.payloadId;
-    const parentVariant = chain.forkChoice.getBlockHexAndBlockHash(
-      toRootHex(parentBlockRoot),
-      toRootHex(parentBlockHash)
-    );
+    const parentVariant =
+      ForkSeq[fork] >= ForkSeq.heze
+        ? chain.forkChoice.getBlockHexAndBlockHash(toRootHex(parentBlockRoot), toRootHex(parentBlockHash))
+        : null;
     if (
       recordHeadPayloadInclusionListVerdict(chain.forkChoice, parentVariant, forkchoiceUpdate.inclusionListSatisfied)
     ) {

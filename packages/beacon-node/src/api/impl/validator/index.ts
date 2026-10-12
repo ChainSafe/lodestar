@@ -87,7 +87,11 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
-import {validateApiAggregateAndProof, validateApiInclusionList} from "../../../chain/validation/index.js";
+import {
+  InclusionListValidationResult,
+  validateApiAggregateAndProof,
+  validateGossipInclusionList,
+} from "../../../chain/validation/index.js";
 import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -2278,7 +2282,7 @@ export function getValidatorApi(
       const dutySlotByValidator = new Map<ValidatorIndex, Slot>();
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         const slot = epochStartSlot + i;
-        for (const validatorIndex of getInclusionListCommittee(shuffling, slot)) {
+        for (const validatorIndex of getInclusionListCommittee(shuffling, slot).validatorIndices) {
           if (requestedIndices.has(validatorIndex) && !dutySlotByValidator.has(validatorIndex)) {
             dutySlotByValidator.set(validatorIndex, slot);
           }
@@ -2311,15 +2315,25 @@ export function getValidatorApi(
         throw new ApiError(400, `Publishing pre-heze inclusion list slot: ${slot}`);
       }
 
+      // Timeliness is judged on receipt, as for gossip, so a list submitted in time stays timely if validation is slow
+      const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
+      metrics?.inclusionListsReceived.inc({source: InclusionListSource.api});
+      metrics?.inclusionListTransactionsReceived.inc(
+        {source: InclusionListSource.api},
+        signedInclusionList.message.transactions.length
+      );
+
       const timer = metrics?.inclusionListsValidationTime.startTimer();
-      let committeeIndices: number[];
+      let validationResult: InclusionListValidationResult;
       try {
-        ({committeeIndices} = await validateApiInclusionList(chain, signedInclusionList));
+        validationResult = await validateGossipInclusionList(chain, signedInclusionList);
       } finally {
         timer?.({source: InclusionListSource.api});
       }
+      const {committeeIndices, totalBytes} = validationResult;
+      metrics?.inclusionListsValid.inc({source: InclusionListSource.api});
+      metrics?.inclusionListsValidSize.inc(totalBytes);
 
-      const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
       const isTimely =
         secFromSlot >= 0 && secFromSlot * 1000 < chain.config.getInclusionListDueMs(chain.config.getForkName(slot));
       chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);

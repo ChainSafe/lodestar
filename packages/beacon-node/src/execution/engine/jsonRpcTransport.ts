@@ -42,8 +42,9 @@ const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
-// The spec gives engine_getInclusionListV1 a 1s timeout; no retries so that bound holds end to end ahead of the duty deadline
-const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList", timeout: 1000, retries: 0};
+// The spec gives engine_getInclusionListV1 a 1s timeout; no retries and one deadline across fallback urls so that
+// bound holds end to end ahead of the duty deadline
+const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList", totalTimeout: 1000, retries: 0};
 
 /**
  * Legacy `engine_*` JSON-RPC methods

@@ -5,6 +5,7 @@ import {
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
+import {isForkPostHeze} from "@lodestar/params";
 import {DataAvailabilityStatus, isStatePostGloas, isStatePostHeze} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
@@ -297,6 +298,9 @@ export async function importExecutionPayload(
     this.executionEngine
       .notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash)
       .then(({inclusionListSatisfied}) => {
+        if (!isForkPostHeze(fork)) {
+          return;
+        }
         const fullVariant = this.forkChoice.getBlockHexAndBlockHash(blockRootHex, blockHashHex);
         if (recordHeadPayloadInclusionListVerdict(this.forkChoice, fullVariant, inclusionListSatisfied)) {
           this.recomputeForkChoiceHead(ForkchoiceCaller.inclusionListVerdict);

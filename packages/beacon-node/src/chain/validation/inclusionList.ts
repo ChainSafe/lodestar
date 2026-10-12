@@ -9,70 +9,33 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, heze} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {InclusionListSource} from "../blocks/types.js";
-import {InclusionListError, InclusionListErrorCode, InclusionListErrorType} from "../errors/inclusionList.js";
+import {InclusionListError, InclusionListErrorCode} from "../errors/inclusionList.js";
 import {GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
 import {isValidDependentRoot} from "./proposerPreferences.js";
 
-export enum InvalidInclusionListReason {
-  emptyTransactions = "empty_transactions",
-  maxSizeExceeded = "max_size_exceeded",
-  emptyTransaction = "empty_transaction",
-  slotOutOfRange = "slot_out_of_range",
-  seenTwice = "seen_twice",
-  unknownDependentRoot = "unknown_dependent_root",
-  invalidDependentRootSlot = "invalid_dependent_root_slot",
-  invalidDependentRoot = "invalid_dependent_root",
-  missingShuffling = "missing_shuffling",
-  validatorNotInCommittee = "validator_not_in_committee",
-  invalidSignature = "invalid_signature",
-  preHezeSlot = "pre_heze_slot",
-}
-
 export type InclusionListValidationResult = {
   /** Positions of `validator_index` in `get_inclusion_list_committee(state, slot)`, several when the committee cycles */
   committeeIndices: number[];
+  /** Sum of the byte lengths of `message.transactions` */
+  totalBytes: number;
 };
 
-export async function validateApiInclusionList(
-  chain: IBeaconChain,
-  signedInclusionList: heze.SignedInclusionList
-): Promise<InclusionListValidationResult> {
-  return validateInclusionList(chain, signedInclusionList, InclusionListSource.api);
-}
-
+/**
+ * Gossip validation for the `inclusion_list` topic, in spec rule order. Also applied to inclusion lists
+ * submitted over the API before they are published.
+ */
 export async function validateGossipInclusionList(
   chain: IBeaconChain,
   signedInclusionList: heze.SignedInclusionList
 ): Promise<InclusionListValidationResult> {
-  return validateInclusionList(chain, signedInclusionList, InclusionListSource.gossip);
-}
-
-/**
- * Gossip validation for the `inclusion_list` topic, in spec rule order.
- */
-async function validateInclusionList(
-  chain: IBeaconChain,
-  signedInclusionList: heze.SignedInclusionList,
-  source: InclusionListSource
-): Promise<InclusionListValidationResult> {
   const {slot, validatorIndex, transactions, dependentRoot} = signedInclusionList.message;
-
-  const inclusionListSize = transactions.reduce((total, transaction) => total + transaction.byteLength, 0);
-  const reject = (reason: InvalidInclusionListReason, type: InclusionListErrorType): never => {
-    chain.metrics?.inclusionListsInvalid.inc({source, reason});
-    throw new InclusionListError(GossipAction.REJECT, type);
-  };
-  const ignore = (reason: InvalidInclusionListReason, type: InclusionListErrorType): never => {
-    chain.metrics?.inclusionListsInvalid.inc({source, reason});
-    throw new InclusionListError(GossipAction.IGNORE, type);
-  };
+  const totalBytes = transactions.reduce((total, transaction) => total + transaction.byteLength, 0);
 
   // A pre-heze slot has no inclusion list committee to validate against
   if (!isForkPostHeze(chain.config.getForkName(slot))) {
-    ignore(InvalidInclusionListReason.preHezeSlot, {
+    throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.PRE_HEZE_SLOT,
       inclusionListSlot: slot,
     });
@@ -82,7 +45,7 @@ async function validateInclusionList(
   // for (message.slot, message.dependent_root)
   const dependentRootHex = toRootHex(dependentRoot);
   if (chain.inclusionListStore.seenTwice(slot, dependentRootHex, validatorIndex)) {
-    ignore(InvalidInclusionListReason.seenTwice, {
+    throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.MORE_THAN_TWO,
       validatorIndex,
     });
@@ -90,7 +53,7 @@ async function validateInclusionList(
 
   // [IGNORE] message.slot is equal to the current slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
-    ignore(InvalidInclusionListReason.slotOutOfRange, {
+    throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.INVALID_SLOT,
       inclusionListSlot: slot,
       currentSlot: chain.clock.currentSlot,
@@ -98,33 +61,31 @@ async function validateInclusionList(
   }
 
   // [IGNORE] The size of message.transactions is greater than 0
-  if (inclusionListSize === 0) {
-    ignore(InvalidInclusionListReason.emptyTransactions, {code: InclusionListErrorCode.EMPTY_TRANSACTIONS});
+  if (totalBytes === 0) {
+    throw new InclusionListError(GossipAction.IGNORE, {code: InclusionListErrorCode.EMPTY_TRANSACTIONS});
   }
 
   // [REJECT] The size of message.transactions is within upperbound MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST
-  if (inclusionListSize > chain.config.MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST) {
-    reject(InvalidInclusionListReason.maxSizeExceeded, {
+  if (totalBytes > chain.config.MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST) {
+    throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED,
-      inclusionListSize,
-      sizeLimit: chain.config.MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST,
+      totalBytes,
+      maxBytes: chain.config.MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST,
     });
   }
 
   // [REJECT] Every transaction in message.transactions is non-empty
   const emptyTransactionIndex = transactions.findIndex((transaction) => transaction.byteLength === 0);
   if (emptyTransactionIndex !== -1) {
-    reject(InvalidInclusionListReason.emptyTransaction, {
+    throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.EMPTY_TRANSACTION,
       transactionIndex: emptyTransactionIndex,
     });
   }
 
   // [IGNORE] The block with root message.dependent_root has been seen
-  // Thrown inline so the null check narrows dependentBlock, which a never-returning arrow function cannot do
   const dependentBlock = chain.forkChoice.getBlockHexDefaultStatus(dependentRootHex);
   if (dependentBlock === null) {
-    chain.metrics?.inclusionListsInvalid.inc({source, reason: InvalidInclusionListReason.unknownDependentRoot});
     throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.UNKNOWN_DEPENDENT_ROOT,
       dependentRoot: dependentRootHex,
@@ -138,7 +99,7 @@ async function validateInclusionList(
   const dependentEpoch = epoch - MIN_SEED_LOOKAHEAD;
   const maxDependentSlot = Math.max(GENESIS_SLOT, computeStartSlotAtEpoch(dependentEpoch) - 1);
   if (dependentBlock.slot > maxDependentSlot) {
-    reject(InvalidInclusionListReason.invalidDependentRootSlot, {
+    throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.INVALID_DEPENDENT_ROOT_SLOT,
       dependentRoot: dependentRootHex,
       dependentSlot: dependentBlock.slot,
@@ -148,7 +109,7 @@ async function validateInclusionList(
 
   // [IGNORE] is_valid_dependent_root(store, message.dependent_root, epoch - MIN_SEED_LOOKAHEAD)
   if (!isValidDependentRoot(chain.forkChoice, dependentBlock, dependentEpoch)) {
-    ignore(InvalidInclusionListReason.invalidDependentRoot, {
+    throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.INVALID_DEPENDENT_ROOT,
       dependentRoot: dependentRootHex,
       epoch: dependentEpoch,
@@ -159,22 +120,15 @@ async function validateInclusionList(
   // state of the block with root message.dependent_root, i.e. the shuffling of `epoch` keyed by `dependent_root`
   const shuffling = await getShuffling(chain, epoch, dependentRootHex, dependentBlock);
   if (shuffling === null) {
-    chain.metrics?.inclusionListsInvalid.inc({source, reason: InvalidInclusionListReason.missingShuffling});
     throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.MISSING_SHUFFLING,
       dependentRoot: dependentRootHex,
       epoch,
     });
   }
-  const committee = getInclusionListCommittee(shuffling, slot);
-  const committeeIndices: number[] = [];
-  for (let i = 0; i < committee.length; i++) {
-    if (committee[i] === validatorIndex) {
-      committeeIndices.push(i);
-    }
-  }
+  const committeeIndices = getInclusionListCommittee(shuffling, slot).getCommitteeIndices(validatorIndex);
   if (committeeIndices.length === 0) {
-    reject(InvalidInclusionListReason.validatorNotInCommittee, {
+    throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE,
       validatorIndex,
     });
@@ -182,24 +136,23 @@ async function validateInclusionList(
 
   // [REJECT] The signature is valid with respect to the validator's public key
   // Domain from the list's own slot, so a list for the first Heze slot verifies while the clock is still in Gloas
-  const signatureSet = getInclusionListSignatureSet(
-    chain.config,
-    signedInclusionList.message.slot,
-    signedInclusionList
-  );
+  const signatureSet = getInclusionListSignatureSet(chain.config, slot, signedInclusionList);
   // With only 16 inclusion list committee members per slot, batching can delay gossip by 100ms.
   // Verify without batching so inclusion lists can be forwarded sooner.
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: false}))) {
-    reject(InvalidInclusionListReason.invalidSignature, {code: InclusionListErrorCode.INVALID_SIGNATURE});
+    throw new InclusionListError(GossipAction.REJECT, {code: InclusionListErrorCode.INVALID_SIGNATURE});
   }
 
-  chain.metrics?.inclusionListsValid.inc({source});
-  chain.metrics?.inclusionListsValidSize.inc(inclusionListSize);
+  chain.inclusionListStore.markSeen(slot, dependentRootHex, validatorIndex);
 
-  return {committeeIndices};
+  return {committeeIndices, totalBytes};
 }
 
-/** The shuffling of `epoch` on the branch of `dependentBlock`, regenerated only on a branch the head has not seen */
+/**
+ * The shuffling of `epoch` on the branch of `dependentBlock`. Usually cached from the head state; when the
+ * dependent block is the head across empty epochs that state has not reached the lookahead start slot, so
+ * the spec's `process_slots` step is a state regen
+ */
 async function getShuffling(
   chain: IBeaconChain,
   epoch: Epoch,

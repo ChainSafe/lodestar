@@ -9360,7 +9360,7 @@
 - name: on_inclusion_list#heze
   sources:
     - file: packages/beacon-node/src/chain/validation/inclusionList.ts
-      search: async function validateInclusionList(
+      search: export async function validateGossipInclusionList(
     - file: packages/beacon-node/src/network/processor/gossipHandlers.ts
       search: "[GossipType.inclusion_list]: async ({"
   spec: |

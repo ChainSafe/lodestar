@@ -742,7 +742,7 @@ async function validateMessageForTopic(
     case GossipType.inclusion_list: {
       const signedInclusionList = rejectOnInvalidSerializedBytes(() => ssz.heze.SignedInclusionList.deserialize(bytes));
       const {committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList);
-      // Mirror gossip handler: insert into the store so the first-or-second message rule works
+      // Mirror gossip handler: store the list so later vectors see it
       chain.inclusionListStore.process(signedInclusionList, committeeIndices, true);
       break;
     }

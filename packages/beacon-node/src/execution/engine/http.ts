@@ -440,9 +440,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return this.withTransport(undefined, "v1", (transport) => transport.getBlobsV1(versionedHashes));
   }
 
-  /** `engine_getInclusionListV1` */
+  /** `engine_getInclusionListV1`, JSON-RPC only as the REST engine API defines no inclusion list route */
   async getInclusionList(): Promise<bellatrix.Transactions> {
-    return this.withTransport(ForkName.heze, undefined, (transport) => transport.getInclusionList());
+    this.metrics?.engineApiRequests.inc({transport: "json-rpc"});
+    return this.jsonRpc.getInclusionList();
   }
 
   private enqueue<T>(job: () => Promise<T>): Promise<T> {

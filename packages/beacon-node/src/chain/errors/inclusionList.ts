@@ -18,7 +18,7 @@ export enum InclusionListErrorCode {
 
 export type InclusionListErrorType =
   | {code: InclusionListErrorCode.EMPTY_TRANSACTIONS}
-  | {code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED; inclusionListSize: number; sizeLimit: number}
+  | {code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED; totalBytes: number; maxBytes: number}
   | {code: InclusionListErrorCode.EMPTY_TRANSACTION; transactionIndex: number}
   | {code: InclusionListErrorCode.INVALID_SLOT; inclusionListSlot: Slot; currentSlot: Slot}
   | {code: InclusionListErrorCode.MORE_THAN_TWO; validatorIndex: ValidatorIndex}

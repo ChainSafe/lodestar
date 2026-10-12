@@ -2,7 +2,6 @@ import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {InclusionListSource} from "../../chain/blocks/types.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
-import {InvalidInclusionListReason} from "../../chain/validation/inclusionList.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
@@ -446,11 +445,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Total number of valid inclusion lists",
       labelNames: ["source"],
     }),
-    inclusionListsInvalid: register.counter<{source: InclusionListSource; reason: InvalidInclusionListReason}>({
-      name: "beacon_inclusion_lists_invalid_total",
-      help: "Total number of invalid inclusion lists",
-      labelNames: ["source", "reason"],
-    }),
     inclusionListsValidSize: register.counter({
       name: "beacon_inclusion_lists_valid_size_bytes_total",
       help: "Total size of valid inclusion lists in bytes",
@@ -467,13 +461,13 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     inclusionListsValidationTime: register.histogram<{source: InclusionListSource}>({
       name: "beacon_inclusion_lists_validation_time_seconds",
       help: "Time taken to validate inclusion lists",
-      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5],
       labelNames: ["source"],
     }),
     inclusionListArrivalTime: register.histogram({
       name: "beacon_inclusion_lists_arrival_time_seconds",
       help: "Inclusion list arrival time since the beginning of slot",
-      buckets: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12],
+      buckets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
     }),
   };
 }
