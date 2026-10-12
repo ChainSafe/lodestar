@@ -84,6 +84,13 @@ export class GetBlobsTracker {
       this.logger.verbose("Trigger getBlobsV1 for block", logCtx);
       let requestFailed = false;
       getBlobSidecarsFromExecution(this.config, this.executionEngine, this.metrics, this.emitter, input)
+        .then(() => {
+          // EL errors and misses are handled inside the helper, blobs still missing means the attempt failed
+          if (!input.hasAllData()) {
+            requestFailed = true;
+            this.recordFailedAttempt(input.blockRootHex);
+          }
+        })
         .catch((error) => {
           this.logger.debug("Error during getBlobsV1 for block", logCtx, error as Error);
           requestFailed = true;
