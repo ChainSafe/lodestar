@@ -2,14 +2,15 @@ import {RootHex, Slot, ValidatorIndex, eip8025} from "@lodestar/types";
 
 type BlockProofs = {
   slot: Slot;
-  verified: Map<eip8025.ProofType, eip8025.ExecutionProofEnvelope>;
+  verified: Set<eip8025.ProofType>;
   proofRoots: Set<RootHex>;
   provers: Set<string>;
 };
 
 /**
- * Execution proofs per beacon block root: the verified envelopes (spec `Store.execution_proofs`) and the
- * gossip dedup sets (spec `Seen.execution_proof_roots` and `Seen.execution_proof_provers`).
+ * Execution proofs per beacon block root: which proof types are verified (spec `Store.execution_proofs`,
+ * without the envelopes, since `proofData` is up to 4 MiB and nothing serves it yet) and the gossip dedup
+ * sets (spec `Seen.execution_proof_roots` and `Seen.execution_proof_provers`).
  * Proving takes minutes, so entries outlive the block's import and are pruned on finalization.
  */
 export class SeenExecutionProofs {
@@ -19,15 +20,8 @@ export class SeenExecutionProofs {
     return this.blocks.get(blockRoot)?.verified.has(proofType) === true;
   }
 
-  getVerified(blockRoot: RootHex): eip8025.ExecutionProofEnvelope[] {
-    return Array.from(this.blocks.get(blockRoot)?.verified.values() ?? []);
-  }
-
-  addVerified(blockRoot: RootHex, slot: Slot, proofEnvelope: eip8025.ExecutionProofEnvelope): void {
-    const block = this.getOrCreate(blockRoot, slot);
-    if (!block.verified.has(proofEnvelope.proofType)) {
-      block.verified.set(proofEnvelope.proofType, proofEnvelope);
-    }
+  addVerified(blockRoot: RootHex, slot: Slot, proofType: eip8025.ProofType): void {
+    this.getOrCreate(blockRoot, slot).verified.add(proofType);
   }
 
   isProofSeen(blockRoot: RootHex, proofRoot: RootHex): boolean {
@@ -61,7 +55,7 @@ export class SeenExecutionProofs {
   private getOrCreate(blockRoot: RootHex, slot: Slot): BlockProofs {
     let block = this.blocks.get(blockRoot);
     if (block === undefined) {
-      block = {slot, verified: new Map(), proofRoots: new Set(), provers: new Set()};
+      block = {slot, verified: new Set(), proofRoots: new Set(), provers: new Set()};
       this.blocks.set(blockRoot, block);
     }
     return block;

@@ -1,3 +1,4 @@
+import {ForkName} from "@lodestar/params";
 import {RootHex, ValidatorIndex, eip8025} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
@@ -10,6 +11,7 @@ export enum ExecutionProofErrorCode {
   PROVER_ALREADY_SEEN = "EXECUTION_PROOF_ERROR_PROVER_ALREADY_SEEN",
   PAYLOAD_UNAVAILABLE = "EXECUTION_PROOF_ERROR_PAYLOAD_UNAVAILABLE",
   UNKNOWN_BLOCK_STATE = "EXECUTION_PROOF_ERROR_UNKNOWN_BLOCK_STATE",
+  PRE_GLOAS_BLOCK = "EXECUTION_PROOF_ERROR_PRE_GLOAS_BLOCK",
   VALIDATOR_INDEX_OUT_OF_RANGE = "EXECUTION_PROOF_ERROR_VALIDATOR_INDEX_OUT_OF_RANGE",
   VALIDATOR_NOT_ACTIVE = "EXECUTION_PROOF_ERROR_VALIDATOR_NOT_ACTIVE",
   INVALID_SIGNATURE = "EXECUTION_PROOF_ERROR_INVALID_SIGNATURE",
@@ -28,6 +30,7 @@ export type ExecutionProofErrorType =
   | ({code: ExecutionProofErrorCode.PROVER_ALREADY_SEEN} & ProverContext)
   | ({code: ExecutionProofErrorCode.PAYLOAD_UNAVAILABLE} & ProofContext)
   | ({code: ExecutionProofErrorCode.UNKNOWN_BLOCK_STATE} & ProofContext)
+  | ({code: ExecutionProofErrorCode.PRE_GLOAS_BLOCK; fork: ForkName} & ProofContext)
   | ({code: ExecutionProofErrorCode.VALIDATOR_INDEX_OUT_OF_RANGE; validatorCount: number} & ProverContext)
   | ({code: ExecutionProofErrorCode.VALIDATOR_NOT_ACTIVE} & ProverContext)
   | ({code: ExecutionProofErrorCode.INVALID_SIGNATURE} & ProverContext)

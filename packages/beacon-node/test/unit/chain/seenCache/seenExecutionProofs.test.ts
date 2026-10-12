@@ -1,5 +1,4 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {ssz} from "@lodestar/types";
 import {SeenExecutionProofs} from "../../../../src/chain/seenCache/seenExecutionProofs.js";
 
 describe("SeenExecutionProofs", () => {
@@ -10,21 +9,14 @@ describe("SeenExecutionProofs", () => {
     cache = new SeenExecutionProofs();
   });
 
-  it("keeps the first verified envelope per block root and proof type", () => {
-    const first = ssz.eip8025.ExecutionProofEnvelope.defaultValue();
-    first.proofType = 1;
-    first.proofData = Uint8Array.from([1]);
-    const second = {...first, proofData: Uint8Array.from([2])};
-    const other = {...first, proofType: 2};
-
-    cache.addVerified(blockRoot, 8, first);
-    cache.addVerified(blockRoot, 8, second);
-    cache.addVerified(blockRoot, 8, other);
+  it("tracks verified proof types per block root", () => {
+    cache.addVerified(blockRoot, 8, 1);
+    cache.addVerified(blockRoot, 8, 2);
 
     expect(cache.hasVerified(blockRoot, 1)).toBe(true);
+    expect(cache.hasVerified(blockRoot, 2)).toBe(true);
     expect(cache.hasVerified(blockRoot, 3)).toBe(false);
     expect(cache.hasVerified("0x02", 1)).toBe(false);
-    expect(cache.getVerified(blockRoot)).toEqual([first, other]);
   });
 
   it("tracks processed proof roots and prover attempts per block root", () => {
@@ -41,7 +33,7 @@ describe("SeenExecutionProofs", () => {
   it("prunes blocks below the finalized slot", () => {
     cache.markSeen("0x01", 8, "0xaa", 1, 3);
     cache.markSeen("0x02", 16, "0xbb", 1, 3);
-    cache.addVerified("0x03", 16, ssz.eip8025.ExecutionProofEnvelope.defaultValue());
+    cache.addVerified("0x03", 16, 0);
 
     cache.prune(16);
 

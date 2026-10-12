@@ -4,17 +4,24 @@ import {
   isActiveValidator,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {eip8025, ssz} from "@lodestar/types";
+import {Slot, eip8025, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionProofError, ExecutionProofErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {getExecutionProof} from "../proofEngine/index.js";
 import {RegenCaller} from "../regen/index.js";
 
+export async function validateApiExecutionProof(
+  chain: IBeaconChain,
+  signedProofEnvelope: eip8025.SignedExecutionProofEnvelope
+): Promise<{blockSlot: Slot}> {
+  return validateGossipExecutionProof(chain, signedProofEnvelope);
+}
+
 export async function validateGossipExecutionProof(
   chain: IBeaconChain,
   signedProofEnvelope: eip8025.SignedExecutionProofEnvelope
-): Promise<void> {
+): Promise<{blockSlot: Slot}> {
   const proofEnvelope = signedProofEnvelope.message;
   const {proofType} = proofEnvelope;
   const {validatorIndex} = signedProofEnvelope;
@@ -78,8 +85,10 @@ export async function validateGossipExecutionProof(
     });
   }
 
-  // [IGNORE] The proof's execution payload is available
-  const payloadInput = await chain.seenPayloadEnvelopeInputCache.getOrReload(blockRoot);
+  // [IGNORE] The proof's execution payload is available (spec `store.payloads`, so imported, not just seen)
+  const payloadInput = chain.forkChoice.hasPayloadHexUnsafe(blockRoot)
+    ? await chain.seenPayloadEnvelopeInputCache.getOrReload(blockRoot)
+    : undefined;
   if (payloadInput === undefined || !payloadInput.hasPayloadEnvelope()) {
     throw new ExecutionProofError(GossipAction.IGNORE, {
       code: ExecutionProofErrorCode.PAYLOAD_UNAVAILABLE,
@@ -96,7 +105,12 @@ export async function validateGossipExecutionProof(
     });
   });
   if (!isStatePostGloas(state)) {
-    throw new Error(`Expected gloas+ state for execution proof validation, got fork=${state.forkName}`);
+    throw new ExecutionProofError(GossipAction.IGNORE, {
+      code: ExecutionProofErrorCode.PRE_GLOAS_BLOCK,
+      blockRoot,
+      proofType,
+      fork: state.forkName,
+    });
   }
 
   // [REJECT] The execution proof envelope passes validation (spec `verify_execution_proof_envelope`)
@@ -143,4 +157,8 @@ export async function validateGossipExecutionProof(
       validatorIndex,
     });
   }
+
+  chain.seenExecutionProofs.addVerified(blockRoot, block.slot, proofType);
+
+  return {blockSlot: block.slot};
 }

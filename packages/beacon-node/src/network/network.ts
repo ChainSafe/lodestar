@@ -19,11 +19,13 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
+  Slot,
   SlotRootHex,
   SubnetID,
   altair,
   capella,
   deneb,
+  eip8025,
   fulu,
   gloas,
   heze,
@@ -176,6 +178,7 @@ export class Network implements INetwork {
     const activeValidatorCount = chain.getHeadState().activeValidatorCount;
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
+    const executionProofAware = chain.proofEngine.supportedProofTypes.size > 0;
 
     if (opts.useWorker) {
       logger.info("running libp2p instance in worker thread");
@@ -191,6 +194,7 @@ export class Network implements INetwork {
             genesisTime: chain.genesisTime,
             initialStatus,
             initialCustodyGroupCount,
+            executionProofAware,
           },
           config,
           privateKey,
@@ -212,6 +216,7 @@ export class Network implements INetwork {
           initialStatus,
           initialCustodyGroupCount,
           activeValidatorCount,
+          executionProofAware,
         });
 
     const networkProcessor = new NetworkProcessor(
@@ -554,6 +559,18 @@ export class Network implements INetwork {
     return this.publishGossip<GossipType.proposer_preferences>(
       {type: GossipType.proposer_preferences, boundary},
       signedProposerPreferences
+    );
+  }
+
+  async publishExecutionProof(
+    signedProofEnvelope: eip8025.SignedExecutionProofEnvelope,
+    blockSlot: Slot
+  ): Promise<number> {
+    const boundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(blockSlot));
+
+    return this.publishGossip<GossipType.execution_proof>(
+      {type: GossipType.execution_proof, boundary},
+      signedProofEnvelope
     );
   }
 

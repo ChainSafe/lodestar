@@ -108,6 +108,7 @@ const core = await NetworkCore.init({
   activeValidatorCount: workerData.activeValidatorCount,
   initialStatus: workerData.initialStatus,
   initialCustodyGroupCount: workerData.initialCustodyGroupCount,
+  executionProofAware: workerData.executionProofAware,
 });
 
 wireEventsOnWorkerThread<NetworkEventData>(

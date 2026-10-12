@@ -93,6 +93,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.execution_payload_bid:
     case GossipType.proposer_preferences:
     case GossipType.inclusion_list:
+    case GossipType.execution_proof:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -148,6 +149,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.gloas.SignedProposerPreferences;
     case GossipType.inclusion_list:
       return ssz.heze.SignedInclusionList;
+    case GossipType.execution_proof:
+      return ssz.eip8025.SignedExecutionProofEnvelope;
   }
 }
 
@@ -243,6 +246,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.execution_payload_bid:
       case GossipType.proposer_preferences:
       case GossipType.inclusion_list:
+      case GossipType.execution_proof:
         return {type: gossipTypeStr, boundary, encoding};
     }
 
@@ -282,7 +286,12 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
 export function getCoreTopicsAtFork(
   networkConfig: NetworkConfig,
   fork: ForkName,
-  opts: {subscribeAllSubnets?: boolean; subscribeAllColumnSubnets?: boolean; disableLightClientServer?: boolean}
+  opts: {
+    subscribeAllSubnets?: boolean;
+    subscribeAllColumnSubnets?: boolean;
+    disableLightClientServer?: boolean;
+    executionProofAware?: boolean;
+  }
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   // Common topics for all forks
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
@@ -298,6 +307,9 @@ export function getCoreTopicsAtFork(
     topics.push({type: GossipType.payload_attestation_message});
     topics.push({type: GossipType.execution_payload_bid});
     topics.push({type: GossipType.proposer_preferences});
+    if (opts.executionProofAware) {
+      topics.push({type: GossipType.execution_proof});
+    }
   }
 
   if (ForkSeq[fork] >= ForkSeq.heze) {
@@ -361,6 +373,7 @@ export function getAllowedTopics(networkConfig: NetworkConfig): Set<string> {
       subscribeAllSubnets: true,
       subscribeAllColumnSubnets: true,
       disableLightClientServer: false,
+      executionProofAware: true,
     });
     for (const topic of topics) {
       allowedTopics.add(stringifyGossipTopic(config, {...topic, boundary}));
@@ -422,6 +435,7 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.execution_payload_bid]: true,
   [GossipType.proposer_preferences]: true,
   [GossipType.inclusion_list]: true,
+  [GossipType.execution_proof]: true,
 };
 
 /**
@@ -461,4 +475,5 @@ export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
   [GossipType.execution_payload_bid]: false,
   [GossipType.proposer_preferences]: false,
   [GossipType.inclusion_list]: false,
+  [GossipType.execution_proof]: false,
 };
