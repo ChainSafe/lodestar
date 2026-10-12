@@ -22,7 +22,12 @@ test "ListType - sanity" {
     defer allocator.free(b_buf);
 
     _ = Bytes.serializeIntoBytes(&b, b_buf);
-    try Bytes.deserializeFromBytes(allocator, b_buf, &b);
+
+    var b_decoded: Bytes.Type = Bytes.default_value;
+    defer b_decoded.deinit(allocator);
+
+    try Bytes.deserializeFromBytes(allocator, b_buf, &b_decoded);
+    try std.testing.expect(Bytes.equals(&b, &b_decoded));
 
     const BytesBytes = VariableProgressiveListType(Bytes);
     var b2: BytesBytes.Type = BytesBytes.default_value;
@@ -34,7 +39,12 @@ test "ListType - sanity" {
     defer allocator.free(b2_buf);
 
     _ = BytesBytes.serializeIntoBytes(&b2, b2_buf);
-    try BytesBytes.deserializeFromBytes(allocator, b2_buf, &b2);
+
+    var b2_decoded: BytesBytes.Type = BytesBytes.default_value;
+    defer BytesBytes.deinit(allocator, &b2_decoded);
+
+    try BytesBytes.deserializeFromBytes(allocator, b2_buf, &b2_decoded);
+    try std.testing.expect(BytesBytes.equals(&b2, &b2_decoded));
 }
 
 test "fixed progressive list tree size needs no allocation" {
@@ -124,17 +134,17 @@ test "memory_safety: progressive list tree.fromValue reclaims unpublished nodes 
     try expectProgressiveFromValuePoolExhaustionReclaimsNodes(List, &value, 32);
 }
 
-test "memory_safety: progressive fixed list byte deserialization preserves out on malformed input" {
+test "memory_safety: progressive fixed list byte deserialization leaves default out on error" {
     const List = FixedProgressiveListType(BoolType());
     var out: List.Type = .empty;
     defer out.deinit(std.testing.allocator);
-    try out.appendSlice(std.testing.allocator, &.{ false, false });
 
     try std.testing.expectError(
         error.invalidBoolean,
         List.deserializeFromBytes(std.testing.allocator, &.{ 1, 2 }, &out),
     );
-    try std.testing.expectEqualSlices(bool, &.{ false, false }, out.items);
+    try std.testing.expectEqual(@as(usize, 0), out.items.len);
+    try std.testing.expectEqual(@as(usize, 0), out.capacity);
 }
 
 test "memory_safety: progressive list tree.toValue preserves out on malformed tree" {
@@ -155,16 +165,16 @@ test "memory_safety: progressive list tree.toValue preserves out on malformed tr
 
     var out: List.Type = .empty;
     defer out.deinit(std.testing.allocator);
-    try out.append(std.testing.allocator, 99);
 
     try std.testing.expectError(
         error.InvalidNode,
         List.tree.toValue(std.testing.allocator, root, &pool, &out),
     );
-    try std.testing.expectEqualSlices(u64, &.{99}, out.items);
+    try std.testing.expectEqual(@as(usize, 0), out.items.len);
+    try std.testing.expectEqual(@as(usize, 0), out.capacity);
 }
 
-test "memory_safety: variable progressive list byte deserialization preserves out on OOM" {
+test "memory_safety: variable progressive list byte deserialization leaves default out on OOM" {
     const Bits = ProgressiveBitListType();
     const List = VariableProgressiveListType(Bits);
     var source: List.Type = .empty;
@@ -188,16 +198,11 @@ test "memory_safety: variable progressive list byte deserialization preserves ou
         ) !void {
             var out: List.Type = .empty;
             defer List.deinit(allocator, &out);
-            var sentinel: ?Bits.Type = try Bits.Type.fromBitLen(allocator, 5);
-            errdefer if (sentinel) |*value| value.deinit(allocator);
-            sentinel.?.setAssumeCapacity(4, true);
-            try out.append(allocator, sentinel.?);
-            sentinel = null;
 
             List.deserializeFromBytes(allocator, serialized, &out) catch |err| {
-                try std.testing.expectEqual(@as(usize, 1), out.items.len);
-                try std.testing.expectEqual(@as(usize, 5), out.items[0].bit_len);
-                try std.testing.expect(try out.items[0].get(4));
+                try std.testing.expectEqual(error.OutOfMemory, err);
+                try std.testing.expectEqual(@as(usize, 0), out.items.len);
+                try std.testing.expectEqual(@as(usize, 0), out.capacity);
                 return err;
             };
             try std.testing.expect(List.equals(source_value, &out));
@@ -205,7 +210,7 @@ test "memory_safety: variable progressive list byte deserialization preserves ou
     }.run, .{ bytes, &source });
 }
 
-test "memory_safety: variable progressive list tree.toValue preserves out on OOM" {
+test "memory_safety: variable progressive list tree.toValue leaves default out on OOM" {
     const Bits = ProgressiveBitListType();
     const List = VariableProgressiveListType(Bits);
     var source: List.Type = .empty;
@@ -235,16 +240,11 @@ test "memory_safety: variable progressive list tree.toValue preserves out on OOM
         ) !void {
             var out: List.Type = .empty;
             defer List.deinit(allocator, &out);
-            var sentinel: ?Bits.Type = try Bits.Type.fromBitLen(allocator, 5);
-            errdefer if (sentinel) |*value| value.deinit(allocator);
-            sentinel.?.setAssumeCapacity(4, true);
-            try out.append(allocator, sentinel.?);
-            sentinel = null;
 
             List.tree.toValue(allocator, input_root, input_pool, &out) catch |err| {
-                try std.testing.expectEqual(@as(usize, 1), out.items.len);
-                try std.testing.expectEqual(@as(usize, 5), out.items[0].bit_len);
-                try std.testing.expect(try out.items[0].get(4));
+                try std.testing.expectEqual(error.OutOfMemory, err);
+                try std.testing.expectEqual(@as(usize, 0), out.items.len);
+                try std.testing.expectEqual(@as(usize, 0), out.capacity);
                 return err;
             };
             try std.testing.expect(List.equals(source_value, &out));

@@ -180,7 +180,7 @@ test "memory_safety: fixed progressive container byte deserialization preserves 
     try std.testing.expect(!out.b);
 }
 
-test "memory_safety: variable progressive container byte deserialization preserves out on malformed input" {
+test "memory_safety: variable progressive container byte deserialization leaves default out on error" {
     const Items = FixedProgressiveListType(BoolType());
     const Container = VariableProgressiveContainerType(struct {
         a: UintType(8),
@@ -188,8 +188,6 @@ test "memory_safety: variable progressive container byte deserialization preserv
     }, &.{ 1, 1 });
     var out = Container.default_value;
     defer Container.deinit(std.testing.allocator, &out);
-    out.a = 7;
-    try out.items.appendSlice(std.testing.allocator, &.{ false, false });
 
     try std.testing.expectError(
         error.invalidBoolean,
@@ -199,8 +197,9 @@ test "memory_safety: variable progressive container byte deserialization preserv
             &out,
         ),
     );
-    try std.testing.expectEqual(@as(u8, 7), out.a);
-    try std.testing.expectEqualSlices(bool, &.{ false, false }, out.items.items);
+    try std.testing.expectEqual(@as(u8, 0), out.a);
+    try std.testing.expectEqual(@as(usize, 0), out.items.items.len);
+    try std.testing.expectEqual(@as(usize, 0), out.items.capacity);
 }
 
 test "progressive container hashing streams sparse fields without allocation" {

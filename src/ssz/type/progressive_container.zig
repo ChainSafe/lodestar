@@ -551,6 +551,7 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
             return variable_index;
         }
 
+        /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
         pub fn deserializeFromBytes(allocator: std.mem.Allocator, data: []const u8, out: *Type) !void {
             if (data.len > max_size or data.len < min_size) {
                 return error.InvalidSize;
@@ -575,7 +576,6 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
                 }
             }
 
-            deinit(allocator, out);
             out.* = replacement;
         }
 
@@ -699,6 +699,7 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
         };
 
         pub const tree = struct {
+            /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
             pub fn toValue(allocator: std.mem.Allocator, node: Node.Id, pool: *Node.Pool, out: *Type) !void {
                 const nodes = try allocator.alloc(Node.Id, chunk_count);
                 defer allocator.free(nodes);
@@ -729,7 +730,6 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
                     }
                 }
 
-                deinit(allocator, out);
                 out.* = replacement;
             }
 
@@ -801,6 +801,7 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
             try writer.endObject();
         }
 
+        /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
         pub fn deserializeFromJson(allocator: std.mem.Allocator, source: *std.json.Scanner, out: *Type) !void {
             // start object token "{"
             switch (try source.next()) {
@@ -839,7 +840,6 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
                 else => return error.InvalidJson,
             }
 
-            deinit(allocator, out);
             out.* = replacement;
         }
     };
