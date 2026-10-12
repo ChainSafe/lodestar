@@ -61,6 +61,10 @@
             .url = "git+https://github.com/lalinsky/zio?ref=v0.14.0#aa860381beb42bc077e24ef304827cbdc23fcef9",
             .hash = "zio-0.14.0-xHbVVPxFHgBCop4CvfF4u360kzWlHD4FS8Ud-RIkPcZ7",
         },
+        .ere = .{
+            .url = "git+https://github.com/ChainSafe/ere.zig#66d27cc300e467cae55335f673fad13569bf56cf",
+            .hash = "ere_zig-0.1.0-UBcsLXo1AADfv1_PF3kwGLo9wx-O0Usjf-4SnZKi-3mM",
+        },
     },
     .options_modules = .{
         .build_options = .{
@@ -99,6 +103,18 @@
                 .type = .string,
                 .default = "fixtures/era",
                 .description = "Local output directory for downloaded ERA files.",
+            },
+        },
+        .download_ere_fixture_options = .{
+            .ere_fixture_base_url = .{
+                .type = .string,
+                .default = "https://raw.githubusercontent.com/eth-act/ere/c0c411ae9215e0f72a00d52e32e267b30ef48606",
+                .description = "Base URL of the eth-act/ere tree (v0.19.2) that holds the verifier fixtures.",
+            },
+            .ere_fixture_out_dir = .{
+                .type = .string,
+                .default = "test/fixtures/ere",
+                .description = "Output directory for the ere verifier fixtures.",
             },
         },
         .spec_test_options = .{
@@ -227,12 +243,22 @@
             .root_source_file = "src/beacon_node/root.zig",
             .imports = .{ .consensus_types, .state_transition, .persistent_merkle_tree, .testing_allocators, .metrics, .hex, .time },
         },
+        .ere_verifier = .{
+            .root_source_file = "src/ere_verifier/root.zig",
+            .imports = .{.ere},
+        },
     },
     .executables = .{
         .download_era_files = .{
             .root_module = .{
                 .root_source_file = "scripts/download_era_files.zig",
                 .imports = .{.download_era_options},
+            },
+        },
+        .download_ere_fixtures = .{
+            .root_module = .{
+                .root_source_file = "scripts/download_ere_fixtures.zig",
+                .imports = .{.download_ere_fixture_options},
             },
         },
         // TODO: Re-enable metrics_stf once karlseguin/http.zig supports Zig 0.16.0.
@@ -388,6 +414,7 @@
                     .fork_types,
                     .state_transition,
                     .hex,
+                    .ere_verifier,
                     "zapi:zapi",
                 },
             },
@@ -418,6 +445,7 @@
         .fork_choice = .{ .root_module = .fork_choice },
         .clock = .{ .root_module = .clock },
         .beacon_node = .{ .root_module = .beacon_node },
+        .ere_verifier = .{ .root_module = .ere_verifier },
         .bindings_allocator = .{
             .root_module = .{
                 .root_source_file = "bindings/napi/tracked_allocator.zig",

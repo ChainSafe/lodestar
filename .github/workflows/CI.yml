@@ -119,6 +119,9 @@ jobs:
       - name: Run beacon-node tests
         run: |
           zig build test:beacon_node
+      - name: Run ere_verifier tests
+        run: |
+          zig build test:ere_verifier
 
       - name: Build benchmarks
         run: |
@@ -456,6 +459,9 @@ jobs:
       - name: Download era files
         run: |
           zig build run:download_era_files
+      - name: Download ere verifier fixtures
+        run: |
+          zig build run:download_ere_fixtures
       - name: Test bindings
         run: |
           pnpm test

@@ -35,6 +35,10 @@
     "./shuffle": {
       "import": "./bindings/src/shuffle.js",
       "types": "./bindings/src/shuffle.d.ts"
+    },
+    "./execution-proof-verifier": {
+      "import": "./bindings/src/execution-proof-verifier.js",
+      "types": "./bindings/src/execution-proof-verifier.d.ts"
     }
   },
   "scripts": {

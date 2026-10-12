@@ -55,6 +55,7 @@ src/
   consensus_types/         # Fork-specific Ethereum consensus types
   constants/               # Protocol constants
   era/                     # ERA file handling
+  ere_verifier/            # EIP-8025 execution proof verification through ere.zig
   fork_choice/             # Fork-choice implementation
   fork_types/              # Type-erased, fork-aware wrappers
   hashing/                 # SHA-256 and Merkleization
@@ -137,6 +138,16 @@ zig build test:spec_tests -Dtest:spec_tests.filters="pattern" -Dpreset=minimal
 
 Use the minimal preset for faster iteration, but run mainnet when behavior depends on preset values.
 Do not assume minimal and mainnet constants are interchangeable.
+
+### ere verifier fixtures
+
+The execution-proof-verifier binding test verifies ere's own fixture proofs when the fixtures are present;
+ere.zig covers the same proofs at the library level:
+
+```bash
+zig build run:download_ere_fixtures
+pnpm test
+```
 
 ### JavaScript and TypeScript bindings
 
