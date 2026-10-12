@@ -46,6 +46,42 @@ test "innerShuffleList generic over u64" {
     try std.testing.expectEqualSlices(u64, &input, &actual);
 }
 
+test "list shuffle matches ComputeShuffledIndex across pair and source hash boundaries" {
+    const allocator = std.testing.allocator;
+    const seed = [_]u8{0x5a} ** SEED_SIZE;
+    const rounds = shuffle.SHUFFLE_ROUNDS_MAINNET;
+    const list_sizes =
+        // Sizes below 16 only swap one pair at a time; longer lists also take eight-pair steps.
+        [_]u32{
+            2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+            32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
+            47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
+            62, 63, 64,
+        } ++
+        // One source hash decides 256 positions.
+        [_]u32{ 255, 256, 257, 511, 512, 513, 1023, 1024, 1025 };
+
+    for (list_sizes) |list_size| {
+        var reference = try shuffle.ComputeShuffledIndex.init(allocator, &seed, list_size, rounds);
+        defer reference.deinit();
+
+        const positions = try allocator.alloc(u32, list_size);
+        defer allocator.free(positions);
+
+        for (positions, 0..) |*position, i| position.* = @intCast(i);
+        try shuffle.unshuffleList(u32, positions, &seed, rounds);
+        for (positions, 0..) |position, i| {
+            try std.testing.expectEqual(try reference.get(@intCast(i)), position);
+        }
+
+        try shuffle.shuffleList(u32, positions, &seed, rounds);
+        for (positions, 0..) |position, i| {
+            try std.testing.expectEqual(@as(u32, @intCast(i)), position);
+        }
+    }
+}
+
 test "unshuffleList matches spec test vector" {
     // seed 0x4fe91d85d6bc19b20413659c61f3c690a1c4d48be41cab8363a130cebabada97
     const seed = [_]u8{

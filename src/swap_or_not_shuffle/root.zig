@@ -71,6 +71,79 @@ inline fn maskedSwap(comptime T: type, out: []T, i: usize, j: usize, bit: u8) vo
     out[j] = right ^ delta;
 }
 
+const PAIRS_PER_SOURCE_BYTE = 8;
+
+/// Swaps `out[low + k]` with `out[high - k]` for each k in 0..8 whose bit `7 - k` of
+/// `source_byte` is set. Requires `high & 7 == 7`, so one source byte decides all eight pairs.
+inline fn maskedSwapBlock(
+    comptime T: type,
+    out: []T,
+    low: usize,
+    high: usize,
+    source_byte: u8,
+) void {
+    const Block = @Vector(PAIRS_PER_SOURCE_BYTE, T);
+    const Bits = @Vector(PAIRS_PER_SOURCE_BYTE, u8);
+    const lane_bit: Bits = .{ 1, 2, 4, 8, 16, 32, 64, 128 };
+
+    std.debug.assert(high & 0x07 == 0x07);
+    const high_start = high - (PAIRS_PER_SOURCE_BYTE - 1);
+    std.debug.assert(low + PAIRS_PER_SOURCE_BYTE <= high_start);
+
+    const low_block: Block = out[low..][0..PAIRS_PER_SOURCE_BYTE].*;
+    const high_block: Block = out[high_start..][0..PAIRS_PER_SOURCE_BYTE].*;
+    // Lane m of the high block is pair `7 - m`, which bit m decides. Reversing the low block
+    // puts its half of each pair in the same lane.
+    const low_reversed = std.simd.reverseOrder(low_block);
+    const swap = (@as(Bits, @splat(source_byte)) & lane_bit) != @as(Bits, @splat(0));
+
+    out[low..][0..PAIRS_PER_SOURCE_BYTE].* =
+        std.simd.reverseOrder(@select(T, swap, high_block, low_reversed));
+    out[high_start..][0..PAIRS_PER_SOURCE_BYTE].* = @select(T, swap, low_reversed, high_block);
+}
+
+/// Applies the current round's swap-or-not to `pair_count` pairs, walking up from `low_first`
+/// and down from `high_first`. The high position of a pair selects its decision bit.
+fn swapOrNotPairs(
+    comptime T: type,
+    out: []T,
+    manager: *ShufflingManager,
+    low_first: usize,
+    high_first: usize,
+    pair_count: usize,
+) void {
+    std.debug.assert(high_first < out.len);
+    std.debug.assert(low_first + 2 * pair_count <= high_first + 1);
+
+    manager.mixInPosition(high_first >> 8);
+    var source = manager.hash();
+    var byte_v = source[(high_first & 0xff) >> 3];
+
+    var pair: usize = 0;
+    while (pair < pair_count) {
+        const i = low_first + pair;
+        const j = high_first - pair;
+
+        if (j & 0xff == 0xff) {
+            manager.mixInPosition(j >> 8);
+            source = manager.hash();
+        }
+
+        if (j & 0x07 == 0x07) {
+            byte_v = source[(j & 0xff) >> 3];
+            if (pair_count - pair >= PAIRS_PER_SOURCE_BYTE) {
+                maskedSwapBlock(T, out, i, j, byte_v);
+                pair += PAIRS_PER_SOURCE_BYTE;
+                continue;
+            }
+        }
+        const bit_v = (byte_v >> @intCast(j & 0x07)) & 0x01;
+
+        maskedSwap(T, out, i, j, bit_v);
+        pair += 1;
+    }
+}
+
 /// Shuffles an entire list in-place, equivalent to running
 /// `compute_shuffled_index` over every index but ~250x faster on large lists.
 /// Algorithm by [@protolambda](https://github.com/protolambda).
@@ -111,54 +184,13 @@ pub fn innerShuffleList(comptime T: type, out: []T, seed: []const u8, rounds: i3
         // guarantee pivot is within length
         const pivot = manager.rawPivot() % list_size;
 
-        // cut range in half
-        var mirror = (pivot + 1) >> 1;
-
-        manager.mixInPosition(pivot >> 8);
-        var source = manager.hash();
-        var byte_v = source[(pivot & 0xff) >> 3];
-
         // swap-or-not from beginning of list to mirror point
-        for (0..mirror) |i| {
-            const j = pivot - i;
+        const mirror_low = (pivot + 1) >> 1;
+        swapOrNotPairs(T, out, &manager, 0, pivot, mirror_low);
 
-            if (j & 0xff == 0xff) {
-                manager.mixInPosition(j >> 8);
-                source = manager.hash();
-            }
-
-            if (j & 0x07 == 0x07) {
-                byte_v = source[(j & 0xff) >> 3];
-            }
-            const bit_v = (byte_v >> @intCast(j & 0x07)) & 0x01;
-
-            maskedSwap(T, out, i, j, bit_v);
-        }
-
-        // reset mirror to middle of opposing section of pivot
-        mirror = (pivot + list_size + 1) >> 1;
-        const end = list_size - 1;
-
-        manager.mixInPosition(end >> 8);
-        source = manager.hash();
-        byte_v = source[(end & 0xff) >> 3];
-
-        // swap-or-not from pivot to mirror
-        for ((pivot + 1)..mirror, 0..) |i, loop_iter| {
-            const j = end - loop_iter;
-
-            if (j & 0xff == 0xff) {
-                manager.mixInPosition(j >> 8);
-                source = manager.hash();
-            }
-
-            if (j & 0x07 == 0x07) {
-                byte_v = source[(j & 0xff) >> 3];
-            }
-            const bit_v = (byte_v >> @intCast(j & 0x07)) & 0x01;
-
-            maskedSwap(T, out, i, j, bit_v);
-        }
+        // swap-or-not from just past the pivot to the mirror point of the rest of the list
+        const mirror_high = (pivot + list_size + 1) >> 1;
+        swapOrNotPairs(T, out, &manager, pivot + 1, list_size - 1, mirror_high - (pivot + 1));
 
         // update current_round and stop when reaching the end of the
         // predetermined rounds
