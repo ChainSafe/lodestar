@@ -95,3 +95,10 @@ The per-stream middleware array isolation fix is retained.
 - The SDK archive and runtime/type patches match their companion source and builds.
   Frozen installation, beacon-node and CLI type checks, and all four real-collector
   transport/worker combinations pass. The live devnet was not rerun for this API revision.
+
+## SDK refresh, 2026-10-12
+
+The staged SDK now uses Xray `983ccc74d1b40e7ef3ecff7d9eda7d41f7bd5f81`,
+including batched socket writes. SDK type checks, build, and all 12 tests pass.
+Lodestar's frozen installation, lint, beacon-node type checks, and all four
+real-collector TCP/QUIC main-thread/worker tests pass against the refreshed archive.

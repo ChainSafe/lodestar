@@ -69,7 +69,7 @@ the CLI's `options/beaconNodeOptions.test.ts`.
 
 Companion commits used for validation:
 
-- Xray: `a69f9e7` from [ethp2p/xray#1](https://github.com/ethp2p/xray/pull/1)
+- Xray: `983ccc7` from [ethp2p/xray#1](https://github.com/ethp2p/xray/pull/1)
 - js-libp2p: `14b63af` from [libp2p/js-libp2p#3650](https://github.com/libp2p/js-libp2p/pull/3650)
 - Lodestar base: `unstable` at `01cc10ce70bc3c6cd3f6d6169a740330f5882f3d`
 
