@@ -10,6 +10,7 @@ const env = (name) => {
 };
 const CLIENT = env("CLIENT");
 const BN_TYPE = env("BN_TYPE");
+const VC_TYPE = env("VC_TYPE");
 const BN_IMAGE = env("BN_IMAGE");
 const VC_IMAGE = env("VC_IMAGE");
 const SCENARIO = env("SCENARIO");
@@ -40,7 +41,7 @@ const FIRST_JUDGED_EPOCH = 2;
 // a committee filling fewer of its seats in a block means one side stopped delivering
 const MIN_COMMITTEE_SHARE = 0.75;
 // the bootnode has no validators, node 2 holds the first 64 and node 3 the next 64
-const PAIR = [`${BN_TYPE} bn + lodestar vc`, `lodestar bn + ${CLIENT} vc`];
+const PAIR = [`${BN_TYPE} bn + lodestar vc`, `lodestar bn + ${VC_TYPE} vc`];
 const nodeOf = (validatorIndex) => Math.floor(validatorIndex / VALIDATORS_PER_NODE);
 
 const failures = [];
@@ -59,7 +60,9 @@ const readOptional = (file) => {
 };
 
 const restartWindows = RESTART_WINDOWS === "" ? [] : RESTART_WINDOWS.split(",").map((w) => w.split("-").map(Number));
-const inRestartWindow = (slot) => restartWindows.some(([start, end]) => slot >= start && slot <= end);
+// a block right after the window still carries the sync committee messages of the slot the node came back in
+const RESTART_GRACE_SLOTS = 2;
+const inRestartWindow = (slot) => restartWindows.some(([start, end]) => slot >= start && slot <= end + RESTART_GRACE_SLOTS);
 // attestations of an epoch can be included until the end of the next one, both epochs have to be clear of a restart
 const epochTouchesRestart = (epoch) =>
   restartWindows.some(([start, end]) => start <= (epoch + 2) * SLOTS_PER_EPOCH - 1 && end >= epoch * SLOTS_PER_EPOCH);

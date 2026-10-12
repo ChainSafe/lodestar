@@ -51,9 +51,10 @@ jobs:
           - client: nimbus
             bn_image: ethpandaops/nimbus-eth2:unstable-minimal
             vc_image: ethpandaops/nimbus-validator-client:unstable-minimal
+          # the package cannot run grandine as a separate validator client yet, node 3 is Lodestar on both sides
           - client: grandine
             bn_image: ethpandaops/grandine:develop-minimal
-            vc_image: ethpandaops/grandine:develop-minimal
+            vc_image: "-"
           # validator client only, node 2 is Lodestar on both sides
           - client: vero
             bn_image: "-"

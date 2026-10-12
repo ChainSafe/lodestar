@@ -6,7 +6,8 @@
 #   node 1 is a Lodestar beacon node without validators that only serves as the bootnode, node 2 is the other client's
 #   beacon node driving a Lodestar validator client, node 3 is a Lodestar beacon node driving the other client's
 #   validator client. Pass "-" as <bn_image> for a client without a beacon node (vero), node 2 is then Lodestar on
-#   both sides.
+#   both sides, and "-" as <vc_image> for a client the package cannot run as a separate validator client (grandine),
+#   node 3 is then Lodestar on both sides.
 #   LODESTAR_IMAGE   Lodestar image for the beacon nodes and the validator client (default chainsafe/lodestar:next)
 #   EL_IMAGE         geth image behind every beacon node (default ethpandaops/geth:master)
 #   OUT_DIR          where logs, metrics and the verdict are written (default ./temp/cl-interop/<client>-<scenario>)
@@ -46,9 +47,10 @@ case "$SCENARIO" in
 esac
 
 if [ "$BN_IMAGE" = "-" ]; then BN_TYPE=lodestar; BN_IMAGE=$LODESTAR_IMAGE; else BN_TYPE=$CLIENT; fi
+if [ "$VC_IMAGE" = "-" ]; then VC_TYPE=lodestar; VC_IMAGE=$LODESTAR_IMAGE; else VC_TYPE=$CLIENT; fi
 # the package starts a web3signer for clients without their own keystore loading
 REMOTE_SIGNER=false
-[ "$CLIENT" = "vero" ] && REMOTE_SIGNER=true
+[ "$VC_TYPE" = "vero" ] && REMOTE_SIGNER=true
 BN_HTTP_PORT=4000
 [ "$BN_TYPE" = "prysm" ] && BN_HTTP_PORT=3500
 # with so few peers most subnets have nobody to publish to, so every beacon node subscribes to all of them
@@ -116,7 +118,7 @@ participants:
     cl_extra_params: $LODESTAR_BN_PARAMS
     use_separate_vc: true
     use_remote_signer: $REMOTE_SIGNER
-    vc_type: $CLIENT
+    vc_type: $VC_TYPE
     vc_image: $VC_REF
     supernode: true
 network_params:
@@ -147,7 +149,7 @@ capture_logs() {
   docker logs -t "$CL_X" > "$OUT_DIR/bn2-$BN_TYPE.log" 2>&1
   docker logs -t "$VC_LS" > "$OUT_DIR/vc2-lodestar.log" 2>&1
   docker logs -t "$CL_LS" > "$OUT_DIR/bn3-lodestar.log" 2>&1
-  docker logs -t "$VC_X" > "$OUT_DIR/vc3-$CLIENT.log" 2>&1
+  docker logs -t "$VC_X" > "$OUT_DIR/vc3-$VC_TYPE.log" 2>&1
   [ -n "$EL_BOOT" ] && docker logs -t "$EL_BOOT" > "$OUT_DIR/el1.log" 2>&1
   docker logs -t "$EL_X" > "$OUT_DIR/el2.log" 2>&1
   docker logs -t "$EL_LS" > "$OUT_DIR/el3.log" 2>&1
@@ -158,15 +160,19 @@ capture_logs() {
 on_exit() {
   local code=$1
   if [ "$code" != "0" ]; then
-    # a failure before the verdict still gets a summary row with the reason, the container logs and the enclave
-    # contents for the artifacts
-    [ -f "$OUT_DIR/result.json" ] || capture_logs
+    # a failure before the verdict still gets a summary row with the reason, the container logs, a last metrics
+    # snapshot and the enclave contents for the artifacts
+    if [ ! -f "$OUT_DIR/result.json" ]; then
+      capture_logs
+      [ -n "${METRICS_LSVC:-}" ] && snapshot abort || true
+    fi
     if [ ! -f "$OUT_DIR/summary.md" ]; then
       local reason="run aborted before the verdict, see the run log"
       if [ -f "$OUT_DIR/abort.reason" ]; then
         reason=$(sed 's/|/\\|/g' "$OUT_DIR/abort.reason")
       elif [ -f "$OUT_DIR/kurtosis-run.log" ] && ! grep -q "starting enclave done" "$OUT_DIR/.progress" 2>/dev/null; then
-        reason="enclave did not start: $(grep -oE "Some errors occurred starting or updating the following services: '[^']*'|(ValueError|Error|error|panic).{0,160}" "$OUT_DIR/kurtosis-run.log" | head -2 | tr '\n' ' ' | sed 's/|/\\|/g')"
+        # the service that failed and the first error from its own logs, not the generic Starlark wrapper lines
+        reason="enclave did not start: $(grep -oE "starting or updating the following services: '[^']*'|(ValueError|fail|panic|Error|error): [^\"]{0,200}" "$OUT_DIR/kurtosis-run.log" | grep -vE "Starlark|instruction \(number|starting or updating.*\] *$" | head -2 | tr '\n' ' ' | sed 's/|/\\|/g')"
       fi
       echo "| $CLIENT | \`$BN_IMAGE\` | \`$VC_IMAGE\` | $SCENARIO | ❌ fail | $reason |" > "$OUT_DIR/summary.md"
     fi
@@ -192,7 +198,11 @@ wait_finalized() {
   while :; do
     fin=$(finalized)
     [ "${fin:-0}" -ge "$target" ] && return 0
-    [ $(( $(date +%s) - start )) -ge "$budget" ] && { log "finalized epoch $fin after ${budget}s, wanted $target"; return 1; }
+    if [ $(( $(date +%s) - start )) -ge "$budget" ]; then
+      log "finalized epoch $fin after ${budget}s, wanted $target"
+      echo "finalized epoch $fin after ${budget}s, wanted $target (head $(head_slot "$API_LS") on lodestar bn, $(head_slot "$API_X") on $BN_TYPE bn)" > "$OUT_DIR/abort.reason"
+      return 1
+    fi
     sleep 10
   done
 }
@@ -244,7 +254,7 @@ restart_beacon_node() {
   log "$name back after $(( $(date +%s) - start ))s, head slot $(cat "$OUT_DIR/restart-$n.end.slot")"
 }
 
-log "starting enclave $ENCLAVE (lodestar $LODESTAR_IMAGE ${LODESTAR_DIGEST:0:19} ${LODESTAR_VERSION:-unknown version}, $BN_TYPE bn $BN_IMAGE ${BN_DIGEST:0:19}, $CLIENT vc $VC_IMAGE ${VC_DIGEST:0:19}, geth $EL_IMAGE ${EL_DIGEST:0:19})"
+log "starting enclave $ENCLAVE (lodestar $LODESTAR_IMAGE ${LODESTAR_DIGEST:0:19} ${LODESTAR_VERSION:-unknown version}, $BN_TYPE bn $BN_IMAGE ${BN_DIGEST:0:19}, $VC_TYPE vc $VC_IMAGE ${VC_DIGEST:0:19}, geth $EL_IMAGE ${EL_DIGEST:0:19})"
 # kurtosis occasionally loses track of the short-lived key generation service while bringing the enclave up
 # ("has Docker resources but not a container"), a second attempt gets past it. In CI nothing else runs on the engine,
 # so it is restarted in between as well
@@ -311,7 +321,7 @@ fi
 
 capture_logs
 
-CLIENT="$CLIENT" BN_TYPE="$BN_TYPE" BN_IMAGE="$BN_IMAGE" VC_IMAGE="$VC_IMAGE" SCENARIO="$SCENARIO" OUT_DIR="$OUT_DIR" \
+CLIENT="$CLIENT" BN_TYPE="$BN_TYPE" VC_TYPE="$VC_TYPE" BN_IMAGE="$BN_IMAGE" VC_IMAGE="$VC_IMAGE" SCENARIO="$SCENARIO" OUT_DIR="$OUT_DIR" \
   LODESTAR_IMAGE="$LODESTAR_IMAGE" LODESTAR_VERSION="${LODESTAR_VERSION:-}" LODESTAR_DIGEST="${LODESTAR_DIGEST:-}" \
   BN_DIGEST="${BN_DIGEST:-}" VC_DIGEST="${VC_DIGEST:-}" EL_IMAGE="$EL_IMAGE" EL_DIGEST="${EL_DIGEST:-}" \
   API_LS="$API_LS" API_X="$API_X" LS_PEER_ID="$LS_PEER_ID" X_PEER_ID="$X_PEER_ID" RESTART_WINDOWS="$RESTART_WINDOWS" \

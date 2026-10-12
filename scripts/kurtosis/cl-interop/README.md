@@ -11,7 +11,8 @@ node, blob spam) with Lodestar and the other client crossed over:
 So every validator duty crosses a client boundary over the beacon API, and the two beacon nodes with validators talk
 to each other on the p2p network. Every beacon node subscribes to all subnets, with so few peers a message could
 otherwise not be published at all. A client without a beacon node (vero) gets a Lodestar beacon node and validator
-client as node 2. The nightly runs the `fulu` scenario, `gloas` is ready in the script and joins once the other
+client as node 2, a client the package cannot run as a separate validator client (grandine) gets Lodestar on both
+sides of node 3. The nightly runs the `fulu` scenario, `gloas` is ready in the script and joins once the other
 clients are ready for it:
 
 - `fulu`: electra and fulu at genesis, finality 3, then the two beacon nodes with validators are restarted one after
@@ -45,6 +46,7 @@ validator client logs at debug level, so a failed pair comes with the request fl
 ```sh
 # one client locally, keep the enclave for a closer look
 KEEP=1 ./scripts/kurtosis/cl-interop/run.sh lighthouse ethpandaops/lighthouse:unstable ethpandaops/lighthouse:unstable fulu
-# a validator client without a beacon node
-./scripts/kurtosis/cl-interop/run.sh vero - ghcr.io/serenita-org/vero:master gloas
+# a validator client without a beacon node, and a beacon node without a separate validator client
+./scripts/kurtosis/cl-interop/run.sh vero - ghcr.io/serenita-org/vero:master fulu
+./scripts/kurtosis/cl-interop/run.sh grandine ethpandaops/grandine:develop-minimal - fulu
 ```
