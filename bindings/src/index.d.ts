@@ -138,6 +138,8 @@ export interface TransitionOpts {
   verifySignatures?: boolean;
   /** Default: false (cache is transferred). Set to true to opt out of cache transfer. */
   dontTransferCache?: boolean;
+  /** Source of block processing for the process-block timing metric. Default: "block". */
+  source?: "block" | "regen" | "get_historical_state";
 }
 
 interface ProposerRewards {

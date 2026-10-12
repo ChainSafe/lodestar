@@ -58,6 +58,55 @@ describe("serialized state transition", () => {
     expect(native.getExpectedWithdrawals().expectedWithdrawals[0].amount).toBe(1_000_000_000n);
   });
 
+  it("records explicit and default process block metric sources", () => {
+    bindings.metrics.init();
+    const value = createStfState();
+    value.latestExecutionPayloadHeader.blockHash.fill(1);
+    const native = bindings.BeaconStateView.createFromBytes(ssz.fulu.BeaconState.serialize(value), config);
+    let advanced: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    let explicit: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    let regular: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    try {
+      const slot = native.slot + 1;
+      advanced = native.processSlots(slot);
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      block.message.proposerIndex = advanced.getBeaconProposer(slot);
+      block.message.parentRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(advanced.latestBlockHeader);
+      block.message.body.executionPayload.parentHash.fill(1);
+      block.message.body.executionPayload.blockHash.fill(2);
+      block.message.body.executionPayload.timestamp = slot * (stfConfig.SECONDS_PER_SLOT ?? 12);
+      const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+      const options = {
+        dataAvailabilityStatus: "Available" as const,
+        executionPayloadStatus: "valid" as const,
+        source: "get_historical_state" as const,
+        verifyProposer: false,
+        verifySignatures: false,
+        verifyStateRoot: false,
+      };
+      explicit = native.stateTransition(blockBytes, false, options);
+      regular = native.stateTransition(blockBytes, false, {
+        dataAvailabilityStatus: "Available",
+        executionPayloadStatus: "valid",
+        verifyProposer: false,
+        verifySignatures: false,
+        verifyStateRoot: false,
+      });
+
+      expect(explicit.slot).toBe(slot);
+      expect(regular.slot).toBe(slot);
+      const metrics = bindings.metrics.scrapeMetrics();
+      expect(metrics).toContain('lodestar_stfn_process_block_seconds_count{source="get_historical_state"} 1\n');
+      expect(metrics).toContain('lodestar_stfn_process_block_seconds_count{source="block"} 1\n');
+    } finally {
+      regular?.release();
+      explicit?.release();
+      advanced?.release();
+      native.release();
+    }
+  });
+
   describe.each([
     {SECONDS_PER_SLOT: undefined, SLOT_DURATION_MS: 6000, name: "milliseconds only"},
     {SECONDS_PER_SLOT: 12, SLOT_DURATION_MS: 6000, name: "milliseconds with stale legacy seconds"},

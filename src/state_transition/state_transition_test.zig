@@ -170,7 +170,7 @@ test "state transition - records per-block and per-epoch metrics" {
         std.testing.io,
         test_state.cached_state,
         signed_beacon_block,
-        .{ .verify_signatures = false, .verify_proposer = false, .verify_state_root = false },
+        .{ .verify_signatures = false, .verify_proposer = false, .verify_state_root = false, .source = .regen },
         null,
     );
     defer {
@@ -204,6 +204,10 @@ test "state transition - records per-block and per-epoch metrics" {
     try testing.expectEqual(
         @as(?u64, 1),
         metricValue(out, "lodestar_stfn_process_block_step_seconds_count{step=\"processBlockHeader\"}"),
+    );
+    try testing.expectEqual(
+        @as(?u64, 1),
+        metricValue(out, "lodestar_stfn_process_block_seconds_count{source=\"regen\"}"),
     );
     try testing.expectEqual(
         @as(?u64, 1),

@@ -19,6 +19,13 @@ pub const StateHashTreeRootSource = enum {
     compute_new_state_root,
 };
 
+/// Consumer-facing source of a block-processing transition.
+pub const ProcessBlockSource = enum {
+    block,
+    regen,
+    get_historical_state,
+};
+
 pub const EpochTransitionStepKind = enum {
     before_process_epoch,
     after_process_epoch,
@@ -66,6 +73,7 @@ pub const ProposerRewardKind = enum {
 };
 
 const HashTreeRootLabel = struct { source: StateHashTreeRootSource };
+const ProcessBlockLabel = struct { source: ProcessBlockSource };
 const EpochTransitionStepLabel = struct { step: EpochTransitionStepKind };
 const ProcessBlockStepLabel = struct { step: ProcessBlockStepKind };
 const ProcessOperationsStepLabel = struct { step: ProcessOperationsStepKind };
@@ -102,7 +110,7 @@ const Metrics = struct {
     const EpochTransitionCommit = m.Histogram(f64, &.{ 0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1 });
     const EpochTransitionStep = m.HistogramVec(f64, EpochTransitionStepLabel, &.{ 0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1 });
     const EpochShufflingJob = m.Histogram(f64, &.{ 0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1 });
-    const ProcessBlock = m.Histogram(f64, &.{ 0.005, 0.01, 0.02, 0.05, 0.1, 1 });
+    const ProcessBlock = m.HistogramVec(f64, ProcessBlockLabel, &.{ 0.005, 0.01, 0.02, 0.05, 0.1, 1 });
     const ProcessBlockStep = m.HistogramVec(f64, ProcessBlockStepLabel, &.{ 0.001, 0.005, 0.01, 0.025, 0.05, 0.1 });
     const ProcessOperationsStep = m.HistogramVec(f64, ProcessOperationsStepLabel, &.{ 0.001, 0.005, 0.01, 0.025, 0.05, 0.1 });
     const ProcessBlockCommit = m.Histogram(f64, &.{ 0.005, 0.01, 0.02, 0.05, 0.1, 1 });
@@ -115,6 +123,7 @@ const Metrics = struct {
     /// Deinitializes all `HistogramVec` and `GaugeVec` metrics for state transition.
     pub fn deinit(self: *Metrics) void {
         self.epoch_transition_step.deinit();
+        self.process_block.deinit();
         self.process_block_step.deinit();
         self.process_operations_step.deinit();
         self.state_hash_tree_root.deinit();
@@ -146,6 +155,14 @@ pub fn init(allocator: Allocator, io: std.Io, comptime opts: m.RegistryOpts) !vo
         .exclude = opts.exclude,
     };
 
+    var process_block = try Metrics.ProcessBlock.init(
+        allocator,
+        io,
+        "stfn_process_block_seconds",
+        .{ .help = "Time to process a single block in seconds" },
+        metric_opts,
+    );
+    errdefer process_block.deinit();
     var epoch_transition_step = try Metrics.EpochTransitionStep.init(
         allocator,
         io,
@@ -212,11 +229,7 @@ pub fn init(allocator: Allocator, io: std.Io, comptime opts: m.RegistryOpts) !vo
             .{ .help = "Time to build the next epoch shuffling in the shuffling job" },
             metric_opts,
         ),
-        .process_block = Metrics.ProcessBlock.init(
-            "stfn_process_block_seconds",
-            .{ .help = "Time to process a single block in seconds" },
-            metric_opts,
-        ),
+        .process_block = process_block,
         .process_block_step = process_block_step,
         .process_operations_step = process_operations_step,
         .process_block_commit = Metrics.ProcessBlockCommit.init(
@@ -355,6 +368,9 @@ test "exports the expected metric names" {
 
     try state_transition.process_block_step.observe(.{ .step = .processBlockHeader }, 0.001);
     try state_transition.process_operations_step.observe(.{ .step = .processAttestations }, 0.001);
+    try state_transition.process_block.observe(.{ .source = .block }, 0.001);
+    try state_transition.process_block.observe(.{ .source = .regen }, 0.001);
+    try state_transition.process_block.observe(.{ .source = .get_historical_state }, 0.001);
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
     defer aw.deinit();
@@ -415,5 +431,25 @@ test "exports the expected metric names" {
         u8,
         aw.written(),
         "lodestar_stfn_process_operations_step_seconds_count{step=\"processAttestations\"} 1\n",
+    ) != null);
+    try std.testing.expect(std.mem.indexOf(
+        u8,
+        aw.written(),
+        "lodestar_stfn_process_block_seconds_count{source=\"block\"} 1\n",
+    ) != null);
+    try std.testing.expect(std.mem.indexOf(
+        u8,
+        aw.written(),
+        "lodestar_stfn_process_block_seconds_count{source=\"regen\"} 1\n",
+    ) != null);
+    try std.testing.expect(std.mem.indexOf(
+        u8,
+        aw.written(),
+        "lodestar_stfn_process_block_seconds_count{source=\"get_historical_state\"} 1\n",
+    ) != null);
+    try std.testing.expect(std.mem.indexOf(
+        u8,
+        aw.written(),
+        "lodestar_stfn_process_block_seconds_sum{source=\"block\"} 0.001\n",
     ) != null);
 }

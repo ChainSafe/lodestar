@@ -16,9 +16,10 @@ const st = @import("state_transition");
 /// - `dontTransferCache`: bool (negated to set `transfer_cache`)
 /// - `executionPayloadStatus`: "valid" | "invalid"
 /// - `dataAvailabilityStatus`: "Available" | "PreData" | "OutOfRange"
+/// - `source`: "block" | "regen" | "get_historical_state"
 ///
-/// Throws `error.InvalidExecutionPayloadStatus` / `error.InvalidDataAvailabilityStatus`
-/// for unknown enum strings.
+/// Throws `error.InvalidExecutionPayloadStatus`, `error.InvalidDataAvailabilityStatus`,
+/// or `error.InvalidProcessBlockSource` for unknown enum strings.
 ///
 /// TODO(bing): rename `dontTransferCache` → `transferCache` to drop the double negation.
 pub fn parseOptions(options: ?js.Value) !st.TransitionOpts {
@@ -64,6 +65,19 @@ pub fn parseOptions(options: ?js.Value) !st.TransitionOpts {
                         // else if (std.mem.eql(u8, da_str, "NotRequired")) .not_required;
                     else
                         return error.InvalidDataAvailabilityStatus;
+            }
+            if (try raw.hasNamedProperty("source")) {
+                var buf: [32]u8 = undefined;
+                const source_str = try (try raw.getNamedProperty("source")).getValueStringUtf8(&buf);
+                transition_opts.source =
+                    if (std.mem.eql(u8, source_str, "block"))
+                        .block
+                    else if (std.mem.eql(u8, source_str, "regen"))
+                        .regen
+                    else if (std.mem.eql(u8, source_str, "get_historical_state"))
+                        .get_historical_state
+                    else
+                        return error.InvalidProcessBlockSource;
             }
         }
     }

@@ -42,6 +42,8 @@ pub const DataAvailabilityStatus = enum(u8) {
     available,
 };
 
+pub const ProcessBlockSource = metrics.ProcessBlockSource;
+
 pub const BlockExternalData = struct {
     execution_payload_status: ExecutionPayloadStatus = .valid,
     data_availability_status: DataAvailabilityStatus = .available,
@@ -160,6 +162,7 @@ pub const TransitionOpts = struct {
     verify_signatures: bool = true,
     transfer_cache: bool = true,
     block_external_data: BlockExternalData = .{},
+    source: ProcessBlockSource = .block,
 };
 
 pub const StateTransitionResult = struct {
@@ -258,7 +261,10 @@ pub fn stateTransition(
     const commit_timer = time.start(io);
     try post_state.commit();
     metrics.state_transition.process_block_commit.observe(time.durationSeconds(time.since(io, commit_timer)));
-    metrics.state_transition.process_block.observe(time.durationSeconds(time.since(io, process_block_timer)));
+    try metrics.state_transition.process_block.observe(
+        .{ .source = opts.source },
+        time.durationSeconds(time.since(io, process_block_timer)),
+    );
 
     const proposer_rewards = post_cached_state.proposer_rewards;
     try metrics.state_transition.proposer_rewards.set(.{ .type = .attestation }, proposer_rewards.attestations);
