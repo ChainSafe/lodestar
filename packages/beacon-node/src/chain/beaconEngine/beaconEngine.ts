@@ -86,13 +86,13 @@ import {ClockEvent, IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
 import {ArchiveMode, StateArchiveStrategy} from "../archiveStore/interface.js";
 import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
-import {IBlockInput} from "../blocks/blockInput/index.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
@@ -117,7 +117,6 @@ import {
   SyncContributionAndProofPool,
 } from "../opPools/index.js";
 import {InsertOutcome} from "../opPools/types.js";
-import {BlockProcessOpts} from "../options.js";
 import {BlockAttributes, BlockType} from "../produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller, RegenRequest} from "../regen/index.js";
 import {
@@ -230,6 +229,7 @@ import {
   ProduceBlockResponse,
   ProduceBlockV4Request,
   ProduceBlockV4Response,
+  VerifyBlocksOpts,
 } from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
 import {prepareForNextSlot} from "./prepareNextSlot.js";
@@ -338,6 +338,7 @@ export class BeaconEngine implements IBeaconEngine {
   readonly signal: AbortSignal;
   lightClientServer: LightClientServer | undefined;
   readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
+  readonly serializedCache: SerializedCache;
   // TODO - beacon engine: this is not part of BeaconEngine but BeaconChain, remove it, create BeaconEngine own emitter if needed
   readonly emitter: ChainEventEmitter;
 
@@ -373,6 +374,7 @@ export class BeaconEngine implements IBeaconEngine {
     this.dbName = modules.dbName;
     this.dataColumnDir = modules.dataColumnDir;
     this.signal = signal;
+    this.serializedCache = modules.serializedCache ?? new SerializedCache();
     this.metrics = metrics;
     this.clock = clock;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
@@ -1552,21 +1554,11 @@ export class BeaconEngine implements IBeaconEngine {
 
   async verifyBlocks(
     blockBytes: Uint8Array[],
-    blockInputs: IBlockInput[],
-    opts: BlockProcessOpts & ImportBlockOpts,
+    opts: VerifyBlocksOpts,
     signal: AbortSignal
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
-    for (const blockInput of blockInputs) {
-      if (isForkPostGloas(blockInput.forkName)) {
-        this.seenPayloadEnvelopeInputCache.add({
-          blockRootHex: blockInput.blockRootHex,
-          block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
-          forkName: blockInput.forkName,
-        });
-      }
-    }
     try {
-      return await verifyBlocks.call(this, blockBytes, blockInputs, opts, signal);
+      return await verifyBlocks.call(this, blockBytes, opts, signal);
     } catch (error) {
       this.publishChainView();
       throw error;

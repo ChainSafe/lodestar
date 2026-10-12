@@ -35,6 +35,7 @@ import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
+import {SerializedCache} from "../../src/util/serializedCache.js";
 import {getMockedClock} from "./clock.js";
 import {getMockedLogger} from "./loggerMock.js";
 
@@ -196,7 +197,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       genesisTime,
       clock,
       forkChoice: getMockedForkChoice(),
-      serializedCache: new Map(),
+      serializedCache: new SerializedCache(),
       verifiedBlocks: new Map(),
       events: new BeaconEngineEventBus(),
       publishChainView: vi.fn(),

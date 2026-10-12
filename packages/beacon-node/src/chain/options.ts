@@ -17,6 +17,8 @@ export type IChainOptions = IBeaconEngineOptions &
   ArchiveStoreOpts &
   ValidatorMonitorOpts &
   LightClientServerOpts & {
+    /** Use separate BeaconEngine caches and block decoding. Worker thread transport is still pending. */
+    beaconEngineWorker?: boolean;
     blacklistedBlocks?: string[];
     persistProducedBlocks?: boolean;
     persistProducedPayloadEnvelopes?: boolean;
@@ -59,6 +61,7 @@ export type BlockProcessOpts = {
 };
 
 export const defaultChainOptions: IChainOptions = {
+  beaconEngineWorker: false,
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
   blacklistedBlocks: [],

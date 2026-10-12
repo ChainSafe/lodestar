@@ -96,6 +96,7 @@ const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 16;
 const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
 
 export type BeaconChainModules = {
+  serializedCache: SerializedCache;
   config: BeaconConfig;
   pubkeyCache: PubkeyCache;
   db: IBeaconDb;
@@ -232,7 +233,7 @@ export class BeaconChain implements IBeaconChain {
     const signal = abortController.signal;
     this.cpStateDatastore = cpStateDatastore;
     this.custodyConfig = custodyConfig;
-    this.serializedCache = new SerializedCache();
+    this.serializedCache = modules.serializedCache;
     this.seenBlockInputCache = new SeenBlockInput({
       config,
       custodyConfig: this.custodyConfig,

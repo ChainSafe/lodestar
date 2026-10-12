@@ -14,6 +14,7 @@ import {BuilderApiClientOpts} from "../../src/execution/builder/apiClient.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/interface.js";
 import {Clock, IClock} from "../../src/util/clock.js";
 import {CustodyConfig} from "../../src/util/dataColumns.js";
+import {SerializedCache} from "../../src/util/serializedCache.js";
 
 export type TestBeaconEngineModules = Omit<
   BeaconChainModules,
@@ -26,6 +27,7 @@ export type TestBeaconEngineModules = Omit<
   | "custodyConfig"
   | "lightClientServer"
   | "builderApiClient"
+  | "serializedCache"
 > & {
   validatorMonitorOpts?: ValidatorMonitorOpts | null;
   privateKey: PrivateKey;
@@ -82,7 +84,9 @@ export function createTestBeaconEngine(
     ? undefined
     : new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
 
+  const serializedCache = new SerializedCache();
   const beaconEngine = new BeaconEngine({
+    serializedCache: opts.beaconEngineWorker ? undefined : serializedCache,
     executionEngine,
     executionBuilder,
     builderApiClientOpts,
@@ -104,6 +108,7 @@ export function createTestBeaconEngine(
   });
   return {
     ...modules,
+    serializedCache,
     beaconEngine,
     abortController,
     clock,

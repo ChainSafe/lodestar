@@ -5,6 +5,7 @@ import {
   IBeaconStateView,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -12,7 +13,6 @@ import {IBeaconEngineOptions} from "../beaconEngine/options.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
-import {IBlockInput} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
 import {persistInvalidSszObject} from "./utils/persistInvalidSszObject.js";
 
@@ -27,7 +27,7 @@ import {persistInvalidSszObject} from "./utils/persistInvalidSszObject.js";
 export async function verifyBlocksStateTransitionOnly(
   config: BeaconConfig,
   preState0: IBeaconStateView,
-  blocks: IBlockInput[],
+  blocks: SignedBeaconBlock[],
   dataAvailabilityStatuses: DataAvailabilityStatus[],
   blockBytes: Uint8Array[],
   logger: Logger,
@@ -45,9 +45,9 @@ export async function verifyBlocksStateTransitionOnly(
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
+    if (signal.aborted) throw new ErrorAborted("verifyBlockStateTransitionOnly");
     const {validProposerSignature, validSignatures} = opts;
-    const blockInput = blocks[i];
-    const block = blockInput.getBlock();
+    const block = blocks[i];
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
@@ -75,7 +75,7 @@ export async function verifyBlocksStateTransitionOnly(
     } catch (e) {
       throw new BlockError(block, {
         code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
-        blockRoot: blocks[i].blockRootHex,
+        blockRoot: toRootHex(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
         error: e as Error,
       });
     }
@@ -145,7 +145,7 @@ export async function verifyBlocksStateTransitionOnly(
 
   const verifyStateTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const slot = blocks[0].getBlock().message.slot;
+    const slot = blocks[0].message.slot;
     const recvToValidation = verifyStateTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 

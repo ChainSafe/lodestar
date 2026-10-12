@@ -4,6 +4,7 @@ import {ensure0xPrefix} from "../../util/format.js";
 import {CircuitBreakerArgs} from "./builder.js";
 
 export type ChainArgs = {
+  "chain.beaconEngineWorker"?: boolean;
   suggestedFeeRecipient: string;
   graffitiAppend?: boolean;
   serveHistoricalState?: boolean;
@@ -47,6 +48,7 @@ export type ChainArgs = {
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
   return {
+    beaconEngineWorker: args["chain.beaconEngineWorker"] ?? defaultOptions.chain.beaconEngineWorker,
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,
     serveHistoricalState: args.serveHistoricalState,
@@ -333,6 +335,14 @@ Will double processing times. Use only for debugging purposes.",
     description: "Use fs to store checkpoint state for PersistentCheckpointStateCache or not",
     type: "boolean",
     default: defaultOptions.chain.nHistoricalStatesFileDataStore,
+    group: "chain",
+  },
+
+  "chain.beaconEngineWorker": {
+    hidden: true,
+    description: "Use separate BeaconEngine caches and block decoding (worker thread transport pending)",
+    type: "boolean",
+    default: defaultOptions.chain.beaconEngineWorker,
     group: "chain",
   },
 

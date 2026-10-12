@@ -161,7 +161,6 @@ describe("initBeaconState", () => {
         executionEngine: new ExecutionEngineDisabled(),
       }
     );
-    // @ts-expect-error TODO: align source test utilities with CLI built-package imports.
     await executeStateInitialization(modules.beaconEngine, {
       ...stateInit,
       log(anchor) {

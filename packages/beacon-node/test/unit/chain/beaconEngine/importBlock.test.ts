@@ -8,11 +8,7 @@ import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {VerifiedBlockBundle, importBlock} from "../../../../src/chain/beaconEngine/importBlock.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
-import {
-  BlockInputBlobs,
-  BlockInputNoData,
-  BlockInputPreData,
-} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputBlobs, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {writeBlockInputToDb} from "../../../../src/chain/blocks/writeBlockInputToDb.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
@@ -51,7 +47,7 @@ describe("BeaconEngine block persistence", () => {
     });
     chain.regen.processState = vi.fn();
     bundle = {
-      blockInput,
+      block,
       blockBytes,
       postState: new BeaconStateView(generateCachedState()),
       executionStatus: ExecutionStatus.PreMerge,
@@ -60,6 +56,7 @@ describe("BeaconEngine block persistence", () => {
       parentBlockSlot: 0,
       seenTimestampSec: 0,
     };
+    chain.serializedCache.set(block, blockBytes);
   });
 
   afterEach(() => vi.restoreAllMocks());
@@ -86,18 +83,10 @@ describe("BeaconEngine block persistence", () => {
       expect(cache.get(rootHex)?.getBid()).toEqual(gloasBlock.message.body.signedExecutionPayloadBid.message);
       throw afterCache;
     });
-    const input = BlockInputNoData.createFromBlock({
-      block: gloasBlock,
-      blockRootHex: rootHex,
-      forkName: ForkName.gloas,
-      daOutOfRange: false,
-      source: BlockInputSource.byRange,
-      seenTimestampSec: 0,
-    });
     await expect(
       importBlock.call(
         chain.beaconEngine,
-        {...bundle, blockInput: input, blockBytes: ssz.gloas.SignedBeaconBlock.serialize(gloasBlock)},
+        {...bundle, block: gloasBlock, blockBytes: ssz.gloas.SignedBeaconBlock.serialize(gloasBlock)},
         DataAvailabilityStatus.Available,
         {}
       )
@@ -112,9 +101,13 @@ describe("BeaconEngine block persistence", () => {
     const result = expect(importing).rejects.toBe(reachedForkChoice);
     expect(putBinary).toHaveBeenCalledExactlyOnceWith(root, blockBytes);
     expect(chain.forkChoice.onBlock).not.toHaveBeenCalled();
+    expect(chain.serializedCache.get(block)).toBe(blockBytes);
+    expect(chain.serializedCache.getDeserialized(blockBytes)).toBe(block);
     write.resolve();
     await result;
     expect(chain.forkChoice.onBlock).toHaveBeenCalledOnce();
+    expect(chain.serializedCache.get(block)).toBeUndefined();
+    expect(chain.serializedCache.getDeserialized(blockBytes)).toBeUndefined();
   });
 
   it("does not import into fork choice when the block write fails", async () => {
@@ -123,6 +116,8 @@ describe("BeaconEngine block persistence", () => {
     await expect(importBlock.call(chain.beaconEngine, bundle, DataAvailabilityStatus.PreData, {})).rejects.toBe(error);
     expect(chain.forkChoice.onBlock).not.toHaveBeenCalled();
     expect(chain.regen.processState).not.toHaveBeenCalled();
+    expect(chain.serializedCache.get(block)).toBe(blockBytes);
+    expect(chain.serializedCache.getDeserialized(blockBytes)).toBe(block);
   });
 
   it("persists blob data without writing a beacon block", async () => {

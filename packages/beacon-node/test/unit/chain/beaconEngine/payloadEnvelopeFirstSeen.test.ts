@@ -138,7 +138,13 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
       }
       throw new Error("pre-state unavailable");
     });
-    await expect(engine.verifyBlocks([], inputs, {}, new AbortController().signal)).rejects.toMatchObject({
+    await expect(
+      engine.verifyBlocks(
+        blocks.map((block) => ssz.gloas.SignedBeaconBlock.serialize(block)),
+        {},
+        new AbortController().signal
+      )
+    ).rejects.toMatchObject({
       type: {code: BlockErrorCode.PRESTATE_MISSING},
     });
     expect(engine.seenPayloadEnvelopeInputCache.size()).toBe(2);

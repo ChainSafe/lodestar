@@ -42,8 +42,8 @@ import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
-import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
@@ -67,6 +67,7 @@ import {IBeaconEngineOptions} from "./options.js";
 import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
 
 export type BeaconEngineModules = {
+  serializedCache?: SerializedCache;
   builderApiClientOpts?: BuilderApiClientOpts;
   executionEngine: IExecutionEngine;
   executionBuilder?: IExecutionBuilder;
@@ -89,6 +90,8 @@ export type BeaconEngineModules = {
   isAnchorStateFinalized: boolean;
   lightClientServer?: LightClientServer;
 };
+
+export type VerifyBlocksOpts = BlockProcessOpts & ImportBlockOpts;
 
 export type ImportBlockResult = {
   headChanged: boolean;
@@ -582,9 +585,9 @@ export interface IBeaconEngine {
   isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): boolean;
 
   verifyBlocks(
-    _blockBytes: Uint8Array[],
-    blockInputs: IBlockInput[],
-    opts: BlockProcessOpts & ImportBlockOpts,
+    blockBytes: Uint8Array[],
+    opts: VerifyBlocksOpts,
+    // TODO - beacon engine: handle AbortSignal across the worker boundary.
     signal: AbortSignal
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}>;
   // `blockRoot` is the SSZ root as raw bytes (the verify output handle, import input) — bytes-first for

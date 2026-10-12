@@ -65,6 +65,11 @@ export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataC
   });
 }
 
+/**
+ * Runs on BeaconChain to persist sidecars and prune its block-input and serialized caches.
+ * BeaconEngine persists the block in beaconEngine/importBlock.ts before fork-choice import.
+ * This cleanup can precede that write; the engine's verified bundle retains the block bytes.
+ */
 export async function persistBlockInput(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
   await writeBlockInputToDb
     .call(this, blockInput)

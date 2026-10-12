@@ -1,12 +1,13 @@
 import {describe, expect, it} from "vitest";
-import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {verifyBlocksStateTransitionOnly} from "../../../../src/chain/blocks/verifyBlocksStateTransitionOnly.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
-import {MockBlockInput} from "../../../utils/blockInput.js";
 
 describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
   // A block with an invalid deposit/attestation/operation makes preState.stateTransition() throw a
@@ -14,20 +15,18 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
   // the block root) rather than a generic BEACON_CHAIN_ERROR — otherwise range sync never blames the
   // peer that served the invalid block.
   it("wraps a state-transition failure as PER_BLOCK_PROCESSING_ERROR with the block root", async () => {
-    const blockRootHex = "0x1234";
+    const block = ssz.deneb.SignedBeaconBlock.defaultValue();
+    const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
     const preState = {
       stateTransition: () => {
         throw new Error("invalid attestation");
       },
     } as unknown as IBeaconStateView;
 
-    const blockInput = new MockBlockInput({forkName: ForkName.deneb, slot: 1, blockRootHex});
-    blockInput.block = ssz.deneb.SignedBeaconBlock.defaultValue();
-
     const err = await verifyBlocksStateTransitionOnly(
-      createBeaconConfig(defaultChainConfig, new Uint8Array(32)),
+      createBeaconConfig(getConfig(ForkName.deneb), new Uint8Array(32)),
       preState,
-      [blockInput],
+      [block],
       [DataAvailabilityStatus.Available],
       [ssz.deneb.SignedBeaconBlock.serialize(ssz.deneb.SignedBeaconBlock.defaultValue())],
       testLogger(),

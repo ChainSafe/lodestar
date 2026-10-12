@@ -9,7 +9,7 @@ import {
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
-import {bellatrix, deneb, electra} from "@lodestar/types";
+import {SignedBeaconBlock, bellatrix, deneb, electra, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -17,8 +17,6 @@ import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {isBlockInputNoData} from "./blockInput/blockInput.js";
-import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
@@ -59,14 +57,14 @@ type VerifyBlockExecutionResponse =
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
-  blockInputs: IBlockInput[],
+  blocks: SignedBeaconBlock[],
   preState0: IBeaconStateView,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
   const executionStatuses: BlockExecutionStatus[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
-  const lastBlock = blockInputs.at(-1);
+  const lastBlock = blocks.at(-1);
 
   // Error in the same way as verifyBlocksSanityChecks if empty blocks
   if (!lastBlock) {
@@ -91,18 +89,18 @@ export async function verifyBlocksExecutionPayload(
   //
   // When to import such blocks:
   // From: https://github.com/ethereum/consensus-specs/pull/2844
-  for (let blockIndex = 0; blockIndex < blockInputs.length; blockIndex++) {
-    const blockInput = blockInputs[blockIndex];
+  for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
+    const block = blocks[blockIndex];
     // If blocks are invalid in consensus the main promise could resolve before this loop ends.
     // In that case stop sending blocks to execution engine
     if (signal.aborted) {
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
-    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, preState0);
+    const verifyResponse = await verifyBlockExecutionPayload(chain, block, preState0);
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
-      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs);
+      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blocks);
     }
 
     // If we are here then its because executionStatus is one of BlockExecutionStatus
@@ -111,11 +109,7 @@ export async function verifyBlocksExecutionPayload(
   }
 
   const executionTime = Date.now();
-  if (
-    blockInputs.length === 1 &&
-    opts.seenTimestampSec !== undefined &&
-    executionStatuses[0] === ExecutionStatus.Valid
-  ) {
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined && executionStatuses[0] === ExecutionStatus.Valid) {
     const recvToValidation = executionTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 
@@ -123,7 +117,7 @@ export async function verifyBlocksExecutionPayload(
     chain.metrics?.gossipBlock.executionPayload.validationTime.observe(validationTime);
 
     chain.logger.debug("Verified execution payload", {
-      slot: blockInputs[0].slot,
+      slot: blocks[0].message.slot,
       recvToValLatency,
       recvToValidation,
       validationTime,
@@ -144,14 +138,12 @@ export async function verifyBlocksExecutionPayload(
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
-  blockInput: IBlockInput,
+  block: SignedBeaconBlock,
   preState0: IBeaconStateView
 ): Promise<VerifyBlockExecutionResponse> {
-  const block = blockInput.getBlock();
-
   // Gloas block doesn't have execution payload. Return Syncing as a placeholder; the actual
   // status for gloas PENDING/EMPTY is derived from parent's chain in importBlock.
-  if (isBlockInputNoData(blockInput)) {
+  if (isGloasBeaconBlock(block.message)) {
     return {executionStatus: ExecutionStatus.Syncing, lvhResponse: undefined, execError: null};
   }
 
@@ -170,7 +162,7 @@ export async function verifyBlockExecutionPayload(
   }
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
-  const fork = blockInput.forkName;
+  const fork = chain.config.getForkName(block.message.slot);
   // [beacon-engine] deviation: derive hashes from consensus commitments without reading facade DA data.
   const versionedHashes =
     ForkSeq[fork] >= ForkSeq.deneb
@@ -180,7 +172,7 @@ export async function verifyBlockExecutionPayload(
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
 
-  const logCtx = {slot: blockInput.slot, executionBlock: executionPayloadEnabled.blockNumber};
+  const logCtx = {slot: block.message.slot, executionBlock: executionPayloadEnabled.blockNumber};
   chain.logger.debug("Call engine api newPayload", logCtx);
   const execResult = await chain.executionEngine.notifyNewPayload(
     fork,
@@ -205,7 +197,7 @@ export async function verifyBlockExecutionPayload(
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateFromParentBlockRoot: blockInput.parentRootHex,
+        invalidateFromParentBlockRoot: toRootHex(block.message.parentRoot),
         invalidateFromParentBlockHash: toRootHex(executionPayloadEnabled.parentHash),
       };
       const execError = new BlockError(block, {
@@ -258,7 +250,7 @@ export async function verifyBlockExecutionPayload(
 function getSegmentErrorResponse(
   {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
   parentBlock: ProtoBlock,
-  blocks: IBlockInput[]
+  blocks: SignedBeaconBlock[]
 ): SegmentExecStatus {
   const {executionStatus, lvhResponse, execError} = verifyResponse;
   let invalidSegmentLVH: LVHInvalidResponse | undefined = undefined;
@@ -270,7 +262,7 @@ function getSegmentErrorResponse(
   ) {
     let lvhFound = false;
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
-      const block = blocks[mayBeLVHIndex].getBlock();
+      const block = blocks[mayBeLVHIndex];
       if (
         toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
         lvhResponse.latestValidExecHash

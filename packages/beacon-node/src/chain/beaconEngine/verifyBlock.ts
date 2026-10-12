@@ -1,17 +1,17 @@
 // Consensus verification stays engine-owned; the facade observes verified blocks only after its DA join.
 import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
-import {IndexedAttestation, isGloasBeaconBlock} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {IBlockInput} from "../blocks/blockInput/index.js";
-import {ImportBlockOpts} from "../blocks/types.js";
+import {IndexedAttestation, SignedBeaconBlock, isGloasBeaconBlock} from "@lodestar/types";
+import {ErrorAborted, LodestarError, toRootHex} from "@lodestar/utils";
+import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import {BeaconEngine} from "./beaconEngine.js";
+import {VerifyBlocksOpts} from "./interface.js";
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@ba0411b482 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
@@ -21,14 +21,33 @@ export async function verifyBlocks(
   this: BeaconEngine,
   // [beacon-engine] deviation: bytes/POJO seam leaves DA verification in the facade.
   blockBytes: Uint8Array[],
-  blockInputs: IBlockInput[],
-  opts: BlockProcessOpts & ImportBlockOpts,
+  opts: VerifyBlocksOpts,
   signal: AbortSignal
 ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
+  if (signal.aborted) throw new ErrorAborted("verifyBlocks");
+  const blocks = blockBytes.map((bytes) => {
+    const cached = this.serializedCache.getDeserialized<SignedBeaconBlock>(bytes);
+    if (cached !== undefined) return cached;
+    const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
+    if (slot === null) throw new LodestarError({code: "INVALID_BLOCK_SSZ"});
+    const block = this.config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes, {reuseBytes: true});
+    this.serializedCache.set(block, bytes);
+    return block;
+  });
+  for (const block of blocks) {
+    const forkName = this.config.getForkName(block.message.slot);
+    if (isForkPostGloas(forkName)) {
+      this.seenPayloadEnvelopeInputCache.add({
+        blockRootHex: toRootHex(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
+        block: block as SignedBeaconBlock<ForkPostGloas>,
+        forkName,
+      });
+    }
+  }
+
   // [beacon-engine] deviation: verify consensus and EL internally and retain post-states in the engine-owned bundle cache.
-  const blocks = blockInputs.map((bi) => bi.getBlock());
   const block0 = blocks[0];
-  if (!block0) throw Error("Empty blockInputs");
+  if (!block0) throw Error("Empty blocks");
   const parentRoot = toRootHex(block0.message.parentRoot);
   let parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (!parentBlock) throw new BlockError(block0, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
@@ -45,6 +64,7 @@ export async function verifyBlocks(
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
 
+  if (signal.aborted) throw new ErrorAborted("verifyBlocks");
   this.shufflingCache.processState(preState0);
 
   // [beacon-engine] deviation: retain branch omission of upstream pre-state SSZ-cache diagnostic logs.
@@ -73,7 +93,7 @@ export async function verifyBlocks(
   // [beacon-engine] deviation: reject EL failures internally so the facade aborts its concurrent DA wait.
   const verifyExecutionPayloadsPromise =
     opts.skipVerifyExecutionPayload !== true
-      ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, signal, opts)
+      ? verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, signal, opts)
       : Promise.resolve<SegmentExecStatus>({
           execAborted: null,
           executionStatuses: blocks.map(() => ExecutionStatus.Syncing),
@@ -85,7 +105,7 @@ export async function verifyBlocks(
       verifyBlocksStateTransitionOnly(
         this.config,
         preState0,
-        blockInputs,
+        blocks,
         // [beacon-engine] deviation: DA gates import facade-side, outside consensus verification.
         blocks.map(() => DataAvailabilityStatus.Available),
         // [beacon-engine] deviation: use the bytes already passed by the facade instead of its SerializedCache.
@@ -119,13 +139,16 @@ export async function verifyBlocks(
   }
 
   // [beacon-engine] deviation: retain verification bundles instead of returning FullyVerifiedBlock state objects.
-  for (let i = 0; i < blockInputs.length; i++) {
-    const blockInput = blockInputs[i];
-    const blockRootHex = blockInput.blockRootHex;
+  if (signal.aborted) throw new ErrorAborted("verifyBlocks");
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    const blockRootHex = toRootHex(
+      this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+    );
     this.verifiedBlocks.set(blockRootHex, {
       executionStatus: segmentExecStatus.executionStatuses[i],
       postState: postStates[i],
-      blockInput,
+      block,
       blockBytes: blockBytes[i],
       indexedAttestations: indexedAttestationsByBlock[i],
       proposerBalanceDelta: proposerBalanceDeltas[i],

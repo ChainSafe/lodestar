@@ -60,11 +60,12 @@ export async function verifyBlocksInEpoch(
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
 
-  // Per-block SSZ bytes for the engine's bytes-first contract (unused by the JS engine). Gossip + sync
-  // populate serializedCache; fall back to serializing on a cache miss so all call sites pass real bytes.
   const blockBytes = blockInputs.map((blockInput) => {
     const block = blockInput.getBlock();
-    return this.serializedCache.get(block) ?? sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(block);
+    const bytes =
+      this.serializedCache.get(block) ?? sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(block);
+    this.serializedCache.set(block, bytes);
+    return bytes;
   });
 
   const abortController = new AbortController();
@@ -128,7 +129,7 @@ export async function verifyBlocksInEpoch(
       // [beacon-engine] moved: verifyBlocksInEpoch state-transition/signature/EL verification now lives in
       // packages/beacon-node/src/chain/beaconEngine/verifyBlock.ts#verifyBlocks.
       // On unstable merges, sync that logic there; retain DA verification here.
-      this.beaconEngine.verifyBlocks(blockBytes, blockInputs, opts, abortController.signal),
+      this.beaconEngine.verifyBlocks(blockBytes, opts, abortController.signal),
     ]);
 
     // Observation must follow both consensus verification and the facade DA wait.
@@ -223,6 +224,9 @@ export async function verifyBlocksInEpoch(
     }
 
     return {segmentExecStatus, blockDAStatuses, payloadDAStatuses};
+  } catch (error) {
+    this.beaconEngine.discardVerifiedBlocks(blockInputs.map((blockInput) => blockInput.blockRootHex));
+    throw error;
   } finally {
     abortController.abort();
   }

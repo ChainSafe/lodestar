@@ -8,7 +8,7 @@ import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
-import {IBlockInput} from "./blockInput/index.js";
+import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -48,6 +48,17 @@ export async function importBlock(
   // and import FCU now live in packages/beacon-node/src/chain/beaconEngine/importBlock.ts.
   // On unstable merges, sync that logic there; retain facade side effects here.
   const r = await this.beaconEngine.importBlock(fromHex(blockInput.blockRootHex), dataAvailabilityStatus, opts);
+
+  this.metrics?.importBlock.bySource.inc({source: blockInput.getBlockSource().source});
+  if (isBlockInputColumns(blockInput)) {
+    for (const {source} of blockInput.getSampledColumnsWithSource()) {
+      this.metrics?.dataColumns.bySource.inc({source});
+    }
+  } else if (isBlockInputBlobs(blockInput)) {
+    for (const {source} of blockInput.getAllBlobsWithSource()) {
+      this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
+    }
+  }
 
   // [beacon-engine] moved: head/reorg events are emitted by engine fork-choice transitions.
   if (this.config.getForkSeq(blockSlot) >= ForkSeq.gloas) {

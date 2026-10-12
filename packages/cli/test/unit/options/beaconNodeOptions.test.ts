@@ -24,6 +24,7 @@ describe("options / beaconNodeOptions", () => {
       "rest.bodyLimit": 30e6,
       "rest.stacktraces": true,
 
+      "chain.beaconEngineWorker": true,
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
@@ -126,6 +127,7 @@ describe("options / beaconNodeOptions", () => {
         },
       },
       chain: {
+        beaconEngineWorker: true,
         blsVerifyAllMultiThread: true,
         blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,

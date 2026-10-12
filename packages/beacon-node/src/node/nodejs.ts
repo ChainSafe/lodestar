@@ -31,6 +31,7 @@ import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
+import {SerializedCache} from "../util/serializedCache.js";
 import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
@@ -254,7 +255,9 @@ export class BeaconNode {
     const executionBuilder = opts.executionBuilder.enabled
       ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
       : undefined;
+    const serializedCache = new SerializedCache();
     const beaconEngine = new BeaconEngine({
+      serializedCache: opts.chain.beaconEngineWorker ? undefined : serializedCache,
       validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
       validatorMonitorOpts:
         opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
@@ -296,6 +299,7 @@ export class BeaconNode {
       });
 
     const chain = new BeaconChain(opts.chain, {
+      serializedCache,
       config,
       pubkeyCache,
       db,

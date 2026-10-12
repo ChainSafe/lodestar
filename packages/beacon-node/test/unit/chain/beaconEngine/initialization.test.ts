@@ -8,6 +8,7 @@ import {getConfig} from "@lodestar/config/test-utils";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
@@ -78,6 +79,24 @@ describe("bytes-based engine startup", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     await closeDb();
+  });
+
+  it.each([false, true])("selects cache sharing with beaconEngineWorker=%s", async (beaconEngineWorker) => {
+    const options = {...opts, beaconEngineWorker};
+    const dependencies = await initializeTestChain(options, modules);
+    chain = new BeaconChain(options, dependencies);
+    if (!engine) throw Error("Expected initialized engine");
+    expect(chain.serializedCache === engine.serializedCache).toBe(!beaconEngineWorker);
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
+    chain.serializedCache.set(block, bytes);
+    const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
+    vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
+    await expect(engine.verifyBlocks([bytes], {}, new AbortController().signal)).rejects.toMatchObject({
+      type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"},
+    });
+    expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
+    expect(engine.serializedCache.getDeserialized(bytes) === block).toBe(!beaconEngineWorker);
   });
 
   it("notifies the facade once when fork choice becomes irrecoverable", async () => {

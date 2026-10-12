@@ -47,8 +47,6 @@ import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {isBlockInputBlobs, isBlockInputColumns} from "../blocks/blockInput/blockInput.js";
-import {IBlockInput} from "../blocks/blockInput/index.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../blocks/types.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
@@ -60,7 +58,7 @@ import {ImportBlockResult} from "./interface.js";
 export type VerifiedBlockBundle = {
   executionStatus: BlockExecutionStatus;
   postState: IBeaconStateView;
-  blockInput: IBlockInput;
+  block: SignedBeaconBlock;
   blockBytes: Uint8Array;
   indexedAttestations: IndexedAttestation[];
   proposerBalanceDelta: number;
@@ -80,13 +78,9 @@ export async function importBlock(
   opts: ImportBlockOpts
 ): Promise<ImportBlockResult> {
   const fullyVerifiedBlock = {...v, dataAvailabilityStatus};
-  const {blockInput, postState, parentBlockSlot, indexedAttestations} = fullyVerifiedBlock;
+  const {block, postState, parentBlockSlot, indexedAttestations} = fullyVerifiedBlock;
 
   let {executionStatus} = fullyVerifiedBlock;
-
-  const block = blockInput.getBlock();
-
-  const source = blockInput.getBlockSource();
 
   const {slot: blockSlot} = block.message;
 
@@ -97,6 +91,7 @@ export async function importBlock(
   // Regen must be able to read the block from DB as soon as fork choice exposes it.
   this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
   await this.db.block.putBinary(blockRoot, v.blockBytes);
+  this.serializedCache.delete([block]);
 
   const currentSlot = this.forkChoice.getTime();
 
@@ -110,11 +105,6 @@ export async function importBlock(
     fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
 
   const fork = this.config.getForkSeq(blockSlot);
-
-  // this is just a type assertion since blockinput with dataPromise type will not end up here
-  if (!blockInput.hasAllData) {
-    throw Error("Unavailable block can not be imported in forkchoice");
-  }
 
   // 2. Import block to fork choice
 
@@ -156,8 +146,6 @@ export async function importBlock(
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
-
-  this.metrics?.importBlock.bySource.inc({source: source.source});
 
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
@@ -543,15 +531,6 @@ export async function importBlock(
     );
   }
 
-  if (isBlockInputColumns(blockInput)) {
-    for (const {source} of blockInput.getSampledColumnsWithSource()) {
-      this.metrics?.dataColumns.bySource.inc({source});
-    }
-  } else if (isBlockInputBlobs(blockInput)) {
-    for (const {source} of blockInput.getAllBlobsWithSource()) {
-      this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
-    }
-  }
   // [beacon-engine] deviation: return plain metadata; events and state remain engine-local.
   return {
     headChanged: newHead.blockRoot !== oldHead.blockRoot,
