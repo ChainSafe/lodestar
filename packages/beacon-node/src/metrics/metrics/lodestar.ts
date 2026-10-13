@@ -2061,10 +2061,16 @@ export function createLodestarMetrics(
       }),
       streamTime: register.histogram<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_stream_time_seconds",
-        help: "ExecutionEngineHttp client - streaming time by routeId",
+        help: "ExecutionEngineHttp client - response body consumption time, including failures and excluding parsing",
         labelNames: ["routeId"],
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      responseParseTime: register.histogram<{routeId: string; encoding: "json" | "ssz"}>({
+        name: "lodestar_execution_engine_http_client_response_parse_time_seconds",
+        help: "ExecutionEngineHttp client - JSON.parse or SSZ deserialize time, including failures, excluding body reads and subsequent value conversion",
+        labelNames: ["routeId", "encoding"],
+        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
       }),
       requestErrors: register.gauge<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_request_errors_total",
