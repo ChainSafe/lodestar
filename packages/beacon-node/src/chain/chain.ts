@@ -93,7 +93,6 @@ import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
-import {requestShutdownAtGloasFork} from "./gloasForkShutdown.js";
 import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {
@@ -327,7 +326,6 @@ export class BeaconChain implements IBeaconChain {
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
     //TODO(bing): remove once gloas support is in
-    if (opts.nativeStateTransition) requestShutdownAtGloasFork(clock, config, processShutdownCallback);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);

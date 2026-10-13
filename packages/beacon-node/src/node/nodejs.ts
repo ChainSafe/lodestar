@@ -13,9 +13,14 @@ import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {IBeaconStateView, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
+import {
+  IBeaconStateView,
+  computeStartSlotAtEpoch,
+  isStatePostBellatrix,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
@@ -354,6 +359,25 @@ export class BeaconNode {
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 
     startDeferredVoluntaryExitPublisher({chain, network, logger, signal});
+
+    if (opts.chain.nativeStateTransition && config.GLOAS_FORK_EPOCH !== Infinity) {
+      // TODO(bing): remove once lodestar-z supports gloas
+      logger.warn("--chain.nativeStateTransition does not support Gloas, the node will stop at the fork", {
+        gloasForkEpoch: config.GLOAS_FORK_EPOCH,
+      });
+      clock
+        .waitForSlot(computeStartSlotAtEpoch(config.GLOAS_FORK_EPOCH))
+        .then(() =>
+          processShutdownCallback(
+            new Error(
+              `--chain.nativeStateTransition does not support Gloas, which activated at epoch ${config.GLOAS_FORK_EPOCH}`
+            )
+          )
+        )
+        .catch((e) => {
+          if (!isErrorAborted(e)) logger.error("Error waiting for Gloas fork", {}, e as Error);
+        });
+    }
 
     return new BeaconNode({
       opts,
