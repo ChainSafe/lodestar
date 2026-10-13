@@ -135,9 +135,17 @@ export class InclusionListStore {
     return bits;
   }
 
-  /** True iff `bits` has a bit set for every bit set in the local inclusion list bits. */
-  isInclusionListBitsInclusive(slot: Slot, dependentRoot: RootHex, bits: BitArray, onlyTimely = true): boolean {
-    for (const {committeeIndices} of this.getEligible(slot, dependentRoot, onlyTimely)) {
+  /**
+   * True iff `bits` has a bit set for every bit set in the local inclusion list bits.
+   *
+   * Intentionally deviates from the spec by only checking against timely lists, where the proposer would check
+   * against every list it observed (only_timely=False in
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/heze/validator.md#signed-execution-payload-bid).
+   * A bid that passed gossip must stay eligible, otherwise a list released after the deadline voids every bid and
+   * a high early bid with empty bits crowds out the rest without ever paying.
+   */
+  isInclusionListBitsInclusive(slot: Slot, dependentRoot: RootHex, bits: BitArray): boolean {
+    for (const {committeeIndices} of this.getEligible(slot, dependentRoot, true)) {
       if (committeeIndices.some((committeeIndex) => !bits.get(committeeIndex))) {
         return false;
       }
