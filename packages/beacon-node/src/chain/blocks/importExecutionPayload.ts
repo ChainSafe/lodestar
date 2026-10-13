@@ -199,7 +199,13 @@ export async function importExecutionPayload(
           computeEpochAtSlot(parentBlock.slot),
           parentBlock
         );
-      } catch {}
+      } catch (e) {
+        this.logger.debug(
+          "Inclusion list dependent root not in fork choice, importing payload without lists",
+          {slot, root: blockRootHex},
+          e as Error
+        );
+      }
     }
     inclusionListTransactions =
       dependentRoot === null
