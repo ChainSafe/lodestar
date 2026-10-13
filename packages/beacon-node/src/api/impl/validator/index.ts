@@ -50,7 +50,6 @@ import {
   bellatrix,
   getValidatorStatus,
   gloas,
-  heze,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -100,7 +99,6 @@ import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {getBuilderBidTotalGwei, validateBuilderApiExecutionPayloadBid} from "../../../execution/builder/validateBid.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
-import {getShufflingDependentRoot} from "../../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getBlockGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
@@ -1074,45 +1072,11 @@ export function getValidatorApi(
           });
         }
 
-        // Filtered here to cover both p2p and builder API bids. Uses the full view including untimely
-        // lists (only_timely=False), a superset of the timely-only view other validators enforce.
-        const eligibleCandidates = isForkPostHeze(fork)
-          ? candidates.filter((candidate) => {
-              const {inclusionListBits} = candidate.signedBid.message as heze.ExecutionPayloadBid;
-              const inclusionListSlot = slot - 1;
-              const dependentRoot = getShufflingDependentRoot(
-                chain.forkChoice,
-                computeEpochAtSlot(inclusionListSlot),
-                computeEpochAtSlot(parentBlock.slot),
-                parentBlock
-              );
-              if (
-                chain.inclusionListStore.isInclusionListBitsInclusive(
-                  inclusionListSlot,
-                  dependentRoot,
-                  inclusionListBits,
-                  false
-                )
-              ) {
-                return true;
-              }
-              logger.verbose("Discarding bid with non-inclusive inclusion list bits", {
-                slot,
-                builderIndex: candidate.signedBid.message.builderIndex,
-                inclusionListBits: toHex(inclusionListBits.uint8Array),
-                expectedInclusionListBits: toHex(
-                  chain.inclusionListStore.getInclusionListBits(inclusionListSlot, dependentRoot, false).uint8Array
-                ),
-              });
-              return false;
-            })
-          : candidates;
-
-        if (eligibleCandidates.length === 0) {
+        if (candidates.length === 0) {
           return null;
         }
 
-        const rankedCandidates = eligibleCandidates.toSorted(compareBidCandidates);
+        const rankedCandidates = candidates.toSorted(compareBidCandidates);
         for (const [index, candidate] of rankedCandidates.entries()) {
           logger.debug("Builder bid candidate", {
             slot,
