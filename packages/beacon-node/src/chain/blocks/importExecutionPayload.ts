@@ -308,7 +308,12 @@ export async function importExecutionPayload(
         : execResult.status === ExecutionPayloadStatus.SYNCING || execResult.status === ExecutionPayloadStatus.ACCEPTED;
     this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, satisfied);
     if (!satisfied) {
-      this.logger.verbose("Payload did not satisfy inclusion list constraints", {slot, blockRoot: blockRootHex});
+      this.logger.verbose("Payload did not satisfy inclusion list constraints", {
+        ...logCtx,
+        blockHash: blockHashHex,
+        status: execResult.status,
+        inclusionListTransactions: inclusionListTransactions.length,
+      });
     }
   }
 
