@@ -5,13 +5,6 @@
 // on its own.
 export const knownIssues = [
   {
-    client: "teku",
-    failure: /^finalized epoch [01] after \d+s, wanted/,
-    evidence: ["bn2-teku.log", /Failed to publish .* No peers for message topics/],
-    note: "teku drops the subscription announcement of a peer with more than 200 topics in one message, a Lodestar supernode subscribed to all subnets announces 205, so teku never publishes to it",
-    issue: "https://github.com/Consensys/teku/issues/11482",
-  },
-  {
     client: "prysm",
     failure: /^lodestar bn \(node 3\): \d+ REST API error responses \(getAggregatedAttestationV2 404 x\d+\)$/,
     note: "Lodestar hands out attestation data with the next epoch's source after 2/3 of the last slot of an epoch, the prysm aggregators re-fetch the data at that point",
