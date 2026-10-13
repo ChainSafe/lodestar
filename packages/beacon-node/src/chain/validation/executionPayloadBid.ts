@@ -147,6 +147,18 @@ export async function validateApiExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] The bid is received after the inclusion list deadline of `bid.slot - 1`
+  if (
+    isForkPostHeze(chain.config.getForkName(bid.slot)) &&
+    chain.clock.msFromSlot(bid.slot - 1) < chain.config.getInclusionListDueMs(chain.config.getForkName(bid.slot - 1))
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BEFORE_INCLUSION_LIST_DEADLINE,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
+
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
   // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
   // proposer-preferences lookup below from a known fork-choice block.
@@ -304,6 +316,18 @@ async function validateExecutionPayloadBid(
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
+
+  // [IGNORE] The bid is received after the inclusion list deadline of `bid.slot - 1`
+  if (
+    isForkPostHeze(chain.config.getForkName(bid.slot)) &&
+    chain.clock.msFromSlot(bid.slot - 1) < chain.config.getInclusionListDueMs(chain.config.getForkName(bid.slot - 1))
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BEFORE_INCLUSION_LIST_DEADLINE,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
     });
