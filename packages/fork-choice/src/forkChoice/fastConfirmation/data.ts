@@ -15,6 +15,7 @@ export function createFastConfirmationCache(): FastConfirmationCache {
     isDescendantByRootPair: new Map(),
     voteWeightBySource: new Map(),
     totalActiveBalanceByKey: new Map(),
+    zeroInactiveBalancesByState: new Map(),
     checkpointStateByKey: new Map(),
   };
 }

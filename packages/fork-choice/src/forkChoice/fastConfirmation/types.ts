@@ -113,6 +113,8 @@ export type FastConfirmationCache = {
   voteWeightBySource: Map<BalanceSourceKey, Map<RootHex, number>>;
   /** total active balance, keyed by the balance source's state or balances reference */
   totalActiveBalanceByKey: Map<TotalActiveBalanceCacheKey, number>;
+  /** balances with inactive and slashed validators zeroed, keyed by state */
+  zeroInactiveBalancesByState: Map<IBeaconStateView, EffectiveBalanceIncrements>;
   headState?: IBeaconStateView;
   pulledUpHeadState?: IBeaconStateView;
   checkpointStateByKey: Map<string, IBeaconStateView | null>;
