@@ -8,6 +8,7 @@ import {
   computeWeakSubjectivitySummaryFromStateBytes,
   createBeaconStateView,
   getCurrentSlot,
+  getSlotDurations,
   getValidatorCountFromStateBytes,
   isWithinWeakSubjectivityPeriodFromSummary,
   readBeaconStateBytesMetadata,
