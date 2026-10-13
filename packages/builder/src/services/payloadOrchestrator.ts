@@ -1,11 +1,5 @@
 import {LodestarError, TimeoutError, retry, sleep, withTimeout} from "@lodestar/utils";
-import {
-  type BuildRequest,
-  type BuiltPayload,
-  type PayloadSource,
-  PayloadSourceError,
-  PayloadSourceErrorCode,
-} from "./payloadSource.js";
+import type {BuildRequest, BuiltPayload, PayloadSource} from "./payloadSource.js";
 
 const PREPARE_RETRY_DELAY = 100;
 
@@ -35,15 +29,20 @@ export type PayloadOrchestratorErrorType =
       getPayloadAt: number;
     }
   | {
-      code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT | PayloadOrchestratorErrorCode.GET_PAYLOAD_TIMEOUT;
+      code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT;
+      jobId: string;
+      lastError: string | null;
+    }
+  | {
+      code: PayloadOrchestratorErrorCode.GET_PAYLOAD_TIMEOUT;
       jobId: string;
     };
 
 export class PayloadOrchestratorError extends LodestarError<PayloadOrchestratorErrorType> {}
 
 /**
- * Prepares a payload and retrieves it at the requested time. Preparation retries missing payload IDs until the
- * retrieval time. Transport-level retries remain owned by the source.
+ * Prepares a payload and retrieves it at the requested time. Preparation is retried until the retrieval time,
+ * the execution client may not have imported the parent payload yet.
  */
 export class PayloadOrchestrator {
   private readonly jobs = new Map<string, Promise<BuiltPayload>>();
@@ -73,20 +72,25 @@ export class PayloadOrchestrator {
       );
     }
 
+    let lastError: Error | null = null;
     const handle = await withTimeout(
       (signal = this.signal) =>
         retry(() => this.source.prepare(request, signal), {
           retries: Infinity,
           retryDelay: PREPARE_RETRY_DELAY,
-          shouldRetry: (error) =>
-            error instanceof PayloadSourceError && error.type.code === PayloadSourceErrorCode.NO_PAYLOAD_ID,
+          onRetry: (error) => {
+            lastError = error;
+          },
           signal,
         }),
       prepareTimeout,
       this.signal
     ).catch((error: unknown) => {
       if (error instanceof TimeoutError) {
-        throw new PayloadOrchestratorError({code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: id});
+        throw new PayloadOrchestratorError(
+          {code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: id, lastError: lastError?.message ?? null},
+          `Payload preparation timed out jobId=${id} lastError=${lastError?.message}`
+        );
       }
       throw error;
     });

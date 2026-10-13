@@ -117,21 +117,22 @@ describe("PayloadOrchestrator", () => {
 
   it("builds different branches independently", async () => {
     const source = new StubPayloadSource();
-    const sourceError = new Error("invalid forkchoice");
+    const fullRequest = buildRequest();
     source.prepareImpl = async (request) => {
-      if (source.prepareCalls.length === 1) throw sourceError;
+      if (request === fullRequest) throw new Error("unknown parent");
       return {sourceId: source.id, fork: request.fork, payloadId: "0x02"};
     };
     const orchestrator = createOrchestrator(source);
 
-    const full = orchestrator.run(buildJob("slot-1-full"));
+    const full = orchestrator.run({id: "slot-1-full", request: fullRequest, getPayloadAt: NOW + 100});
     const empty = orchestrator.run(buildJob("slot-1-empty"));
-    const fullExpectation = expect(full).rejects.toBe(sourceError);
+    const fullExpectation = expect(full).rejects.toMatchObject({
+      type: {code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: "slot-1-full"},
+    });
     await vi.advanceTimersByTimeAsync(100);
 
     await fullExpectation;
     await expect(empty).resolves.toEqual(builtPayload({sourceId: source.id, fork: ForkName.gloas, payloadId: "0x02"}));
-    expect(source.prepareCalls).toHaveLength(2);
     expect(source.getPayloadCalls).toHaveLength(1);
   });
 
@@ -256,18 +257,7 @@ describe("PayloadOrchestrator", () => {
     expect(source.getPayloadSignals[0]?.aborted).toBe(true);
   });
 
-  it("propagates a source preparation failure", async () => {
-    const source = new StubPayloadSource();
-    const sourceError = new Error("source unavailable");
-    source.prepareImpl = async () => {
-      throw sourceError;
-    };
-    const orchestrator = createOrchestrator(source);
-
-    await expect(orchestrator.run(buildJob())).rejects.toBe(sourceError);
-  });
-
-  it("retries missing payload IDs until preparation succeeds", async () => {
+  it("retries a failing preparation until it succeeds", async () => {
     const source = new StubPayloadSource();
     source.prepareImpl = async (request) => {
       if (source.prepareCalls.length < 3) {
@@ -288,15 +278,19 @@ describe("PayloadOrchestrator", () => {
     expect(source.getPayloadCalls).toHaveLength(1);
   });
 
-  it("does not extend the preparation deadline while retrying", async () => {
+  it("does not extend the preparation deadline while retrying and reports the last error", async () => {
     const source = new StubPayloadSource();
     source.prepareImpl = async () => {
-      throw new PayloadSourceError({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id});
+      throw new Error("Execution Layer Syncing");
     };
     const orchestrator = createOrchestrator(source);
     const result = orchestrator.run(buildJob("deadline", NOW + 250));
     const assertion = expect(result).rejects.toMatchObject({
-      type: {code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: "deadline"},
+      type: {
+        code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT,
+        jobId: "deadline",
+        lastError: "Execution Layer Syncing",
+      },
     });
 
     await vi.advanceTimersByTimeAsync(250);
@@ -321,24 +315,6 @@ describe("PayloadOrchestrator", () => {
     await assertion;
     await vi.advanceTimersByTimeAsync(500);
     expect(source.prepareCalls).toHaveLength(1);
-    expect(source.getPayloadCalls).toHaveLength(0);
-  });
-
-  it("does not retry a permanent source error after a missing payload ID", async () => {
-    const source = new StubPayloadSource();
-    const sourceError = new Error("invalid forkchoice");
-    source.prepareImpl = async () => {
-      if (source.prepareCalls.length === 1) {
-        throw new PayloadSourceError({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id});
-      }
-      throw sourceError;
-    };
-    const orchestrator = createOrchestrator(source);
-    const result = orchestrator.run(buildJob("invalid", NOW + 350));
-    const assertion = expect(result).rejects.toBe(sourceError);
-    await vi.advanceTimersByTimeAsync(350);
-    await assertion;
-    expect(source.prepareCalls).toHaveLength(2);
     expect(source.getPayloadCalls).toHaveLength(0);
   });
 

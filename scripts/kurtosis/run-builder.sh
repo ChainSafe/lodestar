@@ -41,8 +41,13 @@ if [ ! -d "$TEMP"/derived ]; then
   cp "$(find "$TEMP"/derived/secrets -type f | head -n1)" "$TEMP"/password.txt
 fi
 
-# download network config
+# download network config and jwt secret
 kurtosis files download builder-dev el_cl_genesis_data "$TEMP"/netcfg
+kurtosis files download builder-dev jwt_file "$TEMP"/jwt
+
+# the builder uses the beacon node and execution client of the first participant
+BN_URL="$(kurtosis port print builder-dev cl-1-lodestar-geth http)"
+EL_URL="http://$(kurtosis port print builder-dev el-1-geth-lodestar engine-rpc)"
 
 # builder running note
 echo
@@ -52,8 +57,9 @@ echo 'LODESTAR_PRESET=minimal ./lodestar builder \'
 echo '  --keystore ./temp/builder-dev/keystore.json \'
 echo '  --keystorePassword ./temp/builder-dev/password.txt \'
 echo '  --builderPubkey 0x8ec9cc826ea7735329831dbe89c28ae700e39b51c817f1086483621a2104145343f912b3bf167027256780a62a1995bd \'
-# make sure to place the correct url
-echo '  --beaconNodeUrl "http://127.0.0.1:37001" \'
+echo "  --beaconNodeUrl $BN_URL \\"
+echo "  --execution.urls $EL_URL \\"
+echo '  --jwtSecret ./temp/builder-dev/jwt/jwtsecret \'
 echo '  --executionFeeRecipient 0x8943545177806ed17b9f23f0a21ee5948ecaa776 \'
 echo '  --paramsFile ./temp/builder-dev/netcfg/config.yaml'
 echo
