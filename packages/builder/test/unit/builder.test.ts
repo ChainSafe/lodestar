@@ -578,7 +578,9 @@ describe("Builder", () => {
     function prepareStartup() {
       vi.useFakeTimers();
       const {events, data} = configureInputs(modules, clock);
-      vi.setSystemTime(9 * modules.opts.config.SLOT_DURATION_MS + modules.opts.config.getSlotComponentDurationMs(6667));
+      vi.setSystemTime(
+        9 * modules.opts.config.SLOT_DURATION_MS + modules.opts.config.getSlotComponentDurationMs(ForkName.gloas, 6667)
+      );
       api.beacon.getGenesis.mockResolvedValue(
         mockApiResponse({data: ssz.phase0.Genesis.defaultValue(), meta: undefined})
       );
@@ -832,7 +834,9 @@ describe("Builder", () => {
     it("stops reveal retries at the cutoff", async () => {
       const {builder, reveal, emitBlock} = await prepareSelection();
       vi.setSystemTime(
-        10 * modules.opts.config.SLOT_DURATION_MS + modules.opts.config.getSlotComponentDurationMs(5000) - 50
+        10 * modules.opts.config.SLOT_DURATION_MS +
+          modules.opts.config.getSlotComponentDurationMs(ForkName.gloas, 5000) -
+          50
       );
       reveal.mockRejectedValue(new ApiError("unavailable", 503, "publishExecutionPayloadEnvelope"));
       emitBlock();
@@ -1111,7 +1115,8 @@ describe("Builder", () => {
       onEvent(events.attributes);
       const config = modules.opts.config;
       await vi.advanceTimersByTimeAsync(
-        config.getSlotComponentDurationMs(9000) - config.getSlotComponentDurationMs(6667)
+        config.getSlotComponentDurationMs(ForkName.gloas, 9000) -
+          config.getSlotComponentDurationMs(ForkName.gloas, 6667)
       );
       expect(source.getPayload).toHaveBeenCalledOnce();
       const retrievalSignal = source.getPayload.mock.calls[0][1];

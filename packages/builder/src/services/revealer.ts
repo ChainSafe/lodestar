@@ -56,7 +56,7 @@ export class Revealer {
     metrics?.bidSelections.inc({result: "won"});
     logger.info("Local bid selected", {...context, value: selected.bid.valueGwei});
 
-    const cutoff = config.getSlotComponentDurationMs(this.options.cutoffBps);
+    const cutoff = config.getSlotComponentDurationMs(config.getForkName(observed.slot), this.options.cutoffBps);
     const remaining = cutoff - clock.msFromSlot(observed.slot);
     if (remaining <= 0) {
       metrics?.reveals.inc({result: "cutoff"});

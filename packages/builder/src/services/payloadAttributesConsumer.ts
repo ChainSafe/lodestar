@@ -144,11 +144,12 @@ export class PayloadAttributesConsumer {
       return {status: "ignored", reason: "preference_mismatch"};
     }
 
+    const buildFork = config.getForkName(data.proposalSlot - 1);
     const getPayloadAt =
       Date.now() +
       clock.msToSlot(data.proposalSlot) -
-      config.SLOT_DURATION_MS +
-      config.getSlotComponentDurationMs(this.options.deadlineBps);
+      config.getSlotDurationMs(buildFork) +
+      config.getSlotComponentDurationMs(buildFork, this.options.deadlineBps);
     if (getPayloadAt <= Date.now()) return {status: "ignored", reason: "deadline_passed"};
     const id = JSON.stringify(ssz.gloas.SSEPayloadAttributes.toJson(data));
     if (this.active?.id === id && !this.active.controller.signal.aborted) return this.active.promise;

@@ -359,14 +359,10 @@ export class ValidatorStore {
     }
 
     // Post-Gloas block production uses standard builder boost factor. Need to normalize the
-    // gloas-deprecated "builderonly" and "executiononly" to the gloas fallback "builderalways"
-    // and "executionalways" equivalent before deriving the boost factor.
-    if (isPostGloas) {
-      if (selection === routes.validator.BuilderSelection.BuilderOnly) {
-        selection = routes.validator.BuilderSelection.BuilderAlways;
-      } else if (selection === routes.validator.BuilderSelection.ExecutionOnly) {
-        selection = routes.validator.BuilderSelection.ExecutionAlways;
-      }
+    // gloas-deprecated "builderonly" to the gloas fallback "builderalways" equivalent before
+    // deriving the boost factor.
+    if (isPostGloas && selection === routes.validator.BuilderSelection.BuilderOnly) {
+      selection = routes.validator.BuilderSelection.BuilderAlways;
     }
 
     const boostFactor = getBuilderBoostFactor(

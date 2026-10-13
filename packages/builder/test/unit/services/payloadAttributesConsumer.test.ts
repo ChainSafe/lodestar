@@ -261,11 +261,16 @@ describe("Gloas payload attributes consumer", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  it.each([5000, 9000])("checks deadline %s against the real clock at BN preparation time", async (deadlineBps) => {
-    const {config, tracker, run, head, attributes, signal, executionFeeRecipient} = setup();
+  it.each([
+    [5000, 12000],
+    [9000, 12000],
+    [5000, 6000],
+    [9000, 6000],
+  ])("checks deadline %s with slot duration %s against the real clock", async (deadlineBps, slotDuration) => {
+    const {config, tracker, run, head, attributes, signal, executionFeeRecipient} = setup(10, true, slotDuration);
     const currentSlot = attributes.message.data.proposalSlot - 1;
     const slotStart = computeTimeAtSlot(config, currentSlot, 0) * 1000;
-    vi.setSystemTime(slotStart + config.getSlotComponentDurationMs(6667));
+    vi.setSystemTime(slotStart + config.getSlotComponentDurationMs(ForkName.gloas, 6667));
     const clock = new Clock(config, getMockedLogger(), {genesisTime: 0});
     const consumer = new PayloadAttributesConsumer(
       {config, clock, preferences: tracker, bidder: {run}},
@@ -278,13 +283,18 @@ describe("Gloas payload attributes consumer", () => {
       expect(run).not.toHaveBeenCalled();
     } else {
       expect(result).toMatchObject({status: "published"});
-      expect(run.mock.calls[0][0].job.getPayloadAt).toBe(slotStart + config.getSlotComponentDurationMs(deadlineBps));
+      expect(run.mock.calls[0][0].job.getPayloadAt).toBe(
+        slotStart + config.getSlotComponentDurationMs(ForkName.gloas, deadlineBps)
+      );
     }
   });
 });
 
-function setup(slot = 10, withPreference = true) {
-  const config = createBeaconConfig(getConfig(ForkName.gloas), Buffer.alloc(32, 1));
+function setup(slot = 10, withPreference = true, slotDuration = 12000) {
+  const config = createBeaconConfig(
+    {...getConfig(ForkName.gloas), SLOT_DURATION_MS: slotDuration},
+    Buffer.alloc(32, 1)
+  );
   const clock = new ClockMock();
   clock.currentSlot = slot - 1;
   const api = getApiClientStub();
