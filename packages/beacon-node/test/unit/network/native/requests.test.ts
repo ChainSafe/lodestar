@@ -76,7 +76,10 @@ it.each([
   ["timeout", "negotiation", null, RequestErrorCode.DIAL_TIMEOUT, PeerAction.HighToleranceError],
   ["timeout", "request", null, RequestErrorCode.REQUEST_TIMEOUT, null],
   ["timeout", "response", null, RequestErrorCode.RESP_TIMEOUT, null],
-  ["invalid_response", "response", null, RequestErrorCode.INVALID_RESPONSE_SSZ, PeerAction.LowToleranceError],
+  ["invalid_response", "response", "LengthOutOfBounds", RequestErrorCode.INVALID_RESPONSE_SSZ, null],
+  ["invalid_response", "response", "BufferTooSmall", RequestErrorCode.INVALID_RESPONSE_SSZ, null],
+  ["too_many_chunks", "response", null, RequestErrorCode.INVALID_RESPONSE_SSZ, null],
+  ["unknown_context", "response", null, RequestErrorCode.INVALID_RESPONSE_SSZ, null],
   ["host_timeout", "response", null, RequestErrorCode.REQUEST_ERROR, null],
   ["quota_timeout", "response", null, RequestErrorCode.REQUEST_ERROR, null],
 ] as const)("maps and scores %s in %s once", async (reason, phase, detail, code, action) => {

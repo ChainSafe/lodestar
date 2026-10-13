@@ -121,9 +121,12 @@ export function outgoingNativeRequest(
       const nativeFault = error instanceof Error && "peerFault" in error && error.peerFault !== null;
       if (score && !reported && !nativeFault && mapped instanceof RequestError) {
         reported = true;
-        // Native owns response-timeout attribution, including when local delays rule out a peer penalty.
+        // Native owns framing and response-timeout attribution. A null fault can mean a local limit or delay.
         const action =
-          mapped.type.code === RequestErrorCode.RESP_TIMEOUT ? null : onOutgoingReqRespError(mapped, data.method);
+          mapped.type.code === RequestErrorCode.RESP_TIMEOUT ||
+          mapped.type.code === RequestErrorCode.INVALID_RESPONSE_SSZ
+            ? null
+            : onOutgoingReqRespError(mapped, data.method);
         if (action !== null) {
           const native = error as NativeRequestError;
           const origin = native.code === "NetworkRequestFailed" ? native.origin : null;
