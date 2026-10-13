@@ -67,7 +67,11 @@ VC_PARAMS='[]'
 
 mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd)"
-# leftovers of an earlier run must not end up in this verdict
+# leftovers of an earlier run must not end up in this verdict, anything else in there is not ours to delete
+if [ -n "$(ls -A "$OUT_DIR")" ] && [ ! -f "$OUT_DIR/args.yaml" ] && [ ! -f "$OUT_DIR/summary.md" ]; then
+  echo "refusing to clean $OUT_DIR, not the output of an earlier run"
+  exit 1
+fi
 find "$OUT_DIR" -mindepth 1 -maxdepth 1 ! -name args.yaml -exec rm -rf {} +
 log() { echo "[$CLIENT/$SCENARIO] $*"; }
 
