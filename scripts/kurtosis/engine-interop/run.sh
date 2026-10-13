@@ -199,7 +199,7 @@ if [ "$SCENARIO" = "fulu" ]; then
   beacon /eth/v1/beacon/headers/head | node -pe 'JSON.parse(require("fs").readFileSync(0)).data.header.message.slot' > "$OUT_DIR/restart-end.slot"
   log "$EL2 back after $(( $(date +%s) - start ))s, head slot $(cat "$OUT_DIR/restart-end.slot")"
   snapshot restart
-  wait_finalized $(( FINALITY_TARGET + 1 )) 240
+  wait_finalized $(( $(finalized) + 1 )) 240
   snapshot after-restart
   log "finality advanced after the restart"
 fi
