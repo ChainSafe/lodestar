@@ -766,8 +766,8 @@ export async function prepareExecutionPayload(
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
-  // Post-heze the attributes feed the cache key: inclusion lists keep arriving after a payload was
-  // prepared in advance, and a payload built without them would not satisfy the constraints
+  // Post-heze the inclusion lists are part of the cache key, so a list set that changed since the
+  // payload was prepared triggers a new forkchoiceUpdated instead of reusing a payload built without them
   let attributes = payloadAttributes;
   if (attributes === undefined && ForkSeq[fork] >= ForkSeq.heze) {
     attributes = preparePayloadAttributes(fork, chain, {
