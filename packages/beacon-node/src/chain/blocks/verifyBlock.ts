@@ -4,6 +4,7 @@ import {
   DataAvailabilityStatus,
   IBeaconStateView,
   computeEpochAtSlot,
+  getIndexedAttestation,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
@@ -81,10 +82,6 @@ export async function verifyBlocksInEpoch(
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
 
-  // in forky condition, make sure to populate ShufflingCache with regened state
-  // otherwise it may fail to get indexed attestations from shuffling cache later
-  this.shufflingCache.processState(preState0);
-
   if (!preState0.isStateValidatorsNodesPopulated()) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
       slot: preState0.slot,
@@ -117,8 +114,12 @@ export async function verifyBlocksInEpoch(
     for (const [i, block] of blocks.entries()) {
       indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
         const attEpoch = computeEpochAtSlot(attestation.data.slot);
-        const decisionRoot = preState0.getShufflingDecisionRoot(attEpoch);
-        return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
+        // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
+        // we should have the shuffling inside ShufflingCache most of the time
+        const shuffling =
+          this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
+          preState0.getShufflingAtEpoch(attEpoch);
+        return getIndexedAttestation(shuffling, fork, attestation);
       });
     }
 
@@ -188,6 +189,7 @@ export async function verifyBlocksInEpoch(
         blockInputs,
         // hack availability for state transition eval as availability is separately determined
         blocks.map(() => DataAvailabilityStatus.Available),
+        this.serializedCache,
         this.logger,
         this.metrics,
         this.validatorMonitor,

@@ -3,6 +3,7 @@ import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
+import {IndexedBuilderState} from "./indexedBuilderState.js";
 import {processBuilderDepositRequest} from "./processBuilderDepositRequest.js";
 import {processBuilderExitRequest} from "./processBuilderExitRequest.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
@@ -53,29 +54,8 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
   const parentEpoch = computeEpochAtSlot(parentSlot);
   const currentEpoch = computeEpochAtSlot(state.slot);
 
-  // Process execution requests from parent's payload. The execution
-  // requests are processed at state.slot (child's slot), not the parent's slot.
-  for (const deposit of requests.deposits) {
-    processDepositRequest(fork, state, deposit);
-  }
-
-  for (const withdrawal of requests.withdrawals) {
-    processWithdrawalRequest(fork, state, withdrawal);
-  }
-
-  for (const consolidation of requests.consolidations) {
-    processConsolidationRequest(state, consolidation);
-  }
-
-  for (const builderDeposit of requests.builderDeposits) {
-    processBuilderDepositRequest(state, builderDeposit);
-  }
-
-  for (const builderExit of requests.builderExits) {
-    processBuilderExitRequest(state, builderExit);
-  }
-
-  // Settle the builder payment
+  // Settle the builder payment before the requests so that a builder exit request
+  // is rejected while the payment is pending
   if (parentEpoch === currentEpoch) {
     settleBuilderPayment(state, SLOTS_PER_EPOCH + (parentSlot % SLOTS_PER_EPOCH));
   } else if (parentEpoch === currentEpoch - 1) {
@@ -90,6 +70,30 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
         builderIndex: parentBid.builderIndex,
       })
     );
+  }
+
+  // Process execution requests from parent's payload. The execution
+  // requests are processed at state.slot (child's slot), not the parent's slot.
+  for (const deposit of requests.deposits) {
+    processDepositRequest(fork, state, deposit);
+  }
+
+  for (const withdrawal of requests.withdrawals) {
+    processWithdrawalRequest(fork, state, withdrawal);
+  }
+
+  for (const consolidation of requests.consolidations) {
+    processConsolidationRequest(state, consolidation);
+  }
+
+  if (requests.builderDeposits.length > 0 || requests.builderExits.length > 0) {
+    const indexedState = new IndexedBuilderState(state);
+    for (const builderDeposit of requests.builderDeposits) {
+      processBuilderDepositRequest(indexedState, builderDeposit);
+    }
+    for (const builderExit of requests.builderExits) {
+      processBuilderExitRequest(indexedState, builderExit);
+    }
   }
 
   // Update parent payload availability and latest block hash

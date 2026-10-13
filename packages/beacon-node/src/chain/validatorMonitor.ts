@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkName, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   IBeaconStateView,
   ParticipationFlags,
@@ -119,6 +119,11 @@ export type ValidatorMonitor = {
 export type ValidatorMonitorOpts = {
   /** Log validator monitor events as info */
   validatorMonitorLogs?: boolean;
+};
+
+export type NativeValidatorMonitor = {
+  registerLocalValidator(index: ValidatorIndex): void;
+  unregisterLocalValidator(index: ValidatorIndex): void;
 };
 
 export const defaultValidatorMonitorOpts: ValidatorMonitorOpts = {
@@ -294,7 +299,8 @@ export function createValidatorMonitor(
   config: ChainForkConfig,
   genesisTime: number,
   logger: Logger,
-  opts: ValidatorMonitorOpts
+  opts: ValidatorMonitorOpts,
+  nativeValidatorMonitor: NativeValidatorMonitor | null = null
 ): ValidatorMonitor {
   const logLevel = opts.validatorMonitorLogs ? LogLevel.info : LogLevel.debug;
   const log: LogHandler = (message: string, context?: LogData) => {
@@ -325,18 +331,23 @@ export function createValidatorMonitor(
   }));
 
   let lastRegisteredStatusEpoch = -1;
+  let lastAttestationSummaryEpoch = -1;
 
   // Track validator additions/removals per epoch for logging
   const addedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
   const removedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
 
-  const validatorMonitorMetrics = metricsRegister ? createValidatorMonitorMetrics(metricsRegister) : null;
+  const shouldRegisterStateDerivedMetrics = nativeValidatorMonitor === null;
+  const validatorMonitorMetrics = metricsRegister
+    ? createValidatorMonitorMetrics(metricsRegister, shouldRegisterStateDerivedMetrics)
+    : null;
 
   const validatorMonitor: ValidatorMonitor = {
     registerLocalValidator(index) {
       const isNewValidator = !validators.has(index);
       validators.getOrDefault(index).lastRegisteredTimeMs = Date.now();
       if (isNewValidator) {
+        nativeValidatorMonitor?.registerLocalValidator(index);
         addedValidatorsInEpoch.add(index);
       }
     },
@@ -364,7 +375,7 @@ export function createValidatorMonitor(
       // Track total balance instead of per-validator balance to reduce metric cardinality
       let totalBalance = 0;
 
-      for (const [index, monitoredValidator] of validators.entries()) {
+      for (const index of validators.keys()) {
         // We subtract two from the state of the epoch that generated these summaries.
         //
         // - One to account for it being the previous epoch.
@@ -378,68 +389,29 @@ export function createValidatorMonitor(
         );
 
         if (summary.isPrevSourceAttester) {
-          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterHit?.inc();
         } else {
-          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterMiss?.inc();
         }
         if (summary.isPrevHeadAttester) {
-          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterHit?.inc();
         } else {
-          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterMiss?.inc();
         }
         if (summary.isPrevTargetAttester) {
-          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterHit?.inc();
         } else {
-          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterMiss.inc();
-        }
-
-        const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
-        const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
-        if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
-          if (attestationCorrectHead) {
-            validatorMonitorMetrics?.prevOnChainAttesterCorrectHead.inc();
-          } else {
-            validatorMonitorMetrics?.prevOnChainAttesterIncorrectHead.inc();
-          }
-        }
-
-        const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
-        const inclusionDistance =
-          attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0
-            ? // altair, attestation is not missed
-              attestationMinBlockInclusionDistance
-            : summary.inclusionDistance
-              ? // phase0, this is from the state transition
-                summary.inclusionDistance
-              : null;
-
-        if (inclusionDistance !== null) {
-          validatorMonitorMetrics?.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
-          validatorMonitorMetrics?.prevEpochOnChainAttesterHit.inc();
-        } else {
-          validatorMonitorMetrics?.prevEpochOnChainAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterMiss?.inc();
         }
 
         const balance = balances?.[index];
         if (balance !== undefined) {
           totalBalance += balance;
         }
-
-        if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
-          log("Failed attestation in previous epoch", {
-            validator: index,
-            prevEpoch: currentEpoch - 1,
-            isPrevSourceAttester: summary.isPrevSourceAttester,
-            isPrevHeadAttester: summary.isPrevHeadAttester,
-            isPrevTargetAttester: summary.isPrevTargetAttester,
-            // inclusionDistance is not available in summary since altair
-            inclusionDistance,
-          });
-        }
       }
 
       if (balances !== undefined) {
-        validatorMonitorMetrics?.prevEpochOnChainBalance.set(totalBalance);
+        validatorMonitorMetrics?.prevEpochOnChainBalance?.set(totalBalance);
       }
     },
 
@@ -726,6 +698,7 @@ export function createValidatorMonitor(
       // Prune validators not seen in a while
       for (const [index, validator] of validators.entries()) {
         if (Date.now() - validator.lastRegisteredTimeMs > retainRegisteredValidatorsMs) {
+          nativeValidatorMonitor?.unregisterLocalValidator(index);
           validators.delete(index);
           removedValidatorsInEpoch.add(index);
         }
@@ -761,23 +734,67 @@ export function createValidatorMonitor(
         return;
       }
 
+      // On-chain attestation summary of prevEpoch. Reads only the epoch summaries filled by
+      // registerAttestationInBlock(), so it works with both TS and native state transition.
+      if (prevEpoch > lastAttestationSummaryEpoch) {
+        lastAttestationSummaryEpoch = prevEpoch;
+
+        for (const monitoredValidator of validators.values()) {
+          const prevEpochSummary = monitoredValidator.summaries.get(prevEpoch);
+          const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
+          if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
+            if (attestationCorrectHead) {
+              validatorMonitorMetrics?.prevOnChainAttesterCorrectHead.inc();
+            } else {
+              validatorMonitorMetrics?.prevOnChainAttesterIncorrectHead.inc();
+            }
+          }
+
+          const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
+          const inclusionDistance =
+            attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0
+              ? // altair, attestation is not missed
+                attestationMinBlockInclusionDistance
+              : null;
+
+          if (inclusionDistance !== null) {
+            validatorMonitorMetrics?.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
+            validatorMonitorMetrics?.prevEpochOnChainAttesterHit.inc();
+          } else {
+            validatorMonitorMetrics?.prevEpochOnChainAttesterMiss.inc();
+          }
+        }
+      }
+
       const rootCache = new RootHexCache(headState);
 
       if (isStatePostAltair(headState)) {
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
+        const prevEpochFork = config.getForkName(prevEpochStartSlot);
         const prevEpochTargetRoot = toRootHex(headState.getBlockRootAtSlot(prevEpochStartSlot));
 
         // Check attestation performance
         for (const [index, validator] of validators.entries()) {
           const flags = parseParticipationFlags(headState.getPreviousEpochParticipation(index));
           const attestationSummary = validator.attestations.get(prevEpoch)?.get(prevEpochTargetRoot);
-          const summary = renderAttestationSummary(config, rootCache, attestationSummary, flags);
+          const summary = renderAttestationSummary(config, prevEpochFork, rootCache, attestationSummary, flags);
           validatorMonitorMetrics?.prevEpochAttestationSummary.inc({summary});
           log("Previous epoch attestation", {
             validator: index,
             epoch: prevEpoch,
             summary,
           });
+
+          if (!flags.timelySource || !flags.timelyTarget || !flags.timelyHead) {
+            log("Failed attestation in previous epoch", {
+              validator: index,
+              prevEpoch,
+              isPrevSourceAttester: flags.timelySource,
+              isPrevHeadAttester: flags.timelyHead,
+              isPrevTargetAttester: flags.timelyTarget,
+              inclusionDistance: validator.summaries.get(prevEpoch)?.attestationMinBlockInclusionDistance ?? null,
+            });
+          }
         }
       }
 
@@ -919,6 +936,7 @@ export function createValidatorMonitor(
  */
 function renderAttestationSummary(
   config: ChainForkConfig,
+  fork: ForkName,
   rootCache: RootHexCache,
   summary: AttestationSummary | undefined,
   flags: ParticipationFlags
@@ -1021,7 +1039,7 @@ function renderAttestationSummary(
   }
 
   const submittedLate =
-    summary.poolSubmitDelayMinSec > config.getSlotComponentDurationMs(LATE_ATTESTATION_SUBMISSION_BPS) / 1000;
+    summary.poolSubmitDelayMinSec > config.getSlotComponentDurationMs(fork, LATE_ATTESTATION_SUBMISSION_BPS) / 1000;
 
   const aggregateInclusion = summary.aggregateInclusionDelaysSec.length > 0;
 
@@ -1156,7 +1174,8 @@ function renderBlockProposalSummary(
 
   if (
     proposal.poolSubmitDelaySec !== null &&
-    proposal.poolSubmitDelaySec > config.getSlotComponentDurationMs(LATE_BLOCK_SUBMISSION_BPS) / 1000
+    proposal.poolSubmitDelaySec >
+      config.getSlotComponentDurationMs(config.getForkName(proposalSlot), LATE_BLOCK_SUBMISSION_BPS) / 1000
   ) {
     out += "_late";
   }
@@ -1192,7 +1211,9 @@ export class RootHexCache {
   }
 }
 
-function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
+function createValidatorMonitorMetrics(register: RegistryMetricCreator, registerStateDerivedMetrics = true) {
+  const stateDerivedRegister = registerStateDerivedMetrics ? register : null;
+
   return {
     validatorsConnected: register.gauge({
       name: "validator_monitor_validators",
@@ -1211,7 +1232,7 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
     }),
 
     // Validator Monitor Metrics (per-epoch summaries)
-    prevEpochOnChainBalance: register.gauge({
+    prevEpochOnChainBalance: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_balance",
       help: "Total balance of all monitored validators after an epoch",
     }),
@@ -1223,19 +1244,19 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
       name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
       help: "Incremented if validator's submitted attestation is not included in any blocks",
     }),
-    prevEpochOnChainSourceAttesterHit: register.gauge({
+    prevEpochOnChainSourceAttesterHit: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
       help: "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing",
     }),
-    prevEpochOnChainSourceAttesterMiss: register.gauge({
+    prevEpochOnChainSourceAttesterMiss: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
     }),
-    prevEpochOnChainHeadAttesterHit: register.gauge({
+    prevEpochOnChainHeadAttesterHit: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
       help: "Incremented if the validator is flagged as a previous epoch head attester during per epoch processing",
     }),
-    prevEpochOnChainHeadAttesterMiss: register.gauge({
+    prevEpochOnChainHeadAttesterMiss: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
     }),
@@ -1247,11 +1268,11 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
       name: "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total",
       help: "Total count of times a validator votes incorrect head",
     }),
-    prevEpochOnChainTargetAttesterHit: register.gauge({
+    prevEpochOnChainTargetAttesterHit: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
       help: "Incremented if the validator is flagged as a previous epoch target attester during per epoch processing",
     }),
-    prevEpochOnChainTargetAttesterMiss: register.gauge({
+    prevEpochOnChainTargetAttesterMiss: stateDerivedRegister?.gauge({
       name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
     }),

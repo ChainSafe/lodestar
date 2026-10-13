@@ -204,7 +204,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreFulu, null> {
     this.blockPromise.resolve(state.block);
   }
 
-  static createFromBlock(props: AddBlock & CreateBlockInputMeta): BlockInputPreData {
+  static createFromBlock(props: AddBlock<ForkPreFulu> & CreateBlockInputMeta): BlockInputPreData {
     const init: BlockInputInit = {
       daOutOfRange: props.daOutOfRange,
       timeCreated: props.seenTimestampSec,

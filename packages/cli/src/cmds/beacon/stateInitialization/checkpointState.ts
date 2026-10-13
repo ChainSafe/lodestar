@@ -223,8 +223,22 @@ function prepareCheckpointInitialization(
         }
       }
     },
+    async initializeEarliestAvailableSlot(state) {
+      const stored = await db.earliestAvailableSlot.get();
+      const floor = useArchived ? (stored ?? state.slot) : Math.max(stored ?? 0, state.slot);
+      if (stored !== floor) {
+        await db.earliestAvailableSlot.set(floor);
+      }
+      logger.verbose("Initialized earliest available slot", {
+        source,
+        anchorSlot: state.slot,
+        previousSlot: stored,
+        earliestAvailableSlot: floor,
+      });
+      return floor;
+    },
     persist: shouldPersist ? (state, bytes) => persistAnchorState(config, db, state, bytes) : null,
-    log(state) {
+    log(state, nativeStateTransition) {
       const {checkpoint} = state.computeAnchorCheckpoint();
       logger.info("Initialized checkpoint state", {
         source,
@@ -234,6 +248,7 @@ function prepareCheckpointInitialization(
         stateRoot: toRootHex(state.hashTreeRoot()),
         checkpointRoot: toRootHex(checkpoint.root),
         isFinalized,
+        nativeStateTransition,
         ...(isFinalized ? {} : {lastProcessedSlot: state.latestBlockHeader.slot}),
       });
     },

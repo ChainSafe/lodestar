@@ -47,8 +47,9 @@ export type SeenPayloadEnvelopeInputModules = {
  * Created whenever we have a block because it needs block bid.
  * Steady state (linear chain, healthy progression): the cache holds ~2 entries — the head
  * (parent for next-slot production) and its parent (proposer-boost-reorg fallback). It can
- * transiently hold more during forks, range-sync bursts, or when `prepareNextSlot` skips
- * ticks; subsequent ticks settle it back.
+ * hold more during forks and range sync, or while an entry's payload is not FULL on the head's
+ * branch or its columns are still being gathered. Such entries are evicted on a later block
+ * import, on finalization or by the size cap.
  */
 export class SeenPayloadEnvelopeInput {
   private readonly config: ChainForkConfig;

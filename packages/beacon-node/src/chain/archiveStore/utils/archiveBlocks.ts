@@ -3,7 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
@@ -253,14 +253,13 @@ export async function archiveBlocks(
   }
 
   // Delete expired data column sidecars
-  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, archiveDataEpochs)]`
+  // Keep only `[min(compute_blob_data_retention_start_epoch(current_epoch), current_epoch - archiveDataEpochs)]`
   if (finalizedPostFulu) {
     if (archiveDataEpochs !== Infinity) {
-      const dataColumnSidecarsArchiveWindow = Math.max(
-        config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
-        archiveDataEpochs ?? 0
+      const dataColumnSidecarsMinEpoch = Math.min(
+        getBlobDataRetentionStartEpoch(config, currentEpoch),
+        currentEpoch - (archiveDataEpochs ?? 0)
       );
-      const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
         const columnsPruneSlot = computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch);
         const prunedColumnSlots = await db.dataColumns.pruneBefore(columnsPruneSlot);
@@ -439,7 +438,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       const blockEpoch = computeEpochAtSlot(block.slot);
       if (
         config.getForkSeq(block.slot) < ForkSeq.fulu ||
-        blockEpoch < currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+        blockEpoch < getBlobDataRetentionStartEpoch(config, currentEpoch)
       ) {
         continue;
       }

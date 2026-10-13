@@ -4,6 +4,7 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
   ForkSeq,
+  GENESIS_EPOCH,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
   INACTIVITY_PENALTY_QUOTIENT_BELLATRIX,
   MAX_EFFECTIVE_BALANCE,
@@ -18,12 +19,15 @@ import {
 import {ValidatorIndex, rewards} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {EpochTransitionCache, beforeProcessEpoch} from "../cache/epochTransitionCache.js";
+import {processInactivityUpdates} from "../epoch/processInactivityUpdates.js";
+import {processJustificationAndFinalization} from "../epoch/processJustificationAndFinalization.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {
   FLAG_ELIGIBLE_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER_UNSLASHED,
   FLAG_PREV_SOURCE_ATTESTER_UNSLASHED,
   FLAG_PREV_TARGET_ATTESTER_UNSLASHED,
+  getSlotDurationMsAtEpoch,
   hasMarkers,
   isInInactivityLeak,
 } from "../util/index.js";
@@ -45,8 +49,13 @@ export async function computeAttestationsRewards(
     throw Error("Unsupported fork. Attestations rewards calculation is not available in phase0");
   }
 
-  const stateAltair = state as CachedBeaconStateAltair;
+  // Rewards are computed after justification and inactivity updates in epoch processing, so apply both to a clone
+  // before reading finality and inactivity scores, see
+  // https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.2/specs/altair/beacon-chain.md#epoch-processing
+  const stateAltair = state.clone() as CachedBeaconStateAltair;
   const transitionCache = beforeProcessEpoch(stateAltair);
+  processJustificationAndFinalization(stateAltair, transitionCache);
+  processInactivityUpdates(stateAltair, transitionCache);
 
   const [idealRewards, penalties] = computeIdealAttestationsRewardsAndPenaltiesAltair(
     config,
@@ -161,7 +170,16 @@ function computeTotalAttestationsRewardsAltair(
     config.getForkSeq(state.slot) === ForkSeq.altair
       ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR
       : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
-  const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenaltyQuotient;
+  let inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenaltyQuotient;
+  // The penalty pays for the previous epoch and scales with the square of its slot duration
+  const genesisSlotDurationMs = getSlotDurationMsAtEpoch(config, GENESIS_EPOCH);
+  const prevEpochSlotDurationMs = getSlotDurationMsAtEpoch(config, Math.max(epochCtx.epoch - 1, GENESIS_EPOCH));
+  if (prevEpochSlotDurationMs !== genesisSlotDurationMs) {
+    inactivityPenaltyDenominator = Number(
+      (BigInt(inactivityPenaltyDenominator) * BigInt(genesisSlotDurationMs) ** 2n) /
+        BigInt(prevEpochSlotDurationMs) ** 2n
+    );
+  }
 
   for (let i = 0; i < flags.length; i++) {
     if (validatorIndices.length && !validatorIndices.includes(i)) {

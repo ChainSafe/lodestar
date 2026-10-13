@@ -9,7 +9,15 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPostGloas,
+  ForkPreFulu,
+  ForkPreGloas,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -23,7 +31,13 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
+import {
+  BlockInputColumns,
+  BlockInputNoData,
+  BlockInputPreData,
+  BlockInputSource,
+  IBlockInput,
+} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
@@ -121,9 +135,9 @@ class GossipTestClock extends EventEmitter implements IClock {
     return (toMs ?? this.currentTimeMs) - slotTimeMs;
   }
 
-  /** Set the current time in milliseconds since genesis */
+  /** Set the current Unix time in milliseconds */
   setCurrentTimeMs(ms: number): void {
-    this.currentTimeMs = this.genesisTime * 1000 + ms;
+    this.currentTimeMs = ms;
   }
 
   /** Also support setSlot for block import phases */
@@ -138,9 +152,8 @@ interface MetaYaml {
   topic: GossipType;
   blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus}[];
   finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
-  current_time_ms?: bigint;
   messages: {
-    offset_ms?: bigint;
+    current_time_ms?: bigint;
     subnet_id?: bigint;
     message: string;
     expected: "valid" | "ignore" | "reject";
@@ -270,7 +283,7 @@ function computePostState(
   fork: ForkName
 ): IBeaconStateView {
   return parentState.stateTransition(
-    signedBlock,
+    {block: signedBlock},
     {
       verifyStateRoot: true,
       verifyProposer: true,
@@ -387,6 +400,7 @@ export async function runGossipValidationTest(
       validatorMonitor: null,
       anchorState: anchorStateView,
       isAnchorStateFinalized: true,
+      earliestAvailableSlot: anchorStateView.slot,
       executionEngine,
       executionBuilder: undefined,
     }
@@ -480,14 +494,32 @@ export async function runGossipValidationTest(
         clock.setSlot(slot);
         chain.forkChoice.updateTime(slot);
 
-        const blockImport = BlockInputPreData.createFromBlock({
+        const blockProps = {
           forkName: fork,
-          block: signedBlock,
           blockRootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: 0,
-          daOutOfRange: false,
-        });
+          daOutOfRange: true,
+        };
+        let blockImport: IBlockInput;
+        if (isForkPostGloas(fork)) {
+          blockImport = BlockInputNoData.createFromBlock({
+            ...blockProps,
+            block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+          });
+        } else if (isForkPostFulu(fork)) {
+          blockImport = BlockInputColumns.createFromBlock({
+            ...blockProps,
+            block: signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
+            sampledColumns: [],
+            custodyColumns: [],
+          });
+        } else {
+          blockImport = BlockInputPreData.createFromBlock({
+            ...blockProps,
+            block: signedBlock as SignedBeaconBlock<ForkPreFulu>,
+          });
+        }
 
         await chain.processBlock(blockImport, {
           seenTimestampSec: 0,
@@ -514,10 +546,10 @@ export async function runGossipValidationTest(
         })
     );
 
-    const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
-      const messageTimeMs = baseCurrentTimeMs + Number(message.offset_ms ?? 0);
-      clock.setCurrentTimeMs(messageTimeMs);
+      if (message.current_time_ms !== undefined) {
+        clock.setCurrentTimeMs(Number(message.current_time_ms));
+      }
 
       let result: "valid" | "ignore" | "reject";
       try {
