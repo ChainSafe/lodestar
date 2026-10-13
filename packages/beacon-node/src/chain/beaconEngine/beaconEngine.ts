@@ -73,6 +73,7 @@ import {
   toRootHex,
 } from "@lodestar/utils";
 import {ApiError, NodeIsSyncing} from "../../api/impl/errors.js";
+import {HALF_SLOT_BPS} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
 import {decodeArchivedEnvelope} from "../../db/repositories/index.js";
 import {BuilderApiClient} from "../../execution/builder/apiClient.js";
@@ -131,7 +132,7 @@ import {
 import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "../seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "../seenCache/seenBlockAttesters.js";
-import {ShufflingCache} from "../shufflingCache.js";
+import {ShufflingCache, ShufflingPromiseCancelReason} from "../shufflingCache.js";
 import {FIFOBlockStateCache} from "../stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "../stateCache/persistentCheckpointsCache.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
@@ -221,6 +222,7 @@ import {
   ApiStateResultWithFork,
   BeaconEngineErrorCode,
   BeaconEngineModules,
+  HeadParentPayload,
   IBeaconEngine,
   ImportBlockResult,
   ImportExecutionPayloadOpts,
@@ -544,7 +546,7 @@ export class BeaconEngine implements IBeaconEngine {
     ]);
 
     this.attestationPool = new AttestationPool(config, clock, opts?.preaggregateSlotDistance, metrics);
-    this.aggregatedAttestationPool = new AggregatedAttestationPool(config, metrics);
+    this.aggregatedAttestationPool = new AggregatedAttestationPool(config, metrics, logger);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
@@ -642,18 +644,21 @@ export class BeaconEngine implements IBeaconEngine {
       this.seenExecutionPayloadBids.prune(slot);
       this.seenAttestationDatas.onSlot(slot);
 
-      // Source: unstable@0edec865c8 chain/chain.ts#onClockSlot.
+      // Source: unstable@2593063a82 chain/chain.ts#onClockSlot.
       if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0 && !this.closed && !this.signal.aborted) {
         clearTimeout(this.validatorMonitorTimeout);
-        this.validatorMonitorTimeout = setTimeout(() => {
-          this.validatorMonitorTimeout = undefined;
-          try {
-            this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
-          } catch (e) {
-            if (!isErrorAborted(e))
-              this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e as Error);
-          }
-        }, this.config.SLOT_DURATION_MS / 2);
+        this.validatorMonitorTimeout = setTimeout(
+          () => {
+            this.validatorMonitorTimeout = undefined;
+            try {
+              this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
+            } catch (e) {
+              if (!isErrorAborted(e))
+                this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e as Error);
+            }
+          },
+          this.config.getSlotComponentDurationMs(this.config.getForkName(slot), HALF_SLOT_BPS)
+        );
       }
     };
     this.onEpoch = (epoch: Epoch) => {
@@ -720,6 +725,7 @@ export class BeaconEngine implements IBeaconEngine {
    * at the same time, bounded inside "ShufflingCache.insertPromise()" function.
    * Leave this function in chain instead of attestatation verification code to make sure we're aware of its performance impact.
    */
+  // Source: unstable@2593063a82 chain/chain.ts#regenStateForAttestationVerification.
   async regenStateForAttestationVerification(
     attEpoch: Epoch,
     shufflingDependentRoot: RootHex,
@@ -732,21 +738,48 @@ export class BeaconEngine implements IBeaconEngine {
     const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
 
     let state: IBeaconStateView;
-    if (blockEpoch < attEpoch - 1) {
-      // thanks to one epoch look ahead, we don't need to dial up to attEpoch
-      const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
-      this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
-      state = await this.regen.getBlockSlotState(attHeadBlock, targetSlot, {dontTransferCache: true}, regenCaller);
-    } else if (blockEpoch > attEpoch) {
-      // should not happen, handled inside attestation verification code
-      throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
-    } else {
-      // should use either current or next shuffling of head state
-      // it's not likely to hit this since these shufflings are cached already
-      // so handle just in case
-      this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
-      state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
+    try {
+      if (blockEpoch < attEpoch - 1) {
+        // thanks to one epoch look ahead, we don't need to dial up to attEpoch
+        const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
+        this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
+        state = await this.regen.getBlockSlotState(attHeadBlock, targetSlot, {dontTransferCache: true}, regenCaller);
+      } else if (blockEpoch > attEpoch) {
+        // should not happen, handled inside attestation verification code
+        throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
+      } else {
+        // should use either current or next shuffling of head state
+        // it's not likely to hit this since these shufflings are cached already
+        // so handle just in case
+        this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
+        state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
+      }
+    } catch (e) {
+      this.shufflingCache.cancelPromise(attEpoch, shufflingDependentRoot, ShufflingPromiseCancelReason.regenError);
+      throw e;
     }
+
+    const stateDecisionRoot = state.getShufflingDecisionRoot(attEpoch);
+    if (stateDecisionRoot !== shufflingDependentRoot) {
+      // the promise would never be resolved by the state's shuffling
+      this.shufflingCache.cancelPromise(
+        attEpoch,
+        shufflingDependentRoot,
+        ShufflingPromiseCancelReason.decisionRootMismatch
+      );
+      this.logger.debug("Shuffling decision root mismatch on attestation regen", {
+        slot: attHeadBlock.slot,
+        root: attHeadBlock.blockRoot,
+        epoch: attEpoch,
+        shufflingDependentRoot,
+        stateDecisionRoot,
+      });
+
+      throw Error(
+        `Shuffling decision root mismatch epoch=${attEpoch} slot=${attHeadBlock.slot} root=${attHeadBlock.blockRoot} expected=${shufflingDependentRoot} actual=${stateDecisionRoot}`
+      );
+    }
+
     // resolve the promise to unblock other calls of the same epoch and dependent root
     this.shufflingCache.processState(state);
     return state.getShufflingAtEpoch(attEpoch);
@@ -1376,6 +1409,15 @@ export class BeaconEngine implements IBeaconEngine {
     return this.beaconProposerCache.get(proposerIndex);
   }
 
+  /** Source: unstable@2593063a82 chain/chain.ts#updateAttachedValidators; custody remains facade-owned. */
+  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): boolean {
+    let hasNewValidators = false;
+    for (const validatorIndex of validatorIndices) {
+      if (this.beaconProposerCache.track(epoch, validatorIndex)) hasNewValidators = true;
+    }
+    return hasNewValidators;
+  }
+
   /** Register proposer preparation data. Returns true if new validators were discovered. */
   updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): boolean {
     const previousValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
@@ -1651,14 +1693,17 @@ export class BeaconEngine implements IBeaconEngine {
     return blockCutoffSlot;
   }
 
+  // Source: unstable@2593063a82 chain/chain.ts#loadFromDisk / persistToDisk; both pools stay engine-owned.
   /** Populate the (engine-owned) op pool from its persisted DB repos. Call once on startup. */
   async loadOpPoolFromDisk(): Promise<void> {
     await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot);
+    await this.proposerPreferencesPool.fromPersisted(this.db, this.clock.currentSlot);
   }
 
   /** Persist the (engine-owned) op pool to its DB repos. Call before stopping. */
   async persistOpPoolToDisk(): Promise<void> {
     await this.opPool.toPersisted(this.db);
+    await this.proposerPreferencesPool.toPersisted(this.db);
   }
 
   // === BLK-3: state-read engine methods (regen-backed; no IBeaconStateView crosses the seam) ===
@@ -1999,14 +2044,27 @@ export class BeaconEngine implements IBeaconEngine {
     return this.getHeadState().getLatestWeakSubjectivityCheckpointEpoch();
   }
 
-  /** Head-state `latestExecutionPayloadBid` (gloas empty-block detection in range sync); undefined pre-gloas. */
+  /** Proposer pubkey from the head state for builder preference validation. */
   getHeadProposerPubkey(slot: Slot): Uint8Array {
     return this.pubkeyCache.getPubkeyBytesOrThrow(this.getHeadState().getBeaconProposer(slot));
   }
 
-  getHeadLatestExecutionPayloadBid(): gloas.ExecutionPayloadBid | undefined {
-    const state = this.getHeadState();
-    return isStatePostGloas(state) ? (state as IBeaconStateViewGloas).latestExecutionPayloadBid : undefined;
+  /** Source: unstable@2593063a82 sync/range/range.ts#addPeerOrCreateChain. */
+  getHeadParentPayload(): HeadParentPayload | undefined {
+    const headState = this.getHeadState();
+    if (!isStatePostGloas(headState) || headState.latestBlockHeader.slot === 0) return undefined;
+    const header = ssz.phase0.BeaconBlockHeader.clone(headState.latestBlockHeader);
+    if (byteArrayEquals(header.stateRoot, ssz.Root.defaultValue())) header.stateRoot = headState.hashTreeRoot();
+    const headRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
+    const headSlot = headState.latestBlockHeader.slot;
+    return structuredClone({
+      blockRoot: headRoot,
+      blockRootHex: toRootHex(headRoot),
+      slot: headSlot,
+      proposerIndex: headState.latestBlockHeader.proposerIndex,
+      forkName: this.config.getForkName(headSlot),
+      bid: (headState as IBeaconStateViewGloas).latestExecutionPayloadBid,
+    });
   }
 
   /** Subset of `indices` that are active-or-pending at the current epoch (builder registration filter). */

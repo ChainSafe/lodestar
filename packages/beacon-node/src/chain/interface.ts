@@ -193,6 +193,8 @@ export interface IBeaconChain extends IChainView {
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
+  /** Track validators that use this node for duties, e.g. by subscribing to attestation subnets */
+  updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void>;
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
   persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void;
@@ -212,6 +214,7 @@ export type SSZObjectType =
   | "syncCommittee"
   | "contributionAndProof";
 
-export type CommonBlockBody = phase0.BeaconBlockBody &
+export type CommonBlockBody = Omit<phase0.BeaconBlockBody, "eth1Data" | "deposits"> &
+  Partial<Pick<phase0.BeaconBlockBody, "eth1Data" | "deposits">> &
   Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
   Pick<altair.BeaconBlockBody, "syncAggregate">;

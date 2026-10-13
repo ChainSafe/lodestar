@@ -3,7 +3,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {BlockInputNoData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
@@ -44,6 +44,7 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
     engine.forkChoice = modules.chain.forkChoice;
     modules.chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
     engine.regen = modules.chain.regen;
+    vi.spyOn(blockValidation, "verifyBlockProposerSignature").mockResolvedValue(undefined);
     engine.seenPayloadEnvelopeInputCache = new SeenEnginePayloadEnvelopeInput({
       config,
       forkChoice: engine.forkChoice,
@@ -59,11 +60,11 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
   afterEach(() => vi.restoreAllMocks());
 
   it.each(["accept", "unknown_parent", "observed_sibling", "unobserved_sibling", "reject", "unexpected"])(
-    "seeds before gossip validation and preserves cache cleanup for %s",
+    "retains only signature-verified gossip blocks for %s",
     async (scenario) => {
       vi.spyOn(engine, "hasObservedBlockRoot").mockReturnValue(scenario === "observed_sibling");
       vi.spyOn(blockValidation, "validateGossipBlock").mockImplementation(async () => {
-        expect(engine.seenPayloadEnvelopeInputCache.get(root)?.proposerIndex).toBe(7);
+        expect(engine.seenPayloadEnvelopeInputCache.get(root)).toBeUndefined();
         switch (scenario) {
           case "accept":
             return {skippedSlots: 0};
@@ -110,6 +111,38 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
     }
   );
 
+  it.each([true, false])("authenticates unknown-parent blocks before caching them (valid=%s)", async (valid) => {
+    const verified = defer<void>();
+    vi.spyOn(blockValidation, "validateGossipBlock").mockRejectedValue(
+      new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
+        parentRoot: toRootHex(block.message.parentRoot),
+      })
+    );
+    vi.mocked(blockValidation.verifyBlockProposerSignature).mockReturnValue(verified.promise);
+    const pending = engine.validateGossipBlock(
+      fromHex(root),
+      ssz.gloas.SignedBeaconBlock.serialize(block),
+      ForkName.gloas,
+      0
+    );
+    await vi.waitFor(() => expect(blockValidation.verifyBlockProposerSignature).toHaveBeenCalledOnce());
+    expect(engine.seenPayloadEnvelopeInputCache.get(root)).toBeUndefined();
+    expect(engine.hasObservedBlockRoot(1, 7, root)).toBe(false);
+    if (valid) verified.resolve();
+    else
+      verified.reject(
+        new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID, slot: 1, root})
+      );
+    expect(await pending).toMatchObject({
+      status: valid ? "ignore" : "reject",
+      code: valid ? BlockErrorCode.PARENT_BLOCK_UNKNOWN : BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+    });
+    expect(engine.seenPayloadEnvelopeInputCache.get(root) !== undefined).toBe(valid);
+    expect(engine.hasObservedBlockRoot(1, 7, root)).toBe(valid);
+    expect(engine.blockCache.get(root) !== undefined).toBe(valid);
+  });
+
   it.each(["truncated", "invalid_offset", "root_mismatch"])(
     "returns a plain rejection for %s without replacing existing cache entries",
     async (scenario) => {
@@ -143,6 +176,7 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
   );
 
   it("returns ignore and clears the decoded block if payload cache initialization fails", async () => {
+    vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
     const error = new Error("payload cache initialization failed");
     vi.spyOn(engine.seenPayloadEnvelopeInputCache, "add").mockImplementation(() => {
       throw error;

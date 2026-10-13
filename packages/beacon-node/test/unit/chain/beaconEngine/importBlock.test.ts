@@ -77,6 +77,7 @@ describe("BeaconEngine block persistence", () => {
     });
     Object.defineProperty(chain.beaconEngine, "seenPayloadEnvelopeInputCache", {value: cache});
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
+    chain.forkChoice.getBlockHexAndBlockHash.mockReturnValue(zeroProtoBlock);
     chain.forkChoice.onBlock = vi.fn().mockReturnValue({...zeroProtoBlock, blockRoot: rootHex, slot: 1});
     const afterCache = new Error("stop after cache insertion");
     chain.regen.processState.mockImplementation(() => {

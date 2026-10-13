@@ -30,6 +30,7 @@ import {StateArchiveStrategy} from "../archiveStore/interface.js";
 import {pruneHistory as pruneHistoryFromDb} from "../archiveStore/utils/pruneHistory.js";
 import {FinalizedProtoSummary} from "../chainView/interface.js";
 import type {BeaconEngine} from "./beaconEngine.js";
+import {BeaconEngineEvent} from "./events.js";
 import {LateCanonicalBlockReason} from "./interface.js";
 
 // Process in chunks to avoid OOM
@@ -225,8 +226,9 @@ export async function completeFinalization(
  * Sources: unstable@0edec865c8 chain/archiveStore/archiveStore.ts#ArchiveStore.init / processFinalizedCheckpoint
  * and chain/archiveStore/utils/pruneHistory.ts#pruneHistory.
  * [beacon-engine] The pruning cursor stays private on BeaconEngine and advances only after this succeeds.
- * Merge note: upstream now deletes envelopes inside its pruneHistory helper and calls beforePrune to persist
- * earliestAvailableSlot before deletion. This branch still deletes envelopes afterward and lacks that hook.
+ * Synced through unstable@2593063a82: persist the serving floor before deleting any history.
+ * [beacon-engine] Publish the floor to the facade before deletion, including failed prune attempts;
+ * the beforePrune callback stays engine-local.
  */
 export async function pruneHistory(
   this: BeaconEngine,
@@ -241,7 +243,13 @@ export async function pruneHistory(
     this.metrics,
     finalizedEpoch,
     currentEpoch,
-    statePruneFromSlot
+    statePruneFromSlot,
+    async (blockCutoffSlot) => {
+      const stored = await this.db.earliestAvailableSlot.get();
+      const earliestAvailableSlot = Math.max(stored ?? 0, blockCutoffSlot);
+      if (stored !== earliestAvailableSlot) await this.db.earliestAvailableSlot.set(earliestAvailableSlot);
+      this.events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, earliestAvailableSlot);
+    }
   );
   await this.db.executionPayloadEnvelopeArchive.batchDelete(
     await this.db.executionPayloadEnvelopeArchive.keys({gte: 0, lt: blockCutoffSlot})

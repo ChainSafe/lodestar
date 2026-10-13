@@ -163,6 +163,7 @@ export const forkChoiceTestRunner =
             validatorMonitorOpts: null,
             anchorStateBytes: cachedState.serialize(),
             isAnchorStateFinalized: true,
+            earliestAvailableSlot: cachedState.slot,
             executionEngine,
             executionBuilder: undefined,
           }

@@ -14,7 +14,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
 
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/payloadAttestationMessage.ts#validateGossipPayloadAttestationMessage.
- * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.payload_attestation_message.
+ * Handler source: unstable@2593063a82 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.payload_attestation_message.
  * [beacon-engine] deviation: pool/fork-choice updates precede the verdict; consume indices internally.
  */
 export async function validateGossipPayloadAttestationMessage(
@@ -77,7 +77,7 @@ export function validateApiPayloadAttestationMessage(
 }
 
 /**
- * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.payload_attestation_message.
+ * Handler source: unstable@2593063a82 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.payload_attestation_message.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/api/impl/beacon/pool/index.ts#submitPayloadAttestationMessages.
  * [beacon-engine] deviation: shared engine pool/fork-choice updates; retain proposer gating and API error propagation.
  */
@@ -90,7 +90,7 @@ function insertPayloadAttestationOnAccept(
   const {attDataRootHex, validatorCommitteeIndices} = result;
   if (source === "gossip") {
     const nextSlotProposer = this.getHeadState().getBeaconProposer(message.data.slot + 1);
-    if (this.beaconProposerCache.get(nextSlotProposer) !== undefined) {
+    if (this.beaconProposerCache.has(nextSlotProposer)) {
       try {
         const insertOutcome = this.payloadAttestationPool.add(message, attDataRootHex, validatorCommitteeIndices);
         this.metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});

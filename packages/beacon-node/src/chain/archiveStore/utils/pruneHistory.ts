@@ -12,7 +12,8 @@ export async function pruneHistory(
   metrics: Metrics | null | undefined,
   finalizedEpoch: Epoch,
   currentEpoch: Epoch,
-  statePruneFromSlot: Slot = 0
+  statePruneFromSlot: Slot,
+  beforePrune: (blockCutoffSlot: Slot) => Promise<void>
 ): Promise<{blockCutoffSlot: Slot; stateCutoffSlot: Slot}> {
   const blockCutoffEpoch = Math.min(
     // set by config, with underflow protection
@@ -47,6 +48,8 @@ export async function pruneHistory(
     blockSlots: prettyPrintIndices(blocks),
     stateSlots: prettyPrintIndices(states),
   });
+
+  await beforePrune(blockCutoffSlot);
 
   const step1 = metrics?.pruneHistory.pruneKeys.startTimer();
   await Promise.all([

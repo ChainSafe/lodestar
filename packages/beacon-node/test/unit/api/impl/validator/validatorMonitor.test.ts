@@ -34,8 +34,7 @@ describe("validator API monitor forwarding", () => {
     );
     const subscriptions = [{validatorIndex: 1, slot: 1, isAggregator: true, committeesAtSlot: 1, committeeIndex: 0}];
     const pending = api.prepareBeaconCommitteeSubnet({subscriptions});
-    await Promise.resolve();
-    expect(modules.network.prepareBeaconCommitteeSubnets).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(modules.network.prepareBeaconCommitteeSubnets).toHaveBeenCalledOnce());
     expect(register).not.toHaveBeenCalled();
     finishSubscription();
     await pending;

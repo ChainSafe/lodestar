@@ -7,7 +7,7 @@ import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
-import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
 
@@ -116,7 +116,10 @@ export async function importBlock(
     });
   }
 
-  const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
+  const reprocessGuardSec =
+    this.config.getSlotComponentDurationMs(this.config.getForkName(blockSlot), REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS) /
+    1000;
+  const advancedSlot = this.clock.slotWithFutureTolerance(reprocessGuardSec);
   callInNextEventLoop(() => {
     this.reprocessController.onBlockImported({slot: blockSlot, root: blockRootHex}, advancedSlot);
   });

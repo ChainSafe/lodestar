@@ -278,8 +278,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
     const batchBlocks = batch.getBlocks();
     const requests = batch.getRequestsForPeer(peer);
-    const parentRoot = requests.parentPayloadRequest?.envelopeBlockRoot ?? requests.parentPayloadRequest?.blockRoot;
-    const parentPayloadCommitments = parentRoot ? batch.getParentPayloadCommitments(parentRoot) : undefined;
+    const parentPayload = requests.parentPayloadRequest ? batch.getParentPayload() : undefined;
     const {result, warnings} = await downloadByRange({
       config: this.config,
       chain: this.chain,
@@ -287,7 +286,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       logger: this.logger,
       peerIdStr: peer.peerId,
       batchBlocks,
-      parentPayloadCommitments,
+      parentPayload,
       peerDasMetrics: this.chain.metrics?.peerDas,
       ...requests,
     });
@@ -300,6 +299,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       batchBlocks,
       downloadedPayloadEnvelopes,
       existingPayloadEnvelopes: batch.getPayloadEnvelopes(),
+      parentPayload,
       custodyConfig: this.chain.custodyConfig,
       seenTimestampSec: Date.now() / 1000,
     });
@@ -377,10 +377,10 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerIdStr, syncType: RangeSyncType): void {
     let syncChain = this.chains.get(syncType);
     if (!syncChain) {
-      // The first batch of a new sync chain may need to detect whether the parent block was an
-      // gloas "empty" block (no envelope produced). It does so by comparing the first
-      // downloaded block's `bid.parentBlockHash` against the head state's `latestExecutionPayloadBid.blockHash`.
-      const latestBid = this.chain.beaconEngine.getHeadLatestExecutionPayloadBid();
+      // The first block of the first batch may build on the head's FULL variant before its payload is imported,
+      // the batch then downloads the head's payload as dangling parent and validates it against the bid
+      // [beacon-engine] State/header derivation lives in BeaconEngine.getHeadParentPayload.
+      const parentPayload = this.chain.beaconEngine.getHeadParentPayload();
 
       syncChain = new SyncChain(
         startEpoch,
@@ -401,7 +401,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           custodyConfig: this.chain.custodyConfig,
           metrics: this.metrics,
         },
-        latestBid
+        parentPayload
       );
       this.chains.set(syncType, syncChain);
 

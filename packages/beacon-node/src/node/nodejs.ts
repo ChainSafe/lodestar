@@ -9,6 +9,7 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
 import {LodestarError, sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
@@ -289,7 +290,11 @@ export class BeaconNode {
         userAgent: opts.executionBuilder.userAgent,
       },
     });
-    await executeStateInitialization(beaconEngine, stateInitialization, opts.chain.nativeStateTransition ?? false);
+    const {earliestAvailableSlot} = await executeStateInitialization(
+      beaconEngine,
+      stateInitialization,
+      opts.chain.nativeStateTransition ?? false
+    );
     await db.pruneHotDb();
     const anchor = await beaconEngine.initializeFromAnchor();
     if (metrics) initBeaconMetrics(metrics, anchor);
@@ -327,6 +332,7 @@ export class BeaconNode {
       custodyConfig,
       lightClientServer,
       anchor,
+      earliestAvailableSlot,
       builderApiClient: beaconEngine.builderApiClient,
     });
 
@@ -448,10 +454,11 @@ export async function executeStateInitialization(
   beaconEngine: IBeaconEngine,
   stateInitialization: StateInitialization,
   nativeStateTransition = false
-): Promise<AnchorSummary> {
+): Promise<AnchorSummary & {earliestAvailableSlot: Slot}> {
   const anchor = await beaconEngine.prepareAnchorState(stateInitialization.stateBytes);
   stateInitialization.validate(anchor);
+  const earliestAvailableSlot = await stateInitialization.initializeEarliestAvailableSlot(anchor);
   if (stateInitialization.shouldPersist) await beaconEngine.persistAnchorState();
   stateInitialization.log(anchor, nativeStateTransition);
-  return anchor;
+  return {...anchor, earliestAvailableSlot};
 }

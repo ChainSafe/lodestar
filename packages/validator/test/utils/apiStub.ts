@@ -39,6 +39,10 @@ export function getApiClientStub(): ApiClientStub {
       publishAggregateAndProofs: vi.fn(),
       publishAggregateAndProofsV2: vi.fn(),
       submitBeaconCommitteeSelections: vi.fn(),
+      prepareBeaconProposer: vi.fn(),
+      registerValidator: vi.fn(),
+      submitProposerPreferences: vi.fn(),
+      submitBuilderPreferences: vi.fn(),
     },
     httpClient: httpClientStub,
   } as unknown as ApiClientStub;

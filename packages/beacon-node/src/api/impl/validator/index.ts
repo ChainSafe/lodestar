@@ -7,7 +7,6 @@ import {
   ForkPostBellatrix,
   ForkPreGloas,
   ForkSeq,
-  SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkPostElectra,
   isForkPostFulu,
@@ -141,8 +140,8 @@ export function getValidatorApi(
    */
   function msToNextEpoch(): number {
     const nextEpoch = chain.clock.currentEpoch + 1;
-    const secPerEpoch = (SLOTS_PER_EPOCH * config.SLOT_DURATION_MS) / 1000;
-    const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
+    const nextEpochSlot = computeStartSlotAtEpoch(nextEpoch);
+    const nextEpochStartSec = computeTimeAtSlot(config, nextEpochSlot, chain.genesisTime);
     return nextEpochStartSec * 1000 - Date.now();
   }
 
@@ -243,6 +242,10 @@ export function getValidatorApi(
       builderBoostFactor,
       ...productionOpts
     }) {
+      const forkName = config.getForkName(slot);
+      if (isForkPostGloas(forkName)) {
+        throw new ApiError(400, `produceBlockV3 not supported for post-gloas fork=${forkName}, use produceBlockV4`);
+      }
       notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
       if (builderBoostFactor !== undefined && builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
@@ -433,7 +436,7 @@ export function getValidatorApi(
       // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
       // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
       // the input's creation time.
-      const payloadDueSec = config.getPayloadDueMs() / 1000;
+      const payloadDueSec = config.getPayloadDueMs(fork) / 1000;
       const payloadSeenSec =
         payloadInput?.hasPayloadEnvelope() === true
           ? chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec)
@@ -510,8 +513,9 @@ export function getValidatorApi(
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
       const startSlot = computeStartSlotAtEpoch(epoch);
+      const prepareFork = config.getForkName(computeStartSlotAtEpoch(nextEpoch) - 1);
       const prepareNextSlotLookAheadMs =
-        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
+        config.getSlotDurationMs(prepareFork) - config.getSlotComponentDurationMs(prepareFork, PREPARE_NEXT_SLOT_BPS);
       const toNextEpochMs = msToNextEpoch();
       const nearNextEpoch = toNextEpochMs < prepareNextSlotLookAheadMs;
       // Post-Fulu the proposer lookahead is deterministic and known a full epoch ahead, so
@@ -802,6 +806,17 @@ export function getValidatorApi(
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {
+      // The subscribing validators use this node for duties regardless of its sync state and
+      // the subscription must not fail on the tracking, e.g. if the finalized state is unavailable
+      try {
+        await chain.updateAttachedValidators(
+          chain.clock.currentEpoch,
+          Array.from(new Set(subscriptions.map(({validatorIndex}) => validatorIndex)))
+        );
+      } catch (e) {
+        logger.warn("Error tracking attached validators", {count: subscriptions.length}, e as Error);
+      }
+
       notWhileSyncing(chain, sync.state);
 
       const committeeSubscriptions = subscriptions.map(
@@ -862,6 +877,13 @@ export function getValidatorApi(
     },
 
     async prepareBeaconProposer({proposers}) {
+      if (isForkPostGloas(config.getForkName(chain.clock.currentSlot))) {
+        throw new ApiError(
+          410,
+          "prepareBeaconProposer is no longer supported from gloas, submit signed proposer preferences via POST /eth/v1/validator/proposer_preferences instead"
+        );
+      }
+
       await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
     },
 
@@ -896,6 +918,13 @@ export function getValidatorApi(
     },
 
     async registerValidator({registrations}) {
+      if (isForkPostGloas(config.getForkName(chain.clock.currentSlot))) {
+        throw new ApiError(
+          410,
+          "registerValidator is no longer supported from gloas, submit builder preferences via POST /eth/v1/validator/builder_preferences instead"
+        );
+      }
+
       if (!chain.executionBuilder) {
         throw Error("External builder not configured");
       }
@@ -925,6 +954,8 @@ export function getValidatorApi(
 
     async submitProposerPreferences({signedProposerPreferences}, context) {
       const failures: FailureList = [];
+      // Preferences submitted here are signed by validators using this node, gossiped ones are not
+      const attachedValidatorIndices: ValidatorIndex[] = [];
 
       // SSZ request: slice each entry out of the (fixed-size element) list body. JSON request
       // (no sszBytes): serialize once.
@@ -944,6 +975,7 @@ export function getValidatorApi(
             const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes[i]);
             if (res.status !== GossipValidationStatus.Accept) {
               if (res.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+                attachedValidatorIndices.push(signed.message.validatorIndex);
                 logger.debug("Ignoring known signed proposer preferences", logCtx);
                 return;
               }
@@ -955,6 +987,7 @@ export function getValidatorApi(
               return;
             }
 
+            attachedValidatorIndices.push(signed.message.validatorIndex);
             // Engine inserted into its (internal) proposerPreferencesPool on Accept above.
             await network.publishProposerPreferences(signed);
             chain.emitter.emit(routes.events.EventType.proposerPreferences, {
@@ -967,6 +1000,14 @@ export function getValidatorApi(
           }
         })
       );
+
+      if (attachedValidatorIndices.length > 0) {
+        try {
+          await chain.updateAttachedValidators(chain.clock.currentEpoch, attachedValidatorIndices);
+        } catch (e) {
+          logger.warn("Error tracking attached validators", {count: attachedValidatorIndices.length}, e as Error);
+        }
+      }
 
       if (failures.length > 0) {
         throw new IndexedError("Error processing signed proposer preferences", failures);

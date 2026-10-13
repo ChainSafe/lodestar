@@ -2,10 +2,11 @@ import {beforeEach, describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
+import {ForkPostGloas, ForkPreDeneb, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {ChainViewBlock, IChainView} from "../../../../src/chain/chainView/interface.js";
@@ -19,7 +20,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
   let forkChoice: MockedBeaconChain["forkChoice"];
   let clock: ClockStopped;
   let modules: Parameters<typeof verifyBlocksImportSanityChecks>[0];
-  let block: SignedBeaconBlock;
+  let block: phase0.SignedBeaconBlock;
   const currentSlot = 1;
 
   beforeEach(() => {
@@ -70,7 +71,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     forkChoice.getBlockHexAndBlockHash.mockReturnValue(null);
 
     expectThrowsLodestarError(
-      () => verifyBlocksSanityChecks({...modules, config: gloasConfig}, [gloasBlock as SignedBeaconBlock], null, {}),
+      () => verifyBlocksSanityChecks({...modules, config: gloasConfig}, [gloasBlock], null, {}),
       BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
     );
   });
@@ -184,14 +185,20 @@ function verifyBlocksSanityChecks(
         modules.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
       );
       const forkName = modules.config.getForkName(block.message.slot);
-      return BlockInputPreData.createFromBlock({
-        block,
+      const props = {
         blockRootHex,
         forkName,
         daOutOfRange: true,
         source: BlockInputSource.byRange,
         seenTimestampSec: Math.floor(Date.now() / 1000),
-      });
+      };
+      if (isForkPostGloas(forkName)) {
+        return BlockInputNoData.createFromBlock({...props, block: block as SignedBeaconBlock<ForkPostGloas>});
+      }
+      if (isForkPostDeneb(forkName)) {
+        throw Error("This sanity-check helper does not construct data sidecars");
+      }
+      return BlockInputPreData.createFromBlock({...props, block: block as SignedBeaconBlock<ForkPreDeneb>});
     }),
     payloadEnvelopes,
     opts
@@ -203,8 +210,8 @@ function verifyBlocksSanityChecks(
   };
 }
 
-function getValidChain(count: number, initialSlot = 0): SignedBeaconBlock[] {
-  const blocks: SignedBeaconBlock[] = [];
+function getValidChain(count: number, initialSlot = 0): phase0.SignedBeaconBlock[] {
+  const blocks: phase0.SignedBeaconBlock[] = [];
 
   for (let i = 0; i < count; i++) {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -221,7 +228,7 @@ function getValidChain(count: number, initialSlot = 0): SignedBeaconBlock[] {
   return blocks;
 }
 
-function getChainView(knownBlocks: SignedBeaconBlock[], finalizedEpoch = 0): IChainView {
+function getChainView(knownBlocks: phase0.SignedBeaconBlock[], finalizedEpoch = 0): IChainView {
   const blocks = new Map<string, ProtoBlock>();
   for (const block of knownBlocks) {
     const protoBlock = toProtoBlock(block);
@@ -241,7 +248,7 @@ function getChainView(knownBlocks: SignedBeaconBlock[], finalizedEpoch = 0): ICh
   } as Partial<IChainView> as IChainView;
 }
 
-function toProtoBlock(block: SignedBeaconBlock): ProtoBlock {
+function toProtoBlock(block: phase0.SignedBeaconBlock): ProtoBlock {
   return {
     slot: block.message.slot,
     blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),

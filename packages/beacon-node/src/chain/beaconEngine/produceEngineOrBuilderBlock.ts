@@ -2,8 +2,10 @@ import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
-  ForkName,
   ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPreDeneb,
+  ForkPreGloas,
   ForkSeq,
   isForkPostBellatrix,
   isForkPostDeneb,
@@ -12,6 +14,7 @@ import {
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {
   BLSSignature,
+  BeaconBlock,
   BlindedBeaconBlock,
   BlockContents,
   Bytes32,
@@ -55,20 +58,19 @@ import {produceBlindedBlock, produceBlock as produceSelfBlock} from "./produceBl
  * Post this time, race execution and builder to pick whatever resolves first.
  *
  * Empirically the builder block resolves in ~1 second, and execution block resolves in <500 ms.
- * A cutoff of 2 seconds gives enough time and if there are unexpected delays it ensures we publish
- * in time as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
+ * A cutoff of 1667 BPS (2 seconds for 12s slots) gives enough time and if there are unexpected delays
+ * it ensures we publish in time as proposals after the attestation deadline will likely be orphaned
+ * due to proposer boost reorg.
  *
  * TODO GLOAS: re-evaluate cutoff timing
  */
-const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
-/** Overall timeout for execution and block production apis */
-const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
+const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
 
 // [beacon-engine] deviation: selected results include DA artifacts for the facade cache.
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
-  data: BlockContents;
+  data: BlockContents<ForkPreGloas>;
   produceResult: ProduceResult;
-  version: ForkName;
+  version: ForkPreGloas;
 };
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlindedBeaconBlock;
@@ -122,6 +124,7 @@ export type BlockSelectionResult =
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#getBlockValueLogInfo.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 function getBlockValueLogInfo(
@@ -154,6 +157,7 @@ function getBlockValueLogInfo(
 }
 /**
  * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceBuilderBlindedBlock.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBuilderBlindedBlock(
@@ -226,6 +230,7 @@ export async function produceBuilderBlindedBlock(
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceEngineBlockContents.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceEngineBlockContents(
@@ -244,6 +249,10 @@ export async function produceEngineBlockContents(
   }
 ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
   const {config, metrics, logger} = this;
+  const version = config.getForkName(slot);
+  if (isForkPostGloas(version)) {
+    throw Error(`produceEngineBlockContents called for post-gloas fork=${version}`);
+  }
   const source = ProducedBlockSource.engine;
   metrics?.blockProductionRequests.inc({source});
 
@@ -259,7 +268,6 @@ export async function produceEngineBlockContents(
         feeRecipient,
         commonBlockBodyPromise,
       });
-    const version = config.getForkName(block.slot);
     if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
       const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
       if (blockFeeRecipient !== feeRecipient) {
@@ -296,7 +304,7 @@ export async function produceEngineBlockContents(
       return {
         produceResult,
         data: {
-          block,
+          block: block as BeaconBlock<ForkPostDeneb & ForkPreGloas>,
           blobs: blobsBundle.blobs,
           kzgProofs: blobsBundle.proofs,
         },
@@ -307,7 +315,14 @@ export async function produceEngineBlockContents(
       };
     }
 
-    return {produceResult, data: {block}, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
+    return {
+      produceResult,
+      data: {block: block as BeaconBlock<ForkPreDeneb>},
+      version,
+      executionPayloadValue,
+      consensusBlockValue,
+      shouldOverrideBuilder,
+    };
   } finally {
     if (timer) timer({source});
   }
@@ -315,6 +330,7 @@ export async function produceEngineBlockContents(
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceEngineOrBuilderBlock.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceEngineOrBuilderBlock(
@@ -411,17 +427,20 @@ export async function produceEngineOrBuilderBlock(
     });
 
   // Calculate cutoff time based on start of the slot
-  const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - this.clock.msFromSlot(slot));
+  const cutoffMs = Math.max(
+    0,
+    config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS) - this.clock.msFromSlot(slot)
+  );
 
   logger.verbose("Block production race (builder vs execution) starting", {
     ...loggerContext,
     cutoffMs,
-    timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+    timeoutMs: config.getSlotDurationMs(fork),
   });
 
   const blockProductionRacePromise = resolveOrRacePromises([builderPromise, enginePromise], {
     resolveTimeoutMs: cutoffMs,
-    raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+    raceTimeoutMs: config.getSlotDurationMs(fork),
     signal: controller.signal,
   });
 
@@ -605,6 +624,7 @@ export async function produceEngineOrBuilderBlock(
 }
 /**
  * Runs inside BeaconEngine. Moved from unstable@ba0411b482 packages/beacon-node/src/api/impl/validator/index.ts#produceBlockV4.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBlockV4(
@@ -795,7 +815,10 @@ export async function produceBlockV4(
 
   // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
   // not delay the proposal when a builder bid block is available (and vice versa)
-  const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - this.clock.msFromSlot(slot));
+  const cutoffMs = Math.max(
+    0,
+    config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS) - this.clock.msFromSlot(slot)
+  );
 
   // use abort controller to stop waiting for the bid block if the engine block will be selected
   const controller = new AbortController();
@@ -823,7 +846,7 @@ export async function produceBlockV4(
 
   const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
     resolveTimeoutMs: cutoffMs,
-    raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+    raceTimeoutMs: config.getSlotDurationMs(fork),
     signal: controller.signal,
   });
 

@@ -119,6 +119,19 @@ describe("bytes-based engine startup", () => {
     expect(chain.serializedCache.getDeserialized(exitBytes)).toBe(beaconEngineWorker ? undefined : exit);
   });
 
+  it("starts with the persisted serving floor and advances it monotonically from engine events", async () => {
+    const dependencies = await initializeTestChain(opts, modules);
+    chain = new BeaconChain(opts, {...dependencies, earliestAvailableSlot: 10});
+    if (!engine) throw Error("Expected initialized engine");
+    expect(chain.earliestAvailableSlot).toBe(10);
+    engine.events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 20);
+    engine.events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 15);
+    expect(chain.earliestAvailableSlot).toBe(20);
+    await chain.close();
+    engine.events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 30);
+    expect(chain.earliestAvailableSlot).toBe(20);
+  });
+
   it("notifies the facade once when fork choice becomes irrecoverable", async () => {
     const shutdown = vi.fn();
     modules.processShutdownCallback = shutdown;

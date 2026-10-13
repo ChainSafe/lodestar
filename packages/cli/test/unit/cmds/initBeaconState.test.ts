@@ -125,14 +125,18 @@ describe("initBeaconState", () => {
   }
 
   // Reduce the result to a summary, a failing assertion would otherwise try to print the whole state
-  async function init(db: BeaconDb, args: Partial<BeaconArgs & GlobalArgs>): Promise<AnchorSummary> {
+  async function init(
+    db: BeaconDb,
+    args: Partial<BeaconArgs & GlobalArgs>,
+    logger = getMockedLogger()
+  ): Promise<AnchorSummary> {
     const stateInit = await initBeaconState(
       {network: "dev", ...args} as BeaconArgs & GlobalArgs,
       fixturesDir,
       path.join(fixturesDir, "pubkeys"),
       config,
       db,
-      getMockedLogger()
+      logger
     );
     let summary: AnchorSummary | undefined;
     const modules = createTestBeaconEngine(
@@ -177,6 +181,63 @@ describe("initBeaconState", () => {
   function anchorOf(fixture: Fixture, isFinalized: boolean): AnchorSummary {
     return {slot: fixture.state.slot, stateRoot: toRootHex(fixture.state.hashTreeRoot()), isFinalized};
   }
+
+  it("preserves the checkpoint boundary across repeated DB restarts", async () => {
+    const db = await createDb({archived: dbStale});
+    await db.earliestAvailableSlot.set(dbStale.state.slot);
+    await init(db, {checkpointState: checkpointFresh.file});
+    expect(await db.earliestAvailableSlot.get()).toBe(checkpointFresh.state.slot);
+
+    const write = vi.spyOn(db.earliestAvailableSlot, "set");
+    for (let restart = 0; restart < 2; restart++) {
+      await init(db, {});
+      expect(await db.earliestAvailableSlot.get(), `restart ${restart}`).toBe(checkpointFresh.state.slot);
+    }
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it("initializes legacy DB metadata only once", async () => {
+    const db = await createDb({archived: dbFresh});
+    const write = vi.spyOn(db.earliestAvailableSlot, "set");
+    await init(db, {});
+    await init(db, {});
+    expect(write).toHaveBeenCalledExactlyOnceWith(dbFresh.state.slot);
+  });
+
+  it("does not persist a checkpoint when writing its boundary fails", async () => {
+    const db = await createDb({archived: dbStale});
+    vi.spyOn(db.earliestAvailableSlot, "set").mockRejectedValue(new Error("write failed"));
+    await expect(init(db, {checkpointState: checkpointFresh.file})).rejects.toThrow("write failed");
+    expect(await db.stateArchive.keys()).toEqual([dbStale.state.slot]);
+  });
+
+  it("retains the boundary if anchor persistence fails", async () => {
+    const db = await createDb({archived: dbStale});
+    vi.spyOn(db.stateArchive, "putBinary").mockRejectedValue(new Error("anchor write failed"));
+    await expect(init(db, {checkpointState: checkpointFresh.file})).rejects.toThrow("anchor write failed");
+    expect(await db.earliestAvailableSlot.get()).toBe(checkpointFresh.state.slot);
+  });
+
+  it.each([null, 0, 128])("initializes the genesis boundary with stored slot %s", async (stored) => {
+    const db = await createDb();
+    if (stored !== null) await db.earliestAvailableSlot.set(stored);
+    const write = vi.spyOn(db.earliestAvailableSlot, "set");
+    const logger = getMockedLogger();
+    await init(db, {genesisStateFile: genesis.file}, logger);
+
+    expect(await db.earliestAvailableSlot.get()).toBe(0);
+    if (stored === 0) {
+      expect(write).not.toHaveBeenCalled();
+    } else {
+      expect(write).toHaveBeenCalledExactlyOnceWith(0);
+    }
+    const warning = "Resetting earliest available slot for genesis initialization";
+    if (stored !== null && stored !== 0) {
+      expect(logger.warn).toHaveBeenCalledWith(warning, {previousSlot: stored, earliestAvailableSlot: 0});
+    } else {
+      expect(logger.warn).not.toHaveBeenCalledWith(warning, expect.anything());
+    }
+  });
 
   it("starts from genesis with empty db and persists genesis state and block", async () => {
     const db = await createDb();

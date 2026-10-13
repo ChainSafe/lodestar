@@ -27,6 +27,7 @@ import {
   RootCache,
   computeEpochAtSlot,
   computeTimeAtSlot,
+  getBeaconCommittees,
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
@@ -68,6 +69,7 @@ export type VerifiedBlockBundle = {
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#importBlock.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function importBlock(
@@ -112,11 +114,17 @@ export async function importBlock(
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
 
-  if (fork >= ForkSeq.gloas) {
+  if (isGloasBeaconBlock(block.message)) {
+    // A gloas block has no payload of its own, it inherits the status of the payload it builds on,
+    // i.e. the parent variant matching the bid's parent block hash. The parent's default (PENDING)
+    // variant does not reflect a SYNCING parent payload, and onBlock would then mark that payload VALID.
     const parentRootHex = toRootHex(block.message.parentRoot);
-    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRootHex);
+    const parentBlockHashHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
+    const parentBlock = this.forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHashHex);
     if (parentBlock === null) {
-      throw Error(`Parent block not found in forkChoice, parentRoot=${parentRootHex}`);
+      throw Error(
+        `Parent block not found in forkChoice, parentRoot=${parentRootHex} parentBlockHash=${parentBlockHashHex}`
+      );
     }
     if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
       throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
@@ -314,7 +322,7 @@ export async function importBlock(
       this.metrics.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      if (delaySec < (SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000) {
+      if (delaySec < (SLOTS_PER_EPOCH * this.config.getSlotDurationMs(this.config.getForkName(newHead.slot))) / 1000) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
         const cutOffSec = this.config.getAttestationDueMs(this.config.getForkName(blockSlot)) / 1000;
         if (delaySec > cutOffSec) {
@@ -389,9 +397,7 @@ export async function importBlock(
     const proposalSlot = blockSlot + 1;
     try {
       const proposerIndex = postState.getBeaconProposer(proposalSlot);
-      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
-
-      if (feeRecipient) {
+      if (this.beaconProposerCache.has(proposerIndex)) {
         // We would set this to true if
         //  1) This is a gossip block
         //  2) We are proposer of next slot
@@ -528,7 +534,7 @@ export async function importBlock(
     this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
-      fullyVerifiedBlock.postState.currentSyncCommitteeIndexed.validatorIndices
+      fullyVerifiedBlock.postState.currentSyncCommitteeValidatorIndices
     );
   }
 
@@ -557,6 +563,7 @@ export async function importBlock(
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPreElectra.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function addAttestationPreElectra(
@@ -579,6 +586,7 @@ export function addAttestationPreElectra(
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPostElectra.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function addAttestationPostElectra(
@@ -601,8 +609,10 @@ export function addAttestationPostElectra(
   } else {
     const attSlot = attestation.data.slot;
     const attEpoch = computeEpochAtSlot(attSlot);
-    const decisionRoot = state.getShufflingDecisionRoot(attEpoch);
-    const committees = this.shufflingCache.getBeaconCommittees(attEpoch, decisionRoot, attSlot, committeeIndices);
+    const shuffling =
+      this.shufflingCache.getSync(attEpoch, state.getShufflingDecisionRoot(attEpoch)) ??
+      state.getShufflingAtEpoch(attEpoch);
+    const committees = getBeaconCommittees(shuffling, attSlot, committeeIndices);
     const aggregationBools = attestation.aggregationBits.toBoolArray();
     let offset = 0;
     for (let i = 0; i < committees.length; i++) {

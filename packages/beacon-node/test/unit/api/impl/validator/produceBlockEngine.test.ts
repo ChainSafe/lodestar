@@ -55,7 +55,7 @@ describe("validator production engine boundary", () => {
     const response = await api.produceBlockV3({...request, blindedLocal: true, feeRecipient: "0x1234"});
     expect(modules.chain.beaconEngine.produceBlock).toHaveBeenCalledExactlyOnceWith({
       ...request,
-      graffiti: toGraffitiBytes(`${request.graffiti} LS`),
+      graffiti: toGraffitiBytes(`${request.graffiti} LS0000`),
       feeRecipient: "0x1234",
       strictFeeRecipientCheck: undefined,
       builderSelection: routes.validator.BuilderSelection.MaxProfit,
@@ -130,7 +130,7 @@ describe("validator production engine boundary", () => {
     });
     expect(modules.chain.beaconEngine.produceBlockV4).toHaveBeenCalledExactlyOnceWith({
       ...request,
-      graffiti: toGraffitiBytes(`${request.graffiti} LS`),
+      graffiti: toGraffitiBytes(`${request.graffiti} LS0000`),
       feeRecipient: undefined,
       strictFeeRecipientCheck: undefined,
       includePayload: false,

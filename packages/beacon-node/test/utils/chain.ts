@@ -13,18 +13,23 @@ export async function initializeTestChain(opts: IChainOptions, modules: TestChai
   const dependencies = createTestBeaconEngine(opts, modules);
   const {beaconEngine} = dependencies;
   try {
-    await executeStateInitialization(beaconEngine, {
+    const {earliestAvailableSlot} = await executeStateInitialization(beaconEngine, {
       stateBytes: modules.anchorStateBytes,
       config: modules.config,
       isFinalized: modules.isAnchorStateFinalized,
       shouldPersist: false,
       validate: () => {},
+      initializeEarliestAvailableSlot: async (anchor) => {
+        const floor = modules.earliestAvailableSlot ?? anchor.slot;
+        await modules.db.earliestAvailableSlot.set(floor);
+        return floor;
+      },
       log: () => {},
       ...modules.stateInitialization,
     });
     if (modules.pruneHotDbOnInit) await modules.db.pruneHotDb();
     const anchor = await beaconEngine.initializeFromAnchor();
-    return {...dependencies, anchor, builderApiClient: beaconEngine.builderApiClient};
+    return {...dependencies, anchor, earliestAvailableSlot, builderApiClient: beaconEngine.builderApiClient};
   } catch (error) {
     dependencies.abortController.abort();
     await beaconEngine.close();

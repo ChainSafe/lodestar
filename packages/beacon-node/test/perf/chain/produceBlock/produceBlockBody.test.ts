@@ -67,6 +67,7 @@ describe("produceBlockBody", () => {
         validatorMonitorOpts: null,
         anchorStateBytes: state.serialize(),
         isAnchorStateFinalized: true,
+        earliestAvailableSlot: state.slot,
         executionEngine,
       }
     );

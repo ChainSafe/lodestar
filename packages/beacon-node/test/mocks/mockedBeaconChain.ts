@@ -243,6 +243,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       payloadAttestationPool: {
         add: vi.fn(),
         getAll: vi.fn(),
+        getPayloadAttestationsForBlock: vi.fn().mockReturnValue([]),
       },
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
@@ -276,6 +277,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       getHeadState: vi.fn(),
       getStateBySlot: vi.fn(),
       updateBuilderStatus: vi.fn(),
+      updateAttachedValidators: vi.fn(),
       processBlock: vi.fn(),
       processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),
@@ -339,6 +341,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     // Proposer cache + finalized balances bridges (forward to the mock's collaborators).
     "getProposerFeeRecipient",
     "updateProposerPreparation",
+    "trackAttachedValidators",
     "getProposerCacheValidatorIndices",
     "getCheckpointEffectiveBalances",
     // Op-pool add/read bridges (forward to the mock's pools).
@@ -373,6 +376,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
       BeaconEngine.prototype as unknown as Record<string, unknown>
     )[name];
   }
+  vi.spyOn(chain.proposerPreferencesPool, "get");
   chain.beaconEngine.prepareBeaconCommitteeSubnets = vi.fn().mockResolvedValue(undefined);
   for (const [name, forkChoiceName] of Object.entries({
     isDescendant: "isDescendant",

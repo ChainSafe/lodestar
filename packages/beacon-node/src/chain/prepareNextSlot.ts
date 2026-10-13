@@ -54,6 +54,7 @@ export class PrepareNextSlotScheduler {
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     const isEpochTransition = prepareEpoch === nextEpoch;
     const fork = this.config.getForkName(prepareSlot);
+    const currentFork = this.config.getForkName(clockSlot);
 
     // Early return if we are pre-genesis
     //  or we are pre-bellatrix and this is not an epoch transition
@@ -64,7 +65,7 @@ export class PrepareNextSlotScheduler {
     try {
       // At PREPARE_NEXT_SLOT_BPS (~67%) of the current slot we prepare payload for the next slot
       // or precompute epoch transition
-      await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
+      await sleep(this.config.getSlotComponentDurationMs(currentFork, PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // [beacon-engine] moved: consensus/EL preparation and computeStateHashTreeRoot now live in
       // packages/beacon-node/src/chain/beaconEngine/prepareNextSlot.ts under the same names.

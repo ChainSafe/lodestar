@@ -3,6 +3,7 @@ import {Slot} from "@lodestar/types";
 import type {IDataColumnStore} from "./dataColumnStore.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
+import {EarliestAvailableSlotRepository} from "./repositories/earliestAvailableSlot.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
@@ -16,6 +17,7 @@ import {
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
+  ProposerPreferencesRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -43,6 +45,7 @@ export interface IBeaconEngineDb {
   stateArchive: StateArchiveRepository;
   // checkpoint states
   checkpointState: CheckpointStateRepository;
+  earliestAvailableSlot: EarliestAvailableSlotRepository;
 
   executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
   executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
@@ -50,6 +53,7 @@ export interface IBeaconEngineDb {
   // op pool persistence (the OpPool is engine-owned)
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
+  proposerPreferences: ProposerPreferencesRepository;
   attesterSlashing: AttesterSlashingRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
 }

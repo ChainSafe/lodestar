@@ -147,6 +147,10 @@ export async function getDevBeaconNode(
       isFinalized: true,
       shouldPersist: false,
       validate: () => {},
+      initializeEarliestAvailableSlot: async (anchor) => {
+        await db.earliestAvailableSlot.set(anchor.slot);
+        return anchor.slot;
+      },
       log: () => {},
     },
   });

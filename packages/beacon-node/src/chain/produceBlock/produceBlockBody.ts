@@ -20,6 +20,7 @@ import {
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   G2_POINT_AT_INFINITY,
@@ -78,6 +79,7 @@ import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {CommonBlockBody} from "../interface.js";
 import {ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -184,6 +186,7 @@ export type ProduceResult =
  */
 /**
  * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#maybeFilterInvalidatedVoluntaryExits.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 function maybeFilterInvalidatedVoluntaryExits(
@@ -202,6 +205,7 @@ function maybeFilterInvalidatedVoluntaryExits(
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#produceBlockBody.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBlockBody<T extends BlockType>(
@@ -294,10 +298,13 @@ export async function produceBlockBody<T extends BlockType>(
     // this into a completely separate function and have pre/post gloas more separated
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
-    // TODO GLOAS: post-Gloas, proposer feeRecipient is also carried (signed) in
-    // ProposerPreferencesPool. Consider using this unified cache instead
-    // see https://github.com/ChainSafe/lodestar/issues/9379
-    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
+    const {feeRecipient, feeRecipientType} = getProposerFeeRecipient(
+      requestedFeeRecipient,
+      getPooledProposerPreferences(this, blockSlot, parentBlock.blockRoot),
+      this.beaconProposerCache,
+      proposerIndex
+    );
+    Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
     const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
 
@@ -450,13 +457,12 @@ export async function produceBlockBody<T extends BlockType>(
 
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
-    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
-    const feeRecipientType = requestedFeeRecipient
-      ? "requested"
-      : this.beaconProposerCache.get(proposerIndex)
-        ? "cached"
-        : "default";
-
+    const {feeRecipient, feeRecipientType} = getProposerFeeRecipient(
+      requestedFeeRecipient,
+      null,
+      this.beaconProposerCache,
+      proposerIndex
+    );
     Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
     if (blockType === BlockType.Blinded) {
@@ -689,12 +695,11 @@ export async function produceBlockBody<T extends BlockType>(
     executionPayloadValue = BigInt(0);
   }
 
-  const {graffiti, attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
+  const {graffiti, attestations, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
 
   Object.assign(logMeta, {
     graffiti: fromGraffitiBytes(graffiti),
     attestations: attestations.length,
-    deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
@@ -738,6 +743,7 @@ export async function produceBlockBody<T extends BlockType>(
  */
 /**
  * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#prepareExecutionPayload.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function prepareExecutionPayload(
@@ -825,6 +831,7 @@ export async function prepareExecutionPayload(
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#prepareExecutionPayloadHeader.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 async function prepareExecutionPayloadHeader(
@@ -851,6 +858,7 @@ async function prepareExecutionPayloadHeader(
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#getPayloadAttributesForSSE.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function getPayloadAttributesForSSE(
@@ -911,6 +919,7 @@ export function getPayloadAttributesForSSE(
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#preparePayloadAttributes.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 function preparePayloadAttributes(
@@ -998,9 +1007,8 @@ function preparePayloadAttributes(
  * Resolve the proposer's preferred (target) gas limit for the Gloas `PayloadAttributesV4`
  * `targetGasLimit` field (consensus-specs#5235, execution-apis#796).
  *
- * Sourced from the `SignedProposerPreferences` the proposer's VC submitted to the pool
- * (same `(slot, dependent_root)` lookup as gossip bid validation). When no matching
- * preferences are pooled, target the parent payload's gas limit so the gas limit stays
+ * Sourced from the `SignedProposerPreferences` the proposer's VC submitted to the pool. When no
+ * matching preferences are pooled, target the parent payload's gas limit so the gas limit stays
  * unchanged (`is_gas_limit_target_compatible` then requires `gas_limit == parent_gas_limit`).
  *
  * The parent payload's gas_limit is read from fork choice — the variant matching
@@ -1010,6 +1018,7 @@ function preparePayloadAttributes(
  */
 /**
  * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#getProposerTargetGasLimit.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 function getProposerTargetGasLimit(
@@ -1019,26 +1028,9 @@ function getProposerTargetGasLimit(
   parentBlockHash: Bytes32
 ): bigint {
   const parentBlockRootHex = toRootHex(parentBlockRoot);
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
-  const dependentRootHex = (() => {
-    if (parentBlock === null) {
-      return null;
-    }
-    try {
-      return getShufflingDependentRoot(
-        chain.forkChoice,
-        computeEpochAtSlot(prepareSlot),
-        computeEpochAtSlot(parentBlock.slot),
-        parentBlock
-      );
-    } catch {
-      return null;
-    }
-  })();
-
-  const pref = dependentRootHex !== null ? chain.proposerPreferencesPool.get(prepareSlot, dependentRootHex) : null;
-  if (pref !== null) {
-    return pref.message.targetGasLimit;
+  const preferences = getPooledProposerPreferences(chain, prepareSlot, parentBlockRootHex);
+  if (preferences !== null) {
+    return preferences.targetGasLimit;
   }
 
   const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
@@ -1050,8 +1042,58 @@ function getProposerTargetGasLimit(
   return BigInt(parentPayloadVariant.executionPayloadGasLimit);
 }
 
+/** The proposer's request wins over its signed preferences, which win over its registered proposer data */
+function getProposerFeeRecipient(
+  requestedFeeRecipient: string | undefined,
+  pooledPreferences: gloas.ProposerPreferences | null,
+  beaconProposerCache: BeaconProposerCache,
+  proposerIndex: ValidatorIndex
+): {feeRecipient: string; feeRecipientType: "requested" | "preferences" | "cached" | "default"} {
+  if (requestedFeeRecipient !== undefined) {
+    return {feeRecipient: requestedFeeRecipient, feeRecipientType: "requested"};
+  }
+  if (pooledPreferences !== null) {
+    return {feeRecipient: toHex(pooledPreferences.feeRecipient), feeRecipientType: "preferences"};
+  }
+  const cachedFeeRecipient = beaconProposerCache.get(proposerIndex);
+  if (cachedFeeRecipient !== undefined) {
+    return {feeRecipient: cachedFeeRecipient, feeRecipientType: "cached"};
+  }
+  return {feeRecipient: beaconProposerCache.getOrDefault(proposerIndex), feeRecipientType: "default"};
+}
+
+/**
+ * The preferences the proposer of `slot` signed for the branch of `parentBlockRoot`, the same
+ * `(slot, dependent_root)` lookup as gossip bid validation. Null if none are pooled.
+ */
+export function getPooledProposerPreferences(
+  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
+  slot: Slot,
+  parentBlockRootHex: RootHex
+): gloas.ProposerPreferences | null {
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+  if (parentBlock === null) {
+    return null;
+  }
+
+  let dependentRootHex: RootHex;
+  try {
+    dependentRootHex = getShufflingDependentRoot(
+      chain.forkChoice,
+      computeEpochAtSlot(slot),
+      computeEpochAtSlot(parentBlock.slot),
+      parentBlock
+    );
+  } catch {
+    return null;
+  }
+
+  return chain.proposerPreferencesPool.get(slot, dependentRootHex)?.message ?? null;
+}
+
 /**
  * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#produceCommonBlockBody.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceCommonBlockBody<T extends BlockType>(
@@ -1104,16 +1146,21 @@ export async function produceCommonBlockBody<T extends BlockType>(
   });
 
   // Live proposal production is supported from Fulu onward.
-  return {
+  const commonBlockBody: CommonBlockBody = {
     randaoReveal,
     graffiti,
-    eth1Data: currentState.eth1Data,
     proposerSlashings: this.opts.disableProposerSlashings === true ? [] : proposerSlashings,
     attesterSlashings,
     attestations,
-    deposits: [],
     voluntaryExits,
     blsToExecutionChanges,
     syncAggregate,
   };
+
+  if (!isForkPostHeze(fork)) {
+    commonBlockBody.eth1Data = currentState.eth1Data;
+    commonBlockBody.deposits = [];
+  }
+
+  return commonBlockBody;
 }

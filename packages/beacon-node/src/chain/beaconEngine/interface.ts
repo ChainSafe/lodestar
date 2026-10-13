@@ -66,6 +66,15 @@ import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import {IBeaconEngineOptions} from "./options.js";
 import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
 
+export type HeadParentPayload = {
+  blockRoot: Root;
+  blockRootHex: RootHex;
+  slot: Slot;
+  proposerIndex: ValidatorIndex;
+  forkName: ForkName;
+  bid: gloas.ExecutionPayloadBid;
+};
+
 export type BeaconEngineModules = {
   serializedCache?: SerializedCache;
   blockCache?: BlockCache;
@@ -404,7 +413,7 @@ export interface IBeaconEngine {
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>>;
-  getHeadLatestExecutionPayloadBid(): gloas.ExecutionPayloadBid | undefined;
+  getHeadParentPayload(): HeadParentPayload | undefined;
   getActiveOrPendingValidators(indices: ValidatorIndex[]): Set<ValidatorIndex>;
   getAttestationSourceCheckpoint(attEpoch: Epoch): Promise<phase0.Checkpoint>;
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
@@ -545,6 +554,7 @@ export interface IBeaconEngine {
 
   // Proposer cache + finalized balances (engine-internal).
   getProposerFeeRecipient(proposerIndex: ValidatorIndex): string | undefined;
+  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): boolean;
   updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): boolean;
   getProposerCacheValidatorIndices(): ValidatorIndex[];
   getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined;

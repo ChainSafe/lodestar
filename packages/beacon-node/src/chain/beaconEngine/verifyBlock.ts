@@ -1,7 +1,7 @@
 // Consensus verification stays engine-owned; the facade observes verified blocks only after its DA join.
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
-import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, computeEpochAtSlot, getIndexedAttestation} from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, toRootHex} from "@lodestar/utils";
 import {BlockBytes} from "../blocks/blockCache.js";
@@ -15,6 +15,7 @@ import {VerifyBlocksOpts} from "./interface.js";
 
 /**
  * Runs inside BeaconEngine. Moved from unstable@ba0411b482 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
+ * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function verifyBlocks(
@@ -62,7 +63,6 @@ export async function verifyBlocks(
     });
 
   if (signal.aborted) throw new ErrorAborted("verifyBlocks");
-  this.shufflingCache.processState(preState0);
 
   // [beacon-engine] deviation: retain branch omission of upstream pre-state SSZ-cache diagnostic logs.
   if (block0Epoch !== computeEpochAtSlot(preState0.slot)) {
@@ -74,8 +74,10 @@ export async function verifyBlocks(
   for (const [i, block] of blocks.entries()) {
     indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
       const attEpoch = computeEpochAtSlot(attestation.data.slot);
-      const decisionRoot = preState0.getShufflingDecisionRoot(attEpoch);
-      return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
+      const shuffling =
+        this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
+        preState0.getShufflingAtEpoch(attEpoch);
+      return getIndexedAttestation(shuffling, fork, attestation);
     });
   }
 

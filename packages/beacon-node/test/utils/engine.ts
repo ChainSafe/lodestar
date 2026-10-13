@@ -1,6 +1,7 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/index.js";
 import {BlockCache} from "../../src/chain/blocks/blockCache.js";
@@ -21,6 +22,7 @@ export type TestBeaconEngineModules = Omit<
   BeaconChainModules,
   | "beaconEngine"
   | "anchor"
+  | "earliestAvailableSlot"
   | "abortController"
   | "clock"
   | "emitter"
@@ -31,6 +33,7 @@ export type TestBeaconEngineModules = Omit<
   | "serializedCache"
   | "blockCache"
 > & {
+  earliestAvailableSlot?: Slot;
   validatorMonitorOpts?: ValidatorMonitorOpts | null;
   privateKey: PrivateKey;
   clock?: IClock;
@@ -42,7 +45,9 @@ export type TestBeaconEngineModules = Omit<
 export function createTestBeaconEngine(
   opts: IChainOptions,
   modules: TestBeaconEngineModules
-): Omit<BeaconChainModules, "anchor" | "builderApiClient" | "beaconEngine"> & {beaconEngine: BeaconEngine} {
+): Omit<BeaconChainModules, "anchor" | "builderApiClient" | "beaconEngine" | "earliestAvailableSlot"> & {
+  beaconEngine: BeaconEngine;
+} {
   const {
     privateKey,
     config,

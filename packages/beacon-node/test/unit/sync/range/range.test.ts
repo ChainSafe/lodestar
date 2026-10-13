@@ -45,12 +45,11 @@ describe("sync / range / per-block processing", () => {
   ])("hasEnvelope=$hasEnvelope, blobCount=$blobCount", async ({hasEnvelope, blobCount}) => {
     const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     const chain = getMockedBeaconChain({config: gloasConfig});
-    chain.beaconEngine.getHeadLatestExecutionPayloadBid = vi
-      .fn()
-      .mockReturnValue(ssz.gloas.ExecutionPayloadBid.defaultValue());
+    chain.beaconEngine.getHeadParentPayload = vi.fn().mockReturnValue(undefined);
     chain.processExecutionPayload = vi.fn().mockResolvedValue(undefined);
     chain.getHeadState.mockReturnValue({
       forkName: ForkName.gloas,
+      latestBlockHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
       latestExecutionPayloadBid: ssz.gloas.ExecutionPayloadBid.defaultValue(),
     } as IBeaconStateViewGloas);
     const rangeSync = new RangeSync(
@@ -142,11 +141,10 @@ describe.each([{disableProcessAsChainSegment: false}, {disableProcessAsChainSegm
     ])("payload error $errorType.code evicts the cached envelope: $evicted", async ({errorType, evicted}) => {
       const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
       const chain = getMockedBeaconChain({config: gloasConfig});
-      chain.beaconEngine.getHeadLatestExecutionPayloadBid = vi
-        .fn()
-        .mockReturnValue(ssz.gloas.ExecutionPayloadBid.defaultValue());
+      chain.beaconEngine.getHeadParentPayload = vi.fn().mockReturnValue(undefined);
       chain.getHeadState.mockReturnValue({
         forkName: ForkName.gloas,
+        latestBlockHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
         latestExecutionPayloadBid: ssz.gloas.ExecutionPayloadBid.defaultValue(),
       } as IBeaconStateViewGloas);
       const rangeSync = new RangeSync(

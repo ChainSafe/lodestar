@@ -46,6 +46,7 @@ import {
   mapToGeneralStatus,
   phase0,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_EPOCH} from "../../constants/index.js";
@@ -570,6 +571,7 @@ export async function getEpochSyncCommittees(
   return {data: {validators: validatorIndices, validatorAggregates}, executionOptimistic, finalized};
 }
 
+/** Source: unstable@2593063a82 api/impl/beacon/state/index.ts#getPendingDeposits; fork-specific SSZ stays engine-owned. */
 export async function getStatePendingDeposits(
   this: BeaconEngine,
   id: ApiStateId,
@@ -582,10 +584,13 @@ export async function getStatePendingDeposits(
   if (!isStatePostElectra(state)) {
     return {invalid: {code: 400, message: `Cannot retrieve pending deposits for pre-electra state fork=${fork}`}};
   }
-  const data = returnBytes ? ssz.electra.PendingDeposits.serialize(state.pendingDeposits) : state.pendingDeposits;
+  const data = returnBytes
+    ? sszTypesFor(state.forkName).PendingDeposits.serialize(state.pendingDeposits)
+    : state.pendingDeposits;
   return {data, fork, executionOptimistic, finalized};
 }
 
+/** Source: unstable@2593063a82 api/impl/beacon/state/index.ts#getPendingPartialWithdrawals. */
 export async function getStatePendingPartialWithdrawals(
   this: BeaconEngine,
   id: ApiStateId,
@@ -601,11 +606,12 @@ export async function getStatePendingPartialWithdrawals(
     };
   }
   const data = returnBytes
-    ? ssz.electra.PendingPartialWithdrawals.serialize(state.pendingPartialWithdrawals)
+    ? sszTypesFor(state.forkName).PendingPartialWithdrawals.serialize(state.pendingPartialWithdrawals)
     : state.pendingPartialWithdrawals;
   return {data, fork, executionOptimistic, finalized};
 }
 
+/** Source: unstable@2593063a82 api/impl/beacon/state/index.ts#getPendingConsolidations. */
 export async function getStatePendingConsolidations(
   this: BeaconEngine,
   id: ApiStateId,
@@ -621,7 +627,7 @@ export async function getStatePendingConsolidations(
     };
   }
   const data = returnBytes
-    ? ssz.electra.PendingConsolidations.serialize(state.pendingConsolidations)
+    ? sszTypesFor(state.forkName).PendingConsolidations.serialize(state.pendingConsolidations)
     : state.pendingConsolidations;
   return {data, fork, executionOptimistic, finalized};
 }

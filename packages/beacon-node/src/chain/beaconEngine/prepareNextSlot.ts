@@ -21,21 +21,26 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
-import {fromHex, isErrorAborted, sleep} from "@lodestar/utils";
+import {fromHex, isErrorAborted, sleep, toHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/constants.js";
 import {BuilderStatus} from "../../execution/builder/http.js";
 import {PayloadAttributes} from "../../execution/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
-import {getPayloadAttributesForSSE, prepareExecutionPayload} from "../produceBlock/produceBlockBody.js";
+import {
+  getPayloadAttributesForSSE,
+  getPooledProposerPreferences,
+  prepareExecutionPayload,
+} from "../produceBlock/produceBlockBody.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconEngine} from "./beaconEngine.js";
-/** Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#PrepareNextSlotScheduler.prepareForNextSlot. */
+/** Synced through unstable@2593063a82. Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#PrepareNextSlotScheduler.prepareForNextSlot. */
 export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): Promise<null> {
   const prepareSlot = clockSlot + 1;
   const prepareEpoch = computeEpochAtSlot(prepareSlot);
   const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
   const isEpochTransition = prepareEpoch === nextEpoch;
   const fork = this.config.getForkName(prepareSlot);
+  const currentFork = this.config.getForkName(clockSlot);
   if (prepareSlot <= GENESIS_SLOT || (ForkSeq[fork] < ForkSeq.bellatrix && !isEpochTransition)) {
     return null;
   }
@@ -86,7 +91,15 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
     };
 
     const proposerIndex = await getProposerIndex();
-    feeRecipient = this.beaconProposerCache.get(proposerIndex);
+    if (this.beaconProposerCache.has(proposerIndex)) {
+      const pooledPreferences = isForkPostGloas(fork)
+        ? getPooledProposerPreferences(this, prepareSlot, headRoot)
+        : null;
+      feeRecipient =
+        pooledPreferences !== null
+          ? toHex(pooledPreferences.feeRecipient)
+          : this.beaconProposerCache.getOrDefault(proposerIndex);
+    }
 
     // Predict the proposer head of the next slot when either:
     //  - we are proposing the next slot (single-slot proposer-boost-reorg), or
@@ -272,7 +285,7 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
         // skip when we're the next-slot proposer — don't compete with block-production prep.
         feeRecipient === undefined
       ) {
-        const maxDurationMs = this.config.getSlotComponentDurationMs(BUILDER_PREVERIFY_LIMIT_BPS);
+        const maxDurationMs = this.config.getSlotComponentDurationMs(currentFork, BUILDER_PREVERIFY_LIMIT_BPS);
         const preVerifyTimer = this.metrics?.builderDepositPreVerify.duration.startTimer();
         const result = headState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT, maxDurationMs);
         preVerifyTimer?.();
@@ -316,9 +329,12 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
   return null;
 }
 
-/** Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#checkBuilderStatusBeforeSlot. */
+/** Synced through unstable@2593063a82. Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#checkBuilderStatusBeforeSlot. */
 function checkBuilderStatusBeforeSlot(this: BeaconEngine, prepareSlot: Slot): void {
-  const msBeforeSlot = this.config.getSlotComponentDurationMs(BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS);
+  const msBeforeSlot = this.config.getSlotComponentDurationMs(
+    this.config.getForkName(prepareSlot - 1),
+    BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS
+  );
   const msUntilCheck = -this.clock.msFromSlot(prepareSlot) - msBeforeSlot;
   sleep(Math.max(0, msUntilCheck), this.signal)
     .then(() => this.builderApiClient.checkStatus())
@@ -329,7 +345,7 @@ function checkBuilderStatusBeforeSlot(this: BeaconEngine, prepareSlot: Slot): vo
     });
 }
 
-/** Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#computeStateHashTreeRoot. */
+/** Synced through unstable@2593063a82. Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#computeStateHashTreeRoot. */
 function computeStateHashTreeRoot(this: BeaconEngine, state: IBeaconStateView, isEpochTransition: boolean): void {
   // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
   // see https://github.com/ChainSafe/lodestar/issues/6194

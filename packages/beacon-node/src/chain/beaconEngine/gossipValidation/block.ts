@@ -1,9 +1,10 @@
 import {ForkName, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, SubnetID, ssz} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {GossipActionError} from "../../errors/gossipValidation.js";
-import {BlockErrorCode} from "../../errors/index.js";
+import {BlockErrorCode, BlockGossipError, GossipAction} from "../../errors/index.js";
 import * as blobSidecarValidation from "../../validation/blobSidecar.js";
 import * as blockValidation from "../../validation/block.js";
 import {OpSource} from "../../validatorMonitor.js";
@@ -20,7 +21,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
 
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/block.ts#validateGossipBlock.
- * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#validateBeaconBlock.
+ * Handler source: unstable@2593063a82 packages/beacon-node/src/network/processor/gossipHandlers.ts#validateBeaconBlock.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#handleValidBeaconBlock.
  * [beacon-engine] deviation: validation/cache updates run in the engine; the facade retains block import.
  */
@@ -40,26 +41,58 @@ export async function validateGossipBlock(
   try {
     const {block} = this.blockCache.getOrDeserialize(blockRootHex, blockBytes, fork);
     signedBlock = block;
-    // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#validateBeaconBlock.
-    // Seed on entry, including blocks whose parent is still unknown.
-    if (payloadBlockRoot !== null) {
-      this.seenPayloadEnvelopeInputCache.add({
-        blockRootHex: payloadBlockRoot,
-        block: block as SignedBeaconBlock<ForkPostGloas>,
-        forkName: fork,
-      });
-    }
-    const result = await runGossipValidation(() => blockValidation.validateGossipBlock.call(this, block, fork));
-    if (
-      result.status === GossipValidationStatus.Reject ||
-      (result.status === GossipValidationStatus.Ignore &&
-        result.code === BlockErrorCode.REPEAT_PROPOSAL &&
-        !this.hasObservedBlockRoot(block.message.slot, block.message.proposerIndex, blockRootHex))
-    ) {
-      this.blockCache.delete(blockRootHex, block, "rejected");
-      if (payloadBlockRoot !== null && seenTimestampSec !== undefined) {
-        this.seenPayloadEnvelopeInputCache.remove(payloadBlockRoot);
+    // Source: unstable@2593063a82 network/processor/gossipHandlers.ts#validateBeaconBlock.
+    // [beacon-engine] Authenticate unknown-parent blocks before either owner's seen cache retains them.
+    const result = await runGossipValidation(async () => {
+      try {
+        return await blockValidation.validateGossipBlock.call(this, block, fork);
+      } catch (error) {
+        if (
+          error instanceof BlockGossipError &&
+          (error.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+            error.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+        ) {
+          const {slot, proposerIndex} = block.message;
+          await blockValidation.verifyBlockProposerSignature.call(this, block, blockRootHex);
+          this.seenBlockProposers.observeBlockRoot(
+            slot,
+            proposerIndex,
+            blockRootHex,
+            signedBlockToSignedHeader(this.config, block)
+          );
+          if (this.seenBlockProposers.isKnown(slot, proposerIndex)) {
+            if (this.seenBlockProposers.isRepeatProposal(slot, proposerIndex, blockRootHex)) {
+              throw new BlockGossipError(GossipAction.IGNORE, {
+                code: BlockErrorCode.REPEAT_PROPOSAL,
+                proposerIndex,
+                root: blockRootHex,
+              });
+            }
+            throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex});
+          }
+          this.seenBlockProposers.add(slot, proposerIndex, blockRootHex);
+        }
+        throw error;
       }
+    });
+    const retained =
+      result.status === GossipValidationStatus.Accept ||
+      (result.status === GossipValidationStatus.Ignore &&
+        (result.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+          result.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN ||
+          (result.code === BlockErrorCode.REPEAT_PROPOSAL &&
+            this.hasObservedBlockRoot(block.message.slot, block.message.proposerIndex, blockRootHex) &&
+            this.forkChoice.getBlockHexDefaultStatus(toRootHex(block.message.parentRoot)) !== null)));
+    if (retained) {
+      if (payloadBlockRoot !== null) {
+        this.seenPayloadEnvelopeInputCache.add({
+          blockRootHex: payloadBlockRoot,
+          block: block as SignedBeaconBlock<ForkPostGloas>,
+          forkName: fork,
+        });
+      }
+    } else {
+      this.blockCache.delete(blockRootHex, block, "rejected");
     }
     if (this.validatorMonitor && seenTimestampSec !== undefined) {
       const {slot, proposerIndex} = block.message;
@@ -84,7 +117,8 @@ export async function validateGossipBlock(
       } else if (
         result.status === GossipValidationStatus.Ignore &&
         result.code === BlockErrorCode.REPEAT_PROPOSAL &&
-        this.hasObservedBlockRoot(slot, proposerIndex, blockRoot)
+        this.hasObservedBlockRoot(slot, proposerIndex, blockRoot) &&
+        retained
       ) {
         registerBlock();
       }
@@ -93,9 +127,6 @@ export async function validateGossipBlock(
   } catch (error) {
     if (signedBlock !== undefined) {
       this.blockCache.delete(blockRootHex, signedBlock, "rejected");
-      if (payloadBlockRoot !== null && seenTimestampSec !== undefined) {
-        this.seenPayloadEnvelopeInputCache.remove(payloadBlockRoot);
-      }
     }
     if (
       error instanceof LodestarError &&

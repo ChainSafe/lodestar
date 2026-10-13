@@ -14,6 +14,7 @@ import {
   DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
+  ProposerPreferencesRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
@@ -37,6 +38,7 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   blsToExecutionChange: Mocked<BLSToExecutionChangeRepository>;
   proposerSlashing: Mocked<ProposerSlashingRepository>;
   attesterSlashing: Mocked<AttesterSlashingRepository>;
+  proposerPreferences: Mocked<ProposerPreferencesRepository>;
 };
 
 vi.mock("../../src/db/repositories/index.js");
@@ -70,6 +72,8 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       blsToExecutionChange: vi.mocked(new BLSToExecutionChangeRepository({} as any, {} as any)),
       proposerSlashing: vi.mocked(new ProposerSlashingRepository({} as any, {} as any)),
       attesterSlashing: vi.mocked(new AttesterSlashingRepository({} as any, {} as any)),
+      proposerPreferences: vi.mocked(new ProposerPreferencesRepository(minimalConfig, {} as Db)),
+      earliestAvailableSlot: {get: vi.fn().mockResolvedValue(null), set: vi.fn().mockResolvedValue(undefined)},
 
       dataColumns,
       init: vi.fn().mockResolvedValue(undefined),

@@ -27,7 +27,7 @@ describe("api/validator - prepareBeaconCommitteeSubnet", () => {
     ];
 
     const request = api.prepareBeaconCommitteeSubnet({subscriptions});
-    expect(prepare).toHaveBeenCalledExactlyOnceWith(committeeSubscriptions);
+    await vi.waitFor(() => expect(prepare).toHaveBeenCalledExactlyOnceWith(committeeSubscriptions));
     expect(modules.network.prepareBeaconCommitteeSubnets).not.toHaveBeenCalled();
 
     finishPreparation();

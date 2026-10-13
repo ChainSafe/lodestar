@@ -17,7 +17,8 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {JsonOnlyReq} from "../../../utils/codecs.js";
+import {JsonOnlyReq, WithVersion} from "../../../utils/codecs.js";
+import {getPostElectraForkTypes} from "../../../utils/fork.js";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
   ExecutionOptimisticAndFinalizedCodec,
@@ -683,7 +684,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: stateIdOnlyReq,
       resp: {
-        data: ssz.electra.PendingDeposits,
+        data: WithVersion((fork) => getPostElectraForkTypes(fork).PendingDeposits),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
@@ -692,7 +693,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: stateIdOnlyReq,
       resp: {
-        data: ssz.electra.PendingPartialWithdrawals,
+        data: WithVersion((fork) => getPostElectraForkTypes(fork).PendingPartialWithdrawals),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
@@ -701,7 +702,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: stateIdOnlyReq,
       resp: {
-        data: ssz.electra.PendingConsolidations,
+        data: WithVersion((fork) => getPostElectraForkTypes(fork).PendingConsolidations),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

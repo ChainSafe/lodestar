@@ -17,8 +17,8 @@ describe("downloaded block cache", () => {
     const blockCache = new BlockCache(config);
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
-    const root = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
-    const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
+    const root = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const bytes = config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
     const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
     const hashTreeRoot = vi.spyOn(ssz.phase0.BeaconBlock, "hashTreeRoot");
     const network = {
@@ -37,7 +37,7 @@ describe("downloaded block cache", () => {
           ? await Network.prototype.sendBeaconBlocksByRoot.call(network, "peer", [root])
           : await Network.prototype.sendBeaconBlocksByHead.call(network, "peer", {beaconRoot: root, count: 1});
     expect(blocks).toHaveLength(1);
-    expect(ssz.phase0.SignedBeaconBlock.equals(blocks[0].block, block)).toBe(true);
+    expect(config.getForkTypes(block.message.slot).SignedBeaconBlock.equals(blocks[0].block, block)).toBe(true);
     expect(blocks[0].block).toBe(deserialize.mock.results[0].value);
     expect(blocks[0].bytes).toBe(bytes);
     expect(blocks[0].block.signature.buffer).toBe(bytes.buffer);

@@ -11,7 +11,7 @@ import {assertAnchorStateForkMatchesConfig} from "./validation.js";
 
 export function prepareArchivedStateInitialization(
   {stateBytes, metadata, isWithinWeakSubjectivityPeriod}: ArchivedStateBytes,
-  {chainForkConfig, logger}: StatePreparationContext
+  {chainForkConfig, db, logger}: StatePreparationContext
 ): StateInitialization {
   const config = createBeaconConfig(chainForkConfig, metadata.genesisValidatorsRoot);
   return {
@@ -35,6 +35,20 @@ export function prepareArchivedStateInitialization(
       }
     },
     shouldPersist: false,
+    async initializeEarliestAvailableSlot(state) {
+      const stored = await db.earliestAvailableSlot.get();
+      // we bootstrap the node with archived db, use the previous earliestAvailableSLot
+      if (stored !== null) {
+        logger.verbose("Reusing persisted earliest available slot", {
+          anchorSlot: state.slot,
+          earliestAvailableSlot: stored,
+        });
+        return stored;
+      }
+      // legacy db: blockArchive.firstKey() is not a safe floor, a past checkpoint sync may have left a gap.
+      await db.earliestAvailableSlot.set(state.slot);
+      return state.slot;
+    },
     log(state, nativeStateTransition) {
       logger.info("Initialized state from db", {
         slot: state.slot,

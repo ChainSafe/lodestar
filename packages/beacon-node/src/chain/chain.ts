@@ -113,6 +113,7 @@ export type BeaconChainModules = {
   beaconEngine: IBeaconEngine;
   builderApiClient: BuilderApiClient;
   anchor: EngineBootstrap;
+  earliestAvailableSlot: Slot;
   abortController: AbortController;
   clock: IClock;
   emitter: ChainEventEmitter;
@@ -255,12 +256,13 @@ export class BeaconChain implements IBeaconChain {
     this.builderApiClient = modules.builderApiClient;
     this.chainView = new ChainView(beaconEngine.getChainViewSnapshot(), logger);
     beaconEngine.events.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
+    beaconEngine.events.on(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     beaconEngine.events.on(BeaconEngineEvent.fatalError, this.onEngineFatalError);
     beaconEngine.events.on(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
 
-    this._earliestAvailableSlot = anchor.slot;
+    this._earliestAvailableSlot = modules.earliestAvailableSlot;
 
     // Global cache of validators pubkey/index mapping
     this.pubkeyCache = pubkeyCache;
@@ -363,6 +365,10 @@ export class BeaconChain implements IBeaconChain {
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
   }
 
+  private onEarliestAvailableSlotUpdated = (slot: Slot): void => {
+    this.earliestAvailableSlot = Math.max(this.earliestAvailableSlot, slot);
+  };
+
   async init(): Promise<void> {
     await this.archiveStore.init();
     await this.loadFromDisk();
@@ -373,6 +379,7 @@ export class BeaconChain implements IBeaconChain {
     await this.beaconEngine.close();
     await this.bls.close();
     this.beaconEngine.events.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
+    this.beaconEngine.events.off(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.beaconEngine.events.off(BeaconEngineEvent.fatalError, this.onEngineFatalError);
     this.beaconEngine.events.off(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
 
@@ -483,7 +490,11 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenBlockInputCache.hasBlock(blockRoot) || this.hasBlockHexUnsafe(blockRoot);
+    return (
+      this.seenBlockInputCache.hasBlock(blockRoot) ||
+      this.seenBlockInputCache.isValidatingBlock(blockRoot) ||
+      this.hasBlockHexUnsafe(blockRoot)
+    );
   }
 
   seenPayloadEnvelope(blockRoot: RootHex): boolean {
@@ -1138,6 +1149,16 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (discoveredNewValidators) {
+      const finalizedCheckpoint = this.getFinalizedCheckpoint();
+      await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
+    }
+  }
+
+  async updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void> {
+    const hasNewValidators = this.beaconEngine.trackAttachedValidators(epoch, validatorIndices);
+
+    // Only update validator custody if we discovered new validators
+    if (hasNewValidators) {
       const finalizedCheckpoint = this.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }

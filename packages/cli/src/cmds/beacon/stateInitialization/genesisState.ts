@@ -15,7 +15,7 @@ import {assertAnchorStateForkMatchesConfig} from "./validation.js";
 
 export async function prepareGenesisInitialization(
   options: Pick<StateInitializationOptions, "genesisStateFile" | "network">,
-  {chainForkConfig, logger}: StatePreparationContext
+  {chainForkConfig, db, logger}: StatePreparationContext
 ): Promise<StateInitialization> {
   const source = options.genesisStateFile || getGenesisFileUrl(options.network || defaultNetwork);
   if (!source) {
@@ -73,6 +73,19 @@ export async function prepareGenesisInitialization(
       }
     },
     shouldPersist: true,
+    async initializeEarliestAvailableSlot(state) {
+      const stored = await db.earliestAvailableSlot.get();
+      if (stored !== null && stored !== state.slot) {
+        logger.warn("Resetting earliest available slot for genesis initialization", {
+          previousSlot: stored,
+          earliestAvailableSlot: state.slot,
+        });
+      }
+      if (stored !== state.slot) {
+        await db.earliestAvailableSlot.set(state.slot);
+      }
+      return state.slot;
+    },
     log(state, nativeStateTransition) {
       logger.info("Initialized genesis state", {
         slot: state.slot,
