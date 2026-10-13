@@ -17,7 +17,7 @@ export type IChainOptions = IBeaconEngineOptions &
   ArchiveStoreOpts &
   ValidatorMonitorOpts &
   LightClientServerOpts & {
-    /** Use separate BeaconEngine caches and block decoding. Worker thread transport is still pending. */
+    /** Use separate BeaconEngine caches and message decoding. Worker thread transport is still pending. */
     beaconEngineWorker?: boolean;
     blacklistedBlocks?: string[];
     persistProducedBlocks?: boolean;

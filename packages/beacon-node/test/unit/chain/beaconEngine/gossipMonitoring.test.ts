@@ -22,6 +22,7 @@ import * as bidValidation from "../../../../src/chain/validation/executionPayloa
 import * as contributionValidation from "../../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {OpSource, ValidatorMonitor, createValidatorMonitor} from "../../../../src/chain/validatorMonitor.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getApiTestModules} from "../../../utils/api.js";
 
 describe("BeaconEngine gossip monitoring", () => {
@@ -32,6 +33,7 @@ describe("BeaconEngine gossip monitoring", () => {
     vi.useFakeTimers();
     const modules = getApiTestModules();
     engine = new BeaconEngine({
+      serializedCache: new SerializedCache({cacheDeserialized: true}),
       config: modules.chain.config,
       opts: {...defaultChainOptions},
       logger: modules.logger,
@@ -232,12 +234,14 @@ describe("BeaconEngine gossip monitoring", () => {
     });
     const observedAggregate = vi.spyOn(monitor, "registerGossipAggregatedAttestation");
     const observedContribution = vi.spyOn(monitor, "registerGossipSyncContributionAndProof");
-    expect(
-      (await engine.validateGossipAggregateAndProof(new Uint8Array(), ForkName.electra, aggregate, 12.5)).status
-    ).toBe("accept");
-    expect((await engine.validateSyncCommitteeGossipContributionAndProof(new Uint8Array(), contribution)).status).toBe(
+    const aggregateBytes = ssz.electra.SignedAggregateAndProof.serialize(aggregate);
+    const contributionBytes = ssz.altair.SignedContributionAndProof.serialize(contribution);
+    engine.serializedCache?.set(aggregate, aggregateBytes);
+    engine.serializedCache?.set(contribution, contributionBytes);
+    expect((await engine.validateGossipAggregateAndProof(aggregateBytes, ForkName.electra, 12.5)).status).toBe(
       "accept"
     );
+    expect((await engine.validateSyncCommitteeGossipContributionAndProof(contributionBytes)).status).toBe("accept");
     expect(observedAggregate).not.toHaveBeenCalled();
     expect(observedContribution).not.toHaveBeenCalled();
     await vi.runAllTimersAsync();
@@ -254,7 +258,11 @@ describe("BeaconEngine gossip monitoring", () => {
     const observed = vi.spyOn(monitor, "registerExecutionPayloadBid").mockImplementation(() => {
       throw new Error("monitor failed");
     });
-    const result = await engine.validateGossipExecutionPayloadBid(new Uint8Array(), bid, 1);
+    const result = await engine.validateGossipExecutionPayloadBid(
+      ssz.gloas.SignedExecutionPayloadBid.serialize(bid),
+      ForkName.gloas,
+      1
+    );
     expect(observed).not.toHaveBeenCalled();
     await vi.runAllTimersAsync();
     expect(result.status).toBe("accept");

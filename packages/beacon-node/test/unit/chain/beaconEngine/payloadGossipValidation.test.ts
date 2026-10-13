@@ -69,11 +69,13 @@ describe("BeaconEngine payload gossip validation", () => {
   afterEach(() => vi.restoreAllMocks());
 
   function validateEnvelope() {
-    return engine.validateGossipExecutionPayloadEnvelope(
-      ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
-      envelope,
-      {source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 1, peerIdStr: "peer"}
-    );
+    const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+    chain.serializedCache.set(envelope, bytes);
+    return engine.validateGossipExecutionPayloadEnvelope(bytes, {
+      source: PayloadEnvelopeInputSource.gossip,
+      seenTimestampSec: 1,
+      peerIdStr: "peer",
+    });
   }
 
   it("validates from the engine bid and caches the envelope without returning payload data", async () => {
@@ -152,7 +154,6 @@ describe("BeaconEngine payload gossip validation", () => {
     const source = {source: PayloadEnvelopeInputSource.byRoot, seenTimestampSec: 2, peerIdStr: "sync-peer"};
     const result = await engine.validateGossipExecutionPayloadEnvelope(
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
-      envelope,
       source
     );
     expect(result.status).toBe("accept");
@@ -207,12 +208,7 @@ describe("BeaconEngine payload gossip validation", () => {
     const column = columnSidecars[0];
     const bytes = ssz.gloas.DataColumnSidecar.serialize(column);
     const subnet = computeSubnetForDataColumnSidecar(config, column);
-    const result = await BeaconEngine.prototype.validateGossipGloasDataColumnSidecar.call(
-      engine,
-      bytes,
-      column,
-      subnet
-    );
+    const result = await BeaconEngine.prototype.validateGossipGloasDataColumnSidecar.call(engine, bytes, subnet);
     expect(result).toEqual({status: "accept", value: undefined});
   });
 
@@ -223,7 +219,6 @@ describe("BeaconEngine payload gossip validation", () => {
     const result = await BeaconEngine.prototype.validateGossipGloasDataColumnSidecar.call(
       engine,
       ssz.gloas.DataColumnSidecar.serialize(column),
-      column,
       0
     );
     expect(result).toMatchObject({status: "ignore", code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING});

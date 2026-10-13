@@ -1,6 +1,7 @@
 import {ForkName} from "@lodestar/params";
-import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
+import {IndexedAttestation, SignedAggregateAndProof, sszTypesFor} from "@lodestar/types";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
+import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as aggregateAndProofValidation from "../../validation/aggregateAndProof.js";
 import * as attestationValidation from "../../validation/attestation.js";
 import type {AggregatorTracker} from "../aggregatorTracker.js";
@@ -9,8 +10,10 @@ import {
   GossipValidationResult,
   GossipValidationStatus,
   fromResult,
+  ignore,
   runGossipValidation,
 } from "../gossipValidationResult.js";
+import {deserializeGossipMessage} from "./deserialize.js";
 
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/attestation.ts#validateGossipAttestationsSameAttData.
@@ -28,68 +31,73 @@ export async function validateGossipAttestationsSameAttData(
   results: GossipValidationResult<attestationValidation.AttestationValidationResult>[];
   batchableBls: boolean;
 }> {
-  const {results, batchableBls} = await attestationValidation.validateGossipAttestationsSameAttData.call(
-    this,
-    fork,
-    attestations
-  );
-  const mapped = results.map(fromResult);
-  // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#getBatchHandlers.
-  // Consult current duties after validation. [beacon-engine] deviation: pool/fork-choice writes
-  // still precede the returned verdict instead of running in the deferred network handler.
-  for (const res of mapped) {
-    if (res.status !== GossipValidationStatus.Accept) {
-      continue;
-    }
-    const value = res.value;
-    if (aggregatorTracker.shouldAggregate(value.subnet, value.indexedAttestation.data.slot)) {
-      try {
-        const insertOutcome = this.attestationPool.add(
-          value.committeeIndex,
-          value.attestation,
-          value.attDataRootHex,
-          value.validatorCommitteeIndex,
-          value.committeeSize
-        );
-        this.metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        this.logger.error("Error adding unaggregated attestation to pool", {subnet: value.subnet}, e as Error);
+  try {
+    const {results, batchableBls} = await attestationValidation.validateGossipAttestationsSameAttData.call(
+      this,
+      fork,
+      attestations
+    );
+    const mapped = results.map(fromResult);
+    // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#getBatchHandlers.
+    // Consult current duties after validation. [beacon-engine] deviation: pool/fork-choice writes
+    // still precede the returned verdict instead of running in the deferred network handler.
+    for (const res of mapped) {
+      if (res.status !== GossipValidationStatus.Accept) {
+        continue;
       }
-    }
-    if (!this.opts.dontSendGossipAttestationsToForkchoice) {
-      try {
-        this.forkChoice.onAttestation(value.indexedAttestation, value.attDataRootHex);
-      } catch (e) {
-        this.logger.debug(
-          "Error adding gossip unaggregated attestation to forkchoice",
-          {subnet: value.subnet},
-          e as Error
-        );
-      }
-    }
-  }
-  // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#getBatchHandlers.
-  if (this.validatorMonitor) {
-    callInNextEventLoop(() => {
-      if (isClosed()) return;
-      for (const [i, res] of mapped.entries()) {
-        if (res.status !== GossipValidationStatus.Accept) continue;
+      const value = res.value;
+      if (aggregatorTracker.shouldAggregate(value.subnet, value.indexedAttestation.data.slot)) {
         try {
-          this.validatorMonitor?.registerGossipUnaggregatedAttestation(
-            seenTimestampSecs[i],
-            res.value.indexedAttestation
+          const insertOutcome = this.attestationPool.add(
+            value.committeeIndex,
+            value.attestation,
+            value.attDataRootHex,
+            value.validatorCommitteeIndex,
+            value.committeeSize
           );
+          this.metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
+        } catch (e) {
+          this.logger.error("Error adding unaggregated attestation to pool", {subnet: value.subnet}, e as Error);
+        }
+      }
+      if (!this.opts.dontSendGossipAttestationsToForkchoice) {
+        try {
+          this.forkChoice.onAttestation(value.indexedAttestation, value.attDataRootHex);
         } catch (e) {
           this.logger.debug(
-            "Error monitoring gossip attestation",
-            {slot: res.value.indexedAttestation.data.slot},
+            "Error adding gossip unaggregated attestation to forkchoice",
+            {subnet: value.subnet},
             e as Error
           );
         }
       }
-    });
+    }
+    // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#getBatchHandlers.
+    if (this.validatorMonitor) {
+      callInNextEventLoop(() => {
+        if (isClosed()) return;
+        for (const [i, res] of mapped.entries()) {
+          if (res.status !== GossipValidationStatus.Accept) continue;
+          try {
+            this.validatorMonitor?.registerGossipUnaggregatedAttestation(
+              seenTimestampSecs[i],
+              res.value.indexedAttestation
+            );
+          } catch (e) {
+            this.logger.debug(
+              "Error monitoring gossip attestation",
+              {slot: res.value.indexedAttestation.data.slot},
+              e as Error
+            );
+          }
+        }
+      });
+    }
+    return {results: mapped, batchableBls};
+  } catch (error) {
+    this.logger.error("Error validating gossip attestations", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return {results: attestations.map(() => ignore("UNEXPECTED_ERROR")), batchableBls: false};
   }
-  return {results: mapped, batchableBls};
 }
 
 /**
@@ -110,62 +118,74 @@ export function validateApiAttestation(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.beacon_aggregate_and_proof.
  * [beacon-engine] deviation: pool/fork-choice updates precede the verdict; monitoring stays deferred.
  */
-export function validateGossipAggregateAndProof(
+export async function validateGossipAggregateAndProof(
   this: BeaconEngine,
   isClosed: () => boolean,
   aggregateBytes: Uint8Array,
   fork: ForkName,
-  signedAggregateAndProof: SignedAggregateAndProof,
   seenTimestampSec: number
 ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-  return runGossipValidation(async () => {
-    const result = await aggregateAndProofValidation.validateGossipAggregateAndProof.call(
-      this,
-      fork,
-      signedAggregateAndProof,
-      aggregateBytes
+  try {
+    const signedAggregateAndProof = deserializeGossipMessage(
+      sszTypesFor(fork).SignedAggregateAndProof,
+      aggregateBytes,
+      this.serializedCache,
+      // SSZ byte reuse can clear bitlist padding in the original gossip bytes.
+      {reuseBytes: false}
     );
-    // Insert into the aggregated-attestation pool on Accept (moved from the gossip handler).
-    const insertOutcome = this.aggregatedAttestationPool.add(
-      signedAggregateAndProof.message.aggregate,
-      result.attDataRootHex,
-      result.indexedAttestation.attestingIndices.length,
-      result.committeeValidatorIndices
-    );
-    this.metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
-    // Fork-choice write on Accept (moved from the gossip handler). Contain errors — a fork-choice error
-    // must not flip the gossip verdict.
-    if (!this.opts.dontSendGossipAttestationsToForkchoice) {
-      try {
-        this.forkChoice.onAttestation(result.indexedAttestation, result.attDataRootHex);
-      } catch (e) {
-        this.logger.debug(
-          "Error adding gossip aggregated attestation to forkchoice",
-          {slot: result.indexedAttestation.data.slot},
-          e as Error
-        );
-      }
-    }
-    if (this.validatorMonitor) {
-      callInNextEventLoop(() => {
-        if (isClosed()) return;
+    return await runGossipValidation(async () => {
+      const result = await aggregateAndProofValidation.validateGossipAggregateAndProof.call(
+        this,
+        fork,
+        signedAggregateAndProof,
+        aggregateBytes
+      );
+      // Insert into the aggregated-attestation pool on Accept (moved from the gossip handler).
+      const insertOutcome = this.aggregatedAttestationPool.add(
+        signedAggregateAndProof.message.aggregate,
+        result.attDataRootHex,
+        result.indexedAttestation.attestingIndices.length,
+        result.committeeValidatorIndices
+      );
+      this.metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+      // Fork-choice write on Accept (moved from the gossip handler). Contain errors — a fork-choice error
+      // must not flip the gossip verdict.
+      if (!this.opts.dontSendGossipAttestationsToForkchoice) {
         try {
-          this.validatorMonitor?.registerGossipAggregatedAttestation(
-            seenTimestampSec,
-            signedAggregateAndProof,
-            result.indexedAttestation
-          );
+          this.forkChoice.onAttestation(result.indexedAttestation, result.attDataRootHex);
         } catch (e) {
           this.logger.debug(
-            "Error monitoring gossip aggregate and proof",
+            "Error adding gossip aggregated attestation to forkchoice",
             {slot: result.indexedAttestation.data.slot},
             e as Error
           );
         }
-      });
-    }
-    return {indexedAttestation: result.indexedAttestation};
-  });
+      }
+      if (this.validatorMonitor) {
+        callInNextEventLoop(() => {
+          if (isClosed()) return;
+          try {
+            this.validatorMonitor?.registerGossipAggregatedAttestation(
+              seenTimestampSec,
+              signedAggregateAndProof,
+              result.indexedAttestation
+            );
+          } catch (e) {
+            this.logger.debug(
+              "Error monitoring gossip aggregate and proof",
+              {slot: result.indexedAttestation.data.slot},
+              e as Error
+            );
+          }
+        });
+      }
+      return {indexedAttestation: result.indexedAttestation};
+    });
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip aggregate and proof", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
 }
 
 /**

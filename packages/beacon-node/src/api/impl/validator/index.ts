@@ -940,7 +940,8 @@ export function getValidatorApi(
             dependentRoot: toRootHex(signed.message.dependentRoot),
           };
           try {
-            const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes[i], signed);
+            if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signed, preferencesBytes[i]);
+            const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes[i]);
             if (res.status !== GossipValidationStatus.Accept) {
               if (res.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
                 logger.debug("Ignoring known signed proposer preferences", logCtx);

@@ -256,13 +256,14 @@ export class BeaconNode {
     const executionBuilder = opts.executionBuilder.enabled
       ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
       : undefined;
-    const serializedCache = new SerializedCache();
+    const serializedCache = new SerializedCache({cacheDeserialized: !opts.chain.beaconEngineWorker});
     const blockCache = new BlockCache(config, {
       owner: opts.chain.beaconEngineWorker ? "chain" : "shared",
       metrics: metrics?.blockCache,
       logger: chainLogger,
     });
     const beaconEngine = new BeaconEngine({
+      serializedCache: opts.chain.beaconEngineWorker ? undefined : serializedCache,
       blockCache: opts.chain.beaconEngineWorker ? undefined : blockCache,
       validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
       validatorMonitorOpts:

@@ -9,10 +9,13 @@ import {ErrorAborted, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import * as payloadVerification from "../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
+import * as envelopeValidation from "../../../../src/chain/validation/executionPayloadEnvelope.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {QueueError, QueueErrorCode} from "../../../../src/util/queue/index.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {generateState, zeroProtoBlock} from "../../../utils/state.js";
 
@@ -85,6 +88,35 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
   });
 
   afterEach(() => vi.restoreAllMocks());
+
+  it.each([false, true])(
+    "reuses gossip envelope decoding through import with beaconEngineWorker=%s",
+    async (beaconEngineWorker) => {
+      const cache = new SerializedCache({cacheDeserialized: !beaconEngineWorker});
+      cache.set(envelope, envelopeBytes);
+      Object.defineProperty(chain.beaconEngine, "serializedCache", {value: beaconEngineWorker ? undefined : cache});
+      const deserialize = vi.spyOn(ssz.gloas.SignedExecutionPayloadEnvelope, "deserialize");
+      vi.spyOn(envelopeValidation, "validateGossipExecutionPayloadEnvelope").mockResolvedValue(undefined);
+      expect(
+        await BeaconEngine.prototype.validateGossipExecutionPayloadEnvelope.call(chain.beaconEngine, envelopeBytes, {
+          source: PayloadEnvelopeInputSource.gossip,
+          seenTimestampSec: 1,
+        })
+      ).toMatchObject({status: "accept"});
+      expect(
+        await BeaconEngine.prototype.importExecutionPayload.call(
+          chain.beaconEngine,
+          envelopeBytes,
+          DataAvailabilityStatus.Available,
+          {
+            validSignature: true,
+          }
+        )
+      ).toEqual({executionOptimistic: false});
+      expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 2 : 0);
+      expect(putEnvelope.mock.calls[0][1]).toBe(envelopeBytes);
+    }
+  );
 
   async function importPayload(
     execStatus: ExecutionStatus.Valid | ExecutionStatus.Syncing = ExecutionStatus.Valid,

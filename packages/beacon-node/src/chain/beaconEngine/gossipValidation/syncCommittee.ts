@@ -1,36 +1,48 @@
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
-import {SubnetID, ValidatorIndex, altair} from "@lodestar/types";
+import {SubnetID, ValidatorIndex, altair, ssz} from "@lodestar/types";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
+import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as syncCommitteeValidation from "../../validation/syncCommittee.js";
 import * as syncCommitteeContributionAndProofValidation from "../../validation/syncCommitteeContributionAndProof.js";
 import type {BeaconEngine} from "../beaconEngine.js";
-import {GossipValidationResult, runGossipValidation} from "../gossipValidationResult.js";
+import {GossipValidationResult, fromResult, ignore, runGossipValidation} from "../gossipValidationResult.js";
+import {deserializeGossipMessage} from "./deserialize.js";
 
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/syncCommittee.ts#validateGossipSyncCommittee.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.sync_committee.
  * [beacon-engine] deviation: insert into the engine pool before returning the verdict.
  */
-export function validateGossipSyncCommittee(
+export async function validateGossipSyncCommittee(
   this: BeaconEngine,
-  _syncCommitteeBytes: Uint8Array,
-  syncCommittee: altair.SyncCommitteeMessage,
+  syncCommitteeBytes: Uint8Array,
   subnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
-  return runGossipValidation(async () => {
-    const result = await syncCommitteeValidation.validateGossipSyncCommittee.call(this, syncCommittee, subnet);
-    // Insert for ALL positions this validator holds in the subcommittee (moved from the gossip handler).
-    // The subcommittee indices are consumed here internally; the facade only needs the verdict.
-    try {
-      for (const indexInSubcommittee of result.indicesInSubcommittee) {
-        const insertOutcome = this.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
-        this.metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
+  try {
+    const syncCommittee = deserializeGossipMessage(
+      ssz.altair.SyncCommitteeMessage,
+      syncCommitteeBytes,
+      this.serializedCache
+    );
+    return await runGossipValidation(async () => {
+      const result = await syncCommitteeValidation.validateGossipSyncCommittee.call(this, syncCommittee, subnet);
+      // Insert for ALL positions this validator holds in the subcommittee (moved from the gossip handler).
+      // The subcommittee indices are consumed here internally; the facade only needs the verdict.
+      try {
+        for (const indexInSubcommittee of result.indicesInSubcommittee) {
+          const insertOutcome = this.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
+          this.metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
+        }
+      } catch (e) {
+        this.logger.debug("Error adding to syncCommittee pool", {subnet}, e as Error);
       }
-    } catch (e) {
-      this.logger.debug("Error adding to syncCommittee pool", {subnet}, e as Error);
-    }
-  });
+    });
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip sync committee", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
 }
 
 /**
@@ -74,46 +86,60 @@ export function validateApiSyncCommittee(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.sync_committee_contribution_and_proof.
  * [beacon-engine] deviation: pool insertion precedes the verdict; monitoring stays deferred.
  */
-export function validateSyncCommitteeGossipContributionAndProof(
+export async function validateSyncCommitteeGossipContributionAndProof(
   this: BeaconEngine,
   isClosed: () => boolean,
-  _contributionBytes: Uint8Array,
-  signedContributionAndProof: altair.SignedContributionAndProof,
+  contributionBytes: Uint8Array,
   skipValidationKnownParticipants = false
 ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
-  return runGossipValidation(async () => {
-    const result =
-      await syncCommitteeContributionAndProofValidation.validateSyncCommitteeGossipContributionAndProof.call(
+  try {
+    const signedContributionAndProof = deserializeGossipMessage(
+      ssz.altair.SignedContributionAndProof,
+      contributionBytes,
+      this.serializedCache
+    );
+    return await runGossipValidation(async () => {
+      const result =
+        await syncCommitteeContributionAndProofValidation.validateSyncCommitteeGossipContributionAndProof.call(
+          this,
+          signedContributionAndProof,
+          skipValidationKnownParticipants
+        );
+      // Insert into the pool on Accept (moved from the gossip handler).
+      insertSyncContributionOnAccept.call(
         this,
         signedContributionAndProof,
-        skipValidationKnownParticipants
+        result.syncCommitteeParticipantIndices.length,
+        "gossip"
       );
-    // Insert into the pool on Accept (moved from the gossip handler).
-    insertSyncContributionOnAccept.call(
-      this,
-      signedContributionAndProof,
-      result.syncCommitteeParticipantIndices.length,
-      "gossip"
+      if (this.validatorMonitor) {
+        callInNextEventLoop(() => {
+          if (isClosed()) return;
+          try {
+            this.validatorMonitor?.registerGossipSyncContributionAndProof(
+              signedContributionAndProof.message,
+              result.syncCommitteeParticipantIndices
+            );
+          } catch (e) {
+            this.logger.debug(
+              "Error monitoring gossip contribution and proof",
+              {slot: signedContributionAndProof.message.contribution.slot},
+              e as Error
+            );
+          }
+        });
+      }
+      return result;
+    });
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error(
+      "Error validating gossip sync committee contribution and proof",
+      {code: "UNEXPECTED_ERROR"},
+      error as Error
     );
-    if (this.validatorMonitor) {
-      callInNextEventLoop(() => {
-        if (isClosed()) return;
-        try {
-          this.validatorMonitor?.registerGossipSyncContributionAndProof(
-            signedContributionAndProof.message,
-            result.syncCommitteeParticipantIndices
-          );
-        } catch (e) {
-          this.logger.debug(
-            "Error monitoring gossip contribution and proof",
-            {slot: signedContributionAndProof.message.contribution.slot},
-            e as Error
-          );
-        }
-      });
-    }
-    return result;
-  });
+    return ignore("UNEXPECTED_ERROR");
+  }
 }
 
 /**

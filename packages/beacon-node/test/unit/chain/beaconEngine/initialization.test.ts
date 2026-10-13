@@ -16,6 +16,7 @@ import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import * as blockValidation from "../../../../src/chain/validation/block.js";
+import * as voluntaryExitValidation from "../../../../src/chain/validation/voluntaryExit.js";
 import {BeaconDb} from "../../../../src/db/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
 import {createMetrics} from "../../../../src/metrics/index.js";
@@ -105,6 +106,17 @@ describe("bytes-based engine startup", () => {
     expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
     expect(engine.blockCache.get(toRootHex(blockRoot))).toBe(cached);
     expect(cached?.block === block).toBe(!beaconEngineWorker);
+
+    expect(engine.serializedCache).toBe(beaconEngineWorker ? undefined : chain.serializedCache);
+    const exit = ssz.phase0.SignedVoluntaryExit.defaultValue();
+    const exitBytes = ssz.phase0.SignedVoluntaryExit.serialize(exit);
+    chain.serializedCache.set(exit, exitBytes);
+    const deserializeExit = vi.spyOn(ssz.phase0.SignedVoluntaryExit, "deserialize");
+    const validateExit = vi.spyOn(voluntaryExitValidation, "validateGossipVoluntaryExit").mockResolvedValue(undefined);
+    expect((await engine.validateGossipVoluntaryExit(exitBytes)).status).toBe("accept");
+    expect(deserializeExit).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
+    expect(validateExit.mock.calls[0][0] === exit).toBe(!beaconEngineWorker);
+    expect(chain.serializedCache.getDeserialized(exitBytes)).toBe(beaconEngineWorker ? undefined : exit);
   });
 
   it("notifies the facade once when fork choice becomes irrecoverable", async () => {

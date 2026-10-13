@@ -86,9 +86,10 @@ export function createTestBeaconEngine(
     ? undefined
     : new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
 
-  const serializedCache = new SerializedCache();
+  const serializedCache = new SerializedCache({cacheDeserialized: !opts.beaconEngineWorker});
   const blockCache = new BlockCache(config);
   const beaconEngine = new BeaconEngine({
+    serializedCache: opts.beaconEngineWorker ? undefined : serializedCache,
     blockCache: opts.beaconEngineWorker ? undefined : blockCache,
     executionEngine,
     executionBuilder,

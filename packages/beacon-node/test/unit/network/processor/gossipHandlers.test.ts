@@ -364,6 +364,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
 
   const removeInvalid = vi.fn();
   const chain = {
+    opts: {},
     clock: new ClockStopped(1),
     emitter: new ChainEventEmitter(),
     logger,

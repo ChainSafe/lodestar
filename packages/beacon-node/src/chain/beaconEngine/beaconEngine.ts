@@ -55,7 +55,6 @@ import {
   ValidatorIndex,
   altair,
   capella,
-  deneb,
   electra,
   fulu,
   getValidatorStatus,
@@ -86,6 +85,7 @@ import {ClockEvent, IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
 import {ArchiveMode, StateArchiveStrategy} from "../archiveStore/interface.js";
@@ -346,6 +346,7 @@ export class BeaconEngine implements IBeaconEngine {
    * pinning the exact signed candidate while keeping verification results engine-owned.
    */
   readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
+  readonly serializedCache?: SerializedCache;
   readonly blockCache: BlockCache;
   // TODO - beacon engine: this is not part of BeaconEngine but BeaconChain, remove it, create BeaconEngine own emitter if needed
   readonly emitter: ChainEventEmitter;
@@ -382,6 +383,7 @@ export class BeaconEngine implements IBeaconEngine {
     this.dbName = modules.dbName;
     this.dataColumnDir = modules.dataColumnDir;
     this.signal = signal;
+    this.serializedCache = modules.serializedCache;
     this.blockCache =
       modules.blockCache ?? new BlockCache(config, {owner: "engine", metrics: metrics?.blockCache, logger});
     this.metrics = metrics;
@@ -1091,7 +1093,6 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   // Gossip validation delegates to ./gossipValidation/* with engine-owned state.
-  // TODO - beacon engine: migrate the remaining gossip methods to bytes-only inputs.
   async validateGossipBlock(
     blockRoot: Root,
     blockBytes: Uint8Array,
@@ -1102,12 +1103,8 @@ export class BeaconEngine implements IBeaconEngine {
     return validateGossipBlock.call(this, () => this.closed, blockRoot, blockBytes, fork, seenTimestampSec);
   }
 
-  validateGossipSyncCommittee(
-    _syncCommitteeBytes: Uint8Array,
-    syncCommittee: altair.SyncCommitteeMessage,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>> {
-    return validateGossipSyncCommittee.call(this, _syncCommitteeBytes, syncCommittee, subnet);
+  validateGossipSyncCommittee(syncCommitteeBytes: Uint8Array, subnet: SubnetID): Promise<GossipValidationResult<void>> {
+    return validateGossipSyncCommittee.call(this, syncCommitteeBytes, subnet);
   }
 
   // Returns the subnets to broadcast to (the facade publishes). Resolves committee membership + pool insert
@@ -1120,15 +1117,13 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateSyncCommitteeGossipContributionAndProof(
-    _contributionBytes: Uint8Array,
-    signedContributionAndProof: altair.SignedContributionAndProof,
+    contributionBytes: Uint8Array,
     skipValidationKnownParticipants = false
   ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
     return validateSyncCommitteeGossipContributionAndProof.call(
       this,
       () => this.closed,
-      _contributionBytes,
-      signedContributionAndProof,
+      contributionBytes,
       skipValidationKnownParticipants
     );
   }
@@ -1141,35 +1136,29 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateGossipBlobSidecar(
-    _blobBytes: Uint8Array,
+    blobBytes: Uint8Array,
     fork: ForkName,
-    blobSidecar: deneb.BlobSidecar,
     subnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return validateGossipBlobSidecar.call(this, _blobBytes, fork, blobSidecar, subnet);
+    return validateGossipBlobSidecar.call(this, blobBytes, fork, subnet);
   }
 
   validateGossipFuluDataColumnSidecar(
-    _dataColumnBytes: Uint8Array,
-    dataColumnSidecar: fulu.DataColumnSidecar,
+    dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return validateGossipFuluDataColumnSidecar.call(this, _dataColumnBytes, dataColumnSidecar, gossipSubnet);
+    return validateGossipFuluDataColumnSidecar.call(this, dataColumnBytes, gossipSubnet);
   }
 
   validateGossipGloasDataColumnSidecar(
-    _dataColumnBytes: Uint8Array,
-    dataColumnSidecar: gloas.DataColumnSidecar,
+    dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return validateGossipGloasDataColumnSidecar.call(this, _dataColumnBytes, dataColumnSidecar, gossipSubnet);
+    return validateGossipGloasDataColumnSidecar.call(this, dataColumnBytes, gossipSubnet);
   }
 
-  validateGossipPayloadAttestationMessage(
-    _payloadAttestationBytes: Uint8Array,
-    payloadAttestationMessage: gloas.PayloadAttestationMessage
-  ): Promise<GossipValidationResult<void>> {
-    return validateGossipPayloadAttestationMessage.call(this, _payloadAttestationBytes, payloadAttestationMessage);
+  validateGossipPayloadAttestationMessage(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>> {
+    return validateGossipPayloadAttestationMessage.call(this, payloadAttestationBytes);
   }
 
   validateApiPayloadAttestationMessage(
@@ -1207,17 +1196,9 @@ export class BeaconEngine implements IBeaconEngine {
   validateGossipAggregateAndProof(
     aggregateBytes: Uint8Array,
     fork: ForkName,
-    signedAggregateAndProof: SignedAggregateAndProof,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return validateGossipAggregateAndProof.call(
-      this,
-      () => this.closed,
-      aggregateBytes,
-      fork,
-      signedAggregateAndProof,
-      seenTimestampSec
-    );
+    return validateGossipAggregateAndProof.call(this, () => this.closed, aggregateBytes, fork, seenTimestampSec);
   }
 
   validateApiAggregateAndProof(
@@ -1229,11 +1210,10 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateGossipExecutionPayloadEnvelope(
-    _envelopeBytes: Uint8Array,
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    envelopeBytes: Uint8Array,
     source: SourceMeta
   ): Promise<GossipValidationResult<void>> {
-    return validateGossipExecutionPayloadEnvelope.call(this, _envelopeBytes, executionPayloadEnvelope, source);
+    return validateGossipExecutionPayloadEnvelope.call(this, envelopeBytes, source);
   }
 
   validateApiExecutionPayloadEnvelope(
@@ -1245,17 +1225,11 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateGossipExecutionPayloadBid(
-    _bidBytes: Uint8Array,
-    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    bidBytes: Uint8Array,
+    fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
-    return validateGossipExecutionPayloadBid.call(
-      this,
-      () => this.closed,
-      _bidBytes,
-      signedExecutionPayloadBid,
-      seenTimestampSec
-    );
+    return validateGossipExecutionPayloadBid.call(this, () => this.closed, bidBytes, fork, seenTimestampSec);
   }
 
   validateApiExecutionPayloadBid(
@@ -1265,11 +1239,8 @@ export class BeaconEngine implements IBeaconEngine {
     return validateApiExecutionPayloadBid.call(this, _bidBytes, signedExecutionPayloadBid);
   }
 
-  async validateGossipProposerPreferences(
-    _preferencesBytes: Uint8Array,
-    signedProposerPreferences: gloas.SignedProposerPreferences
-  ): Promise<GossipValidationResult<void>> {
-    return validateGossipProposerPreferences.call(this, _preferencesBytes, signedProposerPreferences);
+  async validateGossipProposerPreferences(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>> {
+    return validateGossipProposerPreferences.call(this, preferencesBytes);
   }
 
   // --- Op pool: gossip validate (+ insert on Accept) / API validate (throws, + insert) / REST reads ---
@@ -1277,28 +1248,26 @@ export class BeaconEngine implements IBeaconEngine {
   // through these narrow methods. gossip = no-throw result; API = throws (preserves REST error shape).
 
   async validateGossipAttesterSlashing(
-    attesterSlashing: AttesterSlashing,
+    attesterSlashingBytes: Uint8Array,
     fork: ForkName
   ): Promise<GossipValidationResult<void>> {
-    return validateGossipAttesterSlashing.call(this, attesterSlashing, fork);
+    return validateGossipAttesterSlashing.call(this, attesterSlashingBytes, fork);
   }
 
   async validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void> {
     return validateApiAttesterSlashing.call(this, attesterSlashing, fork);
   }
 
-  async validateGossipProposerSlashing(
-    proposerSlashing: phase0.ProposerSlashing
-  ): Promise<GossipValidationResult<void>> {
-    return validateGossipProposerSlashing.call(this, proposerSlashing);
+  async validateGossipProposerSlashing(proposerSlashingBytes: Uint8Array): Promise<GossipValidationResult<void>> {
+    return validateGossipProposerSlashing.call(this, proposerSlashingBytes);
   }
 
   async validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
     return validateApiProposerSlashing.call(this, proposerSlashing);
   }
 
-  async validateGossipVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<GossipValidationResult<void>> {
-    return validateGossipVoluntaryExit.call(this, voluntaryExit);
+  async validateGossipVoluntaryExit(voluntaryExitBytes: Uint8Array): Promise<GossipValidationResult<void>> {
+    return validateGossipVoluntaryExit.call(this, voluntaryExitBytes);
   }
 
   async validateApiVoluntaryExit(
@@ -1316,9 +1285,9 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   async validateGossipBlsToExecutionChange(
-    blsToExecutionChange: capella.SignedBLSToExecutionChange
+    blsToExecutionChangeBytes: Uint8Array
   ): Promise<GossipValidationResult<void>> {
-    return validateGossipBlsToExecutionChange.call(this, blsToExecutionChange);
+    return validateGossipBlsToExecutionChange.call(this, blsToExecutionChangeBytes);
   }
 
   async validateApiBlsToExecutionChange(

@@ -308,7 +308,7 @@ function getSequentialHandlers(
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      unwrapGossipResult(await chain.beaconEngine.validateGossipBlobSidecar(serializedData, fork, blobSidecar, subnet));
+      unwrapGossipResult(await chain.beaconEngine.validateGossipBlobSidecar(serializedData, fork, subnet));
       const blockInput = chain.seenBlockInputCache.getByBlob({
         blockRootHex,
         blobSidecar,
@@ -429,9 +429,7 @@ function getSequentialHandlers(
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      unwrapGossipResult(
-        await chain.beaconEngine.validateGossipFuluDataColumnSidecar(serializedData, dataColumnSidecar, gossipSubnet)
-      );
+      unwrapGossipResult(await chain.beaconEngine.validateGossipFuluDataColumnSidecar(serializedData, gossipSubnet));
       const blockInput = chain.seenBlockInputCache.getByColumn({
         blockRootHex,
         columnSidecar: dataColumnSidecar,
@@ -551,9 +549,7 @@ function getSequentialHandlers(
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      unwrapGossipResult(
-        await chain.beaconEngine.validateGossipGloasDataColumnSidecar(serializedData, dataColumnSidecar, gossipSubnet)
-      );
+      unwrapGossipResult(await chain.beaconEngine.validateGossipGloasDataColumnSidecar(serializedData, gossipSubnet));
 
       const addedColumn = payloadInput.addColumn({
         columnSidecar: dataColumnSidecar,
@@ -796,7 +792,8 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.blob_sidecar>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const blobSidecar = sszDeserialize(topic, serializedData);
+        const blobSidecar = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(blobSidecar, serializedData);
         const blobSlot = blobSidecar.signedBlockHeader.message.slot;
         const index = blobSidecar.index;
 
@@ -856,7 +853,8 @@ function getSequentialHandlers(
       return runGossipValidation(async () => {
         const {fork} = topic.boundary;
         const {serializedData} = gossipData;
-        const dataColumnSidecar = sszDeserialize(topic, serializedData);
+        const dataColumnSidecar = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(dataColumnSidecar, serializedData);
         const dataColumnSlot = getDataColumnSidecarSlot(dataColumnSidecar);
         const index = dataColumnSidecar.index;
         const delaySec = chain.clock.secFromSlot(dataColumnSlot, seenTimestampSec);
@@ -1035,17 +1033,14 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.beacon_aggregate_and_proof>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const signedAggregateAndProof = sszDeserialize(topic, serializedData);
+        // SSZ byte reuse can clear bitlist padding in the original gossip bytes.
+        const signedAggregateAndProof = sszDeserialize(topic, serializedData, {reuseBytes: false});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signedAggregateAndProof, serializedData);
         const {fork} = topic.boundary;
 
         try {
           unwrapGossipResult(
-            await chain.beaconEngine.validateGossipAggregateAndProof(
-              serializedData,
-              fork,
-              signedAggregateAndProof,
-              seenTimestampSec
-            )
+            await chain.beaconEngine.validateGossipAggregateAndProof(serializedData, fork, seenTimestampSec)
           );
         } catch (e) {
           if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
@@ -1083,8 +1078,9 @@ function getSequentialHandlers(
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
         const {fork} = topic.boundary;
-        const attesterSlashing = sszDeserialize(topic, serializedData);
-        unwrapGossipResult(await chain.beaconEngine.validateGossipAttesterSlashing(attesterSlashing, fork));
+        const attesterSlashing = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(attesterSlashing, serializedData);
+        unwrapGossipResult(await chain.beaconEngine.validateGossipAttesterSlashing(serializedData, fork));
 
         // Handler - deferred to next event loop so the validation result propagates first
         callInNextEventLoop(() => {
@@ -1107,8 +1103,9 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const proposerSlashing = sszDeserialize(topic, serializedData);
-        unwrapGossipResult(await chain.beaconEngine.validateGossipProposerSlashing(proposerSlashing));
+        const proposerSlashing = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(proposerSlashing, serializedData);
+        unwrapGossipResult(await chain.beaconEngine.validateGossipProposerSlashing(serializedData));
 
         // Handler - deferred to next event loop so the validation result propagates first
         callInNextEventLoop(() => {
@@ -1131,8 +1128,9 @@ function getSequentialHandlers(
     [GossipType.voluntary_exit]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const voluntaryExit = sszDeserialize(topic, serializedData);
-        unwrapGossipResult(await chain.beaconEngine.validateGossipVoluntaryExit(voluntaryExit));
+        const voluntaryExit = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(voluntaryExit, serializedData);
+        unwrapGossipResult(await chain.beaconEngine.validateGossipVoluntaryExit(serializedData));
 
         // Handler - deferred to next event loop so the validation result propagates first
         callInNextEventLoop(() => {
@@ -1155,9 +1153,10 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.sync_committee_contribution_and_proof>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const contributionAndProof = sszDeserialize(topic, serializedData);
+        const contributionAndProof = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(contributionAndProof, serializedData);
         await chain.beaconEngine
-          .validateSyncCommitteeGossipContributionAndProof(serializedData, contributionAndProof)
+          .validateSyncCommitteeGossipContributionAndProof(serializedData)
           .then(unwrapGossipResult)
           .catch((e) => {
             if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
@@ -1191,12 +1190,11 @@ function getSequentialHandlers(
     [GossipType.sync_committee]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.sync_committee>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const syncCommittee = sszDeserialize(topic, serializedData);
+        const syncCommittee = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(syncCommittee, serializedData);
         const {subnet} = topic;
         try {
-          unwrapGossipResult(
-            await chain.beaconEngine.validateGossipSyncCommittee(serializedData, syncCommittee, subnet)
-          );
+          unwrapGossipResult(await chain.beaconEngine.validateGossipSyncCommittee(serializedData, subnet));
         } catch (e) {
           if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
             chain.persistInvalidSszValue(ssz.altair.SyncCommitteeMessage, syncCommittee, "gossip_reject");
@@ -1237,8 +1235,9 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const blsToExecutionChange = sszDeserialize(topic, serializedData);
-        unwrapGossipResult(await chain.beaconEngine.validateGossipBlsToExecutionChange(blsToExecutionChange));
+        const blsToExecutionChange = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(blsToExecutionChange, serializedData);
+        unwrapGossipResult(await chain.beaconEngine.validateGossipBlsToExecutionChange(serializedData));
 
         // Handler - deferred to next event loop so the validation result propagates first
         callInNextEventLoop(() => {
@@ -1262,14 +1261,15 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const signedEnvelope = sszDeserialize(topic, serializedData);
+        const signedEnvelope = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signedEnvelope, serializedData);
         const envelope = signedEnvelope.message;
 
         // unlike BlockInput, we send the envelope into UnknownBlockInput sync
         // inside the sync it'll reconcile into PayloadEnvelopeInput and share the same cache with gossip
         try {
           unwrapGossipResult(
-            await chain.beaconEngine.validateGossipExecutionPayloadEnvelope(serializedData, signedEnvelope, {
+            await chain.beaconEngine.validateGossipExecutionPayloadEnvelope(serializedData, {
               source: PayloadEnvelopeInputSource.gossip,
               seenTimestampSec,
               peerIdStr,
@@ -1388,10 +1388,9 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.payload_attestation_message>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const payloadAttestationMessage = sszDeserialize(topic, serializedData);
-        unwrapGossipResult(
-          await chain.beaconEngine.validateGossipPayloadAttestationMessage(serializedData, payloadAttestationMessage)
-        );
+        const payloadAttestationMessage = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(payloadAttestationMessage, serializedData);
+        unwrapGossipResult(await chain.beaconEngine.validateGossipPayloadAttestationMessage(serializedData));
 
         // Handler - deferred to next event loop so the validation result propagates first
         callInNextEventLoop(() => {
@@ -1425,11 +1424,12 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const executionPayloadBid = sszDeserialize(topic, serializedData);
+        const executionPayloadBid = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(executionPayloadBid, serializedData);
         const {proposerIndex} = unwrapGossipResult(
           await chain.beaconEngine.validateGossipExecutionPayloadBid(
             serializedData,
-            executionPayloadBid,
+            topic.boundary.fork,
             seenTimestampSec
           )
         );
@@ -1467,10 +1467,9 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.proposer_preferences>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const signedProposerPreferences = sszDeserialize(topic, serializedData);
-        unwrapGossipResult(
-          await chain.beaconEngine.validateGossipProposerPreferences(serializedData, signedProposerPreferences)
-        );
+        const signedProposerPreferences = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signedProposerPreferences, serializedData);
+        unwrapGossipResult(await chain.beaconEngine.validateGossipProposerPreferences(serializedData));
 
         // Handler - deferred to next event loop so the validation result propagates first
         callInNextEventLoop(() => {

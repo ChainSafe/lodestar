@@ -28,7 +28,6 @@ import {
   ValidatorIndex,
   altair,
   capella,
-  deneb,
   electra,
   fulu,
   gloas,
@@ -42,6 +41,7 @@ import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {BlockBytes, BlockCache} from "../blocks/blockCache.js";
 import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
@@ -67,6 +67,7 @@ import {IBeaconEngineOptions} from "./options.js";
 import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
 
 export type BeaconEngineModules = {
+  serializedCache?: SerializedCache;
   blockCache?: BlockCache;
   builderApiClientOpts?: BuilderApiClientOpts;
   executionEngine: IExecutionEngine;
@@ -416,7 +417,6 @@ export interface IBeaconEngine {
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<rewards.SyncCommitteeRewards>;
 
-  // TODO - beacon engine: migrate the remaining gossip methods to bytes-only inputs.
   /**
    * Always returns a validation result, including decoding failures. Invalid SSZ or a mismatched
    * root returns Reject; unexpected internal failures are logged and return Ignore/UNEXPECTED_ERROR.
@@ -427,18 +427,13 @@ export interface IBeaconEngine {
     fork: ForkName,
     seenTimestampSec?: number
   ): Promise<GossipValidationResult<GossipBlockValidationResult>>;
-  validateGossipSyncCommittee(
-    syncCommitteeBytes: Uint8Array,
-    syncCommittee: altair.SyncCommitteeMessage,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>>;
+  validateGossipSyncCommittee(syncCommitteeBytes: Uint8Array, subnet: SubnetID): Promise<GossipValidationResult<void>>;
   validateApiSyncCommittee(
     syncCommitteeBytes: Uint8Array,
     syncCommittee: altair.SyncCommitteeMessage
   ): Promise<GossipValidationResult<{subnets: number[]}>>;
   validateSyncCommitteeGossipContributionAndProof(
     contributionBytes: Uint8Array,
-    signedContributionAndProof: altair.SignedContributionAndProof,
     skipValidationKnownParticipants?: boolean
   ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>>;
   validateApiSyncCommitteeContributionAndProof(
@@ -448,23 +443,17 @@ export interface IBeaconEngine {
   validateGossipBlobSidecar(
     blobBytes: Uint8Array,
     fork: ForkName,
-    blobSidecar: deneb.BlobSidecar,
     subnet: SubnetID
   ): Promise<GossipValidationResult<void>>;
   validateGossipFuluDataColumnSidecar(
     dataColumnBytes: Uint8Array,
-    dataColumnSidecar: fulu.DataColumnSidecar,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>>;
   validateGossipGloasDataColumnSidecar(
     dataColumnBytes: Uint8Array,
-    dataColumnSidecar: gloas.DataColumnSidecar,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>>;
-  validateGossipPayloadAttestationMessage(
-    payloadAttestationBytes: Uint8Array,
-    payloadAttestationMessage: gloas.PayloadAttestationMessage
-  ): Promise<GossipValidationResult<void>>;
+  validateGossipPayloadAttestationMessage(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateApiPayloadAttestationMessage(
     payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
@@ -482,7 +471,6 @@ export interface IBeaconEngine {
   validateGossipAggregateAndProof(
     aggregateBytes: Uint8Array,
     fork: ForkName,
-    signedAggregateAndProof: SignedAggregateAndProof,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
   validateApiAggregateAndProof(
@@ -492,7 +480,6 @@ export interface IBeaconEngine {
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
   validateGossipExecutionPayloadEnvelope(
     envelopeBytes: Uint8Array,
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
     source: SourceMeta
   ): Promise<GossipValidationResult<void>>;
   validateApiExecutionPayloadEnvelope(
@@ -502,37 +489,32 @@ export interface IBeaconEngine {
   ): Promise<GossipValidationResult<void>>;
   validateGossipExecutionPayloadBid(
     bidBytes: Uint8Array,
-    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
   validateApiExecutionPayloadBid(
     bidBytes: Uint8Array,
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
   ): Promise<GossipValidationResult<void>>;
-  validateGossipProposerPreferences(
-    preferencesBytes: Uint8Array,
-    signedProposerPreferences: gloas.SignedProposerPreferences
-  ): Promise<GossipValidationResult<void>>;
+  validateGossipProposerPreferences(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>>;
 
   // Op pool: gossip validate (+ insert on Accept) / API validate (throws, + insert) / REST reads. The
   // pools live inside the engine (not exposed as cache objects); the facade reaches them only here.
   validateGossipAttesterSlashing(
-    attesterSlashing: AttesterSlashing,
+    attesterSlashingBytes: Uint8Array,
     fork: ForkName
   ): Promise<GossipValidationResult<void>>;
   validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void>;
-  validateGossipProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<GossipValidationResult<void>>;
+  validateGossipProposerSlashing(proposerSlashingBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void>;
-  validateGossipVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<GossipValidationResult<void>>;
+  validateGossipVoluntaryExit(voluntaryExitBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateApiVoluntaryExit(
     voluntaryExit: phase0.SignedVoluntaryExit
   ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}>;
   drainDeferredVoluntaryExits(): phase0.SignedVoluntaryExit[];
   insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): void;
   processProposerEquivocation(slot: Slot, proposerIndex: ValidatorIndex): void;
-  validateGossipBlsToExecutionChange(
-    blsToExecutionChange: capella.SignedBLSToExecutionChange
-  ): Promise<GossipValidationResult<void>>;
+  validateGossipBlsToExecutionChange(blsToExecutionChangeBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateApiBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
     preCapella: boolean

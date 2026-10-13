@@ -1,7 +1,8 @@
 import {ForkName, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
-import {Root, SignedBeaconBlock, SubnetID, deneb} from "@lodestar/types";
+import {Root, SignedBeaconBlock, SubnetID, ssz} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
+import {GossipActionError} from "../../errors/gossipValidation.js";
 import {BlockErrorCode} from "../../errors/index.js";
 import * as blobSidecarValidation from "../../validation/blobSidecar.js";
 import * as blockValidation from "../../validation/block.js";
@@ -10,10 +11,12 @@ import type {BeaconEngine} from "../beaconEngine.js";
 import {
   GossipValidationResult,
   GossipValidationStatus,
+  fromResult,
   ignore,
   reject,
   runGossipValidation,
 } from "../gossipValidationResult.js";
+import {deserializeGossipMessage} from "./deserialize.js";
 
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/block.ts#validateGossipBlock.
@@ -110,14 +113,20 @@ export async function validateGossipBlock(
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/blobSidecar.ts#validateGossipBlobSidecar.
  * [beacon-engine] deviation: invoke validation with engine state and convert gossip errors to verdicts.
  */
-export function validateGossipBlobSidecar(
+export async function validateGossipBlobSidecar(
   this: BeaconEngine,
-  _blobBytes: Uint8Array,
+  blobBytes: Uint8Array,
   fork: ForkName,
-  blobSidecar: deneb.BlobSidecar,
   subnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
-  return runGossipValidation(() =>
-    blobSidecarValidation.validateGossipBlobSidecar.call(this, fork, blobSidecar, subnet)
-  );
+  try {
+    const blobSidecar = deserializeGossipMessage(ssz.deneb.BlobSidecar, blobBytes, this.serializedCache);
+    return await runGossipValidation(() =>
+      blobSidecarValidation.validateGossipBlobSidecar.call(this, fork, blobSidecar, subnet)
+    );
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip blob sidecar", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
 }

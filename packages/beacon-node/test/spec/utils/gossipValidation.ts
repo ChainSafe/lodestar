@@ -653,58 +653,39 @@ async function validateMessageForTopic(
     }
 
     case GossipType.proposer_slashing: {
-      const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).ProposerSlashing.deserialize(bytes));
       // Engine validates + inserts into its (internal) opPool (mirrors the gossip handler).
-      assertAccepted(await chain.beaconEngine.validateGossipProposerSlashing(slashing));
+      assertAccepted(await chain.beaconEngine.validateGossipProposerSlashing(bytes));
       break;
     }
 
     case GossipType.attester_slashing: {
-      const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes));
       // Engine validates + inserts into opPool + fork choice (mirrors the gossip handler).
-      assertAccepted(await chain.beaconEngine.validateGossipAttesterSlashing(slashing, fork));
+      assertAccepted(await chain.beaconEngine.validateGossipAttesterSlashing(bytes, fork));
       break;
     }
 
     case GossipType.voluntary_exit: {
-      const exit = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).SignedVoluntaryExit.deserialize(bytes));
-      assertAccepted(await chain.beaconEngine.validateGossipVoluntaryExit(exit));
+      assertAccepted(await chain.beaconEngine.validateGossipVoluntaryExit(bytes));
       break;
     }
 
     case GossipType.sync_committee: {
-      const syncCommitteeMessage = rejectOnInvalidSerializedBytes(() =>
-        ssz.altair.SyncCommitteeMessage.deserialize(bytes)
-      );
-      assertAccepted(
-        await chain.beaconEngine.validateGossipSyncCommittee(
-          bytes,
-          syncCommitteeMessage,
-          Number(message.subnet_id ?? 0)
-        )
-      );
+      assertAccepted(await chain.beaconEngine.validateGossipSyncCommittee(bytes, Number(message.subnet_id ?? 0)));
       break;
     }
 
     case GossipType.sync_committee_contribution_and_proof: {
-      const signedContributionAndProof = rejectOnInvalidSerializedBytes(() =>
-        ssz.altair.SignedContributionAndProof.deserialize(bytes)
-      );
-      assertAccepted(
-        await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(bytes, signedContributionAndProof)
-      );
+      assertAccepted(await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(bytes));
       break;
     }
 
     case GossipType.bls_to_execution_change: {
-      const blsToExecutionChange = rejectOnInvalidSerializedBytes(() =>
-        ssz.capella.SignedBLSToExecutionChange.deserialize(bytes)
-      );
       if (chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH) {
+        rejectOnInvalidSerializedBytes(() => ssz.capella.SignedBLSToExecutionChange.deserialize(bytes));
         throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_PRE_CAPELLA"});
       }
       // Engine validates + inserts into its (internal) opPool (mirrors the gossip handler).
-      assertAccepted(await chain.beaconEngine.validateGossipBlsToExecutionChange(blsToExecutionChange));
+      assertAccepted(await chain.beaconEngine.validateGossipBlsToExecutionChange(bytes));
       break;
     }
 

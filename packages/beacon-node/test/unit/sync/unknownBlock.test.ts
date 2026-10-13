@@ -961,6 +961,7 @@ describe("UnknownBlockSync", () => {
       const clock = new ClockStopped(0);
 
       const chain = {
+        opts: {},
         blockCache: new BlockCache(gloasConfig),
         getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
         emitter,
@@ -971,6 +972,7 @@ describe("UnknownBlockSync", () => {
         metrics: null,
         serializedCache: {
           get: vi.fn().mockReturnValue(undefined),
+          set: vi.fn(),
           delete: vi.fn(),
         } as unknown as IBeaconChain["serializedCache"],
         getBlockByRoot: vi.fn().mockResolvedValue(null),

@@ -198,7 +198,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       genesisTime,
       clock,
       forkChoice: getMockedForkChoice(),
-      serializedCache: new SerializedCache(),
+      serializedCache: new SerializedCache({cacheDeserialized: true}),
       blockCache: new BlockCache(config),
       verifiedBlocks: new Map(),
       events: new BeaconEngineEventBus(),
