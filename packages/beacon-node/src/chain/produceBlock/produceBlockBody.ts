@@ -766,20 +766,17 @@ export async function prepareExecutionPayload(
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
-  const buildPayloadAttributes = (): PayloadAttributes =>
-    preparePayloadAttributes(fork, chain, {
+  // Post-heze the attributes feed the cache key: inclusion lists keep arriving after a payload was
+  // prepared in advance, and a payload built without them would not satisfy the constraints
+  let attributes = payloadAttributes;
+  if (attributes === undefined && ForkSeq[fork] >= ForkSeq.heze) {
+    attributes = preparePayloadAttributes(fork, chain, {
       prepareState: state,
       prepareSlot: state.slot,
       parentBlockRoot,
       parentBlockHash,
       feeRecipient: suggestedFeeRecipient,
     });
-
-  // Post-heze the attributes feed the cache key: inclusion lists keep arriving after a payload was
-  // prepared in advance, and a payload built without them would not satisfy the constraints
-  let attributes = payloadAttributes;
-  if (attributes === undefined && ForkSeq[fork] >= ForkSeq.heze) {
-    attributes = buildPayloadAttributes();
   }
 
   const payloadIdCached = chain.executionEngine.payloadIdCache.get({
@@ -809,15 +806,21 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    payloadId = (
-      await chain.executionEngine.notifyForkchoiceUpdate(
-        fork,
-        toRootHex(parentBlockHash),
-        safeBlockHash,
-        finalizedBlockHash,
-        attributes ?? buildPayloadAttributes()
-      )
-    ).payloadId;
+    const forkchoiceUpdate = await chain.executionEngine.notifyForkchoiceUpdate(
+      fork,
+      toRootHex(parentBlockHash),
+      safeBlockHash,
+      finalizedBlockHash,
+      attributes ??
+        preparePayloadAttributes(fork, chain, {
+          prepareState: state,
+          prepareSlot: state.slot,
+          parentBlockRoot,
+          parentBlockHash,
+          feeRecipient: suggestedFeeRecipient,
+        })
+    );
+    payloadId = forkchoiceUpdate.payloadId;
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 
