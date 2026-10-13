@@ -18,6 +18,9 @@ on:
       - ".github/workflows/cl-interop.yml"
       - "scripts/kurtosis/cl-interop/**"
 
+permissions:
+  contents: read
+
 concurrency:
   group: cl-interop-${{ github.ref }}
   cancel-in-progress: false

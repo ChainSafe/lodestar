@@ -14,7 +14,8 @@ to each other on the p2p network. Every beacon node subscribes to all subnets, w
 otherwise not be published at all. A client without a beacon node (vero) gets a Lodestar beacon node and validator
 client as node 2, a client the package cannot run as a separate validator client (grandine) gets Lodestar on both
 sides of node 3. The nightly runs the `fulu` scenario, `gloas` is ready in the script and joins once the other
-clients are ready for it:
+clients are ready for it. The Nimbus validator client runs with doppelganger detection off until
+status-im/nimbus-eth2#9278 is fixed, it would otherwise exit on its own epoch 0 block proposal:
 
 - `fulu`: electra and fulu at genesis, finality 4
 - `gloas`: fulu at genesis and gloas at epoch 2, finality 5
@@ -23,7 +24,8 @@ Everything before the first finalized epoch is startup noise and is not judged. 
 
 - finality is not reached in time, or a slot is missed (reported with the proposer's pair), or one node proposes no
   block at all
-- a validator of either node misses the attestation target in a judged epoch (reported with the pair and the indices)
+- a validator of either node misses the attestation target in a judged epoch (reported with the pair and the indices),
+  or a pair hits the head with fewer than 90% of its attestations over the judged epochs
 - the sync committee or, in `gloas`, the payload timeliness committee fills fewer than 75% of its seats in a block
 - the Lodestar beacon node answers a request of the other validator client with an error status, rejects a gossip
   message, hits a req/resp error, loses a peer, or logs an error

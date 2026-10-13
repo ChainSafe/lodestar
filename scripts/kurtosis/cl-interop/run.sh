@@ -61,12 +61,64 @@ subscribe_all_subnets() {
 LODESTAR_BN_PARAMS='["--subscribeAllSubnets", "--serveHistoricalState", "--logLevelModule=api=debug,rest=debug"]'
 BN_PARAMS="[\"$(subscribe_all_subnets "$BN_TYPE")\"]"
 [ "$BN_TYPE" = "lodestar" ] && BN_PARAMS=$LODESTAR_BN_PARAMS
+# the nimbus validator client exits on its own epoch 0 block proposal while status-im/nimbus-eth2#9278 is open
+VC_PARAMS='[]'
+[ "$VC_TYPE" = "nimbus" ] && VC_PARAMS='["--doppelganger-detection=off"]'
 
 mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 # leftovers of an earlier run must not end up in this verdict
 find "$OUT_DIR" -mindepth 1 -maxdepth 1 ! -name args.yaml -exec rm -rf {} +
 log() { echo "[$CLIENT/$SCENARIO] $*"; }
+
+dump_logs() { [ -n "$1" ] && docker logs -t "$1" > "$OUT_DIR/$2" 2>&1 || true; }
+capture_logs() {
+  dump_logs "${CL_BOOT:-}" bn1-bootnode-lodestar.log
+  dump_logs "${CL_X:-}" "bn2-$BN_TYPE.log"
+  dump_logs "${VC_LS:-}" vc2-lodestar.log
+  dump_logs "${CL_LS:-}" bn3-lodestar.log
+  dump_logs "${VC_X:-}" "vc3-$VC_TYPE.log"
+  dump_logs "${EL_BOOT:-}" el1.log
+  dump_logs "${EL_X:-}" el2.log
+  dump_logs "${EL_LS:-}" el3.log
+  dump_logs "${SIGNER_X:-}" signer3.log
+  docker logs "spamoor-$ENCLAVE" > "$OUT_DIR/spamoor.log" 2>&1 || true
+}
+
+on_exit() {
+  local code=$1
+  # a failing command in here must not cut the cleanup short
+  set +e +o pipefail
+  if [ "$code" != "0" ]; then
+    # a failure before the verdict still gets a summary row with the reason, the container logs, a last metrics
+    # snapshot and the enclave contents for the artifacts
+    if [ ! -f "$OUT_DIR/result.json" ]; then
+      capture_logs
+      [ -n "${METRICS_LSVC:-}" ] && snapshot abort
+    fi
+    if [ ! -f "$OUT_DIR/summary.md" ]; then
+      local reason="run aborted before the verdict, see the run log"
+      if [ -f "$OUT_DIR/abort.reason" ]; then
+        reason=$(cat "$OUT_DIR/abort.reason")
+      elif [ -f "$OUT_DIR/kurtosis-run.log" ] && ! grep -q "starting enclave done" "$OUT_DIR/.progress" 2>/dev/null; then
+        # the service that failed and the first error from its own logs, not the generic Starlark wrapper lines
+        reason="enclave did not start: $(grep -oE "starting or updating the following services: '[^']*'|(ValueError|fail|panic|Error|error): [^\"]{0,200}" "$OUT_DIR/kurtosis-run.log" | grep -vE "Starlark|instruction \(number|starting or updating.*\] *$" | head -2 | tr '\n' ' ')"
+      fi
+      # the reason becomes the summary row, a known issue keeps the job green
+      if CLIENT="$CLIENT" BN_TYPE="${BN_TYPE:-}" VC_TYPE="${VC_TYPE:-}" BN_IMAGE="$BN_IMAGE" VC_IMAGE="$VC_IMAGE" SCENARIO="$SCENARIO" OUT_DIR="$OUT_DIR" \
+        BN_DIGEST="${BN_DIGEST:-}" VC_DIGEST="${VC_DIGEST:-}" ABORT_REASON="$reason" node "$SCRIPT_DIR/check.mjs"; then
+        code=0
+      fi
+    fi
+    kurtosis enclave dump "$ENCLAVE" "$OUT_DIR/enclave-dump" >/dev/null 2>&1 || true
+  fi
+  docker rm -f "spamoor-$ENCLAVE" >/dev/null 2>&1 || true
+  if [ "${KEEP:-0}" != "1" ]; then
+    kurtosis enclave rm -f "$ENCLAVE" >/dev/null 2>&1 || true
+  fi
+  exit "$code"
+}
+trap 'on_exit $?' EXIT
 
 # Floating tags must mean the latest build. The host may already have an older image under the same tag and a
 # registry mirror may still serve an older manifest for it, so resolve the tag at the registry and pull by digest.
@@ -86,7 +138,7 @@ EL_REF=$(ref "$EL_REPO" "$EL_DIGEST" "$EL_IMAGE")
 BN_REF=$(ref "$BN_REPO" "$BN_DIGEST" "$BN_IMAGE")
 VC_REF=$(ref "$VC_REPO" "$VC_DIGEST" "$VC_IMAGE")
 for image in "$LODESTAR_REF" "$EL_REF" "$BN_REF" "$VC_REF"; do docker pull -q "$image" > /dev/null; done
-LODESTAR_VERSION=$(docker run --rm --entrypoint node "$LODESTAR_REF" /usr/app/packages/cli/bin/lodestar.js --version 2>/dev/null | sed -n 's/.*Version: //p' | head -1)
+LODESTAR_VERSION=$(docker run --rm --entrypoint node "$LODESTAR_REF" /usr/app/packages/cli/bin/lodestar.js --version 2>/dev/null | sed -n 's/.*Version: //p' | head -1 || true)
 cat > "$OUT_DIR/args.yaml" <<YAML
 participants:
   # the first node is the bootnode of the package and a second Lodestar view of the other client
@@ -116,6 +168,7 @@ participants:
     use_remote_signer: $REMOTE_SIGNER
     vc_type: $VC_TYPE
     vc_image: $VC_REF
+    vc_extra_params: $VC_PARAMS
     supernode: true
 network_params:
   preset: minimal
@@ -139,52 +192,6 @@ snooper_params:
 persistent: true
 YAML
 
-capture_logs() {
-  [ -n "${CL_BOOT:-}" ] || return 0
-  docker logs -t "$CL_BOOT" > "$OUT_DIR/bn1-bootnode-lodestar.log" 2>&1
-  docker logs -t "$CL_X" > "$OUT_DIR/bn2-$BN_TYPE.log" 2>&1
-  docker logs -t "$VC_LS" > "$OUT_DIR/vc2-lodestar.log" 2>&1
-  docker logs -t "$CL_LS" > "$OUT_DIR/bn3-lodestar.log" 2>&1
-  docker logs -t "$VC_X" > "$OUT_DIR/vc3-$VC_TYPE.log" 2>&1
-  [ -n "$EL_BOOT" ] && docker logs -t "$EL_BOOT" > "$OUT_DIR/el1.log" 2>&1
-  docker logs -t "$EL_X" > "$OUT_DIR/el2.log" 2>&1
-  docker logs -t "$EL_LS" > "$OUT_DIR/el3.log" 2>&1
-  [ -n "$SIGNER_X" ] && docker logs -t "$SIGNER_X" > "$OUT_DIR/signer3.log" 2>&1
-  docker logs "spamoor-$ENCLAVE" > "$OUT_DIR/spamoor.log" 2>&1 || true
-}
-
-on_exit() {
-  local code=$1
-  if [ "$code" != "0" ]; then
-    # a failure before the verdict still gets a summary row with the reason, the container logs, a last metrics
-    # snapshot and the enclave contents for the artifacts
-    if [ ! -f "$OUT_DIR/result.json" ]; then
-      capture_logs
-      [ -n "${METRICS_LSVC:-}" ] && snapshot abort || true
-    fi
-    if [ ! -f "$OUT_DIR/summary.md" ]; then
-      local reason="run aborted before the verdict, see the run log"
-      if [ -f "$OUT_DIR/abort.reason" ]; then
-        reason=$(cat "$OUT_DIR/abort.reason")
-      elif [ -f "$OUT_DIR/kurtosis-run.log" ] && ! grep -q "starting enclave done" "$OUT_DIR/.progress" 2>/dev/null; then
-        # the service that failed and the first error from its own logs, not the generic Starlark wrapper lines
-        reason="enclave did not start: $(grep -oE "starting or updating the following services: '[^']*'|(ValueError|fail|panic|Error|error): [^\"]{0,200}" "$OUT_DIR/kurtosis-run.log" | grep -vE "Starlark|instruction \(number|starting or updating.*\] *$" | head -2 | tr '\n' ' ')"
-      fi
-      # the reason becomes the summary row, a known issue keeps the job green
-      if CLIENT="$CLIENT" BN_TYPE="${BN_TYPE:-}" VC_TYPE="${VC_TYPE:-}" BN_IMAGE="$BN_IMAGE" VC_IMAGE="$VC_IMAGE" SCENARIO="$SCENARIO" OUT_DIR="$OUT_DIR" \
-        BN_DIGEST="${BN_DIGEST:-}" VC_DIGEST="${VC_DIGEST:-}" ABORT_REASON="$reason" node "$SCRIPT_DIR/check.mjs"; then
-        code=0
-      fi
-    fi
-    kurtosis enclave dump "$ENCLAVE" "$OUT_DIR/enclave-dump" >/dev/null 2>&1 || true
-  fi
-  docker rm -f "spamoor-$ENCLAVE" >/dev/null 2>&1 || true
-  if [ "${KEEP:-0}" != "1" ]; then
-    kurtosis enclave rm -f "$ENCLAVE" >/dev/null 2>&1 || true
-  fi
-  exit "$code"
-}
-trap 'on_exit $?' EXIT
 
 container() { docker ps -a --filter "network=kt-$ENCLAVE" --format '{{.Names}}' | grep "^$1" | head -1 || true; }
 # a validator client that exited explains a dead half of the network better than any chain metric
@@ -215,11 +222,16 @@ wait_finalized() {
   done
 }
 snapshot() {
-  curl -sf --max-time 5 "http://127.0.0.1:$METRICS_LS/metrics" > "$OUT_DIR/metrics-$1-lsbn.txt"
-  curl -sf --max-time 5 "http://127.0.0.1:$METRICS_LSVC/metrics" > "$OUT_DIR/metrics-$1-lsvc.txt"
+  local who
+  for who in "lsbn:$METRICS_LS" "lsvc:$METRICS_LSVC"; do
+    if ! curl -sf --max-time 5 "http://127.0.0.1:${who#*:}/metrics" > "$OUT_DIR/metrics-$1-${who%%:*}.txt"; then
+      [ -f "$OUT_DIR/abort.reason" ] || echo "metrics of lodestar ${who%%:*} unreachable at snapshot $1 ($(container_states))" > "$OUT_DIR/abort.reason"
+      return 1
+    fi
+  done
   # the bootnode is not judged, its peer counters tell who dropped whom when the others lose each other
-  curl -sf --max-time 5 "http://127.0.0.1:$METRICS_BOOT/metrics" > "$OUT_DIR/metrics-$1-bootnode.txt"
-  [ "$BN_TYPE" = "lodestar" ] && curl -sf --max-time 5 "http://127.0.0.1:$METRICS_X/metrics" > "$OUT_DIR/metrics-$1-xbn.txt"
+  curl -sf --max-time 5 "http://127.0.0.1:$METRICS_BOOT/metrics" > "$OUT_DIR/metrics-$1-bootnode.txt" || true
+  [ "$BN_TYPE" = "lodestar" ] && { curl -sf --max-time 5 "http://127.0.0.1:$METRICS_X/metrics" > "$OUT_DIR/metrics-$1-xbn.txt" || true; }
   date -u +%Y-%m-%dT%H:%M:%S.000Z > "$OUT_DIR/snapshot-$1.time"
 }
 log "starting enclave $ENCLAVE (lodestar $LODESTAR_IMAGE ${LODESTAR_DIGEST:0:19} ${LODESTAR_VERSION:-unknown version}, $BN_TYPE bn $BN_IMAGE ${BN_DIGEST:0:19}, $VC_TYPE vc $VC_IMAGE ${VC_DIGEST:0:19}, geth $EL_IMAGE ${EL_DIGEST:0:19})"
@@ -266,7 +278,7 @@ log "blob spammer started against $EL_X and $EL_LS"
 # everything before the first finalized epoch is startup noise and not judged
 wait_finalized 1 420
 snapshot start
-log "finalized epoch 1, judging from here"
+log "finalized epoch $(finalized), judging from here"
 
 wait_finalized "$FINALITY_TARGET" 600
 snapshot end

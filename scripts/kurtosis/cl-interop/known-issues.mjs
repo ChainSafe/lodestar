@@ -6,7 +6,7 @@
 export const knownIssues = [
   {
     client: "prysm",
-    failure: /^lodestar bn \(node 3\): \d+ REST API error responses \(getAggregatedAttestationV2 404 x\d+\)$/,
+    failure: /^lodestar bn \(node 3\): \d+ REST API error responses \(getAggregatedAttestationV2 404 x(?:[1-9]|1\d)\)$/,
     note: "Lodestar hands out attestation data with the next epoch's source after 2/3 of the last slot of an epoch, the prysm aggregators re-fetch the data at that point",
     issue: "https://github.com/ChainSafe/lodestar/issues/10368",
   },
@@ -15,13 +15,6 @@ export const knownIssues = [
     failure: /^lodestar vc \(node 2\) log: warn: Proposer duties re-org/,
     note: "the prysm beacon node returns the dependent root of the current epoch for next-epoch proposer duties",
     issue: "https://github.com/OffchainLabs/prysm/issues/17681",
-  },
-  {
-    client: "nimbus",
-    failure: /nimbus vc exited/,
-    evidence: ["vc3-nimbus.log", /Doppelganger detection triggered/],
-    note: "the nimbus validator client trips its own doppelganger detection on a block proposal in epoch 0, or on Lodestar reporting last-slot attesters live in the next epoch (ChainSafe/lodestar#10367)",
-    issue: "https://github.com/status-im/nimbus-eth2/issues/9278",
   },
   {
     client: "vero",

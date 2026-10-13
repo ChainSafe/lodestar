@@ -34,6 +34,8 @@ const FIRST_JUDGED_EPOCH = 2;
 const FIRST_JUDGED_SLOT = FIRST_JUDGED_EPOCH * SLOTS_PER_EPOCH;
 // a committee filling fewer of its seats in a block means one side stopped delivering
 const MIN_COMMITTEE_SHARE = 0.75;
+// head votes are lost to late blocks and stale attestation data, a pair below this over the judged epochs is a failure
+const MIN_HEAD_SHARE = 0.9;
 // the bootnode has no validators, node 2 holds the first 64 and node 3 the next 64
 const PAIR = [`${BN_TYPE} bn + lodestar vc`, `lodestar bn + ${VC_TYPE} vc`];
 const nodeOf = (validatorIndex) => Math.floor(validatorIndex / VALIDATORS_PER_NODE);
@@ -76,9 +78,14 @@ const writeSummaryRow = (bn, vc, verdict, lines) =>
     `| ${CLIENT} | ${bn} | ${vc} | ${SCENARIO} | ${RESULT[verdict]} | ${lines.join("<br>").replace(/\\/g, "\\\\").replace(/\|/g, "\\|")} |\n`
   );
 
-// run.sh hands over the reason when the run aborted before the verdict, the row then carries only that reason
+// run.sh hands over the reason when the run aborted before the verdict, the row then carries only that reason. A
+// Lodestar container that is not running is a failure of its own, no other client's known issue can cover it
 if (process.env.ABORT_REASON !== undefined) {
-  const {failures, known} = classify([process.env.ABORT_REASON.trim()]);
+  const reason = process.env.ABORT_REASON.trim();
+  const lodestarDown = [...reason.matchAll(/\b(lodestar (?:bn|vc)) (exited[^,)]*|dead|gone|restarting|paused)/g)].map(
+    ([, who, state]) => `${who} ${state}`
+  );
+  const {failures, known} = classify([reason, ...lodestarDown]);
   const verdict = verdictOf(failures, known);
   writeSummaryRow(`\`${BN_IMAGE}\` ${BN_DIGEST}`, `\`${VC_IMAGE}\` ${VC_DIGEST}`, verdict, [...failures, ...known]);
   console.log(`${verdict.toUpperCase()} ${CLIENT}/${SCENARIO}: ${[...failures, ...known].join("; ")}`);
@@ -125,7 +132,12 @@ const popcount = (hex) => {
 };
 
 async function beacon(port, route) {
-  const res = await fetch(`http://127.0.0.1:${port}${route}`, {headers: {accept: "application/json"}});
+  let res;
+  try {
+    res = await fetch(`http://127.0.0.1:${port}${route}`, {headers: {accept: "application/json"}});
+  } catch (e) {
+    return {status: 0, body: null, error: e instanceof Error ? e.message : String(e)};
+  }
   let body = null;
   try {
     body = await res.json();
@@ -159,7 +171,7 @@ function judgeBeaconNode(who, before, after) {
   if (ignored.length > 0) notes.push(`${who}: ${total(ignored)} gossip messages ignored (${describe(reasons)})`);
 }
 
-function judgeValidatorClient(who, before, after, fullRun) {
+function judgeValidatorClient(who, before, after) {
   const requestErrors = deltaByLabel(before, after, "vc_rest_api_client_request_errors_total");
   if (requestErrors.length > 0) fail(`${who}: ${total(requestErrors)} beacon node request errors (${describe(requestErrors)})`);
   const counters = [
@@ -176,18 +188,16 @@ function judgeValidatorClient(who, before, after, fullRun) {
     const d = deltaByLabel(before, after, name);
     if (d.length > 0) fail(`${who}: ${total(d)} ${text} (${describe(d)})`);
   }
-  if (fullRun) {
-    const published = [
-      ["vc_published_attestations_total", "attestations", fail],
-      ["vc_published_aggregates_total", "aggregates", fail],
-      ["vc_published_sync_committee_message_total", "sync committee messages", fail],
-      ["vc_published_sync_committee_contribution_total", "sync committee contributions", (m) => notes.push(m)],
-      ["vc_block_published_total", "blocks", (m) => notes.push(m)],
-    ];
-    if (SCENARIO === "gloas") published.push(["vc_published_payload_attestations_total", "payload attestations", fail]);
-    for (const [name, text, report] of published) {
-      if (delta(before, after, name) === 0) report(`${who}: published no ${text}`);
-    }
+  const published = [
+    ["vc_published_attestations_total", "attestations", fail],
+    ["vc_published_aggregates_total", "aggregates", fail],
+    ["vc_published_sync_committee_message_total", "sync committee messages", fail],
+    ["vc_published_sync_committee_contribution_total", "sync committee contributions", (m) => notes.push(m)],
+    ["vc_block_published_total", "blocks", (m) => notes.push(m)],
+  ];
+  if (SCENARIO === "gloas") published.push(["vc_published_payload_attestations_total", "payload attestations", fail]);
+  for (const [name, text, report] of published) {
+    if (delta(before, after, name) === 0) report(`${who}: published no ${text}`);
   }
   const health = sum(metric(after, "vc_beacon_health"));
   if (health !== 0) fail(`${who}: beacon health ${health} at the end (0 ready, 1 syncing, 2 error)`);
@@ -196,7 +206,7 @@ function judgeValidatorClient(who, before, after, fullRun) {
 // request and error deltas after the first finalized epoch
 judgeBeaconNode("lodestar bn (node 3)", snap("start", "lsbn"), snap("end", "lsbn"));
 if (hasLodestarXBn) judgeBeaconNode("lodestar bn (node 2)", snap("start", "xbn"), snap("end", "xbn"));
-judgeValidatorClient("lodestar vc (node 2)", snap("start", "lsvc"), snap("end", "lsvc"), true);
+judgeValidatorClient("lodestar vc (node 2)", snap("start", "lsvc"), snap("end", "lsvc"));
 const peerClients = metric(snap("end", "lsbn"), "lodestar_peers_by_client_count")
   .filter(([, v]) => v > 0)
   .map(([k]) => k.match(/client="([^"]*)"/)?.[1])
@@ -233,8 +243,8 @@ const lodestarLogFailures = (file, who, levels) => {
   for (const text of judgedLines(file)) {
     const m = text.match(/\b(warn|error): (.*)$/);
     if (!m || !levels.includes(m[1])) continue;
-    // the message ends where the structured fields start
-    const key = `${m[1]}: ${m[2].replace(/ \S+=.*$/, "").trim()}`;
+    // the message ends where the structured fields start, request ids would make every request its own line
+    const key = `${m[1]}: ${m[2].replace(/ \S+=.*$/, "").replace(/\breq-\w+/, "req-*").trim()}`;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   for (const [key, n] of counts) fail(`${who} log: ${key}${n > 1 ? ` (x${n})` : ""}`);
@@ -247,151 +257,176 @@ if (hasLodestarXBn) {
   lodestarLogFailures("bn2-lodestar.log", "lodestar bn (node 2)", ["error"]);
 }
 
-// chain progress as the Lodestar beacon node sees it: missed slots with their proposer's pair, blocks and blobs per
-// node, sync committee and payload timeliness committee seats filled per block
-const head = Number((await beacon(API_LS, "/eth/v1/beacon/headers/head")).body.data.header.message.slot);
-const finalityLs = (await beacon(API_LS, "/eth/v1/beacon/states/head/finality_checkpoints")).body.data.finalized;
-const finalized = Number(finalityLs.epoch);
-const proposerOf = new Map();
-for (let epoch = 0; epoch <= Math.floor(head / SLOTS_PER_EPOCH); epoch++) {
-  const duties = await beacon(API_LS, `/eth/v1/validator/duties/proposer/${epoch}`);
-  for (const duty of duties.body?.data ?? []) proposerOf.set(Number(duty.slot), Number(duty.validator_index));
-}
+// the chain as the Lodestar beacon node sees it and the cross-node checks need both nodes to answer, a node that goes
+// away during the verdict costs one failure line instead of the row
+let head = -1;
+let finalized = -1;
+let finalityLs = null;
+let versionX = "";
+let envelopes = "";
 const proposals = [0, 0];
 const blobBlocks = [0, 0];
 let blobs = 0;
 const missed = [];
-const slotOfRoot = new Map();
 const syncShares = [];
 const ptcShares = [];
-const gloasBlockSlots = [];
-for (let slot = 1; slot <= head; slot++) {
-  const judged = slot >= FIRST_JUDGED_SLOT;
-  const header = await beacon(API_LS, `/eth/v1/beacon/headers/${slot}`);
-  if (header.status !== 200) {
-    if (judged) missed.push(slot);
-    continue;
-  }
-  slotOfRoot.set(header.body.data.root, slot);
-  const message = (await beacon(API_LS, `/eth/v2/beacon/blocks/${slot}`)).body.data.message;
-  const node = nodeOf(Number(message.proposer_index));
-  proposals[node]++;
-  const bid = message.body.signed_execution_payload_bid;
-  const commitments = bid ? bid.message.blob_kzg_commitments : (message.body.blob_kzg_commitments ?? []);
-  blobs += commitments.length;
-  if (commitments.length > 0) blobBlocks[node]++;
-  if (judged) syncShares.push([slot, popcount(message.body.sync_aggregate.sync_committee_bits) / SYNC_COMMITTEE_SIZE]);
-  if (bid) {
-    gloasBlockSlots.push(slot);
-    // the payload attestations in a block vote on the parent's payload, judged when the parent is the previous slot
-    const parentSlot = slotOfRoot.get(message.parent_root);
-    if (judged && parentSlot === slot - 1 && parentSlot >= GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH) {
-      const seats = message.body.payload_attestations
-        .filter((a) => a.data.beacon_block_root === message.parent_root && a.data.payload_present)
-        .reduce((n, a) => n + popcount(a.aggregation_bits), 0);
-      ptcShares.push([slot, seats / PTC_SIZE]);
-    }
-  }
-}
-if (missed.length > 0) {
-  const who = (slot) => (proposerOf.has(slot) ? ` (${PAIR[nodeOf(proposerOf.get(slot))]})` : "");
-  fail(`missed slots after the first epoch: ${missed.map((slot) => `${slot}${who(slot)}`).join(", ")}`);
-}
-for (const [n, label] of [[0, PAIR[0]], [1, PAIR[1]]]) {
-  if (proposals[n] === 0) fail(`no block proposed by ${label}`);
-}
-if (blobs === 0) fail("no blob was included, the spammer did not run");
-const lowSync = syncShares.filter(([, share]) => share < MIN_COMMITTEE_SHARE);
-if (lowSync.length > 0) {
-  fail(`sync aggregate below ${pct(MIN_COMMITTEE_SHARE)} of the committee in slots ${lowSync.map(([slot, share]) => `${slot} (${pct(share)})`).join(", ")}`);
-}
-const lowPtc = ptcShares.filter(([, share]) => share < MIN_COMMITTEE_SHARE);
-if (lowPtc.length > 0) {
-  fail(`payload attestations below ${pct(MIN_COMMITTEE_SHARE)} of the committee in slots ${lowPtc.map(([slot, share]) => `${slot} (${pct(share)})`).join(", ")}`);
-}
-
-// attestation participation per validator from the state at the end of the following epoch, every validator of both
-// nodes has to hit the target in every judged epoch
-const participationFlags = (value) =>
-  Array.isArray(value) ? value.map(Number) : [...Buffer.from(String(value).replace(/^0x/, ""), "hex")];
 const judgedEpochs = [];
 const targetMisses = [];
 const headMisses = [0, 0];
-const lastJudgedEpoch = Math.floor((head + 1) / SLOTS_PER_EPOCH) - 2;
-for (let epoch = FIRST_JUDGED_EPOCH; epoch <= lastJudgedEpoch; epoch++) {
-  const slot = (epoch + 2) * SLOTS_PER_EPOCH - 1;
-  const state = await beacon(API_LS, `/eth/v2/debug/beacon/states/${slot}`);
-  if (state.status !== 200) {
-    fail(`lodestar bn: state at slot ${slot} not available (${state.status}), participation of epoch ${epoch} not judged`);
-    continue;
+try {
+  // chain progress as the Lodestar beacon node sees it: missed slots with their proposer's pair, blocks and blobs per
+  // node, sync committee and payload timeliness committee seats filled per block
+  const headRes = await beacon(API_LS, "/eth/v1/beacon/headers/head");
+  const finalityRes = await beacon(API_LS, "/eth/v1/beacon/states/head/finality_checkpoints");
+  if (headRes.status !== 200 || finalityRes.status !== 200) {
+    throw new Error(`lodestar bn: headers/head ${headRes.status}, finality_checkpoints ${finalityRes.status}`);
   }
-  judgedEpochs.push(epoch);
-  const missedTarget = [];
-  participationFlags(state.body.data.previous_epoch_participation).forEach((flags, index) => {
-    if (!(flags & TIMELY_TARGET_FLAG)) missedTarget.push(index);
-    if (!(flags & TIMELY_HEAD_FLAG)) headMisses[nodeOf(index)]++;
-  });
-  if (missedTarget.length > 0) targetMisses.push([epoch, missedTarget]);
-}
-for (const [epoch, indices] of targetMisses) {
-  const byNode = [0, 1]
-    .map((n) => [n, indices.filter((i) => nodeOf(i) === n)])
-    .filter(([, ids]) => ids.length > 0)
-    .map(([n, ids]) => `${ids.length} on ${PAIR[n]}: ${ids.slice(0, 8).join(",")}${ids.length > 8 ? ",…" : ""}`);
-  fail(`epoch ${epoch}: ${indices.length} validators missed the target (${byNode.join("; ")})`);
-}
-
-// the other beacon node has to agree with the Lodestar one and the two have to be connected to each other
-const finalityX = await beacon(API_X, "/eth/v1/beacon/states/head/finality_checkpoints");
-if (finalityX.status !== 200) {
-  fail(`${BN_TYPE} bn: finality checkpoints returned ${finalityX.status}`);
-} else if (finalityX.body.data.finalized.root !== finalityLs.root || Number(finalityX.body.data.finalized.epoch) !== finalized) {
-  fail(`nodes disagree on finality: lodestar bn ${finalized} ${finalityLs.root.slice(0, 10)}, ${BN_TYPE} bn ${finalityX.body.data.finalized.epoch} ${finalityX.body.data.finalized.root.slice(0, 10)}`);
-}
-const headX = await beacon(API_X, "/eth/v1/beacon/headers/head");
-const headSlotX = Number(headX.body?.data.header.message.slot ?? -1);
-if (Math.abs(headSlotX - head) > 1) fail(`heads apart: lodestar bn at slot ${head}, ${BN_TYPE} bn at slot ${headSlotX}`);
-const syncingX = await beacon(API_X, "/eth/v1/node/syncing");
-if (syncingX.body?.data.is_syncing !== false) fail(`${BN_TYPE} bn reports syncing at the end`);
-for (const [api, name, peerId, peerName] of [
-  [API_LS, "lodestar bn (node 3)", X_PEER_ID, `${BN_TYPE} bn`],
-  [API_X, `${BN_TYPE} bn (node 2)`, LS_PEER_ID, "lodestar bn"],
-]) {
-  const peers = await beacon(api, "/eth/v1/node/peers?state=connected");
-  const connected = peers.body?.data ?? [];
-  if (!connected.some((p) => p.peer_id === peerId)) fail(`${name} is not connected to ${peerName} at the end (${connected.length} peers)`);
-}
-const versionX = (await beacon(API_X, "/eth/v1/node/version")).body?.data.version ?? "";
-
-// gloas: the fork happened on both nodes and the Lodestar node serves every archived envelope
-let envelopes = "";
-if (SCENARIO === "gloas") {
-  const spec = (await beacon(API_LS, "/eth/v1/config/spec")).body.data;
-  for (const [api, name] of [[API_LS, "lodestar bn"], [API_X, `${BN_TYPE} bn`]]) {
-    const fork = await beacon(api, "/eth/v1/beacon/states/head/fork");
-    const version = fork.body?.data.current_version;
-    if (version !== spec.GLOAS_FORK_VERSION) fail(`${name}: head fork version ${version} is not gloas ${spec.GLOAS_FORK_VERSION}`);
+  head = Number(headRes.body.data.header.message.slot);
+  finalityLs = finalityRes.body.data.finalized;
+  finalized = Number(finalityLs.epoch);
+  const proposerOf = new Map();
+  for (let epoch = 0; epoch <= Math.floor(head / SLOTS_PER_EPOCH); epoch++) {
+    const duties = await beacon(API_LS, `/eth/v1/validator/duties/proposer/${epoch}`);
+    for (const duty of duties.body?.data ?? []) proposerOf.set(Number(duty.slot), Number(duty.validator_index));
   }
-  if (finalized <= GLOAS_FORK_EPOCH) fail(`finalized epoch ${finalized} does not cover gloas slots`);
-  // the newest envelope may still be in flight
-  const slots = gloasBlockSlots.filter((slot) => slot < head);
-  const served = [0, 0];
-  const statusesX = new Set();
-  for (const slot of slots) {
-    const [resLs, resX] = await Promise.all(
-      [API_LS, API_X].map((api) =>
-        fetch(`http://127.0.0.1:${api}/eth/v1/beacon/execution_payload_envelopes/${slot}`, {headers: {accept: "application/octet-stream"}}).then(
-          async (res) => ({status: res.status, bytes: (await res.arrayBuffer()).byteLength})
+  const slotOfRoot = new Map();
+  const gloasBlockSlots = [];
+  for (let slot = 1; slot <= head; slot++) {
+    const judged = slot >= FIRST_JUDGED_SLOT;
+    const header = await beacon(API_LS, `/eth/v1/beacon/headers/${slot}`);
+    if (header.status !== 200) {
+      if (judged) missed.push(slot);
+      continue;
+    }
+    slotOfRoot.set(header.body.data.root, slot);
+    const block = await beacon(API_LS, `/eth/v2/beacon/blocks/${slot}`);
+    if (block.status !== 200) {
+      fail(`lodestar bn: block at slot ${slot} returned ${block.status}`);
+      continue;
+    }
+    const message = block.body.data.message;
+    const node = nodeOf(Number(message.proposer_index));
+    proposals[node]++;
+    const bid = message.body.signed_execution_payload_bid;
+    const commitments = bid ? bid.message.blob_kzg_commitments : (message.body.blob_kzg_commitments ?? []);
+    blobs += commitments.length;
+    if (commitments.length > 0) blobBlocks[node]++;
+    if (judged) syncShares.push([slot, popcount(message.body.sync_aggregate.sync_committee_bits) / SYNC_COMMITTEE_SIZE]);
+    if (bid) {
+      gloasBlockSlots.push(slot);
+      // the payload attestations in a block vote on the parent's payload, judged when the parent is the previous slot
+      const parentSlot = slotOfRoot.get(message.parent_root);
+      if (judged && parentSlot === slot - 1 && parentSlot >= GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH) {
+        const seats = message.body.payload_attestations
+          .filter((a) => a.data.beacon_block_root === message.parent_root && a.data.payload_present)
+          .reduce((n, a) => n + popcount(a.aggregation_bits), 0);
+        ptcShares.push([slot, seats / PTC_SIZE]);
+      }
+    }
+  }
+  if (missed.length > 0) {
+    const who = (slot) => (proposerOf.has(slot) ? ` (${PAIR[nodeOf(proposerOf.get(slot))]})` : "");
+    fail(`missed slots after the first epoch: ${missed.map((slot) => `${slot}${who(slot)}`).join(", ")}`);
+  }
+  for (const [n, label] of [[0, PAIR[0]], [1, PAIR[1]]]) {
+    if (proposals[n] === 0) fail(`no block proposed by ${label}`);
+  }
+  if (blobs === 0) fail("no blob was included, the spammer did not run");
+  const lowSync = syncShares.filter(([, share]) => share < MIN_COMMITTEE_SHARE);
+  if (lowSync.length > 0) {
+    fail(`sync aggregate below ${pct(MIN_COMMITTEE_SHARE)} of the committee in slots ${lowSync.map(([slot, share]) => `${slot} (${pct(share)})`).join(", ")}`);
+  }
+  const lowPtc = ptcShares.filter(([, share]) => share < MIN_COMMITTEE_SHARE);
+  if (lowPtc.length > 0) {
+    fail(`payload attestations below ${pct(MIN_COMMITTEE_SHARE)} of the committee in slots ${lowPtc.map(([slot, share]) => `${slot} (${pct(share)})`).join(", ")}`);
+  }
+
+  // attestation participation per validator from the state at the end of the following epoch, every validator of both
+  // nodes has to hit the target in every judged epoch
+  const participationFlags = (value) =>
+    Array.isArray(value) ? value.map(Number) : [...Buffer.from(String(value).replace(/^0x/, ""), "hex")];
+  const lastJudgedEpoch = Math.floor((head + 1) / SLOTS_PER_EPOCH) - 2;
+  for (let epoch = FIRST_JUDGED_EPOCH; epoch <= lastJudgedEpoch; epoch++) {
+    const slot = (epoch + 2) * SLOTS_PER_EPOCH - 1;
+    const state = await beacon(API_LS, `/eth/v2/debug/beacon/states/${slot}`);
+    if (state.status !== 200) {
+      fail(`lodestar bn: state at slot ${slot} not available (${state.status}), participation of epoch ${epoch} not judged`);
+      continue;
+    }
+    judgedEpochs.push(epoch);
+    const missedTarget = [];
+    participationFlags(state.body.data.previous_epoch_participation).forEach((flags, index) => {
+      if (!(flags & TIMELY_TARGET_FLAG)) missedTarget.push(index);
+      if (!(flags & TIMELY_HEAD_FLAG)) headMisses[nodeOf(index)]++;
+    });
+    if (missedTarget.length > 0) targetMisses.push([epoch, missedTarget]);
+  }
+  for (const [epoch, indices] of targetMisses) {
+    const byNode = [0, 1]
+      .map((n) => [n, indices.filter((i) => nodeOf(i) === n)])
+      .filter(([, ids]) => ids.length > 0)
+      .map(([n, ids]) => `${ids.length} on ${PAIR[n]}: ${ids.slice(0, 8).join(",")}${ids.length > 8 ? ",…" : ""}`);
+    fail(`epoch ${epoch}: ${indices.length} validators missed the target (${byNode.join("; ")})`);
+  }
+  const attestations = judgedEpochs.length * VALIDATORS_PER_NODE;
+  for (const n of [0, 1]) {
+    const share = attestations > 0 ? 1 - headMisses[n] / attestations : 1;
+    if (share < MIN_HEAD_SHARE) fail(`${PAIR[n]}: ${pct(share)} of the attestations in the judged epochs hit the head`);
+  }
+
+  // the other beacon node has to agree with the Lodestar one and the two have to be connected to each other
+  const finalityX = await beacon(API_X, "/eth/v1/beacon/states/head/finality_checkpoints");
+  if (finalityX.status !== 200) {
+    fail(`${BN_TYPE} bn: finality checkpoints returned ${finalityX.status}`);
+  } else if (finalityX.body.data.finalized.root !== finalityLs.root || Number(finalityX.body.data.finalized.epoch) !== finalized) {
+    fail(`nodes disagree on finality: lodestar bn ${finalized} ${finalityLs.root.slice(0, 10)}, ${BN_TYPE} bn ${finalityX.body.data.finalized.epoch} ${finalityX.body.data.finalized.root.slice(0, 10)}`);
+  }
+  const headX = await beacon(API_X, "/eth/v1/beacon/headers/head");
+  const headSlotX = Number(headX.body?.data.header.message.slot ?? -1);
+  if (Math.abs(headSlotX - head) > 1) fail(`heads apart: lodestar bn at slot ${head}, ${BN_TYPE} bn at slot ${headSlotX}`);
+  const syncingX = await beacon(API_X, "/eth/v1/node/syncing");
+  if (syncingX.body?.data.is_syncing !== false) fail(`${BN_TYPE} bn reports syncing at the end`);
+  for (const [api, name, peerId, peerName] of [
+    [API_LS, "lodestar bn (node 3)", X_PEER_ID, `${BN_TYPE} bn`],
+    [API_X, `${BN_TYPE} bn (node 2)`, LS_PEER_ID, "lodestar bn"],
+  ]) {
+    const peers = await beacon(api, "/eth/v1/node/peers?state=connected");
+    const connected = peers.body?.data ?? [];
+    if (!connected.some((p) => p.peer_id === peerId)) fail(`${name} is not connected to ${peerName} at the end (${connected.length} peers)`);
+  }
+  versionX = (await beacon(API_X, "/eth/v1/node/version")).body?.data.version ?? "";
+
+  // gloas: the fork happened on both nodes and the Lodestar node serves every archived envelope
+  if (SCENARIO === "gloas") {
+    const spec = (await beacon(API_LS, "/eth/v1/config/spec")).body.data;
+    for (const [api, name] of [[API_LS, "lodestar bn"], [API_X, `${BN_TYPE} bn`]]) {
+      const fork = await beacon(api, "/eth/v1/beacon/states/head/fork");
+      const version = fork.body?.data.current_version;
+      if (version !== spec.GLOAS_FORK_VERSION) fail(`${name}: head fork version ${version} is not gloas ${spec.GLOAS_FORK_VERSION}`);
+    }
+    if (finalized <= GLOAS_FORK_EPOCH) fail(`finalized epoch ${finalized} does not cover gloas slots`);
+    // the newest envelope may still be in flight
+    const slots = gloasBlockSlots.filter((slot) => slot < head);
+    const served = [0, 0];
+    const statusesX = new Set();
+    for (const slot of slots) {
+      const [resLs, resX] = await Promise.all(
+        [API_LS, API_X].map((api) =>
+          fetch(`http://127.0.0.1:${api}/eth/v1/beacon/execution_payload_envelopes/${slot}`, {headers: {accept: "application/octet-stream"}}).then(
+            async (res) => ({status: res.status, bytes: (await res.arrayBuffer()).byteLength})
+          )
         )
-      )
-    );
-    if (resLs.status === 200 && resLs.bytes >= 400) served[0]++;
-    else fail(`lodestar bn: envelope for slot ${slot}: status ${resLs.status}, ${resLs.bytes} bytes`);
-    if (resX.status === 200 && resX.bytes >= 400) served[1]++;
-    else if (hasLodestarXBn) fail(`lodestar bn (node 2): envelope for slot ${slot}: status ${resX.status}, ${resX.bytes} bytes`);
-    else statusesX.add(resX.status);
+      );
+      if (resLs.status === 200 && resLs.bytes >= 400) served[0]++;
+      else fail(`lodestar bn: envelope for slot ${slot}: status ${resLs.status}, ${resLs.bytes} bytes`);
+      if (resX.status === 200 && resX.bytes >= 400) served[1]++;
+      else if (hasLodestarXBn) fail(`lodestar bn (node 2): envelope for slot ${slot}: status ${resX.status}, ${resX.bytes} bytes`);
+      else statusesX.add(resX.status);
+    }
+    envelopes = `envelopes served ${served[0]}/${slots.length} by lodestar bn, ${served[1]}/${slots.length} by ${BN_TYPE} bn${statusesX.size > 0 ? ` (${[...statusesX].join(",")})` : ""}`;
   }
-  envelopes = `envelopes served ${served[0]}/${slots.length} by lodestar bn, ${served[1]}/${slots.length} by ${BN_TYPE} bn${statusesX.size > 0 ? ` (${[...statusesX].join(",")})` : ""}`;
+} catch (e) {
+  fail(`checks stopped early: ${e instanceof Error ? e.message : String(e)}`);
 }
 
 const {failures: unresolved, known} = classify(failures);
