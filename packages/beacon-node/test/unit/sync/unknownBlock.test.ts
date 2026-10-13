@@ -237,7 +237,7 @@ function buildIncompleteGloasBlockInput({
 
 describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
   const logger = testLogger();
-  const slotSec = 0.3;
+  const slotSec = 1;
   const config = createBeaconConfig(
     {
       ...minimalConfig,
@@ -717,7 +717,7 @@ describe("UnknownBlockSync", () => {
               source,
               peerIdStr,
             }: {
-              block: SignedBeaconBlock;
+              block: SignedBeaconBlock<ForkName.phase0>;
               blockRootHex: string;
               seenTimestampSec: number;
               source: BlockInputSource;
@@ -832,7 +832,7 @@ describe("UnknownBlockSync", () => {
             source,
             peerIdStr,
           }: {
-            block: SignedBeaconBlock;
+            block: SignedBeaconBlock<ForkName.phase0>;
             blockRootHex: string;
             seenTimestampSec: number;
             source: BlockInputSource;
@@ -1281,7 +1281,7 @@ describe("UnknownBlockSync", () => {
 
       // the slot's poll loop retries every pending payload each tick. Put the clock at PAYLOAD_DUE
       // so a fresh loop ticks straight away, then once more an interval later
-      (chain.clock as ClockStopped).setMsIntoSlot(gloasConfig.getPayloadDueMs());
+      (chain.clock as ClockStopped).setMsIntoSlot(gloasConfig.getPayloadDueMs(ForkName.gloas));
       (chain.clock as ClockStopped).emit(ClockEvent.slot, 0);
       await vi.advanceTimersByTimeAsync(PAYLOAD_POLL_INTERVAL_MS);
       await sleep(50);
@@ -1314,7 +1314,7 @@ describe("UnknownBlockSync", () => {
       expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
 
       // the slot's poll loop moves the deferred root into pendingPayloads and searches at PAYLOAD_DUE
-      const payloadDueMs = gloasConfig.getPayloadDueMs();
+      const payloadDueMs = gloasConfig.getPayloadDueMs(ForkName.gloas);
       (chain.clock as ClockStopped).setMsIntoSlot(payloadDueMs);
       await vi.advanceTimersByTimeAsync(payloadDueMs);
       await sleep(50);
@@ -1352,7 +1352,7 @@ describe("UnknownBlockSync", () => {
         source: BlockInputSource.gossip,
       });
 
-      const payloadDueMs = gloasConfig.getPayloadDueMs();
+      const payloadDueMs = gloasConfig.getPayloadDueMs(ForkName.gloas);
       (chain.clock as ClockStopped).setMsIntoSlot(payloadDueMs);
       await vi.advanceTimersByTimeAsync(payloadDueMs + PAYLOAD_POLL_INTERVAL_MS);
 
@@ -1386,7 +1386,7 @@ describe("UnknownBlockSync", () => {
       expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
 
       // the next slot flushes it into pendingPayloads instead of dropping it
-      const payloadDueMs = gloasConfig.getPayloadDueMs();
+      const payloadDueMs = gloasConfig.getPayloadDueMs(ForkName.gloas);
       (chain.clock as ClockStopped).setSlot(1);
       (chain.clock as ClockStopped).setMsIntoSlot(payloadDueMs);
       (chain.clock as ClockStopped).emit(ClockEvent.slot, 1);
@@ -1411,7 +1411,7 @@ describe("UnknownBlockSync", () => {
       (chain.clock as ClockStopped).emit(ClockEvent.slot, 0);
 
       // no root is deferred yet: the loop keeps ticking on an empty map instead of returning
-      const payloadDueMs = gloasConfig.getPayloadDueMs();
+      const payloadDueMs = gloasConfig.getPayloadDueMs(ForkName.gloas);
       (chain.clock as ClockStopped).setMsIntoSlot(payloadDueMs);
       await vi.advanceTimersByTimeAsync(payloadDueMs);
       expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
