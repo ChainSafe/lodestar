@@ -17,8 +17,7 @@ Typescript implementation of the Ethereum Consensus builder client.
 ## Requirements
 
 - A beacon node started with `--emitPayloadAttributes`, the builder bids on the `payload_attributes` events it emits for every slot. Without the flag a beacon node only emits them for slots it proposes itself.
-- An execution client the builder can send `engine_forkchoiceUpdated` and `engine_getPayload` to, configured with `--execution.urls` and `--jwtSecret`. Payload IDs are local to one execution client, so only one url is supported.
-
+- An execution client the builder can send `engine_forkchoiceUpdated` and `engine_getPayload` to, configured with `--execution.urls` and `--jwtSecret`.
 ## License
 
 Apache-2.0 [ChainSafe Systems](https://chainsafe.io)
