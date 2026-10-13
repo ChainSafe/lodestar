@@ -14,9 +14,9 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
+import {processAttesterSlashing} from "../../../src/block/processAttesterSlashing.js";
 import {applyParentExecutionPayload} from "../../../src/block/processParentExecutionPayload.js";
 import {getExpectedWithdrawals, processWithdrawals} from "../../../src/block/processWithdrawals.js";
-import {slashValidator} from "../../../src/block/slashValidator.js";
 import {createCachedBeaconState} from "../../../src/index.js";
 import {CachedBeaconStateGloas} from "../../../src/types.js";
 import {getPendingBalanceToWithdrawForBuilder, isActiveBuilder} from "../../../src/util/gloas.js";
@@ -91,58 +91,66 @@ function exitRequestFor(state: CachedBeaconStateGloas): gloas.ExecutionRequests 
 }
 
 describe("applyParentExecutionPayload", () => {
-  it("does not debit the builder when slashing clears an unqueued payment", () => {
-    const state = buildStateWithEvictedPayment(bidValue);
-    state.latestBlockHeader.slot = state.slot;
-    state.latestExecutionPayloadBid.slot = state.slot;
-    const withdrawal = {
-      amount: bidValue,
-      builderIndex,
-      feeRecipient: state.latestExecutionPayloadBid.feeRecipient,
-    };
-    state.builderPendingPayments.set(
-      SLOTS_PER_EPOCH,
-      ssz.gloas.BuilderPendingPayment.toViewDU({proposerIndex: 0, weight: 1, withdrawal})
-    );
-    const balance = state.builders.getReadonly(builderIndex).balance;
+  describe("attester slashing builder payments", () => {
+    it("does not debit the builder when slashing clears an unqueued payment", () => {
+      const state = buildStateWithEvictedPayment(bidValue);
+      const withdrawal = {
+        amount: bidValue,
+        builderIndex,
+        feeRecipient: state.latestExecutionPayloadBid.feeRecipient,
+      };
+      state.builderPendingPayments.set(
+        SLOTS_PER_EPOCH,
+        ssz.gloas.BuilderPendingPayment.toViewDU({proposerIndex: 0, weight: 1, withdrawal})
+      );
+      const balance = state.builders.getReadonly(builderIndex).balance;
 
-    slashValidator(ForkSeq.gloas, state, 0);
-    state.commit();
+      const slashing = ssz.electra.AttesterSlashing.defaultValue();
+      slashing.attestation1.attestingIndices = [0];
+      slashing.attestation2.attestingIndices = [0];
+      slashing.attestation2.data.beaconBlockRoot = Buffer.alloc(32, 1);
+      processAttesterSlashing(ForkSeq.gloas, state, slashing, false);
+      state.commit();
 
-    expect(state.validators.getReadonly(0).slashed).toBe(true);
-    expect(state.builderPendingPayments.getReadonly(SLOTS_PER_EPOCH).withdrawal.amount).toBe(0);
-    expect(state.builderPendingWithdrawals.length).toBe(0);
-    expect(state.builders.getReadonly(builderIndex).balance).toBe(balance);
-  });
+      expect(state.validators.getReadonly(0).slashed).toBe(true);
+      expect(state.builderPendingPayments.getReadonly(SLOTS_PER_EPOCH).withdrawal.amount).toBe(0);
+      expect(state.builderPendingWithdrawals.length).toBe(0);
+      expect(state.builders.getReadonly(builderIndex).balance).toBe(balance);
+    });
 
-  it("does not cancel an already queued payment when its proposer is slashed", () => {
-    const state = buildStateWithEvictedPayment(bidValue);
-    const balance = state.builders.getReadonly(builderIndex).balance;
-    const withdrawal = {
-      amount: bidValue,
-      builderIndex,
-      feeRecipient: state.latestExecutionPayloadBid.feeRecipient,
-    };
-    for (let i = 0; i < MAX_WITHDRAWALS_PER_PAYLOAD - 1; i++) {
-      state.builderPendingWithdrawals.push(ssz.gloas.BuilderPendingWithdrawal.toViewDU(withdrawal));
-    }
-    applyParentExecutionPayload(state, ssz.gloas.ExecutionRequests.defaultValue());
-    processWithdrawals(ForkSeq.gloas, state);
-    state.commit();
-    const balanceAfterEarlierPayments = balance - (MAX_WITHDRAWALS_PER_PAYLOAD - 1) * bidValue;
-    expect(state.builderPendingWithdrawals.getAllReadonlyValues()).toEqual([withdrawal]);
-    expect(state.builders.getReadonly(builderIndex).balance).toBe(balanceAfterEarlierPayments);
+    it("does not cancel an already queued payment when its proposer is slashed", () => {
+      const state = buildStateWithEvictedPayment(bidValue);
+      const balance = state.builders.getReadonly(builderIndex).balance;
+      const withdrawal = {
+        amount: bidValue,
+        builderIndex,
+        feeRecipient: state.latestExecutionPayloadBid.feeRecipient,
+      };
+      for (let i = 0; i < MAX_WITHDRAWALS_PER_PAYLOAD - 1; i++) {
+        state.builderPendingWithdrawals.push(ssz.gloas.BuilderPendingWithdrawal.toViewDU(withdrawal));
+      }
+      applyParentExecutionPayload(state, ssz.gloas.ExecutionRequests.defaultValue());
+      processWithdrawals(ForkSeq.gloas, state);
+      state.commit();
+      const balanceAfterEarlierPayments = balance - (MAX_WITHDRAWALS_PER_PAYLOAD - 1) * bidValue;
+      expect(state.builderPendingWithdrawals.getAllReadonlyValues()).toEqual([withdrawal]);
+      expect(state.builders.getReadonly(builderIndex).balance).toBe(balanceAfterEarlierPayments);
 
-    slashValidator(ForkSeq.gloas, state, 0);
-    state.commit();
+      const slashing = ssz.electra.AttesterSlashing.defaultValue();
+      slashing.attestation1.attestingIndices = [0];
+      slashing.attestation2.attestingIndices = [0];
+      slashing.attestation2.data.beaconBlockRoot = Buffer.alloc(32, 1);
+      processAttesterSlashing(ForkSeq.gloas, state, slashing, false);
+      state.commit();
 
-    expect(state.builderPendingWithdrawals.getAllReadonlyValues()).toEqual([withdrawal]);
-    expect(state.builders.getReadonly(builderIndex).balance).toBe(balanceAfterEarlierPayments);
-    state.slot++;
-    processWithdrawals(ForkSeq.gloas, state);
-    state.commit();
-    expect(state.builderPendingWithdrawals.length).toBe(0);
-    expect(state.builders.getReadonly(builderIndex).balance).toBe(balanceAfterEarlierPayments - bidValue);
+      expect(state.builderPendingWithdrawals.getAllReadonlyValues()).toEqual([withdrawal]);
+      expect(state.builders.getReadonly(builderIndex).balance).toBe(balanceAfterEarlierPayments);
+      state.slot++;
+      processWithdrawals(ForkSeq.gloas, state);
+      state.commit();
+      expect(state.builderPendingWithdrawals.length).toBe(0);
+      expect(state.builders.getReadonly(builderIndex).balance).toBe(balanceAfterEarlierPayments - bidValue);
+    });
   });
 
   it("rejects a builder exit request while the evicted payment is re-added", () => {
