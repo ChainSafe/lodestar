@@ -381,6 +381,62 @@ describe("SlashingProtection overlapping attestation checks", () => {
     expect(await attestations.getAll(pubkey)).toEqual([conflict, next]);
   });
 
+  it("defers a waiting check until a later import covering the key is done", async () => {
+    const started = defer<void>();
+    const release = defer<void>();
+    const batchPut = db.batchPut.bind(db);
+    vi.spyOn(db, "batchPut").mockImplementationOnce(async (...args) => {
+      started.resolve();
+      await release.promise;
+      await batchPut(...args);
+    });
+
+    const genesisValidatorsRoot = ssz.Root.defaultValue();
+    const metadata = {interchange_format_version: "5" as const, genesis_validators_root: toHex(genesisValidatorsRoot)};
+    const first = slashingProtection.importInterchange(
+      {
+        metadata,
+        data: [
+          {
+            pubkey: toHex(Buffer.alloc(48, 1)),
+            signed_blocks: [{slot: "1", signing_root: toHex(Buffer.alloc(32, 1))}],
+            signed_attestations: [],
+          },
+          {pubkey: toHex(pubkey), signed_blocks: [], signed_attestations: []},
+        ],
+      },
+      genesisValidatorsRoot
+    );
+    await started.promise;
+
+    const pending = slashingProtection.checkAndInsertAttestation(pubkey, attestation);
+    const second = slashingProtection.importInterchange(
+      {
+        metadata,
+        data: [
+          {
+            pubkey: toHex(pubkey),
+            signed_blocks: [],
+            signed_attestations: [
+              {
+                source_epoch: String(conflict.sourceEpoch),
+                target_epoch: String(conflict.targetEpoch),
+                signing_root: toHex(conflict.signingRoot),
+              },
+            ],
+          },
+        ],
+      },
+      genesisValidatorsRoot
+    );
+    // A check that only waits for the import it found is approved before the later import records the conflict
+    release.resolve();
+    await Promise.all([first, second]);
+
+    await expect(pending).rejects.toMatchObject({type: {code: InvalidAttestationErrorCode.DOUBLE_VOTE}});
+    expect(await attestations.getAll(pubkey)).toEqual([conflict]);
+  });
+
   it("does not defer checks for keys outside a running import", async () => {
     const started = defer<void>();
     const release = defer<void>();
