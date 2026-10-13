@@ -292,11 +292,12 @@ export async function importExecutionPayload(
     }
   });
 
-  // Recorded before the payload enters fork choice so should_extend_payload never sees a delivered
-  // payload without a verdict. A VALID response carries one, an optimistically imported payload counts
-  // as satisfied until the engine validates it, anything else as unsatisfied. The engine API makes the
-  // verdict mandatory on VALID, without one the constraints are not enforced rather than failing every
-  // payload of a non-compliant engine
+  // A VALID payload that does not satisfy the inclusion list constraints is still imported, fork choice
+  // only records the verdict so should_extend_payload makes the next proposer build on the EMPTY variant.
+  // Recorded before the payload enters fork choice. A VALID response must carry a verdict, an
+  // optimistically imported payload counts as satisfied until the engine validates it, anything else as
+  // unsatisfied. A VALID response without a verdict violates the engine API, it is logged and treated as
+  // satisfied so a non-compliant engine does not orphan every payload
   if (inclusionListTransactions !== undefined) {
     if (execResult.status === ExecutionPayloadStatus.VALID && execResult.inclusionListSatisfied == null) {
       this.logger.warn("Execution engine reported no inclusion list verdict, not enforcing inclusion lists", logCtx);
