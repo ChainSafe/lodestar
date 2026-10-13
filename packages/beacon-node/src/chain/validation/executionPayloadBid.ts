@@ -357,6 +357,34 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] bid.inclusionListBits is inclusive of our timely inclusion lists for
+  // (bid.slot - 1, get_shuffling_dependent_root(store, bid.parent_block_root, epoch)).
+  // Moved earlier than the spec ordering, it needs no state
+  if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
+    const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
+    const inclusionListSlot = bid.slot - 1;
+    const inclusionListDependentRoot = getShufflingDependentRoot(
+      chain.forkChoice,
+      computeEpochAtSlot(inclusionListSlot),
+      computeEpochAtSlot(parentBlock.slot),
+      parentBlock
+    );
+    if (
+      !chain.inclusionListStore.isInclusionListBitsInclusive(
+        inclusionListSlot,
+        inclusionListDependentRoot,
+        inclusionListBits,
+        true
+      )
+    ) {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE,
+        builderIndex: bid.builderIndex,
+        slot: bid.slot,
+      });
+    }
+  }
+
   // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been
   // seen — i.e. `proposal_slot == bid.slot` AND `dependent_root ==
   // get_proposer_dependent_root(parent_state, compute_epoch_at_slot(bid.slot))`.
@@ -565,33 +593,6 @@ async function validateExecutionPayloadBid(
       parentBlockRoot: bidParentBlockRoot,
       parentBlockHash: bidParentBlockHash,
     });
-  }
-
-  // [IGNORE] bid.inclusionListBits is inclusive of our timely inclusion lists for
-  // (bid.slot - 1, get_shuffling_dependent_root(store, bid.parent_block_root, epoch))
-  if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
-    const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
-    const inclusionListSlot = bid.slot - 1;
-    const inclusionListDependentRoot = getShufflingDependentRoot(
-      chain.forkChoice,
-      computeEpochAtSlot(inclusionListSlot),
-      computeEpochAtSlot(parentBlock.slot),
-      parentBlock
-    );
-    if (
-      !chain.inclusionListStore.isInclusionListBitsInclusive(
-        inclusionListSlot,
-        inclusionListDependentRoot,
-        inclusionListBits,
-        true
-      )
-    ) {
-      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-        code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE,
-        builderIndex: bid.builderIndex,
-        slot: bid.slot,
-      });
-    }
   }
 
   // Valid
