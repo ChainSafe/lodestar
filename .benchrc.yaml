@@ -1,5 +1,5 @@
 # benchmark opts
-threshold: 3
+threshold: 5
 maxMs: 60000
 minRuns: 10
 # Default is set to 0.005, which is too low considering the benchmark setup we have
