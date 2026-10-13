@@ -961,11 +961,13 @@ export class ValidatorStore {
     inclusionList: heze.InclusionList
   ): Promise<heze.SignedInclusionList> {
     if (duty.slot !== inclusionList.slot) {
-      throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != il.slot ${inclusionList.slot}`);
+      throw Error(
+        `Inconsistent duties during signing: duty.slot ${duty.slot} != inclusionList.slot ${inclusionList.slot}`
+      );
     }
     if (duty.validatorIndex !== inclusionList.validatorIndex) {
       throw Error(
-        `Inconsistent duties during signing: duty.validatorIndex ${duty.validatorIndex} != il.validatorIndex ${inclusionList.validatorIndex}`
+        `Inconsistent duties during signing: duty.validatorIndex ${duty.validatorIndex} != inclusionList.validatorIndex ${inclusionList.validatorIndex}`
       );
     }
 

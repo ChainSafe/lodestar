@@ -41,7 +41,7 @@ export class InclusionListStore {
     () => new MapDef<RootHex, Set<ValidatorIndex>>(() => new Set())
   );
   /** slot -> dependent_root -> validator index -> count, for the p2p "first or second message" rule */
-  private readonly validatorIlCounts = new MapDef<Slot, MapDef<RootHex, Map<ValidatorIndex, number>>>(
+  private readonly seenCounts = new MapDef<Slot, MapDef<RootHex, Map<ValidatorIndex, number>>>(
     () => new MapDef<RootHex, Map<ValidatorIndex, number>>(() => new Map())
   );
 
@@ -97,13 +97,13 @@ export class InclusionListStore {
 
   /** Count a valid message of `validatorIndex` for the first-or-second message gossip rule */
   markSeen(slot: Slot, dependentRoot: RootHex, validatorIndex: ValidatorIndex): void {
-    const counts = this.validatorIlCounts.getOrDefault(slot).getOrDefault(dependentRoot);
+    const counts = this.seenCounts.getOrDefault(slot).getOrDefault(dependentRoot);
     counts.set(validatorIndex, (counts.get(validatorIndex) ?? 0) + 1);
   }
 
   /** Gossip rule: at most two valid messages per validator for a `(slot, dependent_root)` */
   seenTwice(slot: Slot, dependentRoot: RootHex, validatorIndex: ValidatorIndex): boolean {
-    return (this.validatorIlCounts.get(slot)?.get(dependentRoot)?.get(validatorIndex) ?? 0) >= 2;
+    return (this.seenCounts.get(slot)?.get(dependentRoot)?.get(validatorIndex) ?? 0) >= 2;
   }
 
   /** Deduplicated transactions from valid, non-equivocating inclusion lists at `(slot, dependentRoot)`. */
@@ -124,7 +124,7 @@ export class InclusionListStore {
     return transactions;
   }
 
-  /** Bit `i` is set iff committee member `i` submitted a valid, non-equivocating inclusion list. */
+  /** Bit `i` is set when committee member `i` submitted a valid, non-equivocating inclusion list */
   getInclusionListBits(slot: Slot, dependentRoot: RootHex, onlyTimely = true): BitArray {
     const bits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
     for (const {committeeIndices} of this.getEligible(slot, dependentRoot, onlyTimely)) {
@@ -170,9 +170,9 @@ export class InclusionListStore {
         this.equivocators.delete(slot);
       }
     }
-    for (const slot of this.validatorIlCounts.keys()) {
+    for (const slot of this.seenCounts.keys()) {
       if (slot < horizon) {
-        this.validatorIlCounts.delete(slot);
+        this.seenCounts.delete(slot);
       }
     }
 
