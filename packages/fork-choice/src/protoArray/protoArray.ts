@@ -960,6 +960,10 @@ export class ProtoArray {
     return this.hasPayload(blockRoot) && this.payloadInclusionListSatisfaction.get(blockRoot) !== false;
   }
 
+  getPayloadInclusionListSatisfaction(blockRoot: RootHex): boolean | null {
+    return this.payloadInclusionListSatisfaction.get(blockRoot) ?? null;
+  }
+
   /**
    * Determine if we should extend the payload (prefer FULL over EMPTY)
    * Spec: gloas/fork-choice.md#new-should_extend_payload

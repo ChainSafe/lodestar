@@ -283,6 +283,8 @@ export interface IForkChoice {
   recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean;
   /** True once the payload is delivered and not recorded unsatisfied */
   isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean;
+  /** Engine verdict recorded for the payload of `blockRoot`, null when none was recorded */
+  getPayloadInclusionListSatisfaction(blockRoot: RootHex): boolean | null;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;

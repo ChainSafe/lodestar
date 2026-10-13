@@ -63,6 +63,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getDependentRoot: vi.fn(),
       recordPayloadInclusionListSatisfaction: vi.fn(),
       isPayloadInclusionListSatisfied: vi.fn(),
+      getPayloadInclusionListSatisfaction: vi.fn(),
       getBlockHex: vi.fn(),
       getBlock: vi.fn(),
       getBlockDefaultStatus: vi.fn(),

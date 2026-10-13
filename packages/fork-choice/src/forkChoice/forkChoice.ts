@@ -436,6 +436,10 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.isPayloadInclusionListSatisfied(blockRoot);
   }
 
+  getPayloadInclusionListSatisfaction(blockRoot: RootHex): boolean | null {
+    return this.protoArray.getPayloadInclusionListSatisfaction(blockRoot);
+  }
+
   /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
     return this.protoArray.shouldBuildOnFull(head, slot);
