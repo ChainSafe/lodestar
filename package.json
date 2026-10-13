@@ -51,7 +51,7 @@
   },
   "keywords": [],
   "author": "ChainSafe Systems",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ChainSafe/lodestar-z.git"
