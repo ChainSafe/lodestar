@@ -1099,6 +1099,10 @@ export function getValidatorApi(
               logger.verbose("Discarding bid with non-inclusive inclusion list bits", {
                 slot,
                 builderIndex: candidate.signedBid.message.builderIndex,
+                inclusionListBits: toHex(inclusionListBits.uint8Array),
+                expectedInclusionListBits: toHex(
+                  chain.inclusionListStore.getInclusionListBits(inclusionListSlot, dependentRoot, false).uint8Array
+                ),
               });
               return false;
             })
