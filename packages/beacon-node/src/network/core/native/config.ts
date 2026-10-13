@@ -20,6 +20,7 @@ import {
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
+import {getSlotDurations} from "@lodestar/state-transition";
 import {Status} from "@lodestar/types";
 import {CustodyConfig} from "../../../util/dataColumns.js";
 import {computeGossipPeerScoreParamsByKind, gossipScoreThresholds} from "../../gossip/scoringParameters.js";
@@ -468,7 +469,7 @@ export function createNativeConfig(
         1024 * MiB,
         4096
       ),
-      seenTtlMs: BigInt(config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2),
+      seenTtlMs: BigInt(Math.max(...getSlotDurations(config).map(([, duration]) => duration)) * SLOTS_PER_EPOCH * 2),
       retainedScoreMs: BigInt(score.retainScore),
       opportunisticGraftIntervalMs: 42000n,
       gossipFactor: 0.25,

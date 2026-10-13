@@ -9,7 +9,6 @@ import {defer} from "@lodestar/utils";
 import {NativeGossipExecutor} from "../../../../src/network/core/native/executor.js";
 import {NativeGossip} from "../../../../src/network/core/native/gossip.js";
 import {NativePeerReports} from "../../../../src/network/core/native/reports.js";
-import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
 import {GossipType} from "../../../../src/network/gossip/interface.js";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 import {defaultNetworkOptions} from "../../../../src/network/options.js";
@@ -36,16 +35,8 @@ async function fixture(attach = true) {
     blockImported: vi.fn<NativeNetwork["blockImported"]>(),
     dropQueuedGossip: vi.fn<NativeNetwork["dropQueuedGossip"]>(),
   };
-  const events = new NetworkEventBus();
   const onError = vi.fn();
-  const gossip = new NativeGossip(
-    network,
-    config,
-    events,
-    defaultNetworkOptions,
-    onError,
-    new NativePeerReports(network)
-  );
+  const gossip = new NativeGossip(network, config, defaultNetworkOptions, onError, new NativePeerReports(network));
   const pending: PendingGossipsubMessage[] = [];
   const completions = new Map<PendingGossipsubMessage, ReturnType<typeof defer<TopicValidatorResult>>>();
   const processor = {
@@ -68,7 +59,6 @@ async function fixture(attach = true) {
   return {
     gossip,
     network,
-    events,
     processor,
     pending,
     onError,
@@ -98,8 +88,6 @@ function job(messages: GossipMessage[], grouped = false): GossipJob {
 describe("native gossip host", () => {
   it("validates a job's messages as pending gossipsub messages and returns their verdicts in order", async () => {
     const node = await fixture();
-    const results = vi.fn();
-    node.events.on(NetworkEvent.gossipMessageValidationResult, results);
     const validating = job([node.message(1), node.message(2), node.message(3)], true);
     const validated = node.gossip.validate(validating);
     expect(node.processor.execute).toHaveBeenCalledExactlyOnceWith(node.pending, true, validating.reported);
@@ -113,11 +101,6 @@ describe("native gossip host", () => {
     node.retire(node.pending[1], TopicValidatorResult.Reject);
     node.retire(node.pending[2], TopicValidatorResult.Ignore);
     expect(await validated).toEqual(["accept", "reject", "ignore"]);
-    expect(results.mock.calls.map(([result]) => result.acceptance)).toEqual([
-      TopicValidatorResult.Accept,
-      TopicValidatorResult.Reject,
-      TopicValidatorResult.Ignore,
-    ]);
     expect(node.processor.observe).toHaveBeenCalledOnce();
   });
 
@@ -159,19 +142,19 @@ describe("native gossip host", () => {
     expect(node.onError).not.toHaveBeenCalled();
   });
 
-  it("returns every verdict when observers and result events throw, and reports their failures once", async () => {
+  it("returns every verdict when observation throws, and reports the failure once", async () => {
     const node = await fixture();
+    const error = new Error("observer failed");
     const observer = vi.fn(() => {
-      throw new Error("observer failed");
+      throw error;
     });
     node.processor.observe.mockImplementation(observer);
-    node.events.on(NetworkEvent.gossipMessageValidationResult, observer);
     const validated = node.gossip.validate(job([node.message(1), node.message(2)], true));
     node.retire(node.pending[0]);
     node.retire(node.pending[1], TopicValidatorResult.Reject);
     expect(await validated).toEqual(["accept", "reject"]);
-    expect(observer).toHaveBeenCalledTimes(3);
-    expect(node.onError).toHaveBeenCalledExactlyOnceWith(expect.any(AggregateError));
+    expect(observer).toHaveBeenCalledOnce();
+    expect(node.onError).toHaveBeenCalledExactlyOnceWith(error);
   });
 
   it("forwards imported blocks and drops until it closes", async () => {

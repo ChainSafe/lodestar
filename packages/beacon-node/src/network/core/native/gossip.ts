@@ -3,7 +3,6 @@ import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {DependencyCheck, GossipJob, GossipMessage, NativeNetwork, Verdict} from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
-import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {parseGossipTopic} from "../../gossip/topic.js";
 import {NetworkOptions} from "../../options.js";
 import {PendingGossipsubMessage} from "../../processor/types.js";
@@ -27,7 +26,6 @@ export class NativeGossip {
   constructor(
     private readonly network: Pick<NativeNetwork, "publish" | "blockImported" | "dropQueuedGossip">,
     private readonly config: BeaconConfig,
-    private readonly events: NetworkEventBus,
     private readonly opts: NetworkOptions,
     private readonly onError: (error: unknown) => void,
     private readonly reports: Pick<NativePeerReports, "forGossip">
@@ -69,30 +67,16 @@ export class NativeGossip {
   checkDependencies(checks: readonly DependencyCheck[]): boolean[] {
     return this.attached().check(checks);
   }
-  /** One verdict per message, in order. Observer and result event failures are reported, never retired as verdicts. */
+  /** One verdict per message, in order. Observer failures do not change the verdicts. */
   async validate(job: GossipJob): Promise<Verdict[]> {
     const processor = this.attached();
     const messages = job.messages.map((message) => this.prepare(message));
     const results = await processor.execute(messages, job.grouped, job.reported);
-    const errors: unknown[] = [];
     try {
       processor.observe(messages);
     } catch (error) {
-      errors.push(error);
+      this.onError(error);
     }
-    for (const [i, message] of messages.entries()) {
-      try {
-        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
-          msgId: message.msgId,
-          propagationSource: message.propagationSource,
-          acceptance: results[i] ?? TopicValidatorResult.Ignore,
-        });
-      } catch (error) {
-        errors.push(error);
-      }
-    }
-    if (errors.length > 0)
-      this.onError(errors.length === 1 ? errors[0] : new AggregateError(errors, "Native gossip observers failed"));
     return messages.map((_, i) => verdicts[results[i] ?? TopicValidatorResult.Ignore]);
   }
   private attached(): GossipExecutor {

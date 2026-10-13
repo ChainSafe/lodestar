@@ -11,7 +11,6 @@ import {AttestationPool} from "../../../../../../src/chain/opPools/attestationPo
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "../../../../../../src/chain/opPools/types.js";
 import {AttestationValidationResult} from "../../../../../../src/chain/validation/attestation.js";
 import {NativeGossip} from "../../../../../../src/network/core/native/gossip.js";
-import {NetworkEventBus} from "../../../../../../src/network/events.js";
 import {defaultNetworkOptions} from "../../../../../../src/network/options.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 
@@ -113,7 +112,6 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     const gossip = new NativeGossip(
       {publish, blockImported: () => {}, dropQueuedGossip: () => {}},
       createBeaconConfig(config, new Uint8Array(32)),
-      new NetworkEventBus(),
       defaultNetworkOptions,
       vi.fn(),
       {forGossip: () => vi.fn()}

@@ -80,14 +80,7 @@ function fixture() {
     core: {reportPeer: vi.fn()} as unknown as INetworkCore,
   };
   const network = {publish: vi.fn(), blockImported: vi.fn(), dropQueuedGossip: vi.fn(), reportPeer: vi.fn()};
-  const gossip = new NativeGossip(
-    network,
-    config,
-    modules.events,
-    defaultNetworkOptions,
-    vi.fn(),
-    new NativePeerReports(network)
-  );
+  const gossip = new NativeGossip(network, config, defaultNetworkOptions, vi.fn(), new NativePeerReports(network));
   const executor = new NativeGossipExecutor(modules, {}, gossip);
   return {order, chain, modules, gossip, executor};
 }
