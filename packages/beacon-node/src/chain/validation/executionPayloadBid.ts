@@ -11,7 +11,7 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, gloas, heze} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
-import {getInclusionListDependentRoot, getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -572,7 +572,12 @@ async function validateExecutionPayloadBid(
   if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
     const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
     const inclusionListSlot = bid.slot - 1;
-    const inclusionListDependentRoot = getInclusionListDependentRoot(chain.forkChoice, parentBlock, inclusionListSlot);
+    const inclusionListDependentRoot = getShufflingDependentRoot(
+      chain.forkChoice,
+      computeEpochAtSlot(inclusionListSlot),
+      computeEpochAtSlot(parentBlock.slot),
+      parentBlock
+    );
     if (
       !chain.inclusionListStore.isInclusionListBitsInclusive(
         inclusionListSlot,

@@ -12,10 +12,13 @@ describe("PayloadIdCache", () => {
 
   it("misses when the inclusion list transactions differ from the prepared payload", () => {
     const cache = new PayloadIdCache();
-    cache.add({...attributes, inclusionListTransactions: ["0xaa"]}, "0x1234");
+    cache.add({...attributes, inclusionListTransactions: [Uint8Array.of(0xaa)]}, "0x1234");
 
-    expect(cache.get({...attributes, inclusionListTransactions: ["0xaa"]})).toBe("0x1234");
-    expect(cache.get({...attributes, inclusionListTransactions: ["0xaa", "0xbb"]})).toBeUndefined();
+    expect(cache.get({...attributes, inclusionListTransactions: [Uint8Array.of(0xaa)]})).toBe("0x1234");
+    expect(cache.get({...attributes, inclusionListTransactions: [Uint8Array.of(0xab)]})).toBeUndefined();
+    expect(
+      cache.get({...attributes, inclusionListTransactions: [Uint8Array.of(0xaa), Uint8Array.of(0xbb)]})
+    ).toBeUndefined();
     expect(cache.get(attributes)).toBeUndefined();
   });
 });

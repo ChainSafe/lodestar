@@ -198,6 +198,7 @@ export function getBeaconCommittee(epochShuffling: EpochShuffling, slot: Slot, i
 }
 
 /** Inclusion list committees of a shuffling by slot index, computed on first use and freed with the shuffling */
+// TODO HEZE: replace this module-level map with an extended EpochShuffling tracked by the beacon-node ShufflingCache
 const inclusionListCommitteesByShuffling = new WeakMap<EpochShuffling, InclusionListCommittee[]>();
 
 /** Spec get_inclusion_list_committee: cycle over the slot's concatenated beacon committees */

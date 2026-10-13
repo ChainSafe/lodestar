@@ -4549,8 +4549,8 @@
   sources:
     - file: packages/beacon-node/src/chain/forkChoice/index.ts
       search: export function initializeForkChoiceFromFinalizedState(
-    - file: packages/fork-choice/src/forkChoice/store.ts
-      search: payloadInclusionListSatisfaction = new Map<RootHex, boolean>();
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: private payloadInclusionListSatisfaction = new Map<RootHex, boolean>();
   spec: |
     <spec fn="get_forkchoice_store" fork="heze" hash="72744fcb">
     def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -> Store:
@@ -8069,7 +8069,7 @@
 
 - name: is_payload_inclusion_list_satisfied#heze
   sources:
-    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
       search: "isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {"
   spec: |
     <spec fn="is_payload_inclusion_list_satisfied" fork="heze" hash="2f119ca9">
@@ -12768,7 +12768,7 @@
 
 - name: record_payload_inclusion_list_satisfaction#heze
   sources:
-    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
       search: "recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {"
   spec: |
     <spec fn="record_payload_inclusion_list_satisfaction" fork="heze" hash="c05f1180">

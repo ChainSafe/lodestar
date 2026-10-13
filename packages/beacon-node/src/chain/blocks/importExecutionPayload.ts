@@ -6,10 +6,16 @@ import {
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {isForkPostHeze} from "@lodestar/params";
-import {DataAvailabilityStatus, isStatePostGloas, isStatePostHeze} from "@lodestar/state-transition";
+import {
+  DataAvailabilityStatus,
+  computeEpochAtSlot,
+  isStatePostGloas,
+  isStatePostHeze,
+} from "@lodestar/state-transition";
+import {RootHex, bellatrix} from "@lodestar/types";
 import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
-import {getInclusionListDependentRootFromState} from "../../util/dependentRoot.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {recordHeadPayloadInclusionListVerdict} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -176,15 +182,30 @@ export async function importExecutionPayload(
     );
   }
 
-  // Timely inclusion lists of the preceding slot, keyed by that slot's dependent root on the block's branch
-  const inclusionListSlot = protoBlock.slot - 1;
-  const inclusionListTransactions = isStatePostHeze(blockState)
-    ? this.inclusionListStore.getInclusionListTransactions(
-        inclusionListSlot,
-        getInclusionListDependentRootFromState(blockState, inclusionListSlot),
-        true
-      )
-    : undefined;
+  // Timely inclusion lists of the preceding slot, keyed by that slot's dependent root on the block's branch and
+  // resolved from the parent, which is at or before that slot. Gossip validation only accepts lists whose dependent
+  // block is in fork choice, so a dependent root fork choice cannot resolve (below the anchor after checkpoint sync)
+  // keys no stored list
+  let inclusionListTransactions: bellatrix.Transactions | undefined;
+  if (isStatePostHeze(blockState)) {
+    const inclusionListSlot = protoBlock.slot - 1;
+    let dependentRoot: RootHex | null = null;
+    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(protoBlock.parentRoot);
+    if (parentBlock !== null) {
+      try {
+        dependentRoot = getShufflingDependentRoot(
+          this.forkChoice,
+          computeEpochAtSlot(inclusionListSlot),
+          computeEpochAtSlot(parentBlock.slot),
+          parentBlock
+        );
+      } catch {}
+    }
+    inclusionListTransactions =
+      dependentRoot === null
+        ? []
+        : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
+  }
 
   // 4a. Run EL and signature verification in parallel
   const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};

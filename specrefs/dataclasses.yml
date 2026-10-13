@@ -605,8 +605,8 @@
   sources:
     - file: packages/fork-choice/src/forkChoice/store.ts
       search: export interface IForkChoiceStore
-    - file: packages/fork-choice/src/forkChoice/store.ts
-      search: "payloadInclusionListSatisfaction: Map<RootHex, boolean>;"
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: private payloadInclusionListSatisfaction =
     - file: packages/fork-choice/src/protoArray/protoArray.ts
       search: private payloadTimelinessVotes =
     - file: packages/fork-choice/src/protoArray/protoArray.ts

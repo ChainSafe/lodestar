@@ -100,7 +100,7 @@ import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {getBuilderBidTotalGwei, validateBuilderApiExecutionPayloadBid} from "../../../execution/builder/validateBid.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
-import {getInclusionListDependentRoot} from "../../../util/dependentRoot.js";
+import {getShufflingDependentRoot} from "../../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getBlockGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
@@ -1080,7 +1080,12 @@ export function getValidatorApi(
           ? candidates.filter((candidate) => {
               const {inclusionListBits} = candidate.signedBid.message as heze.ExecutionPayloadBid;
               const inclusionListSlot = slot - 1;
-              const dependentRoot = getInclusionListDependentRoot(chain.forkChoice, parentBlock, inclusionListSlot);
+              const dependentRoot = getShufflingDependentRoot(
+                chain.forkChoice,
+                computeEpochAtSlot(inclusionListSlot),
+                computeEpochAtSlot(parentBlock.slot),
+                parentBlock
+              );
               if (
                 chain.inclusionListStore.isInclusionListBitsInclusive(
                   inclusionListSlot,

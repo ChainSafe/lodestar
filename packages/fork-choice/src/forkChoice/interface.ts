@@ -281,7 +281,7 @@ export interface IForkChoice {
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
   /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine. True if it changed */
   recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean;
-  /** True only once the payload is delivered and recorded satisfied */
+  /** True once the payload is delivered and not recorded unsatisfied */
   isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;

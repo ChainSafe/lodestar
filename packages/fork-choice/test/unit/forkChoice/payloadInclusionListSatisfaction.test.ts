@@ -73,7 +73,7 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
   });
 
   describe("protoArray wiring", () => {
-    it("installs the gate on protoArray, which is the path variant selection takes", () => {
+    it("gates variant selection in protoArray", () => {
       const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig});
       deliverPayload(forkChoice, headRoot);
       forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
@@ -81,7 +81,6 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
       // Exercise protoArray directly: ForkChoice.shouldExtendPayload is not what production calls,
       // getParentPayloadStatus reaches protoArray.shouldExtendPayload on its own.
       const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;
-      expect(protoArray.isPayloadInclusionListSatisfied).not.toBeNull();
       expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(false);
 
       forkChoice.recordPayloadInclusionListSatisfaction(headRoot, true);

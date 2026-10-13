@@ -72,10 +72,9 @@ import {
   toRootHex,
 } from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {serializeInclusionList} from "../../execution/engine/types.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
-import {getInclusionListDependentRoot, getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {recordHeadPayloadInclusionListVerdict} from "../../util/forkChoice.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
@@ -416,7 +415,12 @@ export async function produceBlockBody<T extends BlockType>(
       const inclusionListSlot = blockSlot - 1;
       (bid as heze.ExecutionPayloadBid).inclusionListBits = this.inclusionListStore.getInclusionListBits(
         inclusionListSlot,
-        getInclusionListDependentRoot(this.forkChoice, parentBlock, inclusionListSlot),
+        getShufflingDependentRoot(
+          this.forkChoice,
+          computeEpochAtSlot(inclusionListSlot),
+          computeEpochAtSlot(parentBlock.slot),
+          parentBlock
+        ),
         false
       );
     }
@@ -806,9 +810,7 @@ export async function prepareExecutionPayload(
     timestamp: numToQuantity(timestamp),
     prevRandao: toHex(prevRandao),
     suggestedFeeRecipient,
-    inclusionListTransactions: attributes?.inclusionListTransactions
-      ? serializeInclusionList(attributes.inclusionListTransactions)
-      : undefined,
+    inclusionListTransactions: attributes?.inclusionListTransactions,
   });
 
   // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
@@ -1032,7 +1034,12 @@ function preparePayloadAttributes(
     (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
       chain.inclusionListStore.getInclusionListTransactions(
         inclusionListSlot,
-        getInclusionListDependentRoot(chain.forkChoice, parentBlock, inclusionListSlot),
+        getShufflingDependentRoot(
+          chain.forkChoice,
+          computeEpochAtSlot(inclusionListSlot),
+          computeEpochAtSlot(parentBlock.slot),
+          parentBlock
+        ),
         false
       );
   }

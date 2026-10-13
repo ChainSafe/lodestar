@@ -365,7 +365,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           }
 
           const payloadAttributesRpc = serializePayloadAttributes(payloadAttributes);
-          this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...payloadAttributesRpc}, payloadId);
+          this.payloadIdCache.add(
+            {
+              headBlockHash,
+              finalizedBlockHash,
+              ...payloadAttributesRpc,
+              inclusionListTransactions: payloadAttributes.inclusionListTransactions,
+            },
+            payloadId
+          );
           void this.prunePayloadIdCache();
         }
         return {payloadId, inclusionListSatisfied: inclusionListSatisfied ?? null};

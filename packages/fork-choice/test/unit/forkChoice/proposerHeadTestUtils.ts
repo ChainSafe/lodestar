@@ -120,7 +120,6 @@ export function makeStore({
     currentSlot: headSlot + 1,
     justified: {checkpoint, balances, totalBalance: VALIDATOR_COUNT * BALANCE_INCREMENT},
     unrealizedJustified: {checkpoint, balances},
-    payloadInclusionListSatisfaction: new Map(),
     finalizedCheckpoint: checkpoint,
     unrealizedFinalizedCheckpoint: checkpoint,
     justifiedBalancesGetter: () => balances,
