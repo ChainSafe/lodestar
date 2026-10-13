@@ -35,6 +35,7 @@ pub const chunkDepth = chunk.chunkDepth;
 pub const getPathGindex = @import("path.zig").getPathGindex;
 
 pub const FixedProgressiveContainerType = @import("progressive_container.zig").FixedProgressiveContainerType;
+pub const StructProgressiveContainerType = @import("progressive_container.zig").StructProgressiveContainerType;
 pub const VariableProgressiveContainerType = @import("progressive_container.zig").VariableProgressiveContainerType;
 
 pub const FixedProgressiveListType = @import("progressive_list.zig").FixedProgressiveListType;

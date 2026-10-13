@@ -35,6 +35,7 @@ pub const VariableContainerType = types.VariableContainerType;
 
 // Progressive container types
 pub const FixedProgressiveContainerType = types.FixedProgressiveContainerType;
+pub const StructProgressiveContainerType = types.StructProgressiveContainerType;
 pub const VariableProgressiveContainerType = types.VariableProgressiveContainerType;
 
 // Progressive list types
