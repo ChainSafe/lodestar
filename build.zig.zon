@@ -506,4 +506,14 @@
             },
         },
     },
+    .aliases = .{
+        .bench_ssz = .{
+            .description = "Run the bench_ssz_* benchmarks",
+            .depends_on = .{
+                "run:bench_ssz_attestation",
+                "run:bench_ssz_block",
+                "run:bench_ssz_state",
+            },
+        },
+    },
 }
