@@ -42,7 +42,8 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
   ...logOptions,
 
   beaconNodeUrl: {
-    description: "Url to a trusted beacon node",
+    description:
+      "Url to a trusted beacon node. The beacon node must run with `--emitPayloadAttributes` to emit the payload attributes of every slot, otherwise the builder only bids on slots the beacon node itself proposes",
     type: "string",
     default: defaultOptions.beaconNodeUrl,
   },

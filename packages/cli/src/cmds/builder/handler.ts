@@ -4,6 +4,7 @@ import {getClient} from "@lodestar/api";
 import {
   RegistryMetricCreator,
   collectNodeJSMetrics,
+  defaultExecutionEngineHttpOpts,
   getHttpMetricsServer,
   initializeExecutionEngine,
 } from "@lodestar/beacon-node";
@@ -92,7 +93,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     {
       mode: "http",
       urls: [executionUrl],
-      timeout: args["execution.timeout"],
+      timeout: args["execution.timeout"] ?? defaultExecutionEngineHttpOpts.timeout,
       retries: args["execution.retries"],
       retryDelay: args["execution.retryDelay"],
       jwtSecretHex: args.jwtSecret ? extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()) : undefined,
