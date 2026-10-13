@@ -14,7 +14,7 @@ import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
-import {DownloadByRangeRequests, ParentPayloadCommitments} from "../utils/downloadByRange.js";
+import {DownloadByRangeRequests, ParentPayload} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
 /**
@@ -175,7 +175,7 @@ export class Batch {
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
   private readonly isFirstBatchInChain: boolean;
-  private readonly latestBid: gloas.ExecutionPayloadBid | undefined;
+  private readonly parentPayload: ParentPayload | undefined;
 
   constructor(
     startEpoch: Epoch,
@@ -183,7 +183,7 @@ export class Batch {
     clock: IClock,
     custodyConfig: CustodyConfig,
     isFirstBatchInChain: boolean,
-    latestBid: gloas.ExecutionPayloadBid | undefined,
+    parentPayload: ParentPayload | undefined,
     targetSlot: Slot
   ) {
     this.config = config;
@@ -196,7 +196,7 @@ export class Batch {
     this.startSlot = startSlot;
     this.count = Math.min(count, targetSlot - startSlot + 1);
     this.isFirstBatchInChain = isFirstBatchInChain;
-    this.latestBid = latestBid;
+    this.parentPayload = parentPayload;
     this.requests = this.getRequests([]);
   }
 
@@ -208,25 +208,19 @@ export class Batch {
     }
 
     // we only know if we should download parent envelope if firstBlock is downloaded
-    if (firstBlock === undefined) return false;
-    if (this.latestBid === undefined) return false;
-    const firstBlockBidParentHash = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
-      .parentBlockHash;
-    return byteArrayEquals(firstBlockBidParentHash, this.latestBid.blockHash);
+    if (firstBlock === undefined || this.parentPayload === undefined) return false;
+    const firstBlockBid = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message;
+    return (
+      byteArrayEquals(firstBlock.message.parentRoot, this.parentPayload.blockRoot) &&
+      byteArrayEquals(firstBlockBid.parentBlockHash, this.parentPayload.bid.blockHash)
+    );
   }
 
-  getParentPayloadCommitments(parentBlockRoot: Uint8Array): ParentPayloadCommitments {
-    if (this.latestBid === undefined) {
-      throw new Error(
-        `Coding error: getParentPayloadCommitments called without latestBid for parentBlockRoot=${toRootHex(parentBlockRoot)}`
-      );
+  getParentPayload(): ParentPayload {
+    if (this.parentPayload === undefined) {
+      throw new Error("Coding error: getParentPayload called without parentPayload");
     }
-    return {
-      blockRoot: parentBlockRoot,
-      blockRootHex: toRootHex(parentBlockRoot),
-      blockHash: this.latestBid.blockHash,
-      kzgCommitments: this.latestBid.blobKzgCommitments,
-    };
+    return this.parentPayload;
   }
 
   /**

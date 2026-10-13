@@ -58,7 +58,7 @@ import {
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
+import {GENESIS_EPOCH, HALF_SLOT_BPS, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {decodeArchivedEnvelope} from "../db/repositories/index.js";
@@ -128,7 +128,7 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
-import {ShufflingCache} from "./shufflingCache.js";
+import {ShufflingCache, ShufflingPromiseCancelReason} from "./shufflingCache.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
@@ -620,12 +620,14 @@ export class BeaconChain implements IBeaconChain {
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
     await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot);
+    await this.proposerPreferencesPool.fromPersisted(this.db, this.clock.currentSlot);
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
     await this.archiveStore.persistToDisk();
     await this.opPool.toPersisted(this.db);
+    await this.proposerPreferencesPool.toPersisted(this.db);
   }
 
   getHeadState(): IBeaconStateView {
@@ -1629,21 +1631,48 @@ export class BeaconChain implements IBeaconChain {
     const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
 
     let state: IBeaconStateView;
-    if (blockEpoch < attEpoch - 1) {
-      // thanks to one epoch look ahead, we don't need to dial up to attEpoch
-      const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
-      this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
-      state = await this.regen.getBlockSlotState(attHeadBlock, targetSlot, {dontTransferCache: true}, regenCaller);
-    } else if (blockEpoch > attEpoch) {
-      // should not happen, handled inside attestation verification code
-      throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
-    } else {
-      // should use either current or next shuffling of head state
-      // it's not likely to hit this since these shufflings are cached already
-      // so handle just in case
-      this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
-      state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
+    try {
+      if (blockEpoch < attEpoch - 1) {
+        // thanks to one epoch look ahead, we don't need to dial up to attEpoch
+        const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
+        this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
+        state = await this.regen.getBlockSlotState(attHeadBlock, targetSlot, {dontTransferCache: true}, regenCaller);
+      } else if (blockEpoch > attEpoch) {
+        // should not happen, handled inside attestation verification code
+        throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
+      } else {
+        // should use either current or next shuffling of head state
+        // it's not likely to hit this since these shufflings are cached already
+        // so handle just in case
+        this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
+        state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
+      }
+    } catch (e) {
+      this.shufflingCache.cancelPromise(attEpoch, shufflingDependentRoot, ShufflingPromiseCancelReason.regenError);
+      throw e;
     }
+
+    const stateDecisionRoot = state.getShufflingDecisionRoot(attEpoch);
+    if (stateDecisionRoot !== shufflingDependentRoot) {
+      // the promise would never be resolved by the state's shuffling
+      this.shufflingCache.cancelPromise(
+        attEpoch,
+        shufflingDependentRoot,
+        ShufflingPromiseCancelReason.decisionRootMismatch
+      );
+      this.logger.debug("Shuffling decision root mismatch on attestation regen", {
+        slot: attHeadBlock.slot,
+        root: attHeadBlock.blockRoot,
+        epoch: attEpoch,
+        shufflingDependentRoot,
+        stateDecisionRoot,
+      });
+
+      throw Error(
+        `Shuffling decision root mismatch epoch=${attEpoch} slot=${attHeadBlock.slot} root=${attHeadBlock.blockRoot} expected=${shufflingDependentRoot} actual=${stateDecisionRoot}`
+      );
+    }
+
     // resolve the promise to unblock other calls of the same epoch and dependent root
     this.shufflingCache.processState(state);
     return state.getShufflingAtEpoch(attEpoch);
@@ -1812,7 +1841,8 @@ export class BeaconChain implements IBeaconChain {
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
       // On the last slot of the epoch
-      sleep(this.config.SLOT_DURATION_MS / 2)
+      const fork = this.config.getForkName(slot);
+      sleep(this.config.getSlotComponentDurationMs(fork, HALF_SLOT_BPS))
         .then(() => this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
           if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);
@@ -1902,6 +1932,21 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (newValidatorCount > previousValidatorCount) {
+      const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+      await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
+    }
+  }
+
+  async updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void> {
+    let hasNewValidators = false;
+    for (const validatorIndex of validatorIndices) {
+      if (this.beaconProposerCache.track(epoch, validatorIndex)) {
+        hasNewValidators = true;
+      }
+    }
+
+    // Only update validator custody if we discovered new validators
+    if (hasNewValidators) {
       const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }

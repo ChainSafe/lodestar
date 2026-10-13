@@ -43,6 +43,7 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   "CONFIG_NAME",
   // EIP-8198 quick slots are not implemented.
   "MIN_BLOB_DATA_RETENTION_MS" as keyof ChainConfig,
+  "SLOT_DURATION_MS_EIP8198" as keyof ChainConfig,
 ];
 
 /**

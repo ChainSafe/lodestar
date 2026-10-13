@@ -300,6 +300,17 @@ function getProposerConfigFromArgs(
     }
   }
 
+  const configs = [valProposerConfig.defaultConfig, ...Object.values(valProposerConfig.proposerConfig ?? {})];
+  if (
+    configs.some(
+      (config) =>
+        config.builder?.selection === routes.validator.BuilderSelection.ExecutionOnly &&
+        (config.builder.builders ?? []).length > 0
+    )
+  ) {
+    throw new YargsError("Builder selection executiononly can not be combined with builders");
+  }
+
   return valProposerConfig;
 }
 
