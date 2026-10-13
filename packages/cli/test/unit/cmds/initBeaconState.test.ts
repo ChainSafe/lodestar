@@ -327,4 +327,22 @@ describe("initBeaconState", () => {
       type: {code: StateInitializationErrorCode.INVALID_CHECKPOINT_SOURCE},
     });
   });
+  it("refuses the native state view once the Gloas fork epoch has passed", async () => {
+    const currentEpoch = Math.floor((Math.floor(Date.now() / 1000) - genesis.state.genesisTime) / secondsPerEpoch);
+    const gloasConfig = createChainForkConfig({...config, GLOAS_FORK_EPOCH: currentEpoch - 1});
+    const db = await createDb({archived: dbFresh});
+    const ensureCapacitySpy = vi.spyOn(pubkeyCache, "ensureCapacity");
+
+    await expect(
+      initBeaconState(
+        {network: "dev", "chain.nativeStateTransition": true} as BeaconArgs & GlobalArgs,
+        fixturesDir,
+        path.join(fixturesDir, "pubkeys"),
+        gloasConfig,
+        db,
+        getMockedLogger()
+      )
+    ).rejects.toMatchObject({type: {code: StateInitializationErrorCode.NATIVE_GLOAS_UNSUPPORTED}});
+    expect(ensureCapacitySpy).not.toHaveBeenCalled();
+  });
 });

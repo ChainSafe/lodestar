@@ -10,6 +10,7 @@ export enum StateInitializationErrorCode {
   ANCHOR_STATE_FORK_MISMATCH = "ANCHOR_STATE_FORK_MISMATCH",
   GENESIS_ROOT_MISMATCH = "GENESIS_ROOT_MISMATCH",
   MISSING_INITIALIZATION_SOURCE = "MISSING_INITIALIZATION_SOURCE",
+  NATIVE_GLOAS_UNSUPPORTED = "NATIVE_GLOAS_UNSUPPORTED",
 }
 
 export class StateInitializationError extends LodestarError<{code: StateInitializationErrorCode}> {}

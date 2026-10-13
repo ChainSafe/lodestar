@@ -4,8 +4,10 @@ import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {MAX_PENDING_DEPOSITS_PER_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   IBeaconStateView,
+  computeEpochAtSlot,
   computeWeakSubjectivitySummaryFromStateBytes,
   createBeaconStateView,
+  getCurrentSlot,
   getValidatorCountFromStateBytes,
   isWithinWeakSubjectivityPeriodFromSummary,
   readBeaconStateBytesMetadata,
@@ -140,11 +142,21 @@ async function executeStateInitialization(
   logger: Logger
 ): Promise<InitBeaconStateResult> {
   const {config, stateBytes} = stateInit;
+  const metadata = readBeaconStateBytesMetadata(stateBytes);
   const validatorCount = getValidatorCountFromStateBytes(config, stateBytes);
-  if (validatorCount === null) {
+  if (metadata === null || validatorCount === null) {
     throw new StateInitializationError(
       {code: StateInitializationErrorCode.MALFORMED_STATE_BYTES},
       "Cannot read validator count from selected state bytes"
+    );
+  }
+  if (
+    nativeStateTransition &&
+    computeEpochAtSlot(getCurrentSlot(config, metadata.genesisTime)) >= config.GLOAS_FORK_EPOCH
+  ) {
+    throw new StateInitializationError(
+      {code: StateInitializationErrorCode.NATIVE_GLOAS_UNSUPPORTED},
+      `--chain.nativeStateTransition does not support Gloas, which activated at epoch ${config.GLOAS_FORK_EPOCH}`
     );
   }
   // Reserve 3 months of worst-case registry growth (MAX_PENDING_DEPOSITS_PER_EPOCH per epoch),

@@ -233,9 +233,9 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const options = beaconNodeOptions.getWithDefaults();
 
   if (options.chain.nativeStateTransition && config.GLOAS_FORK_EPOCH !== Infinity) {
-    throw Error(
-      `--chain.nativeStateTransition does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
-    );
+    logger.warn("--chain.nativeStateTransition does not support Gloas, the node will stop at the fork", {
+      gloasForkEpoch: config.GLOAS_FORK_EPOCH,
+    });
   }
 
   return {config, options, beaconPaths, network, version, commit, privateKey, logger};
