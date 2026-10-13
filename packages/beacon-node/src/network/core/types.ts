@@ -1,14 +1,14 @@
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
+import {NativePeerReportContext} from "@chainsafe/lodestar-z/network";
 import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
-import {ResponseIncoming} from "@lodestar/reqresp";
 import {Status} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
-import {OutgoingRequestArgs} from "../reqresp/types.js";
+import {OutgoingRequestArgs, ResponseIncoming} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 
 export type MultiaddrStr = string;
@@ -51,7 +51,7 @@ export interface INetworkCorePublic {
  */
 export interface INetworkCore extends INetworkCorePublic {
   // Sync method
-  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
+  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string, context?: NativePeerReportContext): void;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
 
   // TODO: Duplicated methods with INetwork interface
@@ -102,7 +102,7 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   // biome-ignore lint/suspicious/noExplicitAny: Explicitly needed the `any` type here
   [string: string]: (...args: any[]) => Promise<any> | any;
   // Async method through worker boundary
-  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void>;
+  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string, context?: NativePeerReportContext): Promise<void>;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
 
   // TODO: Duplicated methods with INetwork interface

@@ -1,6 +1,6 @@
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {ENR} from "@chainsafe/enr";
-import {NativeHost, NativeNetwork, createNativeNetwork} from "@chainsafe/lodestar-z/network";
+import {NativeHost, NativeNetwork, NativePeerReportContext, createNativeNetwork} from "@chainsafe/lodestar-z/network";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {Status} from "@lodestar/types";
@@ -267,8 +267,8 @@ export class NativeNetworkCore implements INetworkCore {
   setTargetGroupCount(count: number): Promise<void> {
     return this.intent.custody(count);
   }
-  reportPeer(peer: string, action: PeerAction, actionName: string): void {
-    this.reports.report(peer, action, actionName);
+  reportPeer(peer: string, action: PeerAction, actionName: string, context?: NativePeerReportContext): void {
+    this.reports.report(peer, action, actionName, context);
   }
   reStatusPeers(peers: string[]): Promise<void> {
     nativeInteger(peers.length, "re-status peers", this.modules.opts.maxPeers);

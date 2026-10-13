@@ -6,7 +6,6 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq} from "@lodestar/params";
-import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
@@ -67,7 +66,13 @@ import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
 import {BoundedServing} from "./reqresp/serving/handler.js";
-import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
+import {
+  GetReqRespHandlerFn,
+  ResponseIncoming,
+  Version,
+  requestSszTypeByMethod,
+  responseSszTypeByMethod,
+} from "./reqresp/types.js";
 import {
   collectExactOneTyped,
   collectMaxResponseTyped,
@@ -633,7 +638,7 @@ export class Network implements INetwork {
       ),
       request,
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -649,7 +654,7 @@ export class Network implements INetwork {
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -662,7 +667,7 @@ export class Network implements INetwork {
       Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -670,7 +675,7 @@ export class Network implements INetwork {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientBootstrap, [Version.V1], request),
       responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap],
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -678,7 +683,7 @@ export class Network implements INetwork {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientOptimisticUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate],
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -686,7 +691,7 @@ export class Network implements INetwork {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientFinalityUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate],
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -699,7 +704,7 @@ export class Network implements INetwork {
       request.count,
       responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange],
       undefined,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -714,7 +719,7 @@ export class Network implements INetwork {
       request.count * this.config.getMaxBlobsPerBlock(epoch),
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange],
       undefined,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -724,7 +729,7 @@ export class Network implements INetwork {
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot],
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -737,7 +742,7 @@ export class Network implements INetwork {
       request.count * request.columns.length,
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange],
       undefined,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -750,7 +755,7 @@ export class Network implements INetwork {
       request.reduce((total, {columns}) => total + columns.length, 0),
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot],
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -763,7 +768,7 @@ export class Network implements INetwork {
       request.count,
       responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRange],
       undefined,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -776,14 +781,16 @@ export class Network implements INetwork {
       request.length,
       responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRoot],
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
-  private reportInvalidResponse(peerId: PeerIdStr): void {
-    this.reportPeer(peerId, PeerAction.LowToleranceError, "InvalidResponseSsz").catch((error: Error) => {
-      this.logger.debug("Failed to report invalid response", {peerId}, error);
-    });
+  private async reportInvalidResponse(peerId: PeerIdStr, chunk: ResponseIncoming): Promise<void> {
+    try {
+      await this.core.reportPeer(peerId, PeerAction.LowToleranceError, "InvalidResponseSsz", chunk.peerReportContext);
+    } catch (error) {
+      this.logger.debug("Failed to report invalid response", {peerId}, error as Error);
+    }
   }
 
   private sendReqRespRequest<Req>(

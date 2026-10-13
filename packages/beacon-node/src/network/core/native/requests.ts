@@ -13,7 +13,6 @@ import {
   RequestErrorCode,
   RespStatus,
   ResponseError,
-  ResponseIncoming,
   ResponseOutgoing,
   RpcResponseStatusError,
   responseStatusErrorToRequestError,
@@ -22,7 +21,7 @@ import {Logger, isErrorAborted} from "@lodestar/utils";
 import {PeerAction} from "../../peers/score/index.js";
 import {onOutgoingReqRespError} from "../../reqresp/score.js";
 import {BoundedServing, ServingHandler} from "../../reqresp/serving/handler.js";
-import {OutgoingRequestArgs} from "../../reqresp/types.js";
+import {OutgoingRequestArgs, ResponseIncoming} from "../../reqresp/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
 
@@ -114,6 +113,7 @@ export function outgoingNativeRequest(
           data: result.value.data,
           fork: ForkName[result.value.fork ?? "phase0"],
           protocolVersion: protocol.version,
+          peerReportContext: {origin: result.value.origin, reason: "reqresp_response"},
         },
       };
     } catch (error) {

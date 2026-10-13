@@ -4,11 +4,12 @@ import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {PrivateKey} from "@libp2p/interface";
+import {NativePeerReportContext} from "@chainsafe/lodestar-z/network";
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
+import {ResponseOutgoing} from "@lodestar/reqresp";
 import {Status} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -18,7 +19,7 @@ import {terminateWorkerThread, wireEventsOnMainThread} from "../../util/workerEv
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
-import {GetReqRespHandlerFn, IncomingRequestArgs, OutgoingRequestArgs} from "../reqresp/types.js";
+import {GetReqRespHandlerFn, IncomingRequestArgs, OutgoingRequestArgs, ResponseIncoming} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 import {
   NetworkWorkerThreadEventType,
@@ -205,8 +206,13 @@ export class WorkerNetworkCore implements INetworkCore {
   reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     return this.getApi().reStatusPeers(peers);
   }
-  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
-    return this.getApi().reportPeer(peer, action, actionName);
+  reportPeer(
+    peer: PeerIdStr,
+    action: PeerAction,
+    actionName: string,
+    context?: NativePeerReportContext
+  ): Promise<void> {
+    return this.getApi().reportPeer(peer, action, actionName, context);
   }
 
   // TODO: Should this just be events? Do they need to report errors back?

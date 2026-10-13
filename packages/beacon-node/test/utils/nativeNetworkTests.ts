@@ -8,10 +8,11 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {ENR, SignableENR} from "@chainsafe/enr";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {NativeApplicationConfig, NativeLocalIntent} from "@chainsafe/lodestar-z/network";
+import {NativeApplicationConfig, NativeLocalIntent, NativePeerReportContext} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {RequestErrorCode} from "@lodestar/reqresp";
 import {getProposerSlashingSignatureSets} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
 import {defer, sleep, toHex, withTimeout} from "@lodestar/utils";
@@ -23,6 +24,7 @@ import {createNativeConfig} from "../../src/network/core/native/config.js";
 import {NativeIntent} from "../../src/network/core/native/intent.js";
 import {NativeNetworkCore} from "../../src/network/core/native/nativeNetworkCore.js";
 import {NativePeers} from "../../src/network/core/native/peers.js";
+import {NativePeerReports} from "../../src/network/core/native/reports.js";
 import {NetworkEvent, NetworkEventData} from "../../src/network/events.js";
 import {defaultNetworkOptions} from "../../src/network/options.js";
 import {PeerAction} from "../../src/network/peers/index.js";
@@ -78,6 +80,39 @@ describe("native Lodestar integration", () => {
       expect(text).not.toContain("lodestar_network_worker_");
       expect(node.metrics.networkJs).toBeNull();
     } finally {
+      await node.close();
+    }
+  }, 15000);
+
+  it("reports malformed SSZ using the response's captured origin", async () => {
+    const node = await nativeNetworkFixture(fuluConfig());
+    const context: NativePeerReportContext = {
+      origin: {
+        connection: {index: 2, generation: 4},
+        endpoint: {family: 4, address: Uint8Array.of(192, 0, 2, 1), port: 9000},
+      },
+      reason: "reqresp_response",
+    };
+    const peer = node.network.peerId.toString();
+    const request = vi.spyOn(NativeNetworkCore.prototype, "sendReqRespRequest").mockReturnValueOnce(
+      (async function* () {
+        yield {
+          data: new Uint8Array(4000),
+          fork: node.chain.config.getForkName(0),
+          protocolVersion: 2,
+          peerReportContext: context,
+        };
+      })()
+    );
+    const report = vi.spyOn(NativePeerReports.prototype, "report").mockImplementation(() => {});
+    try {
+      await expect(node.network.sendBeaconBlocksByRoot(peer, [new Uint8Array(32)])).rejects.toMatchObject({
+        type: {code: RequestErrorCode.INVALID_RESPONSE_SSZ},
+      });
+      expect(report).toHaveBeenCalledExactlyOnceWith(peer, PeerAction.LowToleranceError, "InvalidResponseSsz", context);
+    } finally {
+      request.mockRestore();
+      report.mockRestore();
       await node.close();
     }
   }, 15000);

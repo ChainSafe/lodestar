@@ -1,7 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
-import {RequestError, RequestErrorCode, ResponseIncoming} from "@lodestar/reqresp";
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
+import {ResponseIncoming} from "../../../../src/network/reqresp/types.js";
 import {
   collectExactOneTyped,
   collectMaxResponseTyped,
@@ -11,18 +12,21 @@ import {collectSequentialBlocksInRange} from "../../../../src/network/reqresp/ut
 
 const type = ssz.phase0.SignedBeaconBlock;
 const collectors = {
-  exact: (source: AsyncIterable<ResponseIncoming>, report: () => void) =>
+  exact: (source: AsyncIterable<ResponseIncoming>, report: (chunk: ResponseIncoming) => void) =>
     collectExactOneTyped(source, () => type, report),
-  maximum: (source: AsyncIterable<ResponseIncoming>, report: () => void) =>
+  maximum: (source: AsyncIterable<ResponseIncoming>, report: (chunk: ResponseIncoming) => void) =>
     collectMaxResponseTyped(source, 2, () => type, undefined, report),
-  withBytes: (source: AsyncIterable<ResponseIncoming>, report: () => void) =>
+  withBytes: (source: AsyncIterable<ResponseIncoming>, report: (chunk: ResponseIncoming) => void) =>
     collectMaxResponseTypedWithBytes(source, 2, () => type, undefined, report),
-  sequential: (source: AsyncIterable<ResponseIncoming>, report: () => void) =>
+  sequential: (source: AsyncIterable<ResponseIncoming>, report: (chunk: ResponseIncoming) => void) =>
     collectSequentialBlocksInRange(source, {startSlot: 0, count: 2}, undefined, report),
 };
 
-async function* response(data: Uint8Array): AsyncGenerator<ResponseIncoming> {
-  yield {data, fork: ForkName.phase0, protocolVersion: 1};
+async function* response(
+  data: Uint8Array,
+  peerReportContext?: ResponseIncoming["peerReportContext"]
+): AsyncGenerator<ResponseIncoming> {
+  yield {data, fork: ForkName.phase0, protocolVersion: 1, peerReportContext};
 }
 
 for (const [name, collect] of Object.entries(collectors)) {
@@ -34,6 +38,22 @@ for (const [name, collect] of Object.entries(collectors)) {
       });
       expect(report).toHaveBeenCalledOnce();
     });
+
+    it.each([null, {family: 4 as const, address: Uint8Array.of(192, 0, 2, 1), port: 9000}])(
+      "retains response attribution through a worker copy, including unknown endpoints: %s",
+      async (endpoint) => {
+        const context: ResponseIncoming["peerReportContext"] = {
+          origin: {connection: {index: 2, generation: 4}, endpoint},
+          reason: "reqresp_response",
+        };
+        const delivered = structuredClone(context);
+        const report = vi.fn();
+        await expect(collect(response(new Uint8Array(1), delivered), report)).rejects.toMatchObject({
+          type: {code: RequestErrorCode.INVALID_RESPONSE_SSZ},
+        });
+        expect(report).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({peerReportContext: context}));
+      }
+    );
 
     it("does not re-report a native or libp2p iterator failure", async () => {
       const report = vi.fn();

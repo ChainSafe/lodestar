@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {afterEach, expect, it, vi} from "vitest";
-import {IncomingRequest, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
+import {IncomingRequest, NativePeerOrigin, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
 import {RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
@@ -691,4 +691,25 @@ it("preserves the failed request's origin when reporting a response error", asyn
   );
   await expect(iterator.next()).rejects.toMatchObject({type: {code: RequestErrorCode.DIAL_ERROR}});
   expect(report).toHaveBeenCalledWith(expect.anything(), RequestErrorCode.DIAL_ERROR, origin);
+});
+
+it("delivers the response origin for host validation after the request retires", async () => {
+  const origin: NativePeerOrigin = {
+    connection: {index: 2, generation: 4},
+    endpoint: {family: 4, address: Uint8Array.of(192, 0, 2, 1), port: 9000},
+  };
+  const protocol = "/eth2/beacon_chain/req/beacon_blocks_by_root/2/ssz_snappy";
+  const response = (async function* (): AsyncGenerator<NativeResponseChunk> {
+    yield {data: new Uint8Array(1), fork: "phase0", protocol, origin};
+  })();
+  const report = vi.fn();
+  const iterator = outgoingNativeRequest(
+    {request: () => response},
+    {peerId: "peer", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
+    report
+  );
+  const received = await iterator.next();
+  await iterator.return?.();
+  expect(received.value?.peerReportContext).toEqual({origin, reason: "reqresp_response"});
+  expect(report).not.toHaveBeenCalled();
 });
