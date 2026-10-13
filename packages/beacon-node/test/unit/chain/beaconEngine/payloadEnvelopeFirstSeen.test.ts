@@ -3,7 +3,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {BlockInputNoData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
@@ -89,21 +89,79 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
             throw new Error("unexpected validation failure");
         }
       });
-      const pending = engine.validateGossipBlock(new Uint8Array(), block, ForkName.gloas, 0);
-      if (scenario === "unexpected") await expect(pending).rejects.toThrow("unexpected validation failure");
+      const pending = engine.validateGossipBlock(
+        fromHex(root),
+        ssz.gloas.SignedBeaconBlock.serialize(block),
+        ForkName.gloas,
+        0
+      );
+      if (scenario === "unexpected")
+        await expect(pending).resolves.toMatchObject({status: "ignore", code: "UNEXPECTED_ERROR"});
       else
         await expect(pending).resolves.toMatchObject({
           status: scenario === "accept" ? "accept" : scenario === "reject" ? "reject" : "ignore",
         });
+      expect(engine.blockCache.get(root) !== undefined).toBe(
+        ["accept", "unknown_parent", "observed_sibling"].includes(scenario)
+      );
       expect(engine.seenPayloadEnvelopeInputCache.get(root) !== undefined).toBe(
         ["accept", "unknown_parent", "observed_sibling"].includes(scenario)
       );
     }
   );
 
+  it.each(["truncated", "invalid_offset", "root_mismatch"])(
+    "returns a plain rejection for %s without replacing existing cache entries",
+    async (scenario) => {
+      const validBytes = ssz.gloas.SignedBeaconBlock.serialize(block);
+      const entry = engine.blockCache.set(root, block, validBytes);
+      let bytes: Uint8Array;
+      if (scenario === "truncated") {
+        bytes = new Uint8Array();
+      } else if (scenario === "invalid_offset") {
+        bytes = validBytes.slice();
+        new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).setUint32(0, 0, true);
+      } else {
+        const otherBlock = ssz.gloas.SignedBeaconBlock.clone(block);
+        otherBlock.message.slot++;
+        bytes = ssz.gloas.SignedBeaconBlock.serialize(otherBlock);
+      }
+      const validate = vi.spyOn(blockValidation, "validateGossipBlock");
+
+      const result = await engine.validateGossipBlock(fromHex(root), bytes, ForkName.gloas, 0);
+
+      expect(result).toMatchObject({
+        status: "reject",
+        code: scenario === "root_mismatch" ? "BLOCK_ROOT_MISMATCH" : "INVALID_BLOCK_SSZ",
+      });
+      expect(result).toHaveProperty("error", undefined);
+      expect(structuredClone(result)).toEqual(result);
+      expect(validate).not.toHaveBeenCalled();
+      expect(engine.blockCache.get(root)).toBe(entry);
+      expect(engine.seenPayloadEnvelopeInputCache.get(root)).toBeUndefined();
+    }
+  );
+
+  it("returns ignore and clears the decoded block if payload cache initialization fails", async () => {
+    const error = new Error("payload cache initialization failed");
+    vi.spyOn(engine.seenPayloadEnvelopeInputCache, "add").mockImplementation(() => {
+      throw error;
+    });
+
+    await expect(
+      engine.validateGossipBlock(fromHex(root), ssz.gloas.SignedBeaconBlock.serialize(block), ForkName.gloas, 0)
+    ).resolves.toMatchObject({status: "ignore", code: "UNEXPECTED_ERROR"});
+    expect(engine.blockCache.get(root)).toBeUndefined();
+    expect(engine.logger.error).toHaveBeenCalledWith(
+      "Error validating gossip block",
+      {root, code: "UNEXPECTED_ERROR"},
+      error
+    );
+  });
+
   it("retains API observations on validation failure and preserves an existing envelope candidate", async () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
-    await engine.validateGossipBlock(new Uint8Array(), block, ForkName.gloas);
+    await engine.validateGossipBlock(fromHex(root), ssz.gloas.SignedBeaconBlock.serialize(block), ForkName.gloas);
     const input = engine.seenPayloadEnvelopeInputCache.get(root);
     expect(input).toBeDefined();
     const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
@@ -112,7 +170,10 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
     vi.mocked(blockValidation.validateGossipBlock).mockRejectedValue(
       new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID, slot: 1, root})
     );
-    expect((await engine.validateGossipBlock(new Uint8Array(), block, ForkName.gloas)).status).toBe("reject");
+    expect(
+      (await engine.validateGossipBlock(fromHex(root), ssz.gloas.SignedBeaconBlock.serialize(block), ForkName.gloas))
+        .status
+    ).toBe("reject");
     expect(engine.seenPayloadEnvelopeInputCache.get(root)).toBe(input);
     expect(input?.getPayloadEnvelope()).toBe(envelope);
   });
@@ -140,7 +201,10 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
     });
     await expect(
       engine.verifyBlocks(
-        blocks.map((block) => ssz.gloas.SignedBeaconBlock.serialize(block)),
+        blocks.map((block) => ({
+          blockRoot: ssz.gloas.BeaconBlock.hashTreeRoot(block.message),
+          blockBytes: ssz.gloas.SignedBeaconBlock.serialize(block),
+        })),
         {},
         new AbortController().signal
       )
@@ -165,7 +229,12 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
 
   it("does not create payload inputs for pre-Gloas blocks", async () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
-    await engine.validateGossipBlock(new Uint8Array(), ssz.phase0.SignedBeaconBlock.defaultValue(), ForkName.phase0);
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    await engine.validateGossipBlock(
+      ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
+      ssz.phase0.SignedBeaconBlock.serialize(block),
+      ForkName.phase0
+    );
     expect(engine.seenPayloadEnvelopeInputCache.size()).toBe(0);
   });
 });

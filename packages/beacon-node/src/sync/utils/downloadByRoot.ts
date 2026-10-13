@@ -9,6 +9,7 @@ import {
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
@@ -243,6 +244,7 @@ export async function fetchByRoot({
     } else {
       block = await fetchAndValidateBlock({
         config,
+        chain,
         network,
         peerIdStr,
         blockRoot,
@@ -279,6 +281,7 @@ export async function fetchByRoot({
   } else {
     block = await fetchAndValidateBlock({
       config,
+      chain,
       network,
       peerIdStr,
       blockRoot,
@@ -326,19 +329,21 @@ export async function fetchByRoot({
 
 export async function fetchAndValidateBlock({
   config,
+  chain,
   network,
   peerIdStr,
   blockRoot,
-}: Omit<FetchByRootAndValidateBlockProps, "chain">): Promise<SignedBeaconBlock> {
+}: FetchByRootAndValidateBlockProps): Promise<SignedBeaconBlock> {
   const response = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
-  const block = response.at(0);
-  if (!block) {
+  const blockWithBytes = response.at(0);
+  if (!blockWithBytes) {
     throw new DownloadByRootError({
       code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE,
       peer: prettyPrintPeerIdStr(peerIdStr),
       blockRoot: toRootHex(blockRoot),
     });
   }
+  const {block, bytes} = blockWithBytes;
   const receivedRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   if (!byteArrayEquals(receivedRoot, blockRoot)) {
     throw new DownloadByRootError(
@@ -350,6 +355,14 @@ export async function fetchAndValidateBlock({
       },
       "block does not match requested root"
     );
+  }
+  const rootHex = toRootHex(receivedRoot);
+  if (
+    chain &&
+    block.message.slot > computeStartSlotAtEpoch(chain.getFinalizedCheckpoint().epoch) &&
+    !chain.hasBlockHex(rootHex)
+  ) {
+    chain.blockCache.set(rootHex, block, bytes);
   }
   return block;
 }

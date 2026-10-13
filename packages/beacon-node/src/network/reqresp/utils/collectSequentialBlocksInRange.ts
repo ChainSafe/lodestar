@@ -1,7 +1,6 @@
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {SignedBeaconBlock, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {SerializedCache} from "../../../util/serializedCache.js";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 import {sszDeserializeResponse} from "./collect.js";
 
@@ -9,16 +8,17 @@ import {sszDeserializeResponse} from "./collect.js";
  * Asserts a response from BeaconBlocksByRange respects the request and is sequential
  * Note: MUST allow missing block for skipped slots.
  */
-export async function collectSequentialBlocksInRange(
+export async function collectSequentialBlocksInRange<T>(
   blockStream: AsyncIterable<ResponseIncoming>,
   {count, startSlot}: Pick<phase0.BeaconBlocksByRangeRequest, "count" | "startSlot">,
-  serializedCache?: SerializedCache
-): Promise<SignedBeaconBlock[]> {
-  const blocks: SignedBeaconBlock[] = [];
+  mapResponse: (block: SignedBeaconBlock, bytes: Uint8Array) => T
+): Promise<T[]> {
+  const blocks: T[] = [];
+  let prevBlock: SignedBeaconBlock | undefined;
 
   for await (const chunk of blockStream) {
     const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, chunk.protocolVersion);
-    const block = sszDeserializeResponse(blockType, chunk.data);
+    const block = sszDeserializeResponse(blockType, chunk.data, {reuseBytes: true});
 
     const blockSlot = block.message.slot;
 
@@ -31,14 +31,12 @@ export async function collectSequentialBlocksInRange(
       throw new BlocksByRangeError({code: BlocksByRangeErrorCode.UNDER_START_SLOT});
     }
 
-    const prevBlock = blocks.at(-1);
     if (prevBlock && prevBlock.message.slot >= blockSlot) {
       throw new BlocksByRangeError({code: BlocksByRangeErrorCode.BAD_SEQUENCE});
     }
 
-    blocks.push(block);
-    // optionally cache the serialized response if the cache is available
-    serializedCache?.set(block, chunk.data);
+    blocks.push(mapResponse(block, chunk.data));
+    prevBlock = block;
     if (blocks.length >= count) {
       break; // Done, collected all blocks
     }

@@ -4,6 +4,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
+import {BlockCache} from "../../../../src/chain/blocks/blockCache.js";
 import {
   BlockInputPreData,
   BlockInputSource,
@@ -30,6 +31,7 @@ describe("SeenBlockInputCache", async () => {
   let abortController: AbortController;
   let chainEvents: ChainEventEmitter;
   let serializedCache: SerializedCache;
+  let blockCache: BlockCache;
 
   const privateKey = await generateKeyPair("secp256k1");
   const nodeId = computeNodeIdFromPrivateKey(privateKey);
@@ -40,6 +42,7 @@ describe("SeenBlockInputCache", async () => {
     chainEvents = new ChainEventEmitter();
     abortController = new AbortController();
     serializedCache = new SerializedCache();
+    blockCache = new BlockCache(config);
     const signal = abortController.signal;
     const genesisTime = Math.floor(Date.now() / 1000);
     cache = new SeenBlockInput({
@@ -49,6 +52,7 @@ describe("SeenBlockInputCache", async () => {
       chainEvents,
       signal,
       serializedCache,
+      blockCache,
       logger,
       metrics: null,
     });
@@ -124,7 +128,7 @@ describe("SeenBlockInputCache", async () => {
       expect(cache.get(rootHex)).toBeUndefined();
     });
 
-    it("should remove serialized cache entries for the evicted BlockInput", () => {
+    it("should remove block cache entries for the evicted BlockInput", () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.capella});
       cache.getByBlock({
         block,
@@ -132,11 +136,11 @@ describe("SeenBlockInputCache", async () => {
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now() / 1000,
       });
-      serializedCache.set(block, new Uint8Array([1]));
+      blockCache.set(rootHex, block, new Uint8Array([1]));
 
-      expect(serializedCache.get(block)).toBeDefined();
+      expect(blockCache.get(rootHex)).toBeDefined();
       cache.remove(rootHex);
-      expect(serializedCache.get(block)).toBeUndefined();
+      expect(blockCache.get(rootHex)).toBeUndefined();
     });
 
     it("should not throw an error if BlockInput not in cache", () => {
@@ -198,7 +202,7 @@ describe("SeenBlockInputCache", async () => {
       expect(cache.get(parentRootHex)).toBeUndefined();
     });
 
-    it("should remove serialized cache entries for the pruned BlockInputs", () => {
+    it("should remove block cache entries for the pruned BlockInputs", () => {
       const blocks = generateChainOfBlocks({forkName: ForkName.capella, count: 2});
       const parentBlock = blocks[0].block;
       const parentRootHex = blocks[0].rootHex;
@@ -217,13 +221,13 @@ describe("SeenBlockInputCache", async () => {
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now() / 1000,
       });
-      serializedCache.set(parentBlock, new Uint8Array([1]));
-      serializedCache.set(childBlock, new Uint8Array([2]));
+      blockCache.set(parentRootHex, parentBlock, new Uint8Array([1]));
+      blockCache.set(childRootHex, childBlock, new Uint8Array([2]));
 
       cache.prune(childRootHex);
 
-      expect(serializedCache.get(parentBlock)).toBeUndefined();
-      expect(serializedCache.get(childBlock)).toBeUndefined();
+      expect(blockCache.get(parentRootHex)).toBeUndefined();
+      expect(blockCache.get(childRootHex)).toBeUndefined();
     });
   });
 
@@ -261,8 +265,8 @@ describe("SeenBlockInputCache", async () => {
     });
 
     it("should remove all BlockInputs in slots before the checkpoint", () => {
-      serializedCache.set(parentBlockInput.getBlock(), new Uint8Array([1]));
-      serializedCache.set(childBlockInput.getBlock(), new Uint8Array([2]));
+      blockCache.set(parentRootHex, parentBlockInput.getBlock(), new Uint8Array([1]));
+      blockCache.set(childRootHex, childBlockInput.getBlock(), new Uint8Array([2]));
 
       chainEvents.emit(ChainEvent.forkChoiceFinalized, {
         epoch: config.DENEB_FORK_EPOCH,
@@ -271,8 +275,8 @@ describe("SeenBlockInputCache", async () => {
       });
       expect(cache.get(childRootHex)).toBeUndefined();
       expect(cache.get(parentRootHex)).toBeUndefined();
-      expect(serializedCache.get(parentBlockInput.getBlock())).toBeUndefined();
-      expect(serializedCache.get(childBlockInput.getBlock())).toBeUndefined();
+      expect(blockCache.get(parentRootHex)).toBeUndefined();
+      expect(blockCache.get(childRootHex)).toBeUndefined();
     });
 
     it("should not remove BlockInputs in slots after the checkpoint", () => {

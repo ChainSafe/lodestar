@@ -42,6 +42,7 @@ import {promiseAllMaybeAsync} from "../util/promises.js";
 import {
   BeaconBlocksByRootRequest,
   BlobSidecarsByRootRequest,
+  BlockWithBytes,
   DataColumnSidecarsByRootRequest,
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
@@ -546,10 +547,14 @@ export class Network implements INetwork {
 
   // ReqResp
 
+  /**
+   * Return decoded blocks and original bytes so the caller can populate BlockCache after response
+   * validation, using the roots it already computes instead of hashing blocks here just for caching.
+   */
   async sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<SignedBeaconBlock[]> {
+  ): Promise<BlockWithBytes[]> {
     return collectSequentialBlocksInRange(
       this.sendReqRespRequest(
         peerId,
@@ -559,11 +564,11 @@ export class Network implements INetwork {
         request
       ),
       request,
-      this.chain.serializedCache
+      (block, bytes) => ({block, bytes})
     );
   }
 
-  async sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]> {
+  async sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<BlockWithBytes[]> {
     return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(
         peerId,
@@ -574,19 +579,16 @@ export class Network implements INetwork {
       ),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
-      this.chain.serializedCache
+      (block, bytes) => ({block, bytes})
     );
   }
 
-  async sendBeaconBlocksByHead(
-    peerId: PeerIdStr,
-    request: fulu.BeaconBlocksByHeadRequest
-  ): Promise<SignedBeaconBlock[]> {
+  async sendBeaconBlocksByHead(peerId: PeerIdStr, request: fulu.BeaconBlocksByHeadRequest): Promise<BlockWithBytes[]> {
     return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlocksByHead, [Version.V1], request),
       Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
-      this.chain.serializedCache
+      (block, bytes) => ({block, bytes})
     );
   }
 

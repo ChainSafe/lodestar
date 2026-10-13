@@ -11,6 +11,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {accept} from "../../../src/chain/beaconEngine/gossipValidationResult.js";
+import {BlockCache} from "../../../src/chain/blocks/blockCache.js";
 import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -394,7 +395,10 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
           const correctBlocks = Array.from(roots)
             .map((root) => blocksByRoot.get(toRootHex(root)))
             .filter(notNullish);
-          return wrongBlockRoot ? [ssz.gloas.SignedBeaconBlock.defaultValue()] : correctBlocks;
+          return (wrongBlockRoot ? [ssz.gloas.SignedBeaconBlock.defaultValue()] : correctBlocks).map((block) => ({
+            block,
+            bytes: ssz.gloas.SignedBeaconBlock.serialize(block),
+          }));
         },
       };
 
@@ -433,6 +437,8 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
 
       const emitter = new ChainEventEmitter();
       const chain: Partial<IBeaconChain> = {
+        blockCache: new BlockCache(config),
+        getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
         emitter,
         clock: new ClockStopped(0),
         genesisTime: 0,
@@ -693,12 +699,16 @@ describe("UnknownBlockSync", () => {
             earliestAvailableSlot: 0,
           }),
           custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
-          sendBeaconBlocksByRoot: vi.fn().mockResolvedValue([block]),
+          sendBeaconBlocksByRoot: vi
+            .fn()
+            .mockResolvedValue([{block, bytes: ssz.phase0.SignedBeaconBlock.serialize(block)}]),
           reportPeer,
         } as unknown as INetwork;
 
         const processBlock = vi.fn().mockRejectedValue(error(block));
         const chainForTest = {
+          blockCache: new BlockCache(chain.config),
+          getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
           emitter: new ChainEventEmitter(),
           clock: new ClockStopped(0),
           beaconEngine: {
@@ -951,6 +961,8 @@ describe("UnknownBlockSync", () => {
       const clock = new ClockStopped(0);
 
       const chain = {
+        blockCache: new BlockCache(gloasConfig),
+        getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
         emitter,
         clock,
         config: gloasConfig,
@@ -1463,7 +1475,9 @@ describe("UnknownBlockSync", () => {
       const knownRoots = new Set([parentRootHex]);
 
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
-      const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
+      const sendBeaconBlocksByRoot = vi
+        .fn()
+        .mockResolvedValue([{block, bytes: ssz.gloas.SignedBeaconBlock.serialize(block)}]);
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
       const processBlock = vi.fn().mockImplementation(async () => {
         cachedPayloadInput = payloadInput;
@@ -1557,7 +1571,9 @@ describe("UnknownBlockSync", () => {
       const knownRoots = new Set([parentRootHex]);
 
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
-      const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
+      const sendBeaconBlocksByRoot = vi
+        .fn()
+        .mockResolvedValue([{block, bytes: ssz.gloas.SignedBeaconBlock.serialize(block)}]);
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
 
       let emitter!: ChainEventEmitter;
@@ -1669,7 +1685,9 @@ describe("UnknownBlockSync", () => {
       const knownRoots = new Set([parentRootHex, blockRootHex]);
 
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
-      const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
+      const sendBeaconBlocksByRoot = vi
+        .fn()
+        .mockResolvedValue([{block, bytes: ssz.gloas.SignedBeaconBlock.serialize(block)}]);
       const processExecutionPayload = vi
         .fn()
         .mockRejectedValueOnce(
@@ -2463,7 +2481,9 @@ describe("UnknownBlockSync", () => {
       slot: 1,
     });
 
-    const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
+    const sendBeaconBlocksByRoot = vi
+      .fn()
+      .mockResolvedValue([{block, bytes: ssz.gloas.SignedBeaconBlock.serialize(block)}]);
 
     const processBlock = vi.fn().mockResolvedValue(undefined);
     const networkEvents = new NetworkEventBus();
@@ -2484,6 +2504,8 @@ describe("UnknownBlockSync", () => {
     } as Partial<INetwork> as INetwork;
 
     const chainForTest: Partial<IBeaconChain> = {
+      blockCache: new BlockCache(gloasConfig),
+      getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
       emitter: new ChainEventEmitter(),
       config: gloasConfig,
       clock: new ClockStopped(0),

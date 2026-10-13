@@ -1,6 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {getConfig} from "@lodestar/config/test-utils";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
@@ -10,6 +11,7 @@ import {
   GossipValidationStatus,
   runGossipValidation,
 } from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
+import {BlockCache} from "../../../../src/chain/blocks/blockCache.js";
 import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -29,6 +31,7 @@ import {PeerAction} from "../../../../src/network/peers/index.js";
 import {getGossipHandlers} from "../../../../src/network/processor/gossipHandlers.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../../src/util/peerId.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 
 vi.mock("../../../../src/chain/validation/index.js", async (importActual) => {
@@ -62,11 +65,200 @@ describe("getGossipHandlers", () => {
     vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
   });
 
+  it.each([ForkName.deneb, ForkName.gloas])(
+    "ignores an imported %s block through ChainView before populating caches or calling the engine",
+    async (fork) => {
+      const config = createBeaconConfig(getConfig(fork), Buffer.alloc(32));
+      const forkTypes = config.getForkTypes(1);
+      const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = 1;
+      const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+      const logger = testLogger();
+      const hasBlockHex = vi.fn().mockReturnValue(true);
+      const getByBlock = vi.fn();
+      const addPayloadInput = vi.fn();
+      const validateEngineBlock = vi.fn().mockResolvedValue({
+        status: GossipValidationStatus.Ignore,
+        code: BlockErrorCode.ALREADY_KNOWN,
+        error: new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex}),
+      });
+      const blockCache = new BlockCache(config);
+      const chain = {
+        hasBlockHex,
+        blockCache,
+        clock: new ClockStopped(1),
+        custodyConfig: {sampledColumns: [], custodyColumns: []},
+        seenBlockInputCache: {getByBlock},
+        seenPayloadEnvelopeInputCache: {add: addPayloadInput},
+        beaconEngine: {validateGossipBlock: validateEngineBlock, isBlockProposerEquivocating: () => false},
+      } as unknown as IBeaconChain;
+      const handlers = getGossipHandlers({
+        chain,
+        config,
+        core: {reportPeer: vi.fn()} as unknown as INetworkCore,
+        events: new NetworkEventBus(),
+        logger,
+        metrics: null,
+      });
+      const handler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
+
+      const result = await handler({
+        gossipData: {serializedData: forkTypes.SignedBeaconBlock.serialize(signedBlock)},
+        peerIdStr: "16Uiu2HAmTestGossipPeer",
+        seenTimestampSec: 0,
+        topic: {boundary: {fork, epoch: 0}, type: GossipType.beacon_block},
+      });
+
+      expect(result).toMatchObject({status: GossipValidationStatus.Ignore, code: BlockErrorCode.ALREADY_KNOWN});
+      expect(hasBlockHex).toHaveBeenCalledExactlyOnceWith(blockRootHex);
+      expect(blockCache.get(blockRootHex)).toBeUndefined();
+      expect(getByBlock).not.toHaveBeenCalled();
+      expect(addPayloadInput).not.toHaveBeenCalled();
+      expect(validateEngineBlock).not.toHaveBeenCalled();
+    }
+  );
+
   it("does not report the gossip peer when block processing hits an execution engine error", async () => {
     const {core} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.EXECUTION_ENGINE_ERROR);
 
     expect(core.reportPeer).not.toHaveBeenCalled();
   });
+
+  it.each(["INVALID_BLOCK_SSZ", "BLOCK_ROOT_MISMATCH", "UNEXPECTED_ERROR"])(
+    "handles the plain engine verdict %s without an error instance",
+    async (code) => {
+      const config = denebConfig;
+      const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
+      const root = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message));
+      const status = code === "UNEXPECTED_ERROR" ? GossipValidationStatus.Ignore : GossipValidationStatus.Reject;
+      const persistInvalidSszValue = vi.fn();
+      const remove = vi.fn();
+      const blockCache = new BlockCache(config);
+      const chain = {
+        hasBlockHex: () => false,
+        blockCache,
+        clock: new ClockStopped(0),
+        seenBlockInputCache: {getByBlock: vi.fn(), remove},
+        persistInvalidSszValue,
+        beaconEngine: {
+          validateGossipBlock: vi.fn().mockResolvedValue({status, code}),
+          isBlockProposerEquivocating: () => false,
+        },
+      } as unknown as IBeaconChain;
+      const handlers = getGossipHandlers({
+        chain,
+        config,
+        core: {reportPeer: vi.fn()} as unknown as INetworkCore,
+        events: new NetworkEventBus(),
+        logger: testLogger(),
+        metrics: null,
+      });
+      const handler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
+
+      await expect(
+        handler({
+          gossipData: {serializedData: ssz.deneb.SignedBeaconBlock.serialize(signedBlock)},
+          peerIdStr: "16Uiu2HAmTestGossipPeer",
+          seenTimestampSec: 0,
+          topic: {boundary: {fork: ForkName.deneb, epoch: 0}, type: GossipType.beacon_block},
+        })
+      ).resolves.toMatchObject({status, code});
+
+      if (status === GossipValidationStatus.Reject) {
+        expect(persistInvalidSszValue).toHaveBeenCalledExactlyOnceWith(
+          config.getForkTypes(0).SignedBeaconBlock,
+          signedBlock,
+          "gossip_reject_slot_0",
+          root
+        );
+      } else {
+        expect(persistInvalidSszValue).not.toHaveBeenCalled();
+      }
+      expect(remove).toHaveBeenCalledExactlyOnceWith(root);
+      expect(blockCache.get(root)).toBeUndefined();
+    }
+  );
+
+  it.each([ForkName.deneb, ForkName.gloas])(
+    "reuses the cached %s block object so BlockInput eviction removes it",
+    async (fork) => {
+      const config = createBeaconConfig(getConfig(fork), Buffer.alloc(32));
+      const forkTypes = config.getForkTypes(1);
+      const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = 1;
+      const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+      const bytes = forkTypes.SignedBeaconBlock.serialize(signedBlock);
+      const blockCache = new BlockCache(config);
+      blockCache.set(blockRootHex, signedBlock, bytes);
+      const clock = new ClockStopped(0);
+      const emitter = new ChainEventEmitter();
+      const controller = new AbortController();
+      const custodyConfig = {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig;
+      const seenBlockInputCache = new SeenBlockInput({
+        config,
+        clock,
+        chainEvents: emitter,
+        signal: controller.signal,
+        custodyConfig,
+        serializedCache: new SerializedCache(),
+        blockCache,
+        metrics: null,
+      });
+      const addPayloadInput = vi.fn();
+      const chain = {
+        hasBlockHex: () => false,
+        blockCache,
+        clock,
+        emitter,
+        custodyConfig,
+        seenBlockInputCache,
+        seenPayloadEnvelopeInputCache: {add: addPayloadInput},
+        beaconEngine: {
+          validateGossipBlock: vi.fn().mockResolvedValue({
+            status: GossipValidationStatus.Ignore,
+            code: BlockErrorCode.FUTURE_SLOT,
+            error: new BlockGossipError(GossipAction.IGNORE, {
+              code: BlockErrorCode.FUTURE_SLOT,
+              blockSlot: 1,
+              currentSlot: 0,
+            }),
+          }),
+          isBlockProposerEquivocating: () => false,
+        },
+      } as unknown as IBeaconChain;
+      const handlers = getGossipHandlers({
+        chain,
+        config,
+        core: {reportPeer: vi.fn()} as unknown as INetworkCore,
+        events: new NetworkEventBus(),
+        logger: testLogger(),
+        metrics: null,
+      });
+      const handler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
+
+      try {
+        const result = await handler({
+          gossipData: {serializedData: Uint8Array.from(bytes)},
+          peerIdStr: "16Uiu2HAmTestGossipPeer",
+          seenTimestampSec: 0,
+          topic: {boundary: {fork, epoch: 0}, type: GossipType.beacon_block},
+        });
+
+        expect(result).toMatchObject({status: GossipValidationStatus.Ignore, code: BlockErrorCode.FUTURE_SLOT});
+        const blockInput = seenBlockInputCache.get(blockRootHex);
+        expect(blockInput).toBeDefined();
+        seenBlockInputCache.remove(blockRootHex);
+        expect(blockCache.get(blockRootHex)).toBeUndefined();
+        expect(blockInput?.getBlock()).toBe(signedBlock);
+        if (fork === ForkName.gloas) {
+          expect(addPayloadInput).toHaveBeenCalledOnce();
+          expect(addPayloadInput.mock.calls[0][0].block).toBe(signedBlock);
+        }
+      } finally {
+        controller.abort();
+      }
+    }
+  );
 
   it("reports the gossip peer when block processing gets a definitive execution INVALID verdict", async () => {
     const {core, peerIdStr} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.EXECUTION_ENGINE_INVALID);
@@ -184,6 +376,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
       removeInvalid,
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
+    blockCache: new BlockCache(config),
   } as unknown as IBeaconChain;
 
   const handlers = getGossipHandlers(
@@ -241,6 +434,7 @@ async function runBeaconBlockProcessingError(
   const error = getExecutionBlockError(signedBlock, code);
   const core = {reportPeer: vi.fn()} as Pick<INetworkCore, "reportPeer">;
   const chain = {
+    hasBlockHex: vi.fn().mockReturnValue(false),
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
@@ -264,6 +458,7 @@ async function runBeaconBlockProcessingError(
       remove: vi.fn(),
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
+    blockCache: new BlockCache(config),
   } as unknown as IBeaconChain;
 
   const handlers = getGossipHandlers(
@@ -357,6 +552,7 @@ async function runBeaconBlockRepeatProposal(
   const removeBlockInput = vi.fn();
   const pruneBlockInput = vi.fn();
   const chain = {
+    hasBlockHex: vi.fn().mockReturnValue(false),
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
@@ -384,6 +580,7 @@ async function runBeaconBlockRepeatProposal(
       remove: vi.fn(),
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
+    blockCache: new BlockCache(config),
   } as unknown as IBeaconChain;
 
   const handlers = getGossipHandlers(

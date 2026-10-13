@@ -27,7 +27,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, toHex, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {
   GossipValidationResult,
   GossipValidationStatus,
@@ -145,6 +145,15 @@ function getSequentialHandlers(
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+    // [beacon-engine] deviation: ignore known roots through ChainView before engine validation and
+    // cache seeding, so duplicate gossip does not repopulate entries cleared on import.
+    if (chain.hasBlockHex(blockRootHex)) {
+      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex});
+    }
+    const cachedBlock = chain.blockCache.set(blockRootHex, signedBlock, serializedData);
+    // Identical bytes may already be cached from another source. Keep the same object in BlockInput
+    // so eviction matches by identity and later hashing can reuse its cached SSZ roots.
+    signedBlock = cachedBlock.block;
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
@@ -191,9 +200,21 @@ function getSequentialHandlers(
     }
 
     try {
-      const {skippedSlots} = unwrapGossipResult(
-        await chain.beaconEngine.validateGossipBlock(serializedData, signedBlock, fork, seenTimestampSec)
+      const result = await chain.beaconEngine.validateGossipBlock(
+        fromHex(blockRootHex),
+        serializedData,
+        fork,
+        seenTimestampSec
       );
+      if (result.status === GossipValidationStatus.Reject) {
+        chain.persistInvalidSszValue(
+          forkTypes.SignedBeaconBlock,
+          signedBlock,
+          `gossip_reject_slot_${slot}`,
+          blockRootHex
+        );
+      }
+      const {skippedSlots} = unwrapGossipResult(result);
 
       const blockInputMeta = blockInput.getLogMeta();
 
@@ -243,6 +264,7 @@ function getSequentialHandlers(
             e.type.code === BlockErrorCode.REPEAT_PROPOSAL &&
             !chain.beaconEngine.hasObservedBlockRoot(slot, signedBlock.message.proposerIndex, blockRootHex)
           ) {
+            chain.blockCache.delete(blockRootHex, cachedBlock.block, "rejected");
             chain.seenBlockInputCache.remove(blockRootHex);
             if (isForkPostGloas(fork)) {
               chain.seenPayloadEnvelopeInputCache.remove(blockRootHex);
@@ -250,17 +272,11 @@ function getSequentialHandlers(
           }
           throw e;
         }
-
-        chain.persistInvalidSszValue(
-          forkTypes.SignedBeaconBlock,
-          signedBlock,
-          `gossip_reject_slot_${slot}`,
-          blockRootHex
-        );
       }
 
       // REJECT or unexpected (non-BlockGossipError) error: drop the optimistically-added entries from
       // both caches, keeping them consistent. The block may carry any parent root, so only its own entry is removed
+      chain.blockCache.delete(blockRootHex, cachedBlock.block, "rejected");
       chain.seenBlockInputCache.remove(blockRootHex);
       if (isForkPostGloas(fork)) {
         chain.seenPayloadEnvelopeInputCache.remove(blockRootHex);
@@ -724,7 +740,7 @@ function getSequentialHandlers(
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
 
-        const signedBlock = sszDeserialize(topic, serializedData);
+        const signedBlock = sszDeserialize(topic, serializedData, {reuseBytes: true});
         try {
           const blockInput = await validateBeaconBlock(
             signedBlock,
@@ -736,7 +752,6 @@ function getSequentialHandlers(
           // Handler - deferred to next event loop so the validation result propagates first
           callInNextEventLoop(() => {
             try {
-              chain.serializedCache.set(signedBlock, serializedData);
               handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
             } catch (e) {
               logger.debug(
@@ -762,7 +777,6 @@ function getSequentialHandlers(
             if (blockInput) {
               // We're returning IGNORE (thrown below), so this block is not forwarded to peers. Unlike the
               // happy path there is no rush to forward, so we don't need to wrap in callInNextEventLoop.
-              chain.serializedCache.set(signedBlock, serializedData);
               // this is technically not a valid gossip block but gossip validation is a cheap subset of checks
               // this runs the full state transition, so importing an equivocating-but-valid block here is safe.
               handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);

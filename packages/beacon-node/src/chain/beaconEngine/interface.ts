@@ -42,8 +42,8 @@ import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
-import {SerializedCache} from "../../util/serializedCache.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
+import {BlockBytes, BlockCache} from "../blocks/blockCache.js";
 import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
@@ -67,7 +67,7 @@ import {IBeaconEngineOptions} from "./options.js";
 import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
 
 export type BeaconEngineModules = {
-  serializedCache?: SerializedCache;
+  blockCache?: BlockCache;
   builderApiClientOpts?: BuilderApiClientOpts;
   executionEngine: IExecutionEngine;
   executionBuilder?: IExecutionBuilder;
@@ -416,12 +416,14 @@ export interface IBeaconEngine {
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<rewards.SyncCommitteeRewards>;
 
-  // Gossip + API validation flows. The first parameter is the message's SSZ bytes (unused by the JS
-  // engine, required by the native engine's bytes-first contract), followed by the deserialized object. Each
-  // returns a `GossipValidationResult` (no throw) so the native engine can return outcomes across FFI.
+  // TODO - beacon engine: migrate the remaining gossip methods to bytes-only inputs.
+  /**
+   * Always returns a validation result, including decoding failures. Invalid SSZ or a mismatched
+   * root returns Reject; unexpected internal failures are logged and return Ignore/UNEXPECTED_ERROR.
+   */
   validateGossipBlock(
+    blockRoot: Root,
     blockBytes: Uint8Array,
-    signedBlock: SignedBeaconBlock,
     fork: ForkName,
     seenTimestampSec?: number
   ): Promise<GossipValidationResult<GossipBlockValidationResult>>;
@@ -584,8 +586,21 @@ export interface IBeaconEngine {
   ): Promise<void>;
   isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): boolean;
 
+  /**
+   * Consensus checks for API broadcast validation, without EL submission or retaining an import bundle.
+   * Never changes verifiedBlocks: a concurrent import may already own a bundle for this root.
+   * The facade must still wait for DA before observing the proposer and publishing the block.
+   */
+  validateApiBlock(
+    blockRoot: Root,
+    blockBytes: Uint8Array,
+    opts: VerifyBlocksOpts,
+    // TODO - beacon engine: handle AbortSignal across the worker boundary.
+    signal: AbortSignal
+  ): Promise<void>;
+  /** Retains verified block bundles until importBlock or discardVerifiedBlocks releases them. */
   verifyBlocks(
-    blockBytes: Uint8Array[],
+    blocks: BlockBytes[],
     opts: VerifyBlocksOpts,
     // TODO - beacon engine: handle AbortSignal across the worker boundary.
     signal: AbortSignal

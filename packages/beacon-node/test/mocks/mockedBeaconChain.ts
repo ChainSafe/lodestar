@@ -9,6 +9,7 @@ import {Logger} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineEventBus} from "../../src/chain/beaconEngine/events.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
+import {BlockCache} from "../../src/chain/blocks/blockCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
@@ -198,6 +199,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       clock,
       forkChoice: getMockedForkChoice(),
       serializedCache: new SerializedCache(),
+      blockCache: new BlockCache(config),
       verifiedBlocks: new Map(),
       events: new BeaconEngineEventBus(),
       publishChainView: vi.fn(),
@@ -323,6 +325,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   // stay as mock fns above so tests can control head selection.
   for (const name of [
     "verifyBlocks",
+    "validateApiBlock",
     "observeVerifiedBlocks",
     "markBlockProposersSeen",
     "discardVerifiedBlocks",

@@ -18,6 +18,7 @@ import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {SerializedCache} from "../../util/serializedCache.js";
+import {BlockCache} from "../blocks/blockCache.js";
 import {
   BlockInput,
   BlockInputBlobs,
@@ -57,6 +58,7 @@ export type SeenBlockInputCacheModules = {
   signal: AbortSignal;
   custodyConfig: CustodyConfig;
   serializedCache: SerializedCache;
+  blockCache: BlockCache;
   metrics: Metrics | null;
   logger?: Logger;
 };
@@ -104,6 +106,7 @@ export class SeenBlockInput {
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private readonly serializedCache: SerializedCache;
+  private readonly blockCache: BlockCache;
   private readonly metrics: Metrics | null;
   private readonly logger?: Logger;
   private blockInputs = new Map<RootHex, IBlockInput>();
@@ -119,6 +122,7 @@ export class SeenBlockInput {
     chainEvents,
     signal,
     serializedCache,
+    blockCache,
     metrics,
     logger,
   }: SeenBlockInputCacheModules) {
@@ -128,6 +132,7 @@ export class SeenBlockInput {
     this.chainEvents = chainEvents;
     this.signal = signal;
     this.serializedCache = serializedCache;
+    this.blockCache = blockCache;
     this.metrics = metrics;
     this.logger = logger;
 
@@ -187,6 +192,7 @@ export class SeenBlockInput {
   onFinalized = (checkpoint: CheckpointWithHex) => {
     let deletedCount = 0;
     const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
+    this.blockCache.prune(cutoffSlot);
     for (const [, blockInput] of this.blockInputs) {
       if (blockInput.slot < cutoffSlot) {
         deletedCount++;
@@ -443,6 +449,10 @@ export class SeenBlockInput {
   private evictBlockInput(blockInput: IBlockInput): void {
     // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
     this.serializedCache.delete(blockInput.getSerializedCacheKeys());
+    // Release blocks abandoned before persistence, such as failed sync or validation.
+    // Persistence or finalization may already have removed the entry. Match by identity so evicting
+    // this BlockInput does not delete a replacement candidate for the same root.
+    if (blockInput.hasBlock()) this.blockCache.delete(blockInput.blockRootHex, blockInput.getBlock(), "block_input");
     this.blockInputs.delete(blockInput.blockRootHex);
   }
 }

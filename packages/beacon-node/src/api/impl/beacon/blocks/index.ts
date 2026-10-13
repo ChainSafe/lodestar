@@ -40,7 +40,7 @@ import {GossipValidationStatus} from "../../../../chain/beaconEngine/gossipValid
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
-import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
+import {validateApiBlock} from "../../../../chain/blocks/validateApiBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {ChainEvent} from "../../../../chain/emitter.js";
 import {
@@ -214,17 +214,22 @@ export function getBeaconBlockApi({
       return;
     }
 
+    const blockBytes = context?.sszBytes
+      ? isForkPostDeneb(fork) && !isForkPostGloas(fork)
+        ? getSignedBlockBytesFromSignedBlockContentsSerialized(context.sszBytes)
+        : context.sszBytes
+      : chain.blockCache.getOrSerialize(blockRoot, signedBlock).bytes;
+    const cachedBlock = chain.blockCache.set(blockRoot, signedBlock, blockBytes);
+
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
           try {
-            const blockBytes = context?.sszBytes
-              ? isForkPostDeneb(fork) && !isForkPostGloas(fork)
-                ? getSignedBlockBytesFromSignedBlockContentsSerialized(context.sszBytes)
-                : context.sszBytes
-              : config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock);
-            const result = await chain.beaconEngine.validateGossipBlock(blockBytes, signedBlock, fork);
+            const result = await chain.beaconEngine.validateGossipBlock(fromHex(blockRoot), blockBytes, fork);
             if (result.status !== GossipValidationStatus.Accept) {
+              if (result.code === "UNEXPECTED_ERROR") {
+                throw new ApiError(500, "Internal error validating block");
+              }
               throw result.error ?? new ApiError(400, `Invalid block: ${result.code}`);
             }
           } catch (error) {
@@ -237,6 +242,7 @@ export function getBeaconBlockApi({
               }
             }
 
+            chain.blockCache.delete(blockRoot, cachedBlock.block, "rejected");
             chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
@@ -275,13 +281,12 @@ export function getBeaconBlockApi({
           }
 
           try {
-            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], null, {
+            await validateApiBlock.call(chain as BeaconChain, blockForImport, {
               ...opts,
-              verifyOnly: true,
-              skipVerifyExecutionPayload: true,
               seenTimestampSec,
             });
           } catch (error) {
+            chain.blockCache.delete(blockRoot, cachedBlock.block, "rejected");
             chain.logger.error("Consensus checks failed while publishing the block", valLogMeta, error as Error);
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
@@ -295,17 +300,14 @@ export function getBeaconBlockApi({
 
         chain.logger.debug("Consensus validated while publishing block", valLogMeta);
 
-        // Non-local blocks had their proposer and block-body signatures checked by verifyBlocksInEpoch above
+        // Non-local blocks had their proposer and block-body signatures checked by validateApiBlock above
         // Locally produced blocks already passed block production validation, so only their proposer signature is unchecked
         // Verify that signature and observe the block root here
         if (blockLocallyProduced) {
           try {
-            await chain.beaconEngine.verifyAndObserveBlockProposer(
-              config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock),
-              signedBlock,
-              blockRoot
-            );
+            await chain.beaconEngine.verifyAndObserveBlockProposer(blockBytes, signedBlock, blockRoot);
           } catch (e) {
+            chain.blockCache.delete(blockRoot, cachedBlock.block, "rejected");
             chain.logger.error(
               "Proposer signature validation failed while publishing the block",
               valLogMeta,
@@ -353,6 +355,7 @@ export function getBeaconBlockApi({
         blockRoot
       );
       if (conflictingRoots.length > 0) {
+        chain.blockCache.delete(blockRoot, cachedBlock.block, "rejected");
         chain.logger.warn("Not publishing block due to proposer equivocation", {
           ...valLogMeta,
           conflictingRoots: conflictingRoots.join(", "),

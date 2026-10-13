@@ -118,7 +118,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
       generateProtoBlock({slot: 0}),
       [blockInput],
       new Map([[block.message.slot, payloadInput]]),
-      {verifyOnly: true}
+      {}
     );
 
     expect(result.blockDAStatuses).toEqual([DataAvailabilityStatus.NotRequired]);

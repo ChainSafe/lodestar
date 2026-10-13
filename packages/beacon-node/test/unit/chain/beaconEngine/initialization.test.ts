@@ -15,6 +15,7 @@ import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
+import * as blockValidation from "../../../../src/chain/validation/block.js";
 import {BeaconDb} from "../../../../src/db/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
 import {createMetrics} from "../../../../src/metrics/index.js";
@@ -86,17 +87,24 @@ describe("bytes-based engine startup", () => {
     const dependencies = await initializeTestChain(options, modules);
     chain = new BeaconChain(options, dependencies);
     if (!engine) throw Error("Expected initialized engine");
-    expect(chain.serializedCache === engine.serializedCache).toBe(!beaconEngineWorker);
+    expect(chain.blockCache === engine.blockCache).toBe(!beaconEngineWorker);
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
-    chain.serializedCache.set(block, bytes);
+    const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
+    chain.blockCache.set(toRootHex(blockRoot), block, bytes);
     const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
+    vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
+    await engine.validateGossipBlock(blockRoot, structuredClone(bytes), ForkName.phase0);
+    const cached = engine.blockCache.get(toRootHex(blockRoot));
     vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
-    await expect(engine.verifyBlocks([bytes], {}, new AbortController().signal)).rejects.toMatchObject({
+    await expect(
+      engine.verifyBlocks([{blockRoot, blockBytes: structuredClone(bytes)}], {}, new AbortController().signal)
+    ).rejects.toMatchObject({
       type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"},
     });
     expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-    expect(engine.serializedCache.getDeserialized(bytes) === block).toBe(!beaconEngineWorker);
+    expect(engine.blockCache.get(toRootHex(blockRoot))).toBe(cached);
+    expect(cached?.block === block).toBe(!beaconEngineWorker);
   });
 
   it("notifies the facade once when fork choice becomes irrecoverable", async () => {

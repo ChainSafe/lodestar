@@ -86,13 +86,13 @@ import {ClockEvent, IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {SerializedCache} from "../../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
 import {ArchiveMode, StateArchiveStrategy} from "../archiveStore/interface.js";
 import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
+import {BlockBytes, BlockCache} from "../blocks/blockCache.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
@@ -337,8 +337,16 @@ export class BeaconEngine implements IBeaconEngine {
   // TODO - beacon engine: internal helper context; keep this off the worker-facing interface.
   readonly signal: AbortSignal;
   lightClientServer: LightClientServer | undefined;
+  /**
+   * Engine-owned verification results awaiting import, including post-states and execution status.
+   * Bundles reference the same block and bytes returned by blockCache; they do not copy either.
+   * API broadcast validation uses validateApiBlock and never creates or discards these bundles.
+   * Retain them until import settles or discardVerifiedBlocks is called, independently of BlockCache
+   * eviction/replacement and BeaconChain's persistence cleanup. Combining these stores would require
+   * pinning the exact signed candidate while keeping verification results engine-owned.
+   */
   readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
-  readonly serializedCache: SerializedCache;
+  readonly blockCache: BlockCache;
   // TODO - beacon engine: this is not part of BeaconEngine but BeaconChain, remove it, create BeaconEngine own emitter if needed
   readonly emitter: ChainEventEmitter;
 
@@ -374,7 +382,8 @@ export class BeaconEngine implements IBeaconEngine {
     this.dbName = modules.dbName;
     this.dataColumnDir = modules.dataColumnDir;
     this.signal = signal;
-    this.serializedCache = modules.serializedCache ?? new SerializedCache();
+    this.blockCache =
+      modules.blockCache ?? new BlockCache(config, {owner: "engine", metrics: metrics?.blockCache, logger});
     this.metrics = metrics;
     this.clock = clock;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
@@ -1081,17 +1090,16 @@ export class BeaconEngine implements IBeaconEngine {
     return this.regen.getBlockSlotState(head, startSlot, {dontTransferCache: true}, regenCaller);
   }
 
-  // Gossip validation flows. Each method takes the message's SSZ bytes first (unused by this JS impl;
-  // present for the native engine's bytes-first contract) and delegates to the validation logic in
-  // `./gossipValidation/*` rebound onto the engine.
+  // Gossip validation delegates to ./gossipValidation/* with engine-owned state.
+  // TODO - beacon engine: migrate the remaining gossip methods to bytes-only inputs.
   async validateGossipBlock(
-    _blockBytes: Uint8Array,
-    signedBlock: SignedBeaconBlock,
+    blockRoot: Root,
+    blockBytes: Uint8Array,
     fork: ForkName,
     // API publication also call this with no seenTimestampSec
     seenTimestampSec?: number
   ): Promise<GossipValidationResult<GossipBlockValidationResult>> {
-    return validateGossipBlock.call(this, () => this.closed, _blockBytes, signedBlock, fork, seenTimestampSec);
+    return validateGossipBlock.call(this, () => this.closed, blockRoot, blockBytes, fork, seenTimestampSec);
   }
 
   validateGossipSyncCommittee(
@@ -1420,6 +1428,7 @@ export class BeaconEngine implements IBeaconEngine {
 
   /** Prune the (internal) op pool + seen-block-proposers on finalization — driven by the facade's finalized event. */
   async pruneOnFinalized(): Promise<void> {
+    this.blockCache.prune(computeStartSlotAtEpoch(this.forkChoice.getFinalizedCheckpoint().epoch));
     this.seenPayloadEnvelopeInputCache.pruneFinalized(this.forkChoice.getFinalizedCheckpoint());
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(this.forkChoice.getFinalizedCheckpoint().epoch));
 
@@ -1552,13 +1561,28 @@ export class BeaconEngine implements IBeaconEngine {
     return this.seenBlockProposers.isKnown(slot, proposerIndex);
   }
 
+  async validateApiBlock(
+    blockRoot: Root,
+    blockBytes: Uint8Array,
+    opts: VerifyBlocksOpts,
+    signal: AbortSignal
+  ): Promise<void> {
+    await verifyBlocks.call(
+      this,
+      [{blockRoot, blockBytes}],
+      {...opts, skipVerifyExecutionPayload: true},
+      signal,
+      false
+    );
+  }
+
   async verifyBlocks(
-    blockBytes: Uint8Array[],
+    blocks: BlockBytes[],
     opts: VerifyBlocksOpts,
     signal: AbortSignal
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
     try {
-      return await verifyBlocks.call(this, blockBytes, opts, signal);
+      return await verifyBlocks.call(this, blocks, opts, signal);
     } catch (error) {
       this.publishChainView();
       throw error;

@@ -3,6 +3,7 @@ import {PrivateKey} from "@libp2p/interface";
 import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
 import {LodestarError} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/index.js";
+import {BlockCache} from "../../src/chain/blocks/blockCache.js";
 import {BeaconChainModules} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
@@ -28,6 +29,7 @@ export type TestBeaconEngineModules = Omit<
   | "lightClientServer"
   | "builderApiClient"
   | "serializedCache"
+  | "blockCache"
 > & {
   validatorMonitorOpts?: ValidatorMonitorOpts | null;
   privateKey: PrivateKey;
@@ -85,8 +87,9 @@ export function createTestBeaconEngine(
     : new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
 
   const serializedCache = new SerializedCache();
+  const blockCache = new BlockCache(config);
   const beaconEngine = new BeaconEngine({
-    serializedCache: opts.beaconEngineWorker ? undefined : serializedCache,
+    blockCache: opts.beaconEngineWorker ? undefined : blockCache,
     executionEngine,
     executionBuilder,
     builderApiClientOpts,
@@ -109,6 +112,7 @@ export function createTestBeaconEngine(
   return {
     ...modules,
     serializedCache,
+    blockCache,
     beaconEngine,
     abortController,
     clock,

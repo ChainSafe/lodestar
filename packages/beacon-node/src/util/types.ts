@@ -1,7 +1,9 @@
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
+
+export type BlockWithBytes = {block: SignedBeaconBlock; bytes: Uint8Array};
 
 // Misc SSZ types used only in the beacon-node package, no need to upstream to types
 

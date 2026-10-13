@@ -50,12 +50,6 @@ export type BlockProcessOpts = {
   disablePrepareNextSlot?: boolean;
   emitPayloadAttributes?: boolean;
 
-  /**
-   * Used to specify to specify to run verifications only and not
-   * to save the block or log transitions for e.g. doing
-   * broadcastValidation while publishing the block
-   */
-  verifyOnly?: boolean;
   /** Used to specify to skip execution payload validation */
   skipVerifyExecutionPayload?: boolean;
 };

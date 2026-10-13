@@ -72,9 +72,14 @@ describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRan
       });
 
       if (error) {
-        await expectRejectedWithLodestarError(collectSequentialBlocksInRange(arrToSource(blocks), request), error);
+        await expectRejectedWithLodestarError(
+          collectSequentialBlocksInRange(arrToSource(blocks), request, (block) => block),
+          error
+        );
       } else {
-        await expect(collectSequentialBlocksInRange(arrToSource(blocks), request)).resolves.toBeDefined();
+        await expect(
+          collectSequentialBlocksInRange(arrToSource(blocks), request, (block) => block)
+        ).resolves.toBeDefined();
       }
     });
   }

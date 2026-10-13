@@ -1,7 +1,8 @@
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
-import {Slot, deneb, sszTypesFor} from "@lodestar/types";
+import {Slot, deneb} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainViewBlock} from "../chainView/interface.js";
@@ -60,13 +61,10 @@ export async function verifyBlocksInEpoch(
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
 
-  const blockBytes = blockInputs.map((blockInput) => {
-    const block = blockInput.getBlock();
-    const bytes =
-      this.serializedCache.get(block) ?? sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(block);
-    this.serializedCache.set(block, bytes);
-    return bytes;
-  });
+  const blockBytes = blockInputs.map((blockInput) => ({
+    blockRoot: fromHex(blockInput.blockRootHex),
+    blockBytes: this.blockCache.getOrSerialize(blockInput.blockRootHex, blockInput.getBlock()).bytes,
+  }));
 
   const abortController = new AbortController();
 
@@ -135,57 +133,54 @@ export async function verifyBlocksInEpoch(
     // Observation must follow both consensus verification and the facade DA wait.
     this.beaconEngine.observeVerifiedBlocks(
       blockInputs.map((input) => ({block: input.getBlock(), root: input.blockRootHex})),
-      opts.verifyOnly === true
+      false
     );
 
-    if (opts.verifyOnly !== true) {
-      const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
-      const toForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(lastBlock.message.slot));
+    const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
+    const toForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(lastBlock.message.slot));
 
-      // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
-      if (toForkBoundary.fork !== fromForkBoundary.fork) {
-        switch (toForkBoundary.fork) {
-          case ForkName.capella:
-            this.logger.info(CAPELLA_OWL_BANNER);
-            this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
-            break;
+    // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
+    if (toForkBoundary.fork !== fromForkBoundary.fork) {
+      switch (toForkBoundary.fork) {
+        case ForkName.capella:
+          this.logger.info(CAPELLA_OWL_BANNER);
+          this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
+          break;
 
-          case ForkName.deneb:
-            this.logger.info(DENEB_BLOWFISH_BANNER);
-            this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
-            break;
+        case ForkName.deneb:
+          this.logger.info(DENEB_BLOWFISH_BANNER);
+          this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
+          break;
 
-          case ForkName.electra:
-            this.logger.info(ELECTRA_GIRAFFE_BANNER);
-            this.logger.info("Activating maxEB", {epoch: this.config.ELECTRA_FORK_EPOCH});
-            break;
+        case ForkName.electra:
+          this.logger.info(ELECTRA_GIRAFFE_BANNER);
+          this.logger.info("Activating maxEB", {epoch: this.config.ELECTRA_FORK_EPOCH});
+          break;
 
-          case ForkName.fulu:
-            this.logger.info(FULU_ZEBRA_BANNER);
-            this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
-            break;
+        case ForkName.fulu:
+          this.logger.info(FULU_ZEBRA_BANNER);
+          this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
+          break;
 
-          case ForkName.gloas:
-            this.logger.info(GLOAS_POLAR_BEAR_BANNER);
-            this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
-            break;
+        case ForkName.gloas:
+          this.logger.info(GLOAS_POLAR_BEAR_BANNER);
+          this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
+          break;
 
-          default:
-        }
-      }
-
-      if (isForkPostFulu(fromForkBoundary.fork)) {
-        const fromBlobParameters = this.config.getBlobParameters(fromForkBoundary.epoch);
-        const toBlobParameters = this.config.getBlobParameters(toForkBoundary.epoch);
-
-        if (toBlobParameters.epoch !== fromBlobParameters.epoch) {
-          const {epoch, maxBlobsPerBlock} = toBlobParameters;
-
-          this.logger.info("Activating BPO fork", {epoch, maxBlobsPerBlock});
-        }
+        default:
       }
     }
 
+    if (isForkPostFulu(fromForkBoundary.fork)) {
+      const fromBlobParameters = this.config.getBlobParameters(fromForkBoundary.epoch);
+      const toBlobParameters = this.config.getBlobParameters(toForkBoundary.epoch);
+
+      if (toBlobParameters.epoch !== fromBlobParameters.epoch) {
+        const {epoch, maxBlobsPerBlock} = toBlobParameters;
+
+        this.logger.info("Activating BPO fork", {epoch, maxBlobsPerBlock});
+      }
+    }
     if (segmentExecStatus.execAborted === null) {
       const {executionStatuses, executionTime} = segmentExecStatus;
       if (

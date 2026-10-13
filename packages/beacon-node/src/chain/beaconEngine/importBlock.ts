@@ -91,7 +91,8 @@ export async function importBlock(
   // Regen must be able to read the block from DB as soon as fork choice exposes it.
   this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
   await this.db.block.putBinary(blockRoot, v.blockBytes);
-  this.serializedCache.delete([block]);
+  // Persistence releases any cached candidate for this root, including replacements during the write.
+  this.blockCache.delete(blockRootHex, undefined, "persisted");
 
   const currentSlot = this.forkChoice.getTime();
 

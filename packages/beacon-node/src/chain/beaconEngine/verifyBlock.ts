@@ -3,8 +3,8 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock, isGloasBeaconBlock} from "@lodestar/types";
-import {ErrorAborted, LodestarError, toRootHex} from "@lodestar/utils";
-import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
+import {ErrorAborted, toRootHex} from "@lodestar/utils";
+import {BlockBytes} from "../blocks/blockCache.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
@@ -20,20 +20,17 @@ import {VerifyBlocksOpts} from "./interface.js";
 export async function verifyBlocks(
   this: BeaconEngine,
   // [beacon-engine] deviation: bytes/POJO seam leaves DA verification in the facade.
-  blockBytes: Uint8Array[],
+  blockData: BlockBytes[],
   opts: VerifyBlocksOpts,
-  signal: AbortSignal
+  signal: AbortSignal,
+  retainForImport = true
 ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
   if (signal.aborted) throw new ErrorAborted("verifyBlocks");
-  const blocks = blockBytes.map((bytes) => {
-    const cached = this.serializedCache.getDeserialized<SignedBeaconBlock>(bytes);
-    if (cached !== undefined) return cached;
-    const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
-    if (slot === null) throw new LodestarError({code: "INVALID_BLOCK_SSZ"});
-    const block = this.config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes, {reuseBytes: true});
-    this.serializedCache.set(block, bytes);
-    return block;
-  });
+  const entries = blockData.map(({blockRoot, blockBytes}) =>
+    this.blockCache.getOrDeserialize(toRootHex(blockRoot), blockBytes)
+  );
+  const blocks = entries.map(({block}) => block);
+  const blockBytes = entries.map(({bytes}) => bytes);
   for (const block of blocks) {
     const forkName = this.config.getForkName(block.message.slot);
     if (isForkPostGloas(forkName)) {
@@ -108,7 +105,7 @@ export async function verifyBlocks(
         blocks,
         // [beacon-engine] deviation: DA gates import facade-side, outside consensus verification.
         blocks.map(() => DataAvailabilityStatus.Available),
-        // [beacon-engine] deviation: use the bytes already passed by the facade instead of its SerializedCache.
+        // [beacon-engine] deviation: retain the bytes paired with the cached block across worker calls.
         blockBytes,
         this.logger,
         this.metrics,
@@ -140,21 +137,23 @@ export async function verifyBlocks(
 
   // [beacon-engine] deviation: retain verification bundles instead of returning FullyVerifiedBlock state objects.
   if (signal.aborted) throw new ErrorAborted("verifyBlocks");
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i];
-    const blockRootHex = toRootHex(
-      this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
-    );
-    this.verifiedBlocks.set(blockRootHex, {
-      executionStatus: segmentExecStatus.executionStatuses[i],
-      postState: postStates[i],
-      block,
-      blockBytes: blockBytes[i],
-      indexedAttestations: indexedAttestationsByBlock[i],
-      proposerBalanceDelta: proposerBalanceDeltas[i],
-      parentBlockSlot: i === 0 ? parentBlock.slot : blocks[i - 1].message.slot,
-      seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-    });
+  // API validation may reject publication after consensus succeeds. Its post-states must stay local
+  // to this call, and it must not overwrite a bundle belonging to a concurrent import of the same root.
+  if (retainForImport) {
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
+      const blockRootHex = toRootHex(blockData[i].blockRoot);
+      this.verifiedBlocks.set(blockRootHex, {
+        executionStatus: segmentExecStatus.executionStatuses[i],
+        postState: postStates[i],
+        block,
+        blockBytes: blockBytes[i],
+        indexedAttestations: indexedAttestationsByBlock[i],
+        proposerBalanceDelta: proposerBalanceDeltas[i],
+        parentBlockSlot: i === 0 ? parentBlock.slot : blocks[i - 1].message.slot,
+        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+      });
+    }
   }
 
   return {segmentExecStatus, verifyStateTime, verifySignaturesTime};

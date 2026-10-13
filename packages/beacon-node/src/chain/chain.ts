@@ -25,7 +25,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, byteArrayEquals, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
@@ -46,6 +46,7 @@ import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {BeaconEngineEvent, BeaconEngineEventData} from "./beaconEngine/events.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
 import {EngineBootstrap} from "./beaconEngine/initialization.js";
+import {BlockCache} from "./blocks/blockCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
@@ -97,6 +98,7 @@ const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
 
 export type BeaconChainModules = {
   serializedCache: SerializedCache;
+  blockCache: BlockCache;
   config: BeaconConfig;
   pubkeyCache: PubkeyCache;
   db: IBeaconDb;
@@ -168,6 +170,7 @@ export class BeaconChain implements IBeaconChain {
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
   readonly serializedCache: SerializedCache;
+  readonly blockCache: BlockCache;
 
   readonly getBlobsTracker: GetBlobsTracker;
   readonly columnReconstructionTracker: ColumnReconstructionTracker;
@@ -234,7 +237,9 @@ export class BeaconChain implements IBeaconChain {
     this.cpStateDatastore = cpStateDatastore;
     this.custodyConfig = custodyConfig;
     this.serializedCache = modules.serializedCache;
+    this.blockCache = modules.blockCache;
     this.seenBlockInputCache = new SeenBlockInput({
+      blockCache: this.blockCache,
       config,
       custodyConfig: this.custodyConfig,
       clock,
@@ -609,10 +614,12 @@ export class BeaconChain implements IBeaconChain {
       const blockInput = this.seenBlockInputCache.get(protoBlock.blockRoot);
       if (blockInput?.hasBlock()) {
         const signedBlock = blockInput.getBlock();
+        const cached = this.blockCache.get(blockInput.blockRootHex);
         return {
           block:
-            this.serializedCache.get(signedBlock) ??
-            sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(signedBlock),
+            cached && (cached.block === signedBlock || byteArrayEquals(cached.block.signature, signedBlock.signature))
+              ? cached.bytes
+              : this.config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(signedBlock),
           executionOptimistic: isOptimisticBlock(protoBlock),
           finalized: false,
           slot: blockInput.slot,

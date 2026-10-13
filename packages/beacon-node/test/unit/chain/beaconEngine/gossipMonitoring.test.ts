@@ -106,7 +106,12 @@ describe("BeaconEngine gossip monitoring", () => {
         );
       }
 
-      const result = await engine.validateGossipBlock(new Uint8Array(), block, ForkName.phase0, 12.5);
+      const result = await engine.validateGossipBlock(
+        ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
+        ssz.phase0.SignedBeaconBlock.serialize(block),
+        ForkName.phase0,
+        12.5
+      );
       expect(result.status).toBe(scenario === "accept" ? "accept" : scenario === "reject" ? "reject" : "ignore");
       expect(observed).toHaveBeenCalledTimes(scenario === "sibling" ? 1 : 0);
       await vi.runAllTimersAsync();
@@ -125,8 +130,8 @@ describe("BeaconEngine gossip monitoring", () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
     const observed = vi.spyOn(monitor, "registerBeaconBlock");
     const result = await engine.validateGossipBlock(
-      new Uint8Array(),
-      ssz.phase0.SignedBeaconBlock.defaultValue(),
+      ssz.phase0.BeaconBlock.hashTreeRoot(ssz.phase0.BeaconBlock.defaultValue()),
+      ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
       ForkName.phase0
     );
     await vi.runAllTimersAsync();
@@ -138,8 +143,8 @@ describe("BeaconEngine gossip monitoring", () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
     const observed = vi.spyOn(monitor, "registerBeaconBlock");
     const result = await engine.validateGossipBlock(
-      new Uint8Array(),
-      ssz.phase0.SignedBeaconBlock.defaultValue(),
+      ssz.phase0.BeaconBlock.hashTreeRoot(ssz.phase0.BeaconBlock.defaultValue()),
+      ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
       ForkName.phase0,
       1
     );
@@ -157,8 +162,8 @@ describe("BeaconEngine gossip monitoring", () => {
       throw new Error("monitor failed");
     });
     const result = await engine.validateGossipBlock(
-      new Uint8Array(),
-      ssz.phase0.SignedBeaconBlock.defaultValue(),
+      ssz.phase0.BeaconBlock.hashTreeRoot(ssz.phase0.BeaconBlock.defaultValue()),
+      ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
       ForkName.phase0,
       1
     );
