@@ -3,7 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, MIN_DEPOSIT_AMOUNT, isForkPostGloas} from "@lodestar/params";
 import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
 import {BuilderIndex, BuilderStatus, Epoch, ExecutionAddress, RootHex, gloas} from "@lodestar/types";
-import {Logger, isErrorAborted, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
+import {GWEI_TO_WEI, Logger, isErrorAborted, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
 import {BidResult, Metrics} from "../metrics.js";
 import {BidLedger} from "./bidLedger.js";
 import {BidPolicy} from "./bidPolicy.js";
@@ -12,8 +12,6 @@ import {createExecutionPayloadBid} from "./executionPayloadBid.js";
 import {PayloadOrchestrator} from "./payloadOrchestrator.js";
 import {PayloadStore} from "./payloadStore.js";
 import {ProposerPreferencesTracker} from "./proposerPreferencesTracker.js";
-
-const GWEI_TO_WEI = 1_000_000_000n;
 
 export type PayloadAttributesEvent = routes.events.EventData[routes.events.EventType.payloadAttributes];
 
