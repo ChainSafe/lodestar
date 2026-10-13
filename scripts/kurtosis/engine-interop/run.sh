@@ -173,13 +173,29 @@ if [ "$SCENARIO" = "fulu" ]; then
   log "restarting $EL2 at slot $RESTART_SLOT"
   date -u +%Y-%m-%dT%H:%M:%S.000Z > "$OUT_DIR/restart.time"
   docker restart "$EL2" > /dev/null
-  # judge again once node 2 sees its EL back and in sync, plus one REST re-probe interval
+  # judge again once node 2 has seen its EL come back, reports it in sync and, with the REST transport, probed the
+  # capabilities again. Until its next engine call fails node 2 still reports the EL in sync, and a probe that failed
+  # while the EL was down is only retried after a back-off, with JSON-RPC used in between.
+  probe_lines="Discovered REST engine API capabilities|does not support engine API over REST|Invalid engine API capabilities"
+  docker logs "$CL2" 2>&1 | grep -E "$probe_lines" > /dev/null && rest_build=1 || rest_build=0
+  recovered() {
+    local logs
+    logs=$(docker logs --since "$(cat "$OUT_DIR/restart.time")" "$CL2" 2>&1)
+    grep -qE "Execution client (became online|is synced)" <<< "$logs" || return 1
+    [ "$rest_build" = "0" ] || grep -qE "$probe_lines" <<< "$logs"
+  }
+  el_back() {
+    [ "$(beacon /eth/v1/node/syncing | node -pe 'const d=JSON.parse(require("fs").readFileSync(0)).data; d.el_offline === false && d.is_optimistic === false' 2>/dev/null)" = "true" ]
+  }
   start=$(date +%s)
-  until [ "$(beacon /eth/v1/node/syncing | node -pe 'const d=JSON.parse(require("fs").readFileSync(0)).data; d.el_offline === false && d.is_optimistic === false' 2>/dev/null)" = "true" ]; do
-    [ $(( $(date +%s) - start )) -ge 240 ] && { log "$EL2 did not come back within 240s"; exit 1; }
+  until recovered && el_back; do
+    if [ $(( $(date +%s) - start )) -ge 240 ]; then
+      el_back || { log "$EL2 did not come back within 240s"; exit 1; }
+      log "$CL2 logged no EL recovery or REST re-probe within 240s, judging anyway"
+      break
+    fi
     sleep 5
   done
-  sleep 12
   beacon /eth/v1/beacon/headers/head | node -pe 'JSON.parse(require("fs").readFileSync(0)).data.header.message.slot' > "$OUT_DIR/restart-end.slot"
   log "$EL2 back after $(( $(date +%s) - start ))s, head slot $(cat "$OUT_DIR/restart-end.slot")"
   snapshot restart
