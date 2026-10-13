@@ -13,10 +13,6 @@ on:
         required: true
   schedule:
     - cron: "0 5 * * *" # 5 am UTC, after the ethpandaops images are rebuilt and the engine API interop run
-  pull_request:
-    paths:
-      - ".github/workflows/cl-interop.yml"
-      - "scripts/kurtosis/cl-interop/**"
 
 permissions:
   contents: read
