@@ -136,8 +136,8 @@ export class InclusionListStore {
   }
 
   /** True iff `bits` has a bit set for every bit set in the local inclusion list bits. */
-  isInclusionListBitsInclusive(slot: Slot, dependentRoot: RootHex, bits: BitArray, onlyTimely = true): boolean {
-    for (const {committeeIndices} of this.getEligible(slot, dependentRoot, onlyTimely)) {
+  isInclusionListBitsInclusive(slot: Slot, dependentRoot: RootHex, bits: BitArray): boolean {
+    for (const {committeeIndices} of this.getEligible(slot, dependentRoot, true)) {
       if (committeeIndices.some((committeeIndex) => !bits.get(committeeIndex))) {
         return false;
       }

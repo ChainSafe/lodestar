@@ -7847,7 +7847,7 @@
 - name: is_inclusion_list_bits_inclusive#heze
   sources:
     - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
-      search: "isInclusionListBitsInclusive(slot: Slot, dependentRoot: RootHex, bits: BitArray, onlyTimely = true): boolean {"
+      search: "isInclusionListBitsInclusive(slot: Slot, dependentRoot: RootHex, bits: BitArray): boolean {"
   spec: |
     <spec fn="is_inclusion_list_bits_inclusive" fork="heze" hash="ea1a888b">
     def is_inclusion_list_bits_inclusive(

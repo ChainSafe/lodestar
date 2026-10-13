@@ -373,8 +373,7 @@ async function validateExecutionPayloadBid(
       !chain.inclusionListStore.isInclusionListBitsInclusive(
         inclusionListSlot,
         inclusionListDependentRoot,
-        inclusionListBits,
-        true
+        inclusionListBits
       )
     ) {
       throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
