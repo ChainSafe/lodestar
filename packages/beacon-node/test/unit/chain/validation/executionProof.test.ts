@@ -74,6 +74,7 @@ describe("validateGossipExecutionProof", () => {
     expect(proof.publicInput.chainId).toBe(config.DEPOSIT_CHAIN_ID);
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 1, 3)).toBe(true);
     expect(chain.seenExecutionProofs.hasVerified(blockRootHex, 1)).toBe(true);
+    expect(chain.seenExecutionProofs.getVerified(blockRootHex, 1)).toBe(signedProof.message);
   });
 
   it("ignores a proof whose payload is seen but not yet imported into fork choice", async () => {
@@ -87,7 +88,7 @@ describe("validateGossipExecutionProof", () => {
   });
 
   it("ignores a proof for a block root and proof type that already has a verified proof", async () => {
-    chain.seenExecutionProofs.addVerified(blockRootHex, blockSlot, 1);
+    chain.seenExecutionProofs.addVerified(blockRootHex, blockSlot, signedProof.message);
 
     await expect(validateGossipExecutionProof(chain, signedProof)).rejects.toMatchObject({
       type: {code: ExecutionProofErrorCode.PROOF_ALREADY_KNOWN},
@@ -161,6 +162,7 @@ describe("validateGossipExecutionProof", () => {
     });
     expect(chain.proofEngine.verifyExecutionProof).not.toHaveBeenCalled();
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 1, 3)).toBe(false);
+    expect(chain.seenExecutionProofs.getVerified(blockRootHex, 1)).toBeUndefined();
 
     await expect(validateGossipExecutionProof(chain, signedProof)).resolves.toEqual({blockSlot});
   });
@@ -172,6 +174,8 @@ describe("validateGossipExecutionProof", () => {
       type: {code: ExecutionProofErrorCode.INVALID_PROOF},
     });
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 1, 3)).toBe(true);
+    expect(chain.seenExecutionProofs.hasVerified(blockRootHex, 1)).toBe(false);
+    expect(chain.seenExecutionProofs.getVerified(blockRootHex, 1)).toBeUndefined();
 
     signedProof.message.proofData = Uint8Array.from([4, 5, 6]);
     await expect(validateGossipExecutionProof(chain, signedProof)).rejects.toMatchObject({
