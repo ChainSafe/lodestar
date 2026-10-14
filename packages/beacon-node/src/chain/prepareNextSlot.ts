@@ -1,3 +1,4 @@
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -25,7 +26,7 @@ export const PREPARE_NEXT_SLOT_BPS = 6667;
  * + For Bellatrix, to compute proposers of next epoch so that we can prepare new payloads
  *
  * The consensus work is owned by `BeaconEngine.prepareForNextSlot`; this scheduler owns the clock
- * listener, sleep timing, error reporting, and DA seen-cache pruning.
+ * listener, sleep timing, error reporting, payload attributes events, and DA seen-cache pruning.
  */
 export class PrepareNextSlotScheduler {
   constructor(
@@ -69,8 +70,10 @@ export class PrepareNextSlotScheduler {
 
       // [beacon-engine] moved: consensus/EL preparation and computeStateHashTreeRoot now live in
       // packages/beacon-node/src/chain/beaconEngine/prepareNextSlot.ts under the same names.
-      // On unstable merges, sync that logic there; retain scheduling and error logging here.
-      const result = await this.chain.beaconEngine.prepareForNextSlot(clockSlot);
+      // On unstable merges, sync that logic there; retain scheduling, SSE emission and error logging here.
+      const result = await this.chain.beaconEngine.prepareForNextSlot(clockSlot, {
+        produceSSEPayloadAttributes: this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes) > 0,
+      });
       if (!result.ok) {
         if (result.code !== BeaconEngineErrorCode.ABORTED) {
           this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
@@ -82,7 +85,10 @@ export class PrepareNextSlotScheduler {
         }
         return;
       }
-      if (result.data) {
+      if (result.data?.payloadAttributes) {
+        this.chain.emitter.emit(routes.events.EventType.payloadAttributes, result.data.payloadAttributes);
+      }
+      if (result.data?.daPruneParent) {
         this.chain.seenPayloadEnvelopeInputCache.pruneBelowParent(result.data.daPruneParent);
       }
     } catch (e) {

@@ -166,8 +166,12 @@ export type ProductionResponse<T> = {ok: true; data: T} | ProductionError;
 export type ProduceBlockResponse = ProductionResponse<ProduceBlindedBlockOrBlockContentsRes>;
 export type ProduceBlockV4Response = ProductionResponse<ProduceBlockV4Result>;
 
-/** The DA prune parent returned after engine-owned slot preparation. */
-export type PrepareNextSlotResult = {daPruneParent: ProtoBlock};
+export type PrepareNextSlotOpts = {produceSSEPayloadAttributes: boolean};
+
+export type PrepareNextSlotResult = {
+  daPruneParent?: ProtoBlock;
+  payloadAttributes?: routes.events.EventData[routes.events.EventType.payloadAttributes];
+};
 
 export enum LateCanonicalBlockReason {
   SlowImport = "slow_import",
@@ -264,9 +268,9 @@ export interface IBeaconEngine {
   produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response>;
 
   // Advance preparation for the next slot: recompute head, regen the prepare-state, predict a
-  // proposer-boost-reorg, precompute the epoch transition, prepare the EL/builder and emit SSE.
-  // Returns a plain error or success with an optional parent for facade-owned DA pruning.
-  prepareForNextSlot(clockSlot: Slot): Promise<PrepareNextSlotResponse>;
+  // proposer-boost-reorg, precompute the epoch transition and prepare the EL/builder.
+  // Returns requested payload attributes and an optional parent for facade-owned DA pruning.
+  prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse>;
 
   // Validator duties. The engine resolves state internally and returns fully-populated duties (with
   // pubkeys) + dependentRoot; no `IBeaconStateView` crosses. Clock-derived values are passed in (the

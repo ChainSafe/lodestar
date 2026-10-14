@@ -231,6 +231,7 @@ import {
   IBeaconEngine,
   ImportBlockResult,
   ImportExecutionPayloadOpts,
+  PrepareNextSlotOpts,
   PrepareNextSlotResponse,
   ProduceBlockRequest,
   ProduceBlockResponse,
@@ -1024,10 +1025,10 @@ export class BeaconEngine implements IBeaconEngine {
     }
   }
 
-  /** Prepare consensus state, builder status, EL payload and SSE events for the next slot. */
-  async prepareForNextSlot(clockSlot: Slot): Promise<PrepareNextSlotResponse> {
+  /** Prepare consensus state, builder status, EL payload and requested payload attributes for the next slot. */
+  async prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {
     try {
-      return {ok: true, data: await prepareForNextSlot.call(this, clockSlot)};
+      return {ok: true, data: await prepareForNextSlot.call(this, clockSlot, opts)};
     } catch (e) {
       return {
         ok: false,

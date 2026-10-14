@@ -1,4 +1,3 @@
-import {routes} from "@lodestar/api";
 import {getFinalizedExecutionBlockHash, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   ForkPostBellatrix,
@@ -33,8 +32,18 @@ import {
 } from "../produceBlock/produceBlockBody.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconEngine} from "./beaconEngine.js";
-/** Synced through unstable@2593063a82. Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#PrepareNextSlotScheduler.prepareForNextSlot. */
-export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): Promise<null> {
+import {PrepareNextSlotOpts, PrepareNextSlotResult} from "./interface.js";
+
+/**
+ * Synced through unstable@2593063a82. Runs inside BeaconEngine.
+ * Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#PrepareNextSlotScheduler.prepareForNextSlot.
+ * [beacon-engine] deviation: returns requested payload attributes for facade emission after preparation completes.
+ */
+export async function prepareForNextSlot(
+  this: BeaconEngine,
+  clockSlot: Slot,
+  opts: PrepareNextSlotOpts
+): Promise<PrepareNextSlotResult | null> {
   const prepareSlot = clockSlot + 1;
   const prepareEpoch = computeEpochAtSlot(prepareSlot);
   const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
@@ -68,6 +77,7 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
     ? this.metrics?.precomputeNextEpochTransition.duration.startTimer()
     : null;
   const start = Date.now();
+  let result: PrepareNextSlotResult | null = null;
   let feeRecipient: string | undefined;
   if (isForkPostBellatrix(fork)) {
     let preparedState: IBeaconStateView | undefined;
@@ -164,7 +174,7 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
     }
 
     let parentBlockHash: Bytes32;
-    // Apply parent payload once here as it's reused by EL prep and SSE emit below
+    // Apply parent payload once here as it's reused by EL prep and payload attributes below
     let stateAfterParentPayload: IBeaconStateViewBellatrix = preparedState;
     if (isStatePostGloas(preparedState)) {
       // Spec: should_build_on_full(store, head, slot) - see produceBlockBody.ts for context.
@@ -189,12 +199,9 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
 
     let payloadAttributes: PayloadAttributes | undefined;
-    // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
-    // every slot. Without the flag, only emit the event if we are proposing in the next slot.
-    if (
-      (feeRecipient || this.opts.emitPayloadAttributes === true) &&
-      this.emitter.listenerCount(routes.events.EventType.payloadAttributes)
-    ) {
+    // If emitPayloadAttributes is true prepare payload attributes for every slot.
+    // Without the flag, only prepare them if we are proposing in the next slot.
+    if ((feeRecipient || this.opts.emitPayloadAttributes === true) && opts.produceSSEPayloadAttributes) {
       const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this, {
         prepareState: stateAfterParentPayload,
         prepareSlot,
@@ -204,7 +211,7 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
         finalizedBlockHash,
         feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
       });
-      this.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
+      result = {payloadAttributes: {data, version: fork}};
       payloadAttributes = data.payloadAttributes;
     }
 
@@ -267,7 +274,7 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
 
     // Nothing more to do on an epoch-transition slot: that precompute already ran a full (>1s)
     // epoch transition, so we don't pile the builder-deposit pre-verify (below) on top of it.
-    return null;
+    return result;
   }
   const headState = this.getHeadState();
   if (isStatePostFulu(headState)) {
@@ -326,7 +333,7 @@ export async function prepareForNextSlot(this: BeaconEngine, clockSlot: Slot): P
       }
     }
   }
-  return null;
+  return result;
 }
 
 /** Synced through unstable@2593063a82. Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#checkBuilderStatusBeforeSlot. */
