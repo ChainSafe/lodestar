@@ -93,7 +93,7 @@ import {ArchiveMode, StateArchiveStrategy} from "../archiveStore/interface.js";
 import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
-import {BlockBytes, BlockCache} from "../blocks/blockCache.js";
+import {BlockBytes, BlockSerializedCache} from "../blocks/blockSerializedCache.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
@@ -341,15 +341,15 @@ export class BeaconEngine implements IBeaconEngine {
   lightClientServer: LightClientServer | undefined;
   /**
    * Engine-owned verification results awaiting import, including post-states and execution status.
-   * Bundles reference the same block and bytes returned by blockCache; they do not copy either.
+   * Bundles reference the same block and bytes returned by blockSerializedCache; they do not copy either.
    * API broadcast validation uses validateApiBlock and never creates or discards these bundles.
-   * Retain them until import settles or discardVerifiedBlocks is called, independently of BlockCache
+   * Retain them until import settles or discardVerifiedBlocks is called, independently of BlockSerializedCache
    * eviction/replacement and BeaconChain's persistence cleanup. Combining these stores would require
    * pinning the exact signed candidate while keeping verification results engine-owned.
    */
   readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
   readonly serializedCache?: SerializedCache;
-  readonly blockCache: BlockCache;
+  readonly blockSerializedCache: BlockSerializedCache;
   // TODO - beacon engine: this is not part of BeaconEngine but BeaconChain, remove it, create BeaconEngine own emitter if needed
   readonly emitter: ChainEventEmitter;
 
@@ -386,8 +386,9 @@ export class BeaconEngine implements IBeaconEngine {
     this.dataColumnDir = modules.dataColumnDir;
     this.signal = signal;
     this.serializedCache = modules.serializedCache;
-    this.blockCache =
-      modules.blockCache ?? new BlockCache(config, {owner: "engine", metrics: metrics?.blockCache, logger});
+    this.blockSerializedCache =
+      modules.blockSerializedCache ??
+      new BlockSerializedCache(config, {owner: "engine", metrics: metrics?.blockSerializedCache, logger});
     this.metrics = metrics;
     this.clock = clock;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
@@ -1439,7 +1440,7 @@ export class BeaconEngine implements IBeaconEngine {
 
   /** Prune the (internal) op pool + seen-block-proposers on finalization — driven by the facade's finalized event. */
   async pruneOnFinalized(): Promise<void> {
-    this.blockCache.prune(computeStartSlotAtEpoch(this.forkChoice.getFinalizedCheckpoint().epoch));
+    this.blockSerializedCache.prune(computeStartSlotAtEpoch(this.forkChoice.getFinalizedCheckpoint().epoch));
     this.seenPayloadEnvelopeInputCache.pruneFinalized(this.forkChoice.getFinalizedCheckpoint());
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(this.forkChoice.getFinalizedCheckpoint().epoch));
 

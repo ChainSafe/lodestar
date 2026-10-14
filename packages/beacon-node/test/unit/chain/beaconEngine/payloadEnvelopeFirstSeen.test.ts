@@ -102,7 +102,7 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
         await expect(pending).resolves.toMatchObject({
           status: scenario === "accept" ? "accept" : scenario === "reject" ? "reject" : "ignore",
         });
-      expect(engine.blockCache.get(root) !== undefined).toBe(
+      expect(engine.blockSerializedCache.get(root) !== undefined).toBe(
         ["accept", "unknown_parent", "observed_sibling"].includes(scenario)
       );
       expect(engine.seenPayloadEnvelopeInputCache.get(root) !== undefined).toBe(
@@ -140,14 +140,14 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
     });
     expect(engine.seenPayloadEnvelopeInputCache.get(root) !== undefined).toBe(valid);
     expect(engine.hasObservedBlockRoot(1, 7, root)).toBe(valid);
-    expect(engine.blockCache.get(root) !== undefined).toBe(valid);
+    expect(engine.blockSerializedCache.get(root) !== undefined).toBe(valid);
   });
 
   it.each(["truncated", "invalid_offset", "root_mismatch"])(
     "returns a plain rejection for %s without replacing existing cache entries",
     async (scenario) => {
       const validBytes = ssz.gloas.SignedBeaconBlock.serialize(block);
-      const entry = engine.blockCache.set(root, block, validBytes);
+      const entry = engine.blockSerializedCache.set(root, block, validBytes);
       let bytes: Uint8Array;
       if (scenario === "truncated") {
         bytes = new Uint8Array();
@@ -170,7 +170,7 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
       expect(result).toHaveProperty("error", undefined);
       expect(structuredClone(result)).toEqual(result);
       expect(validate).not.toHaveBeenCalled();
-      expect(engine.blockCache.get(root)).toBe(entry);
+      expect(engine.blockSerializedCache.get(root)).toBe(entry);
       expect(engine.seenPayloadEnvelopeInputCache.get(root)).toBeUndefined();
     }
   );
@@ -185,7 +185,7 @@ describe("payload input creation when a block first enters BeaconEngine", () => 
     await expect(
       engine.validateGossipBlock(fromHex(root), ssz.gloas.SignedBeaconBlock.serialize(block), ForkName.gloas, 0)
     ).resolves.toMatchObject({status: "ignore", code: "UNEXPECTED_ERROR"});
-    expect(engine.blockCache.get(root)).toBeUndefined();
+    expect(engine.blockSerializedCache.get(root)).toBeUndefined();
     expect(engine.logger.error).toHaveBeenCalledWith(
       "Error validating gossip block",
       {root, code: "UNEXPECTED_ERROR"},

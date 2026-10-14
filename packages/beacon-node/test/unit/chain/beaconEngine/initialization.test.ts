@@ -88,15 +88,15 @@ describe("bytes-based engine startup", () => {
     const dependencies = await initializeTestChain(options, modules);
     chain = new BeaconChain(options, dependencies);
     if (!engine) throw Error("Expected initialized engine");
-    expect(chain.blockCache === engine.blockCache).toBe(!beaconEngineWorker);
+    expect(chain.blockSerializedCache === engine.blockSerializedCache).toBe(!beaconEngineWorker);
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
     const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
-    chain.blockCache.set(toRootHex(blockRoot), block, bytes);
+    chain.blockSerializedCache.set(toRootHex(blockRoot), block, bytes);
     const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
     await engine.validateGossipBlock(blockRoot, structuredClone(bytes), ForkName.phase0);
-    const cached = engine.blockCache.get(toRootHex(blockRoot));
+    const cached = engine.blockSerializedCache.get(toRootHex(blockRoot));
     vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
     await expect(
       engine.verifyBlocks([{blockRoot, blockBytes: structuredClone(bytes)}], {}, new AbortController().signal)
@@ -104,7 +104,7 @@ describe("bytes-based engine startup", () => {
       type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"},
     });
     expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-    expect(engine.blockCache.get(toRootHex(blockRoot))).toBe(cached);
+    expect(engine.blockSerializedCache.get(toRootHex(blockRoot))).toBe(cached);
     expect(cached?.block === block).toBe(!beaconEngineWorker);
 
     expect(engine.serializedCache).toBe(beaconEngineWorker ? undefined : chain.serializedCache);

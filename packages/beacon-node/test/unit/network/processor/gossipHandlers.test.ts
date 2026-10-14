@@ -11,9 +11,9 @@ import {
   GossipValidationStatus,
   runGossipValidation,
 } from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
-import {BlockCache} from "../../../../src/chain/blocks/blockCache.js";
 import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
+import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerializedCache.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../../src/chain/blocks/payloadError.js";
@@ -82,10 +82,10 @@ describe("getGossipHandlers", () => {
         code: BlockErrorCode.ALREADY_KNOWN,
         error: new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex}),
       });
-      const blockCache = new BlockCache(config);
+      const blockSerializedCache = new BlockSerializedCache(config);
       const chain = {
         hasBlockHex,
-        blockCache,
+        blockSerializedCache,
         clock: new ClockStopped(1),
         custodyConfig: {sampledColumns: [], custodyColumns: []},
         seenBlockInputCache: {getByBlock},
@@ -111,7 +111,7 @@ describe("getGossipHandlers", () => {
 
       expect(result).toMatchObject({status: GossipValidationStatus.Ignore, code: BlockErrorCode.ALREADY_KNOWN});
       expect(hasBlockHex).toHaveBeenCalledExactlyOnceWith(blockRootHex);
-      expect(blockCache.get(blockRootHex)).toBeUndefined();
+      expect(blockSerializedCache.get(blockRootHex)).toBeUndefined();
       expect(getByBlock).not.toHaveBeenCalled();
       expect(addPayloadInput).not.toHaveBeenCalled();
       expect(validateEngineBlock).not.toHaveBeenCalled();
@@ -133,10 +133,10 @@ describe("getGossipHandlers", () => {
       const status = code === "UNEXPECTED_ERROR" ? GossipValidationStatus.Ignore : GossipValidationStatus.Reject;
       const persistInvalidSszValue = vi.fn();
       const remove = vi.fn();
-      const blockCache = new BlockCache(config);
+      const blockSerializedCache = new BlockSerializedCache(config);
       const chain = {
         hasBlockHex: () => false,
-        blockCache,
+        blockSerializedCache,
         clock: new ClockStopped(0),
         seenBlockInputCache: {
           getByBlock: vi.fn(),
@@ -180,7 +180,7 @@ describe("getGossipHandlers", () => {
         expect(persistInvalidSszValue).not.toHaveBeenCalled();
       }
       expect(remove).not.toHaveBeenCalled();
-      expect(blockCache.get(root)).toBeUndefined();
+      expect(blockSerializedCache.get(root)).toBeUndefined();
     }
   );
 
@@ -193,8 +193,8 @@ describe("getGossipHandlers", () => {
       signedBlock.message.slot = 1;
       const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
       const bytes = forkTypes.SignedBeaconBlock.serialize(signedBlock);
-      const blockCache = new BlockCache(config);
-      blockCache.set(blockRootHex, signedBlock, bytes);
+      const blockSerializedCache = new BlockSerializedCache(config);
+      blockSerializedCache.set(blockRootHex, signedBlock, bytes);
       const clock = new ClockStopped(0);
       const emitter = new ChainEventEmitter();
       const controller = new AbortController();
@@ -206,13 +206,13 @@ describe("getGossipHandlers", () => {
         signal: controller.signal,
         custodyConfig,
         serializedCache: new SerializedCache(),
-        blockCache,
+        blockSerializedCache,
         metrics: null,
       });
       const addPayloadInput = vi.fn();
       const chain = {
         hasBlockHex: () => false,
-        blockCache,
+        blockSerializedCache,
         clock,
         emitter,
         custodyConfig,
@@ -255,7 +255,7 @@ describe("getGossipHandlers", () => {
         const blockInput = seenBlockInputCache.get(blockRootHex);
         expect(blockInput).toBeDefined();
         seenBlockInputCache.remove(blockRootHex);
-        expect(blockCache.get(blockRootHex)).toBeUndefined();
+        expect(blockSerializedCache.get(blockRootHex)).toBeUndefined();
         expect(blockInput?.getBlock()).toBe(signedBlock);
         if (fork === ForkName.gloas) {
           expect(addPayloadInput).toHaveBeenCalledOnce();
@@ -392,7 +392,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
       removeInvalid,
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
-    blockCache: new BlockCache(config),
+    blockSerializedCache: new BlockSerializedCache(config),
   } as unknown as IBeaconChain;
 
   const handlers = getGossipHandlers(
@@ -476,7 +476,7 @@ async function runBeaconBlockProcessingError(
       remove: vi.fn(),
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
-    blockCache: new BlockCache(config),
+    blockSerializedCache: new BlockSerializedCache(config),
   } as unknown as IBeaconChain;
 
   const handlers = getGossipHandlers(
@@ -597,7 +597,7 @@ async function runBeaconBlockRepeatProposal(
       remove: vi.fn(),
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
-    blockCache: new BlockCache(config),
+    blockSerializedCache: new BlockSerializedCache(config),
   } as unknown as IBeaconChain;
 
   const handlers = getGossipHandlers(

@@ -16,7 +16,7 @@ import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconEngine} from "../chain/beaconEngine/index.js";
 import {AnchorSummary} from "../chain/beaconEngine/initialization.js";
 import {IBeaconEngine} from "../chain/beaconEngine/interface.js";
-import {BlockCache} from "../chain/blocks/blockCache.js";
+import {BlockSerializedCache} from "../chain/blocks/blockSerializedCache.js";
 import {ChainEventEmitter} from "../chain/emitter.js";
 import {BeaconChain, IBeaconChain} from "../chain/index.js";
 import {initBeaconMetrics} from "../chain/initState.js";
@@ -258,14 +258,14 @@ export class BeaconNode {
       ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
       : undefined;
     const serializedCache = new SerializedCache({cacheDeserialized: !opts.chain.beaconEngineWorker});
-    const blockCache = new BlockCache(config, {
+    const blockSerializedCache = new BlockSerializedCache(config, {
       owner: opts.chain.beaconEngineWorker ? "chain" : "shared",
-      metrics: metrics?.blockCache,
+      metrics: metrics?.blockSerializedCache,
       logger: chainLogger,
     });
     const beaconEngine = new BeaconEngine({
       serializedCache: opts.chain.beaconEngineWorker ? undefined : serializedCache,
-      blockCache: opts.chain.beaconEngineWorker ? undefined : blockCache,
+      blockSerializedCache: opts.chain.beaconEngineWorker ? undefined : blockSerializedCache,
       validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
       validatorMonitorOpts:
         opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
@@ -312,7 +312,7 @@ export class BeaconNode {
 
     const chain = new BeaconChain(opts.chain, {
       serializedCache,
-      blockCache,
+      blockSerializedCache,
       config,
       pubkeyCache,
       db,

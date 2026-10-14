@@ -43,7 +43,7 @@ import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
 import {SerializedCache} from "../../util/serializedCache.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
-import {BlockBytes, BlockCache} from "../blocks/blockCache.js";
+import {BlockBytes, BlockSerializedCache} from "../blocks/blockSerializedCache.js";
 import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
@@ -77,7 +77,7 @@ export type HeadParentPayload = {
 
 export type BeaconEngineModules = {
   serializedCache?: SerializedCache;
-  blockCache?: BlockCache;
+  blockSerializedCache?: BlockSerializedCache;
   builderApiClientOpts?: BuilderApiClientOpts;
   executionEngine: IExecutionEngine;
   executionBuilder?: IExecutionBuilder;

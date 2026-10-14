@@ -39,7 +39,7 @@ export async function validateGossipBlock(
   const payloadBlockRoot = isForkPostGloas(fork) ? blockRootHex : null;
   let signedBlock: SignedBeaconBlock | undefined;
   try {
-    const {block} = this.blockCache.getOrDeserialize(blockRootHex, blockBytes, fork);
+    const {block} = this.blockSerializedCache.getOrDeserialize(blockRootHex, blockBytes, fork);
     signedBlock = block;
     // Source: unstable@2593063a82 network/processor/gossipHandlers.ts#validateBeaconBlock.
     // [beacon-engine] Authenticate unknown-parent blocks before either owner's seen cache retains them.
@@ -92,7 +92,7 @@ export async function validateGossipBlock(
         });
       }
     } else {
-      this.blockCache.delete(blockRootHex, block, "rejected");
+      this.blockSerializedCache.delete(blockRootHex, block, "rejected");
     }
     if (this.validatorMonitor && seenTimestampSec !== undefined) {
       const {slot, proposerIndex} = block.message;
@@ -126,7 +126,7 @@ export async function validateGossipBlock(
     return result;
   } catch (error) {
     if (signedBlock !== undefined) {
-      this.blockCache.delete(blockRootHex, signedBlock, "rejected");
+      this.blockSerializedCache.delete(blockRootHex, signedBlock, "rejected");
     }
     if (
       error instanceof LodestarError &&

@@ -3,12 +3,12 @@ import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockCache} from "../../../../src/chain/blocks/blockCache.js";
+import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerializedCache.js";
 import {createLodestarMetrics} from "../../../../src/metrics/metrics/lodestar.js";
 import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
-describe("BlockCache", () => {
+describe("BlockSerializedCache", () => {
   const config = createChainForkConfig(chainConfig);
   afterEach(() => vi.restoreAllMocks());
 
@@ -24,7 +24,7 @@ describe("BlockCache", () => {
   }
 
   it("reuses the main-thread block and original bytes across cloned inputs", () => {
-    const cache = new BlockCache(config);
+    const cache = new BlockSerializedCache(config);
     const {block, bytes, root} = candidate();
     const entry = cache.set(root, block, bytes);
     const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
@@ -37,7 +37,7 @@ describe("BlockCache", () => {
   });
 
   it("deserializes once with reuseBytes in a separate engine cache", () => {
-    const cache = new BlockCache(config);
+    const cache = new BlockSerializedCache(config);
     const {block, bytes, root} = candidate();
     const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
     const entry = cache.getOrDeserialize(root, bytes);
@@ -48,7 +48,7 @@ describe("BlockCache", () => {
   });
 
   it("does not reuse another signature for the same block root", () => {
-    const cache = new BlockCache(config);
+    const cache = new BlockSerializedCache(config);
     const original = candidate();
     const replacement = candidate(1, 1);
     expect(replacement.root).toBe(original.root);
@@ -63,7 +63,7 @@ describe("BlockCache", () => {
   });
 
   it("serializes a different signature instead of returning stale bytes", () => {
-    const cache = new BlockCache(config);
+    const cache = new BlockSerializedCache(config);
     const original = candidate();
     const replacement = candidate(1, 1);
     cache.set(original.root, original.block, original.bytes);
@@ -71,7 +71,7 @@ describe("BlockCache", () => {
   });
 
   it("rejects a mismatched root without replacing the existing entry", () => {
-    const cache = new BlockCache(config);
+    const cache = new BlockSerializedCache(config);
     const original = candidate();
     const unrelated = candidate(2);
     const entry = cache.set(original.root, original.block, original.bytes);
@@ -80,7 +80,7 @@ describe("BlockCache", () => {
   });
 
   it("bounds entries and prunes blocks older than finalization", () => {
-    const cache = new BlockCache(config, {maxItems: 2});
+    const cache = new BlockSerializedCache(config, {maxItems: 2});
     const blocks = [candidate(1), candidate(2), candidate(3)];
     for (const {root, block, bytes} of blocks) cache.set(root, block, bytes);
     expect(cache.get(blocks[0].root)).toBeUndefined();
@@ -92,9 +92,9 @@ describe("BlockCache", () => {
 
   it("reports reuse, retained bytes, eviction reasons and skipped deletions", async () => {
     const register = new RegistryMetricCreator();
-    const metrics = createLodestarMetrics(register).blockCache;
+    const metrics = createLodestarMetrics(register).blockSerializedCache;
     const logger = getMockedLogger();
-    const cache = new BlockCache(config, {owner: "chain", maxItems: 2, metrics, logger});
+    const cache = new BlockSerializedCache(config, {owner: "chain", maxItems: 2, metrics, logger});
     const original = candidate(1);
     const replacement = candidate(1, 1);
     const second = candidate(2);
@@ -156,10 +156,10 @@ describe("BlockCache", () => {
 
   it("keeps shared, main-thread and engine metric series separate", async () => {
     const register = new RegistryMetricCreator();
-    const metrics = createLodestarMetrics(register).blockCache;
+    const metrics = createLodestarMetrics(register).blockSerializedCache;
     const {root, block, bytes} = candidate();
     for (const owner of ["shared", "chain", "engine"] as const) {
-      new BlockCache(config, {owner, metrics}).set(root, block, bytes);
+      new BlockSerializedCache(config, {owner, metrics}).set(root, block, bytes);
     }
     const metric = register.getSingleMetric("lodestar_block_cache_entries");
     expect((await metric?.get())?.values).toEqual([

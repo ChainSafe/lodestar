@@ -63,7 +63,7 @@ export async function verifyBlocksInEpoch(
 
   const blockBytes = blockInputs.map((blockInput) => ({
     blockRoot: fromHex(blockInput.blockRootHex),
-    blockBytes: this.blockCache.getOrSerialize(blockInput.blockRootHex, blockInput.getBlock()).bytes,
+    blockBytes: this.blockSerializedCache.getOrSerialize(blockInput.blockRootHex, blockInput.getBlock()).bytes,
   }));
 
   const abortController = new AbortController();

@@ -94,7 +94,7 @@ export async function importBlock(
   this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
   await this.db.block.putBinary(blockRoot, v.blockBytes);
   // Persistence releases any cached candidate for this root, including replacements during the write.
-  this.blockCache.delete(blockRootHex, undefined, "persisted");
+  this.blockSerializedCache.delete(blockRootHex, undefined, "persisted");
 
   const currentSlot = this.forkChoice.getTime();
 

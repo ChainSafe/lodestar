@@ -4,7 +4,7 @@ import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, getIndexedAttestation} from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, toRootHex} from "@lodestar/utils";
-import {BlockBytes} from "../blocks/blockCache.js";
+import {BlockBytes} from "../blocks/blockSerializedCache.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
@@ -28,7 +28,7 @@ export async function verifyBlocks(
 ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
   if (signal.aborted) throw new ErrorAborted("verifyBlocks");
   const entries = blockData.map(({blockRoot, blockBytes}) =>
-    this.blockCache.getOrDeserialize(toRootHex(blockRoot), blockBytes)
+    this.blockSerializedCache.getOrDeserialize(toRootHex(blockRoot), blockBytes)
   );
   const blocks = entries.map(({block}) => block);
   const blockBytes = entries.map(({bytes}) => bytes);

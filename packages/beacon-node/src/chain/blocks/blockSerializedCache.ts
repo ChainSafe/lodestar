@@ -7,13 +7,13 @@ import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 
 export type BlockBytes = {blockRoot: Root; blockBytes: Uint8Array};
-export type BlockCacheEntry = {block: SignedBeaconBlock; bytes: Uint8Array};
-export type BlockCacheOwner = "shared" | "chain" | "engine";
-export type BlockCacheDeleteReason = "explicit" | "persisted" | "rejected" | "block_input";
-type BlockCacheOpts = {
+export type BlockSerializedCacheEntry = {block: SignedBeaconBlock; bytes: Uint8Array};
+export type BlockSerializedCacheOwner = "shared" | "chain" | "engine";
+export type BlockSerializedCacheDeleteReason = "explicit" | "persisted" | "rejected" | "block_input";
+type BlockSerializedCacheOpts = {
   maxItems?: number;
-  owner?: BlockCacheOwner;
-  metrics?: Metrics["blockCache"] | null;
+  owner?: BlockSerializedCacheOwner;
+  metrics?: Metrics["blockSerializedCache"] | null;
   logger?: Logger;
 };
 
@@ -25,14 +25,14 @@ type BlockCacheOpts = {
  * block/bytes references needed for pending imports, so removal here cannot invalidate an import.
  * Callers must derive roots from the block and keep cached blocks and bytes immutable.
  */
-export class BlockCache {
-  private readonly entries = new Map<RootHex, BlockCacheEntry>();
+export class BlockSerializedCache {
+  private readonly entries = new Map<RootHex, BlockSerializedCacheEntry>();
   private readonly maxItems: number;
-  private readonly owner: BlockCacheOwner;
+  private readonly owner: BlockSerializedCacheOwner;
 
   constructor(
     private readonly config: ChainForkConfig,
-    private readonly opts: BlockCacheOpts = {}
+    private readonly opts: BlockSerializedCacheOpts = {}
   ) {
     this.maxItems = opts.maxItems ?? (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
     this.owner = opts.owner ?? "shared";
@@ -47,14 +47,14 @@ export class BlockCache {
     }
   }
 
-  get(blockRoot: RootHex): BlockCacheEntry | undefined {
+  get(blockRoot: RootHex): BlockSerializedCacheEntry | undefined {
     const entry = this.entries.get(blockRoot);
     this.opts.metrics?.lookups.inc({owner: this.owner, operation: "get", result: entry ? "hit" : "miss"});
     return entry;
   }
 
   /** The caller must derive the root from this block, and the bytes must encode this block. */
-  set(blockRoot: RootHex, block: SignedBeaconBlock, bytes: Uint8Array): BlockCacheEntry {
+  set(blockRoot: RootHex, block: SignedBeaconBlock, bytes: Uint8Array): BlockSerializedCacheEntry {
     const cached = this.entries.get(blockRoot);
     if (cached && (cached.bytes === bytes || byteArrayEquals(cached.bytes, bytes))) return cached;
     const entry = {block, bytes};
@@ -76,7 +76,7 @@ export class BlockCache {
     return entry;
   }
 
-  getOrSerialize(blockRoot: RootHex, block: SignedBeaconBlock): BlockCacheEntry {
+  getOrSerialize(blockRoot: RootHex, block: SignedBeaconBlock): BlockSerializedCacheEntry {
     const cached = this.entries.get(blockRoot);
     const hit = cached && (cached.block === block || byteArrayEquals(cached.block.signature, block.signature));
     this.opts.metrics?.lookups.inc({owner: this.owner, operation: "serialize", result: hit ? "hit" : "miss"});
@@ -84,7 +84,7 @@ export class BlockCache {
     return this.set(blockRoot, block, this.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block));
   }
 
-  getOrDeserialize(blockRoot: RootHex, bytes: Uint8Array, fork?: ForkName): BlockCacheEntry {
+  getOrDeserialize(blockRoot: RootHex, bytes: Uint8Array, fork?: ForkName): BlockSerializedCacheEntry {
     const cached = this.entries.get(blockRoot);
     const hit = cached && (cached.bytes === bytes || byteArrayEquals(cached.bytes, bytes));
     this.opts.metrics?.lookups.inc({owner: this.owner, operation: "deserialize", result: hit ? "hit" : "miss"});
@@ -106,7 +106,7 @@ export class BlockCache {
   }
 
   /** Only remove the matching object when another candidate may have replaced it. */
-  delete(blockRoot: RootHex, block?: SignedBeaconBlock, reason: BlockCacheDeleteReason = "explicit"): void {
+  delete(blockRoot: RootHex, block?: SignedBeaconBlock, reason: BlockSerializedCacheDeleteReason = "explicit"): void {
     const cached = this.entries.get(blockRoot);
     if (!cached) {
       this.opts.metrics?.deleteMisses.inc({owner: this.owner, reason, result: "missing"});

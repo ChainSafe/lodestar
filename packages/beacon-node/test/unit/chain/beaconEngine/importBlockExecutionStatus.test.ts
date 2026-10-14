@@ -40,7 +40,7 @@ describe("chain / blocks / importBlock", () => {
         push: vi.fn().mockResolvedValue(undefined),
       },
       db: {block: {putBinary: vi.fn().mockResolvedValue(undefined)}},
-      blockCache: {delete: vi.fn()},
+      blockSerializedCache: {delete: vi.fn()},
       checkpointBalancesCache: {processState: vi.fn()},
     } as unknown as BeaconEngine;
 

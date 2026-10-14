@@ -50,7 +50,7 @@ export async function importBlock(
   const r = await this.beaconEngine.importBlock(fromHex(blockInput.blockRootHex), dataAvailabilityStatus, opts);
   // The engine already removes persisted roots from the shared cache.
   if (this.opts.beaconEngineWorker) {
-    this.blockCache.delete(blockInput.blockRootHex, undefined, "persisted");
+    this.blockSerializedCache.delete(blockInput.blockRootHex, undefined, "persisted");
   }
 
   this.metrics?.importBlock.bySource.inc({source: blockInput.getBlockSource().source});

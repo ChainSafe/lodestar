@@ -4,7 +4,7 @@ import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/index.js";
-import {BlockCache} from "../../src/chain/blocks/blockCache.js";
+import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BeaconChainModules} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
@@ -31,7 +31,7 @@ export type TestBeaconEngineModules = Omit<
   | "lightClientServer"
   | "builderApiClient"
   | "serializedCache"
-  | "blockCache"
+  | "blockSerializedCache"
 > & {
   earliestAvailableSlot?: Slot;
   validatorMonitorOpts?: ValidatorMonitorOpts | null;
@@ -92,10 +92,10 @@ export function createTestBeaconEngine(
     : new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
 
   const serializedCache = new SerializedCache({cacheDeserialized: !opts.beaconEngineWorker});
-  const blockCache = new BlockCache(config);
+  const blockSerializedCache = new BlockSerializedCache(config);
   const beaconEngine = new BeaconEngine({
     serializedCache: opts.beaconEngineWorker ? undefined : serializedCache,
-    blockCache: opts.beaconEngineWorker ? undefined : blockCache,
+    blockSerializedCache: opts.beaconEngineWorker ? undefined : blockSerializedCache,
     executionEngine,
     executionBuilder,
     builderApiClientOpts,
@@ -118,7 +118,7 @@ export function createTestBeaconEngine(
   return {
     ...modules,
     serializedCache,
-    blockCache,
+    blockSerializedCache,
     beaconEngine,
     abortController,
     clock,

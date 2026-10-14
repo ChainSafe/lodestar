@@ -4,8 +4,8 @@ import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {ImportBlockResult} from "../../../../src/chain/beaconEngine/interface.js";
-import {BlockCache} from "../../../../src/chain/blocks/blockCache.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
+import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerializedCache.js";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
 import {RegistryMetricCreator} from "../../../../src/metrics/index.js";
 import {createLodestarMetrics} from "../../../../src/metrics/metrics/lodestar.js";
@@ -43,17 +43,22 @@ describe.each([false, true])("BeaconChain block cache cleanup (beaconEngineWorke
   let chain: ReturnType<typeof getMockedBeaconChain>;
   let engineImport: ReturnType<typeof defer<ImportBlockResult>>;
   let sidecarWrite: ReturnType<typeof defer<void>>;
-  let engineCache: BlockCache;
+  let engineCache: BlockSerializedCache;
   let register: RegistryMetricCreator;
 
   beforeEach(() => {
     chain = getMockedBeaconChain();
     chain.opts.beaconEngineWorker = beaconEngineWorker;
     register = new RegistryMetricCreator();
-    const metrics = createLodestarMetrics(register).blockCache;
-    const blockCache = new BlockCache(chain.config, {owner: beaconEngineWorker ? "chain" : "shared", metrics});
-    Object.defineProperty(chain, "blockCache", {value: blockCache});
-    engineCache = beaconEngineWorker ? new BlockCache(chain.config, {owner: "engine", metrics}) : blockCache;
+    const metrics = createLodestarMetrics(register).blockSerializedCache;
+    const blockSerializedCache = new BlockSerializedCache(chain.config, {
+      owner: beaconEngineWorker ? "chain" : "shared",
+      metrics,
+    });
+    Object.defineProperty(chain, "blockSerializedCache", {value: blockSerializedCache});
+    engineCache = beaconEngineWorker
+      ? new BlockSerializedCache(chain.config, {owner: "engine", metrics})
+      : blockSerializedCache;
     engineImport = defer<ImportBlockResult>();
     sidecarWrite = defer<void>();
     chain.beaconEngine.importBlock = vi.fn().mockImplementation(async () => {
@@ -69,7 +74,7 @@ describe.each([false, true])("BeaconChain block cache cleanup (beaconEngineWorke
       },
     });
     vi.spyOn(eventLoop, "callInNextEventLoop").mockImplementation(() => {});
-    chain.blockCache.set(blockRootHex, ssz.phase0.SignedBeaconBlock.deserialize(blockBytes), blockBytes);
+    chain.blockSerializedCache.set(blockRootHex, ssz.phase0.SignedBeaconBlock.deserialize(blockBytes), blockBytes);
     engineCache.set(blockRootHex, block, blockBytes);
   });
 
@@ -81,12 +86,12 @@ describe.each([false, true])("BeaconChain block cache cleanup (beaconEngineWorke
   it("clears the main-thread entry after engine import while sidecar writes are still pending", async () => {
     const importing = importBlock.call(chain, blockInput, DataAvailabilityStatus.PreData, {});
     await vi.waitFor(() => expect(chain.beaconEngine.importBlock).toHaveBeenCalledOnce());
-    expect(chain.blockCache.get(blockRootHex)).toBeDefined();
+    expect(chain.blockSerializedCache.get(blockRootHex)).toBeDefined();
 
     engineImport.resolve(importResult);
     await importing;
 
-    expect(chain.blockCache.get(blockRootHex)).toBeUndefined();
+    expect(chain.blockSerializedCache.get(blockRootHex)).toBeUndefined();
     expect(engineCache.get(blockRootHex)).toBeUndefined();
     const misses = register.getSingleMetric("lodestar_block_cache_delete_misses_total");
     expect((await misses?.get())?.values).toEqual([]);
@@ -94,7 +99,7 @@ describe.each([false, true])("BeaconChain block cache cleanup (beaconEngineWorke
   });
 
   it("retains the main-thread entry when engine import fails", async () => {
-    const cached = chain.blockCache.get(blockRootHex);
+    const cached = chain.blockSerializedCache.get(blockRootHex);
     const error = new Error("Engine import failed");
     const importing = importBlock.call(chain, blockInput, DataAvailabilityStatus.PreData, {});
     const rejected = expect(importing).rejects.toBe(error);
@@ -103,7 +108,7 @@ describe.each([false, true])("BeaconChain block cache cleanup (beaconEngineWorke
     engineImport.reject(error);
     await rejected;
 
-    expect(chain.blockCache.get(blockRootHex)).toBe(cached);
+    expect(chain.blockSerializedCache.get(blockRootHex)).toBe(cached);
     expect(engineCache.get(blockRootHex)).toBeDefined();
     expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
   });

@@ -72,7 +72,7 @@ describe("api - beacon - publishBlockV2", () => {
     const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
     vi.mocked(validateGossipBlock).mockImplementation(async (block) => {
       expect(block).toBe(signedBlock);
-      expect(modules.chain.blockCache.get(rootHex)?.block).toBe(signedBlock);
+      expect(modules.chain.blockSerializedCache.get(rootHex)?.block).toBe(signedBlock);
       return {skippedSlots: 0};
     });
     await getBeaconBlockApi(modules).publishBlockV2(
@@ -80,8 +80,8 @@ describe("api - beacon - publishBlockV2", () => {
       sszRequest ? {sszBytes: bytes} : undefined
     );
     expect(deserialize).not.toHaveBeenCalled();
-    expect(modules.chain.blockCache.get(rootHex)?.bytes).toEqual(bytes);
-    if (sszRequest) expect(modules.chain.blockCache.get(rootHex)?.bytes).toBe(bytes);
+    expect(modules.chain.blockSerializedCache.get(rootHex)?.bytes).toEqual(bytes);
+    if (sszRequest) expect(modules.chain.blockSerializedCache.get(rootHex)?.bytes).toBe(bytes);
     deserialize.mockRestore();
   });
 
@@ -113,7 +113,7 @@ describe("api - beacon - publishBlockV2", () => {
             broadcastValidation: routes.beacon.BroadcastValidation.gossip,
           })
         ).rejects.toMatchObject({statusCode: code === "UNEXPECTED_ERROR" ? 500 : 400});
-        expect(modules.chain.blockCache.get(root)).toBeUndefined();
+        expect(modules.chain.blockSerializedCache.get(root)).toBeUndefined();
         expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
         expect(modules.chain.processBlock).not.toHaveBeenCalled();
       }
@@ -393,10 +393,10 @@ describe("api - beacon - publishBlockV2", () => {
           replacement.signature[0] = 1;
           const replacementBytes = ssz.deneb.SignedBeaconBlock.serialize(replacement);
           const beforeRejection = () => {
-            const cached = modules.chain.blockCache.get(rootHex);
+            const cached = modules.chain.blockSerializedCache.get(rootHex);
             expect(cached?.bytes.buffer).toBe(requestBytes.buffer);
             expect(cached?.bytes.byteLength).toBeLessThan(requestBytes.byteLength);
-            if (replace) modules.chain.blockCache.set(rootHex, replacement, replacementBytes);
+            if (replace) modules.chain.blockSerializedCache.set(rootHex, replacement, replacementBytes);
           };
           const error = new Error("Validation failed");
           if (failure === "consensus") {
@@ -429,7 +429,7 @@ describe("api - beacon - publishBlockV2", () => {
             )
           ).rejects.toThrow(failure === "equivocation" ? /proposer equivocation/ : error);
 
-          expect(modules.chain.blockCache.get(rootHex)).toEqual(
+          expect(modules.chain.blockSerializedCache.get(rootHex)).toEqual(
             replace ? {block: replacement, bytes: replacementBytes} : undefined
           );
           expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();

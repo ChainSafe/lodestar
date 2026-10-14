@@ -16,7 +16,7 @@ export async function validateApiBlock(
 ): Promise<void> {
   const block = blockInput.getBlock();
   const root = blockInput.blockRootHex;
-  const {bytes} = this.blockCache.getOrSerialize(root, block);
+  const {bytes} = this.blockSerializedCache.getOrSerialize(root, block);
   const abortController = new AbortController();
   try {
     await Promise.all([

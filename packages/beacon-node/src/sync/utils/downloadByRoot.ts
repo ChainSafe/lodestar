@@ -362,7 +362,7 @@ export async function fetchAndValidateBlock({
     block.message.slot > computeStartSlotAtEpoch(chain.getFinalizedCheckpoint().epoch) &&
     !chain.hasBlockHex(rootHex)
   ) {
-    chain.blockCache.set(rootHex, block, bytes);
+    chain.blockSerializedCache.set(rootHex, block, bytes);
   }
   return block;
 }

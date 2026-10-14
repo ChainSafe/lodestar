@@ -4,8 +4,11 @@ import {StateHashTreeRootSource} from "@lodestar/state-transition";
 import {ArchiveStoreTask} from "../../chain/archiveStore/interface.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import type {LateCanonicalBlockReason} from "../../chain/beaconEngine/interface.js";
-import type {BlockCacheDeleteReason, BlockCacheOwner} from "../../chain/blocks/blockCache.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
+import type {
+  BlockSerializedCacheDeleteReason,
+  BlockSerializedCacheOwner,
+} from "../../chain/blocks/blockSerializedCache.js";
 import {
   PayloadEnvelopeInputPruneReason,
   PayloadEnvelopeInputSource,
@@ -1505,46 +1508,46 @@ export function createLodestarMetrics(
       }),
     },
 
-    blockCache: {
-      size: register.gauge<{owner: BlockCacheOwner}>({
+    blockSerializedCache: {
+      size: register.gauge<{owner: BlockSerializedCacheOwner}>({
         name: "lodestar_block_cache_entries",
-        help: "Number of decoded blocks retained in BlockCache",
+        help: "Number of decoded blocks retained in BlockSerializedCache",
         labelNames: ["owner"],
       }),
-      bytes: register.gauge<{owner: BlockCacheOwner}>({
+      bytes: register.gauge<{owner: BlockSerializedCacheOwner}>({
         name: "lodestar_block_cache_bytes",
         help: "Sum of cached serialized block lengths, excluding decoded object heap and backing buffer overhead",
         labelNames: ["owner"],
       }),
       lookups: register.counter<{
-        owner: BlockCacheOwner;
+        owner: BlockSerializedCacheOwner;
         operation: "get" | "serialize" | "deserialize";
         result: "hit" | "miss";
       }>({
         name: "lodestar_block_cache_lookups_total",
-        help: "BlockCache reuse hits and misses by operation",
+        help: "BlockSerializedCache reuse hits and misses by operation",
         labelNames: ["owner", "operation", "result"],
       }),
-      insertions: register.counter<{owner: BlockCacheOwner}>({
+      insertions: register.counter<{owner: BlockSerializedCacheOwner}>({
         name: "lodestar_block_cache_insertions_total",
-        help: "BlockCache insertions, including replacement candidates",
+        help: "BlockSerializedCache insertions, including replacement candidates",
         labelNames: ["owner"],
       }),
       removals: register.counter<{
-        owner: BlockCacheOwner;
-        reason: BlockCacheDeleteReason | "replaced" | "capacity" | "finalized";
+        owner: BlockSerializedCacheOwner;
+        reason: BlockSerializedCacheDeleteReason | "replaced" | "capacity" | "finalized";
       }>({
         name: "lodestar_block_cache_removals_total",
-        help: "BlockCache entries removed by reason",
+        help: "BlockSerializedCache entries removed by reason",
         labelNames: ["owner", "reason"],
       }),
       deleteMisses: register.counter<{
-        owner: BlockCacheOwner;
-        reason: BlockCacheDeleteReason;
+        owner: BlockSerializedCacheOwner;
+        reason: BlockSerializedCacheDeleteReason;
         result: "missing" | "object_mismatch";
       }>({
         name: "lodestar_block_cache_delete_misses_total",
-        help: "BlockCache deletions skipped because the entry is absent or the candidate object differs",
+        help: "BlockSerializedCache deletions skipped because the entry is absent or the candidate object differs",
         labelNames: ["owner", "reason", "result"],
       }),
     },

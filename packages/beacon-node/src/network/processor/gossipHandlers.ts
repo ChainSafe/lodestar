@@ -147,7 +147,7 @@ function getSequentialHandlers(
     peerIdStr: string,
     seenTimestampSec: number
   ): BlockInput {
-    signedBlock = chain.blockCache.set(blockRootHex, signedBlock, serializedData).block;
+    signedBlock = chain.blockSerializedCache.set(blockRootHex, signedBlock, serializedData).block;
     const blockInput = chain.seenBlockInputCache.getByBlock({
       block: signedBlock,
       blockRootHex,

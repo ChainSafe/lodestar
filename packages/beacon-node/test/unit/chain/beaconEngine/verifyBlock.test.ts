@@ -8,13 +8,13 @@ import {bellatrix, ssz, sszTypesFor} from "@lodestar/types";
 import {ErrorAborted, defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {verifyBlocks as verifyEngineBlocks} from "../../../../src/chain/beaconEngine/verifyBlock.js";
-import {BlockBytes} from "../../../../src/chain/blocks/blockCache.js";
 import {
   BlockInputBlobs,
   BlockInputNoData,
   BlockInputPreData,
 } from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
+import {BlockBytes} from "../../../../src/chain/blocks/blockSerializedCache.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import * as executionVerification from "../../../../src/chain/blocks/verifyBlocksExecutionPayloads.js";
 import {
@@ -84,7 +84,7 @@ describe("BeaconEngine block execution verification", () => {
     const input = bellatrixInput();
     const block = input.getBlock();
     const [{blockRoot, blockBytes: bytes}] = serializeBlocks(input);
-    if (cached) chain.blockCache.set(input.blockRootHex, block, bytes);
+    if (cached) chain.blockSerializedCache.set(input.blockRootHex, block, bytes);
     const deserialize = vi.spyOn(ssz.bellatrix.SignedBeaconBlock, "deserialize");
     const opts = structuredClone({validSignatures: true});
     await chain.beaconEngine.verifyBlocks([{blockRoot, blockBytes: bytes}], opts, signal);
@@ -165,7 +165,7 @@ describe("BeaconEngine block execution verification", () => {
     expect(deserialize).not.toHaveBeenCalled();
     expect(chain.beaconEngine.verifiedBlocks.get(input.blockRootHex)?.block).toBe(block);
     expect(chain.beaconEngine.verifiedBlocks.get(input.blockRootHex)?.blockBytes).toBe(
-      chain.blockCache.get(input.blockRootHex)?.bytes
+      chain.blockSerializedCache.get(input.blockRootHex)?.bytes
     );
   });
 
