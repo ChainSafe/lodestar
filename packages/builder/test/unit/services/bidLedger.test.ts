@@ -157,6 +157,24 @@ describe("BidLedger", () => {
     expect(ledger.getUnsettledValueGwei(4)).toBe(bid.valueGwei);
   });
 
+  it("only cancels an exact winning obligation and preserves other liabilities", () => {
+    const ledger = new BidLedger();
+    const bid = submittedBid();
+    const other = submittedBid({slot: bid.slot + 1});
+    ledger.recordBid(bid);
+    ledger.recordBid(other);
+    expect(ledger.recordPaymentCancelled(bid)).toBeNull();
+    ledger.recordWin(bid, root(6));
+    ledger.recordWin(other, root(7));
+    expect(ledger.recordPaymentCancelled({...bid, blockHash: root(8)})).toBeNull();
+    expect(ledger.getUnsettledValueGwei(0)).toBe(bid.valueGwei + other.valueGwei);
+    expect(ledger.recordPaymentCancelled(bid)).toEqual({...bid, wonBlockRoots: [root(6)]});
+    expect(ledger.recordPaymentCancelled(bid)).toEqual({...bid, wonBlockRoots: [root(6)]});
+    expect(ledger.getUnsettledValueGwei(0)).toBe(other.valueGwei);
+    expect(ledger.prune(5 * SLOTS_PER_EPOCH)).toBe(1);
+    expect(ledger.getUnsettledValueGwei(5)).toBe(other.valueGwei);
+  });
+
   it("fails closed if unsettled liability exceeds the safe integer range", () => {
     const ledger = new BidLedger();
     const first = submittedBid({valueGwei: Number.MAX_SAFE_INTEGER});
