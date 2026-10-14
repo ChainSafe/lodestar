@@ -20,6 +20,7 @@ import {
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   G2_POINT_AT_INFINITY,
@@ -684,12 +685,11 @@ export async function produceBlockBody<T extends BlockType>(
     executionPayloadValue = BigInt(0);
   }
 
-  const {graffiti, attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
+  const {graffiti, attestations, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
 
   Object.assign(logMeta, {
     graffiti: fromGraffitiBytes(graffiti),
     attestations: attestations.length,
-    deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
@@ -1106,16 +1106,21 @@ export async function produceCommonBlockBody<T extends BlockType>(
   });
 
   // Live proposal production is supported from Fulu onward.
-  return {
+  const commonBlockBody: CommonBlockBody = {
     randaoReveal,
     graffiti,
-    eth1Data: currentState.eth1Data,
     proposerSlashings: this.opts.disableProposerSlashings === true ? [] : proposerSlashings,
     attesterSlashings,
     attestations,
-    deposits: [],
     voluntaryExits,
     blsToExecutionChanges,
     syncAggregate,
   };
+
+  if (!isForkPostHeze(fork)) {
+    commonBlockBody.eth1Data = currentState.eth1Data;
+    commonBlockBody.deposits = [];
+  }
+
+  return commonBlockBody;
 }

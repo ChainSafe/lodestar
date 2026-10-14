@@ -23,6 +23,8 @@ export type EpochSlotOpts = {
   genesisTime: number;
   secondsPerSlot: number;
   slotsPerEpoch: number;
+  /** Slot durations by activation epoch, ascending */
+  slotDurations?: [epoch: number, secondsPerSlot: number][];
 };
 export enum TimestampFormatCode {
   DateRegular = "regular",

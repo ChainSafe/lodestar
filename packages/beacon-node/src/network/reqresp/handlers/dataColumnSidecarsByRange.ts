@@ -3,7 +3,7 @@ import {ChainConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkSeq, GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
 import {ColumnIndex, Epoch, RootHex, fulu} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -216,16 +216,10 @@ export function validateDataColumnSidecarsByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  // Spec: [max(current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH), current_epoch]
-  const minimumRequestEpoch = Math.max(
-    currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
-    config.FULU_FORK_EPOCH
-  );
+  // Spec: [max(compute_blob_data_retention_start_epoch(current_epoch), FULU_FORK_EPOCH), current_epoch]
+  const minimumRequestEpoch = Math.max(getBlobDataRetentionStartEpoch(config, currentEpoch), config.FULU_FORK_EPOCH);
   if (computeEpochAtSlot(startSlot) < minimumRequestEpoch) {
-    throw new ResponseError(
-      RespStatus.RESOURCE_UNAVAILABLE,
-      "startSlot is before MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS"
-    );
+    throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "startSlot is before the blob data retention window");
   }
 
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
