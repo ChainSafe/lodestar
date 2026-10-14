@@ -82,7 +82,7 @@ async function fixture(attach = true) {
 }
 
 function job(messages: GossipMessage[], grouped = false): GossipJob {
-  return {kind: "voluntary_exit", grouped, messages, reported: new Promise(() => {})};
+  return {kind: "voluntary_exit", grouped, messages};
 }
 
 describe("native gossip host", () => {
@@ -90,7 +90,7 @@ describe("native gossip host", () => {
     const node = await fixture();
     const validating = job([node.message(1), node.message(2), node.message(3)], true);
     const validated = node.gossip.validate(validating);
-    expect(node.processor.execute).toHaveBeenCalledExactlyOnceWith(node.pending, true, validating.reported);
+    expect(node.processor.execute).toHaveBeenCalledExactlyOnceWith(node.pending, true);
     expect(node.pending[0]).toMatchObject({
       msgId: Buffer.from(node.message(1).id).toString("hex"),
       msgSlot: 7,

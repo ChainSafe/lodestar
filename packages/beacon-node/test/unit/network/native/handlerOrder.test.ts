@@ -4,7 +4,6 @@ import {GossipJob, GossipMessage, NativeTopicKind} from "@chainsafe/lodestar-z/n
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {defer} from "@lodestar/utils";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
@@ -85,19 +84,8 @@ function fixture() {
   return {order, chain, modules, gossip, executor};
 }
 
-/** A job whose owner holds its verdicts until the test releases them, which admits accepts to forwarding. */
-function heldJob(kind: NativeTopicKind, messages: GossipMessage[], order: string[]) {
-  const reported = defer<void>();
-  void reported.promise.catch(() => {});
-  const job: GossipJob = {kind, grouped: messages.length > 1, messages, reported: reported.promise};
-  return {
-    job,
-    forward: () => {
-      order.push("forwarded");
-      reported.resolve();
-    },
-    close: () => reported.reject(Object.assign(new Error("NetworkClosed"), {code: "NetworkClosed"})),
-  };
+function job(kind: NativeTopicKind, messages: GossipMessage[]): GossipJob {
+  return {kind, grouped: messages.length > 1, messages};
 }
 
 function message(type: GossipType.beacon_attestation | GossipType.voluntary_exit, id: number): GossipMessage {
@@ -144,7 +132,7 @@ afterEach(() => {
 });
 
 describe("native gossip handler order", () => {
-  it("runs a batch's handler work only after the owner disposed of its verdicts, in a later event loop", async () => {
+  it("defers batch handler work until after validation returns", async () => {
     const f = fixture();
     vi.mocked(validateGossipAttestationsSameAttData).mockResolvedValue({
       results: [
@@ -154,22 +142,17 @@ describe("native gossip handler order", () => {
       ],
       batchableBls: true,
     });
-    const held = heldJob(
+    const held = job(
       "beacon_attestation",
-      [1, 2, 3].map((id) => message(GossipType.beacon_attestation, id)),
-      f.order
+      [1, 2, 3].map((id) => message(GossipType.beacon_attestation, id))
     );
     try {
       // Validation returns the verdicts while the owner still holds them.
-      expect(await f.gossip.validate(held.job)).toEqual(["accept", "reject", "accept"]);
-      await timersDue();
+      expect(await f.gossip.validate(held)).toEqual(["accept", "reject", "accept"]);
       expect(f.order).toEqual([]);
-      held.forward();
-      await Promise.resolve();
-      await Promise.resolve();
-      expect(f.order).toEqual(["forwarded"]);
+      f.order.push("verdicts submitted");
       await timersDue();
-      expect(f.order).toEqual(["forwarded", "attestation handler", "attestation handler"]);
+      expect(f.order).toEqual(["verdicts submitted", "attestation handler", "attestation handler"]);
     } finally {
       f.executor.stop();
     }
@@ -178,17 +161,16 @@ describe("native gossip handler order", () => {
   it("records accepted operations before forwarding, even when the network closes", async () => {
     const f = fixture();
     vi.mocked(validateGossipVoluntaryExit).mockResolvedValue(undefined);
-    const forwarded = heldJob("voluntary_exit", [message(GossipType.voluntary_exit, 1)], f.order);
-    const closed = heldJob("voluntary_exit", [message(GossipType.voluntary_exit, 2)], f.order);
+    const forwarded = job("voluntary_exit", [message(GossipType.voluntary_exit, 1)]);
+    const closed = job("voluntary_exit", [message(GossipType.voluntary_exit, 2)]);
     try {
-      expect(await f.gossip.validate(forwarded.job)).toEqual(["accept"]);
-      expect(await f.gossip.validate(closed.job)).toEqual(["accept"]);
+      expect(await f.gossip.validate(forwarded)).toEqual(["accept"]);
+      expect(await f.gossip.validate(closed)).toEqual(["accept"]);
       await timersDue();
       expect(f.order).toEqual(["exit handler", "exit handler"]);
-      closed.close();
-      forwarded.forward();
+      f.order.push("verdicts submitted");
       await timersDue();
-      expect(f.order).toEqual(["exit handler", "exit handler", "forwarded"]);
+      expect(f.order).toEqual(["exit handler", "exit handler", "verdicts submitted"]);
     } finally {
       f.executor.stop();
     }
@@ -198,16 +180,14 @@ describe("native gossip handler order", () => {
     const f = fixture();
     vi.mocked(validateGossipVoluntaryExit).mockImplementation(validateActualExit).mockResolvedValueOnce(undefined);
     const exit = message(GossipType.voluntary_exit, 1);
-    const held = heldJob("voluntary_exit", [exit], f.order);
-    const duplicate = heldJob("voluntary_exit", [{...exit, id: new Uint8Array(20).fill(2)}], f.order);
+    const held = job("voluntary_exit", [exit]);
+    const duplicate = job("voluntary_exit", [{...exit, id: new Uint8Array(20).fill(2)}]);
     try {
-      expect(await f.gossip.validate(held.job)).toEqual(["accept"]);
-      expect(await f.gossip.validate(duplicate.job)).toEqual(["ignore"]);
+      expect(await f.gossip.validate(held)).toEqual(["accept"]);
+      expect(await f.gossip.validate(duplicate)).toEqual(["ignore"]);
       expect(f.chain.opPool.insertVoluntaryExit).toHaveBeenCalledOnce();
       expect(f.order).toEqual(["exit handler"]);
     } finally {
-      held.close();
-      duplicate.close();
       f.executor.stop();
     }
   });

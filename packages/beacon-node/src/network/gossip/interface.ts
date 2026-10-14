@@ -185,19 +185,9 @@ export type GossipMessageInfo = {
   indexed?: string;
 };
 
-/**
- * `reported` settles once a network that processes the validation result after the validator returns has done so.
- * The handler's deferred work waits for it, so an accepted message is forwarded first.
- */
-export type GossipValidatorFn = (
-  messageInfo: GossipMessageInfo,
-  reported?: Promise<void>
-) => Promise<TopicValidatorResult>;
+export type GossipValidatorFn = (messageInfo: GossipMessageInfo) => Promise<TopicValidatorResult>;
 
-export type GossipValidatorBatchFn = (
-  messageInfos: GossipMessageInfo[],
-  reported?: Promise<void>
-) => Promise<TopicValidatorResult[]>;
+export type GossipValidatorBatchFn = (messageInfos: GossipMessageInfo[]) => Promise<TopicValidatorResult[]>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
@@ -219,12 +209,9 @@ export type GossipHandlerParam = {
   seenTimestampSec: number;
 };
 
-export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam, reported?: Promise<void>) => Promise<void>;
+export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam) => Promise<void>;
 
-export type BatchGossipHandlerFn = (
-  gossipHandlerParam: GossipHandlerParam[],
-  reported?: Promise<void>
-) => Promise<(null | AttestationError)[]>;
+export type BatchGossipHandlerFn = (gossipHandlerParam: GossipHandlerParam[]) => Promise<(null | AttestationError)[]>;
 
 export type GossipHandlerParamGeneric<T extends GossipType> = {
   reportPeer?: GossipPeerReport;
@@ -239,8 +226,7 @@ export type GossipHandlers = {
 };
 
 export type SequentialGossipHandler<K extends GossipType> = (
-  gossipHandlerParam: GossipHandlerParamGeneric<K>,
-  reported?: Promise<void>
+  gossipHandlerParam: GossipHandlerParamGeneric<K>
 ) => Promise<void>;
 
 export type SequentialGossipHandlers = {
@@ -252,8 +238,7 @@ export type BatchGossipHandlers = {
 };
 
 export type BatchGossipHandler<K extends GossipType> = (
-  gossipHandlerParams: GossipHandlerParamGeneric<K>[],
-  reported?: Promise<void>
+  gossipHandlerParams: GossipHandlerParamGeneric<K>[]
 ) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
 
 // biome-ignore lint/suspicious/noExplicitAny: Need the usage of `any` here to infer any type

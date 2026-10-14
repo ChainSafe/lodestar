@@ -97,7 +97,6 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
 }
 
 /** The owner's disposition of a job's verdicts, which these tests never withhold. */
-const reported = Promise.resolve();
 
 function message(id: string, attestation = false): PendingGossipsubMessage {
   const boundary = {fork: ForkName.electra, epoch: 0};
@@ -121,7 +120,7 @@ describe("native gossip host execution", () => {
     const held = defer<void>();
     f.single.mockImplementation(() => held.promise);
     try {
-      const execution = f.executor.execute([message("held")], false, reported);
+      const execution = f.executor.execute([message("held")], false);
       const settled = vi.fn();
       void execution.then(settled);
       expect(f.single).toHaveBeenCalledOnce();
@@ -135,9 +134,7 @@ describe("native gossip host execution", () => {
       await expect(execution).resolves.toEqual([TopicValidatorResult.Accept]);
       expect(f.result).not.toHaveBeenCalled();
       expect(settled).toHaveBeenCalledOnce();
-      await expect(f.executor.execute([message("stopped")], false, reported)).resolves.toEqual([
-        TopicValidatorResult.Ignore,
-      ]);
+      await expect(f.executor.execute([message("stopped")], false)).resolves.toEqual([TopicValidatorResult.Ignore]);
       expect(f.single).toHaveBeenCalledOnce();
     } finally {
       held.resolve();
@@ -152,11 +149,11 @@ describe("native gossip host execution", () => {
         null,
         new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE}),
       ]);
-      expect(await f.executor.execute([message("accept", true), message("reject", true)], true, reported)).toEqual([
+      expect(await f.executor.execute([message("accept", true), message("reject", true)], true)).toEqual([
         TopicValidatorResult.Accept,
         TopicValidatorResult.Reject,
       ]);
-      await expect(f.executor.execute([message("unindexed", true)], false, reported)).resolves.toEqual([
+      await expect(f.executor.execute([message("unindexed", true)], false)).resolves.toEqual([
         TopicValidatorResult.Accept,
       ]);
       expect(f.batch).toHaveBeenCalledTimes(2);
@@ -177,7 +174,7 @@ describe("native gossip host execution", () => {
     f.single.mockImplementation(() => held.promise);
     try {
       const messages = [message("held")];
-      const execution = f.executor.execute(messages, false, reported);
+      const execution = f.executor.execute(messages, false);
       expect(submitted).toHaveBeenCalledWith(1);
       expect(observed).not.toHaveBeenCalled();
       held.resolve();
@@ -205,7 +202,7 @@ describe("native gossip host execution", () => {
         new AttestationError(GossipAction.IGNORE, {code: AttestationErrorCode.INVALID_SIGNATURE}),
       ]);
       const messages = [message("accept", true), message("reject", true), message("ignore", true)];
-      const results = await f.executor.execute(messages, true, reported);
+      const results = await f.executor.execute(messages, true);
       expect(results).toEqual([TopicValidatorResult.Accept, TopicValidatorResult.Reject, TopicValidatorResult.Ignore]);
       expect(observed).not.toHaveBeenCalled();
       now.mockReturnValue(1300);
@@ -316,17 +313,17 @@ describe("native gossip host execution", () => {
     f.chain.emitter.on(ChainEvent.unknownBlockRoot, search);
     try {
       f.chain.bls.verifySignatureSets.mockResolvedValue(false);
-      await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Reject]);
+      await expect(f.executor.execute([block], false)).resolves.toEqual([TopicValidatorResult.Reject]);
       expect(recovery).not.toHaveBeenCalled();
       expect(f.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
 
       f.chain.bls.verifySignatureSets.mockResolvedValue(true);
-      await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Ignore]);
+      await expect(f.executor.execute([block], false)).resolves.toEqual([TopicValidatorResult.Ignore]);
       expect(f.chain.bls.verifySignatureSets).toHaveBeenCalledTimes(2);
       expect(recovery).toHaveBeenCalledOnce();
       expect(recovery).toHaveBeenCalledWith(expect.objectContaining({blockInput, peer: "peer"}));
       expect(search).not.toHaveBeenCalled();
-      await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Ignore]);
+      await expect(f.executor.execute([block], false)).resolves.toEqual([TopicValidatorResult.Ignore]);
       expect(recovery).toHaveBeenCalledOnce();
 
       // A known parent at the block's slot fails validation.
@@ -335,7 +332,7 @@ describe("native gossip host execution", () => {
       f.chain.forkChoice.getBlockHexDefaultStatus.mockImplementation((root) =>
         root === blockInput.parentRootHex ? ({slot: 3} as ProtoBlock) : null
       );
-      await expect(f.executor.execute([block], false, reported)).resolves.toEqual([TopicValidatorResult.Reject]);
+      await expect(f.executor.execute([block], false)).resolves.toEqual([TopicValidatorResult.Reject]);
       expect(recovery).toHaveBeenCalledOnce();
     } finally {
       f.executor.stop();
@@ -345,7 +342,7 @@ describe("native gossip host execution", () => {
   it("rejects a non-attestation job containing more than one message", async () => {
     const f = fixture();
     try {
-      await expect(f.executor.execute([message("first"), message("second")], false, reported)).rejects.toThrow(
+      await expect(f.executor.execute([message("first"), message("second")], false)).rejects.toThrow(
         "native gossip validator job"
       );
       expect(f.single).not.toHaveBeenCalled();
@@ -506,12 +503,12 @@ it("uses each delivery's reporter for individual and batched validation failures
     const second = {...message("second", true), reportPeer: vi.fn()};
     const rejected = new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
     f.single.mockRejectedValueOnce(rejected);
-    expect(await f.executor.execute([first], false, reported)).toEqual([TopicValidatorResult.Reject]);
+    expect(await f.executor.execute([first], false)).toEqual([TopicValidatorResult.Reject]);
     expect(f.single.mock.calls[0][0].reportPeer).toBe(first.reportPeer);
     expect(first.reportPeer).toHaveBeenCalledTimes(1);
     expect(second.reportPeer).not.toHaveBeenCalled();
     f.batch.mockResolvedValueOnce([null, rejected]);
-    expect(await f.executor.execute([message("accepted", true), second], true, reported)).toEqual([
+    expect(await f.executor.execute([message("accepted", true), second], true)).toEqual([
       TopicValidatorResult.Accept,
       TopicValidatorResult.Reject,
     ]);

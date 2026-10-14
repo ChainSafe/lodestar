@@ -71,7 +71,7 @@ export class NativeGossip {
   async validate(job: GossipJob): Promise<Verdict[]> {
     const processor = this.attached();
     const messages = job.messages.map((message) => this.prepare(message));
-    const results = await processor.execute(messages, job.grouped, job.reported);
+    const results = await processor.execute(messages, job.grouped);
     try {
       processor.observe(messages);
     } catch (error) {

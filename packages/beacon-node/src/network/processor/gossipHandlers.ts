@@ -127,16 +127,6 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
 
 /**
- * Runs a handler's work in the next event loop after the network has processed the validation result, so an accepted
- * message is forwarded first: at once where the result was reported synchronously, else once `reported` resolves.
- * Work whose network closed first never runs.
- */
-function callAfterValidation(reported: Promise<void> | undefined, callback: () => void): void {
-  if (reported === undefined) callInNextEventLoop(callback);
-  else reported.then(() => callInNextEventLoop(callback)).catch(() => {});
-}
-
-/**
  * Gossip handlers perform validation + handling in a single function.
  * - This gossip handlers MUST only be registered as validator functions. No handler is registered for any topic.
  * - All `chain/validation/*` functions MUST throw typed GossipActionError instances so they gossip action is captured
@@ -745,17 +735,20 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   }
 
   return {
-    [GossipType.beacon_block]: async (
-      {gossipData, topic, peerIdStr, seenTimestampSec, reportPeer}: GossipHandlerParamGeneric<GossipType.beacon_block>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.beacon_block]: async ({
+      gossipData,
+      topic,
+      peerIdStr,
+      seenTimestampSec,
+      reportPeer,
+    }: GossipHandlerParamGeneric<GossipType.beacon_block>) => {
       const {serializedData} = gossipData;
 
       const signedBlock = sszDeserialize(topic, serializedData);
       try {
         const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
         // Handler - deferred to next event loop so the validation result propagates first
-        callAfterValidation(reported, () => {
+        callInNextEventLoop(() => {
           try {
             chain.serializedCache.set(signedBlock, serializedData);
             handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec, reportPeer);
@@ -799,10 +792,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
     },
 
-    [GossipType.blob_sidecar]: async (
-      {gossipData, topic, peerIdStr, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.blob_sidecar>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.blob_sidecar]: async ({
+      gossipData,
+      topic,
+      peerIdStr,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.blob_sidecar>) => {
       const {serializedData} = gossipData;
       const blobSidecar = sszDeserialize(topic, serializedData);
       const blobSlot = blobSidecar.signedBlockHeader.message.slot;
@@ -813,7 +808,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
       const blockInput = await validateBeaconBlob(blobSidecar, topic.subnet, peerIdStr, seenTimestampSec);
       // Handler - deferred to next event loop so the validation result propagates first
-      callAfterValidation(reported, () => {
+      callInNextEventLoop(() => {
         try {
           chain.serializedCache.set(blobSidecar, serializedData);
           if (!blockInput.hasBlockAndAllData()) {
@@ -848,10 +843,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
     },
 
-    [GossipType.data_column_sidecar]: async (
-      {gossipData, topic, peerIdStr, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.data_column_sidecar>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.data_column_sidecar]: async ({
+      gossipData,
+      topic,
+      peerIdStr,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
       const {fork} = topic.boundary;
       const {serializedData} = gossipData;
       const dataColumnSidecar = sszDeserialize(topic, serializedData);
@@ -877,7 +874,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           seenTimestampSec
         );
         // Handler - deferred to next event loop so the validation result propagates first
-        callAfterValidation(reported, () => {
+        callInNextEventLoop(() => {
           try {
             chain.serializedCache.set(dataColumnSidecar, serializedData);
 
@@ -962,7 +959,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           seenTimestampSec
         );
         // Handler - deferred to next event loop so the validation result propagates first
-        callAfterValidation(reported, () => {
+        callInNextEventLoop(() => {
           try {
             chain.serializedCache.set(dataColumnSidecar, serializedData);
             const blockInputMeta = blockInput.getLogMeta();
@@ -1023,10 +1020,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
     },
 
-    [GossipType.beacon_aggregate_and_proof]: async (
-      {gossipData, topic, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.beacon_aggregate_and_proof>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.beacon_aggregate_and_proof]: async ({
+      gossipData,
+      topic,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.beacon_aggregate_and_proof>) => {
       const {serializedData} = gossipData;
       let validationResult: AggregateAndProofValidationResult;
       const signedAggregateAndProof = sszDeserialize(topic, serializedData);
@@ -1047,7 +1045,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       // Handler - deferred to next event loop so the validation result propagates first
       const {indexedAttestation, committeeValidatorIndices, attDataRootHex} = validationResult;
-      callAfterValidation(reported, () => {
+      callInNextEventLoop(() => {
         try {
           chain.validatorMonitor?.registerGossipAggregatedAttestation(
             seenTimestampSec,
@@ -1082,10 +1080,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
     },
 
-    [GossipType.attester_slashing]: async (
-      {gossipData, topic}: GossipHandlerParamGeneric<GossipType.attester_slashing>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.attester_slashing]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
       const {serializedData} = gossipData;
       const {fork} = topic.boundary;
       const attesterSlashing = sszDeserialize(topic, serializedData);
@@ -1096,7 +1094,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       } catch (e) {
         logger.debug("Error storing gossip attester slashing", {}, e as Error);
       }
-      callAfterValidation(reported, () => {
+      callInNextEventLoop(() => {
         try {
           chain.forkChoice.onAttesterSlashing(attesterSlashing);
           chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
@@ -1256,16 +1254,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         );
       }
     },
-    [GossipType.execution_payload]: async (
-      {
-        gossipData,
-        topic,
-        peerIdStr,
-        seenTimestampSec,
-        reportPeer,
-      }: GossipHandlerParamGeneric<GossipType.execution_payload>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.execution_payload]: async ({
+      gossipData,
+      topic,
+      peerIdStr,
+      seenTimestampSec,
+      reportPeer,
+    }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
       const signedEnvelope = sszDeserialize(topic, serializedData);
       const envelope = signedEnvelope.message;
@@ -1320,7 +1315,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       // Handler - deferred to next event loop so the validation result propagates first
-      callAfterValidation(reported, () => {
+      callInNextEventLoop(() => {
         try {
           chain.serializedCache.set(signedEnvelope, serializedData);
 
@@ -1383,16 +1378,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
       });
     },
-    [GossipType.payload_attestation_message]: async (
-      {gossipData, topic, seenTimestampSec}: GossipHandlerParamGeneric<GossipType.payload_attestation_message>,
-      reported?: Promise<void>
-    ) => {
+    [GossipType.payload_attestation_message]: async ({
+      gossipData,
+      topic,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.payload_attestation_message>) => {
       const {serializedData} = gossipData;
       const payloadAttestationMessage = sszDeserialize(topic, serializedData);
       const validationResult = await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
 
       // Handler - deferred to next event loop so the validation result propagates first
-      callAfterValidation(reported, () => {
+      callInNextEventLoop(() => {
         try {
           const delaySec = chain.clock.secFromSlot(payloadAttestationMessage.data.slot, seenTimestampSec);
           metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
@@ -1507,8 +1503,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
   const {chain, metrics, logger, aggregatorTracker} = modules;
   return {
     [GossipType.beacon_attestation]: async (
-      gossipHandlerParams: GossipHandlerParamGeneric<GossipType.beacon_attestation>[],
-      reported?: Promise<void>
+      gossipHandlerParams: GossipHandlerParamGeneric<GossipType.beacon_attestation>[]
     ): Promise<(null | AttestationError)[]> => {
       const results: (null | AttestationError)[] = [];
       const attestationCount = gossipHandlerParams.length;
@@ -1541,7 +1536,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
       }
 
       // Handler - deferred to next event loop so the validation result propagates first.
-      callAfterValidation(reported, () => {
+      callInNextEventLoop(() => {
         for (const [i, validationResult] of validationResults.entries()) {
           if (validationResult.err) continue;
           const {
