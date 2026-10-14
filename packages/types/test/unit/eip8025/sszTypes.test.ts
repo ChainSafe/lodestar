@@ -1,26 +1,21 @@
 import {describe, expect, it} from "vitest";
-import {
-  ByteListType,
-  ProgressiveByteListType,
-  ProgressiveContainerType,
-  ProgressiveListBasicType,
-} from "@chainsafe/ssz";
+import {ByteListType, ListBasicType, ProgressiveByteListType, ProgressiveContainerType} from "@chainsafe/ssz";
 import {MAX_PROOF_SIZE, MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE, STATELESS_INPUT_SCHEMA_ID} from "@lodestar/params";
 import {ssz} from "../../../src/index.js";
 
 describe("EIP-8025 SSZ types", () => {
-  it("uses progressive ProofData bounded by MAX_PROOF_SIZE", () => {
-    expect(ssz.eip8025.ProofData).toBeInstanceOf(ProgressiveByteListType);
+  it("uses bounded ProofData with MAX_PROOF_SIZE", () => {
+    expect(ssz.eip8025.ProofData).toBeInstanceOf(ByteListType);
     expect(ssz.eip8025.ProofData.limitBytes).toBe(MAX_PROOF_SIZE);
   });
 
-  it.each([0, 1, 32, 33, 160, 161])("merkleizes ProofData as ProgressiveList[Byte] with %i bytes", (length) => {
+  it.each([0, 1, 32, 33, 160, 161])("merkleizes ProofData as List[Byte, MAX_PROOF_SIZE] with %i bytes", (length) => {
     const proofData = new Uint8Array(length).fill(0xab);
-    const progressiveList = new ProgressiveListBasicType(ssz.Uint8);
-    const boundedList = new ByteListType(MAX_PROOF_SIZE);
+    const boundedList = new ListBasicType(ssz.Byte, MAX_PROOF_SIZE);
+    const progressiveList = new ProgressiveByteListType();
 
-    expect(ssz.eip8025.ProofData.hashTreeRoot(proofData)).toEqual(progressiveList.hashTreeRoot(Array.from(proofData)));
-    expect(ssz.eip8025.ProofData.hashTreeRoot(proofData)).not.toEqual(boundedList.hashTreeRoot(proofData));
+    expect(ssz.eip8025.ProofData.hashTreeRoot(proofData)).toEqual(boundedList.hashTreeRoot(Array.from(proofData)));
+    expect(ssz.eip8025.ProofData.hashTreeRoot(proofData)).not.toEqual(progressiveList.hashTreeRoot(proofData));
     expect(ssz.eip8025.ProofData.deserialize(ssz.eip8025.ProofData.serialize(proofData))).toEqual(proofData);
   });
 
