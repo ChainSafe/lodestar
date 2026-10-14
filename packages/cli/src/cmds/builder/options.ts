@@ -1,3 +1,4 @@
+import {defaultExecutionEngineHttpOpts} from "@lodestar/beacon-node";
 import {defaultOptions} from "@lodestar/builder";
 import {CliCommandOptions} from "@lodestar/utils";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
@@ -8,12 +9,6 @@ export const builderMetricsDefaultOptions = {
   address: "127.0.0.1",
 };
 
-export const builderBidDefaultOptions = {
-  shareBps: 9000,
-  getPayloadAtBps: 9500,
-  getPayloadTimeout: 1000,
-};
-
 export type IBuilderCliArgs = LogArgs & {
   beaconNodeUrl: string;
   keystore: string;
@@ -22,17 +17,21 @@ export type IBuilderCliArgs = LogArgs & {
   executionFeeRecipient: string;
   requestTimeout: number;
 
-  bid?: boolean;
-  "execution.url"?: string;
+  "execution.urls": string[];
+  "execution.timeout"?: number;
+  "execution.retries": number;
+  "execution.retryDelay": number;
   jwtSecret?: string;
-  "bid.shareBps"?: number;
-  "bid.fixedCostGwei"?: number;
-  "bid.minValueGwei"?: number;
-  "bid.maxValueGwei"?: number;
-  "bid.minOperatingBalanceGwei"?: number;
-  "bid.getPayloadAtBps"?: number;
-  "bid.getPayloadTimeout"?: number;
-  "bid.revealCutoffBps"?: number;
+  jwtId?: string;
+
+  "bidding.shareBps": number;
+  "bidding.fixedCostGwei": number;
+  "bidding.minValueGwei": number;
+  "bidding.maxValueGwei"?: number;
+  "bidding.deadlineBps": number;
+  "bidding.getPayloadTimeout": number;
+  "bidding.minOperatingBalanceGwei": number;
+  "reveal.cutoffBps"?: number;
 
   metrics?: boolean;
   "metrics.port"?: number;
@@ -43,7 +42,8 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
   ...logOptions,
 
   beaconNodeUrl: {
-    description: "Url to a trusted beacon node",
+    description:
+      "Url to a trusted beacon node. The beacon node must run with `--emitPayloadAttributes` to emit the payload attributes of every slot, otherwise the builder only bids on slots the beacon node itself proposes",
     type: "string",
     default: defaultOptions.beaconNodeUrl,
   },
@@ -77,67 +77,111 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
     default: defaultOptions.requestTimeout,
   },
 
-  bid: {
+  // Execution
+
+  "execution.urls": {
     description:
-      "Enable experimental Gloas bidding and prompt reveal. Requires an Engine URL, JWT secret and per-slot payload attributes from the source BN (--emitPayloadAttributes on Lodestar).",
-    type: "boolean",
-    default: false,
-    group: "bid",
+      "Url to the execution client engine API that builds the payloads. The execution client must be kept in sync by a beacon node",
+    default: defaultExecutionEngineHttpOpts.urls.join(","),
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.flatMap((item) => item.split(",")),
+    group: "execution",
   },
-  "execution.url": {
-    description:
-      "Authenticated JSON-RPC URL of one building EL. Sharing the beacon node's EL is not production-qualified.",
-    type: "string",
-    group: "bid",
+
+  "execution.timeout": {
+    description: "Timeout in milliseconds for execution engine API HTTP client",
+    type: "number",
+    defaultDescription: String(defaultExecutionEngineHttpOpts.timeout),
+    group: "execution",
   },
+
+  "execution.retries": {
+    description: "Number of retries when calling execution engine API",
+    type: "number",
+    default: defaultExecutionEngineHttpOpts.retries,
+    group: "execution",
+  },
+
+  "execution.retryDelay": {
+    description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
+    type: "number",
+    default: defaultExecutionEngineHttpOpts.retryDelay,
+    group: "execution",
+  },
+
   jwtSecret: {
-    description: "Path to the building EL's JWT secret file",
+    description:
+      "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
     type: "string",
-    group: "bid",
+    group: "execution",
   },
-  "bid.shareBps": {
-    description: "Share of payload value offered to the proposer, in basis points",
-    type: "number",
-    default: builderBidDefaultOptions.shareBps,
-    group: "bid",
+
+  jwtId: {
+    description:
+      "An optional identifier to be set in the id field of the claims included in jwt tokens used for authentication with EL client's rpc server hosting engine apis",
+    type: "string",
+    group: "execution",
   },
-  "bid.fixedCostGwei": {
-    description: "Fixed amount deducted from the proportional bid, in Gwei",
+
+  // Bidding
+
+  "bidding.shareBps": {
+    description: "Share of the payload value offered to the proposer, in basis points",
     type: "number",
-    group: "bid",
+    default: defaultOptions.bidding.shareBps,
+    group: "bidding",
   },
-  "bid.minValueGwei": {
-    description: "Minimum bid value in Gwei",
+
+  "bidding.fixedCostGwei": {
+    description: "Fixed amount in gwei deducted from the proposer share of every bid",
     type: "number",
-    group: "bid",
+    default: defaultOptions.bidding.fixedCostGwei,
+    group: "bidding",
   },
-  "bid.maxValueGwei": {
-    description: "Maximum bid value in Gwei",
+
+  "bidding.minValueGwei": {
+    description: "Never bid below this value in gwei",
     type: "number",
-    group: "bid",
+    default: defaultOptions.bidding.minValueGwei,
+    group: "bidding",
   },
-  "bid.minOperatingBalanceGwei": {
-    description: "Builder balance reserved from bidding, in Gwei. Defaults to MIN_DEPOSIT_AMOUNT.",
+
+  "bidding.maxValueGwei": {
+    description: "Never bid above this value in gwei",
     type: "number",
-    group: "bid",
+    group: "bidding",
   },
-  "bid.getPayloadAtBps": {
-    description: "Retrieve the built payload at this fraction of the slot BEFORE proposal, in basis points",
+
+  "bidding.deadlineBps": {
+    description:
+      "Point within the slot before the proposal slot at which the payload is retrieved and the bid is published, in basis points",
     type: "number",
-    default: builderBidDefaultOptions.getPayloadAtBps,
-    group: "bid",
+    default: defaultOptions.bidding.deadlineBps,
+    group: "bidding",
   },
-  "bid.getPayloadTimeout": {
-    description: "Payload retrieval timeout in milliseconds",
+
+  "bidding.getPayloadTimeout": {
+    description: "Timeout in milliseconds for retrieving the payload from the execution client at the bid deadline",
     type: "number",
-    default: builderBidDefaultOptions.getPayloadTimeout,
-    group: "bid",
+    default: defaultOptions.bidding.getPayloadTimeout,
+    group: "bidding",
   },
-  "bid.revealCutoffBps": {
-    description: "Stop reveal publication at this fraction of the selected block's slot, in basis points",
+
+  "bidding.minOperatingBalanceGwei": {
+    description: "Do not bid while the builder balance is below this value in gwei",
     type: "number",
-    defaultDescription: "PAYLOAD_ATTESTATION_DUE_BPS from the chain configuration",
-    group: "bid",
+    default: defaultOptions.bidding.minOperatingBalanceGwei,
+    group: "bidding",
+  },
+
+  "reveal.cutoffBps": {
+    description:
+      "Do not reveal the payload if the block committing to our bid arrives after this point within its slot, in basis points. Defaults to PAYLOAD_ATTESTATION_DUE_BPS of the network",
+    type: "number",
+    group: "reveal",
   },
 
   // Metrics

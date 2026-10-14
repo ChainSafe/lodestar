@@ -14,6 +14,22 @@ export type LodestarGitData = {
 
 export const builderStatusValue: Record<BuilderStatus, number> = {pending: 0, active: 1, exited: 2};
 
+export enum BidResult {
+  published = "published",
+  noProposerPreferences = "no_proposer_preferences",
+  inactive = "inactive",
+  lowBalance = "low_balance",
+  policyDeclined = "policy_declined",
+  error = "error",
+}
+
+export enum RevealResult {
+  published = "published",
+  unknownPayload = "unknown_payload",
+  late = "late",
+  error = "error",
+}
+
 export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitData) {
   register
     .gauge<LodestarGitData>({
@@ -24,21 +40,6 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     .set(gitData, 1);
 
   return {
-    bids: register.counter<{result: string}>({
-      name: "bc_bids_total",
-      help: "Bid attempts by result",
-      labelNames: ["result"],
-    }),
-    bidSelections: register.counter<{result: "won" | "lost"}>({
-      name: "bc_bid_selections_total",
-      help: "Imported bid selections in slots with local participation",
-      labelNames: ["result"],
-    }),
-    reveals: register.counter<{result: "published" | "duplicate" | "cutoff" | "withheld" | "expired" | "failed"}>({
-      name: "bc_reveals_total",
-      help: "Payload reveal outcomes",
-      labelNames: ["result"],
-    }),
     builderStatus: register.gauge({
       name: "bc_builder_status",
       help: "Current builder status: pending=0, active=1, exited=2",
@@ -48,6 +49,26 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       name: "bc_builder_balance_gwei",
       help: "Current builder balance in gwei",
     }),
+
+    bids: {
+      total: register.gauge<{result: BidResult}>({
+        name: "bc_builder_bids_total",
+        help: "Total count of bid attempts by result",
+        labelNames: ["result"],
+      }),
+      won: register.gauge({
+        name: "bc_builder_bids_won_total",
+        help: "Total count of imported blocks that selected one of our bids",
+      }),
+    },
+
+    reveals: {
+      total: register.gauge<{result: RevealResult}>({
+        name: "bc_builder_reveals_total",
+        help: "Total count of payload reveal attempts by result",
+        labelNames: ["result"],
+      }),
+    },
 
     // REST API client
 

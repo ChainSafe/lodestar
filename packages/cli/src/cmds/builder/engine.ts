@@ -28,11 +28,16 @@ export class BuilderEngineError extends LodestarError<BuilderEngineErrorType> {}
 
 export type BuilderEngineOptions = {
   url: string;
-  jwtSecret: Uint8Array;
+  jwtSecret?: Uint8Array;
   signal: AbortSignal;
   logger: Logger;
   timeout?: number;
   engineApi?: EngineApiMode;
+  retries?: number;
+  retryDelay?: number;
+  jwtId?: string;
+  version?: string;
+  commit?: string;
 };
 
 /** Uses one EL because payload IDs are local to the engine that prepared them. */
@@ -44,7 +49,7 @@ export function createPayloadSourceEngine({
   ...options
 }: BuilderEngineOptions): PayloadSourceEngine {
   const engine = getExecutionEngineHttp(
-    {urls: [url], jwtSecretHex: toHex(jwtSecret), retries: 2, retryDelay: 100, ...options},
+    {urls: [url], jwtSecretHex: jwtSecret ? toHex(jwtSecret) : undefined, retries: 2, retryDelay: 100, ...options},
     {signal, logger}
   );
   return {

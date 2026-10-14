@@ -18,4 +18,13 @@ describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized (minimal preset
       );
     });
   }
+
+  it("returns null for an incomplete bid offset", () => {
+    for (const size of [0, 200, 511]) {
+      expect(
+        getParentBlockHashFromGloasSignedBeaconBlockSerialized(new Uint8Array(size), ForkName.gloas),
+        `size ${size}`
+      ).toBeNull();
+    }
+  });
 });

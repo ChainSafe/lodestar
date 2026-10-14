@@ -1,13 +1,19 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {Builder, type BuilderBidOptions} from "@lodestar/builder";
+import * as beaconNode from "@lodestar/beacon-node";
+import {Builder, defaultOptions} from "@lodestar/builder";
 import {chainConfig} from "@lodestar/config/default";
-import {LogLevel} from "@lodestar/utils";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {LogLevel, toRootHex} from "@lodestar/utils";
 import {builderHandler} from "../../../../src/cmds/builder/handler.js";
 import * as loadKeypair from "../../../../src/cmds/builder/loadKeypair.js";
 import {IBuilderCliArgs} from "../../../../src/cmds/builder/options.js";
-import * as runtime from "../../../../src/cmds/builder/runtime.js";
 import {GlobalArgs} from "../../../../src/options/index.js";
+import {YargsError} from "../../../../src/util/errors.js";
 import {testFilesDir} from "../../../utils.js";
 
 describe("cmds / builder / args handler", () => {
@@ -22,12 +28,12 @@ describe("cmds / builder / args handler", () => {
   afterEach(() => {
     for (const signal of signals) {
       for (const listener of process.rawListeners(signal)) {
-        if (!previousListeners.get(signal)?.has(listener)) {
+        if (!previousListeners.get(signal)?.has(listener))
           process.removeListener(signal, listener as NodeJS.SignalsListener);
-        }
       }
     }
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   async function runBuilderHandler(
@@ -38,6 +44,12 @@ describe("cmds / builder / args handler", () => {
       logFileLevel: LogLevel.debug,
       dataDir: testFilesDir,
       executionFeeRecipient: VALID_FEE_RECIPIENT,
+      beaconNodeUrl: "http://127.0.0.1:9596",
+      requestTimeout: 1000,
+      "execution.urls": ["http://127.0.0.1:8551"],
+      "execution.retries": 0,
+      "execution.retryDelay": 100,
+      ...Object.fromEntries(Object.entries(defaultOptions.bidding).map(([key, value]) => [`bidding.${key}`, value])),
       ...args,
     } as unknown as IBuilderCliArgs & GlobalArgs);
   }
@@ -57,72 +69,121 @@ describe("cmds / builder / args handler", () => {
     ).rejects.toThrow("Cannot put zero address as an executionFeeRecipient");
   });
 
-  it.each([false, true])("passes the configured runtime to Builder.init, enabled=%s", async (enabled) => {
-    const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
-    vi.spyOn(loadKeypair, "loadBuilderKeypair").mockResolvedValue({secretKey, publicKey: secretKey.toPublicKey()});
-    const bidRuntime: BuilderBidOptions | undefined = enabled
-      ? {
-          source: {id: "local", prepare: vi.fn(), getPayload: vi.fn()},
-          policy: {computeValue: () => 1},
-          orchestration: {getPayloadTimeout: 500},
-          inputs: {deadlineBps: 9000, maxInputsPerSlot: 8},
-          minOperatingBalanceGwei: 1,
-          reveal: {cutoffBps: 5000},
-        }
-      : undefined;
-    const getBidOptions = vi
-      .spyOn(runtime, "getBuilderBidOptions")
-      .mockImplementation((_args, _config, _signal, logger) => {
-        vi.spyOn(logger, LogLevel.info);
-        return bidRuntime;
-      });
-    const failure = Error("stop after runtime construction");
-    const init = vi.spyOn(Builder, "init").mockRejectedValue(failure);
-
-    await expect(
-      runBuilderHandler({
-        "params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1),
-        beaconNodeUrl: "http://localhost:9596",
-        "execution.url": "http://localhost:8551",
-        bid: enabled,
-      })
-    ).rejects.toBe(failure);
-
-    expect(init).toHaveBeenCalledOnce();
-    const options = init.mock.calls[0][0];
-    expect(options.bidRuntime).toBe(bidRuntime);
-    expect(getBidOptions.mock.calls[0][2]).toBe(options.abortController.signal);
-    expect(getBidOptions.mock.calls[0][3]).toBe(options.logger);
-    expect(options.abortController.signal.aborted).toBe(true);
-    const inputRequirement = [
-      "Bidding requires per-slot payload attributes from the source BN",
-      {lodestarOption: "--emitPayloadAttributes"},
-    ] as const;
-    if (enabled) expect(options.logger.info).toHaveBeenCalledWith(...inputRequirement);
-    else expect(options.logger.info).not.toHaveBeenCalledWith(...inputRequirement);
-  });
-
   it("does not repeat cleanup when a signal follows initialization failure", async () => {
     const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
     vi.spyOn(loadKeypair, "loadBuilderKeypair").mockResolvedValue({secretKey, publicKey: secretKey.toPublicKey()});
-    const abort = vi.fn();
     const failure = Error("initialization failed");
-    vi.spyOn(Builder, "init").mockImplementation(async (options) => {
-      options.abortController.signal.addEventListener("abort", abort);
-      const originalAbort = options.abortController.abort.bind(options.abortController);
-      vi.spyOn(options.abortController, "abort").mockImplementation(originalAbort);
+    const init = vi.spyOn(Builder, "init").mockImplementation(async (options) => {
+      vi.spyOn(options.abortController, "abort");
       throw failure;
     });
-    await expect(
-      runBuilderHandler({
-        "params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1),
-        beaconNodeUrl: "http://localhost:9596",
-      })
-    ).rejects.toBe(failure);
-    const controller = vi.mocked(Builder.init).mock.calls[0][0].abortController;
+    await expect(runBuilderHandler({"params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1)})).rejects.toBe(
+      failure
+    );
+    const {abortController} = init.mock.calls[0][0];
+    expect(abortController.signal.aborted).toBe(true);
     process.emit("SIGINT");
     await new Promise<void>((resolve) => setImmediate(resolve));
-    expect(controller.abort).toHaveBeenCalledOnce();
-    expect(abort).toHaveBeenCalledOnce();
+    expect(abortController.abort).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["execution.urls", []],
+    ["execution.urls", ["file:///tmp/engine"]],
+    ["execution.urls", ["http://localhost:8551", "http://localhost:8552"]],
+    ["execution.timeout", 0],
+    ["execution.retryDelay", 2 ** 31],
+    ["execution.retries", -1],
+    ["bidding.deadlineBps", 10_000],
+    ["reveal.cutoffBps", NaN],
+    ["bidding.getPayloadTimeout", 0],
+    ["bidding.getPayloadTimeout", 1_000_000],
+    ["bidding.minOperatingBalanceGwei", -1],
+    ["bidding.shareBps", 0.5],
+    ["bidding.maxValueGwei", -1],
+  ] as const)("rejects invalid %s before loading the keystore", async (option, value) => {
+    const load = vi.spyOn(loadKeypair, "loadBuilderKeypair");
+    const pending = runBuilderHandler({
+      "params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1),
+      [option]: value,
+    });
+    await expect(pending).rejects.toBeInstanceOf(YargsError);
+    await expect(pending).rejects.toThrow(String(option).replace("bidding.", ""));
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it("does not expose invalid JWT contents", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "builder-handler-"));
+    const jwtSecret = path.join(directory, "jwt.hex");
+    try {
+      fs.writeFileSync(jwtSecret, "secret-do-not-log");
+      const pending = runBuilderHandler({
+        "params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1),
+        jwtSecret,
+      });
+      await expect(pending).rejects.toThrow("Expected a 256-bit hex JWT secret");
+      await expect(pending).rejects.not.toThrow("secret-do-not-log");
+    } finally {
+      fs.rmSync(directory, {recursive: true});
+    }
+  });
+
+  it("connects the real Engine source and closes a Builder returned after shutdown", async () => {
+    const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
+    vi.spyOn(loadKeypair, "loadBuilderKeypair").mockResolvedValue({secretKey, publicKey: secretKey.toPublicKey()});
+    const fetch = vi.fn<typeof globalThis.fetch>().mockImplementation(async (url, init) => {
+      if (String(url).endsWith("/engine/v1/capabilities")) return new Response(null, {status: 404});
+      const {method} = JSON.parse(String(init?.body));
+      if (method === "engine_getClientVersionV1") {
+        return Response.json({result: [{code: "GE", name: "Geth", version: "test", commit: "0x12345678"}]});
+      }
+      return Response.json({
+        result: {payloadId: "0x0102030405060708", payloadStatus: {status: "VALID", latestValidHash: null}},
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const close = vi.fn(async () => {});
+    vi.mocked(vi.spyOn(Builder, "init"), {partial: true}).mockImplementation(async (options) => {
+      expect(options.bidding.deadlineBps).toBe(6000);
+      const root = toRootHex(Buffer.alloc(32));
+      const request = {
+        fork: ForkName.gloas as const,
+        forkchoiceState: {headBlockHash: root, safeBlockHash: root, finalizedBlockHash: root},
+        payloadAttributes: ssz.gloas.PayloadAttributes.defaultValue(),
+      };
+      const handle = await options.payloadSource.prepare(request, new AbortController().signal);
+      expect(handle.payloadId).toBe("0x0102030405060708");
+      const calls = fetch.mock.calls
+        .filter(([, init]) => init?.body !== undefined)
+        .map(([, init]) => JSON.parse(String(init?.body)));
+      expect(calls.find(({method}) => method === "engine_forkchoiceUpdatedV4").params[2]).toBeNull();
+      process.emit("SIGINT");
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(options.abortController.signal.aborted).toBe(true);
+      await expect(options.payloadSource.prepare(request, new AbortController().signal)).rejects.toThrow();
+      return {close};
+    });
+    await runBuilderHandler({
+      "params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1),
+      "bidding.deadlineBps": 6000,
+    });
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("closes a metrics server returned after shutdown without starting the Builder", async () => {
+    const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
+    vi.spyOn(loadKeypair, "loadBuilderKeypair").mockResolvedValue({secretKey, publicKey: secretKey.toPublicKey()});
+    const init = vi.spyOn(Builder, "init");
+    const close = vi.fn(async () => {});
+    vi.mocked(vi.spyOn(beaconNode, "getHttpMetricsServer"), {partial: true}).mockImplementation(async () => {
+      process.emit("SIGINT");
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      return {close};
+    });
+    await expect(
+      runBuilderHandler({"params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1), metrics: true})
+    ).rejects.toMatchObject({name: "AbortError"});
+    expect(close).toHaveBeenCalledOnce();
+    expect(init).not.toHaveBeenCalled();
   });
 });

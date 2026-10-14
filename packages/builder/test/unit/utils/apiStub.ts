@@ -8,8 +8,14 @@ export function getApiClientStub(): ApiClientStub {
     beacon: {
       getGenesis: vi.fn(),
       getStateBuilders: vi.fn(),
+      getBlockHeader: vi.fn(),
       getBlockV2: vi.fn(),
       getProposerPreferences: vi.fn(),
+      publishExecutionPayloadBid: vi.fn(),
+      publishExecutionPayloadEnvelope: vi.fn(),
+    },
+    validator: {
+      getProposerDutiesV2: vi.fn(),
     },
     events: {
       eventstream: vi.fn(),

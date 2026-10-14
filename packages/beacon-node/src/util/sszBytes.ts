@@ -9,7 +9,6 @@ import {
   ForkPostGloas,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
-  SYNC_COMMITTEE_SIZE,
   isForkPostElectra,
   isForkPostGloas,
   isForkPostHeze,
@@ -60,7 +59,8 @@ const ATTESTATION_DATA_SIZE = 128;
 // MAX_COMMITTEES_PER_SLOT is in bit, need to convert to byte
 const COMMITTEE_BITS_SIZE = Math.max(Math.ceil(MAX_COMMITTEES_PER_SLOT / 8), 1);
 const SIGNATURE_SIZE = 96;
-const SYNC_AGGREGATE_SIZE = SYNC_COMMITTEE_SIZE / 8 + SIGNATURE_SIZE;
+// SyncAggregate is a fixed-size container, so minSize is its serialized size
+const SYNC_AGGREGATE_SIZE = ssz.altair.SyncAggregate.minSize;
 const SINGLE_ATTESTATION_ATTDATA_OFFSET = 8 + 8;
 const SINGLE_ATTESTATION_SLOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET;
 const SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET = 0;
@@ -451,11 +451,11 @@ export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): 
  * BeaconBlockBody (GLOAS) fixed section before signedExecutionPayloadBid offset pointer:
  *   randaoReveal(96) + eth1Data(72) + graffiti(32)
  *   + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + deposits(4) + voluntaryExits(4)
- *   + syncAggregate(SYNC_COMMITTEE_SIZE/8 + 96) + blsToExecutionChanges(4) = 384 bytes (mainnet preset)
+ *   + syncAggregate(SyncAggregate.minSize) + blsToExecutionChanges(4) = 384 bytes (mainnet preset)
  *
- * Heze body: randaoReveal(96) + graffiti(32) + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + voluntaryExits(4) + syncAggregate(SYNC_COMMITTEE_SIZE/8 + 96) + blsToExecutionChanges(4) = 308 bytes (mainnet preset)
+ * Heze body: randaoReveal(96) + graffiti(32) + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + voluntaryExits(4) + syncAggregate(SyncAggregate.minSize) + blsToExecutionChanges(4) = 308 bytes (mainnet preset)
  *
- * The 4-byte pointer at byte 568 (= 184+384) for Gloas and 492 (= 184+308) for Heze gives the offset of SignedExecutionPayloadBid
+ * The 4-byte pointer at byte 568 (= 184+384) for Gloas and 492 (= 184+308) for Heze (mainnet preset) gives the offset of SignedExecutionPayloadBid
  * within BeaconBlockBody. parentBlockHash is at that bid's byte 100 (after offset+sig).
  */
 // BeaconBlock body starts after: msg_offset(4) + sig(96) + slot(8) + proposer_index(8) + parent_root(32) + state_root(32) + body_offset_ptr(4)

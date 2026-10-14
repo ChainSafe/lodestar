@@ -136,6 +136,31 @@ describe("Builder shared Engine connection", () => {
     });
   });
 
+  it("uses the configured JWT identifier", async () => {
+    await prepare(createPayloadSourceEngine({url, jwtSecret, jwtId: "builder", signal: controller.signal, logger}));
+    const claim = requests[0].authorization?.split(".")[1];
+    expect(JSON.parse(Buffer.from(claim ?? "", "base64url").toString()).id).toBe("builder");
+  });
+
+  it("allows a local unauthenticated Engine without sending an empty token", async () => {
+    await prepare(createPayloadSourceEngine({url, signal: controller.signal, logger, engineApi: "json-rpc"}));
+    expect(requests[0].authorization).toBeUndefined();
+  });
+
+  it.each(["ssz", "json-rpc"] as const)("honors an explicit zero %s retry budget", async (engineApi) => {
+    failureStatus = 503;
+    const connection = createPayloadSourceEngine({
+      url,
+      jwtSecret,
+      signal: controller.signal,
+      logger,
+      engineApi,
+      retries: 0,
+    });
+    await expect(prepare(connection)).rejects.toMatchObject({status: 503});
+    expect(requests).toHaveLength(1);
+  });
+
   it("does not hide a capabilities authentication failure with JSON-RPC fallback", async () => {
     capabilitiesStatus = 401;
     await expect(prepare()).rejects.toMatchObject({status: 401});
