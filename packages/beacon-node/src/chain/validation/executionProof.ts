@@ -158,7 +158,7 @@ export async function validateGossipExecutionProof(
     });
   }
 
-  chain.seenExecutionProofs.addVerified(blockRoot, block.slot, proofType);
+  chain.seenExecutionProofs.addVerified(blockRoot, block.slot, proofEnvelope);
 
   return {blockSlot: block.slot};
 }
