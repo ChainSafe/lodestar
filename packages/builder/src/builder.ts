@@ -2,7 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
-import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
@@ -122,6 +122,14 @@ export class Builder {
   }
 
   static async init(opts: BuilderOptions): Promise<Builder> {
+    opts.abortController.signal.throwIfAborted();
+    for (const [option, value] of [
+      ["bidding.deadlineBps", opts.bidding.deadlineBps],
+      ["reveal.cutoffBps", opts.reveal.cutoffBps ?? opts.config.PAYLOAD_ATTESTATION_DUE_BPS],
+    ] as const) {
+      if (!Number.isSafeInteger(value) || value <= 0 || value >= 10_000)
+        throw new LodestarError({code: "BUILDER_ERROR_INVALID_OPTIONS", option, value});
+    }
     const {api, logger} = opts;
     const genesis = await waitForGenesis(api, logger, opts.abortController.signal);
     logger.info("Genesis fetched from the beacon node", {
@@ -149,6 +157,7 @@ export class Builder {
       config
     );
 
+    opts.abortController.signal.throwIfAborted();
     const {index, status, builder} = identity;
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics, {
       status,

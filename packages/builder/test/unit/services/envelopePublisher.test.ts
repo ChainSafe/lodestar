@@ -40,7 +40,7 @@ describe("EnvelopePublisher", () => {
         },
         broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       },
-      {signal: expect.any(AbortSignal)}
+      {signal: expect.any(AbortSignal), retries: 0}
     );
     const identity = selectionIdentity(contents);
     expect(ledger.hasRevealed(identity.blockRoot)).toBe(true);

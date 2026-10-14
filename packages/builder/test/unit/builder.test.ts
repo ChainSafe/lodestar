@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {routes} from "@lodestar/api";
-import {createBeaconConfig} from "@lodestar/config";
+import {chainConfigToJson, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -16,6 +16,7 @@ import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
 import {biddingOptions, createBiddingModules, getPayloadSourceStub} from "./utils/bidding.js";
 import {ClockMock} from "./utils/clock.js";
 import {getMockedLogger} from "./utils/logger.js";
+import {mockGetStateBuildersResponse} from "./utils/mocks.js";
 import {mockBuiltPayload} from "./utils/payload.js";
 
 const {EventType} = routes.events;
@@ -77,7 +78,52 @@ describe("Builder", () => {
 
   afterEach(() => {
     controller.abort();
+    vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it.each(["slow", "failed"])("seeds startup status before a %s first poll", async (mode) => {
+    vi.useFakeTimers({now: 12_000});
+    api.beacon.getGenesis.mockResolvedValue(
+      mockApiResponse({data: ssz.phase0.Genesis.defaultValue(), meta: undefined})
+    );
+    Object.assign(api, {
+      config: {
+        getSpec: vi
+          .fn()
+          .mockResolvedValue(mockApiResponse({data: chainConfigToJson(modules.opts.config), meta: undefined})),
+      },
+    });
+    api.node.getSyncingStatus.mockResolvedValue(
+      mockApiResponse({
+        data: {headSlot: 1, syncDistance: 0, isSyncing: false, isOptimistic: false, elOffline: false},
+        meta: undefined,
+      })
+    );
+    api.beacon.getStateBuilders.mockResolvedValueOnce(
+      mockGetStateBuildersResponse(1, {
+        pubkey: modules.opts.keypair.publicKey.toBytes(),
+        balance: 10_000_000_000,
+      })
+    );
+    const laterPoll = defer<Awaited<ReturnType<typeof api.beacon.getStateBuilders>>>();
+    if (mode === "slow") api.beacon.getStateBuilders.mockReturnValue(laterPoll.promise);
+    else api.beacon.getStateBuilders.mockRejectedValue(Error("poll failed"));
+    const poll = vi.spyOn(BuilderStatusTracker.prototype, "poll");
+    const initialized = await Builder.init(modules.opts);
+    expect(poll).toHaveBeenCalledOnce();
+    const tracker = poll.mock.contexts[0];
+    if (!(tracker instanceof BuilderStatusTracker)) throw Error("Missing startup tracker");
+    expect(tracker.getStatus()).toEqual({status: "active", balance: 10_000_000_000});
+    expect(api.events.eventstream).toHaveBeenCalledOnce();
+    await initialized.close();
+    laterPoll.resolve(mockGetStateBuildersResponse(1, {balance: 10_000_000_000}));
+  });
+
+  it.each([0, 10_000, NaN, 1.5])("rejects invalid reveal timing %s before startup", async (cutoffBps) => {
+    modules.opts.reveal.cutoffBps = cutoffBps;
+    await expect(Builder.init(modules.opts)).rejects.toMatchObject({type: {code: "BUILDER_ERROR_INVALID_OPTIONS"}});
+    expect(api.beacon.getGenesis).not.toHaveBeenCalled();
   });
 
   it("starts one shared stream after the clock and preserves slot pruning", async () => {

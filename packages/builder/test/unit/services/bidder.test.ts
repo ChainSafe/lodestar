@@ -59,9 +59,7 @@ describe("Bidder", () => {
     vi.useRealTimers();
   });
 
-  function createBidder(
-    getBuilderStatus?: () => {status: BuilderStatus | undefined; balance: number | undefined}
-  ): {
+  function createBidder(getBuilderStatus?: () => {status: BuilderStatus | undefined; balance: number | undefined}): {
     bidder: Bidder;
     ledger: BidLedger;
   } {
@@ -291,4 +289,35 @@ describe("Bidder", () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
+  it("refreshes the dependent root for distinct parent branches within an epoch", async () => {
+    addProposerPreferences();
+    const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+    preferences.message.proposalSlot = slot;
+    preferences.message.dependentRoot = Buffer.alloc(32, 8);
+    preferences.message.targetGasLimit = 50_000_000n;
+    proposerPreferencesTracker.onProposerPreferences(preferences);
+    api.validator.getProposerDutiesV2
+      .mockResolvedValueOnce(mockApiResponse({data: [], meta: {executionOptimistic: false, dependentRoot}}))
+      .mockResolvedValueOnce(
+        mockApiResponse({
+          data: [],
+          meta: {
+            executionOptimistic: false,
+            dependentRoot: toRootHex(preferences.message.dependentRoot),
+          },
+        })
+      );
+    const {bidder} = createBidder();
+    const other = payloadAttributesEvent();
+    other.data.parentBlockRoot = Buffer.alloc(32, 9);
+    other.data.payloadAttributes.parentBeaconBlockRoot = other.data.parentBlockRoot;
+    const attempts = [bidder.onPayloadAttributes(payloadAttributesEvent()), bidder.onPayloadAttributes(other)];
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await Promise.all(attempts);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+    expect(payloadSource.prepare.mock.calls.map(([request]) => request.payloadAttributes.targetGasLimit)).toEqual([
+      60_000_000n,
+      50_000_000n,
+    ]);
+  });
 });

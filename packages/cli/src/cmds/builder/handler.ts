@@ -6,9 +6,8 @@ import {
   collectNodeJSMetrics,
   defaultExecutionEngineHttpOpts,
   getHttpMetricsServer,
-  initializeExecutionEngine,
 } from "@lodestar/beacon-node";
-import {Builder, EnginePayloadResult, EnginePayloadSource, getMetrics} from "@lodestar/builder";
+import {Builder, EnginePayloadSource, getMetrics} from "@lodestar/builder";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
@@ -22,6 +21,7 @@ import {
   parseLoggerArgs,
 } from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
+import {createPayloadSourceEngine} from "./engine.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs, builderMetricsDefaultOptions} from "./options.js";
 
@@ -89,25 +89,21 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     throw Error("Exactly one execution client url is required");
   }
   const executionUrl = args["execution.urls"][0];
-  const engine = initializeExecutionEngine(
-    {
-      mode: "http",
-      urls: [executionUrl],
-      timeout: args["execution.timeout"] ?? defaultExecutionEngineHttpOpts.timeout,
-      retries: args["execution.retries"],
-      retryDelay: args["execution.retryDelay"],
-      jwtSecretHex: args.jwtSecret ? extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()) : undefined,
-      jwtId: args.jwtId,
-      version,
-      commit,
-    },
-    {signal: abortController.signal, logger}
-  );
-  const payloadSource = new EnginePayloadSource(toPrintableUrl(executionUrl), {
-    notifyForkchoiceUpdate: (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) =>
-      engine.notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes),
-    getPayload: async (fork, payloadId) => (await engine.getPayload(fork, payloadId)) as EnginePayloadResult,
+  const engine = createPayloadSourceEngine({
+    url: executionUrl,
+    timeout: args["execution.timeout"] ?? defaultExecutionEngineHttpOpts.timeout,
+    retries: args["execution.retries"],
+    retryDelay: args["execution.retryDelay"],
+    jwtSecret: args.jwtSecret
+      ? fromHex(extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()))
+      : undefined,
+    jwtId: args.jwtId,
+    version,
+    commit,
+    signal: abortController.signal,
+    logger,
   });
+  const payloadSource = new EnginePayloadSource(toPrintableUrl(executionUrl), engine);
 
   const builder = await Builder.init({
     keypair,
