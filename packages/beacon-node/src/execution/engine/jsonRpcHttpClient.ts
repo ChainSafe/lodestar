@@ -48,8 +48,6 @@ interface RpcResponseError {
 
 export type ReqOpts = {
   timeout?: number;
-  /** Deadline in ms across all fallback urls, each attempt gets the remaining time */
-  totalTimeout?: number;
   // To label request metrics
   routeId?: string;
   // retry opts
@@ -218,7 +216,6 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     if (this.urls.length === 0) throw Error("No url provided");
 
     const routeId = opts?.routeId ?? "unknown";
-    const deadlineMs = opts?.totalTimeout !== undefined ? Date.now() + opts.totalTimeout : null;
     let lastError: Error | null = null;
 
     for (let i = 0; i < this.urls.length; i++) {
@@ -226,17 +223,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         this.metrics?.requestUsedFallbackUrl.inc({routeId});
       }
 
-      let attemptOpts = opts;
-      if (deadlineMs !== null) {
-        const remainingMs = deadlineMs - Date.now();
-        if (remainingMs <= 0) {
-          break;
-        }
-        attemptOpts = {...opts, timeout: Math.min(opts?.timeout ?? remainingMs, remainingMs)};
-      }
-
       try {
-        return await this.fetchJsonOneUrl<R, T>(this.urls[i], json, attemptOpts);
+        return await this.fetchJsonOneUrl<R, T>(this.urls[i], json, opts);
       } catch (e) {
         lastError = e as Error;
         if (this.opts?.shouldNotFallback?.(e as Error)) {
