@@ -220,7 +220,7 @@ test "Id.setChunkedLeafChunk: non-chunked_leaf Id returns error.InvalidNode" {
     try std.testing.expectError(error.InvalidNode, leaf_id.setChunkedLeafChunk(&pool, 0, &new_chunk));
 }
 
-test "tree of chunked leaves: build via FillWithContentsIterator; root matches per-leaf tree" {
+test "tree of chunked leaves: build via SubtreeBuilder; root matches per-leaf tree" {
     const allocator = std.testing.allocator;
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 1 << 14 });
     defer pool.deinit();
@@ -231,7 +231,7 @@ test "tree of chunked leaves: build via FillWithContentsIterator; root matches p
         std.mem.writeInt(u256, &raw[s][i], @as(u256, @intCast(s * K + i + 1)), .little);
     };
 
-    var chunked_leaf_it = Node.FillWithContentsIterator.init(&pool, 2);
+    var chunked_leaf_it = Node.SubtreeBuilder.init(&pool, 2);
     errdefer chunked_leaf_it.deinit();
     for (0..4) |s| {
         const sid = try pool.createChunkedLeaf(&raw[s], K);
@@ -240,7 +240,7 @@ test "tree of chunked leaves: build via FillWithContentsIterator; root matches p
     const chunked_leaf_root_id = try chunked_leaf_it.finish();
     defer pool.unref(chunked_leaf_root_id);
 
-    var leaf_it = Node.FillWithContentsIterator.init(&pool, k_log2 + 2);
+    var leaf_it = Node.SubtreeBuilder.init(&pool, k_log2 + 2);
     errdefer leaf_it.deinit();
     for (0..4) |s| for (0..K) |i| {
         var c = raw[s][i];
@@ -252,7 +252,7 @@ test "tree of chunked leaves: build via FillWithContentsIterator; root matches p
     try std.testing.expectEqualSlices(u8, chunked_leaf_root_id.getRoot(&pool), leaf_root_id.getRoot(&pool));
 }
 
-test "FillWithContentsIterator: initWithOffset enables chunked_leaf leaves with correct zero filler" {
+test "SubtreeBuilder: initWithOffset enables chunked_leaf leaves with correct zero filler" {
     const allocator = std.testing.allocator;
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 1 << 14 });
     defer pool.deinit();
@@ -263,7 +263,7 @@ test "FillWithContentsIterator: initWithOffset enables chunked_leaf leaves with 
         std.mem.writeInt(u256, &raw[s][i], @as(u256, @intCast(s * K + i + 1)), .little);
     };
 
-    var chunked_leaf_it = Node.FillWithContentsIterator.initWithOffset(&pool, 2, k_log2);
+    var chunked_leaf_it = Node.SubtreeBuilder.initWithOffset(&pool, 2, k_log2);
     errdefer chunked_leaf_it.deinit();
     for (0..4) |s| {
         const sid = try pool.createChunkedLeaf(&raw[s], K);
@@ -272,7 +272,7 @@ test "FillWithContentsIterator: initWithOffset enables chunked_leaf leaves with 
     const chunked_leaf_root_id = try chunked_leaf_it.finish();
     defer pool.unref(chunked_leaf_root_id);
 
-    var leaf_it = Node.FillWithContentsIterator.init(&pool, k_log2 + 2);
+    var leaf_it = Node.SubtreeBuilder.init(&pool, k_log2 + 2);
     errdefer leaf_it.deinit();
     for (0..4) |s| for (0..K) |i| {
         var c = raw[s][i];
@@ -284,7 +284,7 @@ test "FillWithContentsIterator: initWithOffset enables chunked_leaf leaves with 
     try std.testing.expectEqualSlices(u8, chunked_leaf_root_id.getRoot(&pool), leaf_root_id.getRoot(&pool));
 }
 
-test "FillWithContentsIterator: initWithOffset with partial fill (zero-padded chunked leaves)" {
+test "SubtreeBuilder: initWithOffset with partial fill (zero-padded chunked leaves)" {
     const allocator = std.testing.allocator;
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 1 << 14 });
     defer pool.deinit();
@@ -295,7 +295,7 @@ test "FillWithContentsIterator: initWithOffset with partial fill (zero-padded ch
         std.mem.writeInt(u256, &raw[s][i], @as(u256, @intCast(s * K + i + 1)), .little);
     };
 
-    var chunked_leaf_it = Node.FillWithContentsIterator.initWithOffset(&pool, 2, k_log2);
+    var chunked_leaf_it = Node.SubtreeBuilder.initWithOffset(&pool, 2, k_log2);
     errdefer chunked_leaf_it.deinit();
     for (0..3) |s| {
         const sid = try pool.createChunkedLeaf(&raw[s], K);
@@ -304,7 +304,7 @@ test "FillWithContentsIterator: initWithOffset with partial fill (zero-padded ch
     const chunked_leaf_root_id = try chunked_leaf_it.finish();
     defer pool.unref(chunked_leaf_root_id);
 
-    var leaf_it = Node.FillWithContentsIterator.init(&pool, k_log2 + 2);
+    var leaf_it = Node.SubtreeBuilder.init(&pool, k_log2 + 2);
     errdefer leaf_it.deinit();
     for (0..3) |s| for (0..K) |i| {
         var c = raw[s][i];

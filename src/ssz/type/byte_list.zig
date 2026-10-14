@@ -134,7 +134,7 @@ pub fn ByteListType(comptime _limit: comptime_int) type {
                     );
                 }
 
-                var it = Node.FillWithContentsIterator.init(pool, chunk_depth);
+                var it = Node.SubtreeBuilder.init(pool, chunk_depth);
                 errdefer it.deinit();
 
                 for (0..chunk_count - 1) |i| {
@@ -176,7 +176,7 @@ pub fn ByteListType(comptime _limit: comptime_int) type {
                     );
                 }
 
-                var it = Node.FillWithContentsIterator.init(pool, chunk_depth);
+                var it = Node.SubtreeBuilder.init(pool, chunk_depth);
                 errdefer it.deinit();
 
                 for (0..chunk_count) |i| {

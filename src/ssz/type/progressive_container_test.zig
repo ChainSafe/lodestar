@@ -451,3 +451,75 @@ test "progressive list should round-trip struct progressive container elements" 
     try std.testing.expectEqual(bytes.len, size);
     try std.testing.expectEqualSlices(u8, bytes, encoded);
 }
+
+test "progressive container tree construction streams sparse fields" {
+    const allocator = std.testing.allocator;
+    const active = comptime blk: {
+        var flags: [256]u1 = @splat(0);
+        flags[0] = 1;
+        flags[85] = 1;
+        flags[255] = 1;
+        break :blk flags;
+    };
+    const Fixed = FixedProgressiveContainerType(struct { a: UintType(64), b: BoolType(), c: UintType(8) }, &active);
+    const Variable = VariableProgressiveContainerType(struct { a: UintType(64), b: FixedProgressiveListType(UintType(8)), c: UintType(8) }, &active);
+    inline for (.{ Fixed, Variable }) |ST| {
+        var value = ST.default_value;
+        defer if (ST == Variable) ST.deinit(allocator, &value);
+        value.a = 123;
+        value.c = 45;
+        if (ST == Fixed) value.b = true else try value.b.appendSlice(allocator, &.{ 2, 3, 4 });
+        const bytes = try allocator.alloc(u8, ST.serializedSize(&value));
+        defer allocator.free(bytes);
+        _ = ST.serializeIntoBytes(&value, bytes);
+        var expected: [32]u8 = undefined;
+        if (ST == Fixed) try ST.hashTreeRoot(&value, &expected) else try ST.hashTreeRoot(allocator, &value, &expected);
+        var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 0 });
+        var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = failing.allocator(), .pool_size = 2048 });
+        defer pool.deinit();
+        const baseline = pool.getNodesInUse();
+        const from_value = try ST.tree.fromValue(&pool, &value);
+        try std.testing.expectEqualSlices(u8, &expected, from_value.getRoot(&pool));
+        pool.unref(from_value);
+        const from_bytes = try ST.tree.deserializeFromBytes(&pool, bytes);
+        try std.testing.expectEqualSlices(u8, &expected, from_bytes.getRoot(&pool));
+        pool.unref(from_bytes);
+        try std.testing.expectEqual(baseline, pool.getNodesInUse());
+        try std.testing.expect(!failing.has_induced_failure);
+    }
+}
+
+test "memory_safety: progressive container decoding reclaims partially built fields" {
+    const allocator = std.testing.allocator;
+    const Container = VariableProgressiveContainerType(struct {
+        a: FixedProgressiveListType(BoolType()),
+        b: UintType(64),
+        c: BoolType(),
+    }, &.{ 1, 0, 1, 0, 0, 1 });
+    var value = Container.default_value;
+    defer Container.deinit(allocator, &value);
+    try value.a.appendSlice(allocator, &.{ true, false });
+    value.b = 9;
+    value.c = true;
+    var bytes: [15]u8 = undefined;
+    try std.testing.expectEqual(bytes.len, Container.serializeIntoBytes(&value, &bytes));
+    var succeeded = false;
+    for (0..128) |capacity| {
+        var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = @intCast(capacity) });
+        defer pool.deinit();
+        const baseline = pool.getNodesInUse();
+        const root = Container.tree.deserializeFromBytes(&pool, &bytes) catch |err| {
+            try std.testing.expectEqual(error.PoolExhausted, err);
+            try std.testing.expectEqual(baseline, pool.getNodesInUse());
+            continue;
+        };
+        pool.unref(root);
+        try std.testing.expectEqual(baseline, pool.getNodesInUse());
+        bytes[12] = 2;
+        try std.testing.expectError(error.invalidBoolean, Container.tree.deserializeFromBytes(&pool, &bytes));
+        try std.testing.expectEqual(baseline, pool.getNodesInUse());
+        succeeded = true;
+        break;
+    }
+    try std.testing.expect(succeeded);
+}

@@ -353,3 +353,108 @@ fn expectStreamingProgressiveHash(comptime ST: type, value: *const ST.Type) !voi
     try std.testing.expectEqualSlices(u8, root.getRoot(&pool), &actual);
     try std.testing.expect(!failing.has_induced_failure);
 }
+
+test "progressive tree construction streams packed and nested values" {
+    const allocator = std.testing.allocator;
+    const Pair = FixedContainerType(struct { a: UintType(64), b: BoolType() });
+    inline for (.{ UintType(8), UintType(64), BoolType(), Pair }) |Element| {
+        const List = FixedProgressiveListType(Element);
+        const per_chunk = if (Element.kind == .container) 1 else 32 / Element.fixed_size;
+        for ([_]usize{ 0, 1, per_chunk, per_chunk + 1, 5 * per_chunk, 5 * per_chunk + 1, 21 * per_chunk, 21 * per_chunk + 1, 85 * per_chunk + 1 }) |len| {
+            var value = List.default_value;
+            defer List.deinit(allocator, &value);
+            try value.resize(allocator, len);
+            for (value.items, 0..) |*item, i| item.* = switch (Element.kind) {
+                .uint => @truncate(i),
+                .bool => i % 3 == 0,
+                .container => .{ .a = i, .b = i % 3 == 0 },
+                else => unreachable,
+            };
+            try expectStreamingProgressiveConstruction(List, &value);
+        }
+    }
+    const Inner = FixedProgressiveListType(UintType(8));
+    const Outer = VariableProgressiveListType(Inner);
+    var value = Outer.default_value;
+    defer Outer.deinit(allocator, &value);
+    for (0..22) |i| {
+        try value.append(allocator, .empty);
+        try value.items[i].appendNTimes(allocator, @truncate(i), i % 7);
+    }
+    try expectStreamingProgressiveConstruction(Outer, &value);
+    try expectProgressiveFromValuePoolExhaustionReclaimsNodes(Outer, &value, 256);
+}
+
+fn expectStreamingProgressiveConstruction(comptime ST: type, value: *const ST.Type) !void {
+    const allocator = std.testing.allocator;
+    const bytes = try allocator.alloc(u8, ST.serializedSize(value));
+    defer allocator.free(bytes);
+    _ = ST.serializeIntoBytes(value, bytes);
+    var expected: [32]u8 = undefined;
+    try ST.hashTreeRoot(allocator, value, &expected);
+    var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 0 });
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = failing.allocator(), .pool_size = 8192 });
+    defer pool.deinit();
+    const baseline = pool.getNodesInUse();
+    const from_value = try ST.tree.fromValue(&pool, value);
+    try std.testing.expectEqualSlices(u8, &expected, from_value.getRoot(&pool));
+    pool.unref(from_value);
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+    const from_bytes = try ST.tree.deserializeFromBytes(&pool, bytes);
+    try std.testing.expectEqualSlices(u8, &expected, from_bytes.getRoot(&pool));
+    pool.unref(from_bytes);
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+    try std.testing.expect(!failing.has_induced_failure);
+}
+
+test "memory_safety: progressive streaming decoder cleans up malformed elements and offsets" {
+    const allocator = std.testing.allocator;
+    const Inner = FixedProgressiveListType(BoolType());
+    const Outer = VariableProgressiveListType(Inner);
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 256 });
+    defer pool.deinit();
+    const baseline = pool.getNodesInUse();
+    try std.testing.expectError(error.invalidBoolean, Inner.tree.deserializeFromBytes(&pool, &.{ 1, 2 }));
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+    var prng = std.Random.DefaultPrng.init(0x158);
+    for (0..512) |i| {
+        var bytes: [32]u8 = undefined;
+        prng.random().bytes(&bytes);
+        const len = i % (bytes.len + 1);
+        if (len >= 8) {
+            std.mem.writeInt(u32, bytes[0..4], 8, .little);
+            std.mem.writeInt(u32, bytes[4..8], @intCast(8 + i % (len - 7)), .little);
+            for (bytes[8..len]) |*byte| byte.* %= 3;
+        }
+        var value = Outer.default_value;
+        defer Outer.deinit(allocator, &value);
+        Outer.deserializeFromBytes(allocator, bytes[0..len], &value) catch |err| {
+            try std.testing.expectError(err, Outer.tree.deserializeFromBytes(&pool, bytes[0..len]));
+            try std.testing.expectEqual(baseline, pool.getNodesInUse());
+            continue;
+        };
+        const root = try Outer.tree.deserializeFromBytes(&pool, bytes[0..len]);
+        var expected: [32]u8 = undefined;
+        try Outer.hashTreeRoot(allocator, &value, &expected);
+        try std.testing.expectEqualSlices(u8, &expected, root.getRoot(&pool));
+        pool.unref(root);
+        try std.testing.expectEqual(baseline, pool.getNodesInUse());
+    }
+    const data = [_]u8{ 8, 0, 0, 0, 10, 0, 0, 0, 1, 0, 1, 1 };
+    var succeeded = false;
+    for (0..64) |capacity| {
+        var small_pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = @intCast(capacity) });
+        defer small_pool.deinit();
+        const before = small_pool.getNodesInUse();
+        const root = Outer.tree.deserializeFromBytes(&small_pool, &data) catch |err| {
+            try std.testing.expectEqual(error.PoolExhausted, err);
+            try std.testing.expectEqual(before, small_pool.getNodesInUse());
+            continue;
+        };
+        small_pool.unref(root);
+        try std.testing.expectEqual(before, small_pool.getNodesInUse());
+        succeeded = true;
+        break;
+    }
+    try std.testing.expect(succeeded);
+}

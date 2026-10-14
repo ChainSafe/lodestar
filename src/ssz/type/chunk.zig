@@ -1,4 +1,14 @@
+const std = @import("std");
+
 pub const BYTES_PER_CHUNK: usize = 32;
+
+/// Zero-pads at most one chunk of bytes.
+pub fn fromBytes(bytes: []const u8) [BYTES_PER_CHUNK]u8 {
+    std.debug.assert(bytes.len <= BYTES_PER_CHUNK);
+    var out: [BYTES_PER_CHUNK]u8 = @splat(0);
+    @memcpy(out[0..bytes.len], bytes);
+    return out;
+}
 
 /// Returns the number of items of `ElementType` that fit in a single chunk.
 pub inline fn itemsPerChunk(comptime ElementType: type) comptime_int {

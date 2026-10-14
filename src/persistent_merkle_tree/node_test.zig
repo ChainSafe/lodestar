@@ -19,7 +19,7 @@ fn fillPoolToCapacity(pool: *Node.Pool, out: *std.ArrayList(Node.Id)) !void {
 
 // When append's createBranch fails, both `left` (still in self.lefts) and `carry` must be
 // reclaimed. Here they are two different nodes.
-test "FillWithContentsIterator - pool exhaustion with distinct nodes does not leak" {
+test "SubtreeBuilder - pool exhaustion with distinct nodes does not leak" {
     var pool = try Node.Pool.init(.{ .page_allocator = std.testing.allocator, .allocator = std.testing.allocator, .pool_size = 4 });
     defer pool.deinit();
 
@@ -32,7 +32,7 @@ test "FillWithContentsIterator - pool exhaustion with distinct nodes does not le
     defer drained.deinit(std.testing.allocator);
     try fillPoolToCapacity(&pool, &drained);
 
-    var iter = Node.FillWithContentsIterator.init(&pool, 1);
+    var iter = Node.SubtreeBuilder.init(&pool, 1);
     try iter.append(a); // stored in lefts[0], no allocation
     try std.testing.expectError(error.PoolExhausted, iter.append(b));
     iter.deinit(); // must reclaim a (lefts[0]) and b (unref'd in append)
@@ -43,7 +43,7 @@ test "FillWithContentsIterator - pool exhaustion with distinct nodes does not le
 
 // The all-default path pairs a node with itself (createBranch(X, X)). On failure append must not
 // unref `carry` — it's the same node as `left`, which deinit reclaims; doing both double-frees.
-test "FillWithContentsIterator - pool exhaustion with aliased node does not double-free" {
+test "SubtreeBuilder - pool exhaustion with aliased node does not double-free" {
     var pool = try Node.Pool.init(.{ .page_allocator = std.testing.allocator, .allocator = std.testing.allocator, .pool_size = 4 });
     defer pool.deinit();
 
@@ -55,7 +55,7 @@ test "FillWithContentsIterator - pool exhaustion with aliased node does not doub
     defer drained.deinit(std.testing.allocator);
     try fillPoolToCapacity(&pool, &drained);
 
-    var iter = Node.FillWithContentsIterator.init(&pool, 1);
+    var iter = Node.SubtreeBuilder.init(&pool, 1);
     try iter.append(x); // lefts[0] = x
     try std.testing.expectError(error.PoolExhausted, iter.append(x));
     iter.deinit(); // reclaims x exactly once (carry==left so append did not unref it)
@@ -861,7 +861,7 @@ test "DepthIterator matches getNodesAtDepth" {
     }
 }
 
-test "FillWithContentsIterator matches fillWithContents" {
+test "SubtreeBuilder matches fillWithContents" {
     const allocator = std.testing.allocator;
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 128 });
     defer pool.deinit();
@@ -891,7 +891,7 @@ test "FillWithContentsIterator matches fillWithContents" {
         defer p.unref(root_batch);
 
         // Incremental
-        var it = Node.FillWithContentsIterator.init(p, depth);
+        var it = Node.SubtreeBuilder.init(p, depth);
         for (leaves[0..i]) |leaf| try it.append(leaf);
         const root_iter = try it.finish();
         defer p.unref(root_iter);
@@ -900,7 +900,7 @@ test "FillWithContentsIterator matches fillWithContents" {
     }
 
     // Empty case should match `fillWithContents` behavior (returns zero-node at depth)
-    var empty_it = Node.FillWithContentsIterator.init(p, depth);
+    var empty_it = Node.SubtreeBuilder.init(p, depth);
     errdefer empty_it.deinit();
 
     const empty_root_iter = try empty_it.finish();

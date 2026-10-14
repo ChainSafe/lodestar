@@ -29,7 +29,7 @@ fn buildChunkedLeafListWithZeroBoundary(
 
     // Build chunks subtree: only append chunked_leaf 0; finish() pads remaining
     // positions at chunked_leaf level with ZeroHash[k_log2] sentinels.
-    var fc_it = Node.FillWithContentsIterator.initWithOffset(pool, chunked_leaf_subtree_depth, ChunkedLeafType.k_log2);
+    var fc_it = Node.SubtreeBuilder.initWithOffset(pool, chunked_leaf_subtree_depth, ChunkedLeafType.k_log2);
     errdefer fc_it.deinit();
     try fc_it.append(cl0_id);
     const chunks_root = try fc_it.finish();
@@ -39,7 +39,7 @@ fn buildChunkedLeafListWithZeroBoundary(
     const length_leaf = try pool.createLeafFromUint(@intCast(list_length));
     errdefer pool.unref(length_leaf);
 
-    var list_it = Node.FillWithContentsIterator.init(pool, 1);
+    var list_it = Node.SubtreeBuilder.init(pool, 1);
     errdefer list_it.deinit();
     try list_it.append(chunks_root);
     try list_it.append(length_leaf);

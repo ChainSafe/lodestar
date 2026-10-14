@@ -232,7 +232,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
                 }
 
                 if (comptime use_chunked_leaf) {
-                    var it = Node.FillWithContentsIterator.initWithOffset(pool, chunked_leaf_depth, ChunkedLeaf.k_log2);
+                    var it = Node.SubtreeBuilder.initWithOffset(pool, chunked_leaf_depth, ChunkedLeaf.k_log2);
                     errdefer it.deinit();
 
                     const bytes_per_chunked_leaf: usize = ChunkedLeaf.K * 32;
@@ -336,7 +336,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
 
             pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
                 if (comptime use_chunked_leaf) {
-                    var it = Node.FillWithContentsIterator.initWithOffset(pool, chunked_leaf_depth, ChunkedLeaf.k_log2);
+                    var it = Node.SubtreeBuilder.initWithOffset(pool, chunked_leaf_depth, ChunkedLeaf.k_log2);
                     errdefer it.deinit();
 
                     const items_per_chunk = 32 / Element.fixed_size;

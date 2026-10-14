@@ -7,6 +7,15 @@ const Gindex = @import("persistent_merkle_tree").Gindex;
 const base_count = 1;
 const scaling_factor = 4;
 
+// Subtree i has 2*i edges below i+1 spine edges. Hashing retains roots without traversing that spine.
+// Bound the full 3*i+1 tree path and the 2*i chunk-count shift.
+const max_tree_subtrees = @min((@import("hashing").max_depth - 1) / 3, (@bitSizeOf(usize) - 1) / 2) + 1;
+const max_tree_chunks = blk: {
+    var total: usize = 0;
+    for (0..max_tree_subtrees) |i| total += @as(usize, 1) << @intCast(2 * i);
+    break :blk total;
+};
+
 pub fn chunkGindex(chunk_i: usize) Gindex {
     const subtree_i = subtreeIndex(chunk_i);
     var gindex: Gindex.Uint = 1;
@@ -123,13 +132,7 @@ pub const NodeIterator = struct {
     iterator: Node.DepthIterator = undefined,
 
     pub fn init(pool: *Node.Pool, root: Node.Id, count: usize) !NodeIterator {
-        const max_subtrees = @min((@import("hashing").max_depth - 1) / 3, (@bitSizeOf(usize) - 1) / 2) + 1;
-        const max_chunks = comptime blk: {
-            var total: usize = 0;
-            for (0..max_subtrees) |i| total += @as(usize, 1) << @intCast(2 * i);
-            break :blk total;
-        };
-        if (count > max_chunks) return error.InvalidSubtreeLength;
+        if (count > max_tree_chunks) return error.InvalidSubtreeLength;
         return .{ .pool = pool, .spine = root, .remaining = count };
     }
 
@@ -198,64 +201,68 @@ pub fn getNodes(pool: *Node.Pool, root: Node.Id, out: []Node.Id) !void {
     }
 }
 
-pub fn fillWithContentsComptime(comptime node_count: usize, pool: *Node.Pool, nodes: *[node_count]Node.Id) !Node.Id {
-    const subtree_count = comptime subtreeCount(node_count);
-    var n: Node.Id = @enumFromInt(0);
-    errdefer pool.unref(n);
+/// Builds progressive subtrees with bounded scratch.
+/// Call `deinit` after success or failure; a successful `finish` transfers the root to the caller.
+/// Abandon the builder if a pool operation fails.
+pub const TreeBuilder = struct {
+    pool: *Node.Pool,
+    roots: [max_tree_subtrees]?Node.Id = @splat(null),
+    subtree: Node.SubtreeBuilder,
+    subtree_count: usize = 0,
+    subtree_len: usize = 0,
+    remaining: usize,
+    finished: bool = false,
 
-    // Compute subtree starts at comptime
-    comptime var subtree_starts: [subtree_count]usize = undefined;
-    comptime {
-        var pos: usize = 0;
-        for (0..subtree_count) |subtree_i| {
-            subtree_starts[subtree_i] = pos;
-            pos += @min(subtreeLength(subtree_i), node_count - pos);
+    pub fn init(pool: *Node.Pool, chunk_count: usize) !TreeBuilder {
+        if (chunk_count > max_tree_chunks) return error.InputTooLong;
+        return .{ .pool = pool, .subtree = Node.SubtreeBuilder.init(pool, 0), .remaining = chunk_count };
+    }
+
+    pub fn deinit(self: *TreeBuilder) void {
+        self.subtree.deinit();
+        for (self.roots) |root| if (root) |id| self.pool.unref(id);
+    }
+
+    /// Takes ownership of a fresh, unretained root or zero node on entry, including on error.
+    pub fn appendOwned(self: *TreeBuilder, node: Node.Id) !void {
+        std.debug.assert(node.getState(self.pool).refCount() == 0);
+        if (self.finished or self.remaining == 0) {
+            self.pool.unref(node);
+            return error.InvalidLength;
+        }
+        std.debug.assert(self.subtree_count < max_tree_subtrees);
+        try self.subtree.append(node);
+        self.remaining -= 1;
+        self.subtree_len += 1;
+        if (self.subtree_len == @as(usize, 1) << @intCast(2 * self.subtree_count)) {
+            try self.finishSubtree();
         }
     }
 
-    // Process subtrees in reverse order
-    comptime var i: usize = 0;
-    inline while (i < subtree_count) : (i += 1) {
-        const subtree_i = subtree_count - 1 - i;
-        const st_depth = comptime subtreeDepth(subtree_i);
-        const l = comptime subtree_starts[subtree_i];
-        const st_length = comptime @min(subtreeLength(subtree_i), node_count - l);
-
-        const subtree_root = try Node.fillWithContents(pool, nodes[l..][0..st_length], st_depth);
-        n = try pool.createBranch(subtree_root, n);
+    fn finishSubtree(self: *TreeBuilder) !void {
+        std.debug.assert(self.subtree_len > 0);
+        self.roots[self.subtree_count] = try self.subtree.finish();
+        self.subtree_count += 1;
+        self.subtree_len = 0;
+        self.subtree = Node.SubtreeBuilder.init(self.pool, @intCast(2 * self.subtree_count));
     }
 
-    return n;
-}
-
-pub fn fillWithContents(_: std.mem.Allocator, pool: *Node.Pool, nodes: []Node.Id) !Node.Id {
-    const max_subtrees = @min((@import("hashing").max_depth - 1) / 3, (@bitSizeOf(usize) - 1) / 2) + 1;
-    var subtree_starts: [max_subtrees]usize = undefined;
-    var subtree_count: usize = 0;
-    var pos: usize = 0;
-    for (0..max_subtrees) |i| {
-        if (pos == nodes.len) break;
-        subtree_starts[i] = pos;
-        pos += @min(@as(usize, 1) << @intCast(2 * i), nodes.len - pos);
-        subtree_count += 1;
+    pub fn finish(self: *TreeBuilder) !Node.Id {
+        if (self.finished) return error.InvalidState;
+        if (self.remaining != 0) return error.InvalidLength;
+        if (self.subtree_len != 0) try self.finishSubtree();
+        var root: Node.Id = @enumFromInt(0);
+        errdefer self.pool.unref(root);
+        for (0..self.subtree_count) |_| {
+            const i = self.subtree_count - 1;
+            root = try self.pool.createBranch(self.roots[i].?, root);
+            self.roots[i] = null;
+            self.subtree_count -= 1;
+        }
+        self.finished = true;
+        return root;
     }
-    if (pos != nodes.len) return error.InputTooLong;
-
-    var n: Node.Id = @enumFromInt(0);
-    errdefer pool.unref(n);
-
-    for (0..subtree_count) |i| {
-        const subtree_i = subtree_count - 1 - i;
-        const subtree_depth = subtreeDepth(subtree_i);
-        const l = subtree_starts[subtree_i];
-        const subtree_length = @min(subtreeLength(subtree_i), nodes.len - l);
-
-        const subtree_root = try Node.fillWithContents(pool, nodes[l .. l + subtree_length], subtree_depth);
-        n = try pool.createBranch(subtree_root, n);
-    }
-
-    return n;
-}
+};
 
 test {
     _ = @import("progressive_test.zig");

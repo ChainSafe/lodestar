@@ -60,6 +60,10 @@ fn getActiveFieldIndex(comptime active_fields: []const u1, comptime n: usize) us
     @compileError("field index out of range");
 }
 
+fn inactiveFieldCount(comptime indices: []const usize, comptime field_index: usize) usize {
+    return indices[field_index] - (if (field_index == 0) 0 else indices[field_index - 1] + 1);
+}
+
 /// Creates a progressive container type with only fixed-size fields.
 ///
 /// Parameters:
@@ -160,16 +164,13 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
 
         pub fn hashTreeRoot(value: *const Type, out: *[32]u8) !void {
             var accumulator = try progressive.MerkleAccumulator.init(chunk_count);
-            var next_index: usize = 0;
             inline for (fields, 0..) |field, i| {
-                const field_idx = comptime getActiveFieldIndex(active_fields, i);
-                while (next_index < field_idx) : (next_index += 1) {
+                for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
                     try accumulator.append(&@as([32]u8, @splat(0)));
                 }
                 var chunk: [32]u8 = undefined;
                 try field.type.hashTreeRoot(&@field(value, field.name), &chunk);
                 try accumulator.append(&chunk);
-                next_index += 1;
             }
             var content_root: [32]u8 = undefined;
             try accumulator.finish(&content_root);
@@ -218,16 +219,13 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
                 if (data.len != fixed_size) return error.InvalidSize;
                 var offset: usize = 0;
                 var accumulator = try progressive.MerkleAccumulator.init(chunk_count);
-                var next_index: usize = 0;
                 inline for (fields, 0..) |field, i| {
-                    const field_idx = comptime getActiveFieldIndex(active_fields, i);
-                    while (next_index < field_idx) : (next_index += 1) {
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
                         try accumulator.append(&@as([32]u8, @splat(0)));
                     }
                     var chunk: [32]u8 = undefined;
                     try field.type.serialized.hashTreeRoot(data[offset..][0..field.type.fixed_size], &chunk);
                     try accumulator.append(&chunk);
-                    next_index += 1;
                     offset += field.type.fixed_size;
                 }
                 var content_root: [32]u8 = undefined;
@@ -270,32 +268,44 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
             }
 
             pub fn deserializeFromBytes(pool: *Node.Pool, data: []const u8) !Node.Id {
-                var value = Self.default_value;
-                try Self.deserializeFromBytes(data, &value);
-                return fromValue(pool, &value);
-            }
-
-            pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
-                var content_owns_nodes = false;
-                errdefer if (!content_owns_nodes) pool.free(&nodes);
-
+                if (data.len != fixed_size) return error.InvalidSize;
+                var offset: usize = 0;
+                var builder = try progressive.TreeBuilder.init(pool, chunk_count);
+                defer builder.deinit();
                 inline for (fields, 0..) |field, i| {
-                    const field_idx = comptime getActiveFieldIndex(active_fields, i);
-                    const field_value = &@field(value, field.name);
-                    nodes[field_idx] = try field.type.tree.fromValue(pool, field_value);
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
+                        try builder.appendOwned(@enumFromInt(0));
+                    }
+                    try builder.appendOwned(try field.type.tree.deserializeFromBytes(pool, data[offset..][0..field.type.fixed_size]));
+                    offset += field.type.fixed_size;
                 }
-
-                const content_tree = try progressive.fillWithContentsComptime(chunk_count, pool, &nodes);
-                content_owns_nodes = true;
-                errdefer pool.unref(content_tree);
-
-                // Mix in active_fields
+                const contents = try builder.finish();
+                errdefer pool.unref(contents);
                 const active_fields_packed = comptime packActiveFields(active_fields);
                 const active_fields_node = try pool.createLeaf(&active_fields_packed);
                 errdefer pool.unref(active_fields_node);
+                return try pool.createBranch(contents, active_fields_node);
+            }
 
-                return try pool.createBranch(content_tree, active_fields_node);
+            pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
+                // Active fields are bounded to 256 chunks at comptime.
+                var builder = progressive.TreeBuilder.init(pool, chunk_count) catch unreachable;
+                defer builder.deinit();
+                inline for (fields, 0..) |field, i| {
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
+                        try builder.appendOwned(@enumFromInt(0));
+                    }
+                    try builder.appendOwned(try field.type.tree.fromValue(pool, &@field(value, field.name)));
+                }
+                const contents = builder.finish() catch |err| switch (err) {
+                    error.InvalidState => unreachable, // This local builder is finished exactly once.
+                    else => |pool_error| return pool_error,
+                };
+                errdefer pool.unref(contents);
+                const active_fields_packed = comptime packActiveFields(active_fields);
+                const active_fields_node = try pool.createLeaf(&active_fields_packed);
+                errdefer pool.unref(active_fields_node);
+                return try pool.createBranch(contents, active_fields_node);
             }
         };
 
@@ -563,10 +573,8 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
 
         pub fn hashTreeRoot(allocator: std.mem.Allocator, value: *const Type, out: *[32]u8) !void {
             var accumulator = try progressive.MerkleAccumulator.init(chunk_count);
-            var next_index: usize = 0;
             inline for (fields, 0..) |field, i| {
-                const field_idx = comptime getActiveFieldIndex(active_fields, i);
-                while (next_index < field_idx) : (next_index += 1) {
+                for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
                     try accumulator.append(&@as([32]u8, @splat(0)));
                 }
                 var chunk: [32]u8 = undefined;
@@ -576,7 +584,6 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
                     try field.type.hashTreeRoot(allocator, &@field(value, field.name), &chunk);
                 }
                 try accumulator.append(&chunk);
-                next_index += 1;
             }
             var content_root: [32]u8 = undefined;
             try accumulator.finish(&content_root);
@@ -767,10 +774,8 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
                 if (data.len > max_size or data.len < min_size) return error.InvalidSize;
                 const ranges = try readFieldRanges(data);
                 var accumulator = try progressive.MerkleAccumulator.init(chunk_count);
-                var next_index: usize = 0;
                 inline for (fields, 0..) |field, i| {
-                    const field_idx = comptime getActiveFieldIndex(active_fields, i);
-                    while (next_index < field_idx) : (next_index += 1) {
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
                         try accumulator.append(&@as([32]u8, @splat(0)));
                     }
                     var chunk: [32]u8 = undefined;
@@ -780,7 +785,6 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
                         try field.type.serialized.hashTreeRoot(allocator, data[ranges[i][0]..ranges[i][1]], &chunk);
                     }
                     try accumulator.append(&chunk);
-                    next_index += 1;
                 }
                 var content_root: [32]u8 = undefined;
                 try accumulator.finish(&content_root);
@@ -843,38 +847,39 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
             }
 
             pub fn deserializeFromBytes(pool: *Node.Pool, data: []const u8) !Node.Id {
-                const allocator = pool.allocator;
-                var value = Self.default_value;
-                defer Self.deinit(allocator, &value);
-
-                try Self.deserializeFromBytes(allocator, data, &value);
-                return fromValue(pool, &value);
-            }
-
-            pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
-                const allocator = pool.allocator;
-                const nodes = try allocator.alloc(Node.Id, chunk_count);
-                defer allocator.free(nodes);
-                @memset(nodes, @as(Node.Id, @enumFromInt(0)));
-                var content_owns_nodes = false;
-                errdefer if (!content_owns_nodes) pool.free(nodes);
-
+                if (data.len > max_size or data.len < min_size) return error.InvalidSize;
+                const ranges = try readFieldRanges(data);
+                var builder = try progressive.TreeBuilder.init(pool, chunk_count);
+                defer builder.deinit();
                 inline for (fields, 0..) |field, i| {
-                    const field_idx = comptime getActiveFieldIndex(active_fields, i);
-                    const field_value = &@field(value, field.name);
-                    nodes[field_idx] = try field.type.tree.fromValue(pool, field_value);
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
+                        try builder.appendOwned(@enumFromInt(0));
+                    }
+                    try builder.appendOwned(try field.type.tree.deserializeFromBytes(pool, data[ranges[i][0]..ranges[i][1]]));
                 }
-
-                const content_tree = try progressive.fillWithContents(allocator, pool, nodes);
-                content_owns_nodes = true;
-                errdefer pool.unref(content_tree);
-
-                // Mix in active_fields
+                const contents = try builder.finish();
+                errdefer pool.unref(contents);
                 const active_fields_packed = comptime packActiveFields(active_fields);
                 const active_fields_node = try pool.createLeaf(&active_fields_packed);
                 errdefer pool.unref(active_fields_node);
+                return try pool.createBranch(contents, active_fields_node);
+            }
 
-                return try pool.createBranch(content_tree, active_fields_node);
+            pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
+                var builder = try progressive.TreeBuilder.init(pool, chunk_count);
+                defer builder.deinit();
+                inline for (fields, 0..) |field, i| {
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
+                        try builder.appendOwned(@enumFromInt(0));
+                    }
+                    try builder.appendOwned(try field.type.tree.fromValue(pool, &@field(value, field.name)));
+                }
+                const contents = try builder.finish();
+                errdefer pool.unref(contents);
+                const active_fields_packed = comptime packActiveFields(active_fields);
+                const active_fields_node = try pool.createLeaf(&active_fields_packed);
+                errdefer pool.unref(active_fields_node);
+                return try pool.createBranch(contents, active_fields_node);
             }
         };
 

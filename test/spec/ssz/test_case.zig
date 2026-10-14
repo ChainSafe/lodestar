@@ -379,9 +379,19 @@ test "tree invalid-case normalization preserves resource errors" {
     try std.testing.expectError(error.PoolExhausted, deserializeTree(ssz.BoolType(), &pool, &.{1}));
     try std.testing.expectError(error.InvalidSSZ, deserializeTree(ssz.BoolType(), &pool, &.{2}));
     try std.testing.expectError(
-        error.OutOfMemory,
+        error.PoolExhausted,
         deserializeTree(ssz.FixedProgressiveListType(ssz.BoolType()), &pool, &.{1}),
     );
+
+    var payload_pool = try Node.Pool.init(.{
+        .page_allocator = std.testing.allocator,
+        .allocator = std.testing.failing_allocator,
+        .pool_size = 1,
+    });
+    defer payload_pool.deinit();
+
+    const Container = ssz.StructContainerType(struct { value: ssz.BoolType() });
+    try std.testing.expectError(error.OutOfMemory, deserializeTree(Container, &payload_pool, &.{1}));
 }
 
 // Wrap validate with a single error type

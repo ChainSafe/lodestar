@@ -553,7 +553,7 @@ pub const Pool = struct {
         // guaranteed to be zero-bytes by the trailing-zero invariant) so
         // that the resulting subtree's root matches the chunked_leaf's
         // `computeRoot` exactly.
-        var it = FillWithContentsIterator.init(self, ChunkedLeaf.k_log2);
+        var it = SubtreeBuilder.init(self, ChunkedLeaf.k_log2);
         errdefer it.deinit();
         for (0..ChunkedLeaf.K) |i| {
             const leaf = try self.createLeaf(&storage.chunks[i]);
@@ -1751,29 +1751,29 @@ pub const DepthIterator = struct {
 
 /// Incrementally build a tree by appending leaves, filling missing right siblings with zero-nodes.
 /// Matches the behavior of `fillWithContents`, but optimized for incremental appends.
-pub const FillWithContentsIterator = struct {
+pub const SubtreeBuilder = struct {
     pool: *Pool,
     depth: Depth,
     /// Absolute depth, in chunks, of each appended Id. For depth-0 leaves
     /// (chunks) this is 0. For chunked_leaf Ids it is `ChunkedLeaf.k_log2`. Zero fillers
-    /// emitted by `finish()` for missing right siblings at iterator level L
+    /// emitted by `finish()` for missing right siblings at builder level L
     /// must therefore be at absolute depth `L + leaf_offset`.
     leaf_offset: Depth,
     // At each level i, holds either null or the unpaired left node at that level.
     lefts: [max_depth]?Id,
 
-    /// Initialize an iterator where each appended Id is a depth-0 leaf
+    /// Initialize a builder where each appended Id is a depth-0 leaf
     /// (a chunk). Equivalent to `initWithOffset(pool, depth, 0)`.
-    pub fn init(pool: *Pool, depth: Depth) FillWithContentsIterator {
+    pub fn init(pool: *Pool, depth: Depth) SubtreeBuilder {
         return initWithOffset(pool, depth, 0);
     }
 
-    /// Initialize an iterator where each appended Id is a depth-`leaf_offset`
+    /// Initialize a builder where each appended Id is a depth-`leaf_offset`
     /// subtree (e.g. a chunked_leaf Id is a depth-`ChunkedLeaf.k_log2` subtree of K chunks).
     /// Zero fillers in `finish()` use `@enumFromInt(level + leaf_offset)`
     /// so the resulting tree's root is correct under standard SSZ
     /// merkleization at absolute depth `depth + leaf_offset`.
-    pub fn initWithOffset(pool: *Pool, depth: Depth, leaf_offset: Depth) FillWithContentsIterator {
+    pub fn initWithOffset(pool: *Pool, depth: Depth, leaf_offset: Depth) SubtreeBuilder {
         return .{
             .pool = pool,
             .depth = depth,
@@ -1782,10 +1782,10 @@ pub const FillWithContentsIterator = struct {
         };
     }
 
-    /// Clean up references held by the iterator.
+    /// Clean up references held by the builder.
     ///
-    /// This only needs to be called if the iterator is abandoned before `finish` is called.
-    pub fn deinit(self: *FillWithContentsIterator) void {
+    /// This only needs to be called if the builder is abandoned before `finish` is called.
+    pub fn deinit(self: *SubtreeBuilder) void {
         for (self.lefts) |left| {
             if (left) |node_id| {
                 self.pool.unref(node_id);
@@ -1794,7 +1794,7 @@ pub const FillWithContentsIterator = struct {
     }
 
     /// Append a leaf (or subtree root at leaf level). Builds branches incrementally.
-    pub fn append(self: *FillWithContentsIterator, node_id: Id) Error!void {
+    pub fn append(self: *SubtreeBuilder, node_id: Id) Error!void {
         // Bounds check
         if (self.lefts[self.depth] != null) {
             return error.InvalidLength;
@@ -1822,7 +1822,7 @@ pub const FillWithContentsIterator = struct {
     }
 
     /// Finalize the tree, returning the root node. Uses zero-nodes to pad missing right siblings.
-    pub fn finish(self: *FillWithContentsIterator) Error!Id {
+    pub fn finish(self: *SubtreeBuilder) Error!Id {
         if (self.lefts[self.depth]) |root| {
             return root;
         }
@@ -1842,7 +1842,7 @@ pub const FillWithContentsIterator = struct {
         }
 
         // Starting from the lowest non-null, build upwards with zero-nodes.
-        // A missing right sibling at iterator level `level` is a zero subtree
+        // A missing right sibling at builder level `level` is a zero subtree
         // at absolute depth `level + leaf_offset`.
         for (start_level..self.depth) |level| {
             if (self.lefts[level]) |left| {
