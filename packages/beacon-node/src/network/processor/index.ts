@@ -93,11 +93,15 @@ export const MAX_AWAITING_MESSAGES_PER_ROOT: Partial<Record<GossipType, number>>
 /**
  * Track the forwarded peers we already emit to UnknownBlockInput sync.
  * envelopeSlotEmitted: whether the unknownEnvelopeBlockRootSlot event was already emitted for this root.
+ * blockAwaited / payloadAwaited: a message was buffered for this root, so it must expire with this slot even if
+ * no search was emitted (e.g. the block was already seen, then failed validation or import).
  */
 type SearchedRootEntry = {
   blockPeerIds?: Set<PeerIdStr>;
   envelopePeerIds?: Set<PeerIdStr>;
   envelopeSlotEmitted?: boolean;
+  blockAwaited?: boolean;
+  payloadAwaited?: boolean;
 };
 
 /**
@@ -692,6 +696,7 @@ export class NetworkProcessor {
     metric?.queue.inc({topic: topicType});
     this.awaitingMessagesByBlockRoot.getOrDefault(root).getOrDefault(topicType).add(message);
     this.awaitingBlockMessageCount++;
+    this.searchedRootsBySlot.getOrDefault(slot).getOrDefault(root).blockAwaited = true;
   }
 
   /** Payload counterpart of maybeAwaitBlock */
@@ -717,6 +722,7 @@ export class NetworkProcessor {
     metric?.queue.inc({topic: topicType});
     this.awaitingMessagesByPayloadBlockRoot.getOrDefault(root).getOrDefault(topicType).add(message);
     this.awaitingPayloadMessageCount++;
+    this.searchedRootsBySlot.getOrDefault(slot).getOrDefault(root).payloadAwaited = true;
   }
 
   /**
@@ -861,10 +867,10 @@ export class NetworkProcessor {
       if (slot > minSlot) continue;
 
       // expire messages awaiting an unknown block for these roots. Only roots this slot did a BLOCK search
-      // for (blockPeerIds set) have block waits keyed here; skipping the rest avoids deleting a payload wait
-      // that a newer slot created for the same root (block/envelope searches share searchedRootsBySlot).
+      // for or buffered a block wait for have block waits keyed here; skipping the rest avoids deleting a payload
+      // wait that a newer slot created for the same root (block/envelope searches share searchedRootsBySlot).
       for (const [rootHex, entry] of searchedRoots) {
-        if (entry.blockPeerIds === undefined) continue;
+        if (entry.blockPeerIds === undefined && !entry.blockAwaited) continue;
         const messagesByTopic = this.awaitingMessagesByBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
         let removed = 0;
@@ -889,9 +895,9 @@ export class NetworkProcessor {
       }
 
       // expire messages awaiting an unknown payload envelope for these roots. Symmetric to the block pass:
-      // only roots this slot did an ENVELOPE search for (envelopePeerIds set) have payload waits keyed here.
+      // only roots this slot did an ENVELOPE search for or buffered a payload wait for have payload waits keyed here.
       for (const [rootHex, entry] of searchedRoots) {
-        if (entry.envelopePeerIds === undefined) continue;
+        if (entry.envelopePeerIds === undefined && !entry.payloadAwaited) continue;
         const messagesByTopic = this.awaitingMessagesByPayloadBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
         let removed = 0;

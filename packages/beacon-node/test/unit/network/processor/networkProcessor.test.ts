@@ -41,6 +41,8 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   let unknownEnvelopeBlockRootSpy: Mock<(data: unknown) => void>;
   let unknownEnvelopeBlockRootSlotSpy: Mock<(data: unknown) => void>;
   let reportPeerSpy: Mock<(peer: PeerIdStr, action: PeerAction, actionName: string) => void>;
+  let seenBlockSpy: Mock<(root: string) => boolean>;
+  let seenPayloadEnvelopeSpy: Mock<(root: string) => boolean>;
 
   beforeEach(() => {
     emitter = new ChainEventEmitter();
@@ -48,6 +50,8 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     unknownEnvelopeBlockRootSpy = vi.fn();
     unknownEnvelopeBlockRootSlotSpy = vi.fn();
     reportPeerSpy = vi.fn();
+    seenBlockSpy = vi.fn().mockReturnValue(false);
+    seenPayloadEnvelopeSpy = vi.fn().mockReturnValue(false);
     // the unknown-root search (recovery signal to BlockInputSync) is emitted here - our observable surface
     emitter.on(ChainEvent.unknownBlockRoot, (data) => unknownBlockRootSpy(data));
     emitter.on(ChainEvent.unknownEnvelopeBlockRoot, (data) => unknownEnvelopeBlockRootSpy(data));
@@ -62,8 +66,8 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
         getBlockHexAndBlockHash: vi.fn().mockReturnValue(undefined),
         getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
       },
-      seenBlock: vi.fn().mockReturnValue(false),
-      seenPayloadEnvelope: vi.fn().mockReturnValue(false),
+      seenBlock: seenBlockSpy,
+      seenPayloadEnvelope: seenPayloadEnvelopeSpy,
     } as unknown as IBeaconChain;
 
     const modules = {
@@ -383,6 +387,30 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(p.awaitingMessagesByBlockRoot.has(root)).toBe(false);
       // the newer payload wait survives - it belongs to a slot that hasn't expired
       expect(p.awaitingMessagesByPayloadBlockRoot.has(root)).toBe(true);
+    });
+
+    it("expires messages held for a block that was seen but never imported", () => {
+      // the block is already seen (e.g. still being validated), so it is not looked up, but messages are held
+      seenBlockSpy.mockReturnValue(true);
+      processAggregate(1);
+      processAggregate(1);
+      expect(bufferedBlockCount()).toBe(2);
+
+      // the block then fails validation or import: no block event, and it is not seen anymore
+      seenBlockSpy.mockReturnValue(false);
+      (processor as unknown as Internals).onClockSlot(clockSlot + 4);
+      expect(bufferedBlockCount()).toBe(0);
+    });
+
+    it("expires messages held for a payload that was seen but never imported", () => {
+      const p = processor as unknown as Internals;
+      seenPayloadEnvelopeSpy.mockReturnValue(true);
+      processGloasAggregatePayloadPresent(2);
+      expect(p.awaitingPayloadMessageCount).toBe(1);
+
+      seenPayloadEnvelopeSpy.mockReturnValue(false);
+      p.onClockSlot(clockSlot + 4);
+      expect(p.awaitingPayloadMessageCount).toBe(0);
     });
   });
 
