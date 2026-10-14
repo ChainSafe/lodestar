@@ -1,10 +1,10 @@
-import {ByteListType, ContainerType, ProgressiveContainerType} from "@chainsafe/ssz";
+import {ContainerType, ProgressiveByteListType, ProgressiveContainerType} from "@chainsafe/ssz";
 import {MAX_PROOF_SIZE} from "@lodestar/params";
 import * as primitiveSsz from "../primitive/sszTypes.js";
 
 const {BLSSignature, Root, Uint8, Uint16, UintNum64, ValidatorIndex} = primitiveSsz;
 
-export const ProofData = new ByteListType(MAX_PROOF_SIZE);
+export const ProofData = new ProgressiveByteListType({typeName: "ProofData", limit: MAX_PROOF_SIZE});
 export const ProofType = Uint8;
 
 export const PublicInput = new ProgressiveContainerType(
