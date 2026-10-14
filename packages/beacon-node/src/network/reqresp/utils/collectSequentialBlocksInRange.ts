@@ -2,6 +2,10 @@ import {ResponseIncoming} from "@lodestar/reqresp";
 import {SignedBeaconBlock, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {SerializedCache} from "../../../util/serializedCache.js";
+import {
+  MAX_DESERIALIZED_TRANSACTIONS_PER_PAYLOAD,
+  getTransactionsCountFromSignedBeaconBlockSerialized,
+} from "../../../util/sszBytes.js";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 import {sszDeserializeResponse} from "./collect.js";
 
@@ -18,6 +22,15 @@ export async function collectSequentialBlocksInRange(
 
   for await (const chunk of blockStream) {
     const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, chunk.protocolVersion);
+
+    // Reject before value-decoding: an unverified block filled with transactions forces one
+    // allocation per transaction, so a peer could otherwise drive main-thread heap with a single
+    // batch. See MAX_DESERIALIZED_TRANSACTIONS_PER_PAYLOAD.
+    const transactionsCount = getTransactionsCountFromSignedBeaconBlockSerialized(blockType, chunk.data);
+    if (transactionsCount !== null && transactionsCount > MAX_DESERIALIZED_TRANSACTIONS_PER_PAYLOAD) {
+      throw new BlocksByRangeError({code: BlocksByRangeErrorCode.TOO_MANY_TRANSACTIONS, transactionsCount});
+    }
+
     const block = sszDeserializeResponse(blockType, chunk.data);
 
     const blockSlot = block.message.slot;
@@ -51,11 +64,13 @@ export enum BlocksByRangeErrorCode {
   UNDER_START_SLOT = "BLOCKS_BY_RANGE_ERROR_UNDER_START_SLOT",
   OVER_MAX_SLOT = "BLOCKS_BY_RANGE_ERROR_OVER_MAX_SLOT",
   BAD_SEQUENCE = "BLOCKS_BY_RANGE_ERROR_BAD_SEQUENCE",
+  TOO_MANY_TRANSACTIONS = "BLOCKS_BY_RANGE_ERROR_TOO_MANY_TRANSACTIONS",
 }
 
 type BlocksByRangeErrorType =
   | {code: BlocksByRangeErrorCode.UNDER_START_SLOT}
   | {code: BlocksByRangeErrorCode.OVER_MAX_SLOT}
-  | {code: BlocksByRangeErrorCode.BAD_SEQUENCE};
+  | {code: BlocksByRangeErrorCode.BAD_SEQUENCE}
+  | {code: BlocksByRangeErrorCode.TOO_MANY_TRANSACTIONS; transactionsCount: number};
 
 export class BlocksByRangeError extends LodestarError<BlocksByRangeErrorType> {}

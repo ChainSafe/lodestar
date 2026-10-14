@@ -56,6 +56,7 @@ import {
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromSignedExecutionPayloadBidSerialized,
   getSlotFromSingleAttestationSerialized,
+  getTransactionsCountFromSignedBeaconBlockSerialized,
 } from "../../../src/util/sszBytes.js";
 import {generateRandomBlob} from "../../utils/kzg.js";
 
@@ -466,6 +467,54 @@ describe("getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized", () => {
 
     expect(blobsCount).toBe(blobs.length);
   });
+});
+
+describe("getTransactionsCountFromSignedBeaconBlockSerialized", () => {
+  const config = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 5,
+    ELECTRA_FORK_EPOCH: 10,
+    FULU_FORK_EPOCH: 15,
+    GLOAS_FORK_EPOCH: 20,
+  });
+
+  function blockBytesWithTransactions(slot: number, count: number): Uint8Array {
+    const Type = config.getForkTypes(slot).SignedBeaconBlock;
+    const block = Type.defaultValue() as deneb.SignedBeaconBlock;
+    block.message.slot = slot;
+    block.message.body.executionPayload.transactions = Array.from({length: count}, () => new Uint8Array(0));
+    return Type.serialize(block);
+  }
+
+  it("returns null pre-bellatrix (no execution payload)", () => {
+    const Type = ssz.phase0.SignedBeaconBlock;
+    const bytes = Type.serialize(Type.defaultValue());
+    expect(getTransactionsCountFromSignedBeaconBlockSerialized(Type, bytes)).toBeNull();
+  });
+
+  it("returns null for gloas (transactions moved to the envelope)", () => {
+    const slot = computeStartSlotAtEpoch(20);
+    const Type = config.getForkTypes(slot).SignedBeaconBlock;
+    const bytes = Type.serialize(Type.defaultValue());
+    expect(getTransactionsCountFromSignedBeaconBlockSerialized(Type, bytes)).toBeNull();
+  });
+
+  for (const [fork, epoch] of [
+    ["deneb", 5],
+    ["electra", 10],
+    ["fulu", 15],
+  ] as const) {
+    for (const count of [0, 1, 5, 123]) {
+      it(`counts ${count} transactions for ${fork}`, () => {
+        const slot = computeStartSlotAtEpoch(epoch);
+        const Type = config.getForkTypes(slot).SignedBeaconBlock;
+        const bytes = blockBytesWithTransactions(slot, count);
+        expect(getTransactionsCountFromSignedBeaconBlockSerialized(Type, bytes)).toBe(count);
+      });
+    }
+  }
 });
 
 describe("BeaconState ssz serialized picking", () => {

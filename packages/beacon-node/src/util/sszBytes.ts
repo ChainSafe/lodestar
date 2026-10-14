@@ -1,4 +1,4 @@
-import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
+import {BitArray, ContainerType, Type, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   BYTES_PER_CELL,
@@ -881,4 +881,60 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
   const start = messageRange.start + bodyRange.start + kzgCommitmentsRange.start;
 
   return Math.round(((end > blockBytes.byteLength ? blockBytes.byteLength : end) - start) / commitmentSize);
+}
+
+/**
+ * A client-local cap on the number of transactions accepted in an execution payload before a block
+ * from an untrusted peer is value-decoded (range/root sync, gossip).
+ *
+ * The spec `MAX_TRANSACTIONS_PER_PAYLOAD` (1048576) sets the SSZ list limit and merkle depth and
+ * must not change, but ssz allocates one `Uint8Array` per transaction on value-decode, so a block
+ * filled to the spec cap forces ~1M allocations (~200 MiB) from ~4 MiB on the wire, before any
+ * validation. A valid block can never approach this: at 21000 gas minimum per transaction even a
+ * 1B-gas block (far above any planned gas limit) holds under 50000 transactions, so this bound does
+ * not bind on a real chain while cutting the worst-case allocation ~4x.
+ */
+export const MAX_DESERIALIZED_TRANSACTIONS_PER_PAYLOAD = 2 ** 18;
+
+const SIGNED_BEACON_BLOCK_TO_TRANSACTIONS_PATH = ["message", "body", "executionPayload", "transactions"] as const;
+
+/**
+ * Read the number of transactions in a serialized block's execution payload without value-decoding
+ * the transactions. Navigates the SSZ offset chain
+ * SignedBeaconBlock → message → body → executionPayload → transactions and derives the count from
+ * the transactions list's first offset (count = firstOffset / VARIABLE_FIELD_OFFSET).
+ *
+ * Returns null when the path is absent, i.e. pre-bellatrix blocks (no execution payload) and gloas
+ * and later, where transactions live in SignedExecutionPayloadEnvelope rather than the block.
+ */
+export function getTransactionsCountFromSignedBeaconBlockSerialized(
+  blockType: Type<unknown>,
+  blockBytes: Uint8Array
+): number | null {
+  const view = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
+
+  let type: Type<unknown> = blockType;
+  let start = 0;
+  let end = blockBytes.length;
+
+  for (const fieldName of SIGNED_BEACON_BLOCK_TO_TRANSACTIONS_PATH) {
+    if (!(type instanceof ContainerType)) return null;
+    const index = Object.keys(type.fields).indexOf(fieldName);
+    if (index < 0) return null;
+    const range = type.getFieldRanges(view, start, end)[index];
+    const fieldStart = start + range.start;
+    const fieldEnd = start + range.end;
+
+    if (fieldName === "transactions") {
+      // Empty list serializes to zero bytes; otherwise the first offset divided by the offset size
+      // is the element count.
+      return fieldEnd <= fieldStart ? 0 : view.getUint32(fieldStart, true) / VARIABLE_FIELD_OFFSET;
+    }
+
+    type = type.fields[fieldName];
+    start = fieldStart;
+    end = fieldEnd;
+  }
+
+  return null;
 }

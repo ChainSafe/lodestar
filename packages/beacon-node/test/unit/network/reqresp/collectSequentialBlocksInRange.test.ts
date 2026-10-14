@@ -7,6 +7,7 @@ import {
   BlocksByRangeErrorCode,
   collectSequentialBlocksInRange,
 } from "../../../../src/network/reqresp/utils/collectSequentialBlocksInRange.js";
+import {MAX_DESERIALIZED_TRANSACTIONS_PER_PAYLOAD} from "../../../../src/util/sszBytes.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 
 describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRange", () => {
@@ -84,4 +85,23 @@ describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRan
       yield {data: ssz.phase0.SignedBeaconBlock.serialize(item), fork: ForkName.phase0, protocolVersion: 1};
     }
   }
+
+  it("rejects a block carrying more transactions than the decode cap before decoding it", async () => {
+    async function* source(count: number): AsyncGenerator<ResponseIncoming> {
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      block.message.body.executionPayload.transactions = Array.from({length: count}, () => new Uint8Array(0));
+      yield {data: ssz.fulu.SignedBeaconBlock.serialize(block), fork: ForkName.fulu, protocolVersion: 2};
+    }
+
+    await expectRejectedWithLodestarError(
+      collectSequentialBlocksInRange(source(MAX_DESERIALIZED_TRANSACTIONS_PER_PAYLOAD + 1), {startSlot: 1, count: 1}),
+      new BlocksByRangeError({
+        code: BlocksByRangeErrorCode.TOO_MANY_TRANSACTIONS,
+        transactionsCount: MAX_DESERIALIZED_TRANSACTIONS_PER_PAYLOAD + 1,
+      })
+    );
+
+    await expect(collectSequentialBlocksInRange(source(1), {startSlot: 1, count: 1})).resolves.toBeDefined();
+  });
 });
