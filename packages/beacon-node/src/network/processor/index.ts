@@ -731,7 +731,10 @@ export class NetworkProcessor {
   private tooManySearchedRoots(slot: Slot, root: RootHex): boolean {
     const roots = this.searchedRootsBySlot.get(slot);
     if (roots === undefined) return false;
-    return !roots.has(root) && roots.size >= MAX_SEARCHED_ROOTS_PER_SLOT;
+    // an entry only created to expire buffered messages (blockAwaited / payloadAwaited) is not a search
+    const entry = roots.get(root);
+    const searched = entry?.blockPeerIds !== undefined || entry?.envelopePeerIds !== undefined;
+    return !searched && roots.size >= MAX_SEARCHED_ROOTS_PER_SLOT;
   }
 
   /**

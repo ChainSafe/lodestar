@@ -255,6 +255,21 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(unknownBlockRootSpy).toHaveBeenCalledTimes(MAX_SEARCHED_ROOTS_PER_SLOT);
     });
 
+    it("does not look up a held block past the limit when it is sent again", () => {
+      // the lookup limit is already used up by lookups that hold nothing (e.g. unknown parents of gossip blocks)
+      const searchedRoots = (
+        processor as unknown as {searchedRootsBySlot: MapDef<number, MapDef<string, {blockPeerIds?: Set<string>}>>}
+      ).searchedRootsBySlot.getOrDefault(clockSlot);
+      for (let i = 0; i < MAX_SEARCHED_ROOTS_PER_SLOT; i++) {
+        searchedRoots.getOrDefault(`0xparent${i}`).blockPeerIds = new Set();
+      }
+      // a message for another unknown block is still held, but the block is not looked up, also not when sent again
+      processAggregate(1);
+      processAggregate(1);
+      expect(bufferedBlockCount()).toBe(2);
+      expect(unknownBlockRootSpy).not.toHaveBeenCalled();
+    });
+
     it("looks up a block only once, no matter how many messages point at it", () => {
       processAggregate(1);
       processAggregate(1); // another message for the same unknown block
