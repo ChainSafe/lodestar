@@ -182,14 +182,14 @@ zig build run:download_era_files
 zig build test:int
 
 # Representative benchmarks
-zig build run:bench_ssz_attestation -Doptimize=ReleaseSafe
-zig build run:bench_ssz_block -Doptimize=ReleaseSafe
-zig build run:bench_ssz_state -Doptimize=ReleaseSafe
-zig build run:bench_hashing -Doptimize=ReleaseSafe
-zig build run:bench_merkle_node -Doptimize=ReleaseSafe
-zig build run:bench_merkle_gindex -Doptimize=ReleaseSafe
-zig build run:bench_process_block -Doptimize=ReleaseSafe
-zig build run:bench_process_epoch -Doptimize=ReleaseSafe
+zig build run:bench_ssz_attestation -Doptimize=ReleaseSafe -Dcpu=baseline
+zig build run:bench_ssz_block -Doptimize=ReleaseSafe -Dcpu=baseline
+zig build run:bench_ssz_state -Doptimize=ReleaseSafe -Dcpu=baseline
+zig build run:bench_hashing -Doptimize=ReleaseSafe -Dcpu=baseline
+zig build run:bench_merkle_node -Doptimize=ReleaseSafe -Dcpu=baseline
+zig build run:bench_merkle_gindex -Doptimize=ReleaseSafe -Dcpu=baseline
+zig build run:bench_process_block -Doptimize=ReleaseSafe -Dcpu=baseline
+zig build run:bench_process_epoch -Doptimize=ReleaseSafe -Dcpu=baseline
 ```
 
 ## Code style
