@@ -326,6 +326,15 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   // `prepareForNextSlot` is a real BeaconEngine method too; `recomputeForkChoiceHead` / `predictProposerHead`
   // stay as mock fns above so tests can control head selection.
   for (const name of [
+    "getLightClientServer",
+    "getLightClientBootstrap",
+    "getLightClientUpdate",
+    "getLightClientOptimisticUpdate",
+    "getLightClientFinalityUpdate",
+    "getLightClientCommitteeRoot",
+    "pruneLightClientNonCheckpointData",
+    "validateGossipLightClientOptimisticUpdate",
+    "validateGossipLightClientFinalityUpdate",
     "verifyBlocks",
     "validateApiBlock",
     "observeVerifiedBlocks",

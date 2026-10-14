@@ -138,7 +138,6 @@ export class ArchiveStore {
         this.db,
         this.chain.beaconEngine,
         this.chain.getFinalizedBlockSnapshot(finalized.rootHex),
-        this.chain.lightClientServer,
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,

@@ -67,8 +67,6 @@ import {
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {GossipAttestation, toElectraSingleAttestation} from "../../chain/validation/index.js";
-import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
-import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -1212,8 +1210,9 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.light_client_finality_update>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const lightClientFinalityUpdate = sszDeserialize(topic, serializedData);
-        validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+        unwrapGossipResult(
+          await chain.beaconEngine.validateGossipLightClientFinalityUpdate(serializedData, topic.boundary.fork)
+        );
       });
     },
 
@@ -1223,8 +1222,9 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.light_client_optimistic_update>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
-        const lightClientOptimisticUpdate = sszDeserialize(topic, serializedData);
-        validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
+        unwrapGossipResult(
+          await chain.beaconEngine.validateGossipLightClientOptimisticUpdate(serializedData, topic.boundary.fork)
+        );
       });
     },
 

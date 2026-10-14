@@ -20,7 +20,6 @@ import {BlockSerializedCache} from "../chain/blocks/blockSerializedCache.js";
 import {ChainEventEmitter} from "../chain/emitter.js";
 import {BeaconChain, IBeaconChain} from "../chain/index.js";
 import {initBeaconMetrics} from "../chain/initState.js";
-import {LightClientServer} from "../chain/lightClient/index.js";
 import {DbCPStateDatastore} from "../chain/stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "../chain/stateCache/datastore/file.js";
 import {StateInitialization} from "../chain/stateInitialization.js";
@@ -235,20 +234,6 @@ export class BeaconNode {
       initialCustodyGroupCount,
     });
 
-    // TODO - beacon engine: move LightClientServer into the engine and expose data-only queries/events
-    // before introducing a worker; the facade currently shares this state-consuming service.
-    const lightClientServer = opts.chain.disableLightClientServer
-      ? undefined
-      : new LightClientServer(opts.chain, {
-          config,
-          clock,
-          db,
-          metrics,
-          emitter,
-          logger: chainLogger,
-          signal: chainController.signal,
-        });
-
     const executionEngine = initializeExecutionEngine(executionEngineOpts, {
       metrics,
       signal,
@@ -282,7 +267,6 @@ export class BeaconNode {
       signal: chainController.signal,
       emitter,
       cpStateDatastore,
-      lightClientServer,
       executionEngine,
       executionBuilder,
       builderApiClientOpts: {
@@ -330,7 +314,6 @@ export class BeaconNode {
       emitter,
       cpStateDatastore,
       custodyConfig,
-      lightClientServer,
       anchor,
       earliestAvailableSlot,
       builderApiClient: beaconEngine.builderApiClient,

@@ -62,7 +62,6 @@ import {ChainViewBlock, ChainViewUpdate, IChainView} from "./chainView/interface
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
-import {LightClientServer} from "./lightClient/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {ProduceResult} from "./produceBlock/index.js";
@@ -119,7 +118,6 @@ export type BeaconChainModules = {
   emitter: ChainEventEmitter;
   cpStateDatastore: CPStateDatastore;
   custodyConfig: CustodyConfig;
-  lightClientServer?: LightClientServer;
 };
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
@@ -145,7 +143,6 @@ export class BeaconChain implements IBeaconChain {
   private readonly chainView: ChainView;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
-  readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
   readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput], void>;
@@ -219,7 +216,6 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       cpStateDatastore,
       custodyConfig,
-      lightClientServer,
     } = modules;
     this.opts = opts;
     this.config = config;
@@ -250,7 +246,6 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
-    this.lightClientServer = lightClientServer;
     this.beaconEngine = beaconEngine;
     // TODO - beacon engine: replace shared builder HTTP client when the worker transport is introduced.
     this.builderApiClient = modules.builderApiClient;

@@ -4,7 +4,7 @@ import {MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, MAX_REQUEST_LIGHT_CLIENT_UPDA
 import type {LightClientUpdate} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {LightClientServerError, LightClientServerErrorCode} from "../../../chain/errors/lightClientError.js";
-import {assertLightClientServer} from "../../../node/utils/lightclient.js";
+import {assertLightClientServerEnabled} from "../../../node/utils/lightclient.js";
 import {ApiModules} from "../types.js";
 // TODO: Import from lightclient/server package
 
@@ -14,15 +14,14 @@ export function getLightclientApi({
 }: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.lightclient.Endpoints> {
   return {
     async getLightClientUpdatesByRange({startPeriod, count}) {
-      const lightClientServer = chain.lightClientServer;
-      assertLightClientServer(lightClientServer);
+      assertLightClientServerEnabled(chain.opts.disableLightClientServer);
 
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
       const updates: LightClientUpdate[] = [];
       for (let i = 0; i < maxAllowedCount; i++) {
         try {
-          const update = await lightClientServer.getUpdate(startPeriod + i);
-          updates.push(update);
+          const update = await chain.beaconEngine.getLightClientUpdate(startPeriod + i);
+          updates.push(config.getPostAltairForkTypes(update.slot).LightClientUpdate.deserialize(update.data));
         } catch (e) {
           if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
             // Period not available, if we already have results, stop to preserve
@@ -41,40 +40,56 @@ export function getLightclientApi({
       };
     },
 
-    async getLightClientOptimisticUpdate() {
-      assertLightClientServer(chain.lightClientServer);
+    async getLightClientOptimisticUpdate(_args, context) {
+      assertLightClientServerEnabled(chain.opts.disableLightClientServer);
 
-      const update = chain.lightClientServer.getOptimisticUpdate();
+      const update = await chain.beaconEngine.getLightClientOptimisticUpdate();
       if (update === null) {
         throw Error("No optimistic update available");
       }
-      return {data: update, meta: {version: config.getForkName(update.attestedHeader.beacon.slot)}};
+      return {
+        data: context?.returnBytes
+          ? update.data
+          : config.getPostAltairForkTypes(update.slot).LightClientOptimisticUpdate.deserialize(update.data),
+        meta: {version: config.getForkName(update.slot)},
+      };
     },
 
-    async getLightClientFinalityUpdate() {
-      assertLightClientServer(chain.lightClientServer);
+    async getLightClientFinalityUpdate(_args, context) {
+      assertLightClientServerEnabled(chain.opts.disableLightClientServer);
 
-      const update = chain.lightClientServer.getFinalityUpdate();
+      const update = await chain.beaconEngine.getLightClientFinalityUpdate();
       if (update === null) {
         throw Error("No finality update available");
       }
-      return {data: update, meta: {version: config.getForkName(update.attestedHeader.beacon.slot)}};
+      return {
+        data: context?.returnBytes
+          ? update.data
+          : config.getPostAltairForkTypes(update.slot).LightClientFinalityUpdate.deserialize(update.data),
+        meta: {version: config.getForkName(update.slot)},
+      };
     },
 
-    async getLightClientBootstrap({blockRoot}) {
-      assertLightClientServer(chain.lightClientServer);
+    async getLightClientBootstrap({blockRoot}, context) {
+      assertLightClientServerEnabled(chain.opts.disableLightClientServer);
 
-      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHex(blockRoot));
-      return {data: bootstrapProof, meta: {version: config.getForkName(bootstrapProof.header.beacon.slot)}};
+      const bootstrapProof = await chain.beaconEngine.getLightClientBootstrap(fromHex(blockRoot));
+      return {
+        data: context?.returnBytes
+          ? bootstrapProof.data
+          : config.getPostAltairForkTypes(bootstrapProof.slot).LightClientBootstrap.deserialize(bootstrapProof.data),
+        meta: {version: config.getForkName(bootstrapProof.slot)},
+      };
     },
 
     async getLightClientCommitteeRoot({startPeriod, count}) {
-      const lightClientServer = chain.lightClientServer;
-      assertLightClientServer(lightClientServer);
+      assertLightClientServerEnabled(chain.opts.disableLightClientServer);
 
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
-      const committeeHashes = await Promise.all(periods.map((period) => lightClientServer.getCommitteeRoot(period)));
+      const committeeHashes = await Promise.all(
+        periods.map((period) => chain.beaconEngine.getLightClientCommitteeRoot(period))
+      );
       return {data: committeeHashes};
     },
   };

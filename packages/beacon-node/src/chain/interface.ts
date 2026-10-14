@@ -40,7 +40,6 @@ import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {IChainView} from "./chainView/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
-import {LightClientServer} from "./lightClient/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {ReprocessController} from "./reprocess.js";
@@ -86,7 +85,6 @@ export interface IBeaconChain extends IChainView {
   readonly bls: IBlsVerifier;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
-  readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly pubkeyCache: PubkeyCache;
   readonly archiveStore: IArchiveStore;

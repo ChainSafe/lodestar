@@ -2,7 +2,6 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
 import {IBeaconEngineOptions} from "./beaconEngine/options.js";
-import {LightClientServerOpts} from "./lightClient/index.js";
 import {DEFAULT_MAX_BLOCK_STATES} from "./stateCache/fifoBlockStateCache.js";
 import {
   DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
@@ -15,8 +14,7 @@ export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
 export type IChainOptions = IBeaconEngineOptions &
   BlockProcessOpts &
   ArchiveStoreOpts &
-  ValidatorMonitorOpts &
-  LightClientServerOpts & {
+  ValidatorMonitorOpts & {
     /** Use separate BeaconEngine caches and message decoding. Worker thread transport is still pending. */
     beaconEngineWorker?: boolean;
     blacklistedBlocks?: string[];

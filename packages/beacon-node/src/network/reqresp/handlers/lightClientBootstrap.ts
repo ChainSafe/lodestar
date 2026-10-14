@@ -8,18 +8,16 @@ import {
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
-import {assertLightClientServer} from "../../../node/utils/lightclient.js";
-import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
+import {assertLightClientServerEnabled} from "../../../node/utils/lightclient.js";
 
 export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
-  assertLightClientServer(chain.lightClientServer);
+  assertLightClientServerEnabled(chain.opts.disableLightClientServer);
 
   try {
-    const bootstrap = await chain.lightClientServer.getBootstrap(requestBody);
-    const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(bootstrap.header.beacon.slot));
-    const type = responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap](boundary.fork, 0);
+    const bootstrap = await chain.beaconEngine.getLightClientBootstrap(requestBody);
+    const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(bootstrap.slot));
     yield {
-      data: type.serialize(bootstrap),
+      data: bootstrap.data,
       boundary,
     };
   } catch (e) {

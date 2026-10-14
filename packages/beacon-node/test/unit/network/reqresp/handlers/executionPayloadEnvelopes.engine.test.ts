@@ -146,7 +146,6 @@ describe("facade execution payload envelope serving", () => {
       db,
       chain.beaconEngine,
       chain.getFinalizedBlockSnapshot(rootHex),
-      undefined,
       chain.logger,
       {epoch: 1, root, rootHex},
       1,

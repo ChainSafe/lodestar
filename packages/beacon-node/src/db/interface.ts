@@ -31,8 +31,8 @@ import {
  * but instead expose relevant beacon chain objects.
  *
  * Ownership is split by owner (BeaconEngine seam): `IBeaconEngineDb` holds the consensus stores the
- * engine owns (blocks, states, checkpoint states, envelopes, op-pool persistence); `IBeaconChainDb`
- * retains read access to blocks and envelopes, plus the DA + light-client + backfill stores the facade owns. `IBeaconDb` is their composition, held
+ * engine owns (blocks, states, checkpoint states, envelopes, op-pool persistence, light-client data); `IBeaconChainDb`
+ * retains read access to blocks and envelopes, plus the DA stores the facade owns. `IBeaconDb` is their composition, held
  * only by the bootstrap (CLI / `BeaconNode`).
  */
 export interface IBeaconEngineDb {
@@ -56,6 +56,12 @@ export interface IBeaconEngineDb {
   proposerPreferences: ProposerPreferencesRepository;
   attesterSlashing: AttesterSlashingRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
+
+  // lightclient
+  bestLightClientUpdate: BestLightClientUpdateRepository;
+  checkpointHeader: CheckpointHeaderRepository;
+  syncCommittee: SyncCommitteeRepository;
+  syncCommitteeWitness: SyncCommitteeWitnessRepository;
 }
 
 export interface IBeaconChainDb {
@@ -83,12 +89,6 @@ export interface IBeaconChainDb {
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
   dataColumnSidecar: DataColumnSidecarRepository;
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
-
-  // lightclient
-  bestLightClientUpdate: BestLightClientUpdateRepository;
-  checkpointHeader: CheckpointHeaderRepository;
-  syncCommittee: SyncCommitteeRepository;
-  syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   dataColumns: IDataColumnStore;
   /** Highest legacy column slot at startup; later archival writes the block-root index first. */

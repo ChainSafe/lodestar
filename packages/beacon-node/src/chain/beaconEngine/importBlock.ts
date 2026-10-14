@@ -366,8 +366,6 @@ export async function importBlock(
       callInNextEventLoop(() => {
         try {
           if (isStatePostAltair(postState)) {
-            // TODO - beacon engine: move LightClientServer into the engine and expose data-only queries/events
-            // before introducing a worker; this shared service currently receives a live state view.
             this.lightClientServer?.onImportBlockHead(
               block.message as BeaconBlock<ForkPostAltair>,
               postState,

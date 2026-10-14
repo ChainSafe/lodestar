@@ -2,11 +2,9 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
-import {RequiredSelective} from "@lodestar/utils";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
-import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateLightClientFinalityUpdate} from "../../../../src/chain/validation/lightClientFinalityUpdate.js";
-import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
 describe("Light Client Finality Update validation", () => {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -30,7 +28,7 @@ describe("Light Client Finality Update validation", () => {
     }
   });
 
-  function mockChain(): RequiredSelective<IBeaconChain, "lightClientServer"> {
+  function mockChain(): MockedBeaconChain {
     const chain = getMockedBeaconChain();
     return chain;
   }
@@ -49,7 +47,12 @@ describe("Light Client Finality Update validation", () => {
     });
 
     expect(() => {
-      validateLightClientFinalityUpdate(config, chain, lightclientFinalityUpdate);
+      validateLightClientFinalityUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getFinalityUpdate(),
+        lightclientFinalityUpdate
+      );
     }).toThrow(LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED);
   });
 
@@ -69,7 +72,12 @@ describe("Light Client Finality Update validation", () => {
     vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(0);
 
     expect(() => {
-      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+      validateLightClientFinalityUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getFinalityUpdate(),
+        lightClientFinalityUpdate
+      );
     }).toThrow(LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY);
   });
 
@@ -92,7 +100,12 @@ describe("Light Client Finality Update validation", () => {
     vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     expect(() => {
-      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+      validateLightClientFinalityUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getFinalityUpdate(),
+        lightClientFinalityUpdate
+      );
     }).toThrow(LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL);
   });
 
@@ -115,7 +128,12 @@ describe("Light Client Finality Update validation", () => {
     // latestForwardedFinalitySlot will be -1
 
     expect(() => {
-      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+      validateLightClientFinalityUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getFinalityUpdate(),
+        lightClientFinalityUpdate
+      );
     }).toThrow(LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL);
   });
 
@@ -148,7 +166,12 @@ describe("Light Client Finality Update validation", () => {
     });
 
     expect(() => {
-      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+      validateLightClientFinalityUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getFinalityUpdate(),
+        lightClientFinalityUpdate
+      );
     }).not.toThrow("Expected validateLightClientFinalityUpdate not to throw");
   });
 });

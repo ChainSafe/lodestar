@@ -29,7 +29,6 @@ describe("block archiver task", () => {
   let engine: IBeaconEngine;
   let dbStub: MockedBeaconDb;
   let forkChoiceStub: MockedBeaconChain["forkChoice"];
-  let lightclientServer: MockedBeaconChain["lightClientServer"];
 
   function snapshot() {
     const {ancestors, nonAncestors} = forkChoiceStub.getAllAncestorAndNonAncestorBlocksDefaultStatus(ZERO_HASH_HEX);
@@ -46,7 +45,6 @@ describe("block archiver task", () => {
       rootHex: ZERO_HASH_HEX,
     });
     forkChoiceStub.getHead.mockReturnValue(generateProtoBlock({slot: 0}));
-    lightclientServer = chain.lightClientServer;
     // Exercise the owning engine's persistence adapters against the same upstream DB fixtures.
     const context = {
       config: defaultConfig,
@@ -55,8 +53,12 @@ describe("block archiver task", () => {
       clock: chain.clock,
       logger,
       opts: {},
+      lightClientServer: chain.lightClientServer,
     };
     engine = {
+      pruneLightClientNonCheckpointData: BeaconEngine.prototype.pruneLightClientNonCheckpointData.bind(
+        context as unknown as BeaconEngine
+      ),
       migrateExecutionPayloadEnvelopes: BeaconEngine.prototype.migrateExecutionPayloadEnvelopes.bind(
         context as unknown as BeaconEngine
       ),
@@ -105,7 +107,6 @@ describe("block archiver task", () => {
       dbStub,
       engine,
       snapshot(),
-      lightclientServer,
       logger,
       {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
       currentEpoch
@@ -171,7 +172,6 @@ describe("block archiver task", () => {
       dbStub,
       engine,
       snapshot(),
-      lightclientServer,
       logger,
       {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
       2
@@ -230,7 +230,6 @@ describe("block archiver task", () => {
       dbStub,
       engine,
       snapshot(),
-      lightclientServer,
       logger,
       {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
       1
@@ -273,7 +272,6 @@ describe("block archiver task", () => {
       dbStub,
       engine,
       snapshot(),
-      lightclientServer,
       logger,
       {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
       8
@@ -300,7 +298,6 @@ describe("block archiver task", () => {
       dbStub,
       engine,
       snapshot(),
-      lightclientServer,
       logger,
       {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
       1
@@ -329,7 +326,6 @@ describe("block archiver task", () => {
         dbStub,
         engine,
         snapshot(),
-        lightclientServer,
         logger,
         {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
         8
@@ -376,7 +372,6 @@ describe("block archiver task", () => {
         dbStub,
         engine,
         snapshot(),
-        lightclientServer,
         logger,
         {
           epoch: currentEpoch,

@@ -1,6 +1,7 @@
 import {StatesArchiveOpts} from "../archiveStore/interface.js";
 import {BlsMultiThreadWorkerPoolOptions} from "../bls/index.js";
 import {ForkChoiceOpts} from "../forkChoice/index.js";
+import {LightClientServerOpts} from "../lightClient/index.js";
 import {ShufflingCacheOpts} from "../shufflingCache.js";
 import {FIFOBlockStateCacheOpts} from "../stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCacheOpts} from "../stateCache/persistentCheckpointsCache.js";
@@ -30,6 +31,7 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
   PersistentCheckpointStateCacheOpts &
   ForkChoiceOpts &
   StatesArchiveOpts &
+  LightClientServerOpts &
   BlsMultiThreadWorkerPoolOptions & {
     /**
      * Used to connect beacon in follow mode to an EL,

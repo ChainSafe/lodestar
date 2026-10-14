@@ -9,14 +9,13 @@ import {
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {altair} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
-import {assertLightClientServer} from "../../../node/utils/lightclient.js";
-import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
+import {assertLightClientServerEnabled} from "../../../node/utils/lightclient.js";
 
 export async function* onLightClientUpdatesByRange(
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
 ): AsyncIterable<ResponseOutgoing> {
-  assertLightClientServer(chain.lightClientServer);
+  assertLightClientServerEnabled(chain.opts.disableLightClientServer);
 
   const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
   if (!Number.isSafeInteger(requestBody.startPeriod)) {
@@ -26,12 +25,11 @@ export async function* onLightClientUpdatesByRange(
   for (let i = 0; i < count; i++) {
     const period = requestBody.startPeriod + i;
     try {
-      const update = await chain.lightClientServer.getUpdate(period);
-      const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.attestedHeader.beacon.slot));
-      const type = responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange](boundary.fork, 0);
+      const update = await chain.beaconEngine.getLightClientUpdate(period);
+      const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.slot));
 
       yield {
-        data: type.serialize(update),
+        data: update.data,
         boundary,
       };
       started = true;

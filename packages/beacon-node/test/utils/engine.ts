@@ -7,7 +7,6 @@ import {BeaconEngine} from "../../src/chain/beaconEngine/index.js";
 import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BeaconChainModules} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
-import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {IChainOptions} from "../../src/chain/options.js";
 import {DbCPStateDatastore} from "../../src/chain/stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "../../src/chain/stateCache/datastore/file.js";
@@ -28,7 +27,6 @@ export type TestBeaconEngineModules = Omit<
   | "emitter"
   | "cpStateDatastore"
   | "custodyConfig"
-  | "lightClientServer"
   | "builderApiClient"
   | "serializedCache"
   | "blockSerializedCache"
@@ -85,12 +83,6 @@ export function createTestBeaconEngine(
     initialCustodyGroupCount,
   });
 
-  // lightClientServer proof-gen is engine-owned; created here (depends on nothing from the engine)
-  // and injected at construction.
-  const lightClientServer = opts.disableLightClientServer
-    ? undefined
-    : new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
-
   const serializedCache = new SerializedCache({cacheDeserialized: !opts.beaconEngineWorker});
   const blockSerializedCache = new BlockSerializedCache(config);
   const beaconEngine = new BeaconEngine({
@@ -113,7 +105,6 @@ export function createTestBeaconEngine(
     db,
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
-    lightClientServer,
   });
   return {
     ...modules,
@@ -125,6 +116,5 @@ export function createTestBeaconEngine(
     emitter,
     cpStateDatastore,
     custodyConfig,
-    lightClientServer,
   };
 }

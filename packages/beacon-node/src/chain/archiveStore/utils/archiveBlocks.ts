@@ -8,7 +8,6 @@ import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodest
 import {IBeaconChainDb} from "../../../db/index.js";
 import type {IBeaconEngine} from "../../beaconEngine/interface.js";
 import {FinalizedBlockSnapshot, FinalizedProtoSummary} from "../../chainView/interface.js";
-import {LightClientServer} from "../../lightClient/index.js";
 
 const BLOB_SIDECAR_BATCH_SIZE = 32;
 
@@ -28,7 +27,6 @@ export async function archiveBlocks(
   db: IBeaconChainDb,
   engine: IBeaconEngine,
   snapshot: FinalizedBlockSnapshot,
-  lightclientServer: LightClientServer | undefined,
   logger: Logger,
   finalizedCheckpoint: CheckpointWithHex,
   currentEpoch: Epoch,
@@ -195,9 +193,7 @@ export async function archiveBlocks(
     nonCheckpointBlockRoots.push(block.root);
   }
 
-  if (lightclientServer) {
-    await lightclientServer.pruneNonCheckpointData(nonCheckpointBlockRoots);
-  }
+  await engine.pruneLightClientNonCheckpointData(nonCheckpointBlockRoots);
 
   logger.verbose("Archiving of finalized blocks complete", {
     ...logCtx,

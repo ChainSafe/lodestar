@@ -51,10 +51,20 @@ function createChain(): IBeaconChain {
 
   return {
     config: reqRespConfig,
-    lightClientServer: {
-      getUpdate: async () => update,
-      getFinalityUpdate: () => finalityUpdate,
-      getOptimisticUpdate: () => optimisticUpdate,
+    opts: {},
+    beaconEngine: {
+      getLightClientUpdate: async () => ({
+        data: ssz.capella.LightClientUpdate.serialize(update),
+        slot: reqRespAttestedSlot,
+      }),
+      getLightClientFinalityUpdate: async () => ({
+        data: ssz.capella.LightClientFinalityUpdate.serialize(finalityUpdate),
+        slot: reqRespAttestedSlot,
+      }),
+      getLightClientOptimisticUpdate: async () => ({
+        data: ssz.capella.LightClientOptimisticUpdate.serialize(optimisticUpdate),
+        slot: reqRespAttestedSlot,
+      }),
     },
   } as unknown as IBeaconChain;
 }

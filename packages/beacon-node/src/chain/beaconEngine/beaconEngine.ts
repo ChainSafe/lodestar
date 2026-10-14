@@ -102,6 +102,7 @@ import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from ".
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
 import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
 import {persistAnchorState} from "../initState.js";
 import {CommonBlockBody, FindHeadFnName} from "../interface.js";
@@ -196,6 +197,10 @@ import {
   validateGossipPayloadAttestationMessage,
 } from "./gossipValidation/executionPayload.js";
 import {
+  validateGossipLightClientFinalityUpdate,
+  validateGossipLightClientOptimisticUpdate,
+} from "./gossipValidation/lightClient.js";
+import {
   validateApiAttesterSlashing,
   validateApiBlsToExecutionChange,
   validateApiProposerSlashing,
@@ -231,6 +236,7 @@ import {
   ProduceBlockResponse,
   ProduceBlockV4Request,
   ProduceBlockV4Response,
+  SerializedLightClientData,
   VerifyBlocksOpts,
 } from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
@@ -338,7 +344,7 @@ export class BeaconEngine implements IBeaconEngine {
   private readonly dataColumnDir: string;
   // TODO - beacon engine: internal helper context; keep this off the worker-facing interface.
   readonly signal: AbortSignal;
-  lightClientServer: LightClientServer | undefined;
+  readonly lightClientServer: LightClientServer | undefined;
   /**
    * Engine-owned verification results awaiting import, including post-states and execution status.
    * Bundles reference the same block and bytes returned by blockSerializedCache; they do not copy either.
@@ -394,6 +400,10 @@ export class BeaconEngine implements IBeaconEngine {
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     this.pubkeyCache = pubkeyCache;
     this.emitter = modules.emitter;
+    // [beacon-engine] Previously owned by BeaconChain; LightClientServer is now owned by BeaconEngine.
+    this.lightClientServer = opts.disableLightClientServer
+      ? undefined
+      : new LightClientServer(opts, {config, clock, db, metrics, emitter: this.emitter, logger, signal});
   }
 
   async prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {
@@ -524,7 +534,6 @@ export class BeaconEngine implements IBeaconEngine {
     }
     // Engine owns the buffer pool; sized from the anchor state (NodeJS-specific, engine-internal).
     this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
-    this.lightClientServer = modules.lightClientServer;
 
     // by default, verify signatures on both main threads and worker threads
     this.bls = opts.blsVerifyAllMainThread
@@ -1124,6 +1133,55 @@ export class BeaconEngine implements IBeaconEngine {
     const head = this.forkChoice.getHead();
     const startSlot = computeStartSlotAtEpoch(epoch);
     return this.regen.getBlockSlotState(head, startSlot, {dontTransferCache: true}, regenCaller);
+  }
+
+  getLightClientServer(): LightClientServer {
+    if (!this.lightClientServer) {
+      throw new LightClientServerError({code: LightClientServerErrorCode.DISABLED}, "Light client server is disabled");
+    }
+    return this.lightClientServer;
+  }
+
+  async getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData> {
+    const bootstrap = await this.getLightClientServer().getBootstrap(blockRoot);
+    const slot = bootstrap.header.beacon.slot;
+    return {data: this.config.getPostAltairForkTypes(slot).LightClientBootstrap.serialize(bootstrap), slot};
+  }
+
+  async getLightClientUpdate(period: number): Promise<SerializedLightClientData> {
+    const update = await this.getLightClientServer().getUpdate(period);
+    const slot = update.attestedHeader.beacon.slot;
+    return {data: this.config.getPostAltairForkTypes(slot).LightClientUpdate.serialize(update), slot};
+  }
+
+  async getLightClientOptimisticUpdate(): Promise<SerializedLightClientData | null> {
+    const update = this.getLightClientServer().getOptimisticUpdate();
+    if (update === null) return null;
+    const slot = update.attestedHeader.beacon.slot;
+    return {data: this.config.getPostAltairForkTypes(slot).LightClientOptimisticUpdate.serialize(update), slot};
+  }
+
+  async getLightClientFinalityUpdate(): Promise<SerializedLightClientData | null> {
+    const update = this.getLightClientServer().getFinalityUpdate();
+    if (update === null) return null;
+    const slot = update.attestedHeader.beacon.slot;
+    return {data: this.config.getPostAltairForkTypes(slot).LightClientFinalityUpdate.serialize(update), slot};
+  }
+
+  async getLightClientCommitteeRoot(period: number): Promise<Root> {
+    return Uint8Array.from(await this.getLightClientServer().getCommitteeRoot(period));
+  }
+
+  async pruneLightClientNonCheckpointData(roots: Root[]): Promise<void> {
+    await this.lightClientServer?.pruneNonCheckpointData(roots);
+  }
+
+  validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>> {
+    return validateGossipLightClientOptimisticUpdate.call(this, bytes, fork);
+  }
+
+  validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>> {
+    return validateGossipLightClientFinalityUpdate.call(this, bytes, fork);
   }
 
   // Gossip validation delegates to ./gossipValidation/* with engine-owned state.

@@ -50,7 +50,6 @@ import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
 import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
-import {LightClientServer} from "../lightClient/index.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {BlockProcessOpts} from "../options.js";
 import {ProduceResult} from "../produceBlock/produceBlockBody.js";
@@ -75,6 +74,9 @@ export type HeadParentPayload = {
   bid: gloas.ExecutionPayloadBid;
 };
 
+/** The bootstrap or attested header slot determines the SSZ fork and network context. */
+export type SerializedLightClientData = {data: Uint8Array; slot: Slot};
+
 export type BeaconEngineModules = {
   serializedCache?: SerializedCache;
   blockSerializedCache?: BlockSerializedCache;
@@ -98,7 +100,6 @@ export type BeaconEngineModules = {
   validatorMonitorOpts: ValidatorMonitorOpts | null;
   validatorMonitorLogger?: Logger;
   isAnchorStateFinalized: boolean;
-  lightClientServer?: LightClientServer;
 };
 
 export type VerifyBlocksOpts = BlockProcessOpts & ImportBlockOpts;
@@ -220,6 +221,15 @@ export interface IBeaconEngine {
   readonly events: IBeaconEngineEventBus;
   getChainViewSnapshot(): ChainViewSnapshot;
   readonly config: BeaconConfig;
+
+  getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData>;
+  getLightClientUpdate(period: number): Promise<SerializedLightClientData>;
+  getLightClientOptimisticUpdate(): Promise<SerializedLightClientData | null>;
+  getLightClientFinalityUpdate(): Promise<SerializedLightClientData | null>;
+  getLightClientCommitteeRoot(period: number): Promise<Root>;
+  pruneLightClientNonCheckpointData(roots: Root[]): Promise<void>;
+  validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
+  validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
 
   // Developer API diagnostics only. Operational reads belong to BeaconChain.
   getHeads(): ProtoBlock[];
