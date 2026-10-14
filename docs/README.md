@@ -30,6 +30,28 @@ v1.41.0 tag      → dropdown: 1.41.0 (default) | 1.40.0 | ... | Next 🚧
 
 Local development works without any versioning files present — `docusaurus.config.ts` reads `versions.json` dynamically and falls back gracefully.
 
+### Comparing versions
+
+The **Compare versions** navbar link opens `/compare`. Select two versions and either the beacon node or validator client to see differences in public top-level CLI options, including global options. Search by flag name or description, filter by change type, and share the URL to preserve the selected versions and component. Links to the retained intermediate releases provide upgrade notes beyond CLI changes.
+
+The CLI docs generator writes `pages/cli-options.json` alongside the generated Markdown references. Docusaurus includes this manifest when creating a version snapshot. The local `version-comparison` plugin reads the retained snapshots at build time and bundles their option data only with the comparison route. The page does not request data from GitHub at runtime.
+
+Historical snapshots without a manifest use their generated CLI references instead. These references omit hidden flags, aliases, and some defaults, including `false` and `0` in older generators. The page labels additions and removals as documentation changes when either version uses this fallback. Missing defaults are shown as unknown, and missing CLI references are not interpreted as removed options. Descriptions and declared defaults cannot capture every network or fork-dependent behavior; read the linked release notes before upgrading.
+
+Local builds without version snapshots offer only **Next**. To preview released comparisons, fetch the public `docs-versions` branch and copy its `versioned_docs`, `versioned_sidebars`, and `versions.json` into `docs/`, as the deployment workflow does. Keep these generated snapshots out of the contribution's commits.
+
+Run the comparison tests from `docs/`:
+
+```bash
+pnpm test
+```
+
+Run the CLI documentation regression tests from the repository root:
+
+```bash
+pnpm vitest run --project unit packages/cli/test/unit/docsgen/manifest.test.ts
+```
+
 ### Manual versioning (if needed)
 
 `npx docusaurus docs:version` snapshots the current docs sources.
