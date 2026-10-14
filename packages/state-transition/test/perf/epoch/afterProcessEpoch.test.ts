@@ -9,6 +9,7 @@ import {StateEpoch} from "../types.js";
 describe("phase0 afterProcessEpoch", () => {
   bench<StateEpoch, StateEpoch>({
     id: `phase0 afterProcessEpoch - ${perfStateId}`,
+    threshold: 5,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     before: () => {
       const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
