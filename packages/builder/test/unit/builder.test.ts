@@ -144,6 +144,7 @@ describe("Builder", () => {
       onEvent: expect.any(Function),
       onOpen: expect.any(Function),
       onError: expect.any(Function),
+      onDisconnect: expect.any(Function),
       onClose: expect.any(Function),
     });
     expect(clockStart.mock.invocationCallOrder[0]).toBeLessThan(api.events.eventstream.mock.invocationCallOrder[0]);
@@ -253,9 +254,9 @@ describe("Builder", () => {
     const wake = vi.spyOn(modules.bidder, "onPreferences");
     const invalidate = vi.spyOn(modules.bidder, "invalidateInputs");
     new Builder(modules);
-    const {onOpen, onError} = api.events.eventstream.mock.calls[0][0];
+    const {onOpen, onDisconnect} = api.events.eventstream.mock.calls[0][0];
     onOpen?.();
-    onError?.(Error("disconnected"));
+    onDisconnect?.();
     const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
     pending.resolve(mockApiResponse({data: [preferences], meta: {version: ForkName.gloas}}));
     await pending.promise;
@@ -407,10 +408,12 @@ describe("Builder", () => {
   });
 
   it("logs a stream error and continues delivery", () => {
+    const invalidate = vi.spyOn(modules.bidder, "invalidateInputs");
     new Builder(modules);
     const {onError, onEvent} = api.events.eventstream.mock.calls[0][0];
-    const error = Error("connection interrupted");
+    const error = Error("invalid event data");
     onError?.(error);
+    expect(invalidate).not.toHaveBeenCalled();
     const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
     onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: preferences}});
 

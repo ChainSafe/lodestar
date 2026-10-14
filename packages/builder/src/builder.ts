@@ -255,9 +255,11 @@ export class Builder {
         onOpen: () => {
           void this.fetchProposerPreferences(api);
         },
-        onError: (error) => {
+        onDisconnect: () => {
           this.connectionGeneration++;
           this.bidder.invalidateInputs();
+        },
+        onError: (error) => {
           if (!signal.aborted) this.logger.error("Failed to receive builder event", {topics: topics.join(",")}, error);
         },
         onClose: () => {
