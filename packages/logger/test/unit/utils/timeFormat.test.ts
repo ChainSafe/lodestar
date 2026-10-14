@@ -19,4 +19,27 @@ describe("logger / util / formatEpochSlotTime", () => {
       expect(formatEpochSlotTime({genesisTime, secondsPerSlot, slotsPerEpoch}, nowSec * 1000)).toBe(expectLog);
     });
   }
+
+  describe("with slot duration change", () => {
+    const genesisTime = 1600000000;
+    const slotDurations: [number, number][] = [
+      [0, secondsPerSlot],
+      [2, 10],
+    ];
+    const forkSec = genesisTime + 2 * slotsPerEpoch * secondsPerSlot;
+
+    const durationTestCases: {name: string; nowSec: number; expectLog: string}[] = [
+      {name: "before the fork", nowSec: genesisTime + 45 * secondsPerSlot + 11.423, expectLog: "Eph 1/13 11.423"},
+      {name: "at fork activation", nowSec: forkSec, expectLog: "Eph 2/0 0.000"},
+      {name: "after the fork", nowSec: forkSec + 37 * 10 + 1.5, expectLog: "Eph 3/5 1.500"},
+    ];
+
+    for (const {name, nowSec: now, expectLog} of durationTestCases) {
+      it(`${name} (${expectLog})`, () => {
+        expect(formatEpochSlotTime({genesisTime, secondsPerSlot, slotsPerEpoch, slotDurations}, now * 1000)).toBe(
+          expectLog
+        );
+      });
+    }
+  });
 });
