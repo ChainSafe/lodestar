@@ -331,6 +331,31 @@ export function createLodestarMetrics(
       }),
     },
 
+    columnReconstructionQueue: {
+      length: register.gauge({
+        name: "lodestar_column_reconstruction_queue_length",
+        help: "Count of total column reconstruction queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_column_reconstruction_queue_dropped_jobs_total",
+        help: "Count of total column reconstruction queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_column_reconstruction_queue_job_time_seconds",
+        help: "Time to process column reconstruction queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_column_reconstruction_queue_job_wait_time_seconds",
+        help: "Time from job added to the column reconstruction queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_column_reconstruction_queue_concurrency",
+        help: "Current concurrency of column reconstruction queue",
+      }),
+    },
+
     engineHttpProcessorQueue: {
       length: register.gauge({
         name: "lodestar_engine_http_processor_queue_length",
