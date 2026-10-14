@@ -1,14 +1,11 @@
-import {generateKeyPair, privateKeyFromRaw} from "@libp2p/crypto/keys";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it} from "vitest";
 import {SignableENR} from "@chainsafe/enr";
 import {createBeaconConfig} from "@lodestar/config";
-import {genesisData, networksChainConfig} from "@lodestar/config/networks";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
-import {UINT64_MAX, createNativeConfig, kinds, nativeTopicScore} from "../../../../src/network/core/native/config.js";
+import {UINT64_MAX, createNativeConfig} from "../../../../src/network/core/native/config.js";
 import {NativeNetworkError} from "../../../../src/network/core/native/errors.js";
-import {computeGossipPeerScoreParams} from "../../../../src/network/gossip/scoringParameters.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../../../src/network/options.js";
 import {createSettlingNetwork} from "../../../utils/nativeSettlingNetwork.js";
 
@@ -60,7 +57,7 @@ describe("native configuration boundary", () => {
       scheduled.CUSTODY_REQUIREMENT,
       16
     );
-    expect(application.gossipPolicy.seenTtlMs).toBe(
+    expect(application.gossipPolicy?.seenTtlMs).toBe(
       BigInt(Math.max(config.SLOT_DURATION_MS, duration) * SLOTS_PER_EPOCH * 2)
     );
   });
@@ -79,7 +76,6 @@ describe("native configuration boundary", () => {
     expect(node.create({native: {traceTurns: true}}).traceTurns).toBe(true);
     expect(node.create().gossipPolicy).toMatchObject({
       activeSendTimeoutMs: 6000n,
-      activeSendItems: {beacon_block: 8, blob_sidecar: 32, data_column_sidecar: 256},
     });
     const application = node.create({
       native: {gossipActiveSendTimeoutMs: 4000, gossipActiveSendItems: {beacon_block: 4}},
@@ -132,34 +128,12 @@ describe("native configuration boundary", () => {
     // Initialization refuses a plan past its native or bridge budget.
     const network = createSettlingNetwork(application);
     try {
-      const capacity = Object.values(application.gossipPolicy.processor).reduce(
-        (items, limit) => items + limit.items,
-        0
-      );
-      expect(capacity).toBe(65535);
+      expect(await network.metrics()).toContain("gossipsub_validation_capacity_count 65535");
     } finally {
       application.identitySecretKey.fill(0);
       await network.close();
     }
   });
-  it.each([1_700_000, 1_800_000, 3_000_000])("bounds gossip work capacity for %i validators", async (validators) => {
-    const node = await fixture();
-    const application = node.create({}, 0, validators);
-    try {
-      const {processor} = application.gossipPolicy;
-      const otherItems = kinds.reduce(
-        (sum, kind) => sum + (kind === "beacon_attestation" ? 0 : processor[kind].items),
-        0
-      );
-      expect(processor.beacon_attestation.items).toBe(
-        Math.min(Math.ceil((validators / SLOTS_PER_EPOCH) * 1.1), 65535 - otherItems)
-      );
-      expect(otherItems + processor.beacon_attestation.items).toBeLessThanOrEqual(65535);
-    } finally {
-      application.identitySecretKey.fill(0);
-    }
-  });
-
   it("preserves effective genesis fork selection before genesis and deduplicates same-epoch forks", async () => {
     const node = await fixture();
     const application = node.create({}, -1);
@@ -187,7 +161,6 @@ describe("native configuration boundary", () => {
     {requestTimeoutMs: 1000},
     {respTimeoutMs: 1000},
     {maxGossipTopicConcurrency: Number.NaN},
-    {native: {hostGossipBytes: 1024}},
     {maxPeers: 257},
     {maxPeers: 200, targetPeers: 200},
     {bootMultiaddrs: ["/dns4/example.invalid/udp/9001/quic-v1"]},
@@ -196,22 +169,6 @@ describe("native configuration boundary", () => {
   ])("rejects unmappable options: %j", async (opts) => {
     const node = await fixture();
     expect(() => node.create(opts)).toThrow(NativeNetworkError);
-  });
-
-  it("resolves dial concurrency independently of peer headroom", async () => {
-    const node = await fixture();
-    for (const [maxPeers, targetPeers] of [
-      [210, 200],
-      [201, 200],
-      [256, 255],
-    ]) {
-      const application = node.create({maxPeers, targetPeers});
-      try {
-        expect(application.resources.dialingCapacity).toBe(32);
-      } finally {
-        application.identitySecretKey.fill(0);
-      }
-    }
   });
 
   it("resolves configured direct peers into copied identities and both QUIC endpoints", async () => {
@@ -344,76 +301,6 @@ describe("native configuration boundary", () => {
       ip6: new Uint8Array(16).fill(1, 15),
       udp6: 9000,
     });
-  });
-});
-
-it.each([16, 1_000_000])(
-  "startup kind policies preserve upstream scoring across activation slots for %i validators",
-  async (validators) => {
-    const node = await fixture();
-    const application = node.create({}, 0, validators);
-    application.identitySecretKey.fill(0);
-    const policies = application.gossipPolicy.score.topics;
-    const boundary = config.forkBoundariesAscendingEpochOrder.findLast((boundary) => boundary.epoch === 0);
-    if (!boundary) throw Error("Missing genesis boundary");
-    const digest = Buffer.from(config.forkBoundary2ForkDigest(boundary)).toString("hex");
-    expect(Object.keys(policies).sort()).toEqual([...kinds].sort());
-    expect(policies.sync_committee.weight).toBe(0);
-    expect(policies.data_column_sidecar.weight).toBe(0);
-    for (const kind of ["beacon_block", "beacon_aggregate_and_proof", "beacon_attestation"] as const) {
-      const policy = policies[kind];
-      expect(policy.meshDeliveryStartSlot).toBeGreaterThan(0n);
-      for (const offset of [-1, 0, 1]) {
-        const slot = Number(policy.meshDeliveryStartSlot) + offset;
-        const upstream = computeGossipPeerScoreParams({
-          config,
-          eth2Context: {
-            activeValidatorCount: validators,
-            currentSlot: slot,
-            currentEpoch: Math.floor(slot / SLOTS_PER_EPOCH),
-          },
-        });
-        const topic = `/eth2/${digest}/${kind}${kind === "beacon_attestation" ? "_0" : ""}/ssz_snappy`;
-        const params = upstream.topics?.[topic];
-        if (!params) throw Error(`Missing upstream parameters: ${topic}`);
-        const effective = {...policy};
-        if (offset < 0) {
-          effective.meshDeliveryWeight = 0;
-          effective.meshDeliveryThreshold = 0;
-        }
-        expect(effective).toEqual(nativeTopicScore(params, Number(policy.meshDeliveryStartSlot)));
-      }
-    }
-  }
-);
-
-describe("native gossip limits", () => {
-  const key = privateKeyFromRaw(new Uint8Array(32).fill(7));
-
-  it.each(["mainnet", "hoodi"] as const)("resolves the %s gossip limits through Fulu", (network) => {
-    const beaconConfig = createBeaconConfig(
-      networksChainConfig[network],
-      fromHex(genesisData[network].genesisValidatorsRoot)
-    );
-    const resolved = [16, 1_000_000].map((validators) => {
-      const {application} = createNativeConfig(
-        {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/9000/quic-v1"]},
-        beaconConfig,
-        key,
-        0,
-        ssz.fulu.Status.defaultValue(),
-        beaconConfig.CUSTODY_REQUIREMENT,
-        validators
-      );
-      const {processor, execution} = application.gossipPolicy;
-      return {
-        validators,
-        limits: Object.fromEntries(
-          kinds.map((kind) => [kind, {processor: processor[kind], execution: execution?.[kind]}])
-        ),
-      };
-    });
-    expect(resolved).toMatchSnapshot();
   });
 });
 

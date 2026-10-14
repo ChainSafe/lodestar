@@ -1,4 +1,3 @@
-import {TopicScoreParams, defaultPeerScoreParams, defaultTopicScoreParams} from "@libp2p/gossipsub/score";
 import {PrivateKey} from "@libp2p/interface";
 import {ENR} from "@chainsafe/enr";
 import bindings from "@chainsafe/lodestar-z";
@@ -7,24 +6,14 @@ import {
   IpEndpoint,
   NativeApplicationConfig,
   NativeDiscoveryConfig,
-  NativeGossipProcessorLimit,
   NativeLocalState,
   NativeTopicKind,
-  NativeTopicScoreParams,
 } from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
-import {
-  ATTESTATION_SUBNET_COUNT,
-  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  SLOTS_PER_EPOCH,
-  isForkPostFulu,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
 import {getSlotDurations} from "@lodestar/state-transition";
 import {Status} from "@lodestar/types";
 import {CustodyConfig} from "../../../util/dataColumns.js";
-import {computeGossipPeerScoreParamsByKind, gossipScoreThresholds} from "../../gossip/scoringParameters.js";
-import {getCoreTopicsAtFork, getGossipSSZMaxSize, getGossipSSZType} from "../../gossip/topic.js";
 import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
 import {computeNodeIdFromPrivateKey} from "../../subnets/interface.js";
@@ -49,77 +38,6 @@ export const kinds: readonly NativeTopicKind[] = [
   "blob_sidecar",
   "data_column_sidecar",
 ];
-
-/**
- * Native gossip limits per kind. The processor holds up to `items` messages of the kind in `minMiB` MiB, or in its
- * largest compressed message when that is larger. The host executes a share of its gossip item and byte budgets, in
- * proportion to the kind's `executionItems` and `executionBytes` weights.
- */
-const gossipKindLimits: Readonly<
-  Record<NativeTopicKind, {items: number; minMiB: number; executionItems: number; executionBytes: number}>
-> = {
-  beacon_block: {items: 8, minMiB: 24, executionItems: 1, executionBytes: 32},
-  beacon_aggregate_and_proof: {items: 2048, minMiB: 8, executionItems: 8, executionBytes: 4},
-  // `items` rises to one slot of attesters with 10% headroom
-  beacon_attestation: {items: 128, minMiB: 8, executionItems: 32, executionBytes: 8},
-  proposer_slashing: {items: 32, minMiB: 1, executionItems: 1, executionBytes: 1},
-  attester_slashing: {items: 32, minMiB: 4, executionItems: 1, executionBytes: 4},
-  voluntary_exit: {items: 128, minMiB: 1, executionItems: 1, executionBytes: 1},
-  sync_committee_contribution_and_proof: {items: 128, minMiB: 2, executionItems: 2, executionBytes: 2},
-  sync_committee: {items: 1024, minMiB: 2, executionItems: 4, executionBytes: 2},
-  light_client_finality_update: {items: 8, minMiB: 2, executionItems: 1, executionBytes: 2},
-  light_client_optimistic_update: {items: 8, minMiB: 2, executionItems: 1, executionBytes: 2},
-  bls_to_execution_change: {items: 128, minMiB: 1, executionItems: 1, executionBytes: 1},
-  blob_sidecar: {items: 256, minMiB: 8, executionItems: 4, executionBytes: 8},
-  data_column_sidecar: {items: 256, minMiB: 16, executionItems: 8, executionBytes: 24},
-};
-
-function gossipExecutionLimits(
-  opts: NetworkOptions,
-  maxSszSizes: Readonly<Record<NativeTopicKind, number>>
-): {items: number; bytes: number}[] {
-  const limits = Object.values(gossipKindLimits);
-  const byteTotal = limits.reduce((sum, limit) => sum + limit.executionBytes, 0);
-  const itemTotal = limits.reduce((sum, limit) => sum + limit.executionItems, 0);
-  const itemBudget = nativeInteger(opts.native?.hostGossipItems ?? 4096, "host gossip items", 16384, 1);
-  const byteBudget = nativeInteger(opts.native?.hostGossipBytes ?? 64 * MiB, "host gossip bytes", 1024 * MiB, 1);
-  const concurrency = nativeInteger(opts.maxGossipTopicConcurrency ?? itemBudget, "gossip topic concurrency", 16384, 1);
-  return kinds.map((kind) => {
-    const {executionItems, executionBytes} = gossipKindLimits[kind];
-    const items = Math.min(concurrency, Math.floor((itemBudget * executionItems) / itemTotal));
-    const bytes = Math.floor((byteBudget * executionBytes) / byteTotal);
-    const largest = maxSszSizes[kind];
-    if (items < 1 || bytes < largest)
-      throw new NativeNetworkError({
-        code: NativeNetworkErrorCode.CONFIGURATION,
-        resource: `gossip execution capacity for ${kind}`,
-      });
-    return {items, bytes};
-  });
-}
-
-export function nativeTopicScore(params: TopicScoreParams, meshDeliveryStartSlot = 0): NativeTopicScoreParams {
-  return {
-    meshDeliveryStartSlot: BigInt(nativeInteger(meshDeliveryStartSlot, "mesh delivery start slot")),
-    weight: params.topicWeight,
-    timeInMeshWeight: params.timeInMeshWeight,
-    timeInMeshCap: params.timeInMeshCap,
-    timeInMeshQuantumMs: BigInt(nativeInteger(params.timeInMeshQuantum, "mesh score quantum")),
-    firstDeliveryWeight: params.firstMessageDeliveriesWeight,
-    firstDeliveryCap: params.firstMessageDeliveriesCap,
-    firstDeliveryDecay: params.firstMessageDeliveriesDecay,
-    meshDeliveryWeight: params.meshMessageDeliveriesWeight,
-    meshDeliveryThreshold: params.meshMessageDeliveriesThreshold,
-    meshDeliveryCap: params.meshMessageDeliveriesCap,
-    meshDeliveryDecay: params.meshMessageDeliveriesDecay,
-    meshDeliveryActivationMs: BigInt(nativeInteger(params.meshMessageDeliveriesActivation, "mesh activation")),
-    meshDeliveryWindowMs: BigInt(nativeInteger(params.meshMessageDeliveriesWindow, "mesh window")),
-    meshFailureWeight: params.meshFailurePenaltyWeight,
-    meshFailureDecay: params.meshFailurePenaltyDecay,
-    invalidWeight: params.invalidMessageDeliveriesWeight,
-    invalidDecay: params.invalidMessageDeliveriesDecay,
-  };
-}
 
 export function nativeLocalState(
   config: BeaconConfig,
@@ -335,68 +253,7 @@ export function createNativeConfig(
     nodeId,
     custodyConfig: new CustodyConfig({config, nodeId, initialCustodyGroupCount: custodyGroupCount}),
   };
-  const score = {
-    ...defaultPeerScoreParams,
-    ...computeGossipPeerScoreParamsByKind(config, activeValidatorCount),
-  };
-  const boundaries = config.forkBoundariesAscendingEpochOrder.filter(
-    (boundary, index, all) =>
-      boundary.epoch !== Infinity && !isForkPostGloas(boundary.fork) && boundary.epoch !== all[index + 1]?.epoch
-  );
-  const connections = Math.min(256, Math.max(16, opts.maxPeers + 32));
   const listeners = nativeListeners(opts.localMultiaddrs, true);
-  const maxSszSizes = Object.fromEntries(kinds.map((kind) => [kind, 0])) as Record<NativeTopicKind, number>;
-  for (const boundary of boundaries) {
-    for (const type of getCoreTopicsAtFork(network, boundary.fork, {
-      subscribeAllSubnets: true,
-      subscribeAllColumnSubnets: true,
-    })) {
-      const kind = kinds.find((kind) => kind === type.type);
-      if (!kind)
-        throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: `topic ${type.type}`});
-      const topic = {...type, boundary};
-      const schema = getGossipSSZType(topic);
-      maxSszSizes[kind] = Math.max(
-        maxSszSizes[kind],
-        Math.min(config.MAX_PAYLOAD_SIZE, getGossipSSZMaxSize(topic, config, schema))
-      );
-    }
-  }
-  const processor = Object.fromEntries(
-    kinds.map((kind) => {
-      const {items, minMiB} = gossipKindLimits[kind];
-      const largest = maxSszSizes[kind];
-      const compressedMax = 32 + largest + Math.floor(largest / 6);
-      const pages = Math.ceil(Math.max(4096, compressedMax, minMiB * MiB) / 4096);
-      return [
-        kind,
-        {
-          items:
-            kind === "beacon_attestation"
-              ? Math.max(items, Math.ceil((activeValidatorCount / SLOTS_PER_EPOCH) * 1.1))
-              : items,
-          bytes: pages * 4096,
-        },
-      ];
-    })
-  ) as Record<NativeTopicKind, NativeGossipProcessorLimit>;
-  const otherItems = kinds.reduce((sum, kind) => sum + (kind === "beacon_attestation" ? 0 : processor[kind].items), 0);
-  processor.beacon_attestation.items = Math.min(processor.beacon_attestation.items, 65535 - otherItems);
-  nativeInteger(
-    Object.values(processor).reduce((sum, limit) => sum + limit.items, 0),
-    "gossip work capacity",
-    65535,
-    1
-  );
-  const execution = Object.fromEntries(
-    gossipExecutionLimits(opts, maxSszSizes).map((limit, i) => [
-      kinds[i],
-      {
-        items: Math.min(limit.items, processor[kinds[i]].items),
-        bytes: limit.bytes,
-      },
-    ])
-  ) as Record<NativeTopicKind, NativeGossipProcessorLimit>;
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
     traceGossip: opts.native?.traceGossip ?? false,
     traceTurns: opts.native?.traceTurns ?? false,
@@ -416,6 +273,7 @@ export function createNativeConfig(
       ),
     },
     beaconConfig: new bindings.BeaconConfig(config, config.genesisValidatorsRoot),
+    activeValidatorCount,
     bind: listeners,
     discovery: discovery(opts, key),
     initialSlot: BigInt(Math.max(0, slot)),
@@ -423,43 +281,20 @@ export function createNativeConfig(
     serveLightClients: !(opts.disableLightClientServer ?? false),
     identify: {agentVersion: opts.private ? "" : `Lodestar/${opts.version ?? "dev"}`, protocolVersion: "eth2/1.0.0"},
     resources: {
-      peerCapacity: Math.max(64, 2 * opts.maxPeers),
       targetPeers: opts.targetPeers,
       maxPeers: opts.maxPeers,
-      minOutbound: Math.max(1, Math.floor(opts.targetPeers / 4)),
-      outboundReserve: Math.min(32, opts.targetPeers),
-      connectionCapacity: connections,
-      handshakingCapacity: Math.min(connections, 32),
-      dialingCapacity: 32,
       receiveBudgetBytes: opts.native?.receiveBudgetBytes ?? 512 * MiB,
       nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? 2048 * MiB,
       bridgeBudgetBytes: opts.native?.bridgeBudgetBytes ?? 512 * MiB,
     },
     gossipPolicy: {
-      processor,
-      execution,
-      heartbeatIntervalMs: 700n,
-      iwantFollowupMs: 12000n,
-      idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-      validationTimeoutMs: 30000n,
-      validationTombstoneMs: 30000n,
-      pressureTimeoutMs: 30000n,
-      txTimeoutMs: 30000n,
+      hostItems: nativeInteger(opts.native?.hostGossipItems ?? 4096, "host gossip items", 16384, 1),
+      hostBytes: nativeInteger(opts.native?.hostGossipBytes ?? 64 * MiB, "host gossip bytes", 1024 * MiB, 1),
+      topicConcurrency: nativeInteger(opts.maxGossipTopicConcurrency ?? 16384, "gossip topic concurrency", 16384, 1),
       activeSendTimeoutMs: BigInt(
         nativeInteger(opts.native?.gossipActiveSendTimeoutMs ?? 6000, "gossip active send timeout", 86400000, 1)
       ),
-      activeSendItems: Object.fromEntries(
-        kinds.map((kind) => [
-          kind,
-          nativeInteger(
-            opts.native?.gossipActiveSendItems?.[kind] ??
-              (kind === "data_column_sidecar" ? 256 : kind === "blob_sidecar" ? 32 : 8),
-            `active sends for ${kind}`,
-            256,
-            1
-          ),
-        ])
-      ) as Record<NativeTopicKind, number>,
+      activeSendItems: opts.native?.gossipActiveSendItems,
       largeFrameTimeoutMs: BigInt(
         nativeInteger(opts.native?.gossipLargeFrameTimeoutMs ?? 6000, "gossip large frame timeout", 86400000, 1)
       ),
@@ -469,31 +304,8 @@ export function createNativeConfig(
         1024 * MiB,
         4096
       ),
+      // Native's BeaconConfig does not yet include Heze's slot-duration setting.
       seenTtlMs: BigInt(Math.max(...getSlotDurations(config).map(([, duration]) => duration)) * SLOTS_PER_EPOCH * 2),
-      retainedScoreMs: BigInt(score.retainScore),
-      opportunisticGraftIntervalMs: 42000n,
-      gossipFactor: 0.25,
-      ipAllowlist: [],
-      score: {
-        ipColocationWeight: score.IPColocationFactorWeight,
-        ipColocationThreshold: score.IPColocationFactorThreshold,
-        behaviourWeight: score.behaviourPenaltyWeight,
-        behaviourThreshold: score.behaviourPenaltyThreshold,
-        behaviourDecay: score.behaviourPenaltyDecay,
-        topicCap: score.topicScoreCap,
-        decayIntervalMs: BigInt(score.decayInterval),
-        decayToZero: score.decayToZero,
-        gossipThreshold: gossipScoreThresholds.gossipThreshold,
-        publishThreshold: gossipScoreThresholds.publishThreshold,
-        graylistThreshold: gossipScoreThresholds.graylistThreshold,
-        opportunisticGraftThreshold: gossipScoreThresholds.opportunisticGraftThreshold,
-        topics: Object.fromEntries(
-          kinds.map((kind) => {
-            const policy = score.topics[kind] ?? {...defaultTopicScoreParams, topicWeight: 0, meshDeliveryStartSlot: 0};
-            return [kind, nativeTopicScore(policy, policy.meshDeliveryStartSlot)];
-          })
-        ) as Record<NativeTopicKind, NativeTopicScoreParams>,
-      },
     },
     identitySecretKey: Uint8Array.from(key.raw),
   };
