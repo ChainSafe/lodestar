@@ -49,8 +49,8 @@
             .hash = "zbench-0.13.0-YTdc7xVBAQCCMC-IdLLuotBeiNNNm8k9Pi2V4VYqrwfI",
         },
         .metrics = .{
-            .url = "git+https://github.com/karlseguin/metrics.zig.git#6de29b83a750a06c438d268543e0e3c3c1b309da",
-            .hash = "metrics-0.0.0-W7G4eIegAQD4XxA9Co7Atbw59u_2zvxYf406AZuoAHPM",
+            .url = "git+https://github.com/karlseguin/metrics.zig.git#816dd1f6c1e67fa947e7e6310ca50f5ff49edde9",
+            .hash = "metrics-0.0.0-W7G4eLisAQDYpQvJy25olo-N1XcrgExt67RITrH43viY",
         },
         // TODO: Re-enable httpz + metrics_stf executable once karlseguin/http.zig supports Zig 0.16.0.
         // See: https://github.com/karlseguin/http.zig/issues/175
