@@ -5,7 +5,7 @@ import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as syncCommitteeValidation from "../../validation/syncCommittee.js";
 import * as syncCommitteeContributionAndProofValidation from "../../validation/syncCommitteeContributionAndProof.js";
-import type {BeaconEngine} from "../beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngineCore.js";
 import {GossipValidationResult, fromResult, ignore, runGossipValidation} from "../gossipValidationResult.js";
 import {deserializeGossipMessage} from "./deserialize.js";
 
@@ -15,7 +15,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * [beacon-engine] deviation: insert into the engine pool before returning the verdict.
  */
 export async function validateGossipSyncCommittee(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   syncCommitteeBytes: Uint8Array,
   subnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
@@ -51,7 +51,7 @@ export async function validateGossipSyncCommittee(
  * [beacon-engine] deviation: resolve membership and insert in the engine; return subnets for API publication.
  */
 export function validateApiSyncCommittee(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   _syncCommitteeBytes: Uint8Array,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<GossipValidationResult<{subnets: number[]}>> {
@@ -87,7 +87,7 @@ export function validateApiSyncCommittee(
  * [beacon-engine] deviation: pool insertion precedes the verdict; monitoring stays deferred.
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   isClosed: () => boolean,
   contributionBytes: Uint8Array,
   skipValidationKnownParticipants = false
@@ -148,7 +148,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
  * [beacon-engine] deviation: validate and insert in the engine; the API publishes.
  */
 export function validateApiSyncCommitteeContributionAndProof(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   _contributionBytes: Uint8Array,
   signedContributionAndProof: altair.SignedContributionAndProof
 ): Promise<GossipValidationResult<void>> {
@@ -176,7 +176,7 @@ export function validateApiSyncCommitteeContributionAndProof(
  * [beacon-engine] deviation: shared engine pool insertion; retain gossip/API priority and error handling.
  */
 function insertSyncContributionOnAccept(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   signed: altair.SignedContributionAndProof,
   syncCommitteeParticipants: number,
   source: "gossip" | "api"

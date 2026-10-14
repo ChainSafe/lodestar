@@ -1,10 +1,10 @@
 import {getBlsToExecutionChangeSignatureSet, isValidBlsToExecutionChange} from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {BlsToExecutionChangeError, BlsToExecutionChangeErrorCode, GossipAction} from "../errors/index.js";
 
 export async function validateApiBlsToExecutionChange(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blsToExecutionChange: capella.SignedBLSToExecutionChange
 ): Promise<void> {
   const ignoreExists = true;
@@ -13,14 +13,14 @@ export async function validateApiBlsToExecutionChange(
 }
 
 export async function validateGossipBlsToExecutionChange(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blsToExecutionChange: capella.SignedBLSToExecutionChange
 ): Promise<void> {
   return validateBlsToExecutionChange.call(this, blsToExecutionChange);
 }
 
 async function validateBlsToExecutionChange(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blsToExecutionChange: capella.SignedBLSToExecutionChange,
   opts: {ignoreExists?: boolean; prioritizeBls?: boolean} = {ignoreExists: false, prioritizeBls: false}
 ): Promise<void> {

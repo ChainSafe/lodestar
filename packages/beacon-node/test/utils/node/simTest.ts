@@ -11,11 +11,11 @@ import {
 import {BeaconBlock, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, mapValues, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../src/chain/beaconEngine/index.js";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {BeaconNode} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
+import {getBeaconEngineCore} from "../engine.js";
 
 export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   let lastSeenEpoch = 0;
@@ -69,7 +69,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     if (checkpoint.epoch <= lastSeenEpoch) return;
     lastSeenEpoch = checkpoint.epoch;
 
-    const checkpointState = (bn.chain.beaconEngine as BeaconEngine).regen.getCheckpointStateSync({
+    const checkpointState = getBeaconEngineCore(bn.chain.beaconEngine).regen.getCheckpointStateSync({
       epoch: checkpoint.epoch,
       rootHex: toRootHex(checkpoint.root),
     });
@@ -78,7 +78,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     }
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.getStateRootAtSlot(lastSlot);
-    const lastState = await (bn.chain.beaconEngine as BeaconEngine).regen.getState(
+    const lastState = await getBeaconEngineCore(bn.chain.beaconEngine).regen.getState(
       toRootHex(lastStateRoot),
       RegenCaller.onForkChoiceFinalized
     );

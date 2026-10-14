@@ -1,11 +1,11 @@
 import {assertValidProposerSlashing, getProposerSlashingSignatureSets} from "@lodestar/state-transition";
 import {Domain, phase0} from "@lodestar/types";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {GossipAction, ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/index.js";
 import {getProposerSlashingSignatureDomain} from "../opPools/utils.js";
 
 export async function validateApiProposerSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<Domain> {
   const prioritizeBls = true;
@@ -13,14 +13,14 @@ export async function validateApiProposerSlashing(
 }
 
 export async function validateGossipProposerSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<Domain> {
   return validateProposerSlashing.call(this, proposerSlashing);
 }
 
 async function validateProposerSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   proposerSlashing: phase0.ProposerSlashing,
   prioritizeBls = false
 ): Promise<Domain> {

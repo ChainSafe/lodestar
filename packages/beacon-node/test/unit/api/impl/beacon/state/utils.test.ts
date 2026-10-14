@@ -5,7 +5,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
 import {resolveStateId} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {NodeIsSyncing} from "../../../../../../src/api/impl/errors.js";
-import {BeaconEngine} from "../../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {getStateValidatorIndex} from "../../../../../../src/chain/beaconEngine/index.js";
 import {IChainView} from "../../../../../../src/chain/chainView/interface.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
@@ -99,7 +99,7 @@ describe("beacon state api utils", () => {
 
     function getChain(cachedState: unknown): {chain: IBeaconChain; getHeadState: Mock} {
       const getHeadState = vi.fn(() => anchorState);
-      const engine = Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, {
+      const engine = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
         forkChoice: {
           getHead: () => head,
           getFinalizedCheckpoint: () => ({rootHex: "0xbb", epoch: 497}),

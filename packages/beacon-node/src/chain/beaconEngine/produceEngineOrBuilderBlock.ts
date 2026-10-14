@@ -49,7 +49,7 @@ import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {CommonBlockBody} from "../interface.js";
 import {PooledExecutionPayloadBid} from "../opPools/index.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas, ProduceResult} from "../produceBlock/index.js";
-import type {BeaconEngine} from "./beaconEngine.js";
+import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import type {ProduceBlockV4Request, ProduceBlockV4Result} from "./interface.js";
 import {produceBlindedBlock, produceBlock as produceSelfBlock} from "./produceBlock.js";
 
@@ -123,7 +123,7 @@ export type BlockSelectionResult =
     };
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#getBlockValueLogInfo.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#getBlockValueLogInfo.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
@@ -156,12 +156,12 @@ function getBlockValueLogInfo(
   };
 }
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceBuilderBlindedBlock.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceBuilderBlindedBlock.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBuilderBlindedBlock(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   slot: Slot,
   randaoReveal: BLSSignature,
   graffiti: Bytes32,
@@ -229,12 +229,12 @@ export async function produceBuilderBlindedBlock(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceEngineBlockContents.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceEngineBlockContents.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceEngineBlockContents(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   slot: Slot,
   randaoReveal: BLSSignature,
   graffiti: Bytes32,
@@ -329,12 +329,12 @@ export async function produceEngineBlockContents(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceEngineOrBuilderBlock.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceEngineOrBuilderBlock.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceEngineOrBuilderBlock(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   slot: Slot,
   randaoReveal: BLSSignature,
   graffiti: Bytes32,
@@ -623,12 +623,12 @@ export async function produceEngineOrBuilderBlock(
   throw Error("Unreachable error occurred during the builder and execution block production");
 }
 /**
- * Runs inside BeaconEngine. Moved from unstable@ba0411b482 packages/beacon-node/src/api/impl/validator/index.ts#produceBlockV4.
+ * Runs inside BeaconEngineCore. Moved from unstable@ba0411b482 packages/beacon-node/src/api/impl/validator/index.ts#produceBlockV4.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBlockV4(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   {
     slot,
     randaoReveal,

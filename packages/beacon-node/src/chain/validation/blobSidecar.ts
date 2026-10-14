@@ -14,14 +14,14 @@ import {
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {kzg} from "../../util/kzg.js";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError, BlobSidecarValidationError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlobSidecar(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   fork: ForkName,
   blobSidecar: deneb.BlobSidecar,
   subnet: SubnetID

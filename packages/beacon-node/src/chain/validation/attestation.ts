@@ -49,7 +49,7 @@ import {
   getSignatureFromSingleAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {Result, wrapError} from "../../util/wrapError.js";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
@@ -101,7 +101,7 @@ export type Step0Result = AttestationValidationResult & {
  *   - do not prioritize bls signature set
  */
 export async function validateGossipAttestationsSameAttData(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   fork: ForkName,
   attestationOrBytesArr: GossipAttestation[],
   step0ValidationFn = validateAttestationNoSignatureCheck
@@ -199,7 +199,7 @@ export async function validateGossipAttestationsSameAttData(
  * - prioritize bls signature set
  */
 export async function validateApiAttestation(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   fork: ForkName,
   attestationOrBytes: ApiAttestation
 ): Promise<AttestationValidationResult> {
@@ -235,7 +235,7 @@ export async function validateApiAttestation(
  * This is to avoid deserializing similar attestation multiple times which could help the gc
  */
 async function validateAttestationNoSignatureCheck(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   fork: ForkName,
   attestationOrBytes: AttestationOrBytes,
   subnet: SubnetID | null
@@ -600,7 +600,7 @@ async function validateAttestationNoSignatureCheck(
  * Accounts for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
  * Note: We do not queue future attestations for later processing
  */
-export function verifyPropagationSlotRange(this: BeaconEngine, fork: ForkName, attestationSlot: Slot): void {
+export function verifyPropagationSlotRange(this: BeaconEngineCore, fork: ForkName, attestationSlot: Slot): void {
   // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY
   const latestPermissibleSlot = this.clock.slotWithFutureTolerance(this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000);
   if (attestationSlot > latestPermissibleSlot) {
@@ -669,7 +669,7 @@ export function verifyPropagationSlotRange(this: BeaconEngine, fork: ForkName, a
  * 2. attestation's target block is an ancestor of the block named in the LMD vote
  */
 export function verifyHeadBlockAndTargetRoot(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   beaconBlockRoot: Root,
   targetRoot: Root,
   attestationSlot: Slot,
@@ -709,7 +709,7 @@ export function verifyHeadBlockAndTargetRoot(
  * see https://github.com/ChainSafe/lodestar/blob/v1.11.3/packages/beacon-node/src/chain/validation/attestation.ts#L566
  */
 export async function getShufflingForAttestationVerification(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   attEpoch: Epoch,
   attHeadBlock: ProtoBlock,
   regenCaller: RegenCaller
@@ -764,7 +764,7 @@ export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0
  * it's still fine to ignore here because there's no need for us to handle attestations that are
  * already finalized.
  */
-function verifyHeadBlockIsKnown(this: BeaconEngine, beaconBlockRoot: Root): ProtoBlock {
+function verifyHeadBlockIsKnown(this: BeaconEngineCore, beaconBlockRoot: Root): ProtoBlock {
   // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
   const headBlock = this.forkChoice.getBlockDefaultStatus(beaconBlockRoot);

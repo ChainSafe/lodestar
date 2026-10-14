@@ -6,7 +6,7 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
 
 export type PayloadAttestationValidationResult = {
@@ -15,7 +15,7 @@ export type PayloadAttestationValidationResult = {
 };
 
 export async function validateApiPayloadAttestationMessage(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
   const prioritizeBls = true;
@@ -23,14 +23,14 @@ export async function validateApiPayloadAttestationMessage(
 }
 
 export async function validateGossipPayloadAttestationMessage(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
   return validatePayloadAttestationMessage.call(this, payloadAttestationMessage);
 }
 
 async function validatePayloadAttestationMessage(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   payloadAttestationMessage: gloas.PayloadAttestationMessage,
   prioritizeBls = false
 ): Promise<PayloadAttestationValidationResult> {

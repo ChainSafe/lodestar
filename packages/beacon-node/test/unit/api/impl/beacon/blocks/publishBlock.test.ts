@@ -6,7 +6,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
-import {BeaconEngine} from "../../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {GossipValidationStatus} from "../../../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {
   BlockInputBlobs,
@@ -43,7 +43,7 @@ describe("api - beacon - publishBlockV2", () => {
       "verifyAndObserveBlockProposer",
     ] as const) {
       Object.defineProperty(modules.chain.beaconEngine, name, {
-        value: BeaconEngine.prototype[name].bind(modules.chain.beaconEngine),
+        value: BeaconEngineCore.prototype[name].bind(modules.chain.beaconEngine),
         configurable: true,
       });
     }

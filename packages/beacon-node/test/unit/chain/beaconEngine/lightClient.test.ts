@@ -8,7 +8,7 @@ import {IBeaconStateViewAltair} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getLightclientApi} from "../../../../src/api/impl/lightclient/index.js";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
 import {LightClientErrorCode, LightClientServerErrorCode} from "../../../../src/chain/errors/lightClientError.js";
@@ -28,7 +28,7 @@ import {onLightClientUpdatesByRange} from "../../../../src/network/reqresp/handl
 import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
-describe("BeaconEngine light client ownership", () => {
+describe("BeaconEngineCore light client ownership", () => {
   const config = createBeaconConfig(
     {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 1, DENEB_FORK_EPOCH: 2},
     Buffer.alloc(32)
@@ -48,14 +48,14 @@ describe("BeaconEngine light client ownership", () => {
     syncCommitteeWitness: {get: vi.fn(), put: vi.fn().mockResolvedValue(undefined), batchDelete: vi.fn()},
   };
   const logger = getMockedLogger();
-  let engine: BeaconEngine;
+  let engine: BeaconEngineCore;
   let server: LightClientServer;
   let clock: ClockStopped;
   let chain: IBeaconChain;
   let controller: AbortController;
 
-  function createEngine(disableLightClientServer = false): BeaconEngine {
-    return new BeaconEngine({
+  function createEngine(disableLightClientServer = false): BeaconEngineCore {
+    return new BeaconEngineCore({
       config,
       opts: {...defaultChainOptions, disableLightClientServer},
       logger,

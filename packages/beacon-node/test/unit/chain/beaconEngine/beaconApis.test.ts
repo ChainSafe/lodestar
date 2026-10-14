@@ -8,11 +8,11 @@ import {FAR_FUTURE_EPOCH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateGloas, BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {generateState} from "../../../utils/state.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
-describe("BeaconEngine API response serialization", () => {
+describe("BeaconEngineCore API response serialization", () => {
   const checkpoints = {
     currentJustified: {epoch: 3, root: new Uint8Array(32).fill(3)},
     previousJustified: {epoch: 2, root: new Uint8Array(32).fill(2)},
@@ -37,7 +37,7 @@ describe("BeaconEngine API response serialization", () => {
   ];
   const checkpoint = {...checkpoints.finalized, rootHex: toRootHex(checkpoints.finalized.root)};
   const getCheckpointStateOrBytes = vi.fn();
-  let engine: BeaconEngine;
+  let engine: BeaconEngineCore;
   let view: BeaconStateView;
 
   beforeEach(() => {
@@ -59,7 +59,7 @@ describe("BeaconEngine API response serialization", () => {
     const config = createBeaconConfig(chainConfig, state.genesisValidatorsRoot);
     view = new BeaconStateView(createCachedBeaconState(state, {config, pubkeyCache}));
     const head = generateProtoBlock({slot: state.slot, executionStatus: ExecutionStatus.Syncing});
-    engine = Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, {
+    engine = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
       config,
       forkChoice: {
         getHead: () => head,

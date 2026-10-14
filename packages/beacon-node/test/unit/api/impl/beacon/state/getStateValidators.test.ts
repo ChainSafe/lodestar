@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {BeaconStateView} from "@lodestar/state-transition";
 import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/index.js";
-import {BeaconEngine} from "../../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {ZERO_HASH} from "../../../../../../src/constants/index.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
@@ -30,7 +30,7 @@ describe("getStateValidators status filtering with ids", () => {
     });
     modules.chain.regen.getStateSync.mockReturnValue(state);
     Object.assign(modules.chain, {
-      beaconEngine: Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, {
+      beaconEngine: Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
         config: modules.config,
         pubkeyCache: state.cachedState.epochCtx.pubkeyCache,
         forkChoice: modules.forkChoice,

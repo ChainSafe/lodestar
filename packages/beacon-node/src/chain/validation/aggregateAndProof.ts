@@ -6,7 +6,7 @@ import {
 } from "@lodestar/state-transition";
 import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
@@ -26,7 +26,7 @@ export type AggregateAndProofValidationResult = {
 };
 
 export async function validateApiAggregateAndProof(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   fork: ForkName,
   signedAggregateAndProof: SignedAggregateAndProof
 ): Promise<AggregateAndProofValidationResult> {
@@ -39,7 +39,7 @@ export async function validateApiAggregateAndProof(
 }
 
 export async function validateGossipAggregateAndProof(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   fork: ForkName,
   signedAggregateAndProof: SignedAggregateAndProof,
   serializedData: Uint8Array
@@ -48,7 +48,7 @@ export async function validateGossipAggregateAndProof(
 }
 
 async function validateAggregateAndProof(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   fork: ForkName,
   signedAggregateAndProof: SignedAggregateAndProof,
   serializedData: Uint8Array | null = null,

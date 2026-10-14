@@ -2,7 +2,7 @@ import {SYNC_COMMITTEE_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar
 import {IBeaconStateView, isStatePostAltair} from "@lodestar/state-transition";
 import {SubnetID, altair} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {getSyncCommitteeSignatureSet} from "./signatureSets/index.js";
 
@@ -12,7 +12,7 @@ type IndexInSubcommittee = number;
  * Spec v1.1.0-alpha.8
  */
 export async function validateGossipSyncCommittee(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   syncCommittee: altair.SyncCommitteeMessage,
   subnet: SubnetID
 ): Promise<{indicesInSubcommittee: IndexInSubcommittee[]}> {
@@ -72,7 +72,7 @@ export async function validateGossipSyncCommittee(
 }
 
 export async function validateApiSyncCommittee(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   // Resolve head state internally — no IBeaconStateView crosses the engine seam.
@@ -85,7 +85,7 @@ export async function validateApiSyncCommittee(
  * Abstracted so it can be re-used in API validation.
  */
 async function validateSyncCommitteeSigOnly(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   headState: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage,
   prioritizeBls = false
@@ -102,7 +102,7 @@ async function validateSyncCommitteeSigOnly(
  * Spec v1.1.0-alpha.8
  */
 export function validateGossipSyncCommitteeExceptSig(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   headState: IBeaconStateView,
   subnet: SubnetID,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">

@@ -1,7 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
-import type {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof.js";
 
@@ -27,7 +27,7 @@ describe("validate gossip signedAggregateAndProof", () => {
       },
       fn: async () => {
         const fork = chain.config.getForkName(stateSlot);
-        await validateApiAggregateAndProof.call(chain.beaconEngine as BeaconEngine, fork, agg);
+        await validateApiAggregateAndProof.call(chain.beaconEngine as BeaconEngineCore, fork, agg);
       },
     });
 
@@ -39,7 +39,7 @@ describe("validate gossip signedAggregateAndProof", () => {
       },
       fn: async () => {
         const fork = chain.config.getForkName(stateSlot);
-        await validateGossipAggregateAndProof.call(chain.beaconEngine as BeaconEngine, fork, agg, serializedData);
+        await validateGossipAggregateAndProof.call(chain.beaconEngine as BeaconEngineCore, fork, agg, serializedData);
       },
     });
   }

@@ -78,7 +78,7 @@ import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from 
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {CommonBlockBody} from "../interface.js";
 import {ProposerPreferencesPool} from "../opPools/index.js";
@@ -185,7 +185,7 @@ export type ProduceResult =
  * actually needed (i.e. when extending the parent payload and there are exits to filter).
  */
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#maybeFilterInvalidatedVoluntaryExits.
+ * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#maybeFilterInvalidatedVoluntaryExits.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
@@ -204,12 +204,12 @@ function maybeFilterInvalidatedVoluntaryExits(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#produceBlockBody.
+ * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#produceBlockBody.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBlockBody<T extends BlockType>(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blockType: T,
   currentState: IBeaconStateView,
   blockAttr: BlockAttributes & {
@@ -742,7 +742,7 @@ export async function produceBlockBody<T extends BlockType>(
  * Produce ExecutionPayload for post-merge.
  */
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#prepareExecutionPayload.
+ * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#prepareExecutionPayload.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
@@ -830,7 +830,7 @@ export async function prepareExecutionPayload(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#prepareExecutionPayloadHeader.
+ * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#prepareExecutionPayloadHeader.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
@@ -857,7 +857,7 @@ async function prepareExecutionPayloadHeader(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#getPayloadAttributesForSSE.
+ * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#getPayloadAttributesForSSE.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
@@ -918,7 +918,7 @@ export function getPayloadAttributesForSSE(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#preparePayloadAttributes.
+ * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#preparePayloadAttributes.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
@@ -1017,7 +1017,7 @@ function preparePayloadAttributes(
  * (EMPTY.executionPayloadGasLimit = inherited grandparent's gas_limit).
  */
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#getProposerTargetGasLimit.
+ * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#getProposerTargetGasLimit.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
@@ -1092,12 +1092,12 @@ export function getPooledProposerPreferences(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#produceCommonBlockBody.
+ * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#produceCommonBlockBody.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceCommonBlockBody<T extends BlockType>(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blockType: T,
   currentState: IBeaconStateView,
   {randaoReveal, graffiti, slot, parentBlock}: BlockAttributes

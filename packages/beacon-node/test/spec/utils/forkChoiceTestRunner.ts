@@ -43,7 +43,6 @@ import {
 } from "@lodestar/types";
 import {PayloadAttestationMessage} from "@lodestar/types/gloas";
 import {bnToNum, fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../src/chain/beaconEngine/index.js";
 import {
   BlockInputBlobs,
   BlockInputColumns,
@@ -71,6 +70,7 @@ import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {createBeaconChain} from "../../utils/chain.js";
+import {getBeaconEngineCore} from "../../utils/engine.js";
 import {
   createSpecTestBeaconMetrics,
   expectNoProgressiveBalancesMismatches,
@@ -172,7 +172,7 @@ export const forkChoiceTestRunner =
         // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
         chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
-        const engine = chain.beaconEngine as BeaconEngine;
+        const engine = getBeaconEngineCore(chain.beaconEngine);
         const specStoreBlockRoots = new Set<RootHex>([
           toHex(config.getForkTypes(anchorBlock.slot).BeaconBlock.hashTreeRoot(anchorBlock)),
         ]);

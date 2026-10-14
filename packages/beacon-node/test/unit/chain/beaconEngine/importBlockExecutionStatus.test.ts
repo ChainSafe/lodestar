@@ -5,7 +5,7 @@ import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import type {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {VerifiedBlockBundle, importBlock} from "../../../../src/chain/beaconEngine/importBlock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
@@ -42,7 +42,7 @@ describe("chain / blocks / importBlock", () => {
       db: {block: {putBinary: vi.fn().mockResolvedValue(undefined)}},
       blockSerializedCache: {delete: vi.fn()},
       checkpointBalancesCache: {processState: vi.fn()},
-    } as unknown as BeaconEngine;
+    } as unknown as BeaconEngineCore;
 
     const fullyVerifiedBlock: VerifiedBlockBundle = {
       block,

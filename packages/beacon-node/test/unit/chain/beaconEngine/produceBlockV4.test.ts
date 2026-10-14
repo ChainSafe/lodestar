@@ -7,13 +7,13 @@ import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {ErrorAborted} from "@lodestar/utils";
 import {NodeIsSyncing} from "../../../../src/api/impl/errors.js";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineErrorCode, ProduceBlockV4Request} from "../../../../src/chain/beaconEngine/interface.js";
 import {BlockType, ProduceFullGloas} from "../../../../src/chain/produceBlock/index.js";
 import {ApiTestModules, getApiTestModules} from "../../../utils/api.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
-describe("BeaconEngine V4 production", () => {
+describe("BeaconEngineCore V4 production", () => {
   let modules: ApiTestModules;
   const config = createBeaconConfig(
     createChainForkConfig({
@@ -38,7 +38,7 @@ describe("BeaconEngine V4 production", () => {
   beforeEach(() => {
     modules = getApiTestModules({config});
     modules.chain.beaconEngine.produceBlockV4 = vi.fn(
-      BeaconEngine.prototype.produceBlockV4.bind(modules.chain.beaconEngine)
+      BeaconEngineCore.prototype.produceBlockV4.bind(modules.chain.beaconEngine)
     );
     modules.chain.getProposerHead.mockReturnValue(
       generateProtoBlock({slot: 0, executionPayloadBlockHash: "0x" + "00".repeat(32)})
@@ -119,7 +119,7 @@ describe("BeaconEngine V4 production", () => {
       });
       expect(await modules.chain.beaconEngine.produceBlockV4(attrs)).toEqual({ok: false, code, payload});
       expect(
-        await BeaconEngine.prototype.produceBlock.call(modules.chain.beaconEngine, {
+        await BeaconEngineCore.prototype.produceBlock.call(modules.chain.beaconEngine, {
           ...attrs,
           builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
           builderBoostFactor: 100n,

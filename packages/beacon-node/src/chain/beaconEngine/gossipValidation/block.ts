@@ -8,7 +8,7 @@ import {BlockErrorCode, BlockGossipError, GossipAction} from "../../errors/index
 import * as blobSidecarValidation from "../../validation/blobSidecar.js";
 import * as blockValidation from "../../validation/block.js";
 import {OpSource} from "../../validatorMonitor.js";
-import type {BeaconEngine} from "../beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngineCore.js";
 import {
   GossipValidationResult,
   GossipValidationStatus,
@@ -26,7 +26,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * [beacon-engine] deviation: validation/cache updates run in the engine; the facade retains block import.
  */
 export async function validateGossipBlock(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   isClosed: () => boolean,
   blockRoot: Root,
   blockBytes: Uint8Array,
@@ -145,7 +145,7 @@ export async function validateGossipBlock(
  * [beacon-engine] deviation: invoke validation with engine state and convert gossip errors to verdicts.
  */
 export async function validateGossipBlobSidecar(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blobBytes: Uint8Array,
   fork: ForkName,
   subnet: SubnetID

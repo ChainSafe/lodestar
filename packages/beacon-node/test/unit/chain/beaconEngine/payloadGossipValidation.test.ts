@@ -7,7 +7,7 @@ import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import * as envelopeVerification from "../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
@@ -18,9 +18,9 @@ import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {generateBlockWithColumnSidecars} from "../../../utils/blocksAndData.js";
 import {generateState, zeroProtoBlock} from "../../../utils/state.js";
 
-describe("BeaconEngine payload gossip validation", () => {
+describe("BeaconEngineCore payload gossip validation", () => {
   const config = createBeaconConfig(getConfig(ForkName.gloas), Buffer.alloc(32));
-  let engine: BeaconEngine;
+  let engine: BeaconEngineCore;
   let monitor: ValidatorMonitor;
   let chain: ReturnType<typeof getMockedBeaconChain>;
   let envelope: gloas.SignedExecutionPayloadEnvelope;
@@ -63,7 +63,7 @@ describe("BeaconEngine payload gossip validation", () => {
     chain.regen.getBlockSlotState.mockResolvedValue(state);
     vi.mocked(engine.bls.verifySignatureSets).mockResolvedValue(true);
     engine.validateGossipExecutionPayloadEnvelope =
-      BeaconEngine.prototype.validateGossipExecutionPayloadEnvelope.bind(engine);
+      BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelope.bind(engine);
   });
 
   afterEach(() => vi.restoreAllMocks());
@@ -131,7 +131,7 @@ describe("BeaconEngine payload gossip validation", () => {
 
   it("records API validation in the engine cache", async () => {
     const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope");
-    const result = await BeaconEngine.prototype.validateApiExecutionPayloadEnvelope.call(
+    const result = await BeaconEngineCore.prototype.validateApiExecutionPayloadEnvelope.call(
       engine,
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
       envelope,
@@ -179,7 +179,7 @@ describe("BeaconEngine payload gossip validation", () => {
     engine.validatorMonitor = null;
     expect((await validateEnvelope()).status).toBe("accept");
     await expect(
-      BeaconEngine.prototype.registerApiExecutionPayloadEnvelope.call(engine, 1.25, envelope)
+      BeaconEngineCore.prototype.registerApiExecutionPayloadEnvelope.call(engine, 1.25, envelope)
     ).resolves.toBeUndefined();
   });
 
@@ -187,7 +187,8 @@ describe("BeaconEngine payload gossip validation", () => {
     await validateEnvelope();
     chain.forkChoice.getBlockHex.mockReturnValue({...zeroProtoBlock, slot: 1, blockRoot: root});
     chain.regen.getBlockSlotState.mockRejectedValueOnce(new Error("state unavailable"));
-    const verify = () => BeaconEngine.prototype.verifyEnvelopeForPublish.call(engine, new Uint8Array(), envelope, root);
+    const verify = () =>
+      BeaconEngineCore.prototype.verifyEnvelopeForPublish.call(engine, new Uint8Array(), envelope, root);
     await expect(verify()).rejects.toThrow("Unable to regenerate");
     expect(engine.seenPayloadEnvelopeInputCache.get(root)?.hasPayloadEnvelope()).toBe(true);
     vi.spyOn(envelopeVerification, "verifyExecutionPayloadEnvelope").mockImplementation(() => {
@@ -208,7 +209,7 @@ describe("BeaconEngine payload gossip validation", () => {
     const column = columnSidecars[0];
     const bytes = ssz.gloas.DataColumnSidecar.serialize(column);
     const subnet = computeSubnetForDataColumnSidecar(config, column);
-    const result = await BeaconEngine.prototype.validateGossipGloasDataColumnSidecar.call(engine, bytes, subnet);
+    const result = await BeaconEngineCore.prototype.validateGossipGloasDataColumnSidecar.call(engine, bytes, subnet);
     expect(result).toEqual({status: "accept", value: undefined});
   });
 
@@ -216,7 +217,7 @@ describe("BeaconEngine payload gossip validation", () => {
     const column = ssz.gloas.DataColumnSidecar.defaultValue();
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
     chain.forkChoice.hasBlockHex.mockReturnValue(false);
-    const result = await BeaconEngine.prototype.validateGossipGloasDataColumnSidecar.call(
+    const result = await BeaconEngineCore.prototype.validateGossipGloasDataColumnSidecar.call(
       engine,
       ssz.gloas.DataColumnSidecar.serialize(column),
       0

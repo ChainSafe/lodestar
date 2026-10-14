@@ -6,7 +6,7 @@ import {gloas, ssz} from "@lodestar/types";
 import {defer, fromHex} from "@lodestar/utils";
 import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
-import {BeaconEngine} from "../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BlockAttributes, BlockType, ProduceFullGloas} from "../../../../../src/chain/produceBlock/index.js";
 import {BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/execution/builder/validateBid.js";
@@ -80,7 +80,7 @@ describe("api/validator - produceBlockV4", () => {
     produceFull = vi.fn();
     const produce = produceFull;
     modules.chain.beaconEngine.produceBlockV4 = vi.fn(
-      BeaconEngine.prototype.produceBlockV4.bind(modules.chain.beaconEngine)
+      BeaconEngineCore.prototype.produceBlockV4.bind(modules.chain.beaconEngine)
     );
     modules.chain.beaconEngine.produceCommonBlockBody = vi.fn().mockResolvedValue({});
     modules.chain.produceBlockWrapper.mockImplementation(async (_type, attrs) => {

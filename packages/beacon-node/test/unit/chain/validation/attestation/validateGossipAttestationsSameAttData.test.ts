@@ -4,7 +4,7 @@ import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import type {BeaconEngine} from "../../../../../src/chain/beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
 import {SeenAttesters} from "../../../../../src/chain/seenCache/seenAttesters.js";
@@ -62,7 +62,7 @@ describe("validateGossipAttestationsSameAttData", () => {
     pubkeyCache.append(i, getKeypair(i).publicKey.toBytes());
   }
 
-  let engine: BeaconEngine;
+  let engine: BeaconEngineCore;
   const signingRoot = Buffer.alloc(32, 1);
 
   beforeEach(() => {
@@ -72,8 +72,8 @@ describe("validateGossipAttestationsSameAttData", () => {
       pubkeyCache,
       opts: {
         minSameMessageSignatureSetsToBatch: 2,
-      } as BeaconEngine["opts"],
-    } as Partial<BeaconEngine> as BeaconEngine;
+      } as BeaconEngineCore["opts"],
+    } as Partial<BeaconEngineCore> as BeaconEngineCore;
   });
 
   afterEach(() => {

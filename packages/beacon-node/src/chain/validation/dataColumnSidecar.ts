@@ -17,7 +17,7 @@ import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {kzg} from "../../util/kzg.js";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {
   DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
@@ -30,7 +30,7 @@ import {RegenCaller} from "../regen/interface.js";
 // SPEC FUNCTION
 // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipFuluDataColumnSidecar(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   dataColumnSidecar: fulu.DataColumnSidecar,
   gossipSubnet: SubnetID,
   metrics: Metrics | null
@@ -225,7 +225,7 @@ export async function validateGossipFuluDataColumnSidecar(
 // SPEC FUNCTION
 // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipGloasDataColumnSidecar(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   dataColumnSidecar: gloas.DataColumnSidecar,
   gossipSubnet: SubnetID,
   metrics: Metrics | null

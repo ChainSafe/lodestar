@@ -6,7 +6,7 @@ import {chainConfig} from "@lodestar/config/default";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {FrequencyStateArchiveStrategy} from "../../../../src/chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
@@ -16,11 +16,11 @@ import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 import {createTestBeaconEngine} from "../../../utils/engine.js";
 
-describe("BeaconEngine checkpoint maintenance", () => {
+describe("BeaconEngineCore checkpoint maintenance", () => {
   const config = createChainForkConfig(chainConfig);
   const logger = getMockedLogger();
   const checkpoint = {epoch: 1, root: Buffer.alloc(32, 1)};
-  let engine: BeaconEngine;
+  let engine: BeaconEngineCore;
   let state: IBeaconStateView;
   let abortController: AbortController;
   let closeDb: () => Promise<void>;
@@ -31,7 +31,7 @@ describe("BeaconEngine checkpoint maintenance", () => {
     const anchorState = initDevState(config, 16, {genesisTime: 0});
     anchorState.commit();
     const stateBytes = anchorState.serialize();
-    ({beaconEngine: engine, abortController} = createTestBeaconEngine(
+    ({beaconEngineCore: engine, abortController} = createTestBeaconEngine(
       {
         ...defaultChainOptions,
         blsVerifyAllMainThread: true,

@@ -9,7 +9,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {LateCanonicalBlockReason} from "../../../../src/chain/beaconEngine/interface.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
@@ -22,10 +22,10 @@ import {createTestBeaconEngine} from "../../../utils/engine.js";
 
 const root = (n: number) => toRootHex(Buffer.alloc(32, n));
 
-describe("BeaconEngine finalized-block audit", () => {
+describe("BeaconEngineCore finalized-block audit", () => {
   const config = createChainForkConfig(chainConfig);
   const logger = getMockedLogger();
-  let engine: BeaconEngine;
+  let engine: BeaconEngineCore;
   let closeDb: () => Promise<void>;
   let clock: ClockStopped;
   let protoArray: ProtoArray;
@@ -41,7 +41,7 @@ describe("BeaconEngine finalized-block audit", () => {
     metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     const state = initDevState(config, 16, {genesisTime: 0});
     state.commit();
-    ({beaconEngine: engine} = createTestBeaconEngine(
+    ({beaconEngineCore: engine} = createTestBeaconEngine(
       {
         ...defaultChainOptions,
         blsVerifyAllMainThread: true,

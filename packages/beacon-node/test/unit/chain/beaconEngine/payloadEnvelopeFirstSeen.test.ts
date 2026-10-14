@@ -4,7 +4,7 @@ import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {BlockInputNoData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
@@ -16,15 +16,15 @@ import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled
 import {getApiTestModules} from "../../../utils/api.js";
 import {zeroProtoBlock} from "../../../utils/state.js";
 
-describe("payload input creation when a block first enters BeaconEngine", () => {
+describe("payload input creation when a block first enters BeaconEngineCore", () => {
   const config = createBeaconConfig(getConfig(ForkName.gloas), Buffer.alloc(32));
-  let engine: BeaconEngine;
+  let engine: BeaconEngineCore;
   let block: gloas.SignedBeaconBlock;
   let root: string;
 
   beforeEach(() => {
     const modules = getApiTestModules({config});
-    engine = new BeaconEngine({
+    engine = new BeaconEngineCore({
       config,
       opts: {...defaultChainOptions},
       logger: modules.logger,

@@ -4,7 +4,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import type {BeaconEngine} from "../../../../../src/chain/beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {
@@ -48,7 +48,10 @@ describe("validateAttestation", () => {
     const {chain, attestation} = getValidData();
 
     const fork = chain.config.getForkName(stateSlot);
-    await validateApiAttestation.call(chain.beaconEngine as BeaconEngine, fork, {attestation, serializedData: null});
+    await validateApiAttestation.call(chain.beaconEngine as BeaconEngineCore, fork, {
+      attestation,
+      serializedData: null,
+    });
   });
 
   it("INVALID_SERIALIZED_BYTES_ERROR_CODE", async () => {
@@ -304,7 +307,7 @@ describe("validateAttestation", () => {
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
     await expectRejectedWithLodestarError(
-      validateApiAttestation.call(chain.beaconEngine as BeaconEngine, fork, attestationOrBytes),
+      validateApiAttestation.call(chain.beaconEngine as BeaconEngineCore, fork, attestationOrBytes),
       errorCode
     );
   }
@@ -315,7 +318,7 @@ describe("validateAttestation", () => {
     errorCode: string
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
-    const {results} = await validateGossipAttestationsSameAttData.call(chain.beaconEngine as BeaconEngine, fork, [
+    const {results} = await validateGossipAttestationsSameAttData.call(chain.beaconEngine as BeaconEngineCore, fork, [
       attestationOrBytes,
     ]);
     expect(results.length).toEqual(1);

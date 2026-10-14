@@ -8,7 +8,7 @@ import * as executionPayloadBidValidation from "../../validation/executionPayloa
 import * as executionPayloadEnvelopeValidation from "../../validation/executionPayloadEnvelope.js";
 import * as payloadAttestationMessageValidation from "../../validation/payloadAttestationMessage.js";
 import {OpSource} from "../../validatorMonitor.js";
-import type {BeaconEngine} from "../beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngineCore.js";
 import {GossipValidationResult, fromResult, ignore, runGossipValidation} from "../gossipValidationResult.js";
 import {deserializeGossipMessage} from "./deserialize.js";
 
@@ -18,7 +18,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * [beacon-engine] deviation: pool/fork-choice updates precede the verdict; consume indices internally.
  */
 export async function validateGossipPayloadAttestationMessage(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   payloadAttestationBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
@@ -62,7 +62,7 @@ export async function validateGossipPayloadAttestationMessage(
  * [beacon-engine] deviation: pool/fork-choice updates run in the engine; the API publishes.
  */
 export function validateApiPayloadAttestationMessage(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   _payloadAttestationBytes: Uint8Array,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<GossipValidationResult<void>> {
@@ -82,7 +82,7 @@ export function validateApiPayloadAttestationMessage(
  * [beacon-engine] deviation: shared engine pool/fork-choice updates; retain proposer gating and API error propagation.
  */
 function insertPayloadAttestationOnAccept(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   message: gloas.PayloadAttestationMessage,
   result: payloadAttestationMessageValidation.PayloadAttestationValidationResult,
   source: "gossip" | "api"
@@ -118,7 +118,7 @@ function insertPayloadAttestationOnAccept(
  * [beacon-engine] deviation: cache and monitor the envelope in the engine before returning a verdict.
  */
 export async function validateGossipExecutionPayloadEnvelope(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   envelopeBytes: Uint8Array,
   source: SourceMeta
 ): Promise<GossipValidationResult<void>> {
@@ -166,7 +166,7 @@ export async function validateGossipExecutionPayloadEnvelope(
  * [beacon-engine] deviation: record API validation in the engine envelope cache.
  */
 export function validateApiExecutionPayloadEnvelope(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   _envelopeBytes: Uint8Array,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
   seenTimestampSec: number
@@ -189,7 +189,7 @@ export function validateApiExecutionPayloadEnvelope(
  * [beacon-engine] deviation: pool insertion precedes the verdict; monitoring stays deferred.
  */
 export async function validateGossipExecutionPayloadBid(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   isClosed: () => boolean,
   bidBytes: Uint8Array,
   fork: ForkName,
@@ -251,7 +251,7 @@ export async function validateGossipExecutionPayloadBid(
  * [beacon-engine] deviation: return a validation verdict; API orchestration remains in the caller.
  */
 export function validateApiExecutionPayloadBid(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   _bidBytes: Uint8Array,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<GossipValidationResult<void>> {

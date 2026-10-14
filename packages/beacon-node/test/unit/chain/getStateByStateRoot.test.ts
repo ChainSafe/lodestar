@@ -4,12 +4,12 @@ import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {RegenCaller} from "../../../src/chain/regen/interface.js";
 import {generateCachedState} from "../../utils/state.js";
 import {generateProtoBlock} from "../../utils/typeGenerator.js";
 
-describe("BeaconEngine state-root lookup", () => {
+describe("BeaconEngineCore state-root lookup", () => {
   const rootHex = `0x${"aa".repeat(32)}`;
   const checkpointState = new BeaconStateView(generateCachedState({slot: 2 * SLOTS_PER_EPOCH}));
   const stateRoot = toRootHex(checkpointState.hashTreeRoot());
@@ -53,7 +53,7 @@ describe("BeaconEngine state-root lookup", () => {
       },
     };
 
-    const engine = Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, chain);
+    const engine = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, chain);
     const getStateByStateRoot = (root: string) => engine.getSerializedState(root);
     return {chain, getStateByStateRoot};
   }

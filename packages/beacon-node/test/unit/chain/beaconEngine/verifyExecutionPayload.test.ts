@@ -5,7 +5,7 @@ import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
@@ -28,7 +28,7 @@ const config = createBeaconConfig(
   Buffer.alloc(32)
 );
 
-describe("BeaconEngine envelope verification", () => {
+describe("BeaconEngineCore envelope verification", () => {
   let chain: ReturnType<typeof getMockedBeaconChain>;
   const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
   const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
@@ -62,7 +62,7 @@ describe("BeaconEngine envelope verification", () => {
   afterEach(() => vi.restoreAllMocks());
 
   function verify(validSignature = false) {
-    return BeaconEngine.prototype.importExecutionPayload.call(
+    return BeaconEngineCore.prototype.importExecutionPayload.call(
       chain.beaconEngine,
       bytes,
       DataAvailabilityStatus.Available,
@@ -133,7 +133,7 @@ describe("BeaconEngine envelope verification", () => {
     "rejects malformed envelope bytes before EL verification",
     async (malformed) => {
       await expect(
-        BeaconEngine.prototype.importExecutionPayload.call(
+        BeaconEngineCore.prototype.importExecutionPayload.call(
           chain.beaconEngine,
           malformed,
           DataAvailabilityStatus.Available,

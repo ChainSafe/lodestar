@@ -12,7 +12,7 @@ import {
 import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 
@@ -51,7 +51,7 @@ function getMinBidValue(currentHighestBid: number): number {
  * Otherwise the bid must build on the local head's full or empty payload variant, as selected for its slot.
  */
 function isBidCompatibleWithHead(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   head: ProtoBlock,
   bidSlot: Slot,
   bidParentBlockRoot: RootHex,
@@ -98,7 +98,7 @@ function isBidCompatibleWithHead(
  * unavailable, since the checks cannot be evaluated against the parent branch.
  */
 export async function validateApiExecutionPayloadBid(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
@@ -252,14 +252,14 @@ export async function validateApiExecutionPayloadBid(
 }
 
 export async function validateGossipExecutionPayloadBid(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<{proposerIndex: ValidatorIndex}> {
   return validateExecutionPayloadBid.call(this, signedExecutionPayloadBid);
 }
 
 async function validateExecutionPayloadBid(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<{proposerIndex: ValidatorIndex}> {
   const bid = signedExecutionPayloadBid.message;

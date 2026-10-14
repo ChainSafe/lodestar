@@ -3,12 +3,12 @@ import {sszTypesFor} from "@lodestar/types";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import {validateLightClientFinalityUpdate} from "../../validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../validation/lightClientOptimisticUpdate.js";
-import type {BeaconEngine} from "../beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngineCore.js";
 import {GossipValidationResult, accept, fromResult, ignore} from "../gossipValidationResult.js";
 import {deserializeGossipMessage} from "./deserialize.js";
 
 export async function validateGossipLightClientOptimisticUpdate(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   bytes: Uint8Array,
   fork: ForkName
 ): Promise<GossipValidationResult<void>> {
@@ -37,7 +37,7 @@ export async function validateGossipLightClientOptimisticUpdate(
 }
 
 export async function validateGossipLightClientFinalityUpdate(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   bytes: Uint8Array,
   fork: ForkName
 ): Promise<GossipValidationResult<void>> {

@@ -6,7 +6,7 @@ import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
@@ -19,7 +19,7 @@ import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {generateState, zeroProtoBlock} from "../../../utils/state.js";
 
-describe("BeaconEngine importExecutionPayload FCU", () => {
+describe("BeaconEngineCore importExecutionPayload FCU", () => {
   const blockRoot = Buffer.alloc(32, 1);
   const blockRootHex = toRootHex(blockRoot);
   const blockHashHex = toRootHex(Buffer.alloc(32, 2));
@@ -32,7 +32,7 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
   envelope.message.payload.gasLimit = 30_000_000;
   const envelopeBytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
   const emitImported = vi.fn();
-  const putEnvelope = vi.fn<BeaconEngine["db"]["executionPayloadEnvelope"]["putBinary"]>();
+  const putEnvelope = vi.fn<BeaconEngineCore["db"]["executionPayloadEnvelope"]["putBinary"]>();
 
   beforeEach(() => {
     const config = createBeaconConfig(
@@ -98,13 +98,17 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
       const deserialize = vi.spyOn(ssz.gloas.SignedExecutionPayloadEnvelope, "deserialize");
       vi.spyOn(envelopeValidation, "validateGossipExecutionPayloadEnvelope").mockResolvedValue(undefined);
       expect(
-        await BeaconEngine.prototype.validateGossipExecutionPayloadEnvelope.call(chain.beaconEngine, envelopeBytes, {
-          source: PayloadEnvelopeInputSource.gossip,
-          seenTimestampSec: 1,
-        })
+        await BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelope.call(
+          chain.beaconEngine,
+          envelopeBytes,
+          {
+            source: PayloadEnvelopeInputSource.gossip,
+            seenTimestampSec: 1,
+          }
+        )
       ).toMatchObject({status: "accept"});
       expect(
-        await BeaconEngine.prototype.importExecutionPayload.call(
+        await BeaconEngineCore.prototype.importExecutionPayload.call(
           chain.beaconEngine,
           envelopeBytes,
           DataAvailabilityStatus.Available,
@@ -127,7 +131,7 @@ describe("BeaconEngine importExecutionPayload FCU", () => {
         ? {status: ExecutionPayloadStatus.VALID, latestValidHash: blockHashHex, validationError: null}
         : {status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null}
     );
-    return BeaconEngine.prototype.importExecutionPayload.call(
+    return BeaconEngineCore.prototype.importExecutionPayload.call(
       chain.beaconEngine,
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(candidate),
       DataAvailabilityStatus.Available,

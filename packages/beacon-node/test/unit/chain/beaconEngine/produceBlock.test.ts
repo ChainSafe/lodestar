@@ -5,7 +5,7 @@ import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineErrorCode} from "../../../../src/chain/beaconEngine/interface.js";
 import {BlockType} from "../../../../src/chain/produceBlock/index.js";
 import {BuilderStatus} from "../../../../src/execution/builder/http.js";
@@ -14,7 +14,7 @@ import {toGraffitiBytes} from "../../../../src/util/graffiti.js";
 import {ApiTestModules, getApiTestModules} from "../../../utils/api.js";
 import {zeroProtoBlock} from "../../../utils/state.js";
 
-describe("BeaconEngine V3 production race", () => {
+describe("BeaconEngineCore V3 production race", () => {
   let modules: ApiTestModules;
   const config = createBeaconConfig(
     createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 1}),
@@ -25,7 +25,7 @@ describe("BeaconEngine V3 production race", () => {
     vi.spyOn(modules.chain.clock, "msFromSlot").mockReturnValue(0);
     modules.chain.executionBuilder.status = BuilderStatus.enabled;
     modules.chain.beaconEngine.produceBlock = vi.fn(
-      BeaconEngine.prototype.produceBlock.bind(modules.chain.beaconEngine)
+      BeaconEngineCore.prototype.produceBlock.bind(modules.chain.beaconEngine)
     );
     modules.chain.beaconEngine.produceCommonBlockBody = vi.fn().mockResolvedValue({});
   });

@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {BeaconDb} from "../../../../src/db/index.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
@@ -18,7 +18,7 @@ describe("engine / state pruning progress", () => {
   beforeEach(async () => {
     ({db, close: closeDb} = await startIsolatedTmpBeaconDb(config, "lodestar-archive-store-pruning-"));
     events = new BeaconEngineEventBus();
-    const engine = Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, {
+    const engine = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
       config,
       db,
       logger: testLogger(),

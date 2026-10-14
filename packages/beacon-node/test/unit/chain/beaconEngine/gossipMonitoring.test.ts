@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {GossipValidationStatus} from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {
@@ -25,14 +25,14 @@ import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getApiTestModules} from "../../../utils/api.js";
 
-describe("BeaconEngine gossip monitoring", () => {
-  let engine: BeaconEngine;
+describe("BeaconEngineCore gossip monitoring", () => {
+  let engine: BeaconEngineCore;
   let monitor: ValidatorMonitor;
 
   beforeEach(() => {
     vi.useFakeTimers();
     const modules = getApiTestModules();
-    engine = new BeaconEngine({
+    engine = new BeaconEngineCore({
       serializedCache: new SerializedCache({cacheDeserialized: true}),
       config: modules.chain.config,
       opts: {...defaultChainOptions},

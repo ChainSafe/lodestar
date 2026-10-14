@@ -6,9 +6,9 @@ import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils"
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconNode} from "../../../../src/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
+import {getBeaconEngineCore} from "../../../utils/engine.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 
@@ -63,14 +63,14 @@ describe("api / impl / validator", () => {
       });
 
       // live indices at epoch of consideration, epoch 0
-      (bn.chain.beaconEngine as BeaconEngine).seenBlockProposers.add(0, 1, toRootHex(Buffer.alloc(32)));
-      (bn.chain.beaconEngine as BeaconEngine).seenBlockAttesters.add(0, 2);
-      (bn.chain.beaconEngine as BeaconEngine).seenAttesters.add(0, 3);
-      (bn.chain.beaconEngine as BeaconEngine).seenAggregators.add(0, 4);
+      getBeaconEngineCore(bn.chain.beaconEngine).seenBlockProposers.add(0, 1, toRootHex(Buffer.alloc(32)));
+      getBeaconEngineCore(bn.chain.beaconEngine).seenBlockAttesters.add(0, 2);
+      getBeaconEngineCore(bn.chain.beaconEngine).seenAttesters.add(0, 3);
+      getBeaconEngineCore(bn.chain.beaconEngine).seenAggregators.add(0, 4);
       // live indices at other epochs, epoch 10
-      (bn.chain.beaconEngine as BeaconEngine).seenBlockProposers.add(10, 1000, toRootHex(Buffer.alloc(32)));
-      (bn.chain.beaconEngine as BeaconEngine).seenAttesters.add(10, 2000);
-      (bn.chain.beaconEngine as BeaconEngine).seenAggregators.add(10, 3000);
+      getBeaconEngineCore(bn.chain.beaconEngine).seenBlockProposers.add(10, 1000, toRootHex(Buffer.alloc(32)));
+      getBeaconEngineCore(bn.chain.beaconEngine).seenAttesters.add(10, 2000);
+      getBeaconEngineCore(bn.chain.beaconEngine).seenAggregators.add(10, 3000);
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 
@@ -107,7 +107,7 @@ describe("api / impl / validator", () => {
       await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 1
       await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 2
 
-      (bn.chain.beaconEngine as BeaconEngine).seenBlockProposers.add(
+      getBeaconEngineCore(bn.chain.beaconEngine).seenBlockProposers.add(
         bn.chain.clock.currentEpoch,
         1,
         toRootHex(Buffer.alloc(32))

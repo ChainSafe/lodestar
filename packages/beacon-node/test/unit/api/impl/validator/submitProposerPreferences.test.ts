@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ssz} from "@lodestar/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
-import {BeaconEngine} from "../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {
   GossipAction,
   ProposerPreferencesError,
@@ -30,7 +30,7 @@ describe("api/validator - submitProposerPreferences", () => {
   beforeEach(() => {
     modules = getApiTestModules();
     modules.chain.beaconEngine.validateGossipProposerPreferences =
-      BeaconEngine.prototype.validateGossipProposerPreferences.bind(modules.chain.beaconEngine);
+      BeaconEngineCore.prototype.validateGossipProposerPreferences.bind(modules.chain.beaconEngine);
     api = getValidatorApi(defaultApiOptions, modules);
     vi.spyOn(modules.chain.clock, "currentEpoch", "get").mockReturnValue(5);
     modules.network.publishProposerPreferences = vi.fn().mockResolvedValue(1);

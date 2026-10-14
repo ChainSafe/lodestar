@@ -13,7 +13,7 @@ import {ssz} from "@lodestar/types";
 import {fromAsync, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../src/api/impl/beacon/blocks/index.js";
 import {archiveBlocks} from "../../../../../src/chain/archiveStore/utils/archiveBlocks.js";
-import {BeaconEngine} from "../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {
   PayloadEnvelopeInput,
   PayloadEnvelopeInputSource,
@@ -128,11 +128,10 @@ describe("facade execution payload envelope serving", () => {
     chain.getFinalizedBlockSnapshot = vi
       .fn()
       .mockReturnValue({canonical: [protoBlock], nonCanonical: [{...protoBlock, blockRoot: toRootHex(orphanRoot)}]});
-    chain.beaconEngine.migrateExecutionPayloadEnvelopes = BeaconEngine.prototype.migrateExecutionPayloadEnvelopes.bind(
-      chain.beaconEngine
-    );
+    chain.beaconEngine.migrateExecutionPayloadEnvelopes =
+      BeaconEngineCore.prototype.migrateExecutionPayloadEnvelopes.bind(chain.beaconEngine);
     chain.beaconEngine.deleteNonCanonicalExecutionPayloadEnvelopes =
-      BeaconEngine.prototype.deleteNonCanonicalExecutionPayloadEnvelopes.bind(chain.beaconEngine);
+      BeaconEngineCore.prototype.deleteNonCanonicalExecutionPayloadEnvelopes.bind(chain.beaconEngine);
     chain.beaconEngine.migrateCanonicalBlocks = vi.fn().mockResolvedValue([]);
     chain.beaconEngine.deleteNonCanonicalBlocks = vi.fn().mockResolvedValue(undefined);
     chain.opts.dedupePayloads = false;

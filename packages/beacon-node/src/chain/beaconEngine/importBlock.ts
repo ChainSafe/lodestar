@@ -53,7 +53,7 @@ import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
-import {BeaconEngine} from "./beaconEngine.js";
+import {BeaconEngineCore} from "./beaconEngineCore.js";
 import {ImportBlockResult} from "./interface.js";
 
 export type VerifiedBlockBundle = {
@@ -68,12 +68,12 @@ export type VerifiedBlockBundle = {
 };
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#importBlock.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#importBlock.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function importBlock(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   // [beacon-engine] deviation: consume the engine-owned verification bundle and facade DA status.
   v: VerifiedBlockBundle,
   dataAvailabilityStatus: DataAvailabilityStatus,
@@ -560,12 +560,12 @@ export async function importBlock(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPreElectra.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPreElectra.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function addAttestationPreElectra(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   // added to have the same signature as addAttestationPostElectra
   _: IBeaconStateView,
   target: phase0.Checkpoint,
@@ -583,12 +583,12 @@ export function addAttestationPreElectra(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPostElectra.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPostElectra.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function addAttestationPostElectra(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   state: IBeaconStateView,
   target: phase0.Checkpoint,
   attDataRoot: string,

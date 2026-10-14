@@ -3,7 +3,7 @@ import {PrivateKey} from "@libp2p/interface";
 import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {BeaconEngine} from "../../src/chain/beaconEngine/index.js";
+import {BeaconEngine, BeaconEngineCore, IBeaconEngine} from "../../src/chain/beaconEngine/index.js";
 import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BeaconChainModules} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
@@ -45,6 +45,7 @@ export function createTestBeaconEngine(
   modules: TestBeaconEngineModules
 ): Omit<BeaconChainModules, "anchor" | "builderApiClient" | "beaconEngine" | "earliestAvailableSlot"> & {
   beaconEngine: BeaconEngine;
+  beaconEngineCore: BeaconEngineCore;
 } {
   const {
     privateKey,
@@ -85,7 +86,7 @@ export function createTestBeaconEngine(
 
   const serializedCache = new SerializedCache({cacheDeserialized: !opts.beaconEngineWorker});
   const blockSerializedCache = new BlockSerializedCache(config);
-  const beaconEngine = new BeaconEngine({
+  const beaconEngineCore = new BeaconEngineCore({
     serializedCache: opts.beaconEngineWorker ? undefined : serializedCache,
     blockSerializedCache: opts.beaconEngineWorker ? undefined : blockSerializedCache,
     executionEngine,
@@ -106,15 +107,24 @@ export function createTestBeaconEngine(
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
   });
+  const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter});
   return {
     ...modules,
     serializedCache,
     blockSerializedCache,
     beaconEngine,
+    beaconEngineCore,
     abortController,
     clock,
     emitter,
     cpStateDatastore,
     custodyConfig,
   };
+}
+
+/** Access the in-process core for tests that inspect or mutate consensus internals. */
+export function getBeaconEngineCore(engine: IBeaconEngine): BeaconEngineCore {
+  const core: unknown = Reflect.get(engine, "core");
+  if (!(core instanceof BeaconEngineCore)) throw Error("Expected an in-process BeaconEngineCore");
+  return core;
 }

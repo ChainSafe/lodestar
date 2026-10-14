@@ -78,6 +78,11 @@ export type HeadParentPayload = {
 export type SerializedLightClientData = {data: Uint8Array; slot: Slot};
 
 export type BeaconEngineModules = {
+  core: IBeaconEngineCore;
+  emitter: ChainEventEmitter;
+};
+
+export type BeaconEngineCoreModules = {
   serializedCache?: SerializedCache;
   blockSerializedCache?: BlockSerializedCache;
   builderApiClientOpts?: BuilderApiClientOpts;
@@ -218,7 +223,9 @@ export type ImportExecutionPayloadOpts = {
   seenTimestampSec?: number;
 };
 
-export interface IBeaconEngine {
+export type IBeaconEngine = IBeaconEngineCore;
+
+export interface IBeaconEngineCore {
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
   persistAnchorState(): Promise<void>;
   initializeFromAnchor(): Promise<EngineBootstrap>;

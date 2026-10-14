@@ -1,6 +1,6 @@
 import {VoluntaryExitValidity, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {
   GossipAction,
   VoluntaryExitError,
@@ -36,7 +36,7 @@ export function isTransientExitValidity(v: VoluntaryExitValidity): boolean {
 
 // Comments for each call are present inside `validateVoluntaryExit`.
 export async function validateApiVoluntaryExit(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   voluntaryExit: phase0.SignedVoluntaryExit
 ): Promise<ApiVoluntaryExitResult> {
   const prioritizeBls = true;
@@ -75,14 +75,14 @@ export async function validateApiVoluntaryExit(
 }
 
 export async function validateGossipVoluntaryExit(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   voluntaryExit: phase0.SignedVoluntaryExit
 ): Promise<void> {
   return validateVoluntaryExit.call(this, voluntaryExit);
 }
 
 async function validateVoluntaryExit(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   voluntaryExit: phase0.SignedVoluntaryExit,
   prioritizeBls = false
 ): Promise<void> {

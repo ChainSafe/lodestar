@@ -6,7 +6,7 @@ import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEventBus} from "../../src/chain/beaconEngine/events.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
@@ -41,13 +41,13 @@ import {getMockedClock} from "./clock.js";
 import {getMockedLogger} from "./loggerMock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
-  publishChainView: Mock<BeaconEngine["publishChainView"]>;
+  publishChainView: Mock<BeaconEngineCore["publishChainView"]>;
   logger: Mocked<Logger>;
   // The facade narrows `beaconEngine` to `IBeaconEngine`, but the flat mock doubles as the concrete
-  // engine (`chain.beaconEngine = chain`), so tests invoke the `this: BeaconEngine` phantom validators
+  // engine (`chain.beaconEngine = chain`), so tests invoke the `this: BeaconEngineCore` phantom validators
   // and reach engine internals (regen/bls/getHeadState) through it. Keep the concrete type here.
-  beaconEngine: BeaconEngine;
-  produceBlockWrapper: Mock<BeaconEngine["produceBlockWrapper"]>;
+  beaconEngine: BeaconEngineCore;
+  produceBlockWrapper: Mock<BeaconEngineCore["produceBlockWrapper"]>;
   forkChoice: MockedForkChoice;
   // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
   // real `prepareForNextSlot` bound onto it call `this.recomputeForkChoiceHead`
@@ -84,7 +84,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   getHeadState: Mock<() => IBeaconStateView>;
   getHeadStateAtCurrentEpoch: Mock<() => Promise<IBeaconStateView>>;
   bls: {
-    verifySignatureSets: Mock<BeaconEngine["bls"]["verifySignatureSets"]>;
+    verifySignatureSets: Mock<BeaconEngineCore["bls"]["verifySignatureSets"]>;
     verifySignatureSetsSameMessage: Mock<() => boolean>;
     close: Mock;
     canAcceptWork: Mock<() => boolean>;
@@ -318,12 +318,12 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     genesisTime: genesisTime ?? 0,
     config: config ?? defaultConfig,
   }) as MockedBeaconChain;
-  // The gossip validators are now BeaconEngine methods that read engine collaborators. In this flat
+  // The gossip validators are now BeaconEngineCore methods that read engine collaborators. In this flat
   // mock the facade doubles as the engine, so `chain.beaconEngine.forkChoice === chain.forkChoice` etc.
   (chain as {beaconEngine: unknown}).beaconEngine = chain;
-  // Duty flows are real BeaconEngine methods; bind the real implementations (and the private helpers
+  // Duty flows are real BeaconEngineCore methods; bind the real implementations (and the private helpers
   // they call) so duty tests exercise real logic against the mock's collaborators.
-  // `prepareForNextSlot` is a real BeaconEngine method too; `recomputeForkChoiceHead` / `predictProposerHead`
+  // `prepareForNextSlot` is a real BeaconEngineCore method too; `recomputeForkChoiceHead` / `predictProposerHead`
   // stay as mock fns above so tests can control head selection.
   for (const name of [
     "getLightClientServer",
@@ -382,7 +382,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "getConfirmedBlock",
   ] as const) {
     (chain as unknown as Record<string, unknown>)[name] = (
-      BeaconEngine.prototype as unknown as Record<string, unknown>
+      BeaconEngineCore.prototype as unknown as Record<string, unknown>
     )[name];
   }
   vi.spyOn(chain.proposerPreferencesPool, "get");

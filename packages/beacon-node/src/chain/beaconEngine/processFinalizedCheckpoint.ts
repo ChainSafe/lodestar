@@ -1,5 +1,5 @@
 /**
- * Finalization spans two owners: BeaconEngine owns fork choice, blocks, envelopes and state archival;
+ * Finalization spans two owners: BeaconEngineCore owns fork choice, blocks, envelopes and state archival;
  * BeaconChain owns data columns and ChainView. Its ArchiveStore facade must coordinate their work in order:
  * 1. Archive canonical blocks, sidecars and envelopes, then optionally persist orphaned blocks.
  * 2. Clean up noncanonical data (columns before their blocks), expired sidecars and light-client data,
@@ -29,7 +29,7 @@ import {BlockRootHex} from "../../util/sszBytes.js";
 import {StateArchiveStrategy} from "../archiveStore/interface.js";
 import {pruneHistory as pruneHistoryFromDb} from "../archiveStore/utils/pruneHistory.js";
 import {FinalizedProtoSummary} from "../chainView/interface.js";
-import type {BeaconEngine} from "./beaconEngine.js";
+import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import {BeaconEngineEvent} from "./events.js";
 import {LateCanonicalBlockReason} from "./interface.js";
 
@@ -44,7 +44,7 @@ const BLOCK_BATCH_SIZE = 256;
  * The sync gate comes from chain/archiveStore/archiveStore.ts#ArchiveStore.processFinalizedCheckpoint.
  * [beacon-engine] Read finalized ancestors and clock from the engine; audit only newly migrated blocks after writes.
  */
-export async function migrateBlocksFromHotToColdDb(this: BeaconEngine): Promise<Slot[]> {
+export async function migrateBlocksFromHotToColdDb(this: BeaconEngineCore): Promise<Slot[]> {
   const {db, logger, forkChoice, clock, metrics} = this;
   const finalized = forkChoice.getFinalizedCheckpoint();
   const {ancestors: blocks} = forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(finalized.rootHex);
@@ -135,7 +135,7 @@ export async function migrateBlocksFromHotToColdDb(this: BeaconEngine): Promise<
  * (finalizedPostGloas migration call and logging).
  * [beacon-engine] Select canonical ancestors and read dedupePayloads from the engine instead of caller arguments.
  */
-export async function migrateExecutionPayloadEnvelopes(this: BeaconEngine): Promise<Slot[]> {
+export async function migrateExecutionPayloadEnvelopes(this: BeaconEngineCore): Promise<Slot[]> {
   const finalized = this.forkChoice.getFinalizedCheckpoint();
   const {ancestors} = this.forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(finalized.rootHex);
   const currentEpoch = this.clock.currentEpoch;
@@ -161,7 +161,7 @@ export async function migrateExecutionPayloadEnvelopes(this: BeaconEngine): Prom
  * (noncanonical executionPayloadEnvelope.batchDelete).
  */
 export async function deleteNonCanonicalExecutionPayloadEnvelopes(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   roots: Uint8Array[]
 ): Promise<void> {
   await this.db.executionPayloadEnvelope.batchDelete(roots);
@@ -173,7 +173,7 @@ export async function deleteNonCanonicalExecutionPayloadEnvelopes(
  * [beacon-engine] Read bytes through the engine DB and use its configured directory as a fallback.
  */
 export async function persistOrphanedBlocks(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blocks: FinalizedProtoSummary[],
   directory?: string
 ): Promise<void> {
@@ -197,7 +197,7 @@ export async function persistOrphanedBlocks(
  * Source: unstable@0edec865c8 chain/archiveStore/utils/archiveBlocks.ts#archiveBlocks
  * (noncanonical block.batchDelete after sidecar cleanup).
  */
-export async function deleteNonCanonicalBlocks(this: BeaconEngine, roots: Uint8Array[]): Promise<void> {
+export async function deleteNonCanonicalBlocks(this: BeaconEngineCore, roots: Uint8Array[]): Promise<void> {
   await this.db.block.batchDelete(roots);
 }
 
@@ -210,7 +210,7 @@ export async function deleteNonCanonicalBlocks(this: BeaconEngine, roots: Uint8A
  * ChainView publication is engine-specific.
  */
 export async function completeFinalization(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   finalized: CheckpointWithHex,
   stateArchiveStrategy: StateArchiveStrategy
 ): Promise<number> {
@@ -225,13 +225,13 @@ export async function completeFinalization(
 /**
  * Sources: unstable@0edec865c8 chain/archiveStore/archiveStore.ts#ArchiveStore.init / processFinalizedCheckpoint
  * and chain/archiveStore/utils/pruneHistory.ts#pruneHistory.
- * [beacon-engine] The pruning cursor stays private on BeaconEngine and advances only after this succeeds.
+ * [beacon-engine] The pruning cursor stays private on BeaconEngineCore and advances only after this succeeds.
  * Synced through unstable@2593063a82: persist the serving floor before deleting any history.
  * [beacon-engine] Publish the floor to the facade before deletion, including failed prune attempts;
  * the beforePrune callback stays engine-local.
  */
 export async function pruneHistory(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   finalizedEpoch: Epoch,
   currentEpoch: Epoch,
   statePruneFromSlot: Slot = 0

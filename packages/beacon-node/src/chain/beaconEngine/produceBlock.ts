@@ -13,14 +13,14 @@ import {
   produceBlockBody,
 } from "../produceBlock/produceBlockBody.js";
 import {RegenCaller} from "../regen/index.js";
-import type {BeaconEngine} from "./beaconEngine.js";
+import type {BeaconEngineCore} from "./beaconEngineCore.js";
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceCommonBlockBody.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceCommonBlockBody.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceCommonBlockBody(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blockAttributes: BlockAttributes
 ): Promise<CommonBlockBody> {
   const {slot, parentBlock} = blockAttributes;
@@ -38,11 +38,11 @@ export async function produceCommonBlockBody(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceBlock.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceBlock.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function produceBlock(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
 ): Promise<{
   // [beacon-engine] deviation: return DA artifacts alongside the assembled block.
@@ -56,11 +56,11 @@ export function produceBlock(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceBlindedBlock.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceBlindedBlock.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function produceBlindedBlock(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
 ): Promise<{
   // [beacon-engine] deviation: return DA artifacts alongside the assembled block.
@@ -73,11 +73,11 @@ export function produceBlindedBlock(
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceBlockWrapper.
+ * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/chain.ts#produceBlockWrapper.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBlockWrapper<T extends BlockType>(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blockType: T,
   {
     randaoReveal,

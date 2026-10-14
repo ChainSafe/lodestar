@@ -7,7 +7,7 @@ import {ForkName, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateGloas, BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/index.js";
-import {BeaconEngine} from "../../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {RegenCaller} from "../../../../../../src/chain/regen/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateCachedElectraState, generateState} from "../../../../../utils/state.js";
@@ -46,7 +46,7 @@ describe("getStatePtc", () => {
     );
     modules.db.blockArchive.get.mockResolvedValue(null);
     Object.assign(modules.chain, {
-      beaconEngine: Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, {
+      beaconEngine: Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
         config: modules.config,
         forkChoice: modules.forkChoice,
         db: modules.db,
@@ -100,7 +100,7 @@ describe("getStatePtc", () => {
     );
     const genesisModules = getApiTestModules({config});
     Object.assign(genesisModules.chain, {
-      beaconEngine: Object.assign(Object.create(BeaconEngine.prototype) as BeaconEngine, {
+      beaconEngine: Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
         config,
         forkChoice: modules.forkChoice,
         db: modules.db,

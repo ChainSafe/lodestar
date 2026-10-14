@@ -6,7 +6,7 @@ import {DOMAIN_AGGREGATE_AND_PROOF, ForkName, SLOTS_PER_EPOCH, ZERO_HASH} from "
 import {computeSigningRoot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {phase0, ssz} from "@lodestar/types";
-import type {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
@@ -45,7 +45,7 @@ describe("chain / validation / aggregateAndProof", () => {
     const {chain, signedAggregateAndProof} = getValidData({});
 
     const fork = chain.config.getForkName(stateSlot);
-    await validateApiAggregateAndProof.call(chain.beaconEngine as BeaconEngine, fork, signedAggregateAndProof);
+    await validateApiAggregateAndProof.call(chain.beaconEngine as BeaconEngineCore, fork, signedAggregateAndProof);
   });
 
   it("BAD_TARGET_EPOCH", async () => {
@@ -222,7 +222,7 @@ describe("chain / validation / aggregateAndProof", () => {
     const serializedData = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
     await expectRejectedWithLodestarError(
       validateGossipAggregateAndProof.call(
-        chain.beaconEngine as BeaconEngine,
+        chain.beaconEngine as BeaconEngineCore,
         fork,
         signedAggregateAndProof,
         serializedData

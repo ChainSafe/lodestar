@@ -1,7 +1,7 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
-import {BeaconEngine} from "../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {getApiTestModules} from "../../../../utils/api.js";
 
 afterEach(() => vi.restoreAllMocks());
@@ -13,7 +13,7 @@ describe("api/validator - prepareBeaconCommitteeSubnet", () => {
     const prepared = new Promise<void>((resolve) => {
       finishPreparation = resolve;
     });
-    const prepare = vi.fn<BeaconEngine["prepareBeaconCommitteeSubnets"]>().mockReturnValue(prepared);
+    const prepare = vi.fn<BeaconEngineCore["prepareBeaconCommitteeSubnets"]>().mockReturnValue(prepared);
     modules.chain.beaconEngine.prepareBeaconCommitteeSubnets = prepare;
     modules.network.prepareBeaconCommitteeSubnets = vi.fn().mockResolvedValue(undefined);
     const api = getValidatorApi(defaultApiOptions, modules);

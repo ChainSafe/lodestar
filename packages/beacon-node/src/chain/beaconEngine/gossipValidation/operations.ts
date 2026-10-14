@@ -6,7 +6,7 @@ import * as blsToExecutionChangeValidation from "../../validation/blsToExecution
 import * as proposerPreferencesValidation from "../../validation/proposerPreferences.js";
 import * as proposerSlashingValidation from "../../validation/proposerSlashing.js";
 import * as voluntaryExitValidation from "../../validation/voluntaryExit.js";
-import type {BeaconEngine} from "../beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngineCore.js";
 import {
   GossipValidationResult,
   GossipValidationStatus,
@@ -22,7 +22,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * [beacon-engine] deviation: insert into the engine pool before returning the verdict.
  */
 export async function validateGossipProposerPreferences(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   preferencesBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
@@ -52,7 +52,7 @@ export async function validateGossipProposerPreferences(
  * [beacon-engine] deviation: pool/fork-choice writes precede the verdict; consume verified domains internally.
  */
 export async function validateGossipAttesterSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   attesterSlashingBytes: Uint8Array,
   fork: ForkName
 ): Promise<GossipValidationResult<void>> {
@@ -88,7 +88,7 @@ export async function validateGossipAttesterSlashing(
  * [beacon-engine] deviation: validate and insert in the engine; the API publishes.
  */
 export async function validateApiAttesterSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   attesterSlashing: AttesterSlashing,
   fork: ForkName
 ): Promise<void> {
@@ -102,7 +102,7 @@ export async function validateApiAttesterSlashing(
  * [beacon-engine] deviation: pool insertion precedes the verdict; consume the verified domain internally.
  */
 export async function validateGossipProposerSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   proposerSlashingBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
@@ -135,7 +135,7 @@ export async function validateGossipProposerSlashing(
  * [beacon-engine] deviation: validate and insert in the engine; the API publishes.
  */
 export async function validateApiProposerSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<void> {
   const verifiedDomain = await proposerSlashingValidation.validateApiProposerSlashing.call(this, proposerSlashing);
@@ -148,7 +148,7 @@ export async function validateApiProposerSlashing(
  * [beacon-engine] deviation: pool insertion precedes the verdict; API/network event handling stays outside.
  */
 export async function validateGossipVoluntaryExit(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   voluntaryExitBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
@@ -181,7 +181,7 @@ export async function validateGossipVoluntaryExit(
  * [beacon-engine] deviation: insert or defer in the engine; return insertion status for API error handling.
  */
 export async function validateApiVoluntaryExit(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   voluntaryExit: phase0.SignedVoluntaryExit
 ): Promise<voluntaryExitValidation.ApiVoluntaryExitResult & {inserted?: boolean}> {
   const result = await voluntaryExitValidation.validateApiVoluntaryExit.call(this, voluntaryExit);
@@ -200,7 +200,7 @@ export async function validateApiVoluntaryExit(
  * [beacon-engine] deviation: pool insertion precedes the verdict; API/network event handling stays outside.
  */
 export async function validateGossipBlsToExecutionChange(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blsToExecutionChangeBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
@@ -233,7 +233,7 @@ export async function validateGossipBlsToExecutionChange(
  * [beacon-engine] deviation: validate and insert in the engine; the API publishes.
  */
 export async function validateApiBlsToExecutionChange(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   blsToExecutionChange: capella.SignedBLSToExecutionChange,
   preCapella: boolean
 ): Promise<void> {

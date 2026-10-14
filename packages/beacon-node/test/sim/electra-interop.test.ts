@@ -10,13 +10,13 @@ import {Epoch, Slot, electra} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
-import {BeaconEngine} from "../../src/chain/beaconEngine/index.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {bytesToData, dataToBytes} from "../../src/execution/engine/utils.js";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {BeaconNode} from "../../src/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
+import {getBeaconEngineCore} from "../utils/engine.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
@@ -360,7 +360,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
 
     await waitForSlot(bn, 5);
     // Expect new validator to be in unfinalized cache, in state.validators and not in finalized cache
-    let headState = (bn.chain.beaconEngine as BeaconEngine).getHeadState() as BeaconStateView;
+    let headState = getBeaconEngineCore(bn.chain.beaconEngine).getHeadState() as BeaconStateView;
     let epochCtx = headState.cachedState.epochCtx;
     if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {
       throw Error("New validator is not reflected in the beacon state at slot 5");
@@ -386,7 +386,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     await sleep(500);
 
     // Check if new validator is in finalized cache
-    headState = (bn.chain.beaconEngine as BeaconEngine).getHeadState() as BeaconStateView;
+    headState = getBeaconEngineCore(bn.chain.beaconEngine).getHeadState() as BeaconStateView;
     epochCtx = headState.cachedState.epochCtx;
 
     if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {

@@ -6,9 +6,9 @@ import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils"
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-import {BeaconEngine} from "../../../src/chain/beaconEngine/index.js";
 import {ReorgEventData} from "../../../src/chain/emitter.js";
 import {TimelinessForkChoice} from "../../mocks/fork-choice/timeliness.js";
+import {getBeaconEngineCore} from "../../utils/engine.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
@@ -90,7 +90,7 @@ describe("proposer boost reorg", () => {
       logger,
     });
 
-    ((bn.chain.beaconEngine as BeaconEngine).forkChoice as TimelinessForkChoice).lateSlot = reorgSlot;
+    (getBeaconEngineCore(bn.chain.beaconEngine).forkChoice as TimelinessForkChoice).lateSlot = reorgSlot;
     afterEachCallbacks.push(async () => bn.close());
     const {validators} = await getAndInitDevValidators({
       node: bn,

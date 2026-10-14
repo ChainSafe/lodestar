@@ -15,7 +15,7 @@ import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
-import {BeaconEngine} from "../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/index.js";
 import {BuilderStatus} from "../../../../../src/execution/builder/http.js";
 import {PayloadIdCache} from "../../../../../src/execution/index.js";
@@ -28,10 +28,10 @@ import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 describe("api/validator - produceBlockV3", () => {
   let state: BeaconStateView;
   const produceFull =
-    vi.fn<() => Promise<Omit<Awaited<ReturnType<BeaconEngine["produceBlockWrapper"]>>, "produceResult">>>();
+    vi.fn<() => Promise<Omit<Awaited<ReturnType<BeaconEngineCore["produceBlockWrapper"]>>, "produceResult">>>();
   const produceBlinded =
-    vi.fn<() => Promise<Omit<Awaited<ReturnType<BeaconEngine["produceBlockWrapper"]>>, "produceResult">>>();
-  const produceCommon = vi.fn<BeaconEngine["produceCommonBlockBody"]>();
+    vi.fn<() => Promise<Omit<Awaited<ReturnType<BeaconEngineCore["produceBlockWrapper"]>>, "produceResult">>>();
+  const produceCommon = vi.fn<BeaconEngineCore["produceCommonBlockBody"]>();
   let modules: ApiTestModules;
   let api: ReturnType<typeof getValidatorApi>;
 
@@ -73,10 +73,10 @@ describe("api/validator - produceBlockV3", () => {
     modules.chain.executionBuilder.status = BuilderStatus.enabled;
     modules.forkChoice.getConfirmedBlock.mockReturnValue(null);
     modules.chain.beaconEngine.produceBlock = vi.fn(
-      BeaconEngine.prototype.produceBlock.bind(modules.chain.beaconEngine)
+      BeaconEngineCore.prototype.produceBlock.bind(modules.chain.beaconEngine)
     );
     modules.chain.beaconEngine.produceCommonBlockBody = produceCommon;
-    produceCommon.mockResolvedValue({} as Awaited<ReturnType<BeaconEngine["produceCommonBlockBody"]>>);
+    produceCommon.mockResolvedValue({} as Awaited<ReturnType<BeaconEngineCore["produceCommonBlockBody"]>>);
   });
 
   afterEach(() => {

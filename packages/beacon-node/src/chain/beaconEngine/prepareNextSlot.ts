@@ -31,16 +31,16 @@ import {
   prepareExecutionPayload,
 } from "../produceBlock/produceBlockBody.js";
 import {RegenCaller} from "../regen/index.js";
-import type {BeaconEngine} from "./beaconEngine.js";
+import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import {PrepareNextSlotOpts, PrepareNextSlotResult} from "./interface.js";
 
 /**
- * Synced through unstable@2593063a82. Runs inside BeaconEngine.
+ * Synced through unstable@2593063a82. Runs inside BeaconEngineCore.
  * Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#PrepareNextSlotScheduler.prepareForNextSlot.
  * [beacon-engine] deviation: returns requested payload attributes for facade emission after preparation completes.
  */
 export async function prepareForNextSlot(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   clockSlot: Slot,
   opts: PrepareNextSlotOpts
 ): Promise<PrepareNextSlotResult | null> {
@@ -336,8 +336,8 @@ export async function prepareForNextSlot(
   return result;
 }
 
-/** Synced through unstable@2593063a82. Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#checkBuilderStatusBeforeSlot. */
-function checkBuilderStatusBeforeSlot(this: BeaconEngine, prepareSlot: Slot): void {
+/** Synced through unstable@2593063a82. Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#checkBuilderStatusBeforeSlot. */
+function checkBuilderStatusBeforeSlot(this: BeaconEngineCore, prepareSlot: Slot): void {
   const msBeforeSlot = this.config.getSlotComponentDurationMs(
     this.config.getForkName(prepareSlot - 1),
     BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS
@@ -352,8 +352,8 @@ function checkBuilderStatusBeforeSlot(this: BeaconEngine, prepareSlot: Slot): vo
     });
 }
 
-/** Synced through unstable@2593063a82. Runs inside BeaconEngine. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#computeStateHashTreeRoot. */
-function computeStateHashTreeRoot(this: BeaconEngine, state: IBeaconStateView, isEpochTransition: boolean): void {
+/** Synced through unstable@2593063a82. Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/prepareNextSlot.ts#computeStateHashTreeRoot. */
+function computeStateHashTreeRoot(this: BeaconEngineCore, state: IBeaconStateView, isEpochTransition: boolean): void {
   // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
   // see https://github.com/ChainSafe/lodestar/issues/6194
   const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({

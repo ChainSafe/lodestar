@@ -6,26 +6,26 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiExecutionPayloadEnvelope(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   return validateExecutionPayloadEnvelope.call(this, executionPayloadEnvelope);
 }
 
 export async function validateGossipExecutionPayloadEnvelope(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   return validateExecutionPayloadEnvelope.call(this, executionPayloadEnvelope);
 }
 
 async function validateExecutionPayloadEnvelope(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;

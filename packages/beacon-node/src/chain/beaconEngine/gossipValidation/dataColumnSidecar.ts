@@ -1,7 +1,7 @@
 import {SubnetID, ssz} from "@lodestar/types";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as dataColumnSidecarValidation from "../../validation/dataColumnSidecar.js";
-import type {BeaconEngine} from "../beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngineCore.js";
 import {GossipValidationResult, fromResult, ignore, runGossipValidation} from "../gossipValidationResult.js";
 import {deserializeGossipMessage} from "./deserialize.js";
 
@@ -10,7 +10,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * [beacon-engine] deviation: invoke validation with engine state and convert gossip errors to verdicts.
  */
 export async function validateGossipFuluDataColumnSidecar(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   dataColumnBytes: Uint8Array,
   gossipSubnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
@@ -40,7 +40,7 @@ export async function validateGossipFuluDataColumnSidecar(
  * [beacon-engine] deviation: invoke validation with engine state and convert gossip errors to verdicts.
  */
 export async function validateGossipGloasDataColumnSidecar(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   dataColumnBytes: Uint8Array,
   gossipSubnet: SubnetID
 ): Promise<GossipValidationResult<void>> {

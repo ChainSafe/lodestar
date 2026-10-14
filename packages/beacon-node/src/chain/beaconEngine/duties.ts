@@ -15,11 +15,11 @@ import {ZERO_HASH} from "../../constants/index.js";
 import {ChainEvent} from "../emitter.js";
 import {RegenCaller} from "../regen/index.js";
 import {CheckpointHex} from "../stateCache/types.js";
-import type {BeaconEngine} from "./beaconEngine.js";
+import type {BeaconEngineCore} from "./beaconEngineCore.js";
 
 type GetHeadStateAtEpoch = (epoch: Epoch, regenCaller: RegenCaller) => Promise<IBeaconStateView>;
 
-const genesisBlockRoots = new WeakMap<BeaconEngine, Root>();
+const genesisBlockRoots = new WeakMap<BeaconEngineCore, Root>();
 
 /**
  * Proposer duties for `epoch`.
@@ -28,7 +28,7 @@ const genesisBlockRoots = new WeakMap<BeaconEngine, Root>();
  * state resolution runs in the engine. Historical proposer duties are not supported here.
  */
 export async function getProposerDuties(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   epoch: Epoch,
   {currentEpoch, checkpointWaitTimeoutMs}: {currentEpoch: Epoch; checkpointWaitTimeoutMs?: number},
   v2: boolean,
@@ -123,7 +123,7 @@ export async function getProposerDuties(
  * the engine resolves state at the supplied currentEpoch and returns the head for API metadata.
  */
 export async function getAttesterDuties(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   epoch: Epoch,
   indices: ValidatorIndex[],
   currentEpoch: Epoch,
@@ -165,7 +165,7 @@ export async function getAttesterDuties(
  * this engine implementation reads the head state synchronously and returns the head for API metadata.
  */
 export function getSyncCommitteeDuties(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   epoch: Epoch,
   indices: ValidatorIndex[]
 ): {data: routes.validator.SyncDuty[]; head: ProtoBlock} {
@@ -199,7 +199,7 @@ export function getSyncCommitteeDuties(
  * the engine resolves state at the supplied currentEpoch and returns the head for API metadata.
  */
 export async function getPtcDuties(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   epoch: Epoch,
   indices: ValidatorIndex[],
   currentEpoch: Epoch,
@@ -236,7 +236,7 @@ export async function getPtcDuties(
  * chain.clock.waitForSlot(epochStartSlot + 1) deadline.
  */
 async function waitForCheckpointState(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   cpHex: CheckpointHex,
   timeoutMs: number
 ): Promise<IBeaconStateView | null> {
@@ -274,7 +274,7 @@ async function waitForCheckpointState(
  * [beacon-engine] deviation: synchronous state-only lookup with a module-private cache per engine;
  * omit the upstream canonical-block DB lookup and retain the ZERO_HASH fallback when unavailable.
  */
-function genesisBlockRoot(this: BeaconEngine, state: IBeaconStateView): Root {
+function genesisBlockRoot(this: BeaconEngineCore, state: IBeaconStateView): Root {
   let root = genesisBlockRoots.get(this);
   if (!root) {
     // Close to genesis the genesis block may not be available in the DB

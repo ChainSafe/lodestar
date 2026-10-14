@@ -5,7 +5,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {migrateExecutionPayloadEnvelopesFromHotToColdDb} from "../../../../src/chain/beaconEngine/processFinalizedCheckpoint.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {ArchivedEnvelope, decodeArchivedEnvelope} from "../../../../src/db/repositories/index.js";
@@ -92,16 +92,16 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
           getAllAncestorAndNonAncestorBlocksDefaultStatus: (root: string) =>
             protoArray.getAllAncestorAndNonAncestorNodes(root, PayloadStatus.PENDING),
         },
-      } as unknown as BeaconEngine;
+      } as unknown as BeaconEngineCore;
 
-      expect(await BeaconEngine.prototype.migrateExecutionPayloadEnvelopes.call(engine)).toEqual([10]);
+      expect(await BeaconEngineCore.prototype.migrateExecutionPayloadEnvelopes.call(engine)).toEqual([10]);
       expect(await db.executionPayloadEnvelope.get(fromHex(roots[1]))).not.toBeNull();
       protoArray.maybePrune(finalized.rootHex);
       expect(protoArray.getNode(roots[0], PayloadStatus.FULL)).toBeUndefined();
       expect(protoArray.getNode(roots[1], PayloadStatus.FULL)).toBeDefined();
 
       finalized = {epoch: 2, root: fromHex(roots[2]), rootHex: roots[2]};
-      expect(await BeaconEngine.prototype.migrateExecutionPayloadEnvelopes.call(engine)).toEqual([11]);
+      expect(await BeaconEngineCore.prototype.migrateExecutionPayloadEnvelopes.call(engine)).toEqual([11]);
       const archived = await readArchived(11);
       if (dedupePayloads === false) expect(archived.envelopeBytes).toBeDefined();
       else expect(archived.headerEnvelope).toBeDefined();

@@ -6,7 +6,7 @@ import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {bellatrix, ssz, sszTypesFor} from "@lodestar/types";
 import {ErrorAborted, defer, fromHex, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {verifyBlocks as verifyEngineBlocks} from "../../../../src/chain/beaconEngine/verifyBlock.js";
 import {
   BlockInputBlobs,
@@ -49,7 +49,7 @@ function serializeBlocks(...inputs: IBlockInput[]): BlockBytes[] {
   }));
 }
 
-describe("BeaconEngine block execution verification", () => {
+describe("BeaconEngineCore block execution verification", () => {
   let chain: ReturnType<typeof getMockedBeaconChain>;
   let state: BeaconStateView;
   let signal: AbortSignal;
@@ -66,7 +66,7 @@ describe("BeaconEngine block execution verification", () => {
     chain.forkChoice.validateLatestHash = vi.fn();
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
     chain.regen.getPreState.mockResolvedValue(state);
-    chain.beaconEngine.verifyBlocks = vi.fn(BeaconEngine.prototype.verifyBlocks.bind(chain.beaconEngine));
+    chain.beaconEngine.verifyBlocks = vi.fn(BeaconEngineCore.prototype.verifyBlocks.bind(chain.beaconEngine));
     chain.executionEngine.notifyNewPayload = vi.fn().mockResolvedValue({
       status: ExecutionPayloadStatus.VALID,
       latestValidHash: toRootHex(Buffer.alloc(32, 1)),

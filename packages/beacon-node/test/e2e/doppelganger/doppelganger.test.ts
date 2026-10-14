@@ -6,9 +6,9 @@ import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils"
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BLSPubkey, Epoch, Slot, phase0, ssz} from "@lodestar/types";
 import {Validator} from "@lodestar/validator";
-import {BeaconEngine} from "../../../src/chain/beaconEngine/index.js";
 import {BeaconNode} from "../../../src/node/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
+import {getBeaconEngineCore} from "../../utils/engine.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {connect} from "../../utils/network.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
@@ -122,7 +122,7 @@ describe.skip("doppelganger / doppelganger test", () => {
     });
 
     const {beaconNode: bn2, validators} = await createBNAndVC({
-      genesisTime: (bn.chain.beaconEngine as BeaconEngine).getHeadState().genesisTime,
+      genesisTime: getBeaconEngineCore(bn.chain.beaconEngine).getHeadState().genesisTime,
     });
 
     await connect(bn2.network, bn.network);
@@ -201,7 +201,7 @@ describe.skip("doppelganger / doppelganger test", () => {
     });
 
     const {beaconNode: bn2, validators} = await createBNAndVC({
-      genesisTime: (bn.chain.beaconEngine as BeaconEngine).getHeadState().genesisTime,
+      genesisTime: getBeaconEngineCore(bn.chain.beaconEngine).getHeadState().genesisTime,
       doppelgangerProtection: false,
     });
 

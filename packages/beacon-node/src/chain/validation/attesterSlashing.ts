@@ -5,12 +5,12 @@ import {
   isSlashableValidator,
 } from "@lodestar/state-transition";
 import {AttesterSlashing, Domain} from "@lodestar/types";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 import {getAttesterSlashingSignatureDomains} from "../opPools/utils.js";
 
 export async function validateApiAttesterSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   attesterSlashing: AttesterSlashing
 ): Promise<[Domain, Domain]> {
   const prioritizeBls = true;
@@ -18,14 +18,14 @@ export async function validateApiAttesterSlashing(
 }
 
 export async function validateGossipAttesterSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   attesterSlashing: AttesterSlashing
 ): Promise<[Domain, Domain]> {
   return validateAttesterSlashing.call(this, attesterSlashing);
 }
 
 export async function validateAttesterSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   attesterSlashing: AttesterSlashing,
   prioritizeBls = false
 ): Promise<[Domain, Domain]> {

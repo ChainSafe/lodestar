@@ -11,7 +11,7 @@ import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {importExecutionPayload} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {
@@ -53,7 +53,7 @@ const requests = ssz.gloas.ExecutionRequests.deserialize(
 const parent = {...zeroProtoBlock, slot: 1, blockRoot: rootHex, payloadStatus: PayloadStatus.FULL};
 const dbLogger = testLogger();
 
-describe("BeaconEngine execution requests persistence", () => {
+describe("BeaconEngineCore execution requests persistence", () => {
   let db: BeaconDb;
   let directory: string;
   let chain: ReturnType<typeof getMockedBeaconChain>;
@@ -71,11 +71,11 @@ describe("BeaconEngine execution requests persistence", () => {
       value: new SeenEnginePayloadEnvelopeInput({config, forkChoice: chain.forkChoice, db}),
     });
     Object.defineProperty(chain, "db", {value: db, configurable: true});
-    chain.beaconEngine.getParentExecutionRequests = BeaconEngine.prototype.getParentExecutionRequests.bind(
+    chain.beaconEngine.getParentExecutionRequests = BeaconEngineCore.prototype.getParentExecutionRequests.bind(
       chain.beaconEngine
     );
     chain.beaconEngine.importExecutionPayload = vi.fn(
-      BeaconEngine.prototype.importExecutionPayload.bind(chain.beaconEngine)
+      BeaconEngineCore.prototype.importExecutionPayload.bind(chain.beaconEngine)
     );
     chain.forkChoice.onExecutionPayload = vi.fn();
     chain.forkChoice.getBlockHex.mockReturnValue(null);

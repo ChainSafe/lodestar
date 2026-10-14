@@ -8,7 +8,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
 import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {IBeaconEngine} from "../../../../src/chain/beaconEngine/interface.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
@@ -56,18 +56,24 @@ describe("block archiver task", () => {
       lightClientServer: chain.lightClientServer,
     };
     engine = {
-      pruneLightClientNonCheckpointData: BeaconEngine.prototype.pruneLightClientNonCheckpointData.bind(
-        context as unknown as BeaconEngine
+      pruneLightClientNonCheckpointData: BeaconEngineCore.prototype.pruneLightClientNonCheckpointData.bind(
+        context as unknown as BeaconEngineCore
       ),
-      migrateExecutionPayloadEnvelopes: BeaconEngine.prototype.migrateExecutionPayloadEnvelopes.bind(
-        context as unknown as BeaconEngine
+      migrateExecutionPayloadEnvelopes: BeaconEngineCore.prototype.migrateExecutionPayloadEnvelopes.bind(
+        context as unknown as BeaconEngineCore
       ),
       deleteNonCanonicalExecutionPayloadEnvelopes:
-        BeaconEngine.prototype.deleteNonCanonicalExecutionPayloadEnvelopes.bind(context as unknown as BeaconEngine),
-      migrateCanonicalBlocks: BeaconEngine.prototype.migrateCanonicalBlocks.bind(context as unknown as BeaconEngine),
-      persistOrphanedBlocks: BeaconEngine.prototype.persistOrphanedBlocks.bind(context as unknown as BeaconEngine),
-      deleteNonCanonicalBlocks: BeaconEngine.prototype.deleteNonCanonicalBlocks.bind(
-        context as unknown as BeaconEngine
+        BeaconEngineCore.prototype.deleteNonCanonicalExecutionPayloadEnvelopes.bind(
+          context as unknown as BeaconEngineCore
+        ),
+      migrateCanonicalBlocks: BeaconEngineCore.prototype.migrateCanonicalBlocks.bind(
+        context as unknown as BeaconEngineCore
+      ),
+      persistOrphanedBlocks: BeaconEngineCore.prototype.persistOrphanedBlocks.bind(
+        context as unknown as BeaconEngineCore
+      ),
+      deleteNonCanonicalBlocks: BeaconEngineCore.prototype.deleteNonCanonicalBlocks.bind(
+        context as unknown as BeaconEngineCore
       ),
     } as unknown as IBeaconEngine;
 

@@ -11,7 +11,7 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 
@@ -21,7 +21,7 @@ export type GossipBlockValidationResult = {
 };
 
 export async function validateGossipBlock(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   signedBlock: SignedBeaconBlock,
   fork: ForkName
 ): Promise<GossipBlockValidationResult> {
@@ -309,7 +309,7 @@ export async function validateGossipBlock(
 }
 
 export async function verifyBlockProposerSignature(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   signedBlock: SignedBeaconBlock,
   blockRoot: RootHex,
   opts: {verifyOnMainThread?: boolean} = {}

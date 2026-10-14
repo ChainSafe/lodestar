@@ -29,7 +29,12 @@ export async function initializeTestChain(opts: IChainOptions, modules: TestChai
     });
     if (modules.pruneHotDbOnInit) await modules.db.pruneHotDb();
     const anchor = await beaconEngine.initializeFromAnchor();
-    return {...dependencies, anchor, earliestAvailableSlot, builderApiClient: beaconEngine.builderApiClient};
+    return {
+      ...dependencies,
+      anchor,
+      earliestAvailableSlot,
+      builderApiClient: dependencies.beaconEngineCore.builderApiClient,
+    };
   } catch (error) {
     dependencies.abortController.abort();
     await beaconEngine.close();

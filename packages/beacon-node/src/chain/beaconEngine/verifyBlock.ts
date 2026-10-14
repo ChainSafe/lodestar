@@ -10,16 +10,16 @@ import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
-import {BeaconEngine} from "./beaconEngine.js";
+import {BeaconEngineCore} from "./beaconEngineCore.js";
 import {VerifyBlocksOpts} from "./interface.js";
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@ba0411b482 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
+ * Runs inside BeaconEngineCore. Moved from unstable@ba0411b482 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function verifyBlocks(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   // [beacon-engine] deviation: bytes/POJO seam leaves DA verification in the facade.
   blockData: BlockBytes[],
   opts: VerifyBlocksOpts,

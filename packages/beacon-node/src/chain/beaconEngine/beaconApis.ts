@@ -53,15 +53,15 @@ import {GENESIS_EPOCH} from "../../constants/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {StateGetOpts} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
-import type {BeaconEngine} from "./beaconEngine.js";
+import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import type {ApiStateId} from "./interface.js";
 import {ApiStateResult, ApiStateResultWithFork} from "./interface.js";
 
-const genesisStateRoots = new WeakMap<BeaconEngine, RootHex | null>();
+const genesisStateRoots = new WeakMap<BeaconEngineCore, RootHex | null>();
 
 /** Resolve an API stateId (already reduced to root/slot/checkpoint) to a state view or bytes. */
 async function resolveStateForApi(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId
 ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
   if (typeof id === "object" && "head" in id) {
@@ -90,7 +90,7 @@ async function resolveStateForApi(
 
 /** Resolve to a state *view* (deserializing archive/checkpoint bytes engine-side onto the head state). */
 async function resolveStateViewForApi(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId
 ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null> {
   const res = await resolveStateForApi.call(this, id);
@@ -103,7 +103,7 @@ async function resolveStateViewForApi(
 
 /** Serialized state for the debug `getStateV2` endpoint (the only whole-state-bytes crossing). */
 export async function getSerializedState(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId
 ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
   const res = await resolveStateForApi.call(this, id);
@@ -116,7 +116,7 @@ export async function getSerializedState(
 
 /** Effective balances of `validatorIndices` from the finalized checkpoint state (custody group count). */
 export async function getFinalizedEffectiveBalances(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   finalizedCheckpoint: CheckpointWithHex,
   validatorIndices: ValidatorIndex[]
 ): Promise<number[] | null> {
@@ -132,7 +132,7 @@ export async function getFinalizedEffectiveBalances(
 
 /** Multi-proof of the resolved state for the given SSZ `descriptor`; null if the state is unavailable. */
 export async function getStateProof(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   descriptor: Uint8Array
 ): Promise<{proof: CompactMultiProof; fork: ForkName} | null> {
@@ -145,7 +145,7 @@ export async function getStateProof(
 
 /** Historical summaries + single-proof of the resolved state; null if unavailable (post-capella only). */
 export async function getHistoricalSummaries(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId
 ): Promise<{
   slot: Slot;
@@ -180,7 +180,7 @@ export async function getHistoricalSummaries(
 
 /** Resolve per-epoch shuffling and build indexed attestations (attester-slashing debug helper). */
 export async function getIndexedAttestationsForSlashing(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   requests: {slot: Slot; epoch: Epoch; attestations: Attestation[]}[],
   forkSeq: ForkSeq
 ): Promise<IndexedAttestation[]> {
@@ -199,7 +199,7 @@ export async function getIndexedAttestationsForSlashing(
 }
 
 export async function getStateBuilders(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   builderIds: routes.beacon.BuilderId[],
   statuses: string[]
@@ -263,7 +263,7 @@ function toValidatorResponse(
 }
 
 function resolveStateValidatorIndex(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: IBeaconStateView
 ): StateValidatorIndexResponse {
@@ -271,7 +271,7 @@ function resolveStateValidatorIndex(
 }
 
 function filterStateValidatorsByStatus(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   statuses: string[],
   state: IBeaconStateView,
   currentEpoch: Epoch
@@ -289,7 +289,7 @@ function filterStateValidatorsByStatus(
   return responses;
 }
 
-export async function getStateRoot(this: BeaconEngine, id: ApiStateId): Promise<ApiStateResult<{root: Root}>> {
+export async function getStateRoot(this: BeaconEngineCore, id: ApiStateId): Promise<ApiStateResult<{root: Root}>> {
   const res = await resolveStateViewForApi.call(this, id);
   if (!res) return null;
   return {
@@ -299,14 +299,14 @@ export async function getStateRoot(this: BeaconEngine, id: ApiStateId): Promise<
   };
 }
 
-export async function getStateFork(this: BeaconEngine, id: ApiStateId): Promise<ApiStateResult<phase0.Fork>> {
+export async function getStateFork(this: BeaconEngineCore, id: ApiStateId): Promise<ApiStateResult<phase0.Fork>> {
   const res = await resolveStateViewForApi.call(this, id);
   if (!res) return null;
   return {data: res.state.fork, executionOptimistic: res.executionOptimistic, finalized: res.finalized};
 }
 
 export async function getStateRandao(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   epoch?: Epoch
 ): Promise<ApiStateResult<{randao: Bytes32}>> {
@@ -322,7 +322,7 @@ export async function getStateRandao(
 }
 
 export async function getStateFinalityCheckpoints(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId
 ): Promise<
   ApiStateResult<{
@@ -346,7 +346,7 @@ export async function getStateFinalityCheckpoints(
 }
 
 export async function getStateValidators(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   validatorIds: routes.beacon.ValidatorId[],
   statuses: string[]
@@ -387,7 +387,7 @@ export async function getStateValidators(
 }
 
 export async function getStateValidatorIdentities(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   validatorIds: routes.beacon.ValidatorId[]
 ): Promise<ApiStateResult<routes.beacon.ValidatorIdentities>> {
@@ -417,7 +417,7 @@ export async function getStateValidatorIdentities(
 }
 
 export async function getStateValidator(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   validatorId: routes.beacon.ValidatorId
 ): Promise<ApiStateResult<routes.beacon.ValidatorResponse>> {
@@ -441,7 +441,7 @@ export async function getStateValidator(
 }
 
 export async function getStateValidatorBalances(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   validatorIds: routes.beacon.ValidatorId[]
 ): Promise<ApiStateResult<routes.beacon.ValidatorBalance[]>> {
@@ -470,7 +470,7 @@ export async function getStateValidatorBalances(
 }
 
 export async function getEpochCommittees(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   filters: {epoch?: Epoch; index?: CommitteeIndex; slot?: Slot}
 ): Promise<ApiStateResult<routes.beacon.EpochCommitteeResponse[]>> {
@@ -517,7 +517,7 @@ export async function getEpochCommittees(
 
 /** Source: unstable@ba0411b482 api/impl/beacon/state/index.ts#getStatePtc. */
 export async function getStatePtc(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   slot?: Slot
 ): Promise<ApiStateResult<{slot: Slot; validators: ValidatorIndex[]}>> {
@@ -546,7 +546,7 @@ export async function getStatePtc(
 }
 
 export async function getEpochSyncCommittees(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   epoch?: Epoch
 ): Promise<ApiStateResult<routes.beacon.EpochSyncCommitteeResponse>> {
@@ -573,7 +573,7 @@ export async function getEpochSyncCommittees(
 
 /** Source: unstable@2593063a82 api/impl/beacon/state/index.ts#getPendingDeposits; fork-specific SSZ stays engine-owned. */
 export async function getStatePendingDeposits(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   returnBytes: boolean
 ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingDeposits>> {
@@ -592,7 +592,7 @@ export async function getStatePendingDeposits(
 
 /** Source: unstable@2593063a82 api/impl/beacon/state/index.ts#getPendingPartialWithdrawals. */
 export async function getStatePendingPartialWithdrawals(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   returnBytes: boolean
 ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingPartialWithdrawals>> {
@@ -613,7 +613,7 @@ export async function getStatePendingPartialWithdrawals(
 
 /** Source: unstable@2593063a82 api/impl/beacon/state/index.ts#getPendingConsolidations. */
 export async function getStatePendingConsolidations(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   returnBytes: boolean
 ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingConsolidations>> {
@@ -633,7 +633,7 @@ export async function getStatePendingConsolidations(
 }
 
 export async function getStateProposerLookahead(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   returnBytes: boolean
 ): Promise<ApiStateResultWithFork<Uint8Array | fulu.ProposerLookahead>> {
@@ -650,7 +650,7 @@ export async function getStateProposerLookahead(
 
 /** Source: unstable@ba0411b482 chain/chain.ts#getStateByStateRoot. */
 async function getStateByStateRoot(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   stateRoot: RootHex,
   opts?: StateGetOpts
 ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
@@ -718,7 +718,7 @@ async function getStateByStateRoot(
 }
 
 async function getStateOrBytesByCheckpoint(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   checkpoint: CheckpointWithHex
 ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
   const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
@@ -737,7 +737,7 @@ async function getStateOrBytesByCheckpoint(
 }
 
 async function getStateBySlot(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   slot: Slot,
   opts?: StateGetOpts
 ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null> {
@@ -774,7 +774,7 @@ async function getStateBySlot(
 }
 
 export async function getBuilderPendingPayments(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   returnBytes: boolean
 ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingPayments>> {
@@ -800,7 +800,7 @@ export async function getBuilderPendingPayments(
 }
 
 export async function getBuilderPendingWithdrawals(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   id: ApiStateId,
   returnBytes: boolean
 ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>> {

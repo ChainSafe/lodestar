@@ -10,7 +10,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
@@ -25,6 +25,7 @@ import {ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {TestChainModules, createBeaconChain, initializeTestChain} from "../../../utils/chain.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
+import {getBeaconEngineCore} from "../../../utils/engine.js";
 
 describe("bytes-based engine startup", () => {
   const config = createChainForkConfig(chainConfig);
@@ -39,7 +40,7 @@ describe("bytes-based engine startup", () => {
   let closeDb: () => Promise<void>;
   let modules: TestChainModules;
   let chain: BeaconChain | undefined;
-  let engine: BeaconEngine | undefined;
+  let engine: BeaconEngineCore | undefined;
   let clock: ClockStopped;
   let stateRoot: Uint8Array;
 
@@ -65,8 +66,11 @@ describe("bytes-based engine startup", () => {
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),
     };
-    const prepare = BeaconEngine.prototype.prepareAnchorState;
-    vi.spyOn(BeaconEngine.prototype, "prepareAnchorState").mockImplementation(function (this: BeaconEngine, bytes) {
+    const prepare = BeaconEngineCore.prototype.prepareAnchorState;
+    vi.spyOn(BeaconEngineCore.prototype, "prepareAnchorState").mockImplementation(function (
+      this: BeaconEngineCore,
+      bytes
+    ) {
       engine = this;
       return prepare.call(this, bytes);
     });
@@ -189,8 +193,8 @@ describe("bytes-based engine startup", () => {
     modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.validatorMonitorOpts = {};
     const dependencies = await initializeTestChain(opts, modules);
-    const beaconEngine = dependencies.beaconEngine;
-    if (!(beaconEngine instanceof BeaconEngine) || !beaconEngine.validatorMonitor) throw new Error("Missing monitor");
+    const beaconEngine = getBeaconEngineCore(dependencies.beaconEngine);
+    if (!beaconEngine.validatorMonitor) throw new Error("Missing monitor");
     const monitorEpoch = vi.spyOn(beaconEngine.validatorMonitor, "onceEveryEndOfEpoch").mockImplementation(() => {});
     vi.useFakeTimers();
     const halfSlot = config.SLOT_DURATION_MS / 2;
@@ -213,8 +217,8 @@ describe("bytes-based engine startup", () => {
   it("supports logging without metrics and retains the epoch metrics guard", async () => {
     modules.validatorMonitorOpts = {validatorMonitorLogs: true};
     const dependencies = await initializeTestChain(opts, modules);
-    const beaconEngine = dependencies.beaconEngine;
-    if (!(beaconEngine instanceof BeaconEngine) || !beaconEngine.validatorMonitor) throw new Error("Missing monitor");
+    const beaconEngine = getBeaconEngineCore(dependencies.beaconEngine);
+    if (!beaconEngine.validatorMonitor) throw new Error("Missing monitor");
     const monitorEpoch = vi.spyOn(beaconEngine.validatorMonitor, "onceEveryEndOfEpoch");
     await beaconEngine.registerLocalValidators([1]);
     expect(await beaconEngine.getMonitoredValidatorIndices()).toEqual([1]);
@@ -254,8 +258,8 @@ describe("bytes-based engine startup", () => {
   it("owns a bounded signature cache independent of the facade cache", async () => {
     const dependencies = await initializeTestChain(opts, modules);
     chain = new BeaconChain(opts, dependencies);
-    const {beaconEngine, seenBlockInputCache} = chain;
-    if (!(beaconEngine instanceof BeaconEngine)) throw new Error("Expected a local BeaconEngine");
+    const {seenBlockInputCache} = chain;
+    const beaconEngine = getBeaconEngineCore(chain.beaconEngine);
     const root = toRootHex(Buffer.alloc(32));
     const signature = Buffer.alloc(96, 1);
     expect(beaconEngine.isVerifiedProposerSignature(root, signature)).toBe(false);
@@ -314,7 +318,7 @@ describe("bytes-based engine startup", () => {
     const prune = vi.spyOn(db, "pruneHotDb");
     modules.pruneHotDbOnInit = true;
     const log = vi.fn();
-    const initialize = vi.spyOn(BeaconEngine.prototype, "initializeFromAnchor");
+    const initialize = vi.spyOn(BeaconEngineCore.prototype, "initializeFromAnchor");
     modules.stateInitialization = {
       shouldPersist: true,
       validate() {
@@ -337,7 +341,7 @@ describe("bytes-based engine startup", () => {
     const error = new Error("disk write failed");
     vi.spyOn(db.stateArchive, "putBinary").mockRejectedValue(error);
     const log = vi.fn();
-    const initialize = vi.spyOn(BeaconEngine.prototype, "initializeFromAnchor");
+    const initialize = vi.spyOn(BeaconEngineCore.prototype, "initializeFromAnchor");
     modules.stateInitialization = {shouldPersist: true, validate() {}, log};
     await expect(createBeaconChain(opts, modules)).rejects.toBe(error);
     expect(log).not.toHaveBeenCalled();
@@ -372,8 +376,10 @@ describe("bytes-based engine startup", () => {
     modules.isAnchorStateFinalized = false;
     modules.clock = new ClockStopped(1);
     let bootstrap: EngineBootstrap | undefined;
-    const initialize = BeaconEngine.prototype.initializeFromAnchor;
-    vi.spyOn(BeaconEngine.prototype, "initializeFromAnchor").mockImplementation(async function (this: BeaconEngine) {
+    const initialize = BeaconEngineCore.prototype.initializeFromAnchor;
+    vi.spyOn(BeaconEngineCore.prototype, "initializeFromAnchor").mockImplementation(async function (
+      this: BeaconEngineCore
+    ) {
       bootstrap = await initialize.call(this);
       expect(structuredClone(bootstrap)).toEqual(bootstrap);
       return bootstrap;

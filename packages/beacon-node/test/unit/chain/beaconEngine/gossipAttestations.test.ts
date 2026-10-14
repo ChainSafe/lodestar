@@ -3,7 +3,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {GossipValidationStatus} from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../src/chain/errors/index.js";
@@ -14,13 +14,13 @@ import * as attestationValidation from "../../../../src/chain/validation/attesta
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
 import {getApiTestModules} from "../../../utils/api.js";
 
-describe("BeaconEngine gossip attestation aggregation", () => {
-  let engine: BeaconEngine;
+describe("BeaconEngineCore gossip attestation aggregation", () => {
+  let engine: BeaconEngineCore;
 
   beforeEach(() => {
     const config = createBeaconConfig({}, Buffer.alloc(32));
     const modules = getApiTestModules({config});
-    engine = new BeaconEngine({
+    engine = new BeaconEngineCore({
       config,
       opts: defaultChainOptions,
       logger: modules.logger,

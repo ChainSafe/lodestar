@@ -8,7 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {GossipAction, ProposerPreferencesError, ProposerPreferencesErrorCode} from "../errors/index.js";
 
 /**
@@ -16,7 +16,7 @@ import {GossipAction, ProposerPreferencesError, ProposerPreferencesErrorCode} fr
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/p2p-interface.md#new-proposer_preferences
  */
 export async function validateGossipProposerPreferences(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   signedProposerPreferences: gloas.SignedProposerPreferences
 ): Promise<void> {
   const preferences = signedProposerPreferences.message;

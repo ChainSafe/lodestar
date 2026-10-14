@@ -13,7 +13,7 @@ import {Slot} from "@lodestar/types";
 import {LodestarError, sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
-import {BeaconEngine} from "../chain/beaconEngine/index.js";
+import {BeaconEngine, BeaconEngineCore} from "../chain/beaconEngine/index.js";
 import {AnchorSummary} from "../chain/beaconEngine/initialization.js";
 import {IBeaconEngine} from "../chain/beaconEngine/interface.js";
 import {BlockSerializedCache} from "../chain/blocks/blockSerializedCache.js";
@@ -248,7 +248,7 @@ export class BeaconNode {
       metrics: metrics?.blockSerializedCache,
       logger: chainLogger,
     });
-    const beaconEngine = new BeaconEngine({
+    const beaconEngineCore = new BeaconEngineCore({
       serializedCache: opts.chain.beaconEngineWorker ? undefined : serializedCache,
       blockSerializedCache: opts.chain.beaconEngineWorker ? undefined : blockSerializedCache,
       validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
@@ -274,6 +274,7 @@ export class BeaconNode {
         userAgent: opts.executionBuilder.userAgent,
       },
     });
+    const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter});
     const {earliestAvailableSlot} = await executeStateInitialization(
       beaconEngine,
       stateInitialization,
@@ -316,7 +317,7 @@ export class BeaconNode {
       custodyConfig,
       anchor,
       earliestAvailableSlot,
-      builderApiClient: beaconEngine.builderApiClient,
+      builderApiClient: beaconEngineCore.builderApiClient,
     });
 
     // Load persisted data from disk to in-memory caches

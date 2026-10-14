@@ -5,7 +5,7 @@ import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as aggregateAndProofValidation from "../../validation/aggregateAndProof.js";
 import * as attestationValidation from "../../validation/attestation.js";
 import type {AggregatorTracker} from "../aggregatorTracker.js";
-import type {BeaconEngine} from "../beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngineCore.js";
 import {
   GossipValidationResult,
   GossipValidationStatus,
@@ -21,7 +21,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * [beacon-engine] deviation: pool/fork-choice updates precede verdicts; monitoring stays deferred.
  */
 export async function validateGossipAttestationsSameAttData(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   isClosed: () => boolean,
   aggregatorTracker: AggregatorTracker,
   fork: ForkName,
@@ -106,7 +106,7 @@ export async function validateGossipAttestationsSameAttData(
  * [beacon-engine] deviation: return a validation result; the API retains pool insertion and publication.
  */
 export function validateApiAttestation(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   fork: ForkName,
   attestationOrBytes: attestationValidation.ApiAttestation
 ): Promise<GossipValidationResult<attestationValidation.AttestationValidationResult>> {
@@ -119,7 +119,7 @@ export function validateApiAttestation(
  * [beacon-engine] deviation: pool/fork-choice updates precede the verdict; monitoring stays deferred.
  */
 export async function validateGossipAggregateAndProof(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   isClosed: () => boolean,
   aggregateBytes: Uint8Array,
   fork: ForkName,
@@ -194,7 +194,7 @@ export async function validateGossipAggregateAndProof(
  * [beacon-engine] deviation: insert into the engine pool and return only the indexed attestation.
  */
 export function validateApiAggregateAndProof(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   _aggregateBytes: Uint8Array,
   fork: ForkName,
   signedAggregateAndProof: SignedAggregateAndProof

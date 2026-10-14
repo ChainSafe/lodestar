@@ -17,7 +17,7 @@ import {
   verifyExecutionPayloadEnvelopeSignature,
 } from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {RegenCaller} from "../regen/index.js";
-import {BeaconEngine} from "./beaconEngine.js";
+import {BeaconEngineCore} from "./beaconEngineCore.js";
 import {BeaconEngineEvent} from "./events.js";
 import {ImportExecutionPayloadOpts} from "./interface.js";
 
@@ -34,11 +34,11 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 }
 
 /**
- * Runs inside BeaconEngine. Moved from unstable@1bf214377e packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
+ * Runs inside BeaconEngineCore. Moved from unstable@1bf214377e packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function importExecutionPayload(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   // [beacon-engine] deviation: serialized envelope replaces the upstream payload-input object.
   envelopeBytes: Uint8Array,
   dataAvailabilityStatus: DataAvailabilityStatus,

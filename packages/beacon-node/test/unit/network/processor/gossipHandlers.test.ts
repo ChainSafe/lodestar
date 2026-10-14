@@ -6,7 +6,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {
   GossipValidationStatus,
   runGossipValidation,
@@ -460,7 +460,7 @@ async function runBeaconBlockProcessingError(
     processProposerEquivocation: vi.fn(),
     beaconEngine: {
       validateGossipBlock: () =>
-        runGossipValidation(() => validateGossipBlock.call({} as BeaconEngine, signedBlock, ForkName.deneb)),
+        runGossipValidation(() => validateGossipBlock.call({} as BeaconEngineCore, signedBlock, ForkName.deneb)),
       isBlockProposerEquivocating: () => false,
       processProposerEquivocation: vi.fn(),
     },
@@ -580,7 +580,7 @@ async function runBeaconBlockRepeatProposal(
     processProposerEquivocation: vi.fn(),
     beaconEngine: {
       validateGossipBlock: () =>
-        runGossipValidation(() => validateGossipBlock.call({} as BeaconEngine, signedBlock, ForkName.deneb)),
+        runGossipValidation(() => validateGossipBlock.call({} as BeaconEngineCore, signedBlock, ForkName.deneb)),
       hasObservedBlockRoot: seenBlockProposers.hasBlockRoot.bind(seenBlockProposers),
       isBlockProposerEquivocating: seenBlockProposers.isEquivocating.bind(seenBlockProposers),
       processProposerEquivocation: vi.fn(),

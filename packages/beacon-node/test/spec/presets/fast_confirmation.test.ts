@@ -41,7 +41,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {bnToNum, fromHex, toHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../src/chain/beaconEngine/index.js";
 import {
   BlockInputBlobs,
   BlockInputColumns,
@@ -70,6 +69,7 @@ import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {createBeaconChain} from "../../utils/chain.js";
+import {getBeaconEngineCore} from "../../utils/engine.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
@@ -179,7 +179,7 @@ const fastConfirmationTest =
         // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
         chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
-        const engine = chain.beaconEngine as BeaconEngine;
+        const engine = getBeaconEngineCore(chain.beaconEngine);
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
 

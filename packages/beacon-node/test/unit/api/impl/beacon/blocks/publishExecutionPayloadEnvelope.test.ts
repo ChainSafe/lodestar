@@ -7,7 +7,7 @@ import {IBeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
-import {BeaconEngine} from "../../../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {accept} from "../../../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {PayloadEnvelopeInput} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
@@ -40,17 +40,17 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     modules.network.publishSignedExecutionPayloadEnvelope = vi.fn();
     modules.chain.processExecutionPayload = vi.fn();
     modules.chain.beaconEngine.validateApiExecutionPayloadEnvelope = vi
-      .fn<BeaconEngine["validateApiExecutionPayloadEnvelope"]>()
+      .fn<BeaconEngineCore["validateApiExecutionPayloadEnvelope"]>()
       .mockResolvedValue(accept(undefined));
-    modules.chain.beaconEngine.verifyEnvelopeForPublish = BeaconEngine.prototype.verifyEnvelopeForPublish.bind(
+    modules.chain.beaconEngine.verifyEnvelopeForPublish = BeaconEngineCore.prototype.verifyEnvelopeForPublish.bind(
       modules.chain.beaconEngine
     );
-    modules.chain.beaconEngine.getConflictingBlockRoots = BeaconEngine.prototype.getConflictingBlockRoots.bind(
+    modules.chain.beaconEngine.getConflictingBlockRoots = BeaconEngineCore.prototype.getConflictingBlockRoots.bind(
       modules.chain.beaconEngine
     );
     modules.chain.beaconEngine.validatorMonitor = createValidatorMonitor(null, config, 0, modules.logger, {});
     modules.chain.beaconEngine.registerApiExecutionPayloadEnvelope = (...args) =>
-      BeaconEngine.prototype.registerApiExecutionPayloadEnvelope.call(modules.chain.beaconEngine, ...args);
+      BeaconEngineCore.prototype.registerApiExecutionPayloadEnvelope.call(modules.chain.beaconEngine, ...args);
   });
 
   afterEach(() => vi.restoreAllMocks());

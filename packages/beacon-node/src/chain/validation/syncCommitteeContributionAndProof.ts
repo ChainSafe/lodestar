@@ -1,7 +1,7 @@
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {IBeaconStateView, isStatePostAltair, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {ValidatorIndex, altair} from "@lodestar/types";
-import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {
   getContributionAndProofSignatureSet,
@@ -14,7 +14,7 @@ import {validateGossipSyncCommitteeExceptSig} from "./syncCommittee.js";
  * Spec v1.1.0-beta.2
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
-  this: BeaconEngine,
+  this: BeaconEngineCore,
   signedContributionAndProof: altair.SignedContributionAndProof,
   skipValidationKnownParticipants = false
 ): Promise<{syncCommitteeParticipantIndices: ValidatorIndex[]}> {
