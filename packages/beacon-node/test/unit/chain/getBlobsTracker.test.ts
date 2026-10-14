@@ -105,7 +105,7 @@ describe("GetBlobsTracker", () => {
     expect(getBlobs).toHaveBeenCalledTimes(MAX_GET_BLOBS_ATTEMPTS);
   });
 
-  it("retries after a null answer when triggers arrived while the request was in flight", async () => {
+  it("retries once after a null answer when triggers arrived while the request was in flight", async () => {
     let resolveRequest: (value: null) => void = () => {};
     getBlobs.mockReturnValueOnce(
       new Promise<null>((resolve) => {
@@ -119,6 +119,29 @@ describe("GetBlobsTracker", () => {
     expect(getBlobs).toHaveBeenCalledTimes(1);
 
     resolveRequest(null);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getBlobs).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS);
+    expect(getBlobs).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS * 3);
+    expect(getBlobs).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries after a rejected request when triggers arrived while it was in flight", async () => {
+    let rejectRequest: (error: Error) => void = () => {};
+    getBlobs.mockReturnValueOnce(
+      new Promise<null>((_resolve, reject) => {
+        rejectRequest = reject;
+      })
+    );
+    const blockInput = createBlockInput(1);
+    tracker.triggerGetBlobs(blockInput);
+    tracker.triggerGetBlobs(blockInput);
+    expect(getBlobs).toHaveBeenCalledTimes(1);
+
+    rejectRequest(new Error("EL unavailable"));
     await vi.advanceTimersByTimeAsync(0);
     expect(getBlobs).toHaveBeenCalledTimes(1);
 
