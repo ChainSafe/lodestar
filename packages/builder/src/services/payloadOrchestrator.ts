@@ -1,5 +1,11 @@
 import {LodestarError, TimeoutError, retry, sleep, withTimeout} from "@lodestar/utils";
-import type {BuildRequest, BuiltPayload, PayloadSource} from "./payloadSource.js";
+import {
+  type BuildRequest,
+  type BuiltPayload,
+  type PayloadSource,
+  PayloadSourceError,
+  PayloadSourceErrorCode,
+} from "./payloadSource.js";
 
 const PREPARE_RETRY_DELAY = 100;
 
@@ -41,8 +47,8 @@ export type PayloadOrchestratorErrorType =
 export class PayloadOrchestratorError extends LodestarError<PayloadOrchestratorErrorType> {}
 
 /**
- * Prepares a payload and retrieves it at the requested time. Preparation is retried until the retrieval time,
- * the execution client may not have imported the parent payload yet.
+ * Prepares a payload and retrieves it at the requested time. A missing payload ID is retried until the
+ * retrieval time, the execution client may not have imported the parent payload yet. Other errors fail the build.
  */
 export class PayloadOrchestrator {
   private readonly jobs = new Map<string, Promise<BuiltPayload>>();
@@ -78,6 +84,8 @@ export class PayloadOrchestrator {
         retry(() => this.source.prepare(request, signal), {
           retries: Infinity,
           retryDelay: PREPARE_RETRY_DELAY,
+          shouldRetry: (error) =>
+            error instanceof PayloadSourceError && error.type.code === PayloadSourceErrorCode.NO_PAYLOAD_ID,
           onRetry: (error) => {
             lastError = error;
           },

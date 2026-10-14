@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {
+  ExecutionEngineState,
   RegistryMetricCreator,
   collectNodeJSMetrics,
   defaultExecutionEngineHttpOpts,
@@ -104,8 +105,21 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     {signal: abortController.signal, logger}
   );
   const payloadSource = new EnginePayloadSource(toPrintableUrl(executionUrl), {
-    notifyForkchoiceUpdate: (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) =>
-      engine.notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes),
+    notifyForkchoiceUpdate: async (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) => {
+      try {
+        return await engine.notifyForkchoiceUpdate(
+          fork,
+          headBlockHash,
+          safeBlockHash,
+          finalizedBlockHash,
+          payloadAttributes
+        );
+      } catch (e) {
+        // A syncing execution client has not imported the parent payload yet, the build is retried until the deadline
+        if (engine.state === ExecutionEngineState.SYNCING) return null;
+        throw e;
+      }
+    },
     getPayload: async (fork, payloadId) => (await engine.getPayload(fork, payloadId)) as EnginePayloadResult,
   });
 

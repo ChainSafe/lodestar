@@ -6,6 +6,7 @@ export {persistAnchorState} from "./chain/index.js";
 export {DbCPStateDatastore} from "./chain/stateCache/datastore/db.js";
 export {FileCPStateDatastore} from "./chain/stateCache/datastore/file.js";
 export {BeaconDb, type IBeaconDb} from "./db/index.js";
+export {ExecutionEngineState} from "./execution/engine/interface.js";
 // Export execution engine to make it usable by builder
 export {initializeExecutionEngine} from "./execution/index.js";
 // Export metrics utilities to de-duplicate validator metrics
