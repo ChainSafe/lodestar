@@ -41,7 +41,6 @@ export class InclusionListDutiesService {
     syncingStatusTracker: SyncingStatusTracker
   ) {
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
-    // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
     clock.runEverySlot(this.prepareForNextEpoch);
     chainHeadTracker.runOnNewHead(this.onNewHead);

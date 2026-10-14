@@ -46,10 +46,9 @@ export class InclusionListService {
     if (this.dutiesService.getDutiesAtSlot(slot).length === 0) {
       return;
     }
-    // Spec: broadcast by get_inclusion_list_due_ms(), built against the slot's block if processed, else the
-    // local head. Wait until the beacon node imported the slot's payload, emitted once the execution client
-    // verified it and the fork choice update was queued, so the list is built from a mempool without that
-    // payload's transactions. Fall back to the deadline for empty or late slots.
+    // Spec: broadcast by get_inclusion_list_due_ms(). Wait until the beacon node imported the slot's payload,
+    // emitted once the execution client verified it and the fork choice update was queued, so the list is built
+    // from a mempool without that payload's transactions. Fall back to the deadline for empty or late slots.
     const dueMs = Math.max(
       0,
       this.config.getInclusionListDueMs(this.config.getForkName(slot)) - this.clock.msFromSlot(slot)
