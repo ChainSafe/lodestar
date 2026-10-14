@@ -1707,7 +1707,7 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
 
       return {
         data: duties,
@@ -1756,7 +1756,7 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
 
       return {
         data: duties,
@@ -2249,7 +2249,7 @@ export function getValidatorApi(
       const shuffling = state.getShufflingAtEpoch(epoch);
 
       // Validators set this as `dependent_root` on their inclusion lists
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
 
       // A validator can be on several slots' committees in an epoch; report the earliest, as for attester duties
       const dutySlotByValidator = new Map<ValidatorIndex, Slot>();
