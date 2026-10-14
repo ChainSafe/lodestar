@@ -9,6 +9,7 @@ import {
   ForkPreDeneb,
   ForkPreGloas,
   ForkSeq,
+  GENESIS_EPOCH,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -1663,7 +1664,8 @@ export function getValidatorApi(
 
       // should not compare to headEpoch in order to handle skipped slots
       // Check if the epoch is in the future after waiting for requested slot
-      if (epoch > chain.clock.currentEpoch + 1) {
+      // Before genesis the clock epoch is negative, treat it as GENESIS_EPOCH so the next epoch can be requested
+      if (epoch > Math.max(chain.clock.currentEpoch, GENESIS_EPOCH) + 1) {
         throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
       }
 
@@ -1726,7 +1728,7 @@ export function getValidatorApi(
 
       await waitForNextClosestEpoch();
 
-      if (epoch > chain.clock.currentEpoch + 1) {
+      if (epoch > Math.max(chain.clock.currentEpoch, GENESIS_EPOCH) + 1) {
         throw new ApiError(400, "Cannot get PTC duties for epoch more than one ahead");
       }
 
