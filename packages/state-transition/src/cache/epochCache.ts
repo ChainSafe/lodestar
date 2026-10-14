@@ -178,6 +178,8 @@ export class EpochCache {
    * Update freq: once per epoch after `process_effective_balance_updates()`
    */
   baseRewardPerIncrement: number;
+  /** As baseRewardPerIncrement but priced at the previous epoch's slot duration */
+  baseRewardPerIncrementPrevEpoch: number;
   /**
    * Total active balance for current epoch, to be used instead of getTotalBalance()
    */
@@ -269,6 +271,7 @@ export class EpochCache {
     syncParticipantReward: number;
     syncProposerReward: number;
     baseRewardPerIncrement: number;
+    baseRewardPerIncrementPrevEpoch: number;
     totalActiveBalanceIncrements: number;
     churnLimit: number;
     activationChurnLimit: number;
@@ -302,6 +305,7 @@ export class EpochCache {
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
+    this.baseRewardPerIncrementPrevEpoch = data.baseRewardPerIncrementPrevEpoch;
     this.totalActiveBalanceIncrements = data.totalActiveBalanceIncrements;
     this.churnLimit = data.churnLimit;
     this.activationChurnLimit = data.activationChurnLimit;
@@ -452,9 +456,14 @@ export class EpochCache {
 
     // Values syncParticipantReward, syncProposerReward, baseRewardPerIncrement are only used after altair.
     // However, since they are very cheap to compute they are computed always to simplify upgradeState function.
-    const syncParticipantReward = computeSyncParticipantReward(totalActiveBalanceIncrements);
+    const syncParticipantReward = computeSyncParticipantReward(config, currentEpoch, totalActiveBalanceIncrements);
     const syncProposerReward = Math.floor(syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
-    const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalanceIncrements);
+    const baseRewardPerIncrement = computeBaseRewardPerIncrement(config, currentEpoch, totalActiveBalanceIncrements);
+    const baseRewardPerIncrementPrevEpoch = computeBaseRewardPerIncrement(
+      config,
+      Math.max(currentEpoch - 1, GENESIS_EPOCH),
+      totalActiveBalanceIncrements
+    );
 
     let currentSyncCommitteeIndexed: SyncCommitteeCache;
     let nextSyncCommitteeIndexed: SyncCommitteeCache;
@@ -542,6 +551,7 @@ export class EpochCache {
       syncParticipantReward,
       syncProposerReward,
       baseRewardPerIncrement,
+      baseRewardPerIncrementPrevEpoch,
       totalActiveBalanceIncrements,
       churnLimit,
       activationChurnLimit,
@@ -591,6 +601,7 @@ export class EpochCache {
       syncParticipantReward: this.syncParticipantReward,
       syncProposerReward: this.syncProposerReward,
       baseRewardPerIncrement: this.baseRewardPerIncrement,
+      baseRewardPerIncrementPrevEpoch: this.baseRewardPerIncrementPrevEpoch,
       totalActiveBalanceIncrements: this.totalActiveBalanceIncrements,
       churnLimit: this.churnLimit,
       activationChurnLimit: this.activationChurnLimit,
@@ -685,9 +696,22 @@ export class EpochCache {
 
     this.totalActiveBalanceIncrements = epochTransitionCache.nextEpochTotalActiveBalanceByIncrement;
     if (upcomingEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-      this.syncParticipantReward = computeSyncParticipantReward(this.totalActiveBalanceIncrements);
+      this.syncParticipantReward = computeSyncParticipantReward(
+        this.config,
+        upcomingEpoch,
+        this.totalActiveBalanceIncrements
+      );
       this.syncProposerReward = Math.floor(this.syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
-      this.baseRewardPerIncrement = computeBaseRewardPerIncrement(this.totalActiveBalanceIncrements);
+      this.baseRewardPerIncrement = computeBaseRewardPerIncrement(
+        this.config,
+        upcomingEpoch,
+        this.totalActiveBalanceIncrements
+      );
+      this.baseRewardPerIncrementPrevEpoch = computeBaseRewardPerIncrement(
+        this.config,
+        Math.max(upcomingEpoch - 1, GENESIS_EPOCH),
+        this.totalActiveBalanceIncrements
+      );
     }
 
     this.previousTargetUnslashedBalanceIncrements = this.currentTargetUnslashedBalanceIncrements;

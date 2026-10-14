@@ -1,8 +1,9 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, RootHex} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {strip0xPrefix} from "@lodestar/utils";
+import {strip0xPrefix, toHex} from "@lodestar/utils";
 import {ClientCode, ClientVersion, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
 import {IJsonRpcHttpClient, JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
 import {ForkchoiceUpdatedResult, GetPayloadResult, IEngineTransport, PayloadStatusResult} from "./transport.js";
@@ -110,7 +111,9 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    custodyColumns?: BitArray | null,
+    opts?: ReqOpts
   ): Promise<ForkchoiceUpdatedResult> {
     const method =
       ForkSeq[fork] >= ForkSeq.gloas
@@ -125,15 +128,22 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     // and we can move on, as the next fcU will be issued soon on the new slot
     const fcUReqOpts = payloadAttributes !== undefined ? forkchoiceUpdatedOpts : {...forkchoiceUpdatedOpts, retries: 0};
 
+    let params: EngineApiRpcParamTypes[typeof method] = [
+      {headBlockHash, safeBlockHash, finalizedBlockHash},
+      payloadAttributesRpc,
+    ];
+    if (ForkSeq[fork] >= ForkSeq.gloas && custodyColumns !== undefined) {
+      params = [params[0], payloadAttributesRpc, custodyColumns === null ? null : toHex(custodyColumns.uint8Array)];
+    }
     const {payloadStatus, payloadId} = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc]}, fcUReqOpts);
+    >({method, params}, {...fcUReqOpts, ...opts});
 
     return {payloadStatus, payloadId: payloadId && payloadId !== "0x" ? payloadId : null};
   }
 
-  async getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult> {
+  async getPayload(fork: ForkName, payloadId: PayloadId, opts?: ReqOpts): Promise<GetPayloadResult> {
     let method: keyof EngineApiRpcReturnTypes;
     switch (fork) {
       case ForkName.phase0:
@@ -160,7 +170,7 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [payloadId]}, getPayloadOpts);
+    >({method, params: [payloadId]}, {...getPayloadOpts, ...opts});
     return parseExecutionPayload(fork, payloadResponse);
   }
 

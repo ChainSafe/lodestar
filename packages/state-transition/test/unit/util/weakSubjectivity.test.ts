@@ -79,7 +79,7 @@ describe("weak subjectivity tests", () => {
     it.each(testValues)(
       "should have wsPeriod: $wsPeriod with totalActiveBalance: $totalBalanceIncrement",
       ({totalBalanceIncrement, wsPeriod: expectedWsPeriod}) => {
-        const churn = getGloasChurnLimits(config, totalBalanceIncrement);
+        const churn = getGloasChurnLimits(config, 0, totalBalanceIncrement);
         const wsPeriod = computeWeakSubjectivityPeriodFromConstituentsGloas(
           totalBalanceIncrement,
           churn.exit,

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {fetch} from "@lodestar/utils";
+import {fetch, retry} from "@lodestar/utils";
 import {OpenApiFile, OpenApiJson} from "./parseOpenApiSpec.js";
 
 export async function fetchOpenApiSpec(openApiFile: OpenApiFile): Promise<OpenApiJson> {
@@ -14,7 +14,22 @@ export async function fetchOpenApiSpec(openApiFile: OpenApiFile): Promise<OpenAp
 
   // File not cached, or wrong version
   console.log(`Downloading oapi file from ${openApiFile.url}`);
-  const openApiStr = await fetch(openApiFile.url).then((res) => res.text());
+  const openApiStr = await retry(
+    async () => {
+      const res = await fetch(openApiFile.url);
+      if (!res.ok) {
+        throw new Error(`Failed to download file from ${openApiFile.url}: ${res.status} ${res.statusText}`);
+      }
+      return res.text();
+    },
+    {
+      retries: 3,
+      retryDelay: 1000,
+      onRetry: (e, attempt) => {
+        console.log(`Retrying oapi file download attempt=${attempt}: ${e.message}`);
+      },
+    }
+  );
 
   // Parse before writting to ensure it's proper JSON
   let openApiJson: OpenApiJson;

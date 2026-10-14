@@ -1,9 +1,10 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {ClientVersion, ExecutionPayloadStatus, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
-import {JsonRpcHttpClientEventEmitter} from "./jsonRpcHttpClient.js";
+import {JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
 import {ExecutionPayloadBodyV2} from "./types.js";
 
 export type PayloadStatusResult = {
@@ -46,10 +47,12 @@ export interface IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    custodyColumns?: BitArray | null,
+    opts?: ReqOpts
   ): Promise<ForkchoiceUpdatedResult>;
 
-  getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult>;
+  getPayload(fork: ForkName, payloadId: PayloadId, opts?: ReqOpts): Promise<GetPayloadResult>;
 
   getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
 

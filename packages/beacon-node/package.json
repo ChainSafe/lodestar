@@ -11,9 +11,14 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.49.0",
+  "version": "1.50.0",
   "type": "module",
   "exports": {
+    "./execution/engine": {
+      "typescript": "./src/execution/engine/index.ts",
+      "types": "./lib/execution/engine/index.d.ts",
+      "import": "./lib/execution/engine/index.js"
+    },
     ".": {
       "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
