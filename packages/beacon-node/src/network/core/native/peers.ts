@@ -155,6 +155,13 @@ export class NativePeers {
       this.events.emit(NetworkEvent.peerDisconnected, {peer});
     }
   }
+  /** Connected identities from the latest delivered native observations. */
+  connected(): string[] {
+    return [...this.peers.keys()];
+  }
+  get connectedCount(): number {
+    return this.peers.size;
+  }
   close(): void {
     this.closed = true;
     this.peers.clear();

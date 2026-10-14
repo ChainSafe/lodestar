@@ -268,12 +268,10 @@ export class NativeNetworkCore implements INetworkCore {
     return this.network.reStatus(peers);
   }
   async getConnectedPeers(): Promise<string[]> {
-    return (await this.network.getPeers()).peers
-      .filter((peer) => peer.connection !== null)
-      .map((peer) => peer.identity);
+    return this.peers.connected();
   }
   async getConnectedPeerCount(): Promise<number> {
-    return (await this.network.getPeers()).counts.connected;
+    return this.peers.connectedCount;
   }
   connectToPeer(peer: string, addresses: string[]): Promise<void> {
     nativeInteger(addresses.length, "dial addresses", 2, 1);
@@ -338,7 +336,7 @@ export class NativeNetworkCore implements INetworkCore {
     };
   }
   async scrapeMetrics(): Promise<string> {
-    return this.network.metrics() + this.requests.metrics() + this.reports.metrics();
+    return (await this.network.metrics()) + this.requests.metrics() + this.reports.metrics();
   }
   private unavailable(resource: string): Promise<never> {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));

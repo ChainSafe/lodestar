@@ -88,6 +88,7 @@ describe("native peer projection", () => {
     update({relevant: true});
     expect(node.connected).toHaveBeenCalledTimes(6);
     node.peers.close();
+    expect(node.peers.connectedCount).toBe(0);
   });
 
   it.each([
@@ -156,6 +157,8 @@ describe("native peer projection", () => {
       reason: "host",
     });
     expect(node.disconnected).not.toHaveBeenCalled();
+    expect(node.peers.connected()).toEqual([current.identity]);
+    expect(node.peers.connectedCount).toBe(1);
     node.drain({
       type: "closed",
 
@@ -165,6 +168,8 @@ describe("native peer projection", () => {
       reason: "host",
     });
     expect(node.disconnected).toHaveBeenCalledOnce();
+    expect(node.peers.connected()).toEqual([]);
+    expect(node.peers.connectedCount).toBe(0);
     node.peers.close();
   });
 

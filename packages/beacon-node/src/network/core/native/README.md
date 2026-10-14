@@ -4,11 +4,13 @@ With the native backend, the lodestar-z gossip processor (`src/network/gossip_pr
 
 Each rule below sits next to its `NetworkProcessor` counterpart on unstable, with a decision: **mirror** (same rule), **equivalent** (same bound or outcome by another mechanism), **intentionally different**, **not yet mirrored** (an open requirement), or **unsupported** (Gloas, which native refuses when active or requested). Each `NetworkProcessor` semantics change on unstable adds a row to the second table when the branch rebases.
 
-The tables originated from a comparison of lodestar-z 39616cb2 and unstable fbb58f7280; the branch base is 92b9ec6e8b. They are a comparison inventory, not a claim of complete behavioral parity. The current pump lives in lodestar-z's `bindings/src/network-pump.js`, and `bindings/src/network-tickets.js` owns completion settlement. `nativeNetworkCore.ts` supplies the host callbacks; asynchronous validation and serving retain their obligations until completion.
+The tables originated from a comparison of lodestar-z 39616cb2 and unstable fbb58f7280; the branch base is 92b9ec6e8b. They are a comparison inventory, not a claim of complete behavioral parity. The binding pump lives in lodestar-z's `bindings/src/network-pump.js`; native owns operation Promises, which it settles during each bounded exchange. `nativeNetworkCore.ts` supplies the host callbacks; asynchronous validation and serving retain their obligations until completion.
 
 ## Runtime configuration and failures
 
 Select native networking with `--network.backend=native --tcp=false --quic=true`. It supports IPv4, IPv6, or both, with at most one QUIC listener and one discovery listener per family. Discovery can learn advertised endpoints; explicit endpoints remain fixed. The workspace catalog pins `@chainsafe/lodestar-z` to a Git commit because the network and LevelDB APIs are not yet published. Installing dependencies builds its mainnet binding from source and requires Zig 0.16.0, Rust/Cargo, and CMake.
+
+The network keeps its wrapper and event loop alive until explicit close or environment termination. Connected-peer lists and counts use the latest observations delivered to Lodestar. Diagnostic and remembered-peer queries still request owner snapshots. Metrics scrapes request an owner render, share concurrent requests, and remain available from the final snapshot after close.
 
 When a peer store directory is configured, `rememberedPeers.ts` loads and periodically saves up to 256 qualified peers in `native-remembered-peers.json`, scoped to the genesis validators root and expiring after 24 hours. A missing or invalid file gives a cold start. Shutdown attempts a final snapshot before closing the network.
 
