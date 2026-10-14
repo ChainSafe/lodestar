@@ -304,11 +304,30 @@ export class SyncCommitteeDutiesService {
       dutiesByIndex.set(validatorIndex, {duty: {pubkey: pubkeyHex, validatorIndex, subnets}});
     }
 
-    // these could be redundant duties due to the state of next period query reorged
+    // These could be redundant duties due to the state of next period query reorged
     // see https://github.com/ChainSafe/lodestar/issues/3572
-    // so we always overwrite duties
+    // so we always overwrite duties for the indices this poll requested.
+    //
+    // This poll only queried `indexArr`, which is the full local set for the scheduled
+    // poll but just the newly discovered indices for the incremental poll in
+    // `runDutiesTasks`. Replacing the whole period map with a scoped result would drop
+    // every other validator's duties until the next full poll, so merge into the cached
+    // map instead: overwrite or remove only the entries this poll was responsible for
+    // and keep the rest. For a full poll this is equivalent to replacing the map.
     const period = computeSyncPeriodAtEpoch(epoch);
-    this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
+    const cachedDutiesByIndex = this.dutiesByIndexByPeriod.get(period);
+    if (cachedDutiesByIndex === undefined) {
+      this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
+    } else {
+      for (const validatorIndex of indexArr) {
+        const dutyAtPeriod = dutiesByIndex.get(validatorIndex);
+        if (dutyAtPeriod !== undefined) {
+          cachedDutiesByIndex.set(validatorIndex, dutyAtPeriod);
+        } else {
+          cachedDutiesByIndex.delete(validatorIndex);
+        }
+      }
+    }
 
     this.logger.debug("Downloaded SyncDuties", {epoch, count});
   }
