@@ -8,25 +8,24 @@ const era = @import("era");
 const config = @import("config");
 
 // printf "Date: %s\nKernel: %s\nCPU: %s\nCPUs: %s\nMemory: %s\n" "$(date)" "$(uname -r)" "$(lscpu | grep 'Model name' | awk -F: '{print $2}' | xargs)" "$(lscpu | grep '^CPU(s):' | awk '{print $2}')" "$(free -h | grep Mem | awk '{print $2}')"
-// Date: Mon Apr 21 12:59:32 PM EDT 2025
-// Kernel: 5.15.0-133-generic
-// CPU: AMD Ryzen Threadripper 1950X 16-Core Processor
-// CPUs: 32
-// Memory: 62Gi
-
-// zbuild run bench_state -Doptimize=ReleaseFast
+// Date: Wed Oct 14 09:13:28 UTC 2026
+// Kernel: 6.8.0-137-generic
+// CPU: Intel(R) Xeon(R) E-2386G CPU @ 3.50GHz
+// CPUs: 12
+// Memory: 31Gi
+// zig build run:bench_ssz_state -Doptimize=ReleaseSafe
 //
-// benchmark              runs     total time     time/run (avg ± σ)     (min ... max)                p75        p99        p995
-// -----------------------------------------------------------------------------------------------------------------------------
-// serialize state        14       1.898s         135.592ms ± 3.365ms    (133.059ms ... 145.075ms)    136.637ms  145.075ms  145.075ms
-// serialize state preall 59       1.984s         33.627ms ± 1.412ms     (32.111ms ... 39.15ms)       33.97ms    39.15ms    39.15ms
-// deserialize state      12       2.542s         211.847ms ± 51.699ms   (171.633ms ... 344.908ms)    219.912ms  344.908ms  344.908ms
-// deserialize state prea 24       1.711s         71.321ms ± 7.46ms      (66.76ms ... 97.903ms)       70.22ms    97.903ms   97.903ms
-// validate state         100000   2.39ms         23ns ± 16ns            (20ns ... 3.757us)           30ns       31ns       31ns
-// hash state             2        1.903s         951.658ms ± 1.306ms    (950.734ms ... 952.582ms)    952.582ms  952.582ms  952.582ms
-// hash state prealloc    2        1.85s          925.309ms ± 4.776ms    (921.932ms ... 928.687ms)    928.687ms  928.687ms  928.687ms
-// hash state oneshot     2        1.856s         928.067ms ± 523.611us  (927.697ms ... 928.437ms)    928.437ms  928.437ms  928.437ms
-// hash state serialized  2        1.844s         922.405ms ± 4.557ms    (919.183ms ... 925.628ms)    925.628ms  925.628ms  925.628ms
+// benchmark                           runs     total time     time/run (avg ± σ)    (min ... max)                p75        p99        p995
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+// serialize state                     14       1.984s         141.718ms ± 20.35ms   (129.021ms ... 193.002ms)    136.256ms  193.002ms  193.002ms
+// serialize state prealloc            63       2.216s         35.185ms ± 4.018ms    (30.757ms ... 53.962ms)      36.443ms   53.962ms   53.962ms
+// deserialize state                   6        1.794s         299.106ms ± 44.554ms  (277.355ms ... 389.55ms)     289.483ms  389.55ms   389.55ms
+// deserialize state prealloc struct   7        1.911s         273.07ms ± 3.326ms    (269.627ms ... 279.406ms)    273.714ms  279.406ms  279.406ms
+// validate state                      157      1.996s         12.714ms ± 1.133ms    (10.601ms ... 23.394ms)      13.038ms   15.395ms   23.394ms
+// hash state                          1        1.577s         1.577s ± 0ns          (1.577s ... 1.577s)          1.577s     1.577s     1.577s
+// hash state prealloc                 1        1.338s         1.338s ± 0ns          (1.338s ... 1.338s)          1.338s     1.338s     1.338s
+// hash state oneshot                  1        1.17s          1.17s ± 0ns           (1.17s ... 1.17s)            1.17s      1.17s      1.17s
+// hash state serialized               1        1.14s          1.14s ± 0ns           (1.14s ... 1.14s)            1.14s      1.14s      1.14s
 
 const SerializeState = struct {
     state: *BeaconState.Type,

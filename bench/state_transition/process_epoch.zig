@@ -1,7 +1,7 @@
 //! Benchmark for fork-specific epoch processing.
 //!
 //! Uses a mainnet state at slot 13180928.
-//! Run with: zig build run:bench_process_epoch -Doptimize=ReleaseFast
+//! Run with: zig build run:bench_process_epoch -Doptimize=ReleaseSafe
 
 const std = @import("std");
 const builtin = @import("builtin");

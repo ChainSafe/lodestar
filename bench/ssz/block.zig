@@ -8,25 +8,24 @@ const era = @import("era");
 const config = @import("config");
 
 // printf "Date: %s\nKernel: %s\nCPU: %s\nCPUs: %s\nMemory: %s\n" "$(date)" "$(uname -r)" "$(lscpu | grep 'Model name' | awk -F: '{print $2}' | xargs)" "$(lscpu | grep '^CPU(s):' | awk '{print $2}')" "$(free -h | grep Mem | awk '{print $2}')"
-// Date: Mon Apr 21 12:59:32 PM EDT 2025
-// Kernel: 5.15.0-133-generic
-// CPU: AMD Ryzen Threadripper 1950X 16-Core Processor
-// CPUs: 32
-// Memory: 62Gi
-
-// zbuild run bench_block -Doptimize=ReleaseFast
+// Date: Wed Oct 14 09:12:59 UTC 2026
+// Kernel: 6.8.0-137-generic
+// CPU: Intel(R) Xeon(R) E-2386G CPU @ 3.50GHz
+// CPUs: 12
+// Memory: 31Gi
+// zig build run:bench_ssz_block -Doptimize=ReleaseSafe
 //
-// benchmark              runs     total time     time/run (avg ± σ)     (min ... max)                p75        p99        p995
-// -----------------------------------------------------------------------------------------------------------------------------
-// serialize block        9738     1.967s         202.017us ± 13.616us   (174.444us ... 367.754us)    206.525us  259.678us  267.251us
-// serialize block preall 100000   1.502s         15.021us ± 918ns       (13.957us ... 79.853us)      15.299us   18.035us   20.059us
-// deserialize block      1589     1.971s         1.24ms ± 27.861us      (1.18ms ... 1.527ms)         1.259ms    1.301ms    1.324ms
-// deserialize block prea 1645     1.987s         1.208ms ± 28.544us     (1.129ms ... 1.461ms)        1.227ms    1.267ms    1.294ms
-// validate block         100000   3.552ms        35ns ± 12ns            (30ns ... 3.436us)           40ns       41ns       50ns
-// hash block             1297     2.023s         1.56ms ± 37.705us      (1.459ms ... 1.77ms)         1.586ms    1.639ms    1.658ms
-// hash block prealloc    1777     1.987s         1.118ms ± 28.154us     (1.062ms ... 1.292ms)        1.141ms    1.193ms    1.225ms
-// hash block oneshot     563      2.13s          3.784ms ± 73.197us     (3.598ms ... 4.66ms)         3.824ms    3.958ms    4.034ms
-// hash block serialized  563      2s             3.552ms ± 65.788us     (3.411ms ... 3.905ms)        3.593ms    3.721ms    3.762ms
+// benchmark                           runs     total time     time/run (avg ± σ)    (min ... max)                p75        p99        p995
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+// serialize block                     90931    2.626s         28.887us ± 61.109us   (11.927us ... 6.271ms)       28.211us   60.197us   146.799us
+// serialize block prealloc            100000   140.041ms      1.4us ± 613ns         (868ns ... 23.95us)          1.483us    2.432us    6.741us
+// deserialize block                   5459     1.939s         355.366us ± 161.05us  (234.266us ... 2.646ms)      372.177us  1.026ms    1.133ms
+// deserialize block prealloc struct   7005     1.924s         274.782us ± 130.015us (217.301us ... 1.798ms)      255.555us  979.856us  1.104ms
+// validate block                      100000   10.305ms       103ns ± 190ns         (93ns ... 16.154us)          100ns      149ns      171ns
+// hash block                          2664     1.903s         714.394us ± 190.295us (587.001us ... 3.948ms)      696.743us  1.349ms    1.432ms
+// hash block prealloc                 10519    2.044s         194.366us ± 23.398us  (181.156us ... 1.067ms)      193.334us  262.208us  302.29us
+// hash block oneshot                  10449    1.986s         190.086us ± 7.032us   (182.205us ... 283.28us)     190.762us  219.545us  226.113us
+// hash block serialized               10144    1.985s         195.745us ± 25.201us  (178.231us ... 873.5us)      197.068us  318.001us  391.933us
 
 const SerializeBlock = struct {
     block: *BeaconBlock.Type,

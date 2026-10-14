@@ -9,25 +9,25 @@ const era = @import("era");
 const config = @import("config");
 
 // printf "Date: %s\nKernel: %s\nCPU: %s\nCPUs: %s\nMemory: %s\n" "$(date)" "$(uname -r)" "$(lscpu | grep 'Model name' | awk -F: '{print $2}' | xargs)" "$(lscpu | grep '^CPU(s):' | awk '{print $2}')" "$(free -h | grep Mem | awk '{print $2}')"
-// Date: Fri Apr 25 10:07:24 AM EDT 2025
-// Kernel: 5.15.0-133-generic
-// CPU: AMD Ryzen Threadripper 1950X 16-Core Processor
-// CPUs: 32
-// Memory: 62Gi
-
-// zbuild run bench_attestation -Doptimize=ReleaseFast
+// Date: Wed Oct 14 09:12:46 UTC 2026
+// Kernel: 6.8.0-137-generic
+// CPU: Intel(R) Xeon(R) E-2386G CPU @ 3.50GHz
+// CPUs: 12
+// Memory: 31Gi
+// zig build run:bench_ssz_attestation -Doptimize=ReleaseSafe
 //
-// benchmark              runs     total time     time/run (avg ± σ)     (min ... max)                p75        p99        p995
-// -----------------------------------------------------------------------------------------------------------------------------
-// serialize attestation  100000   267.558ms      2.675us ± 570ns        (2.314us ... 40.227us)       2.625us    4.418us    4.649us
-// serialize attestation  100000   3.897ms        38ns ± 22ns            (30ns ... 7.053us)           40ns       50ns       50ns
-// deserialize attestatio 100000   532.577ms      5.325us ± 845ns        (4.508us ... 44.375us)       5.3us      7.614us    8.366us
-// deserialize attestatio 100000   4.378ms        43ns ± 23ns            (30ns ... 7.194us)           50ns       60ns       60ns
-// validate attestation   100000   2.384ms        23ns ± 25ns            (20ns ... 8.075us)           30ns       31ns       31ns
-// hash attestation       57120    2.017s         35.321us ± 3.204us     (30.479us ... 119.979us)     36.129us   45.648us   48.352us
-// hash attestation preal 100000   115.875ms      1.158us ± 268ns        (1.132us ... 32.542us)       1.153us    1.163us    1.272us
-// hash attestation onesh 100000   632.905ms      6.329us ± 427ns        (5.981us ... 59.494us)       6.442us    7.184us    7.675us
-// hash attestation seria 100000   657.36ms       6.573us ± 614ns        (5.991us ... 84.341us)       6.783us    7.234us    7.976us
+// benchmark                                 runs     total time     time/run (avg ± σ)    (min ... max)                p75        p99        p995
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// serialize attestation                     100000   197.007ms      1.97us ± 1.787us      (1.684us ... 166.414us)      1.843us    3.347us    4.121us
+// serialize attestation prealloc            100000   7.132ms        71ns ± 22ns           (59ns ... 3.619us)           73ns       94ns       99ns
+// deserialize attestation                   100000   1.099s         10.99us ± 18.398us    (7.68us ... 867.175us)       10.786us   25.092us   32.458us
+// deserialize attestation prealloc struct   100000   649.679ms      6.496us ± 9.672us     (5.158us ... 570.778us)      5.893us    11.524us   13.51us
+// validate attestation                      100000   1.752ms        17ns ± 8ns            (16ns ... 2.702us)           18ns       25ns       27ns
+// hash attestation                          33977    1.81s          53.3us ± 47.545us     (44.942us ... 1.083ms)       49.096us   229.616us  430.065us
+// hash attestation prealloc                 100000   781.841ms      7.818us ± 1.377us     (7.292us ... 315.716us)      7.664us    10.682us   12.661us
+// hash attestation oneshot                  100000   755.992ms      7.559us ± 897ns       (7.047us ... 31.055us)       7.451us    10.83us    13.316us
+// hash attestation serialized               100000   740.103ms      7.401us ± 854ns       (7.048us ... 29.715us)       7.355us    11.712us   14.297us
+// equals attestation                        100000   2.136ms        21ns ± 15ns           (20ns ... 4.521us)           22ns       23ns       23ns
 
 const SerializeAttestation = struct {
     attestation: *Attestation.Type,

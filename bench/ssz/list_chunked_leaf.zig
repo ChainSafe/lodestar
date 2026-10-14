@@ -2,7 +2,7 @@
 //! on representative balances-scale workloads.
 //!
 //! Run with:
-//!   zig build run:bench_list_chunked_leaf -Doptimize=ReleaseFast
+//!   zig build run:bench_list_chunked_leaf -Doptimize=ReleaseSafe
 //!
 //! Every workload is registered as a pair — `... leaf` vs `... chunked_leaf` —
 //! so each line in the output is a direct A/B comparison of the two layouts.

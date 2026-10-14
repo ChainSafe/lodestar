@@ -1,7 +1,7 @@
 //! Benchmark for fork-specific block processing.
 //!
 //! Uses a mainnet state at slot 13180928 and block at slot 13180929.
-//! Run with: zig build run:bench_process_block -Doptimize=ReleaseFast [-- /path/to/state.ssz /path/to/block.ssz]
+//! Run with: zig build run:bench_process_block -Doptimize=ReleaseSafe [-- /path/to/state.ssz /path/to/block.ssz]
 
 const std = @import("std");
 const builtin = @import("builtin");
