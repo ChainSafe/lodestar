@@ -288,6 +288,32 @@ describe("ValidatorStore", () => {
     ).resolves.toBeDefined();
   });
 
+  it("Should not sign an aggregate for a validator that is not doppelganger safe", async () => {
+    const slot = 2 * SLOTS_PER_EPOCH + 1;
+    const duty: routes.validator.AttesterDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: 0,
+      committeeIndex: 0,
+      committeeLength: 1,
+      committeesAtSlot: 1,
+      validatorCommitteeIndex: 0,
+      slot,
+    };
+    const aggregate = ssz.phase0.Attestation.defaultValue();
+    aggregate.data = {
+      ...ssz.phase0.AttestationData.defaultValue(),
+      slot,
+      target: {epoch: computeEpochAtSlot(slot), root: ZERO_HASH},
+    };
+    const selectionProof = new Uint8Array(96);
+
+    await expect(validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)).resolves.toBeDefined();
+    vi.spyOn(validatorStore, "isDoppelgangerSafe").mockReturnValue(false);
+    await expect(validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)).rejects.toThrow(
+      "Doppelganger state"
+    );
+  });
+
   it("Should reject builder request auth data with invalid length", async () => {
     await expect(validatorStore.signBuilderRequestAuth(pubkeys[0], new Uint8Array(0), 10)).rejects.toThrow();
     await expect(validatorStore.signBuilderRequestAuth(pubkeys[0], new Uint8Array(4097), 10)).rejects.toThrow();
