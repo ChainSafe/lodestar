@@ -71,7 +71,7 @@ describe("validateGossipExecutionProof", () => {
     const proof = chain.proofEngine.verifyExecutionProof.mock.calls[0][0];
     expect(proof.proofType).toBe(1);
     expect(proof.proofData).toBe(signedProof.message.proofData);
-    expect(proof.publicInput.chainId).toBe(config.DEPOSIT_CHAIN_ID);
+    expect(proof.publicInput.chainId).toBe(BigInt(config.DEPOSIT_CHAIN_ID));
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 1, 3)).toBe(true);
     expect(chain.seenExecutionProofs.hasVerified(blockRootHex, 1)).toBe(true);
     expect(chain.seenExecutionProofs.getVerified(blockRootHex, 1)).toBe(signedProof.message);

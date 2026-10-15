@@ -20,6 +20,11 @@ You will need to go over the [specification](https://github.com/ethereum/consens
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet/).
 
+## Tests
+
+From the repository root, run `pnpm download-execution-proofs-fixtures` before running `pnpm test:unit` or
+the native proof tests. See the [fixture instructions](./test/fixtures/executionProofs.md).
+
 ## Contributors
 
 Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!

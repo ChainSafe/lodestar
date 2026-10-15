@@ -38,6 +38,7 @@ validators
 packages/*/spec-tests*
 packages/*/benchmark_data
 packages/beacon-node/test-logs/
+packages/beacon-node/test/fixtures/executionProofs/
 packages/cli/test-logs/
 packages/state-transition/test-cache
 benchmark_data
