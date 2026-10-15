@@ -54,9 +54,7 @@ describe("native configuration boundary", () => {
     expect(node.create({xrayAddress: "/tmp/xray.sock", xrayWaitForAttach: true}).xray?.waitForAttach).toBe(true);
     expect(node.create().traceTurns).toBe(false);
     expect(node.create({native: {traceTurns: true}}).traceTurns).toBe(true);
-    expect(node.create().gossipPolicy).toMatchObject({
-      activeSendTimeoutMs: 6000n,
-    });
+    expect(node.create().gossipPolicy?.activeSendTimeoutMs).toBeUndefined();
     const application = node.create({
       native: {gossipActiveSendTimeoutMs: 4000, gossipActiveSendItems: {beacon_block: 4}},
     });
@@ -70,10 +68,9 @@ describe("native configuration boundary", () => {
     const node = await fixture();
     expect(node.create().traceGossip).toBe(false);
     expect(node.create({native: {traceGossip: true}}).traceGossip).toBe(true);
-    expect(node.create().gossipPolicy).toMatchObject({
-      largeFrameTimeoutMs: 6000n,
-      receiveBufferBytes: 128 * 1024 * 1024,
-    });
+    expect(node.create().gossipPolicy?.largeFrameTimeoutMs).toBeUndefined();
+    expect(node.create().gossipPolicy?.receiveBufferBytes).toBeUndefined();
+    expect(node.create().resources).toEqual({targetPeers: 200, maxPeers: 210});
     const application = node.create({
       native: {gossipLargeFrameTimeoutMs: 4000, gossipReceiveBufferBytes: 64 * 1024 * 1024},
     });
@@ -289,7 +286,8 @@ describe("native configuration boundary", () => {
 
 it("preserves bounded native transport overrides", async () => {
   const {create} = await fixture();
-  expect(create().transport).toEqual({initialCongestionWindowPackets: 10, receiveDatagramsPerTurn: 32});
+  expect(create().transport).toEqual({});
+  expect(create({native: {receiveDatagramsPerTurn: 128}}).transport).toEqual({receiveDatagramsPerTurn: 128});
   expect(create({native: {initialCongestionWindowPackets: 32, receiveDatagramsPerTurn: 128}}).transport).toEqual({
     initialCongestionWindowPackets: 32,
     receiveDatagramsPerTurn: 128,

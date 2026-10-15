@@ -231,14 +231,14 @@ export function createNativeConfig(
     traceTurns: opts.native?.traceTurns ?? false,
     ...(opts.xrayAddress ? {xray: {address: opts.xrayAddress, waitForAttach: opts.xrayWaitForAttach ?? false}} : {}),
     transport: {
-      initialCongestionWindowPackets: nativeInteger(
-        opts.native?.initialCongestionWindowPackets ?? 10,
+      initialCongestionWindowPackets: optionalInteger(
+        opts.native?.initialCongestionWindowPackets,
         "initial congestion window packets",
         64,
         1
       ),
-      receiveDatagramsPerTurn: nativeInteger(
-        opts.native?.receiveDatagramsPerTurn ?? 32,
+      receiveDatagramsPerTurn: optionalInteger(
+        opts.native?.receiveDatagramsPerTurn,
         "receive datagrams per turn",
         256,
         1
@@ -270,23 +270,19 @@ export function createNativeConfig(
     resources: {
       targetPeers: opts.targetPeers,
       maxPeers: opts.maxPeers,
-      receiveBudgetBytes: opts.native?.receiveBudgetBytes ?? 512 * MiB,
-      nativeBudgetBytes: opts.native?.nativeBudgetBytes ?? 2048 * MiB,
-      bridgeBudgetBytes: opts.native?.bridgeBudgetBytes ?? 512 * MiB,
+      receiveBudgetBytes: opts.native?.receiveBudgetBytes,
+      nativeBudgetBytes: opts.native?.nativeBudgetBytes,
+      bridgeBudgetBytes: opts.native?.bridgeBudgetBytes,
     },
     gossipPolicy: {
-      hostItems: nativeInteger(opts.native?.hostGossipItems ?? 4096, "host gossip items", 16384, 1),
-      hostBytes: nativeInteger(opts.native?.hostGossipBytes ?? 64 * MiB, "host gossip bytes", 1024 * MiB, 1),
-      topicConcurrency: nativeInteger(opts.maxGossipTopicConcurrency ?? 16384, "gossip topic concurrency", 16384, 1),
-      activeSendTimeoutMs: BigInt(
-        nativeInteger(opts.native?.gossipActiveSendTimeoutMs ?? 6000, "gossip active send timeout", 86400000, 1)
-      ),
+      hostItems: optionalInteger(opts.native?.hostGossipItems, "host gossip items", 16384, 1),
+      hostBytes: optionalInteger(opts.native?.hostGossipBytes, "host gossip bytes", 1024 * MiB, 1),
+      topicConcurrency: optionalInteger(opts.maxGossipTopicConcurrency, "gossip topic concurrency", 16384, 1),
+      activeSendTimeoutMs: optionalMilliseconds(opts.native?.gossipActiveSendTimeoutMs, "gossip active send timeout"),
       activeSendItems: opts.native?.gossipActiveSendItems,
-      largeFrameTimeoutMs: BigInt(
-        nativeInteger(opts.native?.gossipLargeFrameTimeoutMs ?? 6000, "gossip large frame timeout", 86400000, 1)
-      ),
-      receiveBufferBytes: nativeInteger(
-        opts.native?.gossipReceiveBufferBytes ?? 128 * MiB,
+      largeFrameTimeoutMs: optionalMilliseconds(opts.native?.gossipLargeFrameTimeoutMs, "gossip large frame timeout"),
+      receiveBufferBytes: optionalInteger(
+        opts.native?.gossipReceiveBufferBytes,
         "gossip receive buffer bytes",
         1024 * MiB,
         4096
@@ -295,4 +291,12 @@ export function createNativeConfig(
     identitySecretKey: Uint8Array.from(key.raw),
   };
   return {application, directPeers, bootPeers};
+}
+
+function optionalInteger(value: number | undefined, resource: string, max: number, min: number): number | undefined {
+  return value === undefined ? undefined : nativeInteger(value, resource, max, min);
+}
+
+function optionalMilliseconds(value: number | undefined, resource: string): bigint | undefined {
+  return value === undefined ? undefined : BigInt(nativeInteger(value, resource, 86400000, 1));
 }
