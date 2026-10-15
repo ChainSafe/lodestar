@@ -809,6 +809,8 @@ export class ValidatorStore {
   ): Promise<SignedAggregateAndProof> {
     this.validateAttestationDuty(duty, aggregate.data);
 
+    this.assertDoppelgangerSafe(duty.pubkey);
+
     const aggregateAndProof: AggregateAndProof = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
@@ -928,8 +930,6 @@ export class ValidatorStore {
     if (duty.slot <= currentSlot) {
       throw Error(`Not signing proposer preferences for past slot ${duty.slot} (current ${currentSlot})`);
     }
-
-    this.assertDoppelgangerSafe(duty.pubkey);
 
     const message: gloas.ProposerPreferences = {
       dependentRoot,
