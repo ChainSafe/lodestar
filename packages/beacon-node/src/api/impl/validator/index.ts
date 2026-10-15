@@ -1707,7 +1707,7 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
 
       return {
         data: duties,
@@ -1756,7 +1756,7 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
 
       return {
         data: duties,
