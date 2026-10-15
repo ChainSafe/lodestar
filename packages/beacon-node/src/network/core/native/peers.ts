@@ -81,7 +81,7 @@ function sameConnection(
 }
 
 export class NativePeers {
-  private readonly peers = new Map<string, {state: NativePeerState; sequence: bigint; rejected?: true}>();
+  private readonly peers = new Map<string, {state: NativePeerState; rejected?: true}>();
   private closed = false;
   constructor(
     private readonly network: Pick<NativeNetwork, "disconnect">,
@@ -99,7 +99,7 @@ export class NativePeers {
     if (event.type === "closed") {
       const peer = event.identity;
       const previous = this.peers.get(peer);
-      if (!previous || previous.sequence >= event.ownerSequence || !sameConnection(previous.state, event)) return;
+      if (!previous || !sameConnection(previous.state, event)) return;
       this.peers.delete(peer);
       if (previous.state.relevant) this.events.emit(NetworkEvent.peerDisconnected, {peer});
       return;
@@ -107,7 +107,6 @@ export class NativePeers {
     const {state} = event;
     const peer = state.identity;
     const previous = this.peers.get(peer);
-    if (previous && previous.sequence >= event.ownerSequence) return;
     if (!state.connection) {
       this.peers.delete(peer);
       if (previous?.state.relevant) this.events.emit(NetworkEvent.peerDisconnected, {peer});
@@ -122,7 +121,7 @@ export class NativePeers {
         status = hostStatus(state.status);
       } catch (error) {
         if (!(error instanceof NativeNetworkError)) throw error;
-        this.peers.set(peer, {state: {...state, relevant: false}, sequence: event.ownerSequence, rejected: true});
+        this.peers.set(peer, {state: {...state, relevant: false}, rejected: true});
         if (previous?.state.relevant) this.events.emit(NetworkEvent.peerDisconnected, {peer});
         try {
           void this.network.disconnect(state.identity).catch(() => {});
@@ -130,7 +129,7 @@ export class NativePeers {
         return;
       }
     }
-    this.peers.set(peer, {state, sequence: event.ownerSequence});
+    this.peers.set(peer, {state});
     if (status) {
       const clientAgent = getKnownClientFromAgentVersion(state.identify?.agent ?? "") ?? ClientKind.Unknown;
       if (

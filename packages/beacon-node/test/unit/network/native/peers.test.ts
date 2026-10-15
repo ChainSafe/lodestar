@@ -61,12 +61,11 @@ describe("native peer projection", () => {
   it("skips unrelated updates while preserving status, custody and client updates", async () => {
     const node = await fixture();
     let state = node.state;
-    let sequence = 1n;
     const update = (changes: Partial<NativePeerState>) => {
       state = {...structuredClone(state), ...changes};
-      node.drain({type: "updated", state, ownerSequence: ++sequence});
+      node.drain({type: "updated", state});
     };
-    node.drain({type: "ready", state, ownerSequence: sequence});
+    node.drain({type: "ready", state});
     update({endpoint: {...state.endpoint, port: 9002}});
     update({score: 10, metadataAtMs: 20n, samplingGroups: [1]});
     expect(node.connected).toHaveBeenCalledOnce();
@@ -98,7 +97,7 @@ describe("native peer projection", () => {
   ])("bounds the client label for %s while preserving diagnostic agent text", async (agent, clientAgent) => {
     const node = await fixture();
     node.state.identify = {agent, protocolVersion: null, protocols: []};
-    node.drain({type: "ready", state: node.state, ownerSequence: 1n});
+    node.drain({type: "ready", state: node.state});
     expect(node.connected).toHaveBeenCalledWith(expect.objectContaining({clientAgent}));
     expect(formatNativePeer(node.state).agentVersion).toBe(agent);
     node.peers.close();
@@ -142,18 +141,17 @@ describe("native peer projection", () => {
       agentClient: "Unknown",
     });
   });
-  it("keeps a newer same-peer connection when an old close arrives with a higher owner sequence", async () => {
+  it("keeps a newer same-peer connection when an old close arrives after its replacement", async () => {
     const node = await fixture();
     const old = node.state;
     const current = {...old, connection: {index: 0, generation: 18}};
-    node.drain({type: "ready", state: old, ownerSequence: 1n}, {type: "updated", state: current, ownerSequence: 2n});
+    node.drain({type: "ready", state: old}, {type: "updated", state: current});
     if (!old.connection) throw new Error("Missing test connection");
     node.drain({
       type: "closed",
 
       identity: old.identity,
       connection: old.connection,
-      ownerSequence: 3n,
       reason: "host",
     });
     expect(node.disconnected).not.toHaveBeenCalled();
@@ -164,7 +162,6 @@ describe("native peer projection", () => {
 
       identity: current.identity,
       connection: current.connection,
-      ownerSequence: 4n,
       reason: "host",
     });
     expect(node.disconnected).toHaveBeenCalledOnce();
@@ -179,12 +176,12 @@ describe("native peer projection", () => {
       const node = await fixture();
       if (!node.state.status) throw new Error("Missing test status");
       const bad = {...node.state, status: {...node.state.status, [field]: (1n << 64n) - 1n}};
-      expect(() => node.drain({type: "ready", state: bad, ownerSequence: 1n})).not.toThrow();
+      expect(() => node.drain({type: "ready", state: bad})).not.toThrow();
       expect(node.connected).not.toHaveBeenCalled();
       expect(node.disconnect).toHaveBeenCalledWith(bad.identity);
-      node.drain({type: "updated", state: bad, ownerSequence: 2n});
+      node.drain({type: "updated", state: bad});
       expect(node.disconnect).toHaveBeenCalledOnce();
-      node.drain({type: "ready", state: {...node.state, connection: {index: 0, generation: 18}}, ownerSequence: 3n});
+      node.drain({type: "ready", state: {...node.state, connection: {index: 0, generation: 18}}});
       expect(node.connected).toHaveBeenCalledOnce();
       node.peers.close();
     }

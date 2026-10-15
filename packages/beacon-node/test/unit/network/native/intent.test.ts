@@ -6,7 +6,7 @@ import {defer} from "@lodestar/utils";
 import {NativeIntent} from "../../../../src/network/core/native/intent.js";
 
 function fixture() {
-  const applyIntent = vi.fn<NativeNetwork["applyIntent"]>(async () => ({slot: 0n, ownerSequence: 1n, changed: true}));
+  const applyIntent = vi.fn<NativeNetwork["applyIntent"]>(async () => {});
   const updateStatus = vi.fn<NativeNetwork["updateStatus"]>(async () => undefined);
   return {applyIntent, updateStatus, intent: new NativeIntent({applyIntent, updateStatus})};
 }
@@ -71,7 +71,7 @@ describe("native local intent coalescing", () => {
     expect(enabled).toBe(disabled);
     await Promise.resolve();
     expect(node.intent.isSubscribedToCoreTopics()).toBe(false);
-    held.resolve({slot: 2n, ownerSequence: 1n, changed: false});
+    held.resolve();
     await enabled;
     expect(node.applyIntent.mock.calls[0][0]).toEqual({coreTopics: false});
     await node.intent.coreTopics(true);
