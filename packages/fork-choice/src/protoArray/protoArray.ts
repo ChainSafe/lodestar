@@ -1277,6 +1277,28 @@ export class ProtoArray {
   }
 
   /**
+   * Variant of `head` that findHead picks once `slot` is the current slot, with the store as it is now. Only the
+   * previous-slot payload decision is modelled: the EMPTY and FULL variants of that block weigh nothing by then
+   * (get_weight), so the tiebreaker findHead applies decides between them.
+   */
+  predictHeadVariantAtSlot(head: ProtoBlock, slot: Slot, proposerBoostRoot: RootHex | null): ProtoBlock {
+    if (head.payloadStatus === PayloadStatus.PENDING || head.slot + 1 !== slot) {
+      return head;
+    }
+    const empty = this.getNode(head.blockRoot, PayloadStatus.EMPTY);
+    const full = this.getNode(head.blockRoot, PayloadStatus.FULL);
+    if (empty === undefined || full === undefined) {
+      return head;
+    }
+    const best =
+      this.getPayloadStatusTiebreaker(full, slot, proposerBoostRoot) >
+      this.getPayloadStatusTiebreaker(empty, slot, proposerBoostRoot)
+        ? full
+        : empty;
+    return best.payloadStatus === head.payloadStatus ? head : {...best};
+  }
+
+  /**
    * Get payload status tiebreaker for fork choice comparison
    * Spec: gloas/fork-choice.md#new-get_payload_status_tiebreaker
    *
