@@ -38,11 +38,10 @@ function Comparison({snapshots, defaultVersion}) {
   const oldSnapshot = snapshots.find(({id}) => id === from);
   const newSnapshot = snapshots.find(({id}) => id === to);
   const changes = valid
-    ? compareOptions(
-        oldSnapshot.commands[command],
-        newSnapshot.commands[command],
-        oldSnapshot.source !== newSnapshot.source
-      )
+    ? compareOptions(oldSnapshot.commands[command], newSnapshot.commands[command], {
+        beforeLegacy: oldSnapshot.source === "reference",
+        afterLegacy: newSnapshot.source === "reference",
+      })
     : null;
   const builderUnavailable =
     command === "builder" &&

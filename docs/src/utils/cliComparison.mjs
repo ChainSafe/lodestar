@@ -54,7 +54,7 @@ export function parseCliReference(markdown, command) {
   });
 }
 
-export function compareOptions(before, after, mixedSources = false) {
+export function compareOptions(before, after, {beforeLegacy = false, afterLegacy = false} = {}) {
   if (!before || !after) return null;
   const oldOptions = new Map(before.filter((option) => !option.hidden).map((option) => [option.name, option]));
   const newOptions = new Map(after.filter((option) => !option.hidden).map((option) => [option.name, option]));
@@ -65,11 +65,17 @@ export function compareOptions(before, after, mixedSources = false) {
       return [{name, status: oldOption ? "removed" : "added", before: oldOption, after: newOption, fields: []}];
     }
     const fields = Object.keys(fieldLabels).filter((field) => {
-      // Old references do not record aliases, deprecation, every required value, or false, 0 and empty
-      // defaults, so a missing default is only comparable when both snapshots share a source.
+      // Old references do not record aliases, deprecation, or every required/default value.
       if (
-        (["aliases", "required", "deprecated"].includes(field) || (field === "default" && mixedSources)) &&
+        ["aliases", "required", "deprecated"].includes(field) &&
         (oldOption[field] === null || newOption[field] === null)
+      )
+        return false;
+      // Old references omit false, 0 and empty defaults, so their missing default is unknown next to a manifest.
+      if (
+        field === "default" &&
+        beforeLegacy !== afterLegacy &&
+        (beforeLegacy ? oldOption : newOption).default === null
       )
         return false;
       const normalized = (option) => (field === "description" ? normalizeText(option[field]) : option[field]);
