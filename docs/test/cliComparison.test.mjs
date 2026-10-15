@@ -44,7 +44,6 @@ const option = (name, extra = {}) => ({
   aliases: [],
   required: false,
   deprecated: false,
-  hidden: false,
   ...extra,
 });
 
@@ -166,6 +165,37 @@ test("build data loads retained manifests, legacy references, and missing local 
   assert.equal(snapshots[1].commands.validator.length, 2);
   await writeFile(path.join(directory, "pages/cli-options.json"), '{"schemaVersion":2}');
   await assert.rejects(loadComparisonData(directory), /Unsupported CLI manifest/);
+});
+
+test("build data excludes hidden options from current and retained manifests", async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "lodestar-compare-hidden-"));
+  context.after(() => rm(directory, {recursive: true, force: true}));
+  const publicOptions = [option("public"), option("legacyPublic", {hidden: false})];
+  const commands = {
+    beacon: [...publicOptions, option("internal", {hidden: true})],
+    validator: [option("internal", {hidden: true})],
+  };
+  await writeFile(path.join(directory, "versions.json"), '["1.50.0"]');
+  for (const subdirectory of ["pages", "versioned_docs/version-1.50.0"]) {
+    await mkdir(path.join(directory, subdirectory), {recursive: true});
+    await writeFile(
+      path.join(directory, subdirectory, "cli-options.json"),
+      JSON.stringify({schemaVersion: 1, commands})
+    );
+  }
+  const {snapshots} = await loadComparisonData(directory);
+  for (const snapshot of snapshots) {
+    assert.deepEqual(
+      snapshot.commands,
+      {beacon: publicOptions, validator: []},
+      `${snapshot.id} must exclude hidden entries before bundling`
+    );
+  }
+  await writeFile(
+    path.join(directory, "pages/cli-options.json"),
+    JSON.stringify({schemaVersion: 1, commands: {beacon: [{hidden: true}]}})
+  );
+  await assert.rejects(loadComparisonData(directory), /Invalid beacon CLI manifest/);
 });
 
 test("literal spaces in default values remain significant", () => {

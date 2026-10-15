@@ -21,7 +21,7 @@ describe("CLI documentation data", () => {
     }
   });
 
-  it("records public metadata, hidden options, global options and overrides", () => {
+  it("records public metadata, global options and overrides without hidden options", () => {
     const manifest = createCliManifest(
       [
         {
@@ -44,10 +44,37 @@ describe("CLI documentation data", () => {
       aliases: ["chain", "n"],
       choices: ["hoodi", "mainnet"],
     });
-    expect(manifest.commands.beacon[1]).toMatchObject({hidden: true, default: null});
-    expect(manifest.commands.beacon[2]).toMatchObject({required: true, deprecated: "Use --network"});
+    expect(manifest.commands.beacon.map(({name}) => name)).toEqual(["network", "required"]);
+    expect(manifest.commands.beacon[1]).toMatchObject({required: true, deprecated: "Use --network"});
     expect(manifest.commands.validator[0].default).toBe('"mainnet"');
     expect(JSON.parse(JSON.stringify(manifest))).toEqual(manifest);
+  });
+
+  it("filters hidden options after applying command overrides", () => {
+    const manifest = createCliManifest(
+      [
+        {
+          command: "beacon",
+          options: {
+            visibleOverride: {type: "boolean", hidden: false},
+            hiddenOverride: {type: "boolean", hidden: true},
+          },
+        },
+        {command: "validator", options: {}},
+      ],
+      {
+        hiddenGlobal: {type: "boolean", hidden: true},
+        visibleOverride: {type: "boolean", hidden: true},
+        hiddenOverride: {type: "boolean", default: false},
+      }
+    );
+    expect(manifest.commands.beacon.map(({name}) => name)).toEqual(["visibleOverride"]);
+    expect(manifest.commands.validator.map(({name}) => name)).toEqual(["hiddenOverride"]);
+    for (const [command, options] of Object.entries(manifest.commands)) {
+      for (const option of options) {
+        expect(option, `${command} --${option.name} must omit hidden metadata`).not.toHaveProperty("hidden");
+      }
+    }
   });
 
   it("keeps dynamic default descriptions and non-finite values readable", () => {

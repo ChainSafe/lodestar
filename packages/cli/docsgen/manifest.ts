@@ -9,7 +9,6 @@ export type CliOptionManifest = {
   aliases: string[];
   required: boolean;
   deprecated: string | boolean;
-  hidden: boolean;
 };
 
 export type CliManifest = {
@@ -40,20 +39,21 @@ export function createCliManifest(
         .filter(({command}) => command === "beacon" || command === "validator")
         .map(({command, options}) => [
           command,
-          Object.entries({...globalOptions, ...options}).map(([name, definition]) => {
-            const option = definition as CliOptionDefinition;
-            return {
-              name,
-              description: String(option.description ?? option.describe ?? ""),
-              type: option.type === "array" ? "string[]" : option.type ?? null,
-              default: formatDefault(option),
-              choices: option.choices?.map(String).sort() ?? [],
-              aliases: [option.alias ?? []].flat().sort(),
-              required: Boolean(option.demandOption),
-              deprecated: option.deprecated ?? false,
-              hidden: option.hidden ?? false,
-            };
-          }),
+          Object.entries({...globalOptions, ...options})
+            .filter(([, definition]) => !(definition as CliOptionDefinition).hidden)
+            .map(([name, definition]) => {
+              const option = definition as CliOptionDefinition;
+              return {
+                name,
+                description: String(option.description ?? option.describe ?? ""),
+                type: option.type === "array" ? "string[]" : option.type ?? null,
+                default: formatDefault(option),
+                choices: option.choices?.map(String).sort() ?? [],
+                aliases: [option.alias ?? []].flat().sort(),
+                required: Boolean(option.demandOption),
+                deprecated: option.deprecated ?? false,
+              };
+            }),
         ])
     ),
   };

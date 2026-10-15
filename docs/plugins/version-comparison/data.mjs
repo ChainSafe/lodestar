@@ -32,6 +32,7 @@ export async function loadComparisonData(siteDir) {
           ) {
             throw new Error(`Invalid ${command} CLI manifest: ${directory}`);
           }
+          if (options !== undefined) manifest.commands[command] = options.filter((option) => !option.hidden);
         }
         return {id, source: "definitions", commands: manifest.commands};
       }
