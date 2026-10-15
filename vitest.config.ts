@@ -1,5 +1,6 @@
 import path from "node:path";
 import {TestUserConfig, defineConfig} from "vitest/config";
+import {eip8025TestProject} from "./configs/vitest.config.8025.js";
 import {browserTestProject} from "./configs/vitest.config.browser.js";
 import {e2eMainnetProject, e2eMinimalProject} from "./configs/vitest.config.e2e.js";
 import {specProjectComptest, specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";
@@ -23,6 +24,10 @@ export default defineConfig({
       {
         extends: true,
         ...unitTestMainnetProject,
+      },
+      {
+        extends: true,
+        ...eip8025TestProject,
       },
       {
         extends: true,

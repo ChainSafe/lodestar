@@ -6,7 +6,7 @@ import {
   hasExecutionProofVerifier,
 } from "@chainsafe/lodestar-z/execution-proof-verifier";
 import {toHex} from "@lodestar/utils";
-import {NativeProofEngine, verifyNativeExecutionProof} from "../../../../src/chain/proofEngine/native.js";
+import {NativeProofEngine, verifyNativeExecutionProof} from "../../src/chain/proofEngine/native.js";
 
 describe.skipIf(!EXECUTION_PROOF_VERIFIER_AVAILABLE)("NativeProofEngine native binding", () => {
   const proofType = 210;
@@ -55,7 +55,7 @@ describe.skipIf(!EXECUTION_PROOF_VERIFIER_AVAILABLE)("NativeProofEngine native b
     let publicValues: Uint8Array;
 
     beforeAll(() => {
-      const fixtureDir = new URL(`../../../fixtures/executionProofs/${zkvm}/`, import.meta.url);
+      const fixtureDir = new URL(`../fixtures/executionProofs/${zkvm}/`, import.meta.url);
       for (const file of ["program_vk.bin", "proof.bin", "public_values.bin"]) {
         expect(
           existsSync(new URL(file, fixtureDir)),
