@@ -17,7 +17,7 @@
 - :books: Use [Lodestar libraries](https://chainsafe.github.io/lodestar/supporting-libraries/libraries/) in your next Ethereum Typescript project.
 - :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/run/beacon-management/starting-a-node/).
 - :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet/).
-- :spiral_notepad: View the Lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
+- :spiral_notepad: View the Lodestar CLI commands and options for the [beacon node](https://chainsafe.github.io/lodestar/run/beacon-management/beacon-cli/) and [validator client](https://chainsafe.github.io/lodestar/run/validator-management/validator-cli/).
 - :nerd_face: View the [Package and dependency structure](https://chainsafe.github.io/lodestar/contribution/depgraph/).
 - :memo: Prospective contributors can read the [contributing section](./CONTRIBUTING.md) to understand how we develop and test on Lodestar.
 - :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or join us on [Discord](https://discord.gg/yjyvFRP)!
