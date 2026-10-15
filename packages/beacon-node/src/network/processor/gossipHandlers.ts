@@ -38,7 +38,7 @@ import {
 } from "../../chain/blocks/blockInput/index.js";
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlobSidecarValidation} from "../../chain/blocks/types.js";
+import {BlobSidecarValidation, InclusionListSource} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
@@ -66,6 +66,7 @@ import {
 } from "../../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
+import {InclusionListValidationResult, validateGossipInclusionList} from "../../chain/validation/inclusionList.js";
 import {
   AggregateAndProofValidationResult,
   GossipAttestation,
@@ -1498,6 +1499,56 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             {proposalSlot: signedProposerPreferences.message.proposalSlot},
             e as Error
           );
+        }
+      });
+    },
+
+    [GossipType.inclusion_list]: async ({
+      gossipData,
+      topic,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
+      const {serializedData} = gossipData;
+      const signedInclusionList = sszDeserialize(topic, serializedData);
+      const {slot} = signedInclusionList.message;
+
+      metrics?.inclusionListsReceived.inc({source: InclusionListSource.gossip});
+      metrics?.inclusionListTransactionsReceived.inc(
+        {source: InclusionListSource.gossip},
+        signedInclusionList.message.transactions.length
+      );
+
+      const timer = metrics?.inclusionListsValidationTime.startTimer();
+      let validationResult: InclusionListValidationResult;
+      try {
+        validationResult = await validateGossipInclusionList(chain, signedInclusionList);
+      } finally {
+        timer?.({source: InclusionListSource.gossip});
+      }
+      const {committeeIndices, totalBytes} = validationResult;
+
+      // Handler - deferred to next event loop so the validation result propagates first
+      callInNextEventLoop(() => {
+        try {
+          metrics?.inclusionListsValid.inc({source: InclusionListSource.gossip});
+          metrics?.inclusionListsValidSize.inc(totalBytes);
+          // Timely only if received within its own slot before the deadline, so a list for the next slot that
+          // passed validation under clock disparity is untimely. Late lists are still stored, marked untimely
+          const secFromSlot = chain.clock.secFromSlot(slot, seenTimestampSec);
+          metrics?.inclusionListArrivalTime.observe(secFromSlot);
+          const isTimely =
+            secFromSlot >= 0 && secFromSlot * 1000 < config.getInclusionListDueMs(config.getForkName(slot));
+
+          const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
+          metrics?.inclusionListStore.insertOutcome.inc({insertOutcome});
+          metrics?.inclusionListStore.size.set(chain.inclusionListStore.size);
+
+          chain.emitter.emit(routes.events.EventType.inclusionList, {
+            version: config.getForkName(slot),
+            data: signedInclusionList,
+          });
+        } catch (e) {
+          logger.debug("Error handling gossip inclusion list", {slot}, e as Error);
         }
       });
     },

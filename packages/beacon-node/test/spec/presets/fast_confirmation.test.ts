@@ -467,6 +467,9 @@ const fastConfirmationTest =
                   validationError: null,
                 });
 
+                // The vectors carry no inclusion lists, so every payload satisfies the empty constraint set
+                (chain.forkChoice as ForkChoice).recordPayloadInclusionListSatisfaction(beaconBlockRoot, true);
+
                 (chain.forkChoice as ForkChoice).onExecutionPayload(
                   beaconBlockRoot,
                   blockHash,
