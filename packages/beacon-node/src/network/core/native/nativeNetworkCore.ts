@@ -303,7 +303,12 @@ export class NativeNetworkCore implements INetworkCore {
     };
   }
   async scrapeMetrics(): Promise<string> {
-    return (await this.network.metrics()) + this.requests.metrics() + this.reports.metrics();
+    try {
+      return (await this.network.metrics()) + this.requests.metrics() + this.reports.metrics();
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "NetworkClosed") return "";
+      throw error;
+    }
   }
   private unavailable(resource: string): Promise<never> {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));

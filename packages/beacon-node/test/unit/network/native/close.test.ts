@@ -6,11 +6,12 @@ import {NativeNetworkCore} from "../../../../src/network/core/native/nativeNetwo
 function fixture() {
   const core = Object.create(NativeNetworkCore.prototype) as NativeNetworkCore;
   const gossip = {close: vi.fn()};
-  const requests = {close: vi.fn()};
+  const requests = {close: vi.fn(), metrics: () => "requests"};
   const peers = {close: vi.fn()};
   const intent = {close: vi.fn()};
   const nativeClosed = defer<CloseResult>();
   const network = {
+    metrics: vi.fn(async () => "network"),
     closed: nativeClosed.promise,
     setDirectPeer: vi.fn(async () => {}),
     connect: vi.fn(async () => {}),
@@ -20,11 +21,21 @@ function fixture() {
       return nativeClosed.promise;
     }),
   };
-  Object.assign(core, {gossip, requests, peers, intent, network});
+  Object.assign(core, {gossip, requests, peers, intent, network, reports: {metrics: () => "reports"}});
   return {core, gossip, requests, peers, intent, network, nativeClosed};
 }
 
 describe("native core close", () => {
+  it("omits native metrics when a scrape races shutdown but preserves unexpected errors", async () => {
+    const {core, network} = fixture();
+    await expect(core.scrapeMetrics()).resolves.toBe("networkrequestsreports");
+    network.metrics.mockRejectedValueOnce(Object.assign(new Error("NetworkClosed"), {code: "NetworkClosed"}));
+    await expect(core.scrapeMetrics()).resolves.toBe("");
+    const failure = new Error("unexpected scrape failure");
+    network.metrics.mockRejectedValueOnce(failure);
+    await expect(core.scrapeMetrics()).rejects.toBe(failure);
+  });
+
   it.each(["NetworkClosed", "Stopped"])("ignores %s from direct-peer registration during close", async (code) => {
     const {core, network} = fixture();
     const registration = defer<void>();
