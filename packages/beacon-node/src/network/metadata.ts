@@ -17,6 +17,7 @@ export enum ENRKey {
   syncnets = "syncnets",
   cgc = "cgc",
   nfd = "nfd",
+  eproof = "eproof",
 }
 export enum SubnetType {
   attnets = "attnets",
@@ -25,6 +26,7 @@ export enum SubnetType {
 
 export type MetadataOpts = {
   metadata?: fulu.Metadata;
+  executionProofAware?: boolean;
 };
 
 export type MetadataModules = {
@@ -43,11 +45,13 @@ export class MetadataController {
   private networkConfig: NetworkConfig;
   private logger: Logger;
   private metadata: fulu.Metadata;
+  private readonly executionProofAware: boolean;
 
   constructor(opts: MetadataOpts, modules: MetadataModules) {
     this.networkConfig = modules.networkConfig;
     this.logger = modules.logger;
     this.onSetValue = modules.onSetValue;
+    this.executionProofAware = opts.executionProofAware ?? false;
     this.metadata = opts.metadata ?? {
       ...ssz.fulu.Metadata.defaultValue(),
       custodyGroupCount: modules.networkConfig.custodyConfig.targetCustodyGroupCount,
@@ -70,6 +74,11 @@ export class MetadataController {
 
     // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
     this.onSetValue(ENRKey.cgc, serializeCgc(this.metadata.custodyGroupCount));
+
+    // EIP-8025: a present, non-zero `eproof` marks this node as subscribed to the `execution_proof` topic
+    if (this.executionProofAware) {
+      this.onSetValue(ENRKey.eproof, Uint8Array.of(1));
+    }
   }
 
   get seqNumber(): bigint {

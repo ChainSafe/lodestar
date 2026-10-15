@@ -66,6 +66,7 @@ import {
 } from "../../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
+import {validateGossipExecutionProof} from "../../chain/validation/executionProof.js";
 import {
   AggregateAndProofValidationResult,
   GossipAttestation,
@@ -1500,6 +1501,20 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           );
         }
       });
+    },
+    [GossipType.execution_proof]: async ({
+      gossipData,
+      topic,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.execution_proof>) => {
+      const {serializedData} = gossipData;
+      const signedProofEnvelope = sszDeserialize(topic, serializedData);
+      const {blockSlot} = await validateGossipExecutionProof(chain, signedProofEnvelope);
+
+      metrics?.gossipExecutionProof.elapsedTimeTillReceived.observe(
+        {source: OpSource.gossip, proofType: signedProofEnvelope.message.proofType},
+        chain.clock.secFromSlot(blockSlot, seenTimestampSec)
+      );
     },
   };
 }

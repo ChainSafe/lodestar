@@ -53,6 +53,7 @@ type Mods = {
   statusCache: LocalStatusCache;
   metrics: NetworkCoreMetrics | null;
   opts: NetworkOptions;
+  executionProofAware: boolean;
 };
 
 export type BaseNetworkInit = {
@@ -68,6 +69,7 @@ export type BaseNetworkInit = {
   activeValidatorCount: number;
   initialStatus: Status;
   initialCustodyGroupCount: number;
+  executionProofAware: boolean;
 };
 
 /** Counts of what is still keeping this thread's event loop alive, e.g. `TCPWrap=3,Timeout=1` */
@@ -113,6 +115,7 @@ export class NetworkCore implements INetworkCore {
   private readonly statusCache: LocalStatusCache;
   private readonly metrics: NetworkCoreMetrics | null;
   private readonly opts: NetworkOptions;
+  private readonly executionProofAware: boolean;
 
   // Internal state
   private readonly forkBoundariesByEpoch = new Map<Epoch, ForkBoundary>();
@@ -134,6 +137,7 @@ export class NetworkCore implements INetworkCore {
     this.statusCache = modules.statusCache;
     this.metrics = modules.metrics;
     this.opts = modules.opts;
+    this.executionProofAware = modules.executionProofAware;
 
     this.clock.on(ClockEvent.epoch, this.onEpoch);
   }
@@ -151,6 +155,7 @@ export class NetworkCore implements INetworkCore {
     activeValidatorCount,
     initialStatus,
     initialCustodyGroupCount,
+    executionProofAware,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
@@ -176,7 +181,10 @@ export class NetworkCore implements INetworkCore {
       config,
       custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
     };
-    const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
+    const metadata = new MetadataController(
+      {executionProofAware},
+      {networkConfig, logger, onSetValue: onMetadataSetValue}
+    );
 
     const reqResp = new ReqRespBeaconNode(
       {
@@ -243,6 +251,7 @@ export class NetworkCore implements INetworkCore {
         networkConfig,
         peersData,
         statusCache,
+        executionProofAware,
       },
       opts
     );
@@ -276,6 +285,7 @@ export class NetworkCore implements INetworkCore {
       statusCache,
       metrics,
       opts,
+      executionProofAware,
     });
   }
 
@@ -607,6 +617,7 @@ export class NetworkCore implements INetworkCore {
     for (const topic of getCoreTopicsAtFork(networkConfig, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
+      executionProofAware: this.executionProofAware,
     })) {
       this.gossip.subscribeTopic({...topic, boundary});
     }
@@ -620,6 +631,7 @@ export class NetworkCore implements INetworkCore {
     for (const topic of getCoreTopicsAtFork(networkConfig, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
+      executionProofAware: this.executionProofAware,
     })) {
       this.gossip.unsubscribeTopic({...topic, boundary});
     }

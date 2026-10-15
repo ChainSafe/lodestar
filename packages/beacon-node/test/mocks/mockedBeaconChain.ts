@@ -3,6 +3,7 @@ import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {eip8025} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
@@ -12,6 +13,7 @@ import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
 import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
+import {SeenExecutionProofs} from "../../src/chain/seenCache/seenExecutionProofs.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
@@ -43,6 +45,10 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
     canAcceptWork: Mock<() => boolean>;
   };
   lightClientServer: Mocked<LightClientServer>;
+  proofEngine: {
+    supportedProofTypes: Set<number>;
+    verifyExecutionProof: Mock<(proof: eip8025.ExecutionProof) => Promise<boolean>>;
+  };
 };
 
 vi.mock("@lodestar/fork-choice", async (importActual) => {
@@ -60,6 +66,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getBlock: vi.fn(),
       getBlockDefaultStatus: vi.fn(),
       getBlockHexDefaultStatus: vi.fn(),
+      hasPayloadHexUnsafe: vi.fn(),
       getBlockHexAndBlockHash: vi.fn(),
       getAllAncestorBlocks: vi.fn(),
       getAllNonAncestorBlocks: vi.fn(),
@@ -195,6 +202,11 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         removeInvalid: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
+      seenExecutionProofs: new SeenExecutionProofs(),
+      proofEngine: {
+        supportedProofTypes: new Set([1, 2, 3]),
+        verifyExecutionProof: vi.fn().mockResolvedValue(true),
+      },
       shufflingCache: new ShufflingCache(),
       pubkeyCache,
       produceCommonBlockBody: vi.fn(),

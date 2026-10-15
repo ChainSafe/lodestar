@@ -28,6 +28,7 @@ const EXECUTION_PAYLOAD_WEIGHT = 0.5;
 const PAYLOAD_ATTESTATION_WEIGHT = 0.05;
 const EXECUTION_PAYLOAD_BID_WEIGHT = 0.05;
 const PROPOSER_PREFERENCES_WEIGHT = 0.05;
+const EXECUTION_PROOF_WEIGHT = 0.05;
 
 const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
 const maxPositiveScore =
@@ -42,7 +43,8 @@ const maxPositiveScore =
     EXECUTION_PAYLOAD_WEIGHT +
     PAYLOAD_ATTESTATION_WEIGHT +
     EXECUTION_PAYLOAD_BID_WEIGHT +
-    PROPOSER_PREFERENCES_WEIGHT);
+    PROPOSER_PREFERENCES_WEIGHT +
+    EXECUTION_PROOF_WEIGHT);
 
 /**
  * The following params is implemented by Lighthouse at
@@ -209,6 +211,17 @@ function getAllTopicsScoreParams(
       topicWeight: PROPOSER_PREFERENCES_WEIGHT,
       // Upper bound ~64 messages per epoch: one per proposer across the current + next epoch.
       expectedMessageRate: 64 / SLOTS_PER_EPOCH,
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
+    topicsParams[
+      stringifyGossipTopic(config, {
+        type: GossipType.execution_proof,
+        boundary,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: EXECUTION_PROOF_WEIGHT,
+      // At most one accepted proof per block for each of the three provisional proof types
+      expectedMessageRate: 3,
       firstMessageDecayTime: epochDurationMs * 100,
     });
 

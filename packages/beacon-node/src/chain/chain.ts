@@ -111,6 +111,7 @@ import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
+import {NoopProofEngine, ProofEngine} from "./proofEngine/index.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
@@ -120,6 +121,7 @@ import {
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
+  SeenExecutionProofs,
   SeenPayloadAttesters,
   SeenPayloadEnvelopeInput,
   SeenSyncCommitteeMessages,
@@ -180,6 +182,7 @@ export class BeaconChain implements IBeaconChain {
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
+  readonly proofEngine: ProofEngine;
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
@@ -215,6 +218,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
+  readonly seenExecutionProofs = new SeenExecutionProofs();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -283,6 +287,7 @@ export class BeaconChain implements IBeaconChain {
       executionEngine,
       executionBuilder,
       builderApiClientOpts,
+      proofEngine,
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
@@ -303,6 +308,7 @@ export class BeaconChain implements IBeaconChain {
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
       builderApiClientOpts?: BuilderApiClientOpts;
+      proofEngine?: ProofEngine;
     }
   ) {
     this.opts = opts;
@@ -461,6 +467,7 @@ export class BeaconChain implements IBeaconChain {
     );
 
     this.builderApiClient = new BuilderApiClient(builderApiClientOpts ?? {}, config, clock, bls, metrics, logger);
+    this.proofEngine = proofEngine ?? new NoopProofEngine();
 
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
@@ -1901,6 +1908,7 @@ export class BeaconChain implements IBeaconChain {
 
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
+    this.seenExecutionProofs.prune(finalizedSlot);
 
     // Update validator custody to account for effective balance changes
     await this.updateValidatorsCustodyRequirement(cp);
