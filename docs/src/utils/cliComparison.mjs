@@ -8,6 +8,8 @@ export const commandPaths = {
 
 export const builderSince = "1.46.0";
 
+const legacyOmittedDefaults = ["false", "0", '""', "", "[]"];
+
 export const fieldLabels = {
   description: "Description",
   type: "Type",
@@ -71,13 +73,11 @@ export function compareOptions(before, after, {beforeLegacy = false, afterLegacy
         (oldOption[field] === null || newOption[field] === null)
       )
         return false;
-      // Old references omit false, 0 and empty defaults, so their missing default is unknown next to a manifest.
-      if (
-        field === "default" &&
-        beforeLegacy !== afterLegacy &&
-        (beforeLegacy ? oldOption : newOption).default === null
-      )
-        return false;
+      // Old references omit false, 0 and empty defaults, so a missing one matches those manifest values.
+      if (field === "default" && beforeLegacy !== afterLegacy) {
+        const [legacyOption, manifestOption] = beforeLegacy ? [oldOption, newOption] : [newOption, oldOption];
+        if (legacyOption.default === null && legacyOmittedDefaults.includes(manifestOption.default)) return false;
+      }
       const normalized = (option) => (field === "description" ? normalizeText(option[field]) : option[field]);
       return JSON.stringify(normalized(oldOption)) !== JSON.stringify(normalized(newOption));
     });
