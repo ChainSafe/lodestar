@@ -857,14 +857,10 @@ export class NetworkProcessor {
     const nowSec = Date.now() / 1000;
     const minSlot = clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE;
 
-    for (const [slot, searchedRoots] of this.searchedRootsBySlot) {
+    for (const [slot, bufferedRoots] of this.bufferedRootsBySlot) {
       if (slot > minSlot) continue;
 
-      // expire messages awaiting an unknown block for these roots. Only roots this slot did a BLOCK search
-      // for (blockPeerIds set) have block waits keyed here; skipping the rest avoids deleting a payload wait
-      // that a newer slot created for the same root (block/envelope searches share searchedRootsBySlot).
-      for (const [rootHex, entry] of searchedRoots) {
-        if (entry.blockPeerIds === undefined) continue;
+      for (const rootHex of bufferedRoots) {
         const messagesByTopic = this.awaitingMessagesByBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
         let removed = 0;
@@ -888,10 +884,7 @@ export class NetworkProcessor {
         }
       }
 
-      // expire messages awaiting an unknown payload envelope for these roots. Symmetric to the block pass:
-      // only roots this slot did an ENVELOPE search for (envelopePeerIds set) have payload waits keyed here.
-      for (const [rootHex, entry] of searchedRoots) {
-        if (entry.envelopePeerIds === undefined) continue;
+      for (const rootHex of bufferedRoots) {
         const messagesByTopic = this.awaitingMessagesByPayloadBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
         let removed = 0;
@@ -915,11 +908,11 @@ export class NetworkProcessor {
         }
       }
 
-      this.searchedRootsBySlot.delete(slot);
+      this.bufferedRootsBySlot.delete(slot);
     }
 
-    for (const slot of this.bufferedRootsBySlot.keys()) {
-      if (slot <= minSlot) this.bufferedRootsBySlot.delete(slot);
+    for (const slot of this.searchedRootsBySlot.keys()) {
+      if (slot <= minSlot) this.searchedRootsBySlot.delete(slot);
     }
 
     for (const [peer, slot] of this.fatalPeers) {
