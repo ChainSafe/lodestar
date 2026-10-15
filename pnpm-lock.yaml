@@ -1283,7 +1283,7 @@ packages:
     resolution: {integrity: sha512-RcjdySH0LuUgCv4tx+FsS3YBbVOc5lIXklWR6HItbriGpEcPSxuHsH8RNw1vqaSDvkA0C18Kl8Tk3kECJnAvUQ==}
 
   '@chainsafe/ssz@file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz':
-    resolution: {integrity: sha512-BnSU/l5gz9UwYNieVZcYcPNbn+nqvmReEBwN821uHPzR4f/x504KwB6M6VEyMW3lO4aVIaiIgkE/N7thiwNhcA==}
+    resolution: {integrity: sha512-BnSU/l5gz9UwYNieVZcYcPNbn+nqvmReEBwN821uHPzR4f/x504KwB6M6VEyMW3lO4aVIaiIgkE/N7thiwNhcA==, tarball: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz}
     version: 1.8.1-serializedlist.2
 
   '@chainsafe/threads@1.11.3':
