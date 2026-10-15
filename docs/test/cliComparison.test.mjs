@@ -116,6 +116,16 @@ test("unknown legacy metadata does not become confirmed alias or deprecation cha
   assert.equal(changes[0].before.default, null);
 });
 
+test("missing defaults are only compared between snapshots from the same source", () => {
+  const legacyOption = option("flag", {aliases: null, deprecated: null, required: null, default: null});
+  assert.deepEqual(compareOptions([legacyOption], [option("flag")], true), []);
+  assert.deepEqual(compareOptions([option("flag")], [legacyOption], true), []);
+  assert.deepEqual(
+    compareOptions([option("flag", {default: '"a"'})], [option("flag", {default: '"b"'})], true)[0].fields,
+    ["default"]
+  );
+});
+
 test("description wrapping and MDX escaping do not create artificial differences", () => {
   assert.deepEqual(
     compareOptions(

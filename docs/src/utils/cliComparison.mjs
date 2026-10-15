@@ -54,7 +54,7 @@ export function parseCliReference(markdown, command) {
   });
 }
 
-export function compareOptions(before, after) {
+export function compareOptions(before, after, mixedSources = false) {
   if (!before || !after) return null;
   const oldOptions = new Map(before.filter((option) => !option.hidden).map((option) => [option.name, option]));
   const newOptions = new Map(after.filter((option) => !option.hidden).map((option) => [option.name, option]));
@@ -65,9 +65,10 @@ export function compareOptions(before, after) {
       return [{name, status: oldOption ? "removed" : "added", before: oldOption, after: newOption, fields: []}];
     }
     const fields = Object.keys(fieldLabels).filter((field) => {
-      // Old references do not record aliases, deprecation, or every required/default value.
+      // Old references do not record aliases, deprecation, every required value, or false, 0 and empty
+      // defaults, so a missing default is only comparable when both snapshots share a source.
       if (
-        ["aliases", "required", "deprecated"].includes(field) &&
+        (["aliases", "required", "deprecated"].includes(field) || (field === "default" && mixedSources)) &&
         (oldOption[field] === null || newOption[field] === null)
       )
         return false;

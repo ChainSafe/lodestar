@@ -37,7 +37,13 @@ function Comparison({snapshots, defaultVersion}) {
   const [filter, setFilter] = useState("all");
   const oldSnapshot = snapshots.find(({id}) => id === from);
   const newSnapshot = snapshots.find(({id}) => id === to);
-  const changes = valid ? compareOptions(oldSnapshot.commands[command], newSnapshot.commands[command]) : null;
+  const changes = valid
+    ? compareOptions(
+        oldSnapshot.commands[command],
+        newSnapshot.commands[command],
+        oldSnapshot.source !== newSnapshot.source
+      )
+    : null;
   const builderUnavailable =
     command === "builder" &&
     [oldSnapshot, newSnapshot].some(
