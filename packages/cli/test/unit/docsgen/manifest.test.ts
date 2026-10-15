@@ -84,5 +84,25 @@ describe("CLI documentation data", () => {
     expect(formatDefault({type: "number", default: Infinity})).toBe("Infinity");
     expect(formatDefault({type: "array", defaultDescription: '"a", "b"'})).toBe('[ "a", "b" ]');
     expect(formatDefault({type: "boolean"})).toBeNull();
+    expect(formatDefault({type: "array"})).toBeNull();
+  });
+
+  it.each([
+    {label: "an empty array description", definition: {defaultDescription: "[]"}, expected: "[]"},
+    {label: "an empty array value", definition: {default: []}, expected: "[]"},
+    {label: "a bracketed array description", definition: {defaultDescription: '["peer"]'}, expected: '["peer"]'},
+    {label: "a scalar array description", definition: {defaultDescription: "peer"}, expected: '[ "peer" ]'},
+    {label: "a quoted array description", definition: {defaultDescription: '"a", "b"'}, expected: '[ "a", "b" ]'},
+  ])("formats $label in references and comparison data", ({definition, expected}) => {
+    const command = {
+      command: "beacon",
+      describe: "Beacon node",
+      options: {
+        directPeers: {type: "array" as const, ...definition},
+      },
+    };
+    const manifest = createCliManifest([command], {});
+    expect(manifest.commands.beacon[0].default).toBe(expected);
+    expect(renderCommandPage(command, {})).toContain(`default: \`${expected}\``);
   });
 });

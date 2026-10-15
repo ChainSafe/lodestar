@@ -21,9 +21,10 @@ export function formatDefault(option: CliOptionDefinition): string | null {
   if (value === undefined) return null;
   let formatted = String(value);
   if (option.type === "string" || option.string) formatted = `"${formatted}"`;
-  if (option.type === "array") {
-    if (!formatted.includes('"')) formatted = `"${formatted}"`;
-    if (!formatted.startsWith("[")) formatted = `[ ${formatted} ]`;
+  if (option.type === "array" && !formatted.startsWith("[")) {
+    if (formatted === "") formatted = "[]";
+    else if (formatted.includes('"')) formatted = `[ ${formatted} ]`;
+    else formatted = `[ "${formatted}" ]`;
   }
   return formatted;
 }
