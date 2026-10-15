@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, ForkChoice, ForkChoiceMetrics, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, ForkChoice, ForkChoiceMetrics, PayloadStatus, ProtoArray} from "../../../src/index.js";
 import {getPayloadBlockHash, gloasConfig, headSlot, hezeConfig, setup} from "./proposerHeadTestUtils.js";
 
 /** Deliver the execution payload envelope for a block, creating its FULL variant. */
@@ -93,6 +93,30 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
 
       const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;
       expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(true);
+    });
+  });
+
+  describe("predictHeadVariantAtSlot", () => {
+    it("returns the EMPTY variant for the next slot when the payload must not be extended", () => {
+      const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig});
+      deliverPayload(forkChoice, headRoot);
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
+      const full = forkChoice.getBlockHex(headRoot, PayloadStatus.FULL);
+      if (full === null) throw Error("FULL variant missing");
+
+      expect(forkChoice.predictHeadVariantAtSlot(full, headSlot + 1).payloadStatus).toBe(PayloadStatus.EMPTY);
+      // Still the block's own slot, fork choice ranks FULL above EMPTY
+      expect(forkChoice.predictHeadVariantAtSlot(full, headSlot)).toBe(full);
+    });
+
+    it("keeps the FULL variant when the payload may be extended", () => {
+      const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig});
+      deliverPayload(forkChoice, headRoot);
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, true);
+      const full = forkChoice.getBlockHex(headRoot, PayloadStatus.FULL);
+      if (full === null) throw Error("FULL variant missing");
+
+      expect(forkChoice.predictHeadVariantAtSlot(full, headSlot + 1)).toBe(full);
     });
   });
 

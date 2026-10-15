@@ -277,6 +277,8 @@ export interface IForkChoice {
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   shouldExtendPayload(blockRoot: RootHex): boolean;
+  /** Variant of `head` that get_head returns once the clock reaches `slot` */
+  predictHeadVariantAtSlot(head: ProtoBlock, slot: Slot): ProtoBlock;
   /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
   /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine. True if it changed */

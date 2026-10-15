@@ -422,6 +422,22 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 
+  /**
+   * Variant of `head` that get_head returns once the clock reaches `slot`. get_payload_status_tiebreaker only demotes
+   * a FULL variant that must not be extended for a block from the previous slot, during the block's own slot FULL still
+   * ranks above EMPTY. Lets a payload prepared ahead of `slot` match what its proposer builds on.
+   */
+  predictHeadVariantAtSlot(head: ProtoBlock, slot: Slot): ProtoBlock {
+    if (
+      head.payloadStatus !== PayloadStatus.FULL ||
+      head.slot + 1 !== slot ||
+      this.shouldExtendPayload(head.blockRoot)
+    ) {
+      return head;
+    }
+    return this.getBlockHex(head.blockRoot, PayloadStatus.EMPTY) ?? head;
+  }
+
   /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine */
   recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {
     const changed = this.protoArray.recordPayloadInclusionListSatisfaction(blockRoot, satisfied);
