@@ -136,7 +136,7 @@ export class InclusionListStore {
   }
 
   /**
-   * True iff `bits` has a bit set for every bit set in the local inclusion list bits.
+   * True if `bits` has a bit set for every bit set in the local inclusion list bits.
    *
    * Intentionally deviates from the spec by only checking against timely lists, where the proposer would check
    * against every list it observed (only_timely=False in
