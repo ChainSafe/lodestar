@@ -116,6 +116,20 @@ test("unknown legacy metadata does not become confirmed alias or deprecation cha
   assert.equal(changes[0].before.default, null);
 });
 
+test("a missing legacy default only matches defaults the legacy renderer omitted", () => {
+  const legacyOption = option("flag", {aliases: null, deprecated: null, required: null, default: null});
+  for (const value of ["false", "0", '""', "[]"]) {
+    const manifestOption = option("flag", {default: value});
+    assert.deepEqual(compareOptions([legacyOption], [manifestOption], {beforeLegacy: true}), [], value);
+    assert.deepEqual(compareOptions([manifestOption], [legacyOption], {afterLegacy: true}), [], value);
+  }
+  const documented = option("flag", {default: '"a"'});
+  const undeclared = option("flag", {default: null});
+  assert.deepEqual(compareOptions([legacyOption], [documented], {beforeLegacy: true})[0].fields, ["default"]);
+  assert.deepEqual(compareOptions([documented], [undeclared], {beforeLegacy: true})[0].fields, ["default"]);
+  assert.deepEqual(compareOptions([undeclared], [documented], {afterLegacy: true})[0].fields, ["default"]);
+});
+
 test("description wrapping and MDX escaping do not create artificial differences", () => {
   assert.deepEqual(
     compareOptions(
