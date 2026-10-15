@@ -28,6 +28,7 @@ overrides:
   loupe: ^2.3.6
   nan: ^2.19.0
   sigstore: 4.0.0
+  '@chainsafe/ssz': file:./vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
 
 patchedDependencies:
   sigstore@4.0.0: 0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32
@@ -149,8 +150,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -213,8 +214,8 @@ importers:
         specifier: ^0.5.2
         version: 0.5.2
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -391,8 +392,8 @@ importers:
         specifier: 'catalog:'
         version: 2.0.0
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -440,8 +441,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -573,8 +574,8 @@ importers:
         specifier: ^1.2.5
         version: 1.2.5
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -588,8 +589,8 @@ importers:
   packages/db:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -628,8 +629,8 @@ importers:
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -665,8 +666,8 @@ importers:
         version: 4.6.0
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -723,8 +724,8 @@ importers:
         version: 3.0.2
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@libp2p/crypto':
         specifier: ^5.1.23
         version: 5.1.23
@@ -747,8 +748,8 @@ importers:
         specifier: ^0.5.2
         version: 0.5.2
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
@@ -774,8 +775,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -836,8 +837,8 @@ importers:
   packages/types:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -879,8 +880,8 @@ importers:
         specifier: 'catalog:'
         version: 2.0.0
       '@chainsafe/ssz':
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: file:../../vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
+        version: file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -1281,8 +1282,9 @@ packages:
   '@chainsafe/snappy-wasm@0.5.2':
     resolution: {integrity: sha512-RcjdySH0LuUgCv4tx+FsS3YBbVOc5lIXklWR6HItbriGpEcPSxuHsH8RNw1vqaSDvkA0C18Kl8Tk3kECJnAvUQ==}
 
-  '@chainsafe/ssz@1.8.1':
-    resolution: {integrity: sha512-Hj0ACi3YQCBtFfUYpv4FZ8vFYl3DuJX29eQd5t70PuR8Z1JoUDX2IY0kHeYyCb2k/13pwV/RAocYQkrNS1mWkQ==}
+  '@chainsafe/ssz@file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz':
+    resolution: {integrity: sha512-BnSU/l5gz9UwYNieVZcYcPNbn+nqvmReEBwN821uHPzR4f/x504KwB6M6VEyMW3lO4aVIaiIgkE/N7thiwNhcA==}
+    version: 1.8.1-serializedlist.2
 
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
@@ -6878,7 +6880,7 @@ snapshots:
 
   '@chainsafe/snappy-wasm@0.5.2': {}
 
-  '@chainsafe/ssz@1.8.1':
+  '@chainsafe/ssz@file:vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz':
     dependencies:
       '@chainsafe/as-sha256': 1.2.5
       '@chainsafe/persistent-merkle-tree': 1.3.1

@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import {SerializedList} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {
   BLOB_TX_TYPE,
@@ -343,14 +344,14 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       executionPayload.gasUsed = Math.floor(0.5 * INTEROP_GAS_LIMIT);
       executionPayload.timestamp = payloadAttributes.timestamp;
       executionPayload.blockHash = crypto.randomBytes(32);
-      executionPayload.transactions = [];
+      const transactions: Uint8Array[] = [];
 
       // Between 0 and 4 transactions for all forks
       const eip1559TxCount = Math.round(4 * Math.random());
       for (let i = 0; i < eip1559TxCount; i++) {
         const tx = crypto.randomBytes(512);
         tx[0] = TX_TYPE_EIP1559;
-        executionPayload.transactions.push(tx);
+        transactions.push(tx);
       }
 
       const commitments: deneb.KZGCommitment[] = [];
@@ -364,7 +365,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
           const blob = generateRandomBlob();
           const commitment = kzg.blobToKzgCommitment(blob);
           const {proofs: cellProofs} = kzg.computeCellsAndKzgProofs(blob);
-          executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+          transactions.push(transactionForKzgCommitment(commitment));
           commitments.push(commitment);
           blobs.push(blob);
           proofs.push(...cellProofs);
@@ -376,12 +377,13 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
           const blob = generateRandomBlob();
           const commitment = kzg.blobToKzgCommitment(blob);
           const proof = kzg.computeBlobKzgProof(blob, commitment);
-          executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+          transactions.push(transactionForKzgCommitment(commitment));
           commitments.push(commitment);
           blobs.push(blob);
           proofs.push(proof);
         }
       }
+      executionPayload.transactions = SerializedList.fromArray(transactions);
 
       if (ForkSeq[fork] >= ForkSeq.capella) {
         (executionPayload as ExecutionPayload<ForkPostCapella>).withdrawals = ssz.capella.Withdrawals.defaultValue();

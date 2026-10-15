@@ -1,5 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {SerializedList} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
@@ -313,7 +314,8 @@ describe("supported payload attributes", () => {
           expect(result).not.toHaveProperty("finalizedBlockHash");
           expect(result.payloadAttributes).not.toHaveProperty("slotNumber");
         }
-        if (fork === ForkName.heze) expect(result.payloadAttributes).toHaveProperty("inclusionListTransactions", []);
+        if (fork === ForkName.heze)
+          expect(result.payloadAttributes).toHaveProperty("inclusionListTransactions", SerializedList.empty());
       });
     }
   }
