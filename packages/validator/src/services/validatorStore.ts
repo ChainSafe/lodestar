@@ -1214,6 +1214,11 @@ export class ValidatorStore {
     }
   }
 
+  /**
+   * Required before signing a message that is slashable or that the beacon node counts as validator
+   * liveness (see `validatorSeenAtEpoch`), otherwise doppelganger detection would flag our own messages.
+   * Skip it for anything else.
+   */
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
     const pubkeyHex = typeof pubKey === "string" ? pubKey : toPubkeyHex(pubKey);
     if (!this.isDoppelgangerSafe(pubkeyHex)) {
