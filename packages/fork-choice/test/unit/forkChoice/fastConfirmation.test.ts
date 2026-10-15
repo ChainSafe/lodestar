@@ -117,16 +117,7 @@ describe("fast confirmation", () => {
     const block = makeBlock(1, ZERO_ROOT);
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), block];
 
-    const baseState = makeState(256, 32, [1 as Slot]);
-    let zeroInactiveCalls = 0;
-    const state = {
-      ...baseState,
-      getEffectiveBalanceIncrementsZeroInactive: () => {
-        zeroInactiveCalls++;
-        return baseState.effectiveBalanceIncrements;
-      },
-    } as typeof baseState;
-
+    const state = makeState(256, 32, [1 as Slot]);
     const store = makeStore(block.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, ZERO_ROOT, block.blockRoot, state);
     const ctx = makeContext(
       2 as Slot,
@@ -137,11 +128,12 @@ describe("fast confirmation", () => {
       state
     );
     const cache = createFastConfirmationCache();
+    const totalActiveBalanceComputations = vi.spyOn(cache.totalActiveBalanceByKey, "set");
 
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
 
-    expect(zeroInactiveCalls).toBe(1);
+    expect(totalActiveBalanceComputations).toHaveBeenCalledTimes(1);
   });
 
   it("isOneConfirmed returns true only when support exceeds the computed threshold", () => {
@@ -255,7 +247,6 @@ describe("fast confirmation", () => {
     // Validator 1 is slashed and validator 2 is inactive, both still sit in slot 2's committee
     const state = makeState(4, 32, [2 as Slot], [1], [2]);
     const getValidator = vi.spyOn(state, "getValidator");
-    const getZeroInactiveBalances = vi.spyOn(state, "getEffectiveBalanceIncrementsZeroInactive");
     const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
     const latestMessages = latestMessagesFor(4, parent.blockRoot, 0);
     const ctx = makeContext(3 as Slot, child.blockRoot, blocks, latestMessages, {epoch: 0, rootHex: ZERO_ROOT}, state);
@@ -276,7 +267,6 @@ describe("fast confirmation", () => {
     expect(support()).toBe(64);
     expect(support()).toBe(64);
     expect(getValidator).not.toHaveBeenCalled();
-    expect(getZeroInactiveBalances).toHaveBeenCalledTimes(1);
   });
 
   it("vote scans exclude slashed validators without reading them", () => {

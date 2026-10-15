@@ -269,24 +269,13 @@ export function getPreviousBalanceSource(
 }
 
 /**
- * Balances with inactive and slashed validators zeroed, memoized per state for this run.
+ * Balances with inactive and slashed validators zeroed.
  * Full-registry scans read weights from here: `state.getValidator()` materializes a validator
  * object per index on native state views.
  */
-function getZeroInactiveBalances(
-  balanceSource: FastConfirmationBalanceSource,
-  cache: FastConfirmationCache
-): EffectiveBalanceIncrements {
-  const {state} = balanceSource;
+function getZeroInactiveBalances(balanceSource: FastConfirmationBalanceSource): EffectiveBalanceIncrements {
   // Fallback balances come from the justified-balance path and already zero inactive validators
-  if (!state) return balanceSource.balances;
-
-  let balances = cache.zeroInactiveBalancesByState.get(state);
-  if (balances === undefined) {
-    balances = state.getEffectiveBalanceIncrementsZeroInactive();
-    cache.zeroInactiveBalancesByState.set(state, balances);
-  }
-  return balances;
+  return balanceSource.state?.getEffectiveBalanceIncrementsZeroInactive() ?? balanceSource.balances;
 }
 
 export function getTotalActiveBalance(
@@ -299,7 +288,7 @@ export function getTotalActiveBalance(
   const cached = cache.totalActiveBalanceByKey.get(key);
   if (cached !== undefined) return cached;
 
-  const total = computeTotalBalance(getZeroInactiveBalances(balanceSource, cache));
+  const total = computeTotalBalance(getZeroInactiveBalances(balanceSource));
 
   cache.totalActiveBalanceByKey.set(key, total);
   return total;
@@ -387,7 +376,7 @@ function ensureVoteMaps(
   if (cache.voteWeightBySource.has(sourceKey)) return;
 
   const voteMap = new Map<RootHex, number>();
-  const balances = getZeroInactiveBalances(balanceSource, cache);
+  const balances = getZeroInactiveBalances(balanceSource);
   const activeIndices = balanceSource.state?.getCurrentShuffling().activeIndices ?? null;
   const equivocating = ctx.getEquivocatingIndices();
   const indices: Iterable<number> = activeIndices ?? balances.keys();
@@ -435,7 +424,7 @@ export function getNodeSupportBetweenSlots(
   endSlot: Slot
 ): number {
   if (startSlot > endSlot) return 0;
-  const balances = getZeroInactiveBalances(balanceSource, cache);
+  const balances = getZeroInactiveBalances(balanceSource);
   const participants = getSlotRangeParticipants(ctx, store, cache, startSlot, endSlot);
   if (participants.size === 0) return 0;
 
@@ -685,10 +674,7 @@ export function getCurrentTargetScore(
   const target = getCurrentTarget(ctx);
   const targetState = getCurrentEpochState(ctx, store, cache);
   if (!target || !targetState) return 0;
-  const balances = getZeroInactiveBalances(
-    {state: targetState, balances: targetState.effectiveBalanceIncrements},
-    cache
-  );
+  const balances = getZeroInactiveBalances({state: targetState, balances: targetState.effectiveBalanceIncrements});
   const activeIndices = targetState.getCurrentShuffling().activeIndices;
   const equivocating = ctx.getEquivocatingIndices();
 
