@@ -1,4 +1,3 @@
-import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   IForkChoice,
@@ -16,7 +15,6 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
-  INCLUSION_LIST_COMMITTEE_SIZE,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -81,7 +79,7 @@ import {kzg} from "../../util/kzg.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
-import {ProposerPreferencesPool} from "../opPools/index.js";
+import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -391,8 +389,19 @@ export async function produceBlockBody<T extends BlockType>(
       executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };
     if (ForkSeq[fork] >= ForkSeq.heze) {
-      // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
-      (bid as heze.ExecutionPayloadBid).inclusionListBits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
+      // Built from the full view (only_timely=False), a superset of the receiver's timely-only
+      // is_inclusion_list_bits_inclusive check
+      const inclusionListSlot = blockSlot - 1;
+      (bid as heze.ExecutionPayloadBid).inclusionListBits = this.inclusionListStore.getInclusionListBits(
+        inclusionListSlot,
+        getShufflingDependentRoot(
+          this.forkChoice,
+          computeEpochAtSlot(inclusionListSlot),
+          computeEpochAtSlot(parentBlock.slot),
+          parentBlock
+        ),
+        false
+      );
     }
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
@@ -737,6 +746,7 @@ export async function prepareExecutionPayload(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -756,12 +766,26 @@ export async function prepareExecutionPayload(
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
+  // Post-heze the inclusion lists are part of the cache key, so a list set that changed since the
+  // payload was prepared triggers a new forkchoiceUpdated instead of reusing a payload built without them
+  let attributes = payloadAttributes;
+  if (attributes === undefined && ForkSeq[fork] >= ForkSeq.heze) {
+    attributes = preparePayloadAttributes(fork, chain, {
+      prepareState: state,
+      prepareSlot: state.slot,
+      parentBlockRoot,
+      parentBlockHash,
+      feeRecipient: suggestedFeeRecipient,
+    });
+  }
+
   const payloadIdCached = chain.executionEngine.payloadIdCache.get({
     headBlockHash: toRootHex(parentBlockHash),
     finalizedBlockHash,
     timestamp: numToQuantity(timestamp),
     prevRandao: toHex(prevRandao),
     suggestedFeeRecipient,
+    inclusionListTransactions: attributes?.inclusionListTransactions,
   });
 
   // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
@@ -782,22 +806,19 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    const attributes: PayloadAttributes =
-      payloadAttributes ??
-      preparePayloadAttributes(fork, chain, {
-        prepareState: state,
-        prepareSlot: state.slot,
-        parentBlockRoot,
-        parentBlockHash,
-        feeRecipient: suggestedFeeRecipient,
-      });
-
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
       toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
-      attributes
+      attributes ??
+        preparePayloadAttributes(fork, chain, {
+          prepareState: state,
+          prepareSlot: state.slot,
+          parentBlockRoot,
+          parentBlockHash,
+          feeRecipient: suggestedFeeRecipient,
+        })
     );
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
@@ -842,6 +863,7 @@ export function getPayloadAttributesForSSE(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   {
     prepareState,
@@ -898,6 +920,7 @@ function preparePayloadAttributes(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   {
     prepareState,
@@ -966,8 +989,27 @@ function preparePayloadAttributes(
   }
 
   if (ForkSeq[fork] >= ForkSeq.heze) {
-    // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
-    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = [];
+    // Built from the full view including untimely lists (only_timely=False in prepare_execution_payload),
+    // a superset of the timely-only set every validator enforces
+    const parentBlockRootHex = toRootHex(parentBlockRoot);
+    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
+    if (parentBlock === null) {
+      throw new Error(
+        `Parent block not in fork choice for Heze payload attributes parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
+      );
+    }
+    const inclusionListSlot = prepareSlot - 1;
+    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
+      chain.inclusionListStore.getInclusionListTransactions(
+        inclusionListSlot,
+        getShufflingDependentRoot(
+          chain.forkChoice,
+          computeEpochAtSlot(inclusionListSlot),
+          computeEpochAtSlot(parentBlock.slot),
+          parentBlock
+        ),
+        false
+      );
   }
 
   return payloadAttributes;

@@ -264,8 +264,15 @@ export class AttestationDutiesService {
     if (!priorDependentRoot || dependentRootChanged) {
       const dutiesByIndex = new Map<ValidatorIndex, AttDutyAndProof>();
       for (const duty of relevantDuties) {
-        const dutyAndProof = await this.getDutyAndProof(duty);
-        dutiesByIndex.set(duty.validatorIndex, dutyAndProof);
+        try {
+          dutiesByIndex.set(duty.validatorIndex, await this.getDutyAndProof(duty));
+        } catch (e) {
+          this.logger.error(
+            "Error signing attestation selection proof",
+            {epoch, validatorIndex: duty.validatorIndex},
+            e as Error
+          );
+        }
       }
       this.dutiesByIndexByEpoch.set(epoch, {dependentRoot, dutiesByIndex});
 
@@ -282,8 +289,15 @@ export class AttestationDutiesService {
       const existingDutiesCount = existingDuties.size;
       for (const duty of relevantDuties) {
         if (!existingDuties.has(duty.validatorIndex)) {
-          const dutyAndProof = await this.getDutyAndProof(duty);
-          existingDuties.set(duty.validatorIndex, dutyAndProof);
+          try {
+            existingDuties.set(duty.validatorIndex, await this.getDutyAndProof(duty));
+          } catch (e) {
+            this.logger.error(
+              "Error signing attestation selection proof",
+              {epoch, validatorIndex: duty.validatorIndex},
+              e as Error
+            );
+          }
         }
       }
 

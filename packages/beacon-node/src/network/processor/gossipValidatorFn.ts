@@ -13,6 +13,7 @@ import {
   ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
+  InclusionListErrorCode,
   PayloadAttestationErrorCode,
   ProposerPreferencesErrorCode,
   ProposerSlashingErrorCode,
@@ -85,6 +86,10 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   [GossipType.payload_attestation_message]: {
     default: PeerAction.MidToleranceError,
     byCode: {[PayloadAttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.inclusion_list]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[InclusionListErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.execution_payload_bid]: {
     default: PeerAction.HighToleranceError,
