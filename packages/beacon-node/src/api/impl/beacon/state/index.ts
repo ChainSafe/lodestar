@@ -174,7 +174,10 @@ export function getBeaconStateApi({
 
         // There is no builder pubkey cache, scan the registry at most once per request
         let builderIndexByPubkey: Map<string, BuilderIndex> | null = null;
-        const getBuilderIndexByPubkeyMap = () => (builderIndexByPubkey ??= getBuilderIndexByPubkey(state));
+        const getBuilderIndexByPubkeyMap = () => {
+          builderIndexByPubkey ??= getBuilderIndexByPubkey(state);
+          return builderIndexByPubkey;
+        };
 
         for (const id of builderIds) {
           const resp = getStateBuilderIndex(id, state, getBuilderIndexByPubkeyMap);
