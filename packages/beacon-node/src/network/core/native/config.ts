@@ -11,7 +11,6 @@ import {
 } from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
-import {getSlotDurations} from "@lodestar/state-transition";
 import {Status} from "@lodestar/types";
 import {CustodyConfig} from "../../../util/dataColumns.js";
 import {NetworkConfig} from "../../networkConfig.js";
@@ -304,8 +303,6 @@ export function createNativeConfig(
         1024 * MiB,
         4096
       ),
-      // Native's BeaconConfig does not yet include Heze's slot-duration setting.
-      seenTtlMs: BigInt(Math.max(...getSlotDurations(config).map(([, duration]) => duration)) * SLOTS_PER_EPOCH * 2),
     },
     identitySecretKey: Uint8Array.from(key.raw),
   };

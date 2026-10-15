@@ -42,26 +42,6 @@ async function fixture() {
 }
 
 describe("native configuration boundary", () => {
-  it.each([6000, 24000])("retains seen messages across configured slot durations of %i ms", async (duration) => {
-    const {key} = await fixture();
-    const scheduled = createBeaconConfig(
-      {...config, GLOAS_FORK_EPOCH: 10, HEZE_FORK_EPOCH: 20, SLOT_DURATION_MS_HEZE: duration},
-      config.genesisValidatorsRoot
-    );
-    const {application} = createNativeConfig(
-      {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"]},
-      scheduled,
-      key,
-      0,
-      ssz.fulu.Status.defaultValue(),
-      scheduled.CUSTODY_REQUIREMENT,
-      16
-    );
-    expect(application.gossipPolicy?.seenTtlMs).toBe(
-      BigInt(Math.max(config.SLOT_DURATION_MS, duration) * SLOTS_PER_EPOCH * 2)
-    );
-  });
-
   it("builds the active send startup policy", async () => {
     const node = await fixture();
     expect(node.create().traceGossip).toBe(false);
