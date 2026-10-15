@@ -17,7 +17,6 @@ import {NativePeerAddress, parseNativeEndpoint, parseNativePeerAddress} from "./
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
 export const UINT64_MAX = 18446744073709551615n;
-const MiB = 1024 * 1024;
 export const kinds: readonly NativeTopicKind[] = [
   "beacon_block",
   "beacon_aggregate_and_proof",
@@ -227,22 +226,12 @@ export function createNativeConfig(
   nativeInteger(activeValidatorCount, "active validators", Number.MAX_SAFE_INTEGER, 1);
   const listeners = nativeListeners(opts.localMultiaddrs, true);
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
-    traceGossip: opts.native?.traceGossip ?? false,
-    traceTurns: opts.native?.traceTurns ?? false,
+    traceGossip: opts.native?.traceGossip,
+    traceTurns: opts.native?.traceTurns,
     ...(opts.xrayAddress ? {xray: {address: opts.xrayAddress, waitForAttach: opts.xrayWaitForAttach ?? false}} : {}),
     transport: {
-      initialCongestionWindowPackets: optionalInteger(
-        opts.native?.initialCongestionWindowPackets,
-        "initial congestion window packets",
-        64,
-        1
-      ),
-      receiveDatagramsPerTurn: optionalInteger(
-        opts.native?.receiveDatagramsPerTurn,
-        "receive datagrams per turn",
-        256,
-        1
-      ),
+      initialCongestionWindowPackets: opts.native?.initialCongestionWindowPackets,
+      receiveDatagramsPerTurn: opts.native?.receiveDatagramsPerTurn,
     },
     beaconConfig: new bindings.BeaconConfig(config, config.genesisValidatorsRoot),
     activeValidatorCount,
@@ -271,32 +260,9 @@ export function createNativeConfig(
       targetPeers: opts.targetPeers,
       maxPeers: opts.maxPeers,
       receiveBudgetBytes: opts.native?.receiveBudgetBytes,
-      nativeBudgetBytes: opts.native?.nativeBudgetBytes,
-      bridgeBudgetBytes: opts.native?.bridgeBudgetBytes,
     },
-    gossipPolicy: {
-      hostItems: optionalInteger(opts.native?.hostGossipItems, "host gossip items", 16384, 1),
-      hostBytes: optionalInteger(opts.native?.hostGossipBytes, "host gossip bytes", 1024 * MiB, 1),
-      topicConcurrency: optionalInteger(opts.maxGossipTopicConcurrency, "gossip topic concurrency", 16384, 1),
-      activeSendTimeoutMs: optionalMilliseconds(opts.native?.gossipActiveSendTimeoutMs, "gossip active send timeout"),
-      activeSendItems: opts.native?.gossipActiveSendItems,
-      largeFrameTimeoutMs: optionalMilliseconds(opts.native?.gossipLargeFrameTimeoutMs, "gossip large frame timeout"),
-      receiveBufferBytes: optionalInteger(
-        opts.native?.gossipReceiveBufferBytes,
-        "gossip receive buffer bytes",
-        1024 * MiB,
-        4096
-      ),
-    },
+    gossipPolicy: {topicConcurrency: opts.maxGossipTopicConcurrency},
     identitySecretKey: Uint8Array.from(key.raw),
   };
   return {application, directPeers, bootPeers};
-}
-
-function optionalInteger(value: number | undefined, resource: string, max: number, min: number): number | undefined {
-  return value === undefined ? undefined : nativeInteger(value, resource, max, min);
-}
-
-function optionalMilliseconds(value: number | undefined, resource: string): bigint | undefined {
-  return value === undefined ? undefined : BigInt(nativeInteger(value, resource, 86400000, 1));
 }

@@ -42,45 +42,25 @@ async function fixture() {
 }
 
 describe("native configuration boundary", () => {
-  it("builds the active send startup policy", async () => {
+  it("passes sparse native policy and tracing options", async () => {
     const node = await fixture();
-    expect(node.create().traceGossip).toBe(false);
-    expect(node.create({native: {traceGossip: true}}).traceGossip).toBe(true);
-    expect(node.create().xray).toBeUndefined();
+    const application = node.create();
+    expect(application.traceGossip).toBeUndefined();
+    expect(application.traceTurns).toBeUndefined();
+    expect(application.gossipPolicy).toEqual({topicConcurrency: undefined});
+    expect(application.resources).toEqual({targetPeers: 200, maxPeers: 210});
+    expect(node.create({native: {traceGossip: true, traceTurns: true}})).toMatchObject({
+      traceGossip: true,
+      traceTurns: true,
+    });
+    expect(node.create({maxGossipTopicConcurrency: 12}).gossipPolicy).toEqual({topicConcurrency: 12});
+    expect(node.create({native: {receiveBudgetBytes: 1024 ** 3}}).resources.receiveBudgetBytes).toBe(1024 ** 3);
+    expect(application.xray).toBeUndefined();
     expect(node.create({xrayAddress: "/tmp/xray.sock"}).xray).toEqual({
       address: "/tmp/xray.sock",
       waitForAttach: false,
     });
     expect(node.create({xrayAddress: "/tmp/xray.sock", xrayWaitForAttach: true}).xray?.waitForAttach).toBe(true);
-    expect(node.create().traceTurns).toBe(false);
-    expect(node.create({native: {traceTurns: true}}).traceTurns).toBe(true);
-    expect(node.create().gossipPolicy?.activeSendTimeoutMs).toBeUndefined();
-    const application = node.create({
-      native: {gossipActiveSendTimeoutMs: 4000, gossipActiveSendItems: {beacon_block: 4}},
-    });
-    expect(application.gossipPolicy).toMatchObject({activeSendTimeoutMs: 4000n, activeSendItems: {beacon_block: 4}});
-    for (const timeout of [0, -1, 1.5, 86400001]) {
-      expect(() => node.create({native: {gossipActiveSendTimeoutMs: timeout}})).toThrow(NativeNetworkError);
-    }
-  });
-
-  it("builds the large receive policy with explicit resource overrides", async () => {
-    const node = await fixture();
-    expect(node.create().traceGossip).toBe(false);
-    expect(node.create({native: {traceGossip: true}}).traceGossip).toBe(true);
-    expect(node.create().gossipPolicy?.largeFrameTimeoutMs).toBeUndefined();
-    expect(node.create().gossipPolicy?.receiveBufferBytes).toBeUndefined();
-    expect(node.create().resources).toEqual({targetPeers: 200, maxPeers: 210});
-    const application = node.create({
-      native: {gossipLargeFrameTimeoutMs: 4000, gossipReceiveBufferBytes: 64 * 1024 * 1024},
-    });
-    expect(application.gossipPolicy).toMatchObject({largeFrameTimeoutMs: 4000n, receiveBufferBytes: 64 * 1024 * 1024});
-    for (const timeout of [0, -1, 1.5, 86400001]) {
-      expect(() => node.create({native: {gossipLargeFrameTimeoutMs: timeout}})).toThrow(NativeNetworkError);
-    }
-    for (const bytes of [0, -1, 4096.5, 1024 * 1024 * 1024 + 1]) {
-      expect(() => node.create({native: {gossipReceiveBufferBytes: bytes}})).toThrow(NativeNetworkError);
-    }
   });
 
   it.each([0, 1, 1_000_000])("rejects an active unsupported fork at epoch %s before startup", async (epoch) => {
@@ -140,7 +120,6 @@ describe("native configuration boundary", () => {
     {dialTimeoutMs: 1000},
     {requestTimeoutMs: 1000},
     {respTimeoutMs: 1000},
-    {maxGossipTopicConcurrency: Number.NaN},
     {maxPeers: 257},
     {maxPeers: 200, targetPeers: 200},
     {bootMultiaddrs: ["/dns4/example.invalid/udp/9001/quic-v1"]},
@@ -284,7 +263,7 @@ describe("native configuration boundary", () => {
   });
 });
 
-it("preserves bounded native transport overrides", async () => {
+it("passes explicit native transport overrides", async () => {
   const {create} = await fixture();
   expect(create().transport).toEqual({});
   expect(create({native: {receiveDatagramsPerTurn: 128}}).transport).toEqual({receiveDatagramsPerTurn: 128});
@@ -292,12 +271,4 @@ it("preserves bounded native transport overrides", async () => {
     initialCongestionWindowPackets: 32,
     receiveDatagramsPerTurn: 128,
   });
-  for (const [field, maximum] of [
-    ["initialCongestionWindowPackets", 64],
-    ["receiveDatagramsPerTurn", 256],
-  ] as const) {
-    for (const value of [0, -1, 1.5, maximum + 1, Number.NaN]) {
-      expect(() => create({native: {[field]: value}})).toThrow(NativeNetworkError);
-    }
-  }
 });

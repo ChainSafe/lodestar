@@ -326,7 +326,6 @@ describe("native Lodestar integration", () => {
         localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"],
         maxPeers: 12,
         targetPeers: 8,
-        native: {gossipReceiveBufferBytes: 16 * 1024 * 1024},
       },
       config,
       await generateKeyPair("secp256k1"),
@@ -360,9 +359,7 @@ describe("native Lodestar integration", () => {
   }, 15000);
   it("closes while real serving and gossip handlers retain unfinished host work", async () => {
     const config = fuluConfig();
-    // The weighted plan gives proposer slashings one execution slot with this budget.
-    const limits = {hostGossipItems: 65, hostGossipBytes: 64 * 1024 * 1024};
-    const old = await nativeNetworkFixture(config, "native", limits);
+    const old = await nativeNetworkFixture(config);
     let remote: Awaited<ReturnType<typeof nativeNetworkProcess>> | undefined;
     const block = defer<null>();
     const signature = defer<boolean>();
@@ -375,7 +372,7 @@ describe("native Lodestar integration", () => {
       .mockImplementationOnce(() => signature.promise);
     const retired = vi.spyOn(NativeGossipExecutor.prototype, "observe");
     try {
-      remote = await nativeNetworkProcess(config, old.chain.clock.genesisTime, "native", limits);
+      remote = await nativeNetworkProcess(config, old.chain.clock.genesisTime);
       const identity = await old.network.getNetworkIdentity();
       await Promise.all([old.network.subscribeGossipCoreTopics(), remote.network.subscribeGossipCoreTopics()]);
       await remote.network.connectToPeer(identity.peerId, identity.p2pAddresses);
