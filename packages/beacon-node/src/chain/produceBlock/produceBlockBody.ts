@@ -806,7 +806,7 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    const forkchoiceUpdate = await chain.executionEngine.notifyForkchoiceUpdate(
+    payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
       toRootHex(parentBlockHash),
       safeBlockHash,
@@ -820,7 +820,6 @@ export async function prepareExecutionPayload(
           feeRecipient: suggestedFeeRecipient,
         })
     );
-    payloadId = forkchoiceUpdate.payloadId;
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 

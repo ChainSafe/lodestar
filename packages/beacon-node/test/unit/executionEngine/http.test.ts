@@ -182,7 +182,7 @@ describe("ExecutionEngine / http", () => {
     const result = await executionEngine.notifyForkchoiceUpdate(ForkName.heze, hash, hash, hash);
 
     expect(reqJsonRpcPayload).toMatchObject({method: "engine_forkchoiceUpdatedV5"});
-    expect(result).toEqual({payloadId: null, inclusionListSatisfied: false});
+    expect(result).toBeNull();
   });
 
   it("getPayloadBodiesByHashV2", async () => {

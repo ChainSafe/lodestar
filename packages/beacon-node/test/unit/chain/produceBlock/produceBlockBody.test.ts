@@ -138,10 +138,7 @@ describe("Fulu engine body", () => {
       const cachedRecipient = "0xccccccccccccccccccccccccccccccccccccccbb";
       modules.chain.beaconProposerCache.getOrDefault.mockReturnValue(cachedRecipient);
       modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
-      modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue({
-        payloadId: "0x1234",
-        inclusionListSatisfied: null,
-      });
+      modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
       modules.chain.executionEngine.getPayload.mockResolvedValue({
         executionPayload: ssz.fulu.ExecutionPayload.defaultValue(),
         executionPayloadValue: 456n,
@@ -195,10 +192,7 @@ describe("Gloas engine body", () => {
     preferences.message.targetGasLimit = 30_000_000n;
     vi.mocked(modules.chain.proposerPreferencesPool.get).mockReturnValue(pooled ? preferences : null);
     modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
-    modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue({
-      payloadId: "0x1234",
-      inclusionListSatisfied: null,
-    });
+    modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
     const executionPayload = ssz.fulu.ExecutionPayload.defaultValue();
     executionPayload.blockHash = new Uint8Array(32).fill(9);
     modules.chain.executionEngine.getPayload.mockResolvedValue({

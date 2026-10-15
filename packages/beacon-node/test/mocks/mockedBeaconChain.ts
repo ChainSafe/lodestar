@@ -156,7 +156,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       clock,
       forkChoice: getMockedForkChoice(),
       executionEngine: {
-        notifyForkchoiceUpdate: vi.fn().mockResolvedValue({payloadId: "0x", inclusionListSatisfied: null}),
+        notifyForkchoiceUpdate: vi.fn(),
         getPayload: vi.fn(),
         getClientVersion: vi.fn(),
       },

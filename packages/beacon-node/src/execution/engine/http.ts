@@ -22,7 +22,6 @@ import {
   ExecutePayloadResponse,
   ExecutionEngineState,
   ExecutionPayloadStatus,
-  ForkchoiceUpdateResult,
   IExecutionEngine,
   PayloadAttributes,
   PayloadId,
@@ -343,9 +342,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<ForkchoiceUpdateResult> {
+  ): Promise<PayloadId | null> {
     const {
-      payloadStatus: {status, validationError, inclusionListSatisfied},
+      payloadStatus: {status, validationError},
       payloadId,
     } = await this.enqueue(() =>
       this.withTransport(fork, undefined, (transport) =>
@@ -376,14 +375,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           );
           void this.prunePayloadIdCache();
         }
-        return {payloadId, inclusionListSatisfied: inclusionListSatisfied ?? null};
+        return payloadId;
 
       case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
           throw Error("Execution Layer Syncing");
         }
-        return {payloadId: null, inclusionListSatisfied: null};
+        return null;
 
       case ExecutionPayloadStatus.INVALID:
         throw Error(

@@ -5,7 +5,6 @@ import {
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {isForkPostHeze} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   computeEpochAtSlot,
@@ -16,10 +15,8 @@ import {RootHex, bellatrix} from "@lodestar/types";
 import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
-import {recordHeadPayloadInclusionListVerdict} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
-import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
@@ -333,22 +330,11 @@ export async function importExecutionPayload(
   if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
-    this.executionEngine
-      .notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash)
-      .then(({inclusionListSatisfied}) => {
-        if (!isForkPostHeze(fork)) {
-          return;
-        }
-        const fullVariant = this.forkChoice.getBlockHexAndBlockHash(blockRootHex, blockHashHex);
-        if (recordHeadPayloadInclusionListVerdict(this.forkChoice, fullVariant, inclusionListSatisfied)) {
-          this.recomputeForkChoiceHead(ForkchoiceCaller.inclusionListVerdict);
-        }
-      })
-      .catch((e) => {
-        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-          this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
-        }
-      });
+    this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
+      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+        this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
+      }
+    });
   }
 
   // 8. Record metrics for payload envelope and column sources
