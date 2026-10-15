@@ -31,13 +31,14 @@ import {
   rewards,
 } from "@lodestar/types";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
+import {IClock} from "../../util/clock.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {BlockBytes} from "../blocks/blockSerializedCache.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
-import {ChainEventEmitter} from "../emitter.js";
+import {ChainViewSnapshot, ChainViewUpdate, FinalizedProtoSummary} from "../chainView/interface.js";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {RegenRequest} from "../regen/index.js";
@@ -45,17 +46,16 @@ import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "..
 import {GossipBlockValidationResult} from "../validation/block.js";
 import {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {ValidatorMonitorAttestation, ValidatorMonitorBlock} from "../validatorMonitor.js";
-import {BeaconEngineEvent, HeadUpdate, IBeaconEngineEventBus} from "./events.js";
+import type {BeaconEngineCore} from "./beaconEngineCore.js";
+import {BeaconEngineEvent, ChainReorg, ExecutionPayloadImported, FastConfirmation, HeadUpdate} from "./events.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import {
   ApiStateId,
   ApiStateResult,
   ApiStateResultWithFork,
-  BeaconEngineModules,
   HeadParentPayload,
   IBeaconEngine,
-  IBeaconEngineCore,
   ImportBlockResult,
   ImportExecutionPayloadOpts,
   PrepareNextSlotOpts,
@@ -68,29 +68,67 @@ import {
   VerifyBlocksOpts,
 } from "./interface.js";
 
+const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
+
+export type BeaconEngineModules = {
+  core: BeaconEngineCore;
+  emitter: ChainEventEmitter;
+  clock: IClock;
+};
+
 export class BeaconEngine implements IBeaconEngine {
   readonly config: BeaconConfig;
-  readonly events: IBeaconEngineEventBus;
-  private readonly core: IBeaconEngineCore;
+  private readonly core: BeaconEngineCore;
   private readonly emitter: ChainEventEmitter;
+  private readonly clock: IClock;
 
-  constructor({core, emitter}: BeaconEngineModules) {
+  constructor({core, emitter, clock}: BeaconEngineModules) {
     this.core = core;
     this.config = core.config;
-    this.events = core.events;
     this.emitter = emitter;
+    this.clock = clock;
     // TODO - beacon engine: in worker mode, post core notifications to a main-thread event bus,
     // preserving their order so ChainView is updated before head/head_v2 consumers run.
-    this.events.on(BeaconEngineEvent.headUpdated, this.onHeadUpdated);
+    this.core.emitter.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
+    this.core.emitter.on(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
+    this.core.emitter.on(BeaconEngineEvent.fatalError, this.onFatalError);
+    this.core.emitter.on(BeaconEngineEvent.headUpdated, this.onHeadUpdated);
+    this.core.emitter.on(BeaconEngineEvent.chainReorg, this.onChainReorg);
+    this.core.emitter.on(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
+    this.core.emitter.on(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
+    this.core.emitter.on(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+    this.core.emitter.on(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.core.emitter.on(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
   }
 
   async close(): Promise<void> {
     try {
       await this.core.close();
     } finally {
-      this.events.off(BeaconEngineEvent.headUpdated, this.onHeadUpdated);
+      this.core.emitter.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
+      this.core.emitter.off(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
+      this.core.emitter.off(BeaconEngineEvent.fatalError, this.onFatalError);
+      this.core.emitter.off(BeaconEngineEvent.headUpdated, this.onHeadUpdated);
+      this.core.emitter.off(BeaconEngineEvent.chainReorg, this.onChainReorg);
+      this.core.emitter.off(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
+      this.core.emitter.off(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
+      this.core.emitter.off(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+      this.core.emitter.off(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+      this.core.emitter.off(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
     }
   }
+
+  private readonly onChainViewUpdated = (update: ChainViewUpdate): void => {
+    this.emitter.emit(ChainEvent.chainViewUpdated, update);
+  };
+
+  private readonly onEarliestAvailableSlotUpdated = (slot: Slot): void => {
+    this.emitter.emit(ChainEvent.earliestAvailableSlotUpdated, slot);
+  };
+
+  private readonly onFatalError = (error: Error): void => {
+    this.emitter.emit(ChainEvent.fatalError, error);
+  };
 
   private readonly onHeadUpdated = (update: HeadUpdate): void => {
     const {
@@ -128,6 +166,40 @@ export class BeaconEngine implements IBeaconEngine {
         executionOptimistic,
       },
     });
+  };
+
+  private readonly onChainReorg = (reorg: ChainReorg): void => {
+    this.emitter.emit(routes.events.EventType.chainReorg, reorg);
+  };
+
+  private readonly onProposerSlashingProduced = (slashing: phase0.ProposerSlashing): void => {
+    this.emitter.emit(routes.events.EventType.proposerSlashing, slashing);
+    this.emitter.emit(ChainEvent.publishProposerSlashing, slashing);
+  };
+
+  private readonly onFastConfirmation = (confirmation: FastConfirmation): void => {
+    this.emitter.emit(routes.events.EventType.fastConfirmation, confirmation);
+  };
+
+  private readonly onLightClientOptimisticUpdate = ({data, slot}: SerializedLightClientData): void => {
+    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
+      version: this.config.getForkName(slot),
+      data: this.config.getPostAltairForkTypes(slot).LightClientOptimisticUpdate.deserialize(data),
+    });
+  };
+
+  private readonly onLightClientFinalityUpdate = ({data, slot}: SerializedLightClientData): void => {
+    this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
+      version: this.config.getForkName(slot),
+      data: this.config.getPostAltairForkTypes(slot).LightClientFinalityUpdate.deserialize(data),
+    });
+  };
+
+  // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.
+  private readonly onExecutionPayloadImported = (event: ExecutionPayloadImported): void => {
+    if (this.clock.currentSlot - event.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+      this.emitter.emit(routes.events.EventType.executionPayload, event);
+    }
   };
 
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {

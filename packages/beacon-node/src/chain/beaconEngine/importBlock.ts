@@ -1,6 +1,5 @@
 // TODO - beacon engine: transport engine-emitted events through the worker boundary.
 import {BitArray} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
 import {
   AncestorStatus,
   BlockExecutionStatus,
@@ -50,10 +49,10 @@ import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../blocks/types.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
-import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
+import {BeaconEngineEvent, ChainReorg} from "./events.js";
 import {ImportBlockResult} from "./interface.js";
 
 export type VerifiedBlockBundle = {
@@ -340,7 +339,7 @@ export async function importBlock(
     if (ancestorResult.code === AncestorStatus.CommonAncestor) {
       // CommonAncestor = chain reorg, old head and new head not direct descendants
 
-      const forkChoiceReorgEventData: ReorgEventData = {
+      const forkChoiceReorgEventData: ChainReorg = {
         depth: ancestorResult.depth,
         epoch: computeEpochAtSlot(newHead.slot),
         slot: newHead.slot,
@@ -351,7 +350,7 @@ export async function importBlock(
         executionOptimistic: isOptimisticBlock(newHead),
       };
 
-      this.emitter.emit(routes.events.EventType.chainReorg, forkChoiceReorgEventData);
+      this.emitter.emit(BeaconEngineEvent.chainReorg, forkChoiceReorgEventData);
       this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
 
       this.metrics?.forkChoice.reorg.inc();
@@ -493,9 +492,8 @@ export async function importBlock(
     const cp = getCheckpointFromState(checkpointState);
     this.regen.addCheckpointState(cp, checkpointState);
     // consumers should not mutate state ever
-    this.emitter.emit(ChainEvent.checkpoint, cp);
+    this.emitter.emit(BeaconEngineEvent.checkpoint, cp);
 
-    // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
     const activeValidatorsCount = checkpointState.activeValidatorCount;
@@ -540,7 +538,6 @@ export async function importBlock(
   return {
     headChanged: newHead.blockRoot !== oldHead.blockRoot,
     head: null,
-    reorg: null,
     blockSummary,
     proposerIndexNextSlot: null,
     isExecutionState: isStatePostBellatrix(postState) && postState.isExecutionStateType,

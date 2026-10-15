@@ -265,7 +265,6 @@ export class BeaconNode {
       metrics,
       clock,
       signal: chainController.signal,
-      emitter,
       cpStateDatastore,
       executionEngine,
       executionBuilder,
@@ -274,7 +273,7 @@ export class BeaconNode {
         userAgent: opts.executionBuilder.userAgent,
       },
     });
-    const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter});
+    const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter, clock});
     const {earliestAvailableSlot} = await executeStateInitialization(
       beaconEngine,
       stateInitialization,

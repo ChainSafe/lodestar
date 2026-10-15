@@ -58,7 +58,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       value: new SeenEnginePayloadEnvelopeInput({config, forkChoice: chain.forkChoice, db: {block: {get: vi.fn()}}}),
     });
     emitImported.mockReset();
-    chain.beaconEngine.events.on(BeaconEngineEvent.executionPayloadImported, emitImported);
+    chain.beaconEngine.emitter.on(BeaconEngineEvent.executionPayloadImported, emitImported);
     chain.forkChoice.getBlockHex.mockReturnValue(null);
     chain.forkChoice.onExecutionPayload = vi.fn().mockImplementation(() => {
       chain.forkChoice.getBlockHex.mockReturnValue({

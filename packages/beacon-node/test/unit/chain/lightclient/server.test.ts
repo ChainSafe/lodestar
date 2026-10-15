@@ -9,6 +9,7 @@ import {
 } from "@lodestar/params";
 import {LightClientUpdate, gloas, ssz} from "@lodestar/types";
 import {verifyMerkleBranch} from "@lodestar/utils";
+import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {
   LightClientServer,
   SyncAttestedData,
@@ -74,7 +75,7 @@ describe("Gloas light client server", () => {
         db,
         clock: {} as never,
         metrics: null,
-        emitter: {} as never,
+        emitter: new BeaconEngineEventBus(),
         logger: {debug: vi.fn(), error: vi.fn()} as never,
         signal: new AbortController().signal,
       }

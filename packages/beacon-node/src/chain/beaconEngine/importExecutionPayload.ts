@@ -209,7 +209,7 @@ export async function importExecutionPayload(
   }
 
   const executionOptimistic = execStatus === ExecutionStatus.Syncing;
-  this.events.emit(BeaconEngineEvent.executionPayloadImported, {
+  this.emitter.emit(BeaconEngineEvent.executionPayloadImported, {
     slot: envelope.payload.slotNumber,
     builderIndex: envelope.builderIndex,
     blockHash: blockHashHex,

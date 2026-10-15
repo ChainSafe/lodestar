@@ -7,8 +7,9 @@ import {toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
-import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
+import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
@@ -61,8 +62,7 @@ describe("BeaconEngine head notifications", () => {
     events = new BeaconEngineEventBus();
     core = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
       config,
-      emitter,
-      events,
+      emitter: events,
       logger: getMockedLogger(),
       close,
       forkChoice: {
@@ -87,8 +87,8 @@ describe("BeaconEngine head notifications", () => {
         });
       },
     });
-    engine = new BeaconEngine({core, emitter});
-    engine.events.on(BeaconEngineEvent.chainViewUpdated, () => order.push("view"));
+    engine = new BeaconEngine({core, emitter, clock: new ClockStopped(0)});
+    emitter.on(ChainEvent.chainViewUpdated, () => order.push("view"));
     events.on(BeaconEngineEvent.headUpdated, onHeadUpdated);
     emitter.on(routes.events.EventType.head, (event) => {
       order.push("head");

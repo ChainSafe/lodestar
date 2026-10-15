@@ -23,7 +23,7 @@ describe("engine / state pruning progress", () => {
       db,
       logger: testLogger(),
       metrics: null,
-      events,
+      emitter: events,
     });
     prune = (epoch) => engine.pruneHistory(epoch, epoch);
     await db.stateArchive.putBinary(0, new Uint8Array([0]));

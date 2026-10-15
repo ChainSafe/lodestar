@@ -248,7 +248,7 @@ export async function pruneHistory(
       const stored = await this.db.earliestAvailableSlot.get();
       const earliestAvailableSlot = Math.max(stored ?? 0, blockCutoffSlot);
       if (stored !== earliestAvailableSlot) await this.db.earliestAvailableSlot.set(earliestAvailableSlot);
-      this.events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, earliestAvailableSlot);
+      this.emitter.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, earliestAvailableSlot);
     }
   );
   await this.db.executionPayloadEnvelopeArchive.batchDelete(

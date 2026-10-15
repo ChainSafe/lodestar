@@ -8,7 +8,9 @@ import {IBeaconStateViewAltair} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getLightclientApi} from "../../../../src/api/impl/lightclient/index.js";
+import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
 import {LightClientErrorCode, LightClientServerErrorCode} from "../../../../src/chain/errors/lightClientError.js";
@@ -49,6 +51,8 @@ describe("BeaconEngineCore light client ownership", () => {
   };
   const logger = getMockedLogger();
   let engine: BeaconEngineCore;
+  let facade: BeaconEngine;
+  let emitter: ChainEventEmitter;
   let server: LightClientServer;
   let clock: ClockStopped;
   let chain: IBeaconChain;
@@ -66,7 +70,6 @@ describe("BeaconEngineCore light client ownership", () => {
       dataColumnDir: "test",
       pubkeyCache,
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
-      emitter: new ChainEventEmitter(),
       signal: controller.signal,
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,
@@ -80,9 +83,11 @@ describe("BeaconEngineCore light client ownership", () => {
     clock = new ClockStopped(slot + 1);
     clock.setMsIntoSlot(config.getSyncMessageDueMs(ForkName.capella) + 1000);
     engine = createEngine();
+    emitter = new ChainEventEmitter();
+    facade = new BeaconEngine({core: engine, emitter, clock});
     if (!engine.lightClientServer) throw Error("Expected an engine-owned light client server");
     server = engine.lightClientServer;
-    chain = {beaconEngine: engine, opts: {}, config} as unknown as IBeaconChain;
+    chain = {beaconEngine: facade, opts: {}, config} as unknown as IBeaconChain;
     db.syncCommitteeWitness.get.mockResolvedValue(witness);
     db.syncCommittee.get.mockResolvedValue(ssz.altair.SyncCommittee.defaultValue());
     const header = ssz.capella.LightClientHeader.defaultValue();
@@ -95,7 +100,7 @@ describe("BeaconEngineCore light client ownership", () => {
   });
 
   afterEach(async () => {
-    await engine.close();
+    await facade.close();
     controller.abort();
     vi.restoreAllMocks();
   });
@@ -256,11 +261,15 @@ describe("BeaconEngineCore light client ownership", () => {
     expect(logger.error).toHaveBeenCalledWith(expect.any(String), {code: "UNEXPECTED_ERROR"}, expect.any(Error));
   });
 
-  it("continues emitting optimistic and finality updates on the shared chain emitter", async () => {
+  it("forwards serialized optimistic and finality updates through the facade", async () => {
     const optimistic = vi.fn();
     const finality = vi.fn();
-    engine.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, optimistic);
-    engine.emitter.on(routes.events.EventType.lightClientFinalityUpdate, finality);
+    const optimisticNotification = vi.fn();
+    const finalityNotification = vi.fn();
+    engine.emitter.on(BeaconEngineEvent.lightClientOptimisticUpdate, optimisticNotification);
+    engine.emitter.on(BeaconEngineEvent.lightClientFinalityUpdate, finalityNotification);
+    emitter.on(routes.events.EventType.lightClientOptimisticUpdate, optimistic);
+    emitter.on(routes.events.EventType.lightClientFinalityUpdate, finality);
     const finalizedHeader = ssz.capella.LightClientHeader.defaultValue();
     finalizedHeader.beacon.slot = SLOTS_PER_EPOCH;
     db.checkpointHeader.get.mockResolvedValue(finalizedHeader);
@@ -289,5 +298,16 @@ describe("BeaconEngineCore light client ownership", () => {
       version: ForkName.capella,
       data: expect.objectContaining({signatureSlot: slot, finalizedHeader}),
     });
+    expect(optimisticNotification).toHaveBeenCalledExactlyOnceWith({
+      data: ssz.capella.LightClientOptimisticUpdate.serialize(optimistic.mock.calls[0][0].data),
+      slot: parent.slot,
+    });
+    expect(finalityNotification).toHaveBeenCalledExactlyOnceWith({
+      data: ssz.capella.LightClientFinalityUpdate.serialize(finality.mock.calls[0][0].data),
+      slot: parent.slot,
+    });
+    expect(optimistic.mock.calls[0][0].data.syncAggregate.syncCommitteeBits.get(0)).toBe(true);
+    optimistic.mock.calls[0][0].data.syncAggregate.syncCommitteeBits.set(0, false);
+    expect(server.getOptimisticUpdate()?.syncAggregate.syncCommitteeBits.get(0)).toBe(true);
   });
 });

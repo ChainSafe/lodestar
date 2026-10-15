@@ -12,7 +12,6 @@ import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
-import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../src/chain/forkChoice/index.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
@@ -201,7 +200,6 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       serializedCache: new SerializedCache({cacheDeserialized: true}),
       blockSerializedCache: new BlockSerializedCache(config),
       verifiedBlocks: new Map(),
-      events: new BeaconEngineEventBus(),
       publishChainView: vi.fn(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
@@ -294,7 +292,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         close: vi.fn().mockResolvedValue(true),
         canAcceptWork: vi.fn().mockReturnValue(true),
       },
-      emitter: new ChainEventEmitter(),
+      emitter: new BeaconEngineEventBus(),
     };
   });
 

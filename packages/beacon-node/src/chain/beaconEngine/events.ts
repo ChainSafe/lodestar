@@ -1,9 +1,9 @@
 import {EventEmitter} from "node:events";
-import {routes} from "@lodestar/api";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {RootHex, Slot} from "@lodestar/types";
-import {StrictEventEmitterSingleArg} from "../../util/strictEvents.js";
+import {BuilderIndex, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {ChainViewUpdate} from "../chainView/interface.js";
+import type {SerializedLightClientData} from "./interface.js";
 
 export enum BeaconEngineEvent {
   fatalError = "fatalError",
@@ -11,6 +11,12 @@ export enum BeaconEngineEvent {
   chainViewUpdated = "chainViewUpdated",
   earliestAvailableSlotUpdated = "earliestAvailableSlotUpdated",
   headUpdated = "headUpdated",
+  chainReorg = "chainReorg",
+  proposerSlashingProduced = "proposerSlashingProduced",
+  fastConfirmation = "fastConfirmation",
+  lightClientOptimisticUpdate = "lightClientOptimisticUpdate",
+  lightClientFinalityUpdate = "lightClientFinalityUpdate",
+  checkpoint = "checkpoint",
 }
 
 export type HeadUpdate = {
@@ -25,13 +31,43 @@ export type HeadUpdate = {
   executionOptimistic: boolean;
 };
 
+export type ChainReorg = {
+  slot: Slot;
+  depth: number;
+  oldHeadBlock: RootHex;
+  newHeadBlock: RootHex;
+  oldHeadState: RootHex;
+  newHeadState: RootHex;
+  epoch: Epoch;
+  executionOptimistic: boolean;
+};
+
+export type FastConfirmation = {block: RootHex; slot: Slot; currentSlot: Slot};
+
+export type ExecutionPayloadImported = {
+  slot: Slot;
+  builderIndex: BuilderIndex;
+  blockHash: RootHex;
+  blockRoot: RootHex;
+  executionOptimistic: boolean;
+};
+
 export type BeaconEngineEventData = {
   [BeaconEngineEvent.headUpdated]: HeadUpdate;
   [BeaconEngineEvent.earliestAvailableSlotUpdated]: Slot;
   [BeaconEngineEvent.fatalError]: Error;
-  [BeaconEngineEvent.executionPayloadImported]: routes.events.EventData[routes.events.EventType.executionPayload];
+  [BeaconEngineEvent.executionPayloadImported]: ExecutionPayloadImported;
   [BeaconEngineEvent.chainViewUpdated]: ChainViewUpdate;
+  [BeaconEngineEvent.chainReorg]: ChainReorg;
+  [BeaconEngineEvent.proposerSlashingProduced]: phase0.ProposerSlashing;
+  [BeaconEngineEvent.fastConfirmation]: FastConfirmation;
+  [BeaconEngineEvent.lightClientOptimisticUpdate]: SerializedLightClientData;
+  [BeaconEngineEvent.lightClientFinalityUpdate]: SerializedLightClientData;
+  [BeaconEngineEvent.checkpoint]: phase0.Checkpoint;
 };
 
-export type IBeaconEngineEventBus = StrictEventEmitterSingleArg<BeaconEngineEventData>;
+export type IBeaconEngineEventBus = StrictEventEmitter<
+  EventEmitter,
+  {[K in BeaconEngineEvent]: (data: BeaconEngineEventData[K]) => void}
+>;
 export class BeaconEngineEventBus extends (EventEmitter as {new (): IBeaconEngineEventBus}) {}

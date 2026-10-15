@@ -101,13 +101,12 @@ export function createTestBeaconEngine(
     clock,
     pubkeyCache,
     cpStateDatastore,
-    emitter,
     signal,
     db,
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
   });
-  const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter});
+  const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter, clock});
   return {
     ...modules,
     serializedCache,

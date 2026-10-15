@@ -5,17 +5,19 @@ import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
-import {testLogger} from "@lodestar/logger/test-utils";
+import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {defer, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
+import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import * as blockValidation from "../../../../src/chain/validation/block.js";
+import * as proposerSlashingValidation from "../../../../src/chain/validation/proposerSlashing.js";
 import * as voluntaryExitValidation from "../../../../src/chain/validation/voluntaryExit.js";
 import {BeaconDb} from "../../../../src/db/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
@@ -128,12 +130,40 @@ describe("bytes-based engine startup", () => {
     chain = new BeaconChain(opts, {...dependencies, earliestAvailableSlot: 10});
     if (!engine) throw Error("Expected initialized engine");
     expect(chain.earliestAvailableSlot).toBe(10);
-    engine.events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 20);
-    engine.events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 15);
+    engine.emitter.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 20);
+    engine.emitter.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 15);
     expect(chain.earliestAvailableSlot).toBe(20);
     await chain.close();
-    engine.events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 30);
+    engine.emitter.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 30);
+    chain.emitter.emit(ChainEvent.earliestAvailableSlotUpdated, 40);
     expect(chain.earliestAvailableSlot).toBe(20);
+  });
+
+  it("applies a view update once before downstream chain listeners read the head", async () => {
+    const dependencies = await initializeTestChain(opts, modules);
+    const beaconChain = new BeaconChain(opts, dependencies);
+    chain = beaconChain;
+    const core = getBeaconEngineCore(beaconChain.beaconEngine);
+    const snapshot = core.getChainViewSnapshot();
+    const head = {
+      ...snapshot.head,
+      slot: snapshot.head.slot + 1,
+      parentRoot: snapshot.head.blockRoot,
+      blockRoot: toRootHex(Buffer.alloc(32, 1)),
+    };
+    const update = {...snapshot, revision: snapshot.revision + 1, head, blocks: [head]};
+    const onUpdate = vi.fn(() => {
+      expect(beaconChain.getHead()).toEqual(head);
+      expect(toRootHex(beaconChain.getStatus().headRoot)).toBe(head.blockRoot);
+    });
+    beaconChain.emitter.on(ChainEvent.chainViewUpdated, onUpdate);
+
+    core.emitter.emit(BeaconEngineEvent.chainViewUpdated, structuredClone(update));
+
+    expect(onUpdate).toHaveBeenCalledExactlyOnceWith(update);
+    await beaconChain.close();
+    core.emitter.emit(BeaconEngineEvent.chainViewUpdated, update);
+    expect(onUpdate).toHaveBeenCalledOnce();
   });
 
   it("notifies the facade once when fork choice becomes irrecoverable", async () => {
@@ -156,7 +186,7 @@ describe("bytes-based engine startup", () => {
     const nodes = engine.forkChoice.getAllNodes();
     const getAllNodes = vi.spyOn(engine.forkChoice, "getAllNodes");
     const updated = vi.fn();
-    engine.events.on(BeaconEngineEvent.chainViewUpdated, updated);
+    engine.emitter.on(BeaconEngineEvent.chainViewUpdated, updated);
     nodes[0].weight = 42n;
     vi.spyOn(engine.forkChoice, "updateAndGetHead").mockReturnValue({head: nodes[0]});
     engine.getProposerHead(0);
@@ -249,10 +279,100 @@ describe("bytes-based engine startup", () => {
       builderIndex: 0,
       executionOptimistic: false,
     };
-    chain.beaconEngine.events.emit(BeaconEngineEvent.executionPayloadImported, event);
+    getBeaconEngineCore(chain.beaconEngine).emitter.emit(BeaconEngineEvent.executionPayloadImported, event);
     expect(imported).toHaveBeenCalledExactlyOnceWith(event);
-    chain.beaconEngine.events.emit(BeaconEngineEvent.executionPayloadImported, {...event, slot: -64});
+    getBeaconEngineCore(chain.beaconEngine).emitter.emit(BeaconEngineEvent.executionPayloadImported, {
+      ...event,
+      slot: -64,
+    });
     expect(imported).toHaveBeenCalledOnce();
+  });
+
+  it.each([true, false])(
+    "forwards fast confirmation from fork choice with finalized anchor=%s",
+    async (isFinalized) => {
+      const state = stateTransition
+        .createBeaconStateView({
+          config: modules.config,
+          stateBytes: modules.anchorStateBytes,
+          nativeStateTransition: false,
+        })
+        .processSlots(1);
+      clock.setSlot(1);
+      const options = {...opts, fastConfirmation: true};
+      const dependencies = await initializeTestChain(options, {
+        ...modules,
+        anchorStateBytes: state.serialize(),
+        isAnchorStateFinalized: isFinalized,
+      });
+      chain = new BeaconChain(options, dependencies);
+      const core = getBeaconEngineCore(chain.beaconEngine);
+      const notification = vi.fn();
+      const publicEvent = vi.fn();
+      core.emitter.on(BeaconEngineEvent.fastConfirmation, notification);
+      chain.emitter.on(routes.events.EventType.fastConfirmation, publicEvent);
+
+      chain.beaconEngine.pauseFastConfirmation();
+
+      const finalized = core.forkChoice.getFinalizedBlock();
+      const expected = {block: finalized.blockRoot, slot: finalized.slot, currentSlot: 1};
+      expect(notification).toHaveBeenCalledExactlyOnceWith(expected);
+      expect(publicEvent).toHaveBeenCalledExactlyOnceWith(expected);
+    }
+  );
+
+  it.each([true, false])("publishes a locally produced slashing only after successful validation=%s", async (valid) => {
+    const dependencies = await initializeTestChain(opts, modules);
+    chain = new BeaconChain(opts, dependencies);
+    const core = getBeaconEngineCore(chain.beaconEngine);
+    const validation = defer<Uint8Array>();
+    const validate = vi
+      .spyOn(proposerSlashingValidation, "validateApiProposerSlashing")
+      .mockReturnValue(validation.promise);
+    const debug = vi.spyOn(modules.logger, LogLevel.debug);
+    for (const value of [1, 2]) {
+      const header = ssz.phase0.SignedBeaconBlockHeader.defaultValue();
+      header.message.slot = 1;
+      header.message.bodyRoot.fill(value);
+      core.seenBlockProposers.observeBlockRoot(
+        1,
+        0,
+        toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.message)),
+        header
+      );
+    }
+    const notification = vi.fn();
+    const publicEvent = vi.fn();
+    const publish = vi.fn(() => expect(core.opPool.hasSeenProposerSlashing(0)).toBe(true));
+    core.emitter.on(BeaconEngineEvent.proposerSlashingProduced, notification);
+    chain.emitter.on(routes.events.EventType.proposerSlashing, publicEvent);
+    chain.emitter.on(ChainEvent.publishProposerSlashing, publish);
+
+    chain.processProposerEquivocation(1, 0);
+    chain.processProposerEquivocation(1, 0);
+    expect(validate).toHaveBeenCalledOnce();
+    expect(notification).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+    if (valid) {
+      validation.resolve(Buffer.alloc(32));
+      await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
+      const slashing = validate.mock.calls[0][0];
+      expect(notification).toHaveBeenCalledExactlyOnceWith(slashing);
+      expect(publicEvent).toHaveBeenCalledExactlyOnceWith(slashing);
+    } else {
+      const error = Error("invalid slashing");
+      validation.reject(error);
+      await vi.waitFor(() =>
+        expect(debug).toHaveBeenCalledWith(
+          "Produced proposer slashing is not valid",
+          {slot: 1, proposerIndex: 0},
+          error
+        )
+      );
+      expect(notification).not.toHaveBeenCalled();
+      expect(publicEvent).not.toHaveBeenCalled();
+      expect(publish).not.toHaveBeenCalled();
+    }
   });
 
   it("owns a bounded signature cache independent of the facade cache", async () => {

@@ -19,6 +19,7 @@ import {
   ProducedBlockSource,
   Root,
   RootHex,
+  SSEPayloadAttributes,
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
@@ -48,7 +49,6 @@ import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeI
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
-import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {BlockProcessOpts} from "../options.js";
@@ -59,7 +59,6 @@ import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "..
 import {GossipBlockValidationResult} from "../validation/block.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {ValidatorMonitorAttestation, ValidatorMonitorBlock, ValidatorMonitorOpts} from "../validatorMonitor.js";
-import {IBeaconEngineEventBus} from "./events.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import {IBeaconEngineOptions} from "./options.js";
@@ -77,11 +76,6 @@ export type HeadParentPayload = {
 /** The bootstrap or attested header slot determines the SSZ fork and network context. */
 export type SerializedLightClientData = {data: Uint8Array; slot: Slot};
 
-export type BeaconEngineModules = {
-  core: IBeaconEngineCore;
-  emitter: ChainEventEmitter;
-};
-
 export type BeaconEngineCoreModules = {
   serializedCache?: SerializedCache;
   blockSerializedCache?: BlockSerializedCache;
@@ -98,8 +92,6 @@ export type BeaconEngineCoreModules = {
   clock: IClock;
   pubkeyCache: PubkeyCache;
   cpStateDatastore: CPStateDatastore;
-  // TODO - beacon engine: emitter is facade infra; forkChoice/regen should not depend on it inside the engine.
-  emitter: ChainEventEmitter;
   signal: AbortSignal;
   db: IBeaconEngineDb;
   validatorMonitorOpts: ValidatorMonitorOpts | null;
@@ -120,7 +112,6 @@ export type ImportBlockResult = {
     currentDutyDependentRoot: string;
     executionOptimistic: boolean;
   } | null;
-  reorg: ReorgEventData | null;
   blockSummary: ProtoBlock | null;
   newHead: ProtoBlock;
   proposerIndexNextSlot: number | null;
@@ -175,7 +166,7 @@ export type PrepareNextSlotOpts = {produceSSEPayloadAttributes: boolean};
 
 export type PrepareNextSlotResult = {
   daPruneParent?: ProtoBlock;
-  payloadAttributes?: routes.events.EventData[routes.events.EventType.payloadAttributes];
+  payloadAttributes?: {version: ForkName; data: SSEPayloadAttributes};
 };
 
 export enum LateCanonicalBlockReason {
@@ -229,7 +220,6 @@ export interface IBeaconEngineCore {
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
   persistAnchorState(): Promise<void>;
   initializeFromAnchor(): Promise<EngineBootstrap>;
-  readonly events: IBeaconEngineEventBus;
   getChainViewSnapshot(): ChainViewSnapshot;
   readonly config: BeaconConfig;
 

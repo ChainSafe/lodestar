@@ -4,7 +4,6 @@ import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {GossipValidationStatus} from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
-import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -44,7 +43,6 @@ describe("BeaconEngineCore gossip monitoring", () => {
       dataColumnDir: "test",
       pubkeyCache: modules.chain.pubkeyCache,
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
-      emitter: new ChainEventEmitter(),
       signal: new AbortController().signal,
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,

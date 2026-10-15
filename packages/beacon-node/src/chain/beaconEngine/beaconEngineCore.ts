@@ -101,7 +101,6 @@ import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
 import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
-import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
 import {persistAnchorState} from "../initState.js";
@@ -276,7 +275,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   blockStateCache!: BlockStateCache;
   checkpointStateCache!: CheckpointStateCache;
   checkpointBalancesCache!: CheckpointBalancesCache;
-  readonly events = new BeaconEngineEventBus();
+  readonly emitter = new BeaconEngineEventBus();
   private chainViewPublisher?: ChainViewPublisher;
   private reportedIrrecoverableError?: Error;
 
@@ -292,10 +291,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     const error = this.forkChoice.irrecoverableError;
     if (error && error !== this.reportedIrrecoverableError) {
       this.reportedIrrecoverableError = error;
-      this.events.emit(BeaconEngineEvent.fatalError, error);
+      this.emitter.emit(BeaconEngineEvent.fatalError, error);
     }
     const update = this.chainViewPublisher?.update(blocksChanged);
-    if (update) this.events.emit(BeaconEngineEvent.chainViewUpdated, update);
+    if (update) this.emitter.emit(BeaconEngineEvent.chainViewUpdated, update);
   }
 
   forkChoice!: IForkChoice;
@@ -357,8 +356,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
   readonly serializedCache?: SerializedCache;
   readonly blockSerializedCache: BlockSerializedCache;
-  // TODO - beacon engine: migrate remaining facade events to core notifications handled by BeaconEngine.
-  readonly emitter: ChainEventEmitter;
 
   readonly executionEngine: IExecutionEngine;
   builderApiClient!: BuilderApiClient;
@@ -400,7 +397,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.clock = clock;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     this.pubkeyCache = pubkeyCache;
-    this.emitter = modules.emitter;
     // [beacon-engine] Previously owned by BeaconChain; LightClientServer is now owned by BeaconEngineCore.
     this.lightClientServer = opts.disableLightClientServer
       ? undefined
@@ -510,7 +506,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       metrics,
       clock,
       cpStateDatastore,
-      emitter,
       signal,
       db,
       validatorMonitorOpts,
@@ -599,7 +594,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
     this.forkChoice = initializeForkChoice(
       config,
-      emitter,
+      this.emitter,
       clock.currentSlot,
       anchorState,
       isAnchorStateFinalized,
@@ -630,7 +625,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       metrics,
       validatorMonitor: this.validatorMonitor,
       logger,
-      emitter,
+      emitter: this.emitter,
       signal,
     });
 
@@ -683,7 +678,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.clock.on(ClockEvent.slot, this.onSlot);
     this.clock.on(ClockEvent.epoch, this.onEpoch);
     this.signal.addEventListener("abort", this.onValidatorMonitorAbort, {once: true});
-    this.emitter.on(ChainEvent.checkpoint, this.checkpointListener);
+    this.emitter.on(BeaconEngineEvent.checkpoint, this.checkpointListener);
 
     // The engine reports metrics for its own (internal) op pools.
     if (metrics) {
@@ -1918,7 +1913,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.pendingPersistence = undefined;
     if (this.onSlot) this.clock.off(ClockEvent.slot, this.onSlot);
     if (this.onEpoch) this.clock.off(ClockEvent.epoch, this.onEpoch);
-    this.emitter?.off(ChainEvent.checkpoint, this.checkpointListener);
+    this.emitter?.off(BeaconEngineEvent.checkpoint, this.checkpointListener);
     await this.historicalStateRegen?.close();
     await this.bls?.close();
     this.anchorState = undefined;
@@ -2349,8 +2344,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         return;
       }
 
-      this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
-      this.emitter.emit(ChainEvent.publishProposerSlashing, proposerSlashing);
+      this.emitter.emit(BeaconEngineEvent.proposerSlashingProduced, proposerSlashing);
       this.metrics?.opPool.proposerSlashingsProduced.inc();
       this.logger.info("Produced proposer slashing from observed equivocation", {
         slot: blockSlot,
@@ -2398,7 +2392,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
       const executionOptimistic = isOptimisticBlock(head);
 
-      this.events.emit(BeaconEngineEvent.headUpdated, {
+      this.emitter.emit(BeaconEngineEvent.headUpdated, {
         slot: head.slot,
         blockRoot: head.blockRoot,
         stateRoot: head.stateRoot,

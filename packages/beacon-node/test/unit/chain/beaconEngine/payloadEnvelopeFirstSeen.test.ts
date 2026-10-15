@@ -8,7 +8,6 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {BlockInputNoData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
-import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../../../../src/chain/errors/index.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import * as blockValidation from "../../../../src/chain/validation/block.js";
@@ -35,7 +34,6 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       dataColumnDir: "test",
       pubkeyCache: modules.chain.pubkeyCache,
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
-      emitter: new ChainEventEmitter(),
       signal: new AbortController().signal,
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,

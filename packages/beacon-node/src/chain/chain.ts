@@ -43,7 +43,6 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
-import {BeaconEngineEvent, BeaconEngineEventData} from "./beaconEngine/events.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
 import {EngineBootstrap} from "./beaconEngine/initialization.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
@@ -119,8 +118,6 @@ export type BeaconChainModules = {
   cpStateDatastore: CPStateDatastore;
   custodyConfig: CustodyConfig;
 };
-
-const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -250,10 +247,6 @@ export class BeaconChain implements IBeaconChain {
     // TODO - beacon engine: replace shared builder HTTP client when the worker transport is introduced.
     this.builderApiClient = modules.builderApiClient;
     this.chainView = new ChainView(beaconEngine.getChainViewSnapshot(), logger);
-    beaconEngine.events.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
-    beaconEngine.events.on(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
-    beaconEngine.events.on(BeaconEngineEvent.fatalError, this.onEngineFatalError);
-    beaconEngine.events.on(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
 
@@ -300,6 +293,9 @@ export class BeaconChain implements IBeaconChain {
 
     this.clock = clock;
     this.emitter = emitter;
+    this.emitter.on(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
+    this.emitter.on(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
+    this.emitter.on(ChainEvent.fatalError, this.onEngineFatalError);
 
     this.getBlobsTracker = new GetBlobsTracker({
       logger,
@@ -373,10 +369,9 @@ export class BeaconChain implements IBeaconChain {
     // Engine owns teardown of its resources (historical-state regen + BLS pool).
     await this.beaconEngine.close();
     await this.bls.close();
-    this.beaconEngine.events.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
-    this.beaconEngine.events.off(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
-    this.beaconEngine.events.off(BeaconEngineEvent.fatalError, this.onEngineFatalError);
-    this.beaconEngine.events.off(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
+    this.emitter.off(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
+    this.emitter.off(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
+    this.emitter.off(ChainEvent.fatalError, this.onEngineFatalError);
 
     // Since we don't persist unfinalized fork-choice,
     // we can abort any ongoing unfinalized block writes.
@@ -972,15 +967,6 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
-  // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.
-  private onExecutionPayloadImported = (
-    event: BeaconEngineEventData[BeaconEngineEvent.executionPayloadImported]
-  ): void => {
-    if (this.clock.currentSlot - event.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
-      this.emitter.emit(routes.events.EventType.executionPayload, event);
-    }
-  };
-
   private onEngineFatalError = (error: Error): void => {
     this.processShutdownCallback(error);
   };
@@ -989,7 +975,6 @@ export class BeaconChain implements IBeaconChain {
     const previousJustified = this.getJustifiedCheckpoint();
     const previousFinalized = this.getFinalizedCheckpoint();
     this.chainView.applyUpdate(update);
-    this.emitter.emit(ChainEvent.chainViewUpdated, update);
     if (update.justified.epoch !== previousJustified.epoch || update.justified.rootHex !== previousJustified.rootHex) {
       this.emitter.emit(ChainEvent.forkChoiceJustified, this.getJustifiedCheckpoint());
     }

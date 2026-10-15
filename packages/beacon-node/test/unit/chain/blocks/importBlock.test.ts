@@ -29,7 +29,6 @@ describe.each([false, true])("BeaconChain block cache cleanup (beaconEngineWorke
   const importResult: ImportBlockResult = {
     headChanged: false,
     head: null,
-    reorg: null,
     blockSummary: null,
     newHead: zeroProtoBlock,
     proposerIndexNextSlot: null,

@@ -12,10 +12,10 @@ import {
 import {BLSPubkey, Epoch, Root, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {fromHex, sleep, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../../constants/index.js";
-import {ChainEvent} from "../emitter.js";
 import {RegenCaller} from "../regen/index.js";
 import {CheckpointHex} from "../stateCache/types.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
+import {BeaconEngineEvent} from "./events.js";
 
 type GetHeadStateAtEpoch = (epoch: Epoch, regenCaller: RegenCaller) => Promise<IBeaconStateView>;
 
@@ -245,20 +245,20 @@ async function waitForCheckpointState(
     return cpState;
   }
   const cp = {epoch: cpHex.epoch, root: fromHex(cpHex.rootHex)};
-  // if not, wait for ChainEvent.checkpoint event until the relative timeout elapses
+  // if not, wait for a checkpoint event until the relative timeout elapses
   let listener: ((eventCp: phase0.Checkpoint) => void) | null = null;
   const foundCPState = await Promise.race([
     new Promise((resolve) => {
       listener = (eventCp) => {
         resolve(ssz.phase0.Checkpoint.equals(eventCp, cp));
       };
-      this.emitter.once(ChainEvent.checkpoint, listener);
+      this.emitter.once(BeaconEngineEvent.checkpoint, listener);
     }),
     sleep(timeoutMs),
   ]);
 
   if (listener != null) {
-    this.emitter.off(ChainEvent.checkpoint, listener);
+    this.emitter.off(BeaconEngineEvent.checkpoint, listener);
   }
 
   if (foundCPState === true) {

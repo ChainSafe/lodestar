@@ -7,7 +7,7 @@ import {IBeaconStateView} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {FrequencyStateArchiveStrategy} from "../../../../src/chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {ChainEvent} from "../../../../src/chain/emitter.js";
+import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
 import {initDevState} from "../../../../src/node/utils/state.js";
@@ -77,7 +77,7 @@ describe("BeaconEngineCore checkpoint maintenance", () => {
     "maintains caches synchronously and defers shuffling with disableArchiveOnCheckpoint=%s",
     async (disableArchiveOnCheckpoint) => {
       engine.opts.disableArchiveOnCheckpoint = disableArchiveOnCheckpoint;
-      engine.emitter.emit(ChainEvent.checkpoint, checkpoint);
+      engine.emitter.emit(BeaconEngineEvent.checkpoint, checkpoint);
 
       expect(engine.regen.getCheckpointStateSync).toHaveBeenCalledExactlyOnceWith({
         epoch: checkpoint.epoch,
@@ -105,7 +105,7 @@ describe("BeaconEngineCore checkpoint maintenance", () => {
 
   it("maintains caches even when the event's checkpoint state is missing", () => {
     vi.mocked(engine.regen.getCheckpointStateSync).mockReturnValue(null);
-    engine.emitter.emit(ChainEvent.checkpoint, checkpoint);
+    engine.emitter.emit(BeaconEngineEvent.checkpoint, checkpoint);
 
     expect(engine.regen.onCheckpoint).toHaveBeenCalledOnce();
     expect(FrequencyStateArchiveStrategy.prototype.onCheckpoint).toHaveBeenCalledOnce();
@@ -122,9 +122,9 @@ describe("BeaconEngineCore checkpoint maintenance", () => {
       vi.mocked(FrequencyStateArchiveStrategy.prototype.onCheckpoint).mockRejectedValueOnce(error);
     }
     const listener = vi.fn();
-    engine.emitter.on(ChainEvent.checkpoint, listener);
+    engine.emitter.on(BeaconEngineEvent.checkpoint, listener);
 
-    expect(() => engine.emitter.emit(ChainEvent.checkpoint, checkpoint)).not.toThrow();
+    expect(() => engine.emitter.emit(BeaconEngineEvent.checkpoint, checkpoint)).not.toThrow();
     expect(listener).toHaveBeenCalledExactlyOnceWith(checkpoint);
     await vi.advanceTimersByTimeAsync(1);
     expect(logger.error).toHaveBeenCalledExactlyOnceWith("Error during state archive", {}, error);
@@ -132,12 +132,12 @@ describe("BeaconEngineCore checkpoint maintenance", () => {
   });
 
   it.each(["abort", "close"])("stops checkpoint maintenance after %s", async (shutdown) => {
-    engine.emitter.emit(ChainEvent.checkpoint, checkpoint);
+    engine.emitter.emit(BeaconEngineEvent.checkpoint, checkpoint);
     await vi.advanceTimersByTimeAsync(1);
     if (shutdown === "abort") abortController.abort();
     else await engine.close();
 
-    engine.emitter.emit(ChainEvent.checkpoint, checkpoint);
+    engine.emitter.emit(BeaconEngineEvent.checkpoint, checkpoint);
     expect(engine.regen.onCheckpoint).toHaveBeenCalledOnce();
     expect(FrequencyStateArchiveStrategy.prototype.onCheckpoint).toHaveBeenCalledOnce();
   });

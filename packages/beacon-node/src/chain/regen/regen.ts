@@ -14,8 +14,8 @@ import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
+import {BeaconEngineEvent, IBeaconEngineEventBus} from "../beaconEngine/events.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
-import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
@@ -27,7 +27,7 @@ export type RegenModules = {
   blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;
   config: ChainForkConfig;
-  emitter: ChainEventEmitter;
+  emitter: IBeaconEngineEventBus;
   logger: Logger;
   metrics: Metrics | null;
   validatorMonitor: ValidatorMonitor | null;
@@ -301,7 +301,7 @@ async function processSlotsByCheckpoint(
     checkpointStateCache: CheckpointStateCache;
     metrics: Metrics | null;
     validatorMonitor: ValidatorMonitor | null;
-    emitter: ChainEventEmitter;
+    emitter: IBeaconEngineEventBus;
     config: ChainForkConfig;
     logger: Logger;
   },
@@ -332,7 +332,7 @@ export async function processSlotsToNearestCheckpoint(
     checkpointStateCache: CheckpointStateCache;
     metrics: Metrics | null;
     validatorMonitor: ValidatorMonitor | null;
-    emitter: ChainEventEmitter | null;
+    emitter: IBeaconEngineEventBus | null;
     config: ChainForkConfig;
     logger: Logger | null;
   },
@@ -374,7 +374,7 @@ export async function processSlotsToNearestCheckpoint(
     const cp = getCheckpointFromState(checkpointState);
     checkpointStateCache.add(cp, checkpointState);
     // consumers should not mutate state ever
-    emitter?.emit(ChainEvent.checkpoint, cp);
+    emitter?.emit(BeaconEngineEvent.checkpoint, cp);
 
     if (count >= 1) {
       // in normal condition, we only process 1 epoch so never reach this

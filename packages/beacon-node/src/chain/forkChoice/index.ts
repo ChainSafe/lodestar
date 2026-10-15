@@ -1,4 +1,3 @@
-import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ExecutionStatus,
@@ -24,7 +23,7 @@ import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {BeaconEngineEvent, IBeaconEngineEventBus} from "../beaconEngine/events.js";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only
@@ -36,12 +35,9 @@ export enum ForkchoiceCaller {
   importBlock = "import_block",
 }
 
-/**
- * Fork Choice extended with a ChainEventEmitter
- */
 export function initializeForkChoice(
   config: ChainForkConfig,
-  emitter: ChainEventEmitter,
+  emitter: IBeaconEngineEventBus,
   currentSlot: Slot,
   state: IBeaconStateView,
   isFinalizedState: boolean,
@@ -81,7 +77,7 @@ export function initializeForkChoice(
  */
 export function initializeForkChoiceFromFinalizedState(
   config: ChainForkConfig,
-  emitter: ChainEventEmitter,
+  emitter: IBeaconEngineEventBus,
   currentSlot: Slot,
   state: IBeaconStateView,
   opts: ForkChoiceOpts,
@@ -119,13 +115,7 @@ export function initializeForkChoiceFromFinalizedState(
       justifiedBalances,
       justifiedBalancesGetter,
       stateGetter,
-      {
-        // justified/finalized are emitted facade-side from the head ProtoBlock (FFI-honest — a native
-        // engine can't emit into the JS emitter). Only fast-confirmation stays wired here for now.
-        onFastConfirmation: ({block, slot, currentSlot}) =>
-          emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
-        onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
-      }
+      {onFastConfirmation: (data) => emitter.emit(BeaconEngineEvent.fastConfirmation, data)}
     ),
 
     ProtoArray.initialize(
@@ -180,7 +170,7 @@ export function initializeForkChoiceFromFinalizedState(
  */
 export function initializeForkChoiceFromUnfinalizedState(
   config: ChainForkConfig,
-  emitter: ChainEventEmitter,
+  emitter: IBeaconEngineEventBus,
   currentSlot: Slot,
   unfinalizedState: IBeaconStateView,
   opts: ForkChoiceOpts,
@@ -218,14 +208,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     justifiedBalances,
     justifiedBalancesGetter,
     stateGetter,
-    {
-      // justified/finalized are emitted facade-side from the head ProtoBlock (FFI-honest — a native
-      // engine can't emit into the JS emitter). Only fast-confirmation stays wired here for now.
-      // TODO - beacon engine: remove this
-      onFastConfirmation: ({block, slot, currentSlot}) =>
-        emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
-      onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
-    }
+    {onFastConfirmation: (data) => emitter.emit(BeaconEngineEvent.fastConfirmation, data)}
   );
 
   // this is the same to the finalized state
