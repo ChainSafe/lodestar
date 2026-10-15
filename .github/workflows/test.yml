@@ -115,9 +115,6 @@ jobs:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
-      - name: Download execution proof fixtures
-        run: pnpm download-execution-proofs-fixtures
-
       - name: Unit tests
         # id: unit_tests
         # Rever to "pnpm test:unit" when finished debugging core dumps
@@ -142,6 +139,22 @@ jobs:
           fail_ci_if_error: true
           verbose: true # optional (default = false)
           flags: "unit"
+
+  eip8025-tests:
+    name: EIP-8025 Tests
+    needs: type-checks
+    runs-on: warp-ubuntu-2204-x64-4x
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: 24
+
+      - name: Download execution proof fixtures
+        run: pnpm download-execution-proofs-fixtures
+
+      - name: EIP-8025 native tests
+        run: pnpm test:8025
 
   e2e-tests:
     name: E2E Tests

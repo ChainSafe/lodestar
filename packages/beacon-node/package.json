@@ -86,6 +86,7 @@
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run --project unit --project unit-minimal",
+    "test:8025": "vitest run --project eip8025",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "test:sim": "vitest run test/sim/**/*.test.ts",
     "test:sim:blobs": "vitest run test/sim/4844-interop.test.ts",

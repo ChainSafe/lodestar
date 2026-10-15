@@ -27,6 +27,7 @@
     "docs:lint:fix": "prettier '**/*.md' --write",
     "test": "pnpm -r --workspace-concurrency=1 run test",
     "test:unit": "vitest run --project unit --project unit-minimal",
+    "test:8025": "vitest run --project eip8025",
     "test:browsers": "vitest run --project browser",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "download-spec-tests": "pnpm -r download-spec-tests",

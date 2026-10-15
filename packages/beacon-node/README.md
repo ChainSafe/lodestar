@@ -22,8 +22,10 @@ You will need to go over the [specification](https://github.com/ethereum/consens
 
 ## Tests
 
-From the repository root, run `pnpm download-execution-proofs-fixtures` before running `pnpm test:unit` or
-the native proof tests. See the [fixture instructions](./test/fixtures/executionProofs.md).
+Run `pnpm test:unit` for unit tests. Execution-proof fixtures are not required.
+
+For real native proof verification, run `pnpm download-execution-proofs-fixtures` followed by
+`pnpm test:8025` from the repository root. See the [fixture instructions](./test/fixtures/executionProofs.md).
 
 ## Contributors
 
