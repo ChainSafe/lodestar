@@ -110,7 +110,11 @@ export class InclusionListService {
         try {
           signedInclusionLists.push(await this.validatorStore.signInclusionList(duty, inclusionList));
         } catch (e) {
-          this.logger.error("Error signing inclusion list", {slot: duty.slot}, e as Error);
+          this.logger.error(
+            "Error signing inclusion list",
+            {slot: duty.slot, validatorIndex: duty.validatorIndex},
+            e as Error
+          );
         }
       })
     );
@@ -125,7 +129,11 @@ export class InclusionListService {
           transactions: transactions.length,
         });
       } catch (e) {
-        this.logger.error("Error publishing inclusionList", {slot}, e as Error);
+        this.logger.error(
+          "Error publishing inclusionList",
+          {slot, validatorIndex, transactions: transactions.length},
+          e as Error
+        );
       }
     }
   }
