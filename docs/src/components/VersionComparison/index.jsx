@@ -6,6 +6,7 @@ import Link from "@docusaurus/Link";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import {useHistory, useLocation} from "@docusaurus/router";
 import {
+  builderSince,
   cliReferenceUrl,
   commandPaths,
   compareOptions,
@@ -44,7 +45,7 @@ function Comparison({snapshots, defaultVersion}) {
         snapshot &&
         !snapshot.commands.builder &&
         snapshot.id !== "current" &&
-        semver.lt(snapshot.id, "1.46.0-0")
+        semver.lt(snapshot.id, `${builderSince}-0`)
     );
   const legacy = oldSnapshot?.source === "reference" || newSnapshot?.source === "reference";
   const labels = {
@@ -155,7 +156,7 @@ function Comparison({snapshots, defaultVersion}) {
             {changes === null ? (
               <div className="alert alert--warning" role="status">
                 {builderUnavailable
-                  ? "The builder client is not available before v1.46.0."
+                  ? `The builder client is not available before v${builderSince}.`
                   : "The CLI reference is missing for one of these versions."}
               </div>
             ) : (

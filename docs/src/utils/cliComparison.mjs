@@ -6,6 +6,8 @@ export const commandPaths = {
   builder: "run/builder-management/builder-cli",
 };
 
+export const builderSince = "1.46.0";
+
 export const fieldLabels = {
   description: "Description",
   type: "Type",
