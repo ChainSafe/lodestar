@@ -1,0 +1,103 @@
+name: Consensus client interop
+
+on:
+  workflow_dispatch:
+    inputs:
+      lodestar_image:
+        description: "Lodestar image to test"
+        default: "chainsafe/lodestar:next"
+        required: true
+      el_image:
+        description: "geth image behind both beacon nodes"
+        default: "ethpandaops/geth:master"
+        required: true
+  schedule:
+    - cron: "23 5 * * *" # after the ethpandaops images are rebuilt and the engine API interop run, off the full hour since those queue
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cl-interop-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  LODESTAR_IMAGE: ${{ inputs.lodestar_image || 'chainsafe/lodestar:next' }}
+  EL_IMAGE: ${{ inputs.el_image || 'ethpandaops/geth:master' }}
+  # Pinned by hand so a red run means a client change, not an upstream Kurtosis release
+  KURTOSIS_VERSION: "1.20.0"
+
+jobs:
+  interop:
+    name: ${{ matrix.client }}
+    runs-on: warp-ubuntu-2204-x64-4x
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # default-branch images, rebuilt nightly by ethpandaops, so every run sees the latest client code.
+          # Clients that compile the preset in need their minimal build.
+          - client: lighthouse
+            bn_image: ethpandaops/lighthouse:unstable
+            vc_image: ethpandaops/lighthouse:unstable
+          - client: prysm
+            bn_image: ethpandaops/prysm-beacon-chain:develop-minimal
+            vc_image: ethpandaops/prysm-validator:develop-minimal
+          - client: teku
+            bn_image: ethpandaops/teku:master
+            vc_image: ethpandaops/teku:master
+          - client: nimbus
+            bn_image: ethpandaops/nimbus-eth2:unstable-minimal
+            vc_image: ethpandaops/nimbus-validator-client:unstable-minimal
+          # the package cannot run grandine as a separate validator client yet, node 3 is Lodestar on both sides
+          - client: grandine
+            bn_image: ethpandaops/grandine:develop-minimal
+            vc_image: "-"
+          # validator client only, node 2 is Lodestar on both sides
+          - client: vero
+            bn_image: "-"
+            vc_image: ghcr.io/serenita-org/vero:master
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Set up Kurtosis
+        run: |
+          echo "deb [trusted=yes] https://sdk.kurtosis.com/kurtosis-cli-release-artifacts/ /" \
+            | sudo tee /etc/apt/sources.list.d/kurtosis.list
+          sudo apt-get update
+          sudo apt-get install -y "kurtosis-cli=${KURTOSIS_VERSION}"
+          kurtosis analytics disable
+          docker info --format 'docker {{.ServerVersion}}, registry mirrors {{.RegistryConfig.Mirrors}}'
+
+      # gloas joins once the other clients are ready for it, the script already supports it
+      - name: Fulu at genesis
+        run: ./scripts/kurtosis/cl-interop/run.sh ${{ matrix.client }} ${{ matrix.bn_image }} ${{ matrix.vc_image }} fulu
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "| client | beacon node (node 2) | validator client (node 3) | scenario | result | details |"
+            echo "| --- | --- | --- | --- | --- | --- |"
+            cat temp/cl-interop/*/summary.md 2>/dev/null || echo "| ${{ matrix.client }} | \`${{ matrix.bn_image }}\` | \`${{ matrix.vc_image }}\` | | ❌ fail | no verdict produced, see the run log |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cl-interop-${{ matrix.client }}
+          path: temp/cl-interop/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kurtosis clean -a || true
+          kurtosis engine stop || true

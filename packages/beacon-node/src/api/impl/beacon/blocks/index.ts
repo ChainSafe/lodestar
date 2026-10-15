@@ -6,6 +6,7 @@ import {
   ForkPostBellatrix,
   ForkPostFulu,
   ForkPostGloas,
+  ForkPreBellatrix,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -674,7 +675,7 @@ export function getBeaconBlockApi({
       return {
         data: isForkPostBellatrix(fork)
           ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix & ForkPreGloas>)
-          : block,
+          : (block as SignedBeaconBlock<ForkPreBellatrix>),
         meta: {
           executionOptimistic,
           finalized,
@@ -692,8 +693,14 @@ export function getBeaconBlockApi({
     },
 
     async getBlockRoot({blockId}) {
-      // Fast path: From head state already available in memory get historical blockRoot
-      const slot = typeof blockId === "string" ? parseInt(blockId) : blockId;
+      // Fast path: From head state already available in memory get historical blockRoot.
+      // A 0x id is a root. parseInt() accepts that prefix as hex and can return a slot.
+      const slot =
+        typeof blockId === "number"
+          ? blockId
+          : blockId.toLowerCase().startsWith("0x")
+            ? Number.NaN
+            : parseInt(blockId, 10);
       if (!Number.isNaN(slot)) {
         const head = chain.forkChoice.getHead();
 
