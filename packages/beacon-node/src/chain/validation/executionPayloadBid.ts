@@ -383,7 +383,6 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] bid.inclusionListBits is inclusive of our timely inclusion lists for
   // (bid.slot - 1, get_shuffling_dependent_root(store, bid.parent_block_root, epoch)).
-  // Moved earlier than the spec ordering, it needs no state
   if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
     const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
     const inclusionListSlot = bid.slot - 1;
