@@ -43,7 +43,7 @@ describe("getExecutionProof", () => {
         executionRequests: signedEnvelope.message.executionRequests,
       }),
       successfulValidation: true,
-      chainId: config.DEPOSIT_CHAIN_ID,
+      chainId: BigInt(config.DEPOSIT_CHAIN_ID),
       schemaId: STATELESS_INPUT_SCHEMA_ID,
     });
     expect(ssz.eip8025.PublicInput.serialize(proof.publicInput)).toHaveLength(43);

@@ -1,7 +1,6 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
-import * as executionProofVerifier from "@chainsafe/lodestar-z/execution-proof-verifier";
 import {
   init as initNativeMetrics,
   registerLocalValidator as registerNativeLocalValidator,
@@ -258,9 +257,7 @@ export class BeaconNode {
 
     const executionProofVerifiers = opts.chain.executionProofVerifiers ?? [];
     const proofEngine =
-      executionProofVerifiers.length > 0
-        ? new NativeProofEngine(executionProofVerifier, executionProofVerifiers, metrics)
-        : undefined;
+      executionProofVerifiers.length > 0 ? new NativeProofEngine(executionProofVerifiers, metrics) : undefined;
 
     const chain = new BeaconChain(opts.chain, {
       privateKey,
