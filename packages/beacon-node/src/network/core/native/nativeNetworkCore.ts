@@ -5,7 +5,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
-import {ClockEvent} from "../../../util/clock.js";
 import {PeerAction} from "../../peers/index.js";
 import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
 import {BoundedServing} from "../../reqresp/serving/handler.js";
@@ -46,16 +45,11 @@ export class NativeNetworkCore implements INetworkCore {
   static async init(modules: NativeNetworkInit): Promise<NativeNetworkCore> {
     const {opts, config, privateKey, clock, initialStatus, initialCustodyGroupCount, activeValidatorCount} = modules;
     const {peerStoreDir, logger} = modules;
-    const {
-      application,
-      network: networkConfig,
-      directPeers,
-      bootPeers,
-    } = createNativeConfig(
+    const {application, directPeers, bootPeers} = createNativeConfig(
       opts,
       config,
       privateKey,
-      clock.currentSlot,
+      clock.genesisTime,
       initialStatus,
       initialCustodyGroupCount,
       activeValidatorCount
@@ -74,15 +68,7 @@ export class NativeNetworkCore implements INetworkCore {
       core.logs = new NativeLogs(modules.logger.child({module: "native"}));
       // The factory calls the host only from later macrotasks, so every consumer below attaches first.
       core.network = createNativeNetwork({...application, rememberedPeers, logLevel: core.logs.level}, core.host);
-      core.intent = new NativeIntent(
-        core.network,
-        application,
-        networkConfig,
-        clock,
-        core.modules.opts,
-        initialStatus,
-        core.onFailure
-      );
+      core.intent = new NativeIntent(core.network);
       core.reports = new NativePeerReports(core.network);
       core.gossip = new NativeGossip(core.network, config, core.modules.opts, core.onOperationError, core.reports);
       core.peers = new NativePeers(core.network, config, modules.events, core.network.limits.peerCapacity);
@@ -94,8 +80,6 @@ export class NativeNetworkCore implements INetworkCore {
           return core.close();
         })
         .catch((error: unknown) => modules.logger.error("Native network terminal cleanup failed", {}, error as Error));
-      modules.clock.on(ClockEvent.slot, core.onSlot);
-      core.intent.refresh();
       queueMicrotask(() => {
         if (!core.closed) void core.connectConfiguredPeers(directPeers, bootPeers).catch(core.onFailure);
       });
@@ -149,13 +133,6 @@ export class NativeNetworkCore implements INetworkCore {
     return this.network.closed.then((result) => this.failure ?? (result.reason === "failed" ? result.error : null));
   }
 
-  private readonly onSlot = (): void => {
-    try {
-      this.intent.refresh();
-    } catch (error) {
-      this.onFailure(error);
-    }
-  };
   /** Delivered work goes to the adapter's consumers; once it closes, the binding only settles. */
   private readonly host: NativeHost = {
     capacity: () => ({
@@ -211,7 +188,6 @@ export class NativeNetworkCore implements INetworkCore {
       const errors: unknown[] = [];
       for (const cleanup of [
         () => this.network?.stopDelivery(),
-        () => this.modules.clock.off(ClockEvent.slot, this.onSlot),
         () => this.gossip?.close(),
         () => this.requests?.close(),
         () => this.peers?.close(),

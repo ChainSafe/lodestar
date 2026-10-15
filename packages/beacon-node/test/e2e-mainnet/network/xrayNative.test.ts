@@ -60,7 +60,7 @@ test.skipIf(!process.env.XRAY_BINARY)(
         new Uint8Array(32)
       );
       local = await nativeNetworkFixture(config);
-      remote = await nativeNetworkProcess(config, "libp2p");
+      remote = await nativeNetworkProcess(config, local.chain.clock.genesisTime, "libp2p");
       const identity = await remote.network.getNetworkIdentity();
       const network = local.network;
       await network.connectToPeer(identity.peerId, identity.p2pAddresses);

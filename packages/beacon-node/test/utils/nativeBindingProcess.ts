@@ -58,7 +58,7 @@ export async function nativeBindingProcess(config: Omit<NativeApplicationConfig,
     ]);
     return {
       identity,
-      applyIntent: (value: NativeLocalIntent, slot: bigint) => call<void>("applyIntent", [value, slot]),
+      applyIntent: (value: NativeLocalIntent) => call<void>("applyIntent", [value]),
       getPeers: () => call<NativePeerSnapshot>("getPeers", []),
       async close() {
         try {

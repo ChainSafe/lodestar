@@ -16,7 +16,7 @@ it("starts on Hoodi before its scheduled Gloas fork", async () => {
     {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"]},
     scheduled,
     key,
-    120_000 * SLOTS_PER_EPOCH,
+    Math.floor(Date.now() / 1000) - 120_000 * SLOTS_PER_EPOCH * (scheduled.SLOT_DURATION_MS / 1000),
     ssz.fulu.Status.defaultValue(),
     scheduled.CUSTODY_REQUIREMENT,
     3_000_000

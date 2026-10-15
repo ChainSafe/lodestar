@@ -1,10 +1,14 @@
 import {mkdirSync, writeFileSync} from "node:fs";
 import {join} from "node:path";
+import {privateKeyFromRaw} from "@libp2p/crypto/keys";
 import {defaultTopicScoreParams} from "@libp2p/gossipsub/score";
 import {createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE} from "@lodestar/params";
 import {kinds} from "../../src/network/core/native/config.js";
 import {computeGossipPeerScoreParamsByKind, gossipScoreThresholds} from "../../src/network/gossip/scoringParameters.js";
+import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/interface.js";
+import {computeSubscribedSubnet} from "../../src/network/subnets/util.js";
+import {CustodyConfig} from "../../src/util/dataColumns.js";
 
 // Run with node --import tsx, LODESTAR_PRESET=mainnet or minimal, and the lodestar-z testdata directory as argv[2].
 const destination = process.argv[2];
@@ -69,3 +73,29 @@ const cases = [
 });
 mkdirSync(destination, {recursive: true});
 writeFileSync(join(destination, `application_scores_${ACTIVE_PRESET}.json`), `${JSON.stringify(cases, null, 2)}\n`);
+
+const subnetMask = (indices: number[]): string =>
+  indices.reduce((mask, index) => mask | (1n << BigInt(index)), 0n).toString(16);
+const subscriptionConfig = createBeaconConfig({}, new Uint8Array(32));
+const subnetCases = [1, 2, 255].map((secret) => {
+  const bytes = new Uint8Array(32);
+  bytes[31] = secret;
+  const nodeId = computeNodeIdFromPrivateKey(privateKeyFromRaw(bytes));
+  const offset = nodeId[31];
+  return {
+    secret,
+    node_id: [...nodeId],
+    epochs: [0, 255 - offset, 256 - offset, 256, 1024].map((epoch) => ({
+      epoch,
+      subnets: computeSubscribedSubnet(subscriptionConfig, nodeId, epoch),
+    })),
+    custody: [1, subscriptionConfig.NUMBER_OF_CUSTODY_GROUPS].map((count) => {
+      const custody = new CustodyConfig({config: subscriptionConfig, nodeId, initialCustodyGroupCount: count});
+      return {count, groups: subnetMask(custody.sampleGroups), subnets: subnetMask(custody.sampledSubnets)};
+    }),
+  };
+});
+writeFileSync(
+  join(destination, `application_subnets_${ACTIVE_PRESET}.json`),
+  `${JSON.stringify(subnetCases, null, 2)}\n`
+);

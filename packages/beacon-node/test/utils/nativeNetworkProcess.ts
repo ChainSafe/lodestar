@@ -8,7 +8,6 @@ import {deserialize, serialize} from "node:v8";
 import {BeaconConfig, ChainConfig} from "@lodestar/config";
 import {SignedBeaconBlock, phase0} from "@lodestar/types";
 import {NativeBackendOptions} from "../../src/network/core/native/options.js";
-import {NetworkEvent, NetworkEventData} from "../../src/network/events.js";
 import {INetwork} from "../../src/network/interface.js";
 
 export type PeerConfiguration = {
@@ -17,10 +16,11 @@ export type PeerConfiguration = {
   backend: "native" | "libp2p";
   native: NativeBackendOptions;
   addresses: string[];
+  genesisTime: number;
 };
 export type PeerCommand =
   | {
-      method: "getNetworkIdentity" | "subscribeGossipCoreTopics" | "scrapeMetrics" | "validationResults" | "close";
+      method: "getNetworkIdentity" | "subscribeGossipCoreTopics" | "scrapeMetrics" | "close";
       args: [];
     }
   | {method: "connectToPeer"; args: [string, string[]]}
@@ -31,6 +31,7 @@ export type PeerCommand =
 
 export async function nativeNetworkProcess(
   config: BeaconConfig,
+  genesisTime: number,
   backend: "native" | "libp2p" = "native",
   native: NativeBackendOptions = {},
   addresses = ["/ip4/127.0.0.1/udp/0/quic-v1"]
@@ -39,7 +40,7 @@ export async function nativeNetworkProcess(
   const chain = Object.fromEntries(Object.entries(config).filter(([key]) => key === key.toUpperCase()));
   await writeFile(
     join(directory, "config"),
-    serialize({chain, root: config.genesisValidatorsRoot, backend, native, addresses})
+    serialize({chain, root: config.genesisValidatorsRoot, backend, native, addresses, genesisTime})
   );
   const child = spawn(
     process.execPath,
@@ -136,8 +137,6 @@ export async function nativeNetworkProcess(
           hasSeenProposerSlashing: (index: number) => call<boolean>({method: "hasSeenProposerSlashing", args: [index]}),
         },
       },
-      validationResults: () =>
-        call<NetworkEventData[NetworkEvent.gossipMessageValidationResult][]>({method: "validationResults", args: []}),
     };
   } catch (error) {
     process.removeListener("exit", kill);

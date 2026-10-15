@@ -4,7 +4,6 @@ import {setTimeout as delay} from "node:timers/promises";
 import {deserialize, serialize} from "node:v8";
 import {test} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
-import {NetworkEvent, NetworkEventData} from "../../src/network/events.js";
 import {nativeNetworkFixture} from "./nativeNetwork.js";
 import type {PeerCommand, PeerConfiguration} from "./nativeNetworkProcess.js";
 
@@ -19,13 +18,10 @@ test.skipIf(!peerDirectory)(
       createBeaconConfig(config.chain, config.root),
       config.backend,
       config.native,
-      config.addresses
+      config.addresses,
+      undefined,
+      config.genesisTime
     );
-    const results: NetworkEventData[NetworkEvent.gossipMessageValidationResult][] = [];
-    node.network.events.on(NetworkEvent.gossipMessageValidationResult, (result) => {
-      if (results.length >= 128) throw new Error("Native peer event capacity");
-      results.push(result);
-    });
     let closed = false;
     const active = new Map<string, Promise<void>>();
     let failure: unknown;
@@ -60,9 +56,6 @@ test.skipIf(!peerDirectory)(
             break;
           case "hasSeenProposerSlashing":
             value = node.chain.opPool.hasSeenProposerSlashing(args[0]);
-            break;
-          case "validationResults":
-            value = results.slice();
             break;
           case "close":
             await node.close();

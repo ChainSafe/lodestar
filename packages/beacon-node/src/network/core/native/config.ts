@@ -6,19 +6,15 @@ import {
   IpEndpoint,
   NativeApplicationConfig,
   NativeDiscoveryConfig,
-  NativeLocalState,
   NativeTopicKind,
+  NetworkStatusUpdate,
 } from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Status} from "@lodestar/types";
-import {CustodyConfig} from "../../../util/dataColumns.js";
-import {NetworkConfig} from "../../networkConfig.js";
 import {NetworkOptions} from "../../options.js";
-import {computeNodeIdFromPrivateKey} from "../../subnets/interface.js";
 import {NativePeerAddress, parseNativeEndpoint, parseNativePeerAddress} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
-import {nativeFork} from "./protocols.js";
 
 export const UINT64_MAX = 18446744073709551615n;
 const MiB = 1024 * 1024;
@@ -38,36 +34,21 @@ export const kinds: readonly NativeTopicKind[] = [
   "data_column_sidecar",
 ];
 
-export function nativeLocalState(
-  config: BeaconConfig,
-  status: Status,
-  slot: number,
-  custodyGroupCount: number
-): NativeLocalState {
-  nativeInteger(slot, "clock slot", Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER);
-  const fork = config.getForkName(slot);
-  nativeFork(fork);
+export function nativeStatus(status: Status): NetworkStatusUpdate {
+  const root = (value: Uint8Array): Uint8Array => {
+    if (!(value instanceof Uint8Array) || value.length !== 32)
+      throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "status root length"});
+    return Uint8Array.from(value);
+  };
   return {
-    status: {
-      finalizedRoot: status.finalizedRoot,
-      headRoot: status.headRoot,
-      finalizedEpoch: BigInt(nativeInteger(status.finalizedEpoch, "finalized epoch")),
-      headSlot: BigInt(nativeInteger(status.headSlot, "head slot")),
-      earliestAvailableSlot: isForkPostFulu(fork)
-        ? BigInt(
-            nativeInteger(
-              "earliestAvailableSlot" in status ? status.earliestAvailableSlot : NaN,
-              "earliest available slot"
-            )
-          )
+    finalizedRoot: root(status.finalizedRoot),
+    headRoot: root(status.headRoot),
+    finalizedEpoch: BigInt(nativeInteger(status.finalizedEpoch, "finalized epoch")),
+    headSlot: BigInt(nativeInteger(status.headSlot, "head slot")),
+    earliestAvailableSlot:
+      "earliestAvailableSlot" in status
+        ? BigInt(nativeInteger(status.earliestAvailableSlot, "earliest available slot"))
         : null,
-    },
-    metadata: {
-      sequenceNumber: 0n,
-      attnets: new Uint8Array(8),
-      syncnets: 0,
-      custodyGroupCount: BigInt(nativeInteger(custodyGroupCount, "custody groups", config.NUMBER_OF_CUSTODY_GROUPS, 1)),
-    },
   };
 }
 
@@ -224,14 +205,13 @@ export function createNativeConfig(
   opts: NetworkOptions,
   config: BeaconConfig,
   key: PrivateKey,
-  slot: number,
+  genesisTime: number,
   status: Status,
   custodyGroupCount: number,
   activeValidatorCount: number
 ): {
   /** The network selects the log level from its logger at initialization. */
   application: Omit<NativeApplicationConfig, "logLevel">;
-  network: NetworkConfig;
   directPeers: NativePeerAddress[];
   bootPeers: NativePeerAddress[];
 } {
@@ -245,13 +225,6 @@ export function createNativeConfig(
   if (key.type !== "secp256k1")
     throw new NativeNetworkError({code: NativeNetworkErrorCode.CONFIGURATION, resource: "secp256k1 identity required"});
   nativeInteger(activeValidatorCount, "active validators", Number.MAX_SAFE_INTEGER, 1);
-  const local = nativeLocalState(config, status, slot, custodyGroupCount);
-  const nodeId = computeNodeIdFromPrivateKey(key);
-  const network: NetworkConfig = {
-    config,
-    nodeId,
-    custodyConfig: new CustodyConfig({config, nodeId, initialCustodyGroupCount: custodyGroupCount}),
-  };
   const listeners = nativeListeners(opts.localMultiaddrs, true);
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
     traceGossip: opts.native?.traceGossip ?? false,
@@ -275,8 +248,23 @@ export function createNativeConfig(
     activeValidatorCount,
     bind: listeners,
     discovery: discovery(opts, key),
-    initialSlot: BigInt(Math.max(0, slot)),
-    local,
+    genesisTime: BigInt(nativeInteger(genesisTime, "genesis time")),
+    subscriptions: {
+      subscribeAllSubnets: opts.subscribeAllSubnets ?? false,
+      slotsToSubscribeBeforeAggregatorDuty: opts.slotsToSubscribeBeforeAggregatorDuty,
+      targetGroupPeers: opts.targetGroupPeers,
+    },
+    local: {
+      status: nativeStatus(status),
+      metadata: {
+        sequenceNumber: 0n,
+        attnets: new Uint8Array(8),
+        syncnets: 0,
+        custodyGroupCount: BigInt(
+          nativeInteger(custodyGroupCount, "custody groups", config.NUMBER_OF_CUSTODY_GROUPS, 1)
+        ),
+      },
+    },
     serveLightClients: !(opts.disableLightClientServer ?? false),
     identify: {agentVersion: opts.private ? "" : `Lodestar/${opts.version ?? "dev"}`, protocolVersion: "eth2/1.0.0"},
     resources: {
@@ -306,5 +294,5 @@ export function createNativeConfig(
     },
     identitySecretKey: Uint8Array.from(key.raw),
   };
-  return {application, network, directPeers, bootPeers};
+  return {application, directPeers, bootPeers};
 }

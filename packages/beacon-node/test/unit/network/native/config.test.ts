@@ -28,12 +28,12 @@ async function fixture() {
   const opts = {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"]};
   return {
     key,
-    create: (options: Partial<NetworkOptions> = {}, slot = 0, validators = 16) =>
+    create: (options: Partial<NetworkOptions> = {}, genesisTime = Math.floor(Date.now() / 1000), validators = 16) =>
       createNativeConfig(
         {...opts, ...options},
         config,
         key,
-        slot,
+        genesisTime,
         ssz.fulu.Status.defaultValue(),
         config.CUSTODY_REQUIREMENT,
         validators
@@ -90,16 +90,18 @@ describe("native configuration boundary", () => {
     const {key} = await fixture();
     const scheduled = createBeaconConfig({...config, GLOAS_FORK_EPOCH: epoch}, config.genesisValidatorsRoot);
     expect(() =>
-      createNativeConfig(
-        {...defaultNetworkOptions, tcp: false},
-        scheduled,
-        key,
-        epoch * SLOTS_PER_EPOCH,
-        ssz.fulu.Status.defaultValue(),
-        scheduled.CUSTODY_REQUIREMENT,
-        16
+      createSettlingNetwork(
+        createNativeConfig(
+          {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"]},
+          scheduled,
+          key,
+          Math.floor(Date.now() / 1000) - epoch * SLOTS_PER_EPOCH * (config.SLOT_DURATION_MS / 1000),
+          ssz.fulu.Status.defaultValue(),
+          scheduled.CUSTODY_REQUIREMENT,
+          16
+        ).application
       )
-    ).toThrow("Unsupported native fork gloas");
+    ).toThrow("UnsupportedNetworkFork");
   });
 
   it("fits the fixed native plan at maximum gossip work capacity", async () => {
@@ -116,9 +118,10 @@ describe("native configuration boundary", () => {
   });
   it("preserves effective genesis fork selection before genesis and deduplicates same-epoch forks", async () => {
     const node = await fixture();
-    const application = node.create({}, -1);
+    const genesis = Math.floor(Date.now() / 1000) + 60;
+    const application = node.create({}, genesis);
     try {
-      expect(application.initialSlot).toBe(0n);
+      expect(application.genesisTime).toBe(BigInt(genesis));
       expect(application.local).not.toHaveProperty("fork");
       expect(application.local.status).not.toHaveProperty("forkDigest");
       expect(application).not.toHaveProperty("requestForks");

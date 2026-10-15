@@ -28,7 +28,8 @@ export async function nativeNetworkFixture(
   localMultiaddrs = ["/ip4/127.0.0.1/udp/0/quic-v1"],
   processShutdownCallback: (error: Error) => void = (error) => {
     throw error;
-  }
+  },
+  genesisTime = Math.floor(Date.now() / 1000)
 ) {
   const directory = await mkdtemp(join(tmpdir(), "lodestar-native-integration-"));
   const logger = testLogger(backend);
@@ -57,7 +58,7 @@ export async function nativeNetworkFixture(
     const db = new BeaconDb(config, controller, {dataColumnDir: join(directory, "columns"), logger});
     await db.init();
     const privateKey = await generateKeyPair("secp256k1");
-    const state = generateState({slot: 0}, config, true);
+    const state = generateState({slot: 0, genesisTime}, config, true);
     const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
     pubkeyCache.syncPubkeys(state.validators.getAllReadonlyValues());
     const cached = createCachedBeaconState(state, {config: beaconConfig, pubkeyCache}, {skipSyncPubkeys: true});
