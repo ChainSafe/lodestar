@@ -17,6 +17,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
+  BuilderIndex,
   ValidatorIndex,
   getBuilderStatus,
   getValidatorStatus,
@@ -29,6 +30,7 @@ import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
 import {
   filterStateValidatorsByStatus,
+  getBuilderIndexByPubkey,
   getStateBuilderIndex,
   getStateResponseWithRegen,
   getStateValidatorIndex,
@@ -170,8 +172,12 @@ export function getBeaconStateApi({
       if (builderIds.length) {
         assertUniqueItems(builderIds, "Duplicate builder IDs provided");
 
+        // There is no builder pubkey cache, scan the registry at most once per request
+        let builderIndexByPubkey: Map<string, BuilderIndex> | null = null;
+        const getBuilderIndexByPubkeyMap = () => (builderIndexByPubkey ??= getBuilderIndexByPubkey(state));
+
         for (const id of builderIds) {
-          const resp = getStateBuilderIndex(id, state);
+          const resp = getStateBuilderIndex(id, state, getBuilderIndexByPubkeyMap);
           if (resp.valid) {
             const builderIndex = resp.builderIndex;
             const builder = state.getBuilder(builderIndex);
