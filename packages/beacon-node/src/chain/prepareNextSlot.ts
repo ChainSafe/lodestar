@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {getFinalizedExecutionBlockHash, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {PayloadStatus, getFinalizedExecutionBlockHash, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   ForkPostBellatrix,
   ForkSeq,
@@ -239,6 +239,15 @@ export class PrepareNextSlotScheduler {
         // Apply parent payload once here as it's reused by EL prep and SSE emit below
         let stateAfterParentPayload: IBeaconStateViewBellatrix = preparedState;
         if (isStatePostGloas(preparedState)) {
+          // Fork choice only demotes a FULL variant that must not be extended once the clock reaches the next slot
+          // (get_payload_status_tiebreaker), so the proposer at prepareSlot builds on EMPTY. Prepare on that variant
+          if (
+            updatedHead.payloadStatus === PayloadStatus.FULL &&
+            updatedHead.slot + 1 === prepareSlot &&
+            !this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot)
+          ) {
+            updatedHead = this.chain.forkChoice.getBlockHex(updatedHead.blockRoot, PayloadStatus.EMPTY) ?? updatedHead;
+          }
           // Spec: should_build_on_full(store, head, slot) - see produceBlockBody.ts for context.
           if (this.chain.forkChoice.shouldBuildOnFull(updatedHead, prepareSlot)) {
             parentBlockHash = preparedState.latestExecutionPayloadBid.blockHash;
