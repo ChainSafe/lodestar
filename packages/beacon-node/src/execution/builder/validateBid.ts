@@ -41,6 +41,7 @@ export async function validateBuilderApiExecutionPayloadBid(
   }
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
+  const fork = chain.config.getForkName(bid.slot);
   const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry, getParentExecutionRequests} = request;
 
   if (bid.slot !== slot) {
@@ -78,7 +79,7 @@ export async function validateBuilderApiExecutionPayloadBid(
 
   // Same check as bid gossip (only_timely=True), not the proposer's full view from validator.md: a list released
   // after the deadline would void every bid, and a high bid that went stale after gossip could crowd out the rest unpaid
-  if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
+  if (isForkPostHeze(fork)) {
     const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
     const inclusionListSlot = bid.slot - 1;
     const dependentRoot = getShufflingDependentRoot(
