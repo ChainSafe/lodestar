@@ -1540,8 +1540,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             secFromSlot >= 0 && secFromSlot * 1000 < config.getInclusionListDueMs(config.getForkName(slot));
 
           const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
-          metrics?.opPool.inclusionListStore.insertOutcome.inc({insertOutcome});
-          metrics?.opPool.inclusionListStore.size.set(chain.inclusionListStore.size);
+          metrics?.inclusionListStore.insertOutcome.inc({insertOutcome});
+          metrics?.inclusionListStore.size.set(chain.inclusionListStore.size);
 
           chain.emitter.emit(routes.events.EventType.inclusionList, {
             version: config.getForkName(slot),

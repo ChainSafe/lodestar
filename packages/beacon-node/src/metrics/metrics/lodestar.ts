@@ -1217,18 +1217,18 @@ export function createLodestarMetrics(
       help: "Total engine API requests by transport",
       labelNames: ["transport"],
     }),
+    inclusionListStore: {
+      size: register.gauge({
+        name: "lodestar_inclusion_list_store_size",
+        help: "Current number of inclusion lists retained in the InclusionListStore",
+      }),
+      insertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
+        name: "lodestar_inclusion_list_store_insert_outcome_total",
+        help: "Total number of InclusionListStore insertions by outcome",
+        labelNames: ["insertOutcome"],
+      }),
+    },
     opPool: {
-      inclusionListStore: {
-        size: register.gauge({
-          name: "lodestar_oppool_inclusion_list_store_size",
-          help: "Current number of inclusion lists retained in the InclusionListStore",
-        }),
-        insertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
-          name: "lodestar_oppool_inclusion_list_store_insert_outcome_total",
-          help: "Total number of InclusionListStore insertions by outcome",
-          labelNames: ["insertOutcome"],
-        }),
-      },
       aggregatedAttestationPool: {
         size: register.gauge({
           name: "lodestar_oppool_aggregated_attestation_pool_size",
