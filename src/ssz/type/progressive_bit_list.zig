@@ -190,53 +190,48 @@ pub fn ProgressiveBitListType() type {
                 return std.mem.readInt(usize, hash[0..8], .little);
             }
 
+            /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
             pub fn toValue(allocator: std.mem.Allocator, node: Node.Id, pool: *Node.Pool, out: *Type) !void {
                 const bit_len = try length(node, pool);
-                const chunk_count = (bit_len + 255) / 256;
-                if (chunk_count == 0) {
-                    try out.resize(allocator, 0);
-                    return;
+                const chunk_count = bit_len / 256 + @intFromBool(bit_len % 256 != 0);
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), chunk_count);
+                var value = Self.default_value;
+                errdefer Self.deinit(allocator, &value);
+                try value.resize(allocator, bit_len);
+                var offset: usize = 0;
+                while (try it.next()) |chunk| {
+                    const count = @min(32, value.data.items.len - offset);
+                    @memcpy(value.data.items[offset..][0..count], chunk.getRoot(pool)[0..count]);
+                    offset += count;
                 }
-
-                const byte_length = (bit_len + 7) / 8;
-
-                const nodes = try allocator.alloc(Node.Id, chunk_count);
-                defer allocator.free(nodes);
-
-                const contents_node = try node.getLeft(pool);
-                try progressive.getNodes(pool, contents_node, nodes);
-
-                try out.resize(allocator, bit_len);
-                for (0..chunk_count) |i| {
-                    const start_idx = i * 32;
-                    const remaining_bytes = byte_length - start_idx;
-
-                    // Determine how many bytes to copy for this chunk
-                    const bytes_to_copy = @min(remaining_bytes, 32);
-
-                    // Copy data if there are bytes to copy
-                    if (bytes_to_copy > 0) {
-                        @memcpy(out.data.items[start_idx..][0..bytes_to_copy], nodes[i].getRoot(pool)[0..bytes_to_copy]);
-                    }
-                }
+                std.debug.assert(offset == value.data.items.len);
+                out.* = value;
             }
 
             pub fn serializedSize(node: Node.Id, pool: *Node.Pool) !usize {
-                const allocator = pool.allocator;
-                var value = Self.default_value;
-                defer Self.deinit(allocator, &value);
-
-                try toValue(allocator, node, pool, &value);
-                return Self.serializedSize(&value);
+                return (try length(node, pool)) / 8 + 1;
             }
 
             pub fn serializeIntoBytes(node: Node.Id, pool: *Node.Pool, out: []u8) !usize {
-                const allocator = pool.allocator;
-                var value = Self.default_value;
-                defer Self.deinit(allocator, &value);
-
-                try toValue(allocator, node, pool, &value);
-                return Self.serializeIntoBytes(&value, out);
+                const bit_len = try length(node, pool);
+                const size = bit_len / 8 + 1;
+                if (out.len < size) return error.InvalidSize;
+                const byte_len = bit_len / 8 + @intFromBool(bit_len % 8 != 0);
+                const chunk_count = bit_len / 256 + @intFromBool(bit_len % 256 != 0);
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), chunk_count);
+                var offset: usize = 0;
+                while (try it.next()) |chunk| {
+                    const count = @min(32, byte_len - offset);
+                    @memcpy(out[offset..][0..count], chunk.getRoot(pool)[0..count]);
+                    offset += count;
+                }
+                std.debug.assert(offset == byte_len);
+                if (bit_len % 8 == 0) {
+                    out[size - 1] = 1;
+                } else {
+                    out[size - 1] |= @as(u8, 1) << @intCast(bit_len % 8);
+                }
+                return size;
             }
 
             pub fn deserializeFromBytes(pool: *Node.Pool, data: []const u8) !Node.Id {

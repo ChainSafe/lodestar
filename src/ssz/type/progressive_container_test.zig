@@ -523,3 +523,117 @@ test "memory_safety: progressive container decoding reclaims partially built fie
     }
     try std.testing.expect(succeeded);
 }
+
+test "progressive container tree reads stream sparse fields" {
+    const allocator = std.testing.allocator;
+    const active = comptime blk: {
+        var flags: [256]u1 = @splat(0);
+        flags[0] = 1;
+        flags[85] = 1;
+        flags[255] = 1;
+        break :blk flags;
+    };
+    const Fixed = FixedProgressiveContainerType(struct { a: UintType(64), b: BoolType(), c: UintType(8) }, &active);
+    const Variable = VariableProgressiveContainerType(struct { a: UintType(64), b: FixedProgressiveListType(UintType(8)), c: UintType(8) }, &active);
+    inline for (.{ Fixed, Variable }) |ST| {
+        var value = ST.default_value;
+        defer if (ST == Variable) ST.deinit(allocator, &value);
+        value.a = 123;
+        value.c = 45;
+        if (ST == Fixed) value.b = true else try value.b.appendSlice(allocator, &.{ 2, 3, 4 });
+        var failing = std.testing.FailingAllocator.init(allocator, .{});
+        var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = failing.allocator(), .pool_size = 2048 });
+        defer pool.deinit();
+        const root = try ST.tree.fromValue(&pool, &value);
+        defer pool.unref(root);
+        failing.fail_index = failing.alloc_index;
+        var output_allocator = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 1 });
+        var actual = ST.default_value;
+        defer if (ST == Variable) ST.deinit(output_allocator.allocator(), &actual);
+        if (ST == Fixed) try ST.tree.toValue(root, &pool, &actual) else try ST.tree.toValue(output_allocator.allocator(), root, &pool, &actual);
+        try std.testing.expect(ST.equals(&value, &actual));
+        try std.testing.expect(!output_allocator.has_induced_failure);
+        const size = ST.serializedSize(&value);
+        try std.testing.expectEqual(size, try ST.tree.serializedSize(root, &pool));
+        const bytes = try allocator.alloc(u8, size);
+        defer allocator.free(bytes);
+        const expected = try allocator.alloc(u8, size);
+        defer allocator.free(expected);
+        _ = ST.serializeIntoBytes(&value, expected);
+        try std.testing.expectEqual(size, try ST.tree.serializeIntoBytes(root, &pool, bytes));
+        try std.testing.expectEqualSlices(u8, expected, bytes);
+        try std.testing.expectError(error.InvalidSize, ST.tree.serializeIntoBytes(root, &pool, bytes[0 .. size - 1]));
+        try std.testing.expect(!failing.has_induced_failure);
+    }
+}
+
+test "memory_safety: progressive container tree.toValue cleans partial values on OOM" {
+    const allocator = std.testing.allocator;
+    const Container = VariableProgressiveContainerType(struct {
+        a: FixedProgressiveListType(UintType(8)),
+        b: FixedListType(UintType(8), 8, .{}),
+    }, &.{ 1, 0, 1 });
+    var source = Container.default_value;
+    defer Container.deinit(allocator, &source);
+    try source.a.appendSlice(allocator, &.{ 1, 2, 3 });
+    try source.b.appendSlice(allocator, &.{ 4, 5 });
+
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 64 });
+    defer pool.deinit();
+    const root = try Container.tree.fromValue(&pool, &source);
+    defer pool.unref(root);
+
+    var saw_failure = false;
+    var saw_success = false;
+    for (0..8) |fail_after| {
+        var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = fail_after });
+        var out = Container.default_value;
+        defer Container.deinit(failing.allocator(), &out);
+        Container.tree.toValue(failing.allocator(), root, &pool, &out) catch |err| {
+            try std.testing.expectEqual(error.OutOfMemory, err);
+            try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
+            saw_failure = true;
+            continue;
+        };
+        try std.testing.expect(Container.equals(&source, &out));
+        saw_success = true;
+        break;
+    }
+    try std.testing.expect(saw_failure);
+    try std.testing.expect(saw_success);
+}
+
+test "memory_safety: progressive container tree reads validate terminators before publishing values" {
+    const allocator = std.testing.allocator;
+    const Fixed = FixedProgressiveContainerType(struct { a: UintType(64), b: UintType(8) }, &.{ 1, 0, 1 });
+    const Variable = VariableProgressiveContainerType(struct {
+        a: UintType(64),
+        b: FixedProgressiveListType(UintType(8)),
+    }, &.{ 1, 0, 1 });
+    inline for (.{ Fixed, Variable }) |ST| {
+        var source = ST.default_value;
+        defer if (ST == Variable) ST.deinit(allocator, &source);
+        source.a = 123;
+        if (ST == Fixed) source.b = 45 else try source.b.appendSlice(allocator, &.{ 4, 5 });
+        var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 64 });
+        defer pool.deinit();
+        const good = try ST.tree.fromValue(&pool, &source);
+        defer pool.unref(good);
+        const bad_leaf = try pool.createLeafFromUint(1);
+        const bad = try good.setNode(&pool, @enumFromInt(11), bad_leaf);
+        defer pool.unref(bad);
+
+        var failing = std.testing.FailingAllocator.init(allocator, .{});
+        var out = ST.default_value;
+        defer if (ST == Variable) ST.deinit(failing.allocator(), &out);
+        if (ST == Fixed) {
+            try std.testing.expectError(error.InvalidTerminatorNode, ST.tree.toValue(bad, &pool, &out));
+        } else {
+            try std.testing.expectError(error.InvalidTerminatorNode, ST.tree.toValue(failing.allocator(), bad, &pool, &out));
+            try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
+        }
+        try std.testing.expect(ST.equals(&ST.default_value, &out));
+        var bytes: [16]u8 = undefined;
+        try std.testing.expectError(error.InvalidTerminatorNode, ST.tree.serializeIntoBytes(bad, &pool, &bytes));
+    }
+}

@@ -164,43 +164,6 @@ pub const NodeIterator = struct {
     }
 };
 
-pub fn getNodes(pool: *Node.Pool, root: Node.Id, out: []Node.Id) !void {
-    const subtree_count = subtreeCount(out.len);
-    var n = root;
-    var l: usize = 0;
-    for (0..subtree_count) |subtree_i| {
-        const subtree_length = @min(subtreeLength(subtree_i), out.len - l);
-        const subtree_depth = subtreeDepth(subtree_i);
-        const subtree_root = n.getLeft(pool) catch |err| {
-            if (@intFromEnum(n) == 0) {
-                for (l..l + subtree_length) |pos| {
-                    if (pos < out.len) {
-                        out[pos] = @enumFromInt(0);
-                    }
-                }
-                l += subtree_length;
-                n = @enumFromInt(0);
-                continue;
-            }
-            return err;
-        };
-        if (subtree_depth == 0) {
-            if (subtree_length != 1) {
-                return error.InvalidSubtreeLength;
-            }
-            out[l] = subtree_root;
-        } else {
-            try subtree_root.getNodesAtDepth(pool, subtree_depth, 0, out[l .. l + subtree_length]);
-        }
-        l += subtree_length;
-        n = try n.getRight(pool);
-    }
-
-    if (!std.mem.eql(u8, &n.getRoot(pool).*, &[_]u8{0} ** 32)) {
-        return error.InvalidTerminatorNode;
-    }
-}
-
 /// Builds progressive subtrees with bounded scratch.
 /// Call `deinit` after success or failure; a successful `finish` transfers the root to the caller.
 /// Abandon the builder if a pool operation fails.

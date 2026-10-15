@@ -236,25 +236,19 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
         };
 
         pub const tree = struct {
+            /// Initializes `out` only on success, without reading or freeing its previous contents.
             pub fn toValue(node: Node.Id, pool: *Node.Pool, out: *Type) !void {
-                var nodes: [chunk_count]Node.Id = undefined;
-
-                // Extract the active_fields mix-in node (get left child which is the content)
-                const content_node = try node.getLeft(pool);
-
-                try progressive.getNodes(pool, content_node, &nodes);
-
-                var replacement = default_value;
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), chunk_count);
+                var value = default_value;
                 inline for (fields, 0..) |field, i| {
-                    const field_idx = comptime getActiveFieldIndex(active_fields, i);
-                    const child_node = nodes[field_idx];
-                    try field.type.tree.toValue(
-                        child_node,
-                        pool,
-                        &@field(replacement, field.name),
-                    );
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
+                        _ = (try it.next()).?;
+                    }
+                    const child = (try it.next()).?;
+                    try field.type.tree.toValue(child, pool, &@field(value, field.name));
                 }
-                out.* = replacement;
+                if (try it.next() != null) return error.InvalidLength;
+                out.* = value;
             }
 
             pub fn serializedSize(_: Node.Id, _: *Node.Pool) !usize {
@@ -262,9 +256,20 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
             }
 
             pub fn serializeIntoBytes(node: Node.Id, pool: *Node.Pool, out: []u8) !usize {
-                var value = Self.default_value;
-                try toValue(node, pool, &value);
-                return Self.serializeIntoBytes(&value, out);
+                if (out.len < fixed_size) return error.InvalidSize;
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), chunk_count);
+                var fixed_index: usize = 0;
+                inline for (fields, 0..) |field, i| {
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
+                        _ = (try it.next()).?;
+                    }
+                    const child = (try it.next()).?;
+                    const written = try field.type.tree.serializeIntoBytes(child, pool, out[fixed_index..][0..field.type.fixed_size]);
+                    std.debug.assert(written == field.type.fixed_size);
+                    fixed_index += written;
+                }
+                if (try it.next() != null) return error.InvalidLength;
+                return fixed_index;
             }
 
             pub fn deserializeFromBytes(pool: *Node.Pool, data: []const u8) !Node.Id {
@@ -796,54 +801,68 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
         pub const tree = struct {
             /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
             pub fn toValue(allocator: std.mem.Allocator, node: Node.Id, pool: *Node.Pool, out: *Type) !void {
-                const nodes = try allocator.alloc(Node.Id, chunk_count);
-                defer allocator.free(nodes);
-
-                // Extract the active_fields mix-in node (get left child which is the content)
-                const content_node = try node.getLeft(pool);
-
-                try progressive.getNodes(pool, content_node, nodes);
-
-                var replacement = default_value;
-                errdefer deinit(allocator, &replacement);
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), chunk_count);
+                var value = default_value;
+                errdefer deinit(allocator, &value);
                 inline for (fields, 0..) |field, i| {
-                    const field_idx = comptime getActiveFieldIndex(active_fields, i);
-                    const child_node = nodes[field_idx];
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
+                        _ = (try it.next()).?;
+                    }
+                    const child = (try it.next()).?;
                     if (comptime isFixedType(field.type)) {
-                        try field.type.tree.toValue(
-                            child_node,
-                            pool,
-                            &@field(replacement, field.name),
-                        );
+                        try field.type.tree.toValue(child, pool, &@field(value, field.name));
                     } else {
-                        try field.type.tree.toValue(
-                            allocator,
-                            child_node,
-                            pool,
-                            &@field(replacement, field.name),
-                        );
+                        try field.type.tree.toValue(allocator, child, pool, &@field(value, field.name));
                     }
                 }
-
-                out.* = replacement;
+                if (try it.next() != null) return error.InvalidLength;
+                out.* = value;
             }
 
             pub fn serializedSize(node: Node.Id, pool: *Node.Pool) !usize {
-                const allocator = pool.allocator;
-                var value = Self.default_value;
-                defer Self.deinit(allocator, &value);
-
-                try toValue(allocator, node, pool, &value);
-                return Self.serializedSize(&value);
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), chunk_count);
+                var size: usize = fixed_end;
+                inline for (fields, 0..) |field, i| {
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
+                        _ = (try it.next()).?;
+                    }
+                    const child = (try it.next()).?;
+                    if (comptime !isFixedType(field.type)) {
+                        size = try std.math.add(usize, size, try field.type.tree.serializedSize(child, pool));
+                    }
+                }
+                if (try it.next() != null) return error.InvalidLength;
+                return size;
             }
 
             pub fn serializeIntoBytes(node: Node.Id, pool: *Node.Pool, out: []u8) !usize {
-                const allocator = pool.allocator;
-                var value = Self.default_value;
-                defer Self.deinit(allocator, &value);
-
-                try toValue(allocator, node, pool, &value);
-                return Self.serializeIntoBytes(&value, out);
+                if (out.len < fixed_end) return error.InvalidSize;
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), chunk_count);
+                var fixed_index: usize = 0;
+                var variable_index: usize = fixed_end;
+                inline for (fields, 0..) |field, i| {
+                    for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
+                        _ = (try it.next()).?;
+                    }
+                    const child = (try it.next()).?;
+                    if (comptime isFixedType(field.type)) {
+                        const written = try field.type.tree.serializeIntoBytes(child, pool, out[fixed_index..][0..field.type.fixed_size]);
+                        std.debug.assert(written == field.type.fixed_size);
+                        fixed_index += written;
+                    } else {
+                        const size = try field.type.tree.serializedSize(child, pool);
+                        const end = try std.math.add(usize, variable_index, size);
+                        if (out.len < end) return error.InvalidSize;
+                        const offset = std.math.cast(u32, variable_index) orelse return error.Overflow;
+                        std.mem.writeInt(u32, out[fixed_index..][0..4], offset, .little);
+                        const written = try field.type.tree.serializeIntoBytes(child, pool, out[variable_index..end]);
+                        std.debug.assert(written == size);
+                        variable_index = end;
+                        fixed_index += 4;
+                    }
+                }
+                if (try it.next() != null) return error.InvalidLength;
+                return variable_index;
             }
 
             pub fn deserializeFromBytes(pool: *Node.Pool, data: []const u8) !Node.Id {

@@ -192,48 +192,26 @@ pub fn FixedProgressiveListType(comptime ST: type) type {
             /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
             pub fn toValue(allocator: std.mem.Allocator, node: Node.Id, pool: *Node.Pool, out: *Type) !void {
                 const len = try length(node, pool);
-                const chunk_count = if (comptime isBasicType(Element))
-                    (Element.fixed_size * len + 31) / 32
-                else
-                    len;
-
-                var replacement: Type = .empty;
-                errdefer replacement.deinit(allocator);
-                if (chunk_count == 0) {
-                    out.* = replacement;
-                    return;
-                }
-
-                const nodes = try allocator.alloc(Node.Id, chunk_count);
-                defer allocator.free(nodes);
-
-                const contents_node = try node.getLeft(pool);
-                try progressive.getNodes(pool, contents_node, nodes);
-
-                try replacement.resize(allocator, len);
-                @memset(replacement.items, Element.default_value);
-                if (comptime isBasicType(Element)) {
-                    for (0..len) |i| {
-                        const chunk_index = (i * Element.fixed_size) / 32;
-                        const element_index = i % (32 / Element.fixed_size);
-                        try Element.tree.toValuePacked(
-                            nodes[chunk_index],
-                            pool,
-                            element_index,
-                            &replacement.items[i],
-                        );
-                    }
-                } else {
-                    for (0..len) |i| {
-                        try Element.tree.toValue(
-                            nodes[i],
-                            pool,
-                            &replacement.items[i],
-                        );
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), chunkCountForLength(len));
+                var value: Type = .empty;
+                errdefer value.deinit(allocator);
+                try value.resize(allocator, len);
+                @memset(value.items, Element.default_value);
+                var index: usize = 0;
+                while (try it.next()) |chunk| {
+                    if (comptime isBasicType(Element)) {
+                        const count = @min(32 / Element.fixed_size, len - index);
+                        for (0..count) |i| {
+                            try Element.tree.toValuePacked(chunk, pool, i, &value.items[index + i]);
+                        }
+                        index += count;
+                    } else {
+                        try Element.tree.toValue(chunk, pool, &value.items[index]);
+                        index += 1;
                     }
                 }
-
-                out.* = replacement;
+                std.debug.assert(index == len);
+                out.* = value;
             }
 
             pub fn serializedSize(node: Node.Id, pool: *Node.Pool) !usize {
@@ -435,49 +413,48 @@ pub fn VariableProgressiveListType(comptime ST: type) type {
             /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.
             pub fn toValue(allocator: std.mem.Allocator, node: Node.Id, pool: *Node.Pool, out: *Type) !void {
                 const len = try length(node, pool);
-                const chunk_count = len;
-                var replacement: Type = .empty;
-                errdefer deinit(allocator, &replacement);
-                if (chunk_count == 0) {
-                    out.* = replacement;
-                    return;
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), len);
+                var value: Type = .empty;
+                errdefer deinit(allocator, &value);
+                try value.resize(allocator, len);
+                @memset(value.items, Element.default_value);
+                var index: usize = 0;
+                while (try it.next()) |chunk| {
+                    try Element.tree.toValue(allocator, chunk, pool, &value.items[index]);
+                    index += 1;
                 }
-
-                const nodes = try allocator.alloc(Node.Id, chunk_count);
-                defer allocator.free(nodes);
-
-                try progressive.getNodes(pool, try node.getLeft(pool), nodes);
-
-                try replacement.resize(allocator, len);
-                @memset(replacement.items, Element.default_value);
-                for (0..len) |i| {
-                    try Element.tree.toValue(
-                        allocator,
-                        nodes[i],
-                        pool,
-                        &replacement.items[i],
-                    );
-                }
-
-                out.* = replacement;
+                std.debug.assert(index == len);
+                out.* = value;
             }
 
             pub fn serializedSize(node: Node.Id, pool: *Node.Pool) !usize {
-                const allocator = pool.allocator;
-                var value = Self.default_value;
-                defer Self.deinit(allocator, &value);
-
-                try toValue(allocator, node, pool, &value);
-                return Self.serializedSize(&value);
+                const len = try length(node, pool);
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), len);
+                var size = try std.math.mul(usize, len, 4);
+                while (try it.next()) |child| {
+                    size = try std.math.add(usize, size, try Element.tree.serializedSize(child, pool));
+                }
+                return size;
             }
 
             pub fn serializeIntoBytes(node: Node.Id, pool: *Node.Pool, out: []u8) !usize {
-                const allocator = pool.allocator;
-                var value = Self.default_value;
-                defer Self.deinit(allocator, &value);
-
-                try toValue(allocator, node, pool, &value);
-                return Self.serializeIntoBytes(&value, out);
+                const len = try length(node, pool);
+                var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), len);
+                var variable_index = try std.math.mul(usize, len, 4);
+                if (out.len < variable_index) return error.InvalidSize;
+                var fixed_index: usize = 0;
+                while (try it.next()) |child| {
+                    const size = try Element.tree.serializedSize(child, pool);
+                    const end = try std.math.add(usize, variable_index, size);
+                    if (out.len < end) return error.InvalidSize;
+                    const offset = std.math.cast(u32, variable_index) orelse return error.Overflow;
+                    std.mem.writeInt(u32, out[fixed_index..][0..4], offset, .little);
+                    const written = try Element.tree.serializeIntoBytes(child, pool, out[variable_index..end]);
+                    std.debug.assert(written == size);
+                    variable_index = end;
+                    fixed_index += 4;
+                }
+                return variable_index;
             }
 
             pub fn deserializeFromBytes(pool: *Node.Pool, data: []const u8) !Node.Id {
