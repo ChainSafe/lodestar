@@ -80,6 +80,17 @@ describe("native local intent coalescing", () => {
     expect(node.intent.isSubscribedToCoreTopics()).toBe(true);
     node.intent.close();
   });
+  it("delegates the custody group ceiling to native configuration", async () => {
+    const node = fixture();
+    for (const count of [0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => node.intent.custody(count)).toThrow();
+    }
+    const failure = new Error("InvalidCustodyCount");
+    node.applyIntent.mockRejectedValueOnce(failure);
+    await expect(node.intent.custody(129)).rejects.toBe(failure);
+    expect(node.applyIntent).toHaveBeenCalledExactlyOnceWith({custodyGroupCount: 129n});
+    node.intent.close();
+  });
   it("orders Status and subscription updates without carrying failed Status into later patches", async () => {
     const node = fixture();
     const held = defer<void>();

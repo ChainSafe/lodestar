@@ -27,7 +27,7 @@ export class NativeIntent {
     return !this.closed && this.subscribed;
   }
   custody(count: number): Promise<void> {
-    return this.enqueue({custodyGroupCount: BigInt(nativeInteger(count, "custody count", 128, 1))});
+    return this.enqueue({custodyGroupCount: BigInt(nativeInteger(count, "custody count", undefined, 1))});
   }
   committee(subscriptions: CommitteeSubscription[], sync: boolean): Promise<void> {
     return this.enqueue({}, normalizeCommitteeSubscriptions(subscriptions, sync));
