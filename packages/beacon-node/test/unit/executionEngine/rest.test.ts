@@ -1,6 +1,7 @@
 import {RLP} from "@ethereumjs/rlp";
 import {FastifyReply, FastifyRequest, fastify} from "fastify";
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -262,7 +263,7 @@ describe("ExecutionEngine / rest", () => {
           1,
           1,
         ]);
-        payload.transactions = [new Uint8Array([0x03, ...transaction])];
+        payload.transactions = SerializedList.fromArray([new Uint8Array([0x03, ...transaction])]);
         const executionRequests =
           fork === ForkName.gloas
             ? ssz.gloas.ExecutionRequests.defaultValue()
@@ -279,7 +280,7 @@ describe("ExecutionEngine / rest", () => {
       jsonRpcResult = {status: "VALID", latestValidHash: null, validationError: null};
       const engine = createEngine("json-rpc");
       const payload = ssz.deneb.ExecutionPayload.defaultValue();
-      payload.transactions = [new Uint8Array([0x03, ...hash])];
+      payload.transactions = SerializedList.fromArray([new Uint8Array([0x03, ...hash])]);
 
       const res = await engine.notifyNewPayload(ForkName.deneb, payload, [new Uint8Array(32)], hash);
 
@@ -307,7 +308,7 @@ describe("ExecutionEngine / rest", () => {
         1,
         1,
       ]);
-      payload.transactions = [new Uint8Array([0x03, ...transaction])];
+      payload.transactions = SerializedList.fromArray([new Uint8Array([0x03, ...transaction])]);
       const res = await engine.notifyNewPayload(ForkName.deneb, payload, [hash], hash);
       expect(res.status).toBe("VALID");
       expect(requests.some((req) => req.url === "/engine/v1/payloads")).toBe(true);
@@ -328,7 +329,7 @@ describe("ExecutionEngine / rest", () => {
         const payload = ssz[fork].ExecutionPayload.defaultValue();
         payload.blockNumber = 42;
         payload.blockHash = hash;
-        payload.transactions = [new Uint8Array([0x02, 0xaa])];
+        payload.transactions = SerializedList.fromArray([new Uint8Array([0x02, 0xaa])]);
         const executionRequests =
           ForkSeq[fork] >= ForkSeq.gloas
             ? ssz.gloas.ExecutionRequests.defaultValue()
@@ -496,7 +497,7 @@ describe("ExecutionEngine / rest", () => {
 
   describe("payload bodies", () => {
     const withdrawal = {index: 1, validatorIndex: 2, address: fromHex(`0x${"bb".repeat(20)}`), amount: 3n};
-    const transactions = [new Uint8Array([0x02, 0xaa]), new Uint8Array([0x03])];
+    const transactions = SerializedList.fromArray([new Uint8Array([0x02, 0xaa]), new Uint8Array([0x03])]);
 
     it("getPayloadBodiesByHashV2 marks unavailable bodies as null", async () => {
       const engine = createEngine();
@@ -504,7 +505,10 @@ describe("ExecutionEngine / rest", () => {
       sszResponse.body = BodiesResponseGloas.serialize({
         entries: [
           {available: true, body: {transactions, withdrawals: [withdrawal], blockAccessList}},
-          {available: false, body: {transactions: [], withdrawals: [], blockAccessList: new Uint8Array()}},
+          {
+            available: false,
+            body: {transactions: SerializedList.empty(), withdrawals: [], blockAccessList: new Uint8Array()},
+          },
         ],
       });
 

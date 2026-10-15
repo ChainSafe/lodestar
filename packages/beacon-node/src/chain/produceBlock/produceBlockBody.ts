@@ -1,4 +1,4 @@
-import {BitArray} from "@chainsafe/ssz";
+import {BitArray, SerializedList} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   IForkChoice,
@@ -967,7 +967,8 @@ function preparePayloadAttributes(
 
   if (ForkSeq[fork] >= ForkSeq.heze) {
     // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
-    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = [];
+    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
+      SerializedList.empty();
   }
 
   return payloadAttributes;
