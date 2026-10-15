@@ -290,7 +290,8 @@ export async function importExecutionPayload(
   });
 
   // A VALID payload that does not satisfy the inclusion list constraints is still imported, fork choice
-  // only records the verdict so should_extend_payload makes the next proposer build on the EMPTY variant.
+  // only records the verdict so should_extend_payload moves the head to the EMPTY variant, which the next
+  // proposer builds on.
   // Recorded before the payload enters fork choice. A VALID response must carry a verdict, an
   // optimistically imported payload counts as satisfied until the engine validates it, anything else as
   // unsatisfied. A VALID response without a verdict violates the engine API, it is logged and treated as
