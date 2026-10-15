@@ -21,7 +21,6 @@ import {NativeGossip} from "./gossip.js";
 import {NativeIntent} from "./intent.js";
 import {NativeLogs} from "./logs.js";
 import {NativePeers, formatNativePeer} from "./peers.js";
-import {RememberedPeersWriter, readRememberedPeers} from "./rememberedPeers.js";
 import {NativePeerReports} from "./reports.js";
 import {NativeRequests, outgoingNativeRequest} from "./requests.js";
 
@@ -36,7 +35,6 @@ export class NativeNetworkCore implements INetworkCore {
   private reports!: NativePeerReports;
   private network!: NativeNetwork;
   private logs!: NativeLogs;
-  private remembered: RememberedPeersWriter | undefined;
   private closed = false;
   private failure: Error | undefined;
   private closePromise: Promise<void> | undefined;
@@ -62,12 +60,12 @@ export class NativeNetworkCore implements INetworkCore {
       },
     });
     try {
-      const rememberedPeers = peerStoreDir
-        ? readRememberedPeers(peerStoreDir, config.genesisValidatorsRoot, logger)
-        : null;
       core.logs = new NativeLogs(modules.logger.child({module: "native"}));
       // The factory calls the host only from later macrotasks, so every consumer below attaches first.
-      core.network = createNativeNetwork({...application, rememberedPeers, logLevel: core.logs.level}, core.host);
+      core.network = createNativeNetwork(
+        {...application, ...(peerStoreDir ? {peerStoreDir} : {}), logLevel: core.logs.level},
+        core.host
+      );
       core.intent = new NativeIntent(core.network);
       core.reports = new NativePeerReports(core.network);
       core.gossip = new NativeGossip(core.network, config, core.modules.opts, core.onOperationError, core.reports);
@@ -83,7 +81,6 @@ export class NativeNetworkCore implements INetworkCore {
       queueMicrotask(() => {
         if (!core.closed) void core.connectConfiguredPeers(directPeers, bootPeers).catch(core.onFailure);
       });
-      if (peerStoreDir) core.remembered = new RememberedPeersWriter(peerStoreDir, core.network, logger);
       return core;
     } catch (error) {
       await core
@@ -198,12 +195,6 @@ export class NativeNetworkCore implements INetworkCore {
         } catch (error) {
           errors.push(error);
         }
-      }
-      // The network refuses the final remembered peers snapshot once it closes.
-      try {
-        await this.remembered?.close();
-      } catch (error) {
-        errors.push(error);
       }
       try {
         await this.network?.close();

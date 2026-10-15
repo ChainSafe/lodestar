@@ -14,7 +14,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestErrorCode} from "@lodestar/reqresp";
 import {getProposerSlashingSignatureSets} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
-import {defer, sleep, toHex, withTimeout} from "@lodestar/utils";
+import {defer, sleep, withTimeout} from "@lodestar/utils";
 import {BlsSingleThreadVerifier} from "../../src/chain/bls/singleThread.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {WorkerNetworkCore} from "../../src/network/core/index.js";
@@ -179,24 +179,20 @@ describe("native Lodestar integration", () => {
   }, 15000);
   it("seeds the runtime from peerStoreDir and writes its remembered peers before it closes", async () => {
     const directory = await mkdtemp(join(tmpdir(), "lodestar-native-peerstore-"));
-    const file = join(directory, "native-remembered-peers.json");
+    const file = join(directory, "native-remembered-peers.txt");
     const [peerId, expiredPeerId] = await Promise.all(
       [0, 1].map(async () => peerIdFromPrivateKey(await generateKeyPair("secp256k1")).toString())
     );
     const nowS = Math.floor(Date.now() / 1000);
-    const remembered = {peerId, endpoint: {family: 4, address: "0x7f000001", port: 9}, qualifiedAtUnixS: nowS - 60};
-    const older = {...remembered, endpoint: {...remembered.endpoint, port: 10}, qualifiedAtUnixS: nowS - 120};
-    const expired = {...remembered, peerId: expiredPeerId, qualifiedAtUnixS: nowS - 24 * 60 * 60};
+    const remembered = `${peerId} 127.0.0.1 9 ${nowS - 60}\n`;
+    const older = `${peerId} 127.0.0.1 10 ${nowS - 120}\n`;
+    const expired = `${expiredPeerId} 127.0.0.1 9 ${nowS - 24 * 60 * 60}\n`;
     let written: string | undefined;
     const originalInit = NativeNetworkCore.init;
     const initialize = vi.spyOn(NativeNetworkCore, "init").mockImplementationOnce((modules) => {
-      const seed = {
-        version: 1,
-        genesisValidatorsRoot: toHex(modules.config.genesisValidatorsRoot),
-        peers: [remembered],
-      };
-      written = JSON.stringify(seed);
-      writeFileSync(file, JSON.stringify({...seed, peers: [older, remembered, expired]}, null, 2));
+      const header = `lodestar-peers-v1 ${Buffer.from(modules.config.genesisValidatorsRoot).toString("hex")}\n`;
+      written = `${header}${remembered}`;
+      writeFileSync(file, `${header}${older}${remembered}${expired}`);
       return originalInit({...modules, peerStoreDir: directory});
     });
     let node: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;

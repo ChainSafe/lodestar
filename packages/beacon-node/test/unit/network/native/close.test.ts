@@ -9,7 +9,6 @@ function fixture() {
   const requests = {close: vi.fn()};
   const peers = {close: vi.fn()};
   const intent = {close: vi.fn()};
-  const remembered = {close: vi.fn(async () => {})};
   const nativeClosed = defer<CloseResult>();
   const network = {
     closed: nativeClosed.promise,
@@ -21,8 +20,8 @@ function fixture() {
       return nativeClosed.promise;
     }),
   };
-  Object.assign(core, {gossip, requests, peers, intent, remembered, network});
-  return {core, gossip, requests, peers, intent, remembered, network, nativeClosed};
+  Object.assign(core, {gossip, requests, peers, intent, network});
+  return {core, gossip, requests, peers, intent, network, nativeClosed};
 }
 
 describe("native core close", () => {
@@ -63,22 +62,18 @@ describe("native core close", () => {
     await core.close();
   });
 
-  it("stops delivery before cleanup and the final snapshot, then closes native with one shared completion", async () => {
-    const {core, remembered, network, gossip, requests, peers, intent} = fixture();
-    const snapshot = defer<void>();
+  it("stops delivery before cleanup, then joins native with one shared completion", async () => {
+    const {core, network, gossip, requests, peers, intent} = fixture();
     const joined = defer<CloseResult>();
-    remembered.close.mockReturnValue(snapshot.promise);
     network.close.mockReturnValue(joined.promise);
     const first = core.close();
     expect(core.close()).toBe(first);
     expect(network.stopDelivery).toHaveBeenCalledOnce();
-    for (const cleanup of [gossip.close, requests.close, peers.close, intent.close, remembered.close]) {
+    for (const cleanup of [gossip.close, requests.close, peers.close, intent.close]) {
       expect(cleanup).toHaveBeenCalledOnce();
       expect(network.stopDelivery).toHaveBeenCalledBefore(cleanup);
+      expect(cleanup).toHaveBeenCalledBefore(network.close);
     }
-    expect(network.close).not.toHaveBeenCalled();
-    snapshot.resolve();
-    await Promise.resolve();
     expect(network.close).toHaveBeenCalledOnce();
     let settled = false;
     void first.then(() => {
@@ -91,10 +86,10 @@ describe("native core close", () => {
     expect(core.close()).toBe(first);
   });
 
-  it("joins native after a rejected snapshot, then rejects every closer", async () => {
-    const {core, remembered, network} = fixture();
-    const error = new Error("snapshot failed");
-    remembered.close.mockRejectedValue(error);
+  it("shares native join failures with every closer", async () => {
+    const {core, network} = fixture();
+    const error = new Error("join failed");
+    network.close.mockRejectedValue(error);
     const first = core.close();
     await expect(first).rejects.toBe(error);
     expect(network.close).toHaveBeenCalledOnce();
@@ -102,7 +97,7 @@ describe("native core close", () => {
   });
 
   it("continues all cleanup and native close after a synchronous cleanup failure", async () => {
-    const {core, gossip, requests, peers, intent, remembered, network} = fixture();
+    const {core, gossip, requests, peers, intent, network} = fixture();
     const error = new Error("gossip cleanup failed");
     gossip.close.mockImplementation(() => {
       throw error;
@@ -112,19 +107,21 @@ describe("native core close", () => {
       first = core.close();
     }).not.toThrow();
     await expect(first).rejects.toBe(error);
-    for (const close of [requests.close, peers.close, intent.close, remembered.close, network.close]) {
+    for (const close of [requests.close, peers.close, intent.close, network.close]) {
       expect(close).toHaveBeenCalledOnce();
     }
     expect(core.close()).toBe(first);
   });
 
-  it("preserves both snapshot and native join failures", async () => {
-    const {core, remembered, network} = fixture();
-    const snapshotError = new Error("snapshot failed");
+  it("preserves both host cleanup and native join failures", async () => {
+    const {core, gossip, network} = fixture();
+    const cleanupError = new Error("cleanup failed");
     const joinError = new Error("join failed");
-    remembered.close.mockRejectedValue(snapshotError);
+    gossip.close.mockImplementation(() => {
+      throw cleanupError;
+    });
     network.close.mockRejectedValue(joinError);
-    await expect(core.close()).rejects.toMatchObject({errors: [snapshotError, joinError]});
+    await expect(core.close()).rejects.toMatchObject({errors: [cleanupError, joinError]});
     expect(network.close).toHaveBeenCalledOnce();
   });
 
@@ -142,11 +139,13 @@ describe("native core close", () => {
   });
 
   it("reports the host failure separately from a cleanup failure", async () => {
-    const {core, remembered, nativeClosed} = fixture();
+    const {core, gossip, nativeClosed} = fixture();
     const failure = new Error("host failed");
-    const cleanupError = new Error("snapshot failed");
+    const cleanupError = new Error("cleanup failed");
     Object.assign(core, {failure});
-    remembered.close.mockRejectedValue(cleanupError);
+    gossip.close.mockImplementation(() => {
+      throw cleanupError;
+    });
     nativeClosed.resolve({reason: "requested"});
     await expect(core.close()).rejects.toBe(cleanupError);
     await expect(core.terminated).resolves.toBe(failure);
