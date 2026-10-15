@@ -35,6 +35,20 @@ Not a root option
 type: \`string\`
 `;
 
+const builderReference = `# Builder
+## \`builder\` Options
+#### \`--dataDir\`
+Lodestar root data directory
+type: \`string\`
+#### \`--beaconNodeUrl\`
+Url to a trusted beacon node
+type: \`string\`
+default: \`"http://localhost:5052"\`
+#### \`--builderPubkey\`
+Builder's expected public key
+type: \`string\`
+`;
+
 const option = (name, extra = {}) => ({
   name,
   description: "An option",
@@ -85,6 +99,16 @@ test("diff identifies fields, additions and removals and excludes hidden flags",
   assert.deepEqual(compareOptions([], []), []);
 });
 
+test("legacy builder references include global and builder options", () => {
+  const options = parseCliReference(builderReference, "builder");
+  assert.deepEqual(
+    options.map(({name}) => name),
+    ["dataDir", "beaconNodeUrl", "builderPubkey"]
+  );
+  assert.equal(options[1].default, '"http://localhost:5052"');
+  assert.equal(options[2].default, null);
+});
+
 test("unknown legacy metadata does not become confirmed alias or deprecation changes", () => {
   const oldOption = option("flag", {aliases: null, deprecated: null, required: null, default: null});
   const changes = compareOptions([oldOption], [option("flag")]);
@@ -121,6 +145,12 @@ test("shareable selection validates missing versions and components", () => {
     command: "validator",
     valid: true,
   });
+  assert.deepEqual(comparisonSelection(versions, "?from=1.43.0&to=current&command=builder"), {
+    from: "1.43.0",
+    to: "current",
+    command: "builder",
+    valid: true,
+  });
   assert.equal(comparisonSelection(versions, "?from=1.1.0").valid, false);
   assert.equal(comparisonSelection(versions, "?command=constructor").valid, false);
   assert.equal(comparisonSelection(["current"], "").valid, true);
@@ -143,12 +173,28 @@ test("reference links respect the docs base path, default release and heading an
     cliReferenceUrl("/lodestar/", "current", "current", "beacon"),
     "/lodestar/run/beacon-management/beacon-cli"
   );
+  assert.equal(
+    cliReferenceUrl("/lodestar/", "1.50.0", "1.46.0", "builder", "builderPubkey"),
+    "/lodestar/1.46.0/run/builder-management/builder-cli#--builderpubkey"
+  );
+  assert.equal(
+    cliReferenceUrl("/lodestar/", "1.50.0", "1.50.0", "builder"),
+    "/lodestar/run/builder-management/builder-cli"
+  );
+  assert.equal(
+    cliReferenceUrl("/lodestar/", "1.50.0", "current", "builder"),
+    "/lodestar/next/run/builder-management/builder-cli"
+  );
 });
 
 test("build data loads retained manifests, legacy references, and missing local versions", async (context) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "lodestar-compare-"));
   context.after(() => rm(directory, {recursive: true, force: true}));
-  assert.deepEqual((await loadComparisonData(directory)).snapshots[0].commands, {beacon: null, validator: null});
+  assert.deepEqual((await loadComparisonData(directory)).snapshots[0].commands, {
+    beacon: null,
+    validator: null,
+    builder: null,
+  });
   await mkdir(path.join(directory, "pages"));
   const commands = {beacon: [option("flag")], validator: []};
   await writeFile(path.join(directory, "pages/cli-options.json"), JSON.stringify({schemaVersion: 1, commands}));
@@ -196,6 +242,36 @@ test("build data excludes hidden options from current and retained manifests", a
     JSON.stringify({schemaVersion: 1, commands: {beacon: [{hidden: true}]}})
   );
   await assert.rejects(loadComparisonData(directory), /Invalid beacon CLI manifest/);
+});
+
+test("builder snapshots preserve missing references and older manifests without builder metadata", async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "lodestar-compare-builder-"));
+  context.after(() => rm(directory, {recursive: true, force: true}));
+  await writeFile(path.join(directory, "versions.json"), '["1.46.0", "1.45.0"]');
+  const builderDirectory = path.join(directory, "versioned_docs/version-1.46.0/run/builder-management");
+  await mkdir(builderDirectory, {recursive: true});
+  await writeFile(path.join(builderDirectory, "builder-cli.md"), builderReference);
+  await mkdir(path.join(directory, "pages"));
+  const manifestPath = path.join(directory, "pages/cli-options.json");
+  const manifest = {schemaVersion: 1, commands: {beacon: [], validator: []}};
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  const {snapshots} = await loadComparisonData(directory);
+  const current = snapshots[0].commands.builder;
+  const introduced = snapshots[1].commands.builder;
+  const earlier = snapshots[2].commands.builder;
+  assert.equal(current, undefined);
+  assert.deepEqual(introduced, parseCliReference(builderReference, "builder"));
+  assert.equal(earlier, null);
+  assert.equal(compareOptions(earlier, introduced), null);
+  assert.equal(compareOptions(introduced, earlier), null);
+  assert.equal(compareOptions(current, introduced), null);
+  assert.equal(compareOptions(introduced, current), null);
+  manifest.commands.builder = [];
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  assert.deepEqual((await loadComparisonData(directory)).snapshots[0].commands.builder, []);
+  manifest.commands.builder = {};
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await assert.rejects(loadComparisonData(directory), /Invalid builder CLI manifest/);
 });
 
 test("literal spaces in default values remain significant", () => {

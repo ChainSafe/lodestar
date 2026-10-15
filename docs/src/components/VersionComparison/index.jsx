@@ -1,4 +1,5 @@
 import React, {useState} from "react";
+import semver from "semver";
 import Layout from "@theme/Layout";
 import BrowserOnly from "@docusaurus/BrowserOnly";
 import Link from "@docusaurus/Link";
@@ -6,6 +7,7 @@ import useBaseUrl from "@docusaurus/useBaseUrl";
 import {useHistory, useLocation} from "@docusaurus/router";
 import {
   cliReferenceUrl,
+  commandPaths,
   compareOptions,
   comparisonSelection,
   fieldLabels,
@@ -35,6 +37,18 @@ function Comparison({snapshots, defaultVersion}) {
   const oldSnapshot = snapshots.find(({id}) => id === from);
   const newSnapshot = snapshots.find(({id}) => id === to);
   const changes = valid ? compareOptions(oldSnapshot.commands[command], newSnapshot.commands[command]) : null;
+  const unavailableBuilderVersions =
+    command === "builder"
+      ? [...new Set([oldSnapshot, newSnapshot])]
+          .filter(
+            (snapshot) =>
+              snapshot &&
+              !snapshot.commands.builder &&
+              snapshot.id !== "current" &&
+              semver.lt(snapshot.id, "1.46.0-0")
+          )
+          .map(({id}) => versionLabel(id))
+      : [];
   const legacy = oldSnapshot?.source === "reference" || newSnapshot?.source === "reference";
   const labels = {
     added: legacy ? "Newly documented" : "Added",
@@ -95,11 +109,10 @@ function Comparison({snapshots, defaultVersion}) {
         <label>
           Component
           <select value={command} onChange={(event) => select({command: event.target.value})}>
-            {!Object.hasOwn({beacon: true, validator: true}, command) && (
-              <option value={command}>{command} (unavailable)</option>
-            )}
+            {!Object.hasOwn(commandPaths, command) && <option value={command}>{command} (unavailable)</option>}
             <option value="beacon">Beacon node</option>
             <option value="validator">Validator client</option>
+            <option value="builder">Builder client</option>
           </select>
         </label>
       </div>
@@ -117,7 +130,7 @@ function Comparison({snapshots, defaultVersion}) {
             <p>
               {legacy
                 ? "Older references omit hidden flags, aliases, and some defaults. Newly documented or missing options do not by themselves confirm a runtime addition or removal. A newly documented default does not prove the default changed."
-                : "Includes public top-level beacon and validator options and their global options. Hidden options and subcommands are excluded."}{" "}
+                : "Includes public top-level beacon, validator, and builder options and their global options. Hidden options and subcommands are excluded."}{" "}
               Descriptions and defaults may depend on your network and active fork. This comparison does not cover every
               API or behavior change.
             </p>
@@ -150,8 +163,17 @@ function Comparison({snapshots, defaultVersion}) {
             <h2 id="cli-changes-title">CLI option changes</h2>
             {changes === null ? (
               <div className="alert alert--warning" role="status">
-                The CLI reference is missing for one of these versions. A missing reference cannot be treated as removed
-                options.
+                {unavailableBuilderVersions.length > 0 ? (
+                  <>
+                    The builder client is unavailable in {unavailableBuilderVersions.join(", ")}. Builder comparisons are
+                    available from v1.46.0. Choose v1.46.0 or later for both versions.
+                  </>
+                ) : (
+                  <>
+                    The CLI reference is missing for one of these versions. A missing reference cannot be treated as removed
+                    options.
+                  </>
+                )}
               </div>
             ) : (
               <>

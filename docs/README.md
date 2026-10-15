@@ -32,7 +32,9 @@ Local development works without any versioning files present — `docusaurus.con
 
 ### Comparing versions
 
-The **Compare versions** navbar link opens `/compare`. Select two versions and either the beacon node or validator client to see differences in public top-level CLI options, including global options. Search by flag name or description, filter by change type, and share the URL to preserve the selected versions and component. Links to the retained intermediate releases provide upgrade notes beyond CLI changes.
+The **Compare versions** navbar link opens `/compare`. Select two versions and the beacon node, validator client, or builder client to see differences in public top-level CLI options, including global options. Search by flag name or description, filter by change type, and share the URL to preserve the selected versions and component. Links to the retained intermediate releases provide upgrade notes beyond CLI changes.
+
+Builder comparisons are available from v1.46.0. Selecting an earlier release shows that the builder client is unavailable in that version.
 
 The CLI docs generator writes `pages/cli-options.json` alongside the generated Markdown references. Docusaurus includes this manifest when creating a version snapshot. The local `version-comparison` plugin reads the retained snapshots at build time and bundles their option data only with the comparison route. The page does not request data from GitHub at runtime.
 

@@ -37,7 +37,7 @@ export function createCliManifest(
     schemaVersion: 1,
     commands: Object.fromEntries(
       commands
-        .filter(({command}) => command === "beacon" || command === "validator")
+        .filter(({command}) => command === "beacon" || command === "validator" || command === "builder")
         .map(({command, options}) => [
           command,
           Object.entries({...globalOptions, ...options})

@@ -3,6 +3,7 @@ import semver from "semver";
 export const commandPaths = {
   beacon: "run/beacon-management/beacon-cli",
   validator: "run/validator-management/validator-cli",
+  builder: "run/builder-management/builder-cli",
 };
 
 export const fieldLabels = {

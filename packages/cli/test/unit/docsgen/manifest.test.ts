@@ -77,6 +77,28 @@ describe("CLI documentation data", () => {
     }
   });
 
+  it("includes public builder options and globals while excluding unrelated commands", () => {
+    const manifest = createCliManifest(
+      [
+        {
+          command: "builder",
+          options: {
+            beaconNodeUrl: {type: "string", default: "http://localhost:9596"},
+            internal: {type: "boolean", hidden: true},
+          },
+        },
+        {command: "bootnode", options: {}},
+        {command: "dev", options: {}},
+      ],
+      {network: {type: "string", default: "mainnet"}, hiddenGlobal: {type: "boolean", hidden: true}}
+    );
+    expect(Object.keys(manifest.commands)).toEqual(["builder"]);
+    expect(manifest.commands.builder.map(({name, default: value}) => ({name, default: value}))).toEqual([
+      {name: "network", default: '"mainnet"'},
+      {name: "beaconNodeUrl", default: '"http://localhost:9596"'},
+    ]);
+  });
+
   it("keeps dynamic default descriptions and non-finite values readable", () => {
     expect(formatDefault({type: "number", default: 0, defaultDescription: "Depends on the network"})).toBe(
       "Depends on the network"
