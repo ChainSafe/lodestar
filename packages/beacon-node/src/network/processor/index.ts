@@ -863,9 +863,14 @@ export class NetworkProcessor {
       for (const rootHex of bufferedRoots) {
         const messagesByTopic = this.awaitingMessagesByBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
-        let removed = 0;
+        let remaining = 0;
         for (const messages of messagesByTopic.values()) {
           for (const message of messages) {
+            // the same root may be buffered again from a newer slot, keep those messages.
+            // msgSlot is always set before buffering, a missing one expires rather than leaks
+            if ((message.msgSlot ?? minSlot) > minSlot) continue;
+            messages.delete(message);
+            this.awaitingBlockMessageCount--;
             const topicType = message.topic.type;
             this.metrics?.awaitingBlockGossipMessages.reject.inc({
               topic: topicType,
@@ -877,19 +882,22 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          removed += messages.size;
+          remaining += messages.size;
         }
-        if (this.awaitingMessagesByBlockRoot.delete(rootHex)) {
-          this.awaitingBlockMessageCount -= removed;
-        }
+        if (remaining === 0) this.awaitingMessagesByBlockRoot.delete(rootHex);
       }
 
       for (const rootHex of bufferedRoots) {
         const messagesByTopic = this.awaitingMessagesByPayloadBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
-        let removed = 0;
+        let remaining = 0;
         for (const messages of messagesByTopic.values()) {
           for (const message of messages) {
+            // the same root may be buffered again from a newer slot, keep those messages.
+            // msgSlot is always set before buffering, a missing one expires rather than leaks
+            if ((message.msgSlot ?? minSlot) > minSlot) continue;
+            messages.delete(message);
+            this.awaitingPayloadMessageCount--;
             const topicType = message.topic.type;
             this.metrics?.awaitingPayloadGossipMessages.reject.inc({
               topic: topicType,
@@ -901,11 +909,9 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          removed += messages.size;
+          remaining += messages.size;
         }
-        if (this.awaitingMessagesByPayloadBlockRoot.delete(rootHex)) {
-          this.awaitingPayloadMessageCount -= removed;
-        }
+        if (remaining === 0) this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
       }
 
       this.bufferedRootsBySlot.delete(slot);

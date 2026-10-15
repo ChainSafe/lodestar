@@ -340,8 +340,53 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     type Entry = {blockPeerIds?: Set<string>; envelopePeerIds?: Set<string>};
     type Internals = {
       searchedRootsBySlot: MapDef<number, MapDef<string, Entry>>;
+      bufferedRootsBySlot: MapDef<number, Set<string>>;
+      awaitingMessagesByBlockRoot: MapDef<string, MapDef<GossipType, Set<PendingGossipsubMessage>>>;
+      awaitingMessagesByPayloadBlockRoot: MapDef<string, MapDef<GossipType, Set<PendingGossipsubMessage>>>;
+      awaitingBlockMessageCount: number;
+      awaitingPayloadMessageCount: number;
       onClockSlot: (slot: number) => void;
     };
+
+    it("expiring a block wait for one block does not drop a newer payload wait for the same block", () => {
+      // a block may be waited on at one slot and, later (after the block arrives), its payload waited on from a
+      // newer slot. Expiring the old slot must not also drop the newer payload wait just because they share the block
+      const p = processor as unknown as Internals;
+      const root = `0x${"ab".repeat(32)}`;
+      const oldSlot = clockSlot - 4; // expires this tick (<= clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE)
+      const newSlot = clockSlot; //     must survive
+      const message = (msgSlot: number): PendingGossipsubMessage =>
+        ({
+          topic: {type: GossipType.beacon_aggregate_and_proof},
+          seenTimestampSec: 0,
+          msgSlot,
+        }) as unknown as PendingGossipsubMessage;
+
+      // old slot: a message waiting for the block
+      p.bufferedRootsBySlot.getOrDefault(oldSlot).add(root);
+      p.awaitingMessagesByBlockRoot
+        .getOrDefault(root)
+        .getOrDefault(GossipType.beacon_aggregate_and_proof)
+        .add(message(oldSlot));
+      p.awaitingBlockMessageCount++;
+
+      // newer slot: a message waiting for the payload of the SAME block
+      p.bufferedRootsBySlot.getOrDefault(newSlot).add(root);
+      p.awaitingMessagesByPayloadBlockRoot
+        .getOrDefault(root)
+        .getOrDefault(GossipType.beacon_aggregate_and_proof)
+        .add(message(newSlot));
+      p.awaitingPayloadMessageCount++;
+
+      p.onClockSlot(clockSlot);
+
+      // the old block wait is expired
+      expect(p.awaitingMessagesByBlockRoot.has(root)).toBe(false);
+      expect(p.awaitingBlockMessageCount).toBe(0);
+      // the newer payload wait survives - it belongs to a slot that hasn't expired
+      expect(p.awaitingMessagesByPayloadBlockRoot.has(root)).toBe(true);
+      expect(p.awaitingPayloadMessageCount).toBe(1);
+    });
 
     it("expires a held message even when its block was never looked up", () => {
       // the per-slot lookup budget is larger than the hold budget, so lookups can run out while holds remain.
