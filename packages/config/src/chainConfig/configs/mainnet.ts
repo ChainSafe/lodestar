@@ -70,8 +70,8 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_SLOT: 12,
   // 12000 milliseconds, 12 seconds
   SLOT_DURATION_MS: 12000,
-  // 10000 milliseconds, 10 seconds
-  SLOT_DURATION_MS_HEZE: 10000,
+  // 12000 milliseconds, 12 seconds
+  SLOT_DURATION_MS_HEZE: 12000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs ~27 hours
