@@ -7,12 +7,6 @@
 .header {
   margin-bottom: 2rem;
 }
-.eyebrow {
-  color: var(--ifm-color-primary);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
 .intro {
   font-size: 1.25rem;
   color: var(--ifm-color-emphasis-700);

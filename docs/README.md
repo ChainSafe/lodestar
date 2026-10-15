@@ -32,15 +32,11 @@ Local development works without any versioning files present — `docusaurus.con
 
 ### Comparing versions
 
-The **Compare versions** navbar link opens `/compare`. Select two versions and the beacon node, validator client, or builder client to see differences in public top-level CLI options, including global options. Search by flag name or description, filter by change type, and share the URL to preserve the selected versions and component. Links to the retained intermediate releases provide upgrade notes beyond CLI changes.
+The **Compare versions** navbar link opens `/compare`, which diffs the public CLI options of the beacon node, validator client or builder client (from v1.46.0) between two docs versions.
 
-Builder comparisons are available from v1.46.0. Selecting an earlier release shows that the builder client is unavailable in that version.
+The CLI docs generator writes `pages/cli-options.json` next to the generated CLI references, and it is included in each version snapshot. The `version-comparison` plugin reads the snapshots at build time, so the page makes no runtime requests. Older snapshots without this file fall back to parsing their CLI reference, which omits hidden flags, aliases and some defaults.
 
-The CLI docs generator writes `pages/cli-options.json` alongside the generated Markdown references. Docusaurus includes this manifest when creating a version snapshot. The local `version-comparison` plugin reads the retained snapshots at build time and bundles their option data only with the comparison route. The page does not request data from GitHub at runtime.
-
-Historical snapshots without a manifest use their generated CLI references instead. These references omit hidden flags, aliases, and some defaults, including `false` and `0` in older generators. The page labels additions and removals as documentation changes when either version uses this fallback. Missing defaults are shown as unknown, and missing CLI references are not interpreted as removed options. Descriptions and declared defaults cannot capture every network or fork-dependent behavior; read the linked release notes before upgrading.
-
-Local builds without version snapshots offer only **Next**. To preview released comparisons, fetch the public `docs-versions` branch and copy its `versioned_docs`, `versioned_sidebars`, and `versions.json` into `docs/`, as the deployment workflow does. Keep these generated snapshots out of the contribution's commits.
+To compare released versions locally, copy `versioned_docs`, `versioned_sidebars` and `versions.json` from the `docs-versions` branch into `docs/` and don't commit them.
 
 Run the comparison tests from `docs/`:
 

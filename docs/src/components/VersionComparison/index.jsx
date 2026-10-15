@@ -37,18 +37,15 @@ function Comparison({snapshots, defaultVersion}) {
   const oldSnapshot = snapshots.find(({id}) => id === from);
   const newSnapshot = snapshots.find(({id}) => id === to);
   const changes = valid ? compareOptions(oldSnapshot.commands[command], newSnapshot.commands[command]) : null;
-  const unavailableBuilderVersions =
-    command === "builder"
-      ? [...new Set([oldSnapshot, newSnapshot])]
-          .filter(
-            (snapshot) =>
-              snapshot &&
-              !snapshot.commands.builder &&
-              snapshot.id !== "current" &&
-              semver.lt(snapshot.id, "1.46.0-0")
-          )
-          .map(({id}) => versionLabel(id))
-      : [];
+  const builderUnavailable =
+    command === "builder" &&
+    [oldSnapshot, newSnapshot].some(
+      (snapshot) =>
+        snapshot &&
+        !snapshot.commands.builder &&
+        snapshot.id !== "current" &&
+        semver.lt(snapshot.id, "1.46.0-0")
+    );
   const legacy = oldSnapshot?.source === "reference" || newSnapshot?.source === "reference";
   const labels = {
     added: legacy ? "Newly documented" : "Added",
@@ -116,9 +113,6 @@ function Comparison({snapshots, defaultVersion}) {
           </select>
         </label>
       </div>
-      <p className={styles.muted}>
-        The address bar keeps your selected versions and component, so you can bookmark or share this comparison.
-      </p>
       {!valid ? (
         <div className="alert alert--warning" role="status">
           This version or component is unavailable. Choose from the retained documentation versions above.
@@ -129,10 +123,8 @@ function Comparison({snapshots, defaultVersion}) {
             <strong>{legacy ? "Comparing published CLI documentation" : "Comparing declared CLI options"}</strong>
             <p>
               {legacy
-                ? "Older references omit hidden flags, aliases, and some defaults. Newly documented or missing options do not by themselves confirm a runtime addition or removal. A newly documented default does not prove the default changed."
-                : "Includes public top-level beacon, validator, and builder options and their global options. Hidden options and subcommands are excluded."}{" "}
-              Descriptions and defaults may depend on your network and active fork. This comparison does not cover every
-              API or behavior change.
+                ? "Older references omit hidden flags, aliases and some defaults, so a difference can be a documentation change only."
+                : "Public top-level options, including global options."}
             </p>
             <div className={styles.links}>
               {oldSnapshot.commands[command] && <Link to={referenceUrl(from)}>{versionLabel(from)} CLI reference</Link>}
@@ -141,8 +133,7 @@ function Comparison({snapshots, defaultVersion}) {
             </div>
           </div>
           <section className={styles.releases} aria-labelledby="release-notes-title">
-            <h2 id="release-notes-title">Release notes along the way</h2>
-            <p>Read these for upgrade actions, API changes, and fork activation requirements.</p>
+            <h2 id="release-notes-title">Release notes</h2>
             <div className={styles.links}>
               {releases.map((version) => (
                 <a className={styles.release} key={version} href={`${repository}/releases/tag/v${version}`}>
@@ -163,17 +154,9 @@ function Comparison({snapshots, defaultVersion}) {
             <h2 id="cli-changes-title">CLI option changes</h2>
             {changes === null ? (
               <div className="alert alert--warning" role="status">
-                {unavailableBuilderVersions.length > 0 ? (
-                  <>
-                    The builder client is unavailable in {unavailableBuilderVersions.join(", ")}. Builder comparisons are
-                    available from v1.46.0. Choose v1.46.0 or later for both versions.
-                  </>
-                ) : (
-                  <>
-                    The CLI reference is missing for one of these versions. A missing reference cannot be treated as removed
-                    options.
-                  </>
-                )}
+                {builderUnavailable
+                  ? "The builder client is not available before v1.46.0."
+                  : "The CLI reference is missing for one of these versions."}
               </div>
             ) : (
               <>
@@ -293,7 +276,6 @@ export default function VersionComparison({comparisonData}) {
     >
       <main className={`container ${styles.page}`}>
         <header className={styles.header}>
-          <p className={styles.eyebrow}>LODESTAR RELEASES</p>
           <h1>Compare versions</h1>
           <p className={styles.intro}>See what changed in your CLI options before upgrading.</p>
         </header>
