@@ -1,26 +1,21 @@
 import {describe, expect, it} from "vitest";
-import {
-  ByteListType,
-  ProgressiveByteListType,
-  ProgressiveContainerType,
-  ProgressiveListBasicType,
-} from "@chainsafe/ssz";
+import {ByteListType, ListBasicType, ProgressiveByteListType, ProgressiveContainerType} from "@chainsafe/ssz";
 import {MAX_PROOF_SIZE, MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE, STATELESS_INPUT_SCHEMA_ID} from "@lodestar/params";
 import {ssz} from "../../../src/index.js";
 
 describe("EIP-8025 SSZ types", () => {
-  it("uses progressive ProofData bounded by MAX_PROOF_SIZE", () => {
-    expect(ssz.eip8025.ProofData).toBeInstanceOf(ProgressiveByteListType);
+  it("uses bounded ProofData with MAX_PROOF_SIZE", () => {
+    expect(ssz.eip8025.ProofData).toBeInstanceOf(ByteListType);
     expect(ssz.eip8025.ProofData.limitBytes).toBe(MAX_PROOF_SIZE);
   });
 
-  it.each([0, 1, 32, 33, 160, 161])("merkleizes ProofData as ProgressiveList[Byte] with %i bytes", (length) => {
+  it.each([0, 1, 32, 33, 160, 161])("merkleizes ProofData as List[Byte, MAX_PROOF_SIZE] with %i bytes", (length) => {
     const proofData = new Uint8Array(length).fill(0xab);
-    const progressiveList = new ProgressiveListBasicType(ssz.Uint8);
-    const boundedList = new ByteListType(MAX_PROOF_SIZE);
+    const boundedList = new ListBasicType(ssz.Byte, MAX_PROOF_SIZE);
+    const progressiveList = new ProgressiveByteListType();
 
-    expect(ssz.eip8025.ProofData.hashTreeRoot(proofData)).toEqual(progressiveList.hashTreeRoot(Array.from(proofData)));
-    expect(ssz.eip8025.ProofData.hashTreeRoot(proofData)).not.toEqual(boundedList.hashTreeRoot(proofData));
+    expect(ssz.eip8025.ProofData.hashTreeRoot(proofData)).toEqual(boundedList.hashTreeRoot(Array.from(proofData)));
+    expect(ssz.eip8025.ProofData.hashTreeRoot(proofData)).not.toEqual(progressiveList.hashTreeRoot(proofData));
     expect(ssz.eip8025.ProofData.deserialize(ssz.eip8025.ProofData.serialize(proofData))).toEqual(proofData);
   });
 
@@ -30,14 +25,14 @@ describe("EIP-8025 SSZ types", () => {
     expect(() => ssz.eip8025.ProofData.fromJson(ssz.eip8025.ProofData.toJson(proofData))).toThrow();
   });
 
-  it("serializes PublicInput as the 43 bytes the proof systems commit to", () => {
+  it("serializes PublicInput as a 43-byte SSZ encoding", () => {
     expect(ssz.eip8025.PublicInput).toBeInstanceOf(ProgressiveContainerType);
     expect(ssz.eip8025.PublicInput.fixedSize).toBe(43);
 
     const bytes = ssz.eip8025.PublicInput.serialize({
       newPayloadRequestRoot: Buffer.alloc(32, 0xab),
       successfulValidation: true,
-      chainId: 1,
+      chainId: 1n,
       schemaId: STATELESS_INPUT_SCHEMA_ID,
     });
     expect(bytes).toHaveLength(43);
@@ -45,6 +40,23 @@ describe("EIP-8025 SSZ types", () => {
     expect(bytes[32]).toBe(1);
     expect(Buffer.from(bytes.subarray(33, 41)).readBigUInt64LE()).toBe(1n);
     expect(Buffer.from(bytes.subarray(41, 43)).readUInt16LE()).toBe(0x1501);
+  });
+
+  it.each([9007199254740993n, 2n ** 64n - 1n])("preserves chainId %s through SSZ and JSON round trips", (chainId) => {
+    const bytes = ssz.eip8025.PublicInput.serialize(ssz.eip8025.PublicInput.defaultValue());
+    bytes.set(ssz.UintBn64.serialize(chainId), 33);
+
+    const publicInput = ssz.eip8025.PublicInput.deserialize(bytes);
+
+    expect(publicInput.chainId).toBe(chainId);
+    expect(ssz.eip8025.PublicInput.serialize(publicInput)).toEqual(bytes);
+
+    const json = ssz.eip8025.PublicInput.toJson(publicInput);
+    expect(json).toMatchObject({chain_id: chainId.toString()});
+    expect(ssz.eip8025.PublicInput.fromJson(json)).toEqual(publicInput);
+    expect(ssz.eip8025.PublicInput.hashTreeRoot(ssz.eip8025.PublicInput.fromJson(json))).toEqual(
+      ssz.eip8025.PublicInput.hashTreeRoot(publicInput)
+    );
   });
 
   it("caps SignedExecutionProofEnvelope at MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE", () => {

@@ -63,7 +63,7 @@ export type NetworkProcessorOpts = GossipHandlerOpts & {
 /**
  * Keep up to 3 slot of unknown roots, so we don't always emit to UnknownBlock sync.
  */
-const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
+export const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
 
 /**
  * Max distinct roots we BUFFER messages for, per slot. Kept tight to avoid the OOM
@@ -666,6 +666,7 @@ export class NetworkProcessor {
    *
    * For DOS protection, the message is ignored (reject metric incremented) when any cap is hit:
    * - MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS: global awaiting-block message count
+   * - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE: message slot already pruned by onClockSlot, so not bounded by the per-slot root budget
    * - MAX_BUFFERED_ROOTS_PER_SLOT: distinct roots we buffer messages for, per slot
    * - MAX_AWAITING_MESSAGES_PER_ROOT[topic]: messages buffered per (root, topic)
    */
@@ -674,6 +675,10 @@ export class NetworkProcessor {
     // global message-count cap - cheapest check first
     if (this.awaitingBlockMessageCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
+      return;
+    }
+    if (slot <= this.chain.clock.currentSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE) {
+      metric?.reject.inc({reason: ReprocessRejectReason.expired, topic: topicType});
       return;
     }
     // per-(root, topic) message cap: e.g. <= NUMBER_OF_COLUMNS columns per root
@@ -700,6 +705,10 @@ export class NetworkProcessor {
     const metric = this.metrics?.awaitingPayloadGossipMessages;
     if (this.awaitingPayloadMessageCount > MAX_QUEUED_UNKNOWN_PAYLOAD_GOSSIP_OBJECTS) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
+      return;
+    }
+    if (slot <= this.chain.clock.currentSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE) {
+      metric?.reject.inc({reason: ReprocessRejectReason.expired, topic: topicType});
       return;
     }
     const perRootCap = MAX_AWAITING_MESSAGES_PER_ROOT[topicType];
