@@ -18,6 +18,7 @@ describe("gloas processInactivityUpdates", () => {
 
   bench<StateEpoch, StateEpoch>({
     id: `gloas processInactivityUpdates - ${vc} inactivity leak all eligible missed target`,
+    threshold: 5,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     before: () => {
       const upgraded = upgradeStateToGloas(

@@ -5,9 +5,16 @@ import {
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
+import {
+  DataAvailabilityStatus,
+  computeEpochAtSlot,
+  isStatePostGloas,
+  isStatePostHeze,
+} from "@lodestar/state-transition";
+import {RootHex, bellatrix} from "@lodestar/types";
 import {isErrorAborted} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
@@ -172,6 +179,37 @@ export async function importExecutionPayload(
     );
   }
 
+  // Timely inclusion lists of the preceding slot, keyed by that slot's dependent root on the block's branch and
+  // resolved from the parent, which is at or before that slot. Gossip validation only accepts lists whose dependent
+  // block is in fork choice, so a dependent root fork choice cannot resolve (below the anchor after checkpoint sync)
+  // keys no stored list
+  let inclusionListTransactions: bellatrix.Transactions | undefined;
+  if (isStatePostHeze(blockState)) {
+    const inclusionListSlot = protoBlock.slot - 1;
+    let dependentRoot: RootHex | null = null;
+    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(protoBlock.parentRoot);
+    if (parentBlock !== null) {
+      try {
+        dependentRoot = getShufflingDependentRoot(
+          this.forkChoice,
+          computeEpochAtSlot(inclusionListSlot),
+          computeEpochAtSlot(parentBlock.slot),
+          parentBlock
+        );
+      } catch (e) {
+        this.logger.debug(
+          "Inclusion list dependent root not in fork choice, importing payload without lists",
+          {slot, root: blockRootHex},
+          e as Error
+        );
+      }
+    }
+    inclusionListTransactions =
+      dependentRoot === null
+        ? []
+        : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
+  }
+
   // 4a. Run EL and signature verification in parallel
   const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};
   this.logger.debug("Call engine api newPayload", logCtx);
@@ -182,7 +220,8 @@ export async function importExecutionPayload(
       envelope.payload,
       payloadInput.getVersionedHashes(),
       envelope.parentBeaconBlockRoot,
-      envelope.executionRequests
+      envelope.executionRequests,
+      inclusionListTransactions
     ),
 
     opts.validSignature === true
@@ -249,6 +288,32 @@ export async function importExecutionPayload(
       );
     }
   });
+
+  // A VALID payload that does not satisfy the inclusion list constraints is still imported, fork choice
+  // only records the verdict so should_extend_payload moves the head to the EMPTY variant, which the next
+  // proposer builds on.
+  // Recorded before the payload enters fork choice. A VALID response must carry a verdict, an
+  // optimistically imported payload counts as satisfied until the engine validates it, anything else as
+  // unsatisfied. A VALID response without a verdict violates the engine API, it is logged and treated as
+  // satisfied so a non-compliant engine does not orphan every payload
+  if (inclusionListTransactions !== undefined) {
+    if (execResult.status === ExecutionPayloadStatus.VALID && execResult.inclusionListSatisfied == null) {
+      this.logger.warn("Execution engine reported no inclusion list verdict, not enforcing inclusion lists", logCtx);
+    }
+    const satisfied =
+      execResult.status === ExecutionPayloadStatus.VALID
+        ? (execResult.inclusionListSatisfied ?? true)
+        : execResult.status === ExecutionPayloadStatus.SYNCING || execResult.status === ExecutionPayloadStatus.ACCEPTED;
+    this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, satisfied);
+    if (!satisfied) {
+      this.logger.verbose("Payload did not satisfy inclusion list constraints", {
+        ...logCtx,
+        blockHash: blockHashHex,
+        status: execResult.status,
+        inclusionListTransactions: inclusionListTransactions.length,
+      });
+    }
+  }
 
   // 6. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
