@@ -104,8 +104,11 @@ describe("beacon state api utils", () => {
     it("should read each builder once to resolve many pubkeys", () => {
       getBuilder.mockClear();
       const builderIndexByPubkey = getBuilderIndexByPubkey(state);
-      for (const builder of builders) {
-        expect(getStateBuilderIndex(builder.pubkey, state, () => builderIndexByPubkey).valid).toBe(true);
+      for (const [i, builder] of builders.entries()) {
+        expect(
+          getStateBuilderIndex(builder.pubkey, state, () => builderIndexByPubkey),
+          `builder ${i}`
+        ).toEqual({valid: true, builderIndex: i});
       }
       expect(getBuilder).toHaveBeenCalledTimes(builders.length);
     });
