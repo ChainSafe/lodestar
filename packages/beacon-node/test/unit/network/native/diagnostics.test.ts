@@ -13,7 +13,6 @@ async function fixture() {
   const key = await generateKeyPair("secp256k1");
   const identity = peerIdFromPublicKey(key.publicKey).toString();
   const page: NativeGossipDiagnosticsPage = {
-    ownerSequence: 1n,
     observedMonoMs: 10000n,
     observedUnixMs: 1000000n,
     nextCursor: null,
@@ -73,14 +72,14 @@ async function fixture() {
   };
   const runtime = {
     getGossipDiagnostics: vi.fn(async () => page),
-    getPeers: vi.fn(async () => ({
-      peers: [peer],
-      occupiedCount: 1,
-      capacity: 8,
-      counts: {connected: 1, relevant: 1, outboundRelevant: 0},
-      ownerSequence: 1n,
+    getPeerScores: vi.fn(async () => ({
+      observedMonoMs: page.observedMonoMs,
+      observedUnixMs: page.observedUnixMs,
+      peers: [
+        {identity: peer.identity, score: peer.score, scoreAtMs: peer.scoreAtMs, gossipScore: page.peers[0]?.score ?? 0},
+      ],
     })),
-  } satisfies Pick<NativeNetwork, "getPeers" | "getGossipDiagnostics">;
+  } satisfies Pick<NativeNetwork, "getPeerScores" | "getGossipDiagnostics">;
   return {page, peer, runtime, peerId: peerIdFromPublicKey(key.publicKey).toString()};
 }
 
@@ -140,4 +139,11 @@ it("includes RPC peers without gossip scores and distinguishes retained scores f
   expect((await dumpNativeGossipScores(runtime))[peerId]).toMatchObject({connected: false, expire: 1002000});
   page.peers = [];
   expect(await dumpNativePeerScores(runtime)).toMatchObject([{peerId, gossipScore: 0, score: -2}]);
+});
+
+it("reads compact peer scores without walking topic diagnostics", async () => {
+  const {runtime} = await fixture();
+  await dumpNativePeerScores(runtime);
+  expect(runtime.getPeerScores).toHaveBeenCalledOnce();
+  expect(runtime.getGossipDiagnostics).not.toHaveBeenCalled();
 });

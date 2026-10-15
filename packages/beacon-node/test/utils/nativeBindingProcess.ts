@@ -3,7 +3,7 @@ import type {
   NativeApplicationConfig,
   NativeIdentity,
   NativeLocalIntent,
-  NativePeerSnapshot,
+  NativePeerState,
 } from "@chainsafe/lodestar-z/network";
 import type {BeaconConfig} from "@lodestar/config";
 
@@ -59,7 +59,7 @@ export async function nativeBindingProcess(config: Omit<NativeApplicationConfig,
     return {
       identity,
       applyIntent: (value: NativeLocalIntent) => call<void>("applyIntent", [value]),
-      getPeers: () => call<NativePeerSnapshot>("getPeers", []),
+      getPeers: () => call<{peers: NativePeerState[]}>("getPeers", []),
       async close() {
         try {
           await call("close", []);

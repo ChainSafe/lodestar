@@ -350,7 +350,7 @@ describe("native Lodestar integration", () => {
           expect(await node.network.scrapeMetrics()).toContain('lodestar_peer_closes_total{reason="host"} 1\n'),
         {timeout: 5000}
       );
-      await vi.waitFor(async () => expect((await remote.getPeers()).counts.connected).toBe(0), {timeout: 5000});
+      await vi.waitFor(async () => expect((await remote.getPeers()).peers.length).toBe(0), {timeout: 5000});
       expect(node.network.closed).toBe(false);
       expect((await node.network.getNetworkIdentity()).peerId).toBe(identity.peerId);
     } finally {
@@ -459,7 +459,9 @@ describe("native Lodestar integration", () => {
           )
         ).toThrow("dial addresses");
         await left.network.connectToPeer(remote.peerId, remote.p2pAddresses);
-        expect(await left.network.dumpPeer(remote.peerId)).toMatchObject({peerId: remote.peerId, state: "connected"});
+        await vi.waitFor(async () =>
+          expect(await left.network.dumpPeer(remote.peerId)).toMatchObject({peerId: remote.peerId, state: "connected"})
+        );
         expect(await left.network.dumpPeers()).toMatchObject([{peerId: remote.peerId, state: "connected"}]);
         expect(await left.network.dumpPeer(left.network.peerId.toString())).toBeUndefined();
         const leftBlock = ssz.fulu.SignedBeaconBlock.defaultValue();

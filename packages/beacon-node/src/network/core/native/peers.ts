@@ -159,6 +159,12 @@ export class NativePeers {
   connected(): string[] {
     return [...this.peers.keys()];
   }
+  states(): NativePeerState[] {
+    return Array.from(this.peers.values(), ({state}) => state);
+  }
+  state(identity: string): NativePeerState | undefined {
+    return this.peers.get(identity)?.state;
+  }
   get connectedCount(): number {
     return this.peers.size;
   }

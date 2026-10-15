@@ -3,6 +3,7 @@ import {createNativeNetwork} from "@chainsafe/lodestar-z/network";
 
 let network;
 let active = 0;
+const peers = new Map();
 // The least a host does: take no work, so the binding only settles results.
 const host = {
   capacity: () => ({gossipValidation: "backpressured", incomingRequestSlots: 0}),
@@ -10,7 +11,13 @@ const host = {
   validate: async (job) => job.messages.map(() => "ignore"),
   checkDependencies: (checks) => checks.map(() => false),
   serve: (request) => request.cancel(),
-  peers: () => {},
+  peers: (events) => {
+    for (const event of events) {
+      if (event.type === "closed") peers.delete(event.identity);
+      else if (event.state.connection) peers.set(event.state.identity, event.state);
+      else peers.delete(event.state.identity);
+    }
+  },
   failed: (error) => {
     throw error;
   },
@@ -23,14 +30,13 @@ process.on("message", async ({id, method, args}) => {
     switch (method) {
       case "initialize":
         network = createNativeNetwork({...args[0], beaconConfig: new bindings.BeaconConfig(args[1], args[2]), logLevel: "off"}, host);
-        network.stopDelivery();
         value = await network.getIdentity();
         break;
       case "applyIntent":
         value = await network.applyIntent(...args);
         break;
       case "getPeers":
-        value = await network.getPeers();
+        value = {peers: [...peers.values()]};
         break;
       case "close":
         value = await network.close();

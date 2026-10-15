@@ -259,7 +259,7 @@ export class NativeNetworkCore implements INetworkCore {
     return this.network.setDirectPeer(peer, null);
   }
   async getDirectPeers(): Promise<string[]> {
-    return (await this.network.getDirectPeers()).identities;
+    return this.network.getDirectPeers();
   }
   sendReqRespRequest(data: OutgoingRequestArgs) {
     return outgoingNativeRequest(this.network, data, (action, reason, origin) => {
@@ -309,12 +309,10 @@ export class NativeNetworkCore implements INetworkCore {
     return Promise.reject(new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource}));
   }
   async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
-    const snapshot = await this.network.getPeers();
-    return snapshot.peers.filter((peer) => peer.connection !== null).map(formatNativePeer);
+    return this.peers.states().map(formatNativePeer);
   }
   async dumpPeer(peerId: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
-    const snapshot = await this.network.getPeers();
-    const peer = snapshot.peers.find((peer) => peer.connection !== null && peer.identity === peerId);
+    const peer = this.peers.state(peerId);
     return peer ? formatNativePeer(peer) : undefined;
   }
   dumpPeerScoreStats(): ReturnType<typeof dumpNativePeerScores> {

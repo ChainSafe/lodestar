@@ -3,7 +3,7 @@ import type {NativeGossipDiagnosticsPage, NativeNetwork} from "@chainsafe/lodest
 import type {PeerScoreStats} from "../../peers/score/interface.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
-type Network = Pick<NativeNetwork, "getPeers" | "getGossipDiagnostics">;
+type Network = Pick<NativeNetwork, "getPeerScores" | "getGossipDiagnostics">;
 
 async function visitPages(network: Network, visit: (page: NativeGossipDiagnosticsPage) => void): Promise<void> {
   let cursor = 0;
@@ -16,7 +16,7 @@ async function visitPages(network: Network, visit: (page: NativeGossipDiagnostic
   throw new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "gossip diagnostics pages"});
 }
 
-function unixTime(time: bigint, page: NativeGossipDiagnosticsPage): number {
+function unixTime(time: bigint, page: Pick<NativeGossipDiagnosticsPage, "observedUnixMs" | "observedMonoMs">): number {
   return time === 0n
     ? 0
     : nativeInteger(Number(page.observedUnixMs + time - page.observedMonoMs), "diagnostic timestamp");
@@ -94,25 +94,17 @@ export async function dumpNativeMeshPeers(network: Network): Promise<Record<stri
 }
 
 export async function dumpNativePeerScores(network: Network): Promise<PeerScoreStats> {
-  const snapshot = await network.getPeers();
-  const gossip = new Map<string, number>();
-  let observed: NativeGossipDiagnosticsPage | undefined;
-  await visitPages(network, (page) => {
-    observed ??= page;
-    for (const peer of page.peers) gossip.set(peer.identity, peer.score);
-  });
-  const page = observed;
-  if (!page) throw new NativeNetworkError({code: NativeNetworkErrorCode.UNAVAILABLE, resource: "peer score snapshot"});
+  const snapshot = await network.getPeerScores();
   return snapshot.peers.map((peer) => {
     const peerId = peer.identity;
-    const gossipScore = gossip.get(peerId) ?? 0;
+    const gossipScore = peer.gossipScore;
     return {
       peerId,
       lodestarScore: peer.score,
       gossipScore,
       ignoreNegativeGossipScore: false,
       score: peer.score + gossipScore,
-      lastUpdate: unixTime(peer.scoreAtMs, page),
+      lastUpdate: unixTime(peer.scoreAtMs, snapshot),
     };
   });
 }
