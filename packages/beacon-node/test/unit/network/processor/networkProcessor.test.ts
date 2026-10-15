@@ -388,6 +388,30 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(p.awaitingPayloadMessageCount).toBe(1);
     });
 
+    it("expires only the old messages of a payload wait held across two slots", () => {
+      const p = processor as unknown as Internals;
+      const root = `0x${"cd".repeat(32)}`;
+      const oldSlot = clockSlot - 4;
+      const newSlot = clockSlot;
+      for (const msgSlot of [oldSlot, newSlot]) {
+        p.bufferedRootsBySlot.getOrDefault(msgSlot).add(root);
+        p.awaitingMessagesByPayloadBlockRoot
+          .getOrDefault(root)
+          .getOrDefault(GossipType.beacon_aggregate_and_proof)
+          .add({
+            topic: {type: GossipType.beacon_aggregate_and_proof},
+            seenTimestampSec: 0,
+            msgSlot,
+          } as unknown as PendingGossipsubMessage);
+        p.awaitingPayloadMessageCount++;
+      }
+
+      p.onClockSlot(clockSlot);
+
+      expect(p.awaitingPayloadMessageCount).toBe(1);
+      expect(p.awaitingMessagesByPayloadBlockRoot.get(root)?.get(GossipType.beacon_aggregate_and_proof)?.size).toBe(1);
+    });
+
     it("expires a held message even when its block was never looked up", () => {
       // the per-slot lookup budget is larger than the hold budget, so lookups can run out while holds remain.
       // A message held without a lookup must still expire with its slot
