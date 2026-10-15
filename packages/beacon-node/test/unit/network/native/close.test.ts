@@ -2,12 +2,9 @@ import {describe, expect, it, vi} from "vitest";
 import {CloseResult} from "@chainsafe/lodestar-z/network";
 import {defer} from "@lodestar/utils";
 import {NativeNetworkCore} from "../../../../src/network/core/native/nativeNetworkCore.js";
-import {ClockEvent} from "../../../../src/util/clock.js";
 
 function fixture() {
   const core = Object.create(NativeNetworkCore.prototype) as NativeNetworkCore;
-  const clock = {off: vi.fn()};
-  const onSlot = vi.fn();
   const gossip = {close: vi.fn()};
   const requests = {close: vi.fn()};
   const peers = {close: vi.fn()};
@@ -24,8 +21,8 @@ function fixture() {
       return nativeClosed.promise;
     }),
   };
-  Object.assign(core, {modules: {clock}, onSlot, gossip, requests, peers, intent, remembered, network});
-  return {core, clock, onSlot, gossip, requests, peers, intent, remembered, network, nativeClosed};
+  Object.assign(core, {gossip, requests, peers, intent, remembered, network});
+  return {core, gossip, requests, peers, intent, remembered, network, nativeClosed};
 }
 
 describe("native core close", () => {
@@ -67,7 +64,7 @@ describe("native core close", () => {
   });
 
   it("stops delivery before cleanup and the final snapshot, then closes native with one shared completion", async () => {
-    const {core, remembered, network, clock, onSlot, gossip, requests, peers, intent} = fixture();
+    const {core, remembered, network, gossip, requests, peers, intent} = fixture();
     const snapshot = defer<void>();
     const joined = defer<CloseResult>();
     remembered.close.mockReturnValue(snapshot.promise);
@@ -75,11 +72,10 @@ describe("native core close", () => {
     const first = core.close();
     expect(core.close()).toBe(first);
     expect(network.stopDelivery).toHaveBeenCalledOnce();
-    for (const cleanup of [clock.off, gossip.close, requests.close, peers.close, intent.close, remembered.close]) {
+    for (const cleanup of [gossip.close, requests.close, peers.close, intent.close, remembered.close]) {
       expect(cleanup).toHaveBeenCalledOnce();
       expect(network.stopDelivery).toHaveBeenCalledBefore(cleanup);
     }
-    expect(clock.off).toHaveBeenCalledExactlyOnceWith(ClockEvent.slot, onSlot);
     expect(network.close).not.toHaveBeenCalled();
     snapshot.resolve();
     await Promise.resolve();
