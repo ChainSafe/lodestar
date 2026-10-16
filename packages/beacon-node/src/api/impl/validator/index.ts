@@ -1131,10 +1131,15 @@ export function getValidatorApi(
       const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
         chain.produceBlock(baseAttrs)
       ).then((engineBlock) => {
-        // No need to wait for the bid block if the engine block will always be selected, either
-        // due to suspected builder censorship, or because no builders are configured and the
-        // boost factor of 0 always prefers the local block over p2p bids
-        if (engineBlock.shouldOverrideBuilder || (builderConfig.builders.length === 0 && builderBoostFactor === 0n)) {
+        // No need to wait for the bid block if the engine block will always be selected, either due
+        // to suspected builder censorship, or because no builders are configured and either the boost
+        // factor of 0 always prefers the local block over p2p bids or no p2p bid has been received yet
+        if (
+          engineBlock.shouldOverrideBuilder ||
+          (builderConfig.builders.length === 0 &&
+            (builderBoostFactor === 0n ||
+              chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) === null))
+        ) {
           controller.abort();
         }
         return engineBlock;

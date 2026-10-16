@@ -587,6 +587,29 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(engineBlock);
   });
 
+  it("does not wait for the bid deadline when no builders are configured and no p2p bid was received", async () => {
+    vi.useFakeTimers();
+    try {
+      modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+      modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+      vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(0);
+
+      const {data: block} = await api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderConfig: getBuilderConfig(),
+      });
+
+      expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+      expect(block).toEqual(engineBlock);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("ignores builder bids when the builder circuit breaker is active", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
