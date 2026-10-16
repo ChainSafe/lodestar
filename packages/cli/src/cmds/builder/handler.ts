@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {
-  ExecutionEngineState,
   RegistryMetricCreator,
   collectNodeJSMetrics,
   defaultExecutionEngineHttpOpts,
@@ -115,8 +114,10 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
           payloadAttributes
         );
       } catch (e) {
-        // A syncing execution client has not imported the parent payload yet, the build is retried until the deadline
-        if (engine.state === ExecutionEngineState.SYNCING) return null;
+        // Only retry while the execution client is syncing, it has not imported the parent payload yet.
+        // The engine interface does not expose the fcU status, this matches the error thrown for the SYNCING status
+        // in ExecutionEngineHttp.notifyForkchoiceUpdate until a typed error is added to the beacon node
+        if (e instanceof Error && e.message === "Execution Layer Syncing") return null;
         throw e;
       }
     },

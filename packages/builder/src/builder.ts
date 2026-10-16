@@ -23,7 +23,10 @@ import {PayloadStore} from "./services/payloadStore.js";
 import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
 import {Revealer} from "./services/revealer.js";
 
-// Payments of won bids are reflected in the builder balance after this many slots
+// Payments of won bids are assumed to be reflected in the builder balance after this many slots.
+// The payment is queued as a builder withdrawal at the epoch transition after the bid epoch and only debited once that
+// withdrawal is processed, so with a backlog of withdrawals the ledger releases the reservation before the balance drops.
+// Reconciling against the pending payments and pending withdrawals of the state is a follow-up.
 const PAYMENT_SETTLEMENT_SLOTS = 3 * SLOTS_PER_EPOCH;
 
 export type BuilderModules = {
