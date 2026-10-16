@@ -1015,11 +1015,11 @@ export function getValidatorApi(
         (!circuitBreakerActive &&
           chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
-      // Select the p2p bid once builders had time to bid up, matching the deadline advertised
-      // on builder API bid requests, unless the circuit breaker is active
+      // Select the p2p bid once builders had the same time to bid up as granted to builder API bid
+      // requests via the advertised deadline, unless the circuit breaker is active
       const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
         ? Promise.resolve(null)
-        : sleep(Math.max(0, chain.builderApiClient.bidDeadline - chain.clock.msFromSlot(slot))).then(() => {
+        : sleep(chain.builderApiClient.bidDeadline).then(() => {
             const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
             // Discard p2p bids below the proposer's configured floor on the total payment.
             // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.

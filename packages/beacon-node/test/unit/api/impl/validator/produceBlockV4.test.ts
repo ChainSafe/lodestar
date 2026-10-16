@@ -7,7 +7,6 @@ import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BlockType, ProduceFullGloas} from "../../../../../src/chain/produceBlock/produceBlockBody.js";
-import {DEFAULT_BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/execution/builder/validateBid.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
@@ -69,8 +68,9 @@ describe("api/validator - produceBlockV4", () => {
     api = getValidatorApi(defaultApiOptions, {...modules, config});
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
-    // Move past the bid deadline so the p2p bid is selected without waiting
-    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(DEFAULT_BUILDER_BID_DEADLINE_MS);
+    // Zero bid deadline so the p2p bid is selected without waiting
+    (modules.chain.builderApiClient as {bidDeadline: number}).bidDeadline = 0;
+    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(0);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
     modules.chain.getProposerHead.mockReturnValue(parentBlock);
     modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
