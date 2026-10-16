@@ -1,9 +1,9 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {routes} from "@lodestar/api";
-import {createBeaconConfig} from "@lodestar/config";
+import {chainConfigToJson, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
 import {Builder, BuilderModules} from "../../src/builder.js";
@@ -13,12 +13,14 @@ import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
+import {biddingOptions, createBiddingModules, getPayloadSourceStub} from "./utils/bidding.js";
 import {ClockMock} from "./utils/clock.js";
 import {getMockedLogger} from "./utils/logger.js";
+import {mockGetStateBuildersResponse} from "./utils/mocks.js";
 import {mockBuiltPayload} from "./utils/payload.js";
 
 const {EventType} = routes.events;
-const topics = [EventType.block, EventType.proposerPreferences];
+const topics = [EventType.block, EventType.proposerPreferences, EventType.payloadAttributes];
 
 describe("Builder", () => {
   let api: ReturnType<typeof getApiClientStub>;
@@ -36,6 +38,10 @@ describe("Builder", () => {
     clock = new ClockMock();
     const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
     const keypair = {secretKey, publicKey: secretKey.toPublicKey()};
+    const builderSigner = new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair);
+    const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    const payloadStore = new PayloadStore();
+    const payloadSource = getPayloadSourceStub();
     modules = {
       opts: {
         logger,
@@ -45,20 +51,79 @@ describe("Builder", () => {
         api,
         executionFeeRecipient: Buffer.alloc(20),
         metrics: null,
+        payloadSource,
+        bidding: biddingOptions,
+        reveal: {},
       },
-      builderSigner: new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair),
+      builderSigner,
       builderStatusTracker: new BuilderStatusTracker(api, logger, 1, null),
       blockObserver: new BlockObserver(config, logger, api),
-      proposerPreferencesTracker: new ProposerPreferencesTracker(),
+      proposerPreferencesTracker,
       clock,
       index: 1,
-      payloadStore: new PayloadStore(),
+      payloadStore,
+      ...createBiddingModules({
+        api,
+        config,
+        logger,
+        clock,
+        builderSigner,
+        proposerPreferencesTracker,
+        payloadStore,
+        payloadSource,
+        signal: controller.signal,
+      }),
     };
   });
 
   afterEach(() => {
     controller.abort();
+    vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it.each(["slow", "failed"])("seeds startup status before a %s first poll", async (mode) => {
+    vi.useFakeTimers({now: 12_000});
+    api.beacon.getGenesis.mockResolvedValue(
+      mockApiResponse({data: ssz.phase0.Genesis.defaultValue(), meta: undefined})
+    );
+    Object.assign(api, {
+      config: {
+        getSpec: vi
+          .fn()
+          .mockResolvedValue(mockApiResponse({data: chainConfigToJson(modules.opts.config), meta: undefined})),
+      },
+    });
+    api.node.getSyncingStatus.mockResolvedValue(
+      mockApiResponse({
+        data: {headSlot: 1, syncDistance: 0, isSyncing: false, isOptimistic: false, elOffline: false},
+        meta: undefined,
+      })
+    );
+    api.beacon.getStateBuilders.mockResolvedValueOnce(
+      mockGetStateBuildersResponse(1, {
+        pubkey: modules.opts.keypair.publicKey.toBytes(),
+        balance: 10_000_000_000,
+      })
+    );
+    const laterPoll = defer<Awaited<ReturnType<typeof api.beacon.getStateBuilders>>>();
+    if (mode === "slow") api.beacon.getStateBuilders.mockReturnValue(laterPoll.promise);
+    else api.beacon.getStateBuilders.mockRejectedValue(Error("poll failed"));
+    const poll = vi.spyOn(BuilderStatusTracker.prototype, "poll");
+    const initialized = await Builder.init(modules.opts);
+    expect(poll).toHaveBeenCalledOnce();
+    const tracker = poll.mock.contexts[0];
+    if (!(tracker instanceof BuilderStatusTracker)) throw Error("Missing startup tracker");
+    expect(tracker.getStatus()).toEqual({status: "active", balance: 10_000_000_000});
+    expect(api.events.eventstream).toHaveBeenCalledOnce();
+    await initialized.close();
+    laterPoll.resolve(mockGetStateBuildersResponse(1, {balance: 10_000_000_000}));
+  });
+
+  it.each([0, 10_000, NaN, 1.5])("rejects invalid reveal timing %s before startup", async (cutoffBps) => {
+    modules.opts.reveal.cutoffBps = cutoffBps;
+    await expect(Builder.init(modules.opts)).rejects.toMatchObject({type: {code: "BUILDER_ERROR_INVALID_OPTIONS"}});
+    expect(api.beacon.getGenesis).not.toHaveBeenCalled();
   });
 
   it("starts one shared stream after the clock and preserves slot pruning", async () => {
@@ -79,6 +144,7 @@ describe("Builder", () => {
       onEvent: expect.any(Function),
       onOpen: expect.any(Function),
       onError: expect.any(Function),
+      onDisconnect: expect.any(Function),
       onClose: expect.any(Function),
     });
     expect(clockStart.mock.invocationCallOrder[0]).toBeLessThan(api.events.eventstream.mock.invocationCallOrder[0]);
@@ -159,6 +225,90 @@ describe("Builder", () => {
     onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: preferences}});
     expect(modules.proposerPreferencesTracker.get(0, toRootHex(preferences.message.dependentRoot))).toBe(preferences);
     expect(controller.signal.aborted).toBe(false);
+  });
+
+  it("wakes pending bidding after a successful snapshot fetch", async () => {
+    const wake = vi.spyOn(modules.bidder, "onPreferences").mockResolvedValue();
+    api.beacon.getProposerPreferences.mockResolvedValue(mockApiResponse({data: [], meta: {version: ForkName.gloas}}));
+    new Builder(modules);
+    api.events.eventstream.mock.calls[0][0].onOpen?.();
+    await vi.waitFor(() => expect(wake).toHaveBeenCalledOnce());
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not report a resumed-build failure as a snapshot fetch failure", async () => {
+    const failure = Error("resumed build failed");
+    vi.spyOn(modules.bidder, "onPreferences").mockRejectedValue(failure);
+    api.beacon.getProposerPreferences.mockResolvedValue(mockApiResponse({data: [], meta: {version: ForkName.gloas}}));
+    new Builder(modules);
+    api.events.eventstream.mock.calls[0][0].onOpen?.();
+    await vi.waitFor(() =>
+      expect(logger.error).toHaveBeenCalledWith("Failed to resume bidding after preference recovery", {}, failure)
+    );
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("ignores an old snapshot returned after a disconnect", async () => {
+    const pending = defer<Awaited<ReturnType<typeof api.beacon.getProposerPreferences>>>();
+    api.beacon.getProposerPreferences.mockReturnValue(pending.promise);
+    const wake = vi.spyOn(modules.bidder, "onPreferences");
+    const invalidate = vi.spyOn(modules.bidder, "invalidateInputs");
+    new Builder(modules);
+    const {onOpen, onDisconnect} = api.events.eventstream.mock.calls[0][0];
+    onOpen?.();
+    onDisconnect?.();
+    const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+    pending.resolve(mockApiResponse({data: [preferences], meta: {version: ForkName.gloas}}));
+    await pending.promise;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(invalidate).toHaveBeenCalledOnce();
+    expect(wake).not.toHaveBeenCalled();
+    expect(modules.proposerPreferencesTracker.get(0, toRootHex(preferences.message.dependentRoot))).toBeNull();
+  });
+
+  it("dispatches payload attributes to the bidder and observed blocks to the revealer", async () => {
+    const onPayloadAttributes = vi.spyOn(modules.bidder, "onPayloadAttributes").mockResolvedValue();
+    const onBlock = vi.spyOn(modules.revealer, "onBlock").mockResolvedValue();
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    api.beacon.getBlockV2.mockResolvedValue(
+      mockApiResponse({data: block, meta: {version: ForkName.gloas, executionOptimistic: false, finalized: false}})
+    );
+    new Builder(modules);
+    const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+    const payloadAttributes = {version: ForkName.gloas, data: ssz.gloas.SSEPayloadAttributes.defaultValue()};
+    onEvent({type: EventType.payloadAttributes, message: payloadAttributes});
+    expect(onPayloadAttributes).toHaveBeenCalledExactlyOnceWith(payloadAttributes);
+
+    const blockRoot = toRootHex(Buffer.alloc(32, 1));
+    onEvent({type: EventType.block, message: {slot: 0, block: blockRoot, executionOptimistic: false}});
+    await vi.waitFor(() => expect(onBlock).toHaveBeenCalledOnce());
+    expect(onBlock.mock.calls[0][0]).toMatchObject({
+      blockRoot,
+      slot: 0,
+      signedBid: block.message.body.signedExecutionPayloadBid,
+    });
+  });
+
+  it("retains winning obligations on slot ticks without payment evidence", async () => {
+    const bid = {
+      slot: 1,
+      parentBlockHash: toRootHex(Buffer.alloc(32, 2)),
+      parentBlockRoot: toRootHex(Buffer.alloc(32, 3)),
+      blockHash: toRootHex(Buffer.alloc(32, 4)),
+      valueGwei: 5,
+      signedBidRoot: toRootHex(Buffer.alloc(32, 5)),
+    };
+    modules.ledger.recordBid(bid);
+    modules.ledger.recordWin(bid, toRootHex(Buffer.alloc(32, 6)));
+    new Builder(modules);
+
+    await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH, controller.signal);
+    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(bid.valueGwei);
+
+    await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH + 1, controller.signal);
+    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(bid.valueGwei);
+    expect(modules.ledger.getBidsForSlot(bid.slot)).toHaveLength(1);
   });
 
   it("does not block preferences while a block consumer is pending", async () => {
@@ -258,10 +408,12 @@ describe("Builder", () => {
   });
 
   it("logs a stream error and continues delivery", () => {
+    const invalidate = vi.spyOn(modules.bidder, "invalidateInputs");
     new Builder(modules);
     const {onError, onEvent} = api.events.eventstream.mock.calls[0][0];
-    const error = Error("connection interrupted");
+    const error = Error("invalid event data");
     onError?.(error);
+    expect(invalidate).not.toHaveBeenCalled();
     const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
     onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: preferences}});
 
