@@ -4,15 +4,12 @@ import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {LogLevel} from "@lodestar/utils";
 import {NativeLogs, nativeLogLevel} from "../../../../src/network/core/native/logs.js";
 
-function record(sequence: number, level: NativeLogRecord["level"] = "debug"): NativeLogRecord {
+function record(level: NativeLogRecord["level"] = "debug"): NativeLogRecord {
   return {
     level,
     scope: "network_reqresp",
     message: "request_completed",
-    sequence: BigInt(sequence),
-    timestampMs: 1000n,
-    monotonicMs: 20n,
-    truncated: false,
+    timestampMs: 1000,
   };
 }
 
@@ -25,31 +22,15 @@ function fixture(level = LogLevel.debug) {
 describe("native log delivery", () => {
   it("logs each record at its level with its native context", () => {
     const f = fixture();
-    f.logs.deliver([record(1), record(2, "warn")], null);
+    f.logs.deliver([record(), record("warn")]);
     expect(f.logger.debug).toHaveBeenCalledExactlyOnceWith("request_completed", {
       nativeScope: "network_reqresp",
-      nativeSequence: "1",
-      nativeTimestampMs: "1000",
-      nativeMonotonicMs: "20",
-      nativeTruncated: false,
+      nativeTimestampMs: 1000,
     });
     expect(f.logger.warn).toHaveBeenCalledExactlyOnceWith(
       "request_completed",
-      expect.objectContaining({nativeSequence: "2"})
+      expect.objectContaining({nativeScope: "network_reqresp"})
     );
-  });
-
-  it("warns once per delivery that reports lost records, after the records", () => {
-    const f = fixture();
-    f.logs.deliver([record(1)], {dropped: 1n, suppressed: 7n, truncated: 0n});
-    expect(f.logger.warn).toHaveBeenCalledExactlyOnceWith("Native log records limited", {
-      dropped: "1",
-      suppressed: "7",
-      truncated: "0",
-    });
-    expect(f.logger.debug.mock.invocationCallOrder[0]).toBeLessThan(f.logger.warn.mock.invocationCallOrder[0]);
-    f.logs.deliver([], null);
-    expect(f.logger.warn).toHaveBeenCalledOnce();
   });
 
   it("lets a throwing logger fail the delivery, which the binding counts", () => {
@@ -57,7 +38,7 @@ describe("native log delivery", () => {
     f.logger.debug.mockImplementation(() => {
       throw Error("logger unavailable");
     });
-    expect(() => f.logs.deliver([record(1)], null)).toThrow("logger unavailable");
+    expect(() => f.logs.deliver([record()])).toThrow("logger unavailable");
   });
 });
 

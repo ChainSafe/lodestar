@@ -46,7 +46,6 @@ export type NetworkArgs = {
   "network.xrayWaitForAttach"?: boolean;
   "network.backend"?: "libp2p" | "native";
   "network.native.traceGossip"?: boolean;
-  "network.native.traceTurns"?: boolean;
   "network.native.receiveBudgetBytes"?: number;
   "network.native.initialCongestionWindowPackets"?: number;
   "network.native.receiveDatagramsPerTurn"?: number;
@@ -214,7 +213,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 
   const native = {
     traceGossip: args["network.native.traceGossip"],
-    traceTurns: args["network.native.traceTurns"],
     receiveBudgetBytes: args["network.native.receiveBudgetBytes"],
     initialCongestionWindowPackets: args["network.native.initialCongestionWindowPackets"],
     receiveDatagramsPerTurn: args["network.native.receiveDatagramsPerTurn"],
@@ -275,13 +273,6 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "Wait up to 30 seconds for the Xray collector before starting networking",
     type: "boolean",
     group: "network",
-  },
-  "network.native.traceTurns": {
-    type: "boolean",
-    group: "network",
-    description: "Log native network phase timing totals at most once per 50 ms",
-    defaultDescription: "false",
-    hidden: true,
   },
   "network.native.traceGossip": {
     type: "boolean",

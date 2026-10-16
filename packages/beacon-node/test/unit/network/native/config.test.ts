@@ -46,12 +46,10 @@ describe("native configuration boundary", () => {
     const node = await fixture();
     const application = node.create();
     expect(application.traceGossip).toBeUndefined();
-    expect(application.traceTurns).toBeUndefined();
     expect(application.gossipPolicy).toEqual({topicConcurrency: undefined});
     expect(application.resources).toEqual({targetPeers: 200, maxPeers: 210});
-    expect(node.create({native: {traceGossip: true, traceTurns: true}})).toMatchObject({
+    expect(node.create({native: {traceGossip: true}})).toMatchObject({
       traceGossip: true,
-      traceTurns: true,
     });
     expect(node.create({maxGossipTopicConcurrency: 12}).gossipPolicy).toEqual({topicConcurrency: 12});
     expect(node.create({native: {receiveBudgetBytes: 1024 ** 3}}).resources.receiveBudgetBytes).toBe(1024 ** 3);

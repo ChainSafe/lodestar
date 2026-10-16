@@ -1,4 +1,4 @@
-import {NativeLogLevel, NativeLogLoss, NativeLogRecord} from "@chainsafe/lodestar-z/network";
+import {NativeLogLevel, NativeLogRecord} from "@chainsafe/lodestar-z/network";
 import {logLevelNum} from "@lodestar/logger";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
 
@@ -22,20 +22,11 @@ export class NativeLogs {
     this.level = nativeLogLevel(logger.toOpts());
   }
 
-  deliver(records: readonly NativeLogRecord[], lost: NativeLogLoss | null): void {
+  deliver(records: readonly NativeLogRecord[]): void {
     for (const record of records)
       this.logger[record.level](record.message, {
         nativeScope: record.scope,
-        nativeSequence: record.sequence.toString(),
-        nativeTimestampMs: record.timestampMs.toString(),
-        nativeMonotonicMs: record.monotonicMs.toString(),
-        nativeTruncated: record.truncated,
-      });
-    if (lost)
-      this.logger.warn("Native log records limited", {
-        dropped: lost.dropped.toString(),
-        suppressed: lost.suppressed.toString(),
-        truncated: lost.truncated.toString(),
+        nativeTimestampMs: record.timestampMs,
       });
   }
 }

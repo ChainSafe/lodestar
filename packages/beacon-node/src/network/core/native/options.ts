@@ -1,7 +1,6 @@
 export type NativeBackendOptions = {
   /** Emit bounded block and sampled column lifecycle logs. */
   traceGossip?: boolean;
-  traceTurns?: boolean;
   receiveBudgetBytes?: number;
   initialCongestionWindowPackets?: number;
   receiveDatagramsPerTurn?: number;

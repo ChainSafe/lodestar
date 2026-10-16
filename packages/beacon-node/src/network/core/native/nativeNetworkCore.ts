@@ -139,7 +139,7 @@ export class NativeNetworkCore implements INetworkCore {
       serveNativeRequest(request, this.modules.getReqRespHandler, this.modules.config, this.modules.logger),
     peers: (events) => this.peers.deliver(events),
     failed: (error) => this.onFailure(error),
-    logs: (records, lost) => this.logs.deliver(records, lost),
+    logs: (records) => this.logs.deliver(records),
     error: (error) => this.onOperationError(error),
   };
   private readonly onFailure = (error: unknown): void => {
