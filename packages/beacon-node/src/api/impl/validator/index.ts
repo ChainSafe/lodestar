@@ -1031,7 +1031,12 @@ export function getValidatorApi(
       // earliest received builder API bid, so the signed block can be routed back to its
       // builder directly.
       const bestBidPromise: Promise<BidCandidate | null> = (async () => {
-        const [builderApiBids] = await Promise.all([builderApiBidsPromise, bidDeadlinePromise]);
+        // Past the race cutoff a pooled p2p bid is used right away rather than waiting for pending
+        // builder API requests, the local block is selected at the cutoff anyway if it is ready
+        let [builderApiBids] = await Promise.all([
+          Promise.race([builderApiBidsPromise, sleep(cutoffMs).then(() => null)]),
+          bidDeadlinePromise,
+        ]);
         let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
 
         let p2pBid: PooledExecutionPayloadBid | null = circuitBreakerActive
@@ -1046,6 +1051,9 @@ export function getValidatorApi(
             minBid: prettyGweiToEth(builderConfig.minBid),
           });
           p2pBid = null;
+        }
+        if (builderApiBids === null) {
+          builderApiBids = p2pBid !== null ? [] : await builderApiBidsPromise;
         }
 
         const candidates = (
