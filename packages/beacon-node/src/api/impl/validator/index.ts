@@ -982,8 +982,11 @@ export function getValidatorApi(
       }
       const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot, parentBlock);
 
-      // Fire builder API bid requests while the local payload is built, one request per entry.
-      // Any entry failure yields no bid and never fails block production.
+      // use abort controller to stop waiting for the bid block if the engine block will be selected
+      const controller = new AbortController();
+
+      // Fire builder API bid requests while the local payload is built, one request per entry and
+      // round. Any entry failure yields no bid and never fails block production.
       let builderApiBidsPromise: Promise<BuilderApiBid[]> = Promise.resolve([]);
       if (builderConfig.builders.length > 0 && !circuitBreakerActive) {
         try {
@@ -994,7 +997,8 @@ export function getValidatorApi(
             slot,
             fromHex(bidParentBlockHash),
             parentBlockRoot,
-            proposerPubkey
+            proposerPubkey,
+            controller.signal
           );
         } catch (e) {
           logger.warn("Unable to request builder API bids", {slot}, e as Error);
@@ -1015,12 +1019,12 @@ export function getValidatorApi(
         config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
       );
 
-      // Give p2p bids the same time to bid up as granted to builder API bid requests via the advertised
-      // deadline, the pool is read once the deadline passed and the bid requests settled. A late request
-      // does not wait past the race cutoff, a pooled bid is still the fastest fallback if the local block fails
+      // Give p2p bids the same window as builder API bid requests, the pool is read once the last request
+      // would reach its advertised deadline and the requests settled. A late request does not wait past
+      // the race cutoff, a pooled bid is still the fastest fallback if the local block fails
       const bidDeadlinePromise = circuitBreakerActive
         ? Promise.resolve()
-        : sleep(Math.min(chain.builderApiClient.bidDeadline, cutoffMs));
+        : sleep(Math.min(chain.builderApiClient.getBidWindowMs(slot), cutoffMs));
 
       // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
       // by the top-level factors and each builder API bid by its own entry. Ties prefer the
@@ -1129,9 +1133,6 @@ export function getValidatorApi(
         const t = metrics?.blockProductionTime.startTimer();
         return fn().finally(() => t?.({source}));
       };
-
-      // use abort controller to stop waiting for the bid block if the engine block will be selected
-      const controller = new AbortController();
 
       const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
         chain.produceBlock(baseAttrs)

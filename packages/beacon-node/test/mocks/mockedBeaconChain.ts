@@ -180,6 +180,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       },
       builderApiClient: {
         bidDeadline: DEFAULT_BUILDER_BID_DEADLINE_MS,
+        getBidWindowMs: vi.fn().mockReturnValue(DEFAULT_BUILDER_BID_DEADLINE_MS),
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
         submitBuilderPreferences: vi.fn(),
         submitSignedBeaconBlock: vi.fn(),

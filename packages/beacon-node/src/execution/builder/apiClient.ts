@@ -10,7 +10,7 @@ import {
   createSingleSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {BLSPubkey, Root, SignedBeaconBlock, Slot, WithOptionalBytes, gloas, ssz} from "@lodestar/types";
-import {isValidAsciiHttpUrl, toHex, toPrintableUrl} from "@lodestar/utils";
+import {ErrorAborted, isValidAsciiHttpUrl, sleep, toHex, toPrintableUrl} from "@lodestar/utils";
 import type {IBlsVerifier} from "../../chain/bls/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
@@ -27,12 +27,20 @@ export const BUILDER_BID_LAG_BUFFER_MS = 250;
  * p2p are given the same time to bid up.
  */
 export const DEFAULT_BUILDER_BID_DEADLINE_MS = 500;
+/** Default delay from the slot start before the first bid request, in milliseconds */
+export const DEFAULT_BUILDER_BID_DELAY_MS = 0;
+/** Default number of consecutive bid requests per proposal */
+export const DEFAULT_BUILDER_BID_REQUESTS = 1;
 
 export type BuilderApiClientOpts = {
   /** Timeout for builder api requests, bid requests are bounded by `bidDeadline` instead */
   timeout?: number;
   /** Time builders are given to provide a bid once block production starts, in milliseconds */
   bidDeadline?: number;
+  /** Delay from the slot start before the first bid request, in milliseconds */
+  bidDelay?: number;
+  /** Number of consecutive bid requests per proposal, each granting `bidDeadline` */
+  bidRequests?: number;
   // Add User-Agent header to all requests
   userAgent?: string;
 };
@@ -61,6 +69,30 @@ export type BuilderApiBid = {
   receivedMs: number;
 };
 
+/** Bid request round as milliseconds from the slot start */
+export type BidRound = {startMs: number; deadlineMs: number};
+
+/**
+ * Round i is scheduled at `bidDelay + i * bidDeadline` from the slot start, but never before the
+ * block production request or the deadline of the previous round. Every round grants the full deadline.
+ */
+export function getBidRounds(
+  msFromSlot: number,
+  bidDelay: number,
+  bidDeadline: number,
+  bidRequests: number
+): BidRound[] {
+  const rounds: BidRound[] = [];
+  let earliestMs = msFromSlot;
+  for (let i = 0; i < bidRequests; i++) {
+    const startMs = Math.max(earliestMs, bidDelay + i * bidDeadline);
+    const deadlineMs = startMs + bidDeadline;
+    rounds.push({startMs, deadlineMs});
+    earliestMs = deadlineMs;
+  }
+  return rounds;
+}
+
 /**
  * External builder integration post-gloas
  *
@@ -69,6 +101,8 @@ export type BuilderApiBid = {
  */
 export class BuilderApiClient {
   readonly bidDeadline: number;
+  readonly bidDelay: number;
+  readonly bidRequests: number;
   private readonly clients = new Map<BuilderUrl, BuilderApi>();
 
   constructor(
@@ -80,19 +114,30 @@ export class BuilderApiClient {
     private readonly logger?: Logger
   ) {
     this.bidDeadline = opts.bidDeadline ?? DEFAULT_BUILDER_BID_DEADLINE_MS;
+    this.bidDelay = opts.bidDelay ?? DEFAULT_BUILDER_BID_DELAY_MS;
+    this.bidRequests = opts.bidRequests ?? DEFAULT_BUILDER_BID_REQUESTS;
+  }
+
+  /** Time from now until the last bid request of the slot reaches its deadline */
+  getBidWindowMs(slot: Slot): number {
+    const msFromSlot = this.clock.msFromSlot(slot);
+    const rounds = getBidRounds(msFromSlot, this.bidDelay, this.bidDeadline, this.bidRequests);
+    return (rounds.at(-1)?.deadlineMs ?? msFromSlot) - msFromSlot;
   }
 
   /**
    * Fan out bid requests to the builders named by the entries, one request per unique
-   * `(url, auth.message.data)` pair. Errors and empty responses (204) are logged and filtered
-   * out so a single unresponsive builder never fails block production.
+   * `(url, auth.message.data)` pair and round, see `getBidRounds`. Errors and empty responses (204)
+   * are logged and filtered out so a single unresponsive builder never fails block production.
+   * Remaining rounds are skipped once the signal is aborted.
    */
   async getExecutionPayloadBids(
     entries: routes.validator.BuilderEntry[],
     slot: Slot,
     parentHash: Root,
     parentRoot: Root,
-    proposerPubkey: BLSPubkey
+    proposerPubkey: BLSPubkey,
+    signal?: AbortSignal
   ): Promise<BuilderApiBid[]> {
     const seenRequests = new Set<string>();
     const requests: {url: BuilderUrl; entry: routes.validator.BuilderEntry}[] = [];
@@ -126,39 +171,56 @@ export class BuilderApiClient {
       requests.push({url, entry});
     }
 
-    // Collected in arrival order so an earlier received bid wins ties during candidate ranking
+    // Collected in arrival order so an earlier received bid wins ties during candidate ranking,
+    // a bid returned unchanged by the same builder in a later round is not collected again
     const bids: BuilderApiBid[] = [];
-    await Promise.all(
-      requests.map(async ({url, entry}) => {
-        this.metrics?.builderApi.bidRequests.inc();
-        try {
-          const client = await this.getOrCreateClient(url, proposerPubkey, entry.auth);
-          const res = await client.getExecutionPayloadBid(
-            {
-              slot,
-              parentHash,
-              parentRoot,
-              proposerPubkey,
-              requestAuth: entry.auth,
-              dateMilliseconds: Date.now(),
-              timeoutMs: this.bidDeadline,
-            },
-            // Event loop lag must not discard bids that arrived in time
-            {timeoutMs: this.bidDeadline + BUILDER_BID_LAG_BUFFER_MS}
-          );
-          const signedBid = res.value();
-          if (signedBid === undefined) {
-            this.logger?.debug("No bid received from builder", {slot, builder: toPrintableUrl(url)});
-            return;
+    const seenBids = new Set<string>();
+    const rounds = getBidRounds(this.clock.msFromSlot(slot), this.bidDelay, this.bidDeadline, this.bidRequests);
+    for (const round of rounds) {
+      if (signal?.aborted) break;
+      try {
+        await sleep(round.startMs - this.clock.msFromSlot(slot), signal);
+      } catch (e) {
+        if (e instanceof ErrorAborted) break;
+        throw e;
+      }
+      await Promise.all(
+        requests.map(async ({url, entry}) => {
+          this.metrics?.builderApi.bidRequests.inc();
+          try {
+            const client = await this.getOrCreateClient(url, proposerPubkey, entry.auth);
+            const res = await client.getExecutionPayloadBid(
+              {
+                slot,
+                parentHash,
+                parentRoot,
+                proposerPubkey,
+                requestAuth: entry.auth,
+                dateMilliseconds: Date.now(),
+                timeoutMs: this.bidDeadline,
+              },
+              // Event loop lag must not discard bids that arrived in time
+              {timeoutMs: this.bidDeadline + BUILDER_BID_LAG_BUFFER_MS}
+            );
+            const signedBid = res.value();
+            if (signedBid === undefined) {
+              this.logger?.debug("No bid received from builder", {slot, builder: toPrintableUrl(url)});
+              return;
+            }
+            this.metrics?.builderApi.bidsReceived.inc();
+            const bidKey = `${url}-${toHex(signedBid.signature)}`;
+            if (seenBids.has(bidKey)) {
+              return;
+            }
+            seenBids.add(bidKey);
+            bids.push({url, entry, signedBid, receivedMs: this.clock.msFromSlot(slot)});
+          } catch (e) {
+            this.metrics?.builderApi.bidRequestErrors.inc();
+            this.logger?.warn("Failed to get bid from builder", {slot, builder: toPrintableUrl(url)}, e as Error);
           }
-          this.metrics?.builderApi.bidsReceived.inc();
-          bids.push({url, entry, signedBid, receivedMs: this.clock.msFromSlot(slot)});
-        } catch (e) {
-          this.metrics?.builderApi.bidRequestErrors.inc();
-          this.logger?.warn("Failed to get bid from builder", {slot, builder: toPrintableUrl(url)}, e as Error);
-        }
-      })
-    );
+        })
+      );
+    }
 
     return bids;
   }

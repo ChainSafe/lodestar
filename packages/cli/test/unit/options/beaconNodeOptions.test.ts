@@ -61,6 +61,8 @@ describe("options / beaconNodeOptions", () => {
       "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
       "builder.bidDeadline": 500,
+      "builder.bidDelay": 0,
+      "builder.bidRequests": 1,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 8,
 
@@ -169,6 +171,8 @@ describe("options / beaconNodeOptions", () => {
         url: "http://localhost:8661",
         timeout: 12000,
         bidDeadline: 500,
+        bidDelay: 0,
+        bidRequests: 1,
         faultInspectionWindow: 32,
         allowedFaults: 8,
       },
