@@ -1,5 +1,6 @@
 import path from "node:path";
 import {expect} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
@@ -8,6 +9,7 @@ import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {loadSpecTestConfig} from "../utils/loadSpecTestConfig.js";
 import {
   createSpecTestMetrics,
   expectInvalidStateTransitionWithNoProgressiveBalancesMismatches,
@@ -72,10 +74,15 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks | undef
   };
 };
 
+const specTestDir = path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET);
+
 const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks | undefined> = (fork) => {
   return {
-    testFunction: async (testcase, _directoryName, testCaseName) => {
-      const config = getConfig(fork);
+    testFunction: async (testcase, directoryName, testCaseName) => {
+      const config = createChainForkConfig({
+        ...getConfig(fork),
+        ...loadSpecTestConfig(path.join(specTestDir, directoryName, testCaseName)),
+      });
       let state = createBeaconStateViewForTest(fork, testcase.pre, config);
       const {metrics, register} = createSpecTestMetrics();
       const verify = shouldVerify(testcase);
@@ -165,7 +172,7 @@ type SanitySlotsTestCase = {
   slots: bigint;
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(specTestDir, {
   sanity: {type: RunnerType.default, fn: sanity},
   random: {type: RunnerType.default, fn: sanityBlocks},
 });
