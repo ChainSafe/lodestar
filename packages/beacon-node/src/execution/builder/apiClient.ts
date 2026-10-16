@@ -130,7 +130,8 @@ export class BuilderApiClient {
    * Fan out bid requests to the builders named by the entries, one request per unique
    * `(url, auth.message.data)` pair and round, see `getBidRounds`. Errors and empty responses (204)
    * are logged and filtered out so a single unresponsive builder never fails block production.
-   * Remaining rounds are skipped once the signal is aborted.
+   * Once the signal is aborted no further round is started and the bids collected so far are
+   * returned, unless there is none yet, then the requests in flight are awaited.
    */
   async getExecutionPayloadBids(
     entries: routes.validator.BuilderEntry[],
@@ -177,7 +178,7 @@ export class BuilderApiClient {
     const bids: BuilderApiBid[] = [];
     const seenBids = new Set<string>();
     const rounds = getBidRounds(this.clock.msFromSlot(slot), this.bidDelay, this.bidDeadline, this.bidRequests);
-    await Promise.all(
+    const collection = Promise.all(
       rounds.map(async (round) => {
         try {
           await sleep(round.startMs - this.clock.msFromSlot(slot), signal);
@@ -224,6 +225,21 @@ export class BuilderApiClient {
         );
       })
     );
+
+    if (signal === undefined) {
+      await collection;
+    } else {
+      await Promise.race([
+        collection,
+        new Promise<void>((resolve) => {
+          if (signal.aborted) resolve();
+          else signal.addEventListener("abort", () => resolve(), {once: true});
+        }),
+      ]);
+      if (bids.length === 0) {
+        await collection;
+      }
+    }
 
     return bids;
   }

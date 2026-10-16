@@ -985,6 +985,18 @@ export function getValidatorApi(
       // use abort controller to stop waiting for the bid block if the engine block will be selected
       const controller = new AbortController();
 
+      // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
+      // not delay the proposal when a builder bid block is available (and vice versa)
+      const cutoffMs = Math.max(
+        0,
+        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
+      );
+
+      // No bid request round is started past the race cutoff or once the local block is selected,
+      // the bids collected by then are still ranked
+      const bidRequestController = new AbortController();
+      void sleep(cutoffMs).then(() => bidRequestController.abort());
+
       // Fire builder API bid requests while the local payload is built, one request per entry and
       // round. Any entry failure yields no bid and never fails block production.
       let builderApiBidsPromise: Promise<BuilderApiBid[]> = Promise.resolve([]);
@@ -998,7 +1010,7 @@ export function getValidatorApi(
             fromHex(bidParentBlockHash),
             parentBlockRoot,
             proposerPubkey,
-            controller.signal
+            bidRequestController.signal
           );
         } catch (e) {
           logger.warn("Unable to request builder API bids", {slot}, e as Error);
@@ -1011,13 +1023,6 @@ export function getValidatorApi(
         builderConfig.builders.length > 0 ||
         (!circuitBreakerActive &&
           chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
-
-      // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
-      // not delay the proposal when a builder bid block is available (and vice versa)
-      const cutoffMs = Math.max(
-        0,
-        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
-      );
 
       // Give p2p bids the same window as builder API bid requests, the pool is read once the last request
       // would reach its advertised deadline and the requests settled. A late request does not wait past
@@ -1150,6 +1155,7 @@ export function getValidatorApi(
         // boost factor of 0 always prefers the local block over p2p bids
         if (engineBlock.shouldOverrideBuilder || (builderConfig.builders.length === 0 && builderBoostFactor === 0n)) {
           controller.abort();
+          bidRequestController.abort();
         }
         return engineBlock;
       });

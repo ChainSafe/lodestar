@@ -132,6 +132,54 @@ describe("execution/builder/apiClient", () => {
     expect(bids).toHaveLength(1);
   });
 
+  it("returns the bids collected so far once aborted while a later round is in flight", async () => {
+    const slot = 1;
+    const entry = getBuilderEntry("https://builder.example.com", slot);
+    const controller = new AbortController();
+    getExecutionPayloadBid
+      .mockResolvedValueOnce({value: () => ssz.gloas.SignedExecutionPayloadBid.defaultValue()})
+      .mockImplementationOnce(() => {
+        controller.abort();
+        return new Promise(() => {});
+      });
+
+    const client = new BuilderApiClient({bidDeadline: 10, bidRequests: 2}, config, clock, bls);
+    const bids = await client.getExecutionPayloadBids(
+      [entry],
+      slot,
+      new Uint8Array(32),
+      new Uint8Array(32),
+      new Uint8Array(48),
+      controller.signal
+    );
+
+    expect(getExecutionPayloadBid).toHaveBeenCalledTimes(2);
+    expect(bids).toHaveLength(1);
+  });
+
+  it("awaits the requests in flight when aborted without a bid", async () => {
+    const slot = 1;
+    const entry = getBuilderEntry("https://builder.example.com", slot);
+    const controller = new AbortController();
+    getExecutionPayloadBid.mockImplementationOnce(async () => {
+      controller.abort();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return {value: () => ssz.gloas.SignedExecutionPayloadBid.defaultValue()};
+    });
+
+    const client = new BuilderApiClient({bidDeadline: 10}, config, clock, bls);
+    const bids = await client.getExecutionPayloadBids(
+      [entry],
+      slot,
+      new Uint8Array(32),
+      new Uint8Array(32),
+      new Uint8Array(48),
+      controller.signal
+    );
+
+    expect(bids).toHaveLength(1);
+  });
+
   it("ignores builder urls that cannot be safely returned in the response header", async () => {
     const slot = 1;
     const invalidUtf8Entry = getBuilderEntry("https://builder.example.com", slot);
