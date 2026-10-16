@@ -22,18 +22,17 @@ import {IClock} from "../../util/clock.js";
 const EVENT_LOOP_LAG_BUFFER = 250;
 
 /**
- * Duration given to a builder to provide a `SignedExecutionPayloadBid` before the deadline
+ * Default duration given to a builder to provide a `SignedExecutionPayloadBid` before the deadline
  * is reached, advertised on each bid request via the `X-Timeout-Ms` header. The p2p bid is
  * selected after the same duration, only considering bids received up to that point.
  */
-export const BUILDER_BID_DEADLINE_MS = 500;
-
-/** Local timeout for bid requests, event loop lag must not discard bids that arrived in time */
-export const BUILDER_BID_REQUEST_TIMEOUT_MS = BUILDER_BID_DEADLINE_MS + EVENT_LOOP_LAG_BUFFER;
+export const DEFAULT_BUILDER_BID_DEADLINE_MS = 500;
 
 export type BuilderApiClientOpts = {
-  /** Timeout for builder api requests, bid requests always use `BUILDER_BID_REQUEST_TIMEOUT_MS` */
+  /** Timeout for builder api requests, bid requests are bounded by `bidDeadline` instead */
   timeout?: number;
+  /** Time from the slot start by which builder bids must be received, in milliseconds */
+  bidDeadline?: number;
   // Add User-Agent header to all requests
   userAgent?: string;
 };
@@ -69,6 +68,7 @@ export type BuilderApiBid = {
  * each block production request, clients are dialed on demand based on the entry `url`.
  */
 export class BuilderApiClient {
+  readonly bidDeadline: number;
   private readonly clients = new Map<BuilderUrl, BuilderApi>();
 
   constructor(
@@ -78,7 +78,9 @@ export class BuilderApiClient {
     private readonly bls: IBlsVerifier,
     private readonly metrics: Metrics | null = null,
     private readonly logger?: Logger
-  ) {}
+  ) {
+    this.bidDeadline = opts.bidDeadline ?? DEFAULT_BUILDER_BID_DEADLINE_MS;
+  }
 
   /**
    * Fan out bid requests to the builders named by the entries, one request per unique
@@ -139,9 +141,10 @@ export class BuilderApiClient {
               proposerPubkey,
               requestAuth: entry.auth,
               dateMilliseconds: Date.now(),
-              timeoutMs: BUILDER_BID_DEADLINE_MS,
+              timeoutMs: this.bidDeadline,
             },
-            {timeoutMs: BUILDER_BID_REQUEST_TIMEOUT_MS}
+            // Event loop lag must not discard bids that arrived in time
+            {timeoutMs: this.bidDeadline + EVENT_LOOP_LAG_BUFFER}
           );
           const signedBid = res.value();
           if (signedBid === undefined) {
@@ -203,7 +206,7 @@ export class BuilderApiClient {
 
   /**
    * Establish the connection to every known builder outside the bid deadline, a cold TCP/TLS handshake
-   * to a distant builder can exhaust `BUILDER_BID_DEADLINE_MS` on its own, and a long idle connection
+   * to a distant builder can exhaust the bid deadline on its own, and a long idle connection
    * may be half-open and only fail once written to.
    */
   async checkStatus(): Promise<void> {

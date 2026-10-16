@@ -94,7 +94,7 @@ import {
 import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
-import {BUILDER_BID_DEADLINE_MS, BuilderApiBid, decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
+import {BuilderApiBid, decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {getBuilderBidTotalGwei, validateBuilderApiExecutionPayloadBid} from "../../../execution/builder/validateBid.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
@@ -233,6 +233,16 @@ export function getValidatorApi(
   {chain, config, logger, metrics, network, sync}: ApiModules
 ): ApplicationMethods<routes.validator.Endpoints> {
   let genesisBlockRoot: Root | null = null;
+
+  // A bid deadline past the race cutoff would select the local block before any bid is considered
+  for (const {name: fork} of config.forksAscendingEpochOrder) {
+    const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS);
+    if (isForkPostGloas(fork) && chain.builderApiClient.bidDeadline >= raceCutoffMs) {
+      throw Error(
+        `Builder bid deadline of ${chain.builderApiClient.bidDeadline}ms must be below ${raceCutoffMs}ms for fork ${fork}`
+      );
+    }
+  }
 
   /**
    * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -1009,7 +1019,7 @@ export function getValidatorApi(
       // on builder API bid requests, unless the circuit breaker is active
       const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
         ? Promise.resolve(null)
-        : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
+        : sleep(Math.max(0, chain.builderApiClient.bidDeadline - chain.clock.msFromSlot(slot))).then(() => {
             const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
             // Discard p2p bids below the proposer's configured floor on the total payment.
             // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.

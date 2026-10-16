@@ -6,6 +6,7 @@ export type ExecutionBuilderArgs = {
   builder: boolean;
   "builder.url"?: string;
   "builder.timeout"?: number;
+  "builder.bidDeadline"?: number;
   "builder.faultInspectionWindow"?: number;
   "builder.allowedFaults"?: number;
 };
@@ -20,10 +21,15 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
     );
   }
 
+  if (args["builder.bidDeadline"] !== undefined && args["builder.bidDeadline"] <= 0) {
+    throw new YargsError("builder.bidDeadline must be greater than 0");
+  }
+
   return {
     enabled: args.builder,
     url: args["builder.url"] ?? defaultExecutionBuilderHttpOpts.url,
     timeout: args["builder.timeout"],
+    bidDeadline: args["builder.bidDeadline"],
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
   };
@@ -51,6 +57,14 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
     description: "Timeout in milliseconds for builder API HTTP client",
     type: "number",
     defaultDescription: String(defaultExecutionBuilderHttpOpts.timeout),
+    group: "builder",
+  },
+
+  "builder.bidDeadline": {
+    description:
+      "Time in milliseconds from the start of the slot by which builder bids must be received. Advertised to builder API endpoints via the `X-Timeout-Ms` header and applied to bids received via p2p. Post-Gloas only",
+    type: "number",
+    defaultDescription: String(defaultExecutionBuilderHttpOpts.bidDeadline),
     group: "builder",
   },
 
