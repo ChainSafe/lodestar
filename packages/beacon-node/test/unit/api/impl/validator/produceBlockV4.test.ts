@@ -68,8 +68,8 @@ describe("api/validator - produceBlockV4", () => {
     api = getValidatorApi(defaultApiOptions, {...modules, config});
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
-    // Zero bid deadline so the p2p bid is selected without waiting
-    (modules.chain.builderApiClient as {bidDeadline: number}).bidDeadline = 0;
+    // Zero bid window so the p2p bid is selected without waiting
+    modules.chain.builderApiClient.getBidWindowMs.mockReturnValue(0);
     vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(0);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
     modules.chain.getProposerHead.mockReturnValue(parentBlock);

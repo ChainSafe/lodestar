@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import type {IBlsVerifier} from "../../../../src/chain/bls/index.js";
-import {BuilderApiClient} from "../../../../src/execution/builder/apiClient.js";
+import {BuilderApiClient, getBidRounds} from "../../../../src/execution/builder/apiClient.js";
 import {IClock} from "../../../../src/util/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
@@ -66,6 +66,70 @@ describe("execution/builder/apiClient", () => {
     await client.getExecutionPayloadBids([entry], slot, new Uint8Array(32), new Uint8Array(32), new Uint8Array(48));
 
     expect(getExecutionPayloadBid).toHaveBeenCalledWith(expect.objectContaining({timeoutMs: 800}), {timeoutMs: 1050});
+  });
+
+  it("requests bids once per round and collects every distinct bid", async () => {
+    const slot = 1;
+    const entry = getBuilderEntry("https://builder.example.com", slot);
+    for (const value of [1, 3, 2]) {
+      const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+      signedBid.message.value = value;
+      signedBid.signature = Buffer.alloc(96, value);
+      getExecutionPayloadBid.mockResolvedValueOnce({value: () => signedBid});
+    }
+
+    const client = new BuilderApiClient({bidDeadline: 10, bidRequests: 3}, config, clock, bls);
+    const bids = await client.getExecutionPayloadBids(
+      [entry],
+      slot,
+      new Uint8Array(32),
+      new Uint8Array(32),
+      new Uint8Array(48)
+    );
+
+    expect(getExecutionPayloadBid).toHaveBeenCalledTimes(3);
+    expect(bids.map((bid) => bid.signedBid.message.value)).toEqual([1, 3, 2]);
+  });
+
+  it("collects a bid returned unchanged by a later round only once", async () => {
+    const slot = 1;
+    const entry = getBuilderEntry("https://builder.example.com", slot);
+    getExecutionPayloadBid.mockResolvedValue({value: () => ssz.gloas.SignedExecutionPayloadBid.defaultValue()});
+
+    const client = new BuilderApiClient({bidDeadline: 10, bidRequests: 2}, config, clock, bls);
+    const bids = await client.getExecutionPayloadBids(
+      [entry],
+      slot,
+      new Uint8Array(32),
+      new Uint8Array(32),
+      new Uint8Array(48)
+    );
+
+    expect(getExecutionPayloadBid).toHaveBeenCalledTimes(2);
+    expect(bids).toHaveLength(1);
+  });
+
+  it("skips the remaining rounds once aborted", async () => {
+    const slot = 1;
+    const entry = getBuilderEntry("https://builder.example.com", slot);
+    const controller = new AbortController();
+    getExecutionPayloadBid.mockImplementation(async () => {
+      controller.abort();
+      return {value: () => ssz.gloas.SignedExecutionPayloadBid.defaultValue()};
+    });
+
+    const client = new BuilderApiClient({bidDeadline: 10, bidRequests: 3}, config, clock, bls);
+    const bids = await client.getExecutionPayloadBids(
+      [entry],
+      slot,
+      new Uint8Array(32),
+      new Uint8Array(32),
+      new Uint8Array(48),
+      controller.signal
+    );
+
+    expect(getExecutionPayloadBid).toHaveBeenCalledOnce();
+    expect(bids).toHaveLength(1);
   });
 
   it("ignores builder urls that cannot be safely returned in the response header", async () => {
@@ -234,6 +298,55 @@ async function getClientWithBuilder(url: string) {
   vi.clearAllMocks();
   return {client, logger};
 }
+
+describe("execution/builder/apiClient - getBidRounds", () => {
+  const testCases: {id: string; msFromSlot: number; delay: number; deadline: number; n: number; want: number[][]}[] = [
+    {id: "single request at the request time", msFromSlot: 100, delay: 0, deadline: 500, n: 1, want: [[100, 600]]},
+    {
+      id: "delayed rounds on time",
+      msFromSlot: 50,
+      delay: 500,
+      deadline: 600,
+      n: 3,
+      want: [
+        [500, 1100],
+        [1100, 1700],
+        [1700, 2300],
+      ],
+    },
+    {
+      id: "late request compresses the rounds",
+      msFromSlot: 1200,
+      delay: 500,
+      deadline: 600,
+      n: 3,
+      want: [
+        [1200, 1800],
+        [1800, 2400],
+        [2400, 3000],
+      ],
+    },
+    {
+      id: "request after the delay starts right away",
+      msFromSlot: 700,
+      delay: 500,
+      deadline: 500,
+      n: 2,
+      want: [
+        [700, 1200],
+        [1200, 1700],
+      ],
+    },
+  ];
+
+  for (const {id, msFromSlot, delay, deadline, n, want} of testCases) {
+    it(id, () => {
+      expect(
+        getBidRounds(msFromSlot, delay, deadline, n).map(({startMs, deadlineMs}) => [startMs, deadlineMs])
+      ).toEqual(want);
+    });
+  }
+});
 
 function getBuilderEntry(url: string, slot: number): routes.validator.BuilderEntry {
   const auth = ssz.gloas.SignedBuilderRequestAuth.defaultValue();

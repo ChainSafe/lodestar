@@ -3,7 +3,12 @@ import {ApiOptions, defaultApiOptions} from "../api/options.js";
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
 import {ValidatorMonitorOpts, defaultValidatorMonitorOpts} from "../chain/validatorMonitor.js";
 import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
-import {BUILDER_BID_LAG_BUFFER_MS} from "../execution/builder/apiClient.js";
+import {
+  BUILDER_BID_LAG_BUFFER_MS,
+  DEFAULT_BUILDER_BID_DEADLINE_MS,
+  DEFAULT_BUILDER_BID_DELAY_MS,
+  DEFAULT_BUILDER_BID_REQUESTS,
+} from "../execution/builder/apiClient.js";
 import {
   EngineApiMode,
   ExecutionBuilderOpts,
@@ -24,6 +29,9 @@ export {allNamespaces} from "../api/rest/index.js";
 export type {EngineApiMode};
 // Re-export to use as default values and for validation in CLI args
 export {
+  DEFAULT_BUILDER_BID_DEADLINE_MS,
+  DEFAULT_BUILDER_BID_DELAY_MS,
+  DEFAULT_BUILDER_BID_REQUESTS,
   ArchiveMode,
   BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS,
   BUILDER_BID_LAG_BUFFER_MS,
