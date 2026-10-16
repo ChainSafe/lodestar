@@ -3,9 +3,9 @@ import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputBlobs, BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -50,6 +50,19 @@ describe("getGossipHandlers", () => {
       ELECTRA_FORK_EPOCH: Infinity,
       FULU_FORK_EPOCH: Infinity,
       GLOAS_FORK_EPOCH: Infinity,
+    },
+    Buffer.alloc(32, 0)
+  );
+  const gloasConfig = createBeaconConfig(
+    {
+      ...defaultConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
     },
     Buffer.alloc(32, 0)
   );
@@ -106,6 +119,42 @@ describe("getGossipHandlers", () => {
     const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(denebConfig, {
       recorded: true,
       parentKnown: false,
+    });
+    expect(getByBlock).not.toHaveBeenCalled();
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
+  });
+
+  it("imports a signature-verified REPEAT_PROPOSAL gloas block whose parent payload is known", async () => {
+    const {processBlock, threw, getBlockHexAndBlockHash} = await runBeaconBlockRepeatProposal(gloasConfig, {
+      recorded: true,
+    });
+    expect(getBlockHexAndBlockHash).toHaveBeenCalledExactlyOnceWith(
+      toRootHex(Buffer.alloc(32, 0)),
+      toRootHex(Buffer.alloc(32, 0xaa))
+    );
+
+    expect(processBlock).toHaveBeenCalledOnce();
+    expect(threw).toBe(true);
+  });
+
+  it("does not import a signature-verified REPEAT_PROPOSAL gloas block whose parent conflicts with finalization", async () => {
+    const {processBlock, threw, getByBlock, getBlockHexAndBlockHash} = await runBeaconBlockRepeatProposal(gloasConfig, {
+      recorded: true,
+      parentKnown: false,
+    });
+    expect(getBlockHexAndBlockHash).not.toHaveBeenCalled();
+    expect(getByBlock).not.toHaveBeenCalled();
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
+  });
+
+  it("does not import a signature-verified REPEAT_PROPOSAL gloas block whose parent payload is unknown", async () => {
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(gloasConfig, {
+      recorded: true,
+      parentPayloadKnown: false,
     });
     expect(getByBlock).not.toHaveBeenCalled();
 
@@ -301,27 +350,49 @@ async function runBeaconBlockProcessingError(
 
 async function runBeaconBlockRepeatProposal(
   config: BeaconConfig,
-  {recorded, reject = false, parentKnown = true}: {recorded: boolean; reject?: boolean; parentKnown?: boolean}
+  {
+    recorded,
+    reject = false,
+    parentKnown = true,
+    parentPayloadKnown = true,
+  }: {recorded: boolean; reject?: boolean; parentKnown?: boolean; parentPayloadKnown?: boolean}
 ): Promise<{
   processBlock: ReturnType<typeof vi.fn>;
   threw: boolean;
   getByBlock: ReturnType<typeof vi.fn>;
+  getBlockHexAndBlockHash: ReturnType<typeof vi.fn>;
 }> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
-  const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
-  signedBlock.message.slot = 1;
-  signedBlock.message.proposerIndex = 3;
-  const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message));
-  const blockInput = BlockInputBlobs.createFromBlock({
-    block: signedBlock,
-    blockRootHex,
-    forkName: ForkName.deneb,
+  const fork = config.getForkName(1);
+  const blockInputMeta = {
     daOutOfRange: false,
     source: BlockInputSource.gossip,
     seenTimestampSec: 0,
     peerIdStr,
-  });
+  };
+  let signedBlock: SignedBeaconBlock;
+  let blockRootHex: RootHex;
+  let serializedData: Uint8Array;
+  let blockInput: BlockInputBlobs | BlockInputNoData;
+  if (fork === ForkName.gloas) {
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    block.message.slot = 1;
+    block.message.proposerIndex = 3;
+    block.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
+    blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
+    serializedData = ssz.gloas.SignedBeaconBlock.serialize(block);
+    blockInput = BlockInputNoData.createFromBlock({...blockInputMeta, block, blockRootHex, forkName: ForkName.gloas});
+    signedBlock = block;
+  } else {
+    const block = ssz.deneb.SignedBeaconBlock.defaultValue();
+    block.message.slot = 1;
+    block.message.proposerIndex = 3;
+    blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
+    serializedData = ssz.deneb.SignedBeaconBlock.serialize(block);
+    blockInput = BlockInputBlobs.createFromBlock({...blockInputMeta, block, blockRootHex, forkName: ForkName.deneb});
+    signedBlock = block;
+  }
 
   // gossip validation rejects the 2nd distinct block for this (proposer, slot) with REPEAT_PROPOSAL,
   // or the block outright when `reject` is set
@@ -354,11 +425,15 @@ async function runBeaconBlockRepeatProposal(
 
   const processBlock = vi.fn().mockResolvedValue(undefined);
   const getByBlock = vi.fn().mockReturnValue(blockInput);
+  const getBlockHexAndBlockHash = vi.fn().mockReturnValue(parentPayloadKnown ? {} : null);
   const chain = {
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
-    forkChoice: {getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {} : null)},
+    forkChoice: {
+      getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {} : null),
+      getBlockHexAndBlockHash,
+    },
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
     persistInvalidSszValue: vi.fn(),
@@ -396,11 +471,11 @@ async function runBeaconBlockRepeatProposal(
   let threw = false;
   try {
     await beaconBlockHandler({
-      gossipData: {serializedData: ssz.deneb.SignedBeaconBlock.serialize(signedBlock)},
+      gossipData: {serializedData},
       peerIdStr,
       seenTimestampSec: 0,
       topic: {
-        boundary: {fork: ForkName.deneb, epoch: 0},
+        boundary: {fork, epoch: 0},
         type: GossipType.beacon_block,
       },
     });
@@ -413,7 +488,7 @@ async function runBeaconBlockRepeatProposal(
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {processBlock, threw, getByBlock};
+  return {processBlock, threw, getByBlock, getBlockHexAndBlockHash};
 }
 
 function getExecutionBlockError(

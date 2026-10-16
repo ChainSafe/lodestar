@@ -24,6 +24,7 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasBeaconBlock,
   isGloasDataColumnSidecar,
   ssz,
   sszTypesFor,
@@ -764,7 +765,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // roots per proposer and slot, which bounds full imports over gossip to one alternate
           chain.seenBlockProposers.hasBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root) &&
           // A sibling with an unknown parent cannot be imported, sync fetches it if its branch becomes relevant
-          chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) !== null
+          chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) !== null &&
+          (!isGloasBeaconBlock(signedBlock.message) ||
+            chain.forkChoice.getBlockHexAndBlockHash(
+              toRootHex(signedBlock.message.parentRoot),
+              toRootHex(signedBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+            ) !== null)
         ) {
           const blockInput = cacheSignatureVerifiedBlock(
             signedBlock,
