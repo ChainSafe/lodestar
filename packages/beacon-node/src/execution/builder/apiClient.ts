@@ -74,7 +74,8 @@ export type BidRound = {startMs: number; deadlineMs: number};
 
 /**
  * Round i is scheduled at `bidDelay + i * bidDeadline` from the slot start, but never before the
- * block production request or the deadline of the previous round. Every round grants the full deadline.
+ * block production request or the deadline of the previous round. Every round grants the full deadline,
+ * a request still using the lag buffer when the next round starts overlaps with it.
  */
 export function getBidRounds(
   msFromSlot: number,
@@ -140,7 +141,7 @@ export class BuilderApiClient {
     signal?: AbortSignal
   ): Promise<BuilderApiBid[]> {
     const seenRequests = new Set<string>();
-    const requests: {url: BuilderUrl; entry: routes.validator.BuilderEntry}[] = [];
+    const requests: {requestKey: string; url: BuilderUrl; entry: routes.validator.BuilderEntry}[] = [];
 
     for (const entry of entries) {
       const urlForLog = Buffer.from(entry.url).toString("utf8");
@@ -168,59 +169,61 @@ export class BuilderApiClient {
         continue;
       }
 
-      requests.push({url, entry});
+      requests.push({requestKey, url, entry});
     }
 
     // Collected in arrival order so an earlier received bid wins ties during candidate ranking,
-    // a bid returned unchanged by the same builder in a later round is not collected again
+    // a bid returned unchanged to the same request in a later round is not collected again
     const bids: BuilderApiBid[] = [];
     const seenBids = new Set<string>();
     const rounds = getBidRounds(this.clock.msFromSlot(slot), this.bidDelay, this.bidDeadline, this.bidRequests);
-    for (const round of rounds) {
-      if (signal?.aborted) break;
-      try {
-        await sleep(round.startMs - this.clock.msFromSlot(slot), signal);
-      } catch (e) {
-        if (e instanceof ErrorAborted) break;
-        throw e;
-      }
-      await Promise.all(
-        requests.map(async ({url, entry}) => {
-          this.metrics?.builderApi.bidRequests.inc();
-          try {
-            const client = await this.getOrCreateClient(url, proposerPubkey, entry.auth);
-            const res = await client.getExecutionPayloadBid(
-              {
-                slot,
-                parentHash,
-                parentRoot,
-                proposerPubkey,
-                requestAuth: entry.auth,
-                dateMilliseconds: Date.now(),
-                timeoutMs: this.bidDeadline,
-              },
-              // Event loop lag must not discard bids that arrived in time
-              {timeoutMs: this.bidDeadline + BUILDER_BID_LAG_BUFFER_MS}
-            );
-            const signedBid = res.value();
-            if (signedBid === undefined) {
-              this.logger?.debug("No bid received from builder", {slot, builder: toPrintableUrl(url)});
-              return;
+    await Promise.all(
+      rounds.map(async (round) => {
+        try {
+          await sleep(round.startMs - this.clock.msFromSlot(slot), signal);
+        } catch (e) {
+          if (e instanceof ErrorAborted) return;
+          throw e;
+        }
+        if (signal?.aborted) return;
+        await Promise.all(
+          requests.map(async ({requestKey, url, entry}) => {
+            this.metrics?.builderApi.bidRequests.inc();
+            try {
+              const client = await this.getOrCreateClient(url, proposerPubkey, entry.auth);
+              const res = await client.getExecutionPayloadBid(
+                {
+                  slot,
+                  parentHash,
+                  parentRoot,
+                  proposerPubkey,
+                  requestAuth: entry.auth,
+                  dateMilliseconds: Date.now(),
+                  timeoutMs: this.bidDeadline,
+                },
+                // Event loop lag must not discard bids that arrived in time
+                {timeoutMs: this.bidDeadline + BUILDER_BID_LAG_BUFFER_MS}
+              );
+              const signedBid = res.value();
+              if (signedBid === undefined) {
+                this.logger?.debug("No bid received from builder", {slot, builder: toPrintableUrl(url)});
+                return;
+              }
+              this.metrics?.builderApi.bidsReceived.inc();
+              const bidKey = `${requestKey}-${toHex(signedBid.signature)}`;
+              if (seenBids.has(bidKey)) {
+                return;
+              }
+              seenBids.add(bidKey);
+              bids.push({url, entry, signedBid, receivedMs: this.clock.msFromSlot(slot)});
+            } catch (e) {
+              this.metrics?.builderApi.bidRequestErrors.inc();
+              this.logger?.warn("Failed to get bid from builder", {slot, builder: toPrintableUrl(url)}, e as Error);
             }
-            this.metrics?.builderApi.bidsReceived.inc();
-            const bidKey = `${url}-${toHex(signedBid.signature)}`;
-            if (seenBids.has(bidKey)) {
-              return;
-            }
-            seenBids.add(bidKey);
-            bids.push({url, entry, signedBid, receivedMs: this.clock.msFromSlot(slot)});
-          } catch (e) {
-            this.metrics?.builderApi.bidRequestErrors.inc();
-            this.logger?.warn("Failed to get bid from builder", {slot, builder: toPrintableUrl(url)}, e as Error);
-          }
-        })
-      );
-    }
+          })
+        );
+      })
+    );
 
     return bids;
   }
