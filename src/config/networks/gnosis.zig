@@ -34,7 +34,7 @@ pub const chain_config = ChainConfig{
     .ELECTRA_FORK_VERSION = b(4, "0x05000064"),
     .ELECTRA_FORK_EPOCH = 1337856,
     .FULU_FORK_VERSION = b(4, "0x06000064"),
-    .FULU_FORK_EPOCH = std.math.maxInt(u64),
+    .FULU_FORK_EPOCH = 1714688,
     .GLOAS_FORK_VERSION = b(4, "0x07000064"),
     .GLOAS_FORK_EPOCH = std.math.maxInt(u64),
 
@@ -99,7 +99,7 @@ pub const chain_config = ChainConfig{
     .MAX_REQUEST_BLOB_SIDECARS_ELECTRA = 256,
 
     // Fulu
-    .MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS = 4096,
+    .MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS = 16384,
     .SAMPLES_PER_SLOT = 8,
     .CUSTODY_REQUIREMENT = 4,
     .NODE_CUSTODY_REQUIREMENT = 1,

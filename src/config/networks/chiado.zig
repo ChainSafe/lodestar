@@ -29,7 +29,7 @@ pub const chain_config = gnosis.chain_config.merge(.{
     .ELECTRA_FORK_VERSION = b(4, "0x0500006f"),
     .ELECTRA_FORK_EPOCH = 948224,
     .FULU_FORK_VERSION = b(4, "0x0600006f"),
-    .FULU_FORK_EPOCH = std.math.maxInt(u64),
+    .FULU_FORK_EPOCH = 1353216,
     .GLOAS_FORK_VERSION = b(4, "0x0700006f"),
     .GLOAS_FORK_EPOCH = std.math.maxInt(u64),
 

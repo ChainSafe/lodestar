@@ -173,6 +173,7 @@ zig build build-lib:bindings
 # Build for a specific preset through package scripts
 pnpm prepare-mainnet
 pnpm prepare-minimal
+pnpm prepare-gnosis
 
 # Run binding tests
 pnpm test

@@ -60,7 +60,7 @@ src/
   fork_types/              # Type-erased, fork-aware wrappers
   hashing/                 # SHA-256 and Merkleization
   persistent_merkle_tree/  # Structural sharing and lazy hashing
-  preset/                  # Mainnet and minimal presets
+  preset/                  # Mainnet, minimal, and gnosis presets
   ssz/                     # SSZ types, serialization, and views
   state_transition/        # Block, epoch, and slot processing
 
@@ -162,6 +162,7 @@ zig build build-lib:bindings -Doptimize=ReleaseSafe
 # Build for a specific preset through package scripts
 pnpm prepare-mainnet
 pnpm prepare-minimal
+pnpm prepare-gnosis
 
 # Run binding tests
 pnpm test
