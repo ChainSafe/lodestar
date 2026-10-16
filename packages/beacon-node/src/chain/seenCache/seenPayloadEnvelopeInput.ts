@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkPostGloas, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -64,6 +64,9 @@ export class SeenPayloadEnvelopeInput {
   private readonly metrics: Metrics | null;
   private readonly logger?: Logger;
   private payloadInputs = new Map<RootHex, PayloadEnvelopeInput>();
+  // Payloads the execution engine rejected, by block root. The bid and the state commit every engine
+  // input, so no other envelope for the block can be valid
+  private readonly invalidPayloads = new Map<RootHex, Slot>();
   // Dedup concurrent DB reloads of the same root so callers share one reconstructed object.
   private readonly reloading = new Map<RootHex, Promise<PayloadEnvelopeInput | undefined>>();
 
@@ -117,6 +120,11 @@ export class SeenPayloadEnvelopeInput {
       if (input.slot < finalizedSlot) {
         this.evictPayloadInput(input, "finalized");
         deletedCount++;
+      }
+    }
+    for (const [blockRootHex, slot] of this.invalidPayloads) {
+      if (slot < finalizedSlot) {
+        this.invalidPayloads.delete(blockRootHex);
       }
     }
 
@@ -274,6 +282,14 @@ export class SeenPayloadEnvelopeInput {
     if (this.payloadInputs.get(payloadInput.blockRootHex) === payloadInput) {
       this.evictPayloadInput(payloadInput, "invalid");
     }
+  }
+
+  markPayloadInvalid(blockRootHex: RootHex, slot: Slot): void {
+    this.invalidPayloads.set(blockRootHex, slot);
+  }
+
+  isPayloadInvalid(blockRootHex: RootHex): boolean {
+    return this.invalidPayloads.has(blockRootHex);
   }
 
   pruneBelowParent(parentBlock: ProtoBlock): void {

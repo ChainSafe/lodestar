@@ -248,6 +248,7 @@ export async function importExecutionPayload(
       break;
 
     case ExecutionPayloadStatus.INVALID:
+      this.seenPayloadEnvelopeInputCache.markPayloadInvalid(blockRootHex, slot);
       throw new PayloadError(payloadInput, {
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,

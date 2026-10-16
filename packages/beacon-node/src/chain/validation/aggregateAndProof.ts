@@ -1,3 +1,4 @@
+import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -90,23 +91,27 @@ async function validateAggregateAndProof(
       });
     }
 
-    // [REJECT] If `aggregate.data.index == 1` (payload present for a past block)
-    //   the corresponding execution payload for `block` passes validation.
-    // [IGNORE] When `aggregate.data.index == 1` (payload present for a past block),
-    //   the corresponding execution payload for `block` has been fully imported, including its
-    //   data -- i.e. `is_payload_verified(store, aggregate.data.beacon_block_root)` returns `True`
-    //   (a client MAY queue attestations for processing until the payload is imported and SHOULD
-    //   request the payload envelope via `ExecutionPayloadEnvelopesByRoot` using
-    //   `aggregate.data.beacon_block_root`).
-    if (
-      block !== null &&
-      attData.index === 1 &&
-      !chain.forkChoice.hasPayloadHexUnsafe(toRootHex(attData.beaconBlockRoot))
-    ) {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
-        beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
-      });
+    if (block !== null && attData.index === 1) {
+      const beaconBlockRoot = toRootHex(attData.beaconBlockRoot);
+      // [REJECT] The attested execution payload is processed and invalid
+      if (
+        chain.seenPayloadEnvelopeInputCache.isPayloadInvalid(beaconBlockRoot) ||
+        chain.forkChoice.getBlockHex(beaconBlockRoot, PayloadStatus.FULL)?.executionStatus === ExecutionStatus.Invalid
+      ) {
+        throw new AttestationError(GossipAction.REJECT, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_INVALID,
+          beaconBlockRoot,
+        });
+      }
+      // [IGNORE] The corresponding execution payload envelope has been seen and verified
+      //   (MAY queue attestations for processing once the payload is retrieved and
+      //   SHOULD request the payload envelope via ExecutionPayloadEnvelopesByRoot)
+      if (!chain.forkChoice.hasPayloadHexUnsafe(beaconBlockRoot)) {
+        throw new AttestationError(GossipAction.IGNORE, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+          beaconBlockRoot,
+        });
+      }
     }
 
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
