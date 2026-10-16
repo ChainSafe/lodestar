@@ -18,6 +18,7 @@ import {
   isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   DataAvailabilityStatus,
@@ -28,6 +29,7 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getCurrentSlot,
+  getInclusionListCommittee,
   isStatePostAltair,
   isStatePostGloas,
   proposerShufflingDecisionRoot,
@@ -68,6 +70,7 @@ import {
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
+import {InclusionListSource} from "../../../chain/blocks/types.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -83,7 +86,11 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
-import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
+import {
+  InclusionListValidationResult,
+  validateApiAggregateAndProof,
+  validateGossipInclusionList,
+} from "../../../chain/validation/index.js";
 import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -1700,7 +1707,7 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
 
       return {
         data: duties,
@@ -1749,7 +1756,7 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
 
       return {
         data: duties,
@@ -2196,6 +2203,121 @@ export function getValidatorApi(
       if (failures.length > 0) {
         throw new IndexedError("Error submitting builder preferences", failures);
       }
+    },
+
+    async produceInclusionList({slot}) {
+      notWhileSyncing(chain, sync.state);
+
+      if (!isForkPostHeze(chain.config.getForkName(slot))) {
+        throw new ApiError(400, `Producing inclusion list for pre-heze slot: ${slot}`);
+      }
+
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      const timer = metrics?.getInclusionListV1RequestsDuration.startTimer();
+      const transactions = await chain.executionEngine.getInclusionList();
+      timer?.();
+      metrics?.getInclusionListV1Requests.inc();
+
+      return {data: transactions, meta: {version: chain.config.getForkName(slot)}};
+    },
+
+    async getInclusionListCommitteeDuties({epoch, indices}) {
+      notWhileSyncing(chain, sync.state);
+
+      if (indices.length === 0) {
+        throw new ApiError(400, "No validator to get inclusion list committee duties");
+      }
+
+      if (!isForkPostHeze(chain.config.getForkName(computeStartSlotAtEpoch(epoch)))) {
+        throw new ApiError(400, `Requesting pre-heze inclusion list committee duties epoch: ${epoch}`);
+      }
+
+      // May request for an epoch that's in the future
+      await waitForNextClosestEpoch();
+
+      if (epoch > chain.clock.currentEpoch + 1) {
+        throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
+      }
+
+      const head = chain.forkChoice.getHead();
+      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+
+      const pubkeys = getPubkeysForIndices(state, indices);
+      const requestedIndices = new Set(indices);
+      const epochStartSlot = computeStartSlotAtEpoch(epoch);
+      const shuffling = state.getShufflingAtEpoch(epoch);
+
+      // Validators set this as `dependent_root` on their inclusion lists
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
+
+      // A validator can be on several slots' committees in an epoch; report the earliest, as for attester duties
+      const dutySlotByValidator = new Map<ValidatorIndex, Slot>();
+      for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+        const slot = epochStartSlot + i;
+        for (const validatorIndex of getInclusionListCommittee(shuffling, slot).validatorIndices) {
+          if (requestedIndices.has(validatorIndex) && !dutySlotByValidator.has(validatorIndex)) {
+            dutySlotByValidator.set(validatorIndex, slot);
+          }
+        }
+      }
+
+      const duties: routes.validator.InclusionListDuty[] = [];
+      for (let i = 0; i < indices.length; i++) {
+        const validatorIndex = indices[i];
+        const slot = dutySlotByValidator.get(validatorIndex);
+        if (slot !== undefined) {
+          duties.push({pubkey: pubkeys[i], validatorIndex, slot, dependentRoot});
+        }
+      }
+
+      return {
+        data: duties,
+        meta: {
+          dependentRoot: toRootHex(dependentRoot),
+          executionOptimistic: isOptimisticBlock(head),
+        },
+      };
+    },
+
+    async publishInclusionList({signedInclusionList}) {
+      notWhileSyncing(chain, sync.state);
+
+      const {slot} = signedInclusionList.message;
+      if (!isForkPostHeze(chain.config.getForkName(slot))) {
+        throw new ApiError(400, `Publishing pre-heze inclusion list slot: ${slot}`);
+      }
+
+      // Timeliness is judged on receipt, as for gossip, so a list submitted in time stays timely if validation is slow
+      const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
+      metrics?.inclusionListsReceived.inc({source: InclusionListSource.api});
+      metrics?.inclusionListTransactionsReceived.inc(
+        {source: InclusionListSource.api},
+        signedInclusionList.message.transactions.length
+      );
+
+      const timer = metrics?.inclusionListsValidationTime.startTimer();
+      let validationResult: InclusionListValidationResult;
+      try {
+        validationResult = await validateGossipInclusionList(chain, signedInclusionList);
+      } finally {
+        timer?.({source: InclusionListSource.api});
+      }
+      const {committeeIndices, totalBytes} = validationResult;
+      metrics?.inclusionListsValid.inc({source: InclusionListSource.api});
+      metrics?.inclusionListsValidSize.inc(totalBytes);
+
+      const isTimely =
+        secFromSlot >= 0 && secFromSlot * 1000 < chain.config.getInclusionListDueMs(chain.config.getForkName(slot));
+      chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
+
+      chain.emitter.emit(routes.events.EventType.inclusionList, {
+        version: chain.config.getForkName(slot),
+        data: signedInclusionList,
+      });
+
+      await network.publishInclusionList(signedInclusionList);
+      metrics?.inclusionListsPublished.inc();
     },
 
     async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {

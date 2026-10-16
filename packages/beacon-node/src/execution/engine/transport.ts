@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {ClientVersion, ExecutionPayloadStatus, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
@@ -11,6 +11,8 @@ export type PayloadStatusResult = {
   status: ExecutionPayloadStatus;
   latestValidHash: RootHex | null;
   validationError: string | null;
+  /** PayloadStatusV2: whether a VALID payload satisfied the inclusion list constraints, null otherwise */
+  inclusionListSatisfied?: boolean | null;
 };
 
 export type ForkchoiceUpdatedResult = {
@@ -39,7 +41,8 @@ export interface IEngineTransport {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<PayloadStatusResult>;
 
   forkchoiceUpdated(
@@ -61,4 +64,6 @@ export interface IEngineTransport {
   getBlobsV2(versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null>;
 
   getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]>;
+
+  getInclusionList(): Promise<bellatrix.Transactions>;
 }

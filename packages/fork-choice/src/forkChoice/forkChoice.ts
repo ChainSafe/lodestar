@@ -422,6 +422,24 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 
+  /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine */
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {
+    const changed = this.protoArray.recordPayloadInclusionListSatisfaction(blockRoot, satisfied);
+    if (changed && !satisfied) {
+      this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
+      this.logger?.verbose("Payload does not satisfy the inclusion list constraints, not extending it", {blockRoot});
+    }
+    return changed;
+  }
+
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {
+    return this.protoArray.isPayloadInclusionListSatisfied(blockRoot);
+  }
+
+  getPayloadInclusionListSatisfaction(blockRoot: RootHex): boolean | null {
+    return this.protoArray.getPayloadInclusionListSatisfaction(blockRoot);
+  }
+
   /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
     return this.protoArray.shouldBuildOnFull(head, slot);
