@@ -10,7 +10,6 @@ import {PayloadAttributes} from "../../../src/execution/engine/interface.js";
 import {decodeJwtToken} from "../../../src/execution/engine/jwt.js";
 import {
   BlobsRequest,
-  BlobsV1Response,
   BlobsV2Response,
   BodiesByHashRequest,
   BodiesResponseGloas,
@@ -94,7 +93,6 @@ describe("ExecutionEngine / rest", () => {
     server.get("/engine/v1/payloads/:payloadId", async (req, reply) => sendSsz(req, reply));
     server.post("/engine/v1/bodies/hash", async (req, reply) => sendSsz(req, reply));
     server.get("/engine/v1/bodies", async (req, reply) => sendSsz(req, reply));
-    server.post("/engine/v1/blobs/v1", async (req, reply) => sendSsz(req, reply));
     server.post("/engine/v1/blobs/v2", async (req, reply) => sendSsz(req, reply));
     server.post<{Body: {method: string}}>("/", async (req) => {
       if (req.body.method === "engine_getClientVersionV1") {
@@ -549,21 +547,6 @@ describe("ExecutionEngine / rest", () => {
       expect(res).toEqual([{blob, proofs}]);
       expect(res?.[0].blob.buffer).not.toBe(buffers[0].buffer);
       expect(buffers[0][0]).toBe(0);
-    });
-
-    it("returns partial results for blobs/v1", async () => {
-      const engine = createEngine();
-      sszResponse.body = BlobsV1Response.serialize({
-        entries: [
-          {available: true, contents: {blob, proof}},
-          {available: false, contents: {blob: ssz.deneb.Blob.defaultValue(), proof: new Uint8Array(48)}},
-        ],
-      });
-
-      const res = await engine.getBlobs(ForkName.deneb, [hash, hash]);
-
-      expect(res).toEqual([{blob, proof}, null]);
-      expect(lastRequest("/engine/v1/blobs/v1").method).toBe("POST");
     });
   });
 });

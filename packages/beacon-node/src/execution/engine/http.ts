@@ -1,15 +1,6 @@
 import {Logger} from "@lodestar/logger";
-import {
-  ForkName,
-  ForkPostFulu,
-  ForkPreFulu,
-  ForkSeq,
-  SLOTS_PER_EPOCH,
-  isForkPostBellatrix,
-  isForkPostFulu,
-} from "@lodestar/params";
+import {ForkName, ForkPostFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -154,7 +145,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private restSupport: RestSupport = {state: "pending"};
   private restProbe: Promise<RestSupport> | null = null;
   private lastRestProbeMs = Number.NEGATIVE_INFINITY;
-  private readonly loggedRestFallbacks = new Set<ForkName | "v1" | "v2">();
+  private readonly loggedRestFallbacks = new Set<ForkName | "v2">();
 
   constructor(
     {jsonRpc, rest}: ExecutionEngineTransports,
@@ -427,24 +418,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getBlobs(
-    fork: ForkPostFulu,
+    _fork: ForkPostFulu,
     versionedHashes: VersionedHashes,
     buffers?: Uint8Array[]
-  ): Promise<BlobAndProofV2[] | null>;
-  async getBlobs(
-    fork: ForkPreFulu,
-    versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<(BlobAndProof | null)[]>;
-  async getBlobs(
-    fork: ForkName,
-    versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
-    if (isForkPostFulu(fork)) {
-      return this.withTransport(undefined, "v2", (transport) => transport.getBlobsV2(versionedHashes, buffers));
-    }
-    return this.withTransport(undefined, "v1", (transport) => transport.getBlobsV1(versionedHashes));
+  ): Promise<BlobAndProofV2[] | null> {
+    return this.withTransport(undefined, "v2", (transport) => transport.getBlobsV2(versionedHashes, buffers));
   }
 
   /**
@@ -470,7 +448,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   private async withTransport<T>(
     fork: ForkName | undefined,
-    blobsRevision: "v1" | "v2" | undefined,
+    blobsRevision: "v2" | undefined,
     fn: (transport: IEngineTransport) => Promise<T>
   ): Promise<T> {
     const transport = await this.getTransport(fork, blobsRevision);
@@ -511,7 +489,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * Pick the transport for a call. Fork-scoped calls only go over REST if the execution client
    * advertises that fork, blob requests only if it serves the needed `/blobs/vN` revision.
    */
-  private async getTransport(fork?: ForkName, blobsRevision?: "v1" | "v2"): Promise<IEngineTransport> {
+  private async getTransport(fork?: ForkName, blobsRevision?: "v2"): Promise<IEngineTransport> {
     if (this.rest === null || this.engineApi === "json-rpc") {
       return this.jsonRpc;
     }
