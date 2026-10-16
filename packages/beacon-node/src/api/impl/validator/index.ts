@@ -1005,32 +1005,31 @@ export function getValidatorApi(
         (!circuitBreakerActive &&
           chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
-      // Select the p2p bid once builders had the same time to bid up as granted to builder API bid
-      // requests via the advertised deadline, unless the circuit breaker is active
-      const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
-        ? Promise.resolve(null)
-        : sleep(chain.builderApiClient.bidDeadline).then(() => {
-            const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
-            // Discard p2p bids below the proposer's configured floor on the total payment.
-            // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
-            if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
-              logger.info("Best p2p bid below configured minimum", {
-                slot,
-                bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
-                minBid: prettyGweiToEth(builderConfig.minBid),
-              });
-              return null;
-            }
-            return p2pBid;
-          });
+      // Give p2p bids the same time to bid up as granted to builder API bid requests via the advertised
+      // deadline, the pool is read once the deadline passed and the bid requests settled
+      const bidDeadlinePromise = circuitBreakerActive ? Promise.resolve() : sleep(chain.builderApiClient.bidDeadline);
 
       // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
       // by the top-level factors and each builder API bid by its own entry. Ties prefer the
       // earliest received builder API bid, so the signed block can be routed back to its
       // builder directly.
       const bestBidPromise: Promise<BidCandidate | null> = (async () => {
-        const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
+        const [builderApiBids] = await Promise.all([builderApiBidsPromise, bidDeadlinePromise]);
         let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
+
+        let p2pBid: PooledExecutionPayloadBid | null = circuitBreakerActive
+          ? null
+          : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+        // Discard p2p bids below the proposer's configured floor on the total payment.
+        // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
+        if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
+          logger.info("Best p2p bid below configured minimum", {
+            slot,
+            bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
+            minBid: prettyGweiToEth(builderConfig.minBid),
+          });
+          p2pBid = null;
+        }
 
         const candidates = (
           await Promise.all(
