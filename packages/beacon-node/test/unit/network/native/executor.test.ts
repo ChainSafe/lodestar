@@ -101,6 +101,7 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
 function message(id: string, attestation = false): PendingGossipsubMessage {
   const boundary = {fork: ForkName.electra, epoch: 0};
   return {
+    reportPeer: vi.fn(),
     topic: attestation
       ? {type: GossipType.beacon_attestation, boundary, subnet: 0}
       : {type: GossipType.voluntary_exit, boundary},

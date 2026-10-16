@@ -23,7 +23,7 @@ import {
   getPayloadPresentFromPayloadAttestationMessageSerialized,
 } from "../../util/sszBytes.js";
 import {INetworkCore} from "../core/index.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {
   GossipHandlers,
   GossipMessageInfo,
@@ -47,6 +47,7 @@ export * from "./types.js";
 
 export type NetworkProcessorModules = ValidatorFnsModules &
   ValidatorFnModules & {
+    core: INetworkCore;
     chain: IBeaconChain;
     db: IBeaconDb;
     events: NetworkEventBus;
@@ -446,7 +447,12 @@ export class NetworkProcessor {
     this.fatalPeers.set(peer, this.chain.clock.currentSlot);
   };
 
-  private onPendingGossipsubMessage = (message: PendingGossipsubMessage): void => {
+  private onPendingGossipsubMessage = (incoming: NetworkEventData[NetworkEvent.pendingGossipsubMessage]): void => {
+    const source = incoming.propagationSource;
+    const message: PendingGossipsubMessage = {
+      ...incoming,
+      reportPeer: (action, reason) => this.core.reportPeer(source, action, reason),
+    };
     const topicType = message.topic.type;
     if (this.fatalPeers.has(message.propagationSource)) {
       this.metrics?.networkProcessor.gossipValidationError.inc({topic: topicType, error: GossipErrorCode.FATAL_PEER});
@@ -470,7 +476,7 @@ export class NetworkProcessor {
       const code = GossipErrorCode.INVALID_SLOT;
       const peerAction = rejectPeerAction(topicType, code);
       this.metrics?.networkProcessor.gossipValidationReject.inc({topic: topicType});
-      this.core.reportPeer(propagationSource, peerAction, code);
+      message.reportPeer(peerAction, code);
       this.logger.debug(`Gossip validation ${topicType} rejected due to null slot`, {
         peer: propagationSource,
         clientAgent,

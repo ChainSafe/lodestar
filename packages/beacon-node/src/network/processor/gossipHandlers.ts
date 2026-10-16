@@ -90,7 +90,6 @@ import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
   BatchGossipHandlers,
@@ -120,7 +119,6 @@ export type ValidatorFnsModules = {
   metrics: Metrics | null;
   events: NetworkEventBus;
   aggregatorTracker: AggregatorTracker;
-  core: INetworkCore;
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
@@ -149,7 +147,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
-  const {chain, config, metrics, logger, core} = modules;
+  const {chain, config, metrics, logger} = modules;
 
   /**
    * Add a gossip block to the seen caches. The proposer signature of the block MUST be verified.
@@ -620,9 +618,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     blockInput: IBlockInput,
     peerIdStr: string,
     seenTimestampSec: number,
-    reportPeer?: GossipPeerReport
+    reportPeer: GossipPeerReport
   ): void {
-    const report = reportPeer ?? ((action: PeerAction, reason: string) => core.reportPeer(peerIdStr, action, reason));
     const signedBlock = blockInput.getBlock();
     const slot = signedBlock.message.slot;
 
@@ -714,12 +711,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               break;
             case BlockErrorCode.EXECUTION_ENGINE_INVALID:
               // the peer served a bad block
-              report(PeerAction.LowToleranceError, "ExecutionEngineInvalid");
+              reportPeer(PeerAction.LowToleranceError, "ExecutionEngineInvalid");
               logLevel = LogLevel.warn;
               break;
             default:
-              // TODO: Should it use PeerId or string?
-              report(PeerAction.LowToleranceError, "BadGossipBlock");
+              reportPeer(PeerAction.LowToleranceError, "BadGossipBlock");
               // Misbehaving peer, but could highlight an issue in another client
               logLevel = LogLevel.warn;
           }
@@ -1351,8 +1347,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                 case PayloadErrorCode.INVALID_SIGNATURE:
                 case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
                 case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
-                  if (reportPeer) reportPeer(PeerAction.LowToleranceError, "BadGossipPayload");
-                  else core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  reportPeer(PeerAction.LowToleranceError, "BadGossipPayload");
                   // The builder may have signed another envelope that is valid, keeping this one would make
                   // by-root and range sync reuse it and never import the payload
                   chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);

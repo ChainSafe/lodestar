@@ -9,7 +9,7 @@ export type GossipAttestationsWork = {
 };
 
 export type PendingGossipsubMessage = {
-  reportPeer?: GossipPeerReport;
+  reportPeer: GossipPeerReport;
   topic: GossipTopic;
   msg: Message;
   // only available for beacon_attestation and aggregate_and_proof

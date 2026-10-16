@@ -4,19 +4,20 @@ import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {defer, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../../../../src/network/events.js";
 import {
   BatchGossipHandlerFn,
+  GossipHandlerFn,
   GossipHandlers,
   GossipTopic,
   GossipType,
 } from "../../../../src/network/gossip/interface.js";
+import {PeerAction} from "../../../../src/network/peers/index.js";
 import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 import {NetworkProcessor} from "../../../../src/network/processor/index.js";
-import {PendingGossipsubMessage} from "../../../../src/network/processor/types.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {PeerIdStr} from "../../../../src/util/peerId.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -28,12 +29,13 @@ const root = new Uint8Array(32).fill(1);
 const rootHex = toRootHex(root);
 const source = "16Uiu2HAmGossipLifecyclePeer" as PeerIdStr;
 type Result = NetworkEventData[NetworkEvent.gossipMessageValidationResult];
+type IncomingMessage = NetworkEventData[NetworkEvent.pendingGossipsubMessage];
 
 function message(
   id: number,
   topic: GossipTopic = {type: GossipType.voluntary_exit, boundary: {fork: ForkName.phase0, epoch: 0}},
   data: Uint8Array = new Uint8Array()
-): PendingGossipsubMessage {
+): IncomingMessage {
   return {
     topic,
     msg: {type: "unsigned", topic: topic.type, data},
@@ -46,7 +48,7 @@ function message(
   };
 }
 
-function attestation(id: number, payload = false, slot = 64): PendingGossipsubMessage {
+function attestation(id: number, payload = false, slot = 64): IncomingMessage {
   const att = ssz.electra.SingleAttestation.defaultValue();
   att.data.slot = slot;
   att.data.beaconBlockRoot = root;
@@ -75,7 +77,7 @@ function fixture() {
     seenPayloadEnvelope: () => false,
     forkChoice: {...baseChain.forkChoice, hasBlockHexUnsafe, hasPayloadHexUnsafe},
   };
-  const single = vi.fn<() => Promise<void>>(async () => {});
+  const single = vi.fn<GossipHandlerFn>(async () => {});
   const batch = vi.fn<BatchGossipHandlerFn>(async (items) => items.map(() => null));
   const handlers: GossipHandlers = {
     beacon_block: single,
@@ -98,13 +100,14 @@ function fixture() {
   };
   const results: Result[] = [];
   events.on(NetworkEvent.gossipMessageValidationResult, (result) => results.push(result));
+  const core = {reportPeer: vi.fn()};
   const processor = new NetworkProcessor(
     {
       chain,
       db: getMockedBeaconDb(),
       config: createBeaconConfig(defaultConfig, new Uint8Array(32)),
       aggregatorTracker: new AggregatorTracker(),
-      core: {} as INetworkCore,
+      core: core as unknown as INetworkCore,
       events,
       logger,
       metrics: null,
@@ -121,10 +124,11 @@ function fixture() {
     single,
     batch,
     results,
+    core,
     blsThreadPoolCanAcceptWork,
     hasBlockHexUnsafe,
     hasPayloadHexUnsafe,
-    dispatch: (msg: PendingGossipsubMessage) => events.emit(NetworkEvent.pendingGossipsubMessage, msg),
+    dispatch: (msg: IncomingMessage) => events.emit(NetworkEvent.pendingGossipsubMessage, msg),
   };
 }
 
@@ -155,6 +159,26 @@ describe("NetworkProcessor lifecycle", () => {
     expect(f.processor.dumpGossipQueue(GossipType.voluntary_exit)).toEqual([]);
     expect(f.single).not.toHaveBeenCalled();
     expect(f.results).toEqual([]);
+  });
+
+  it("attaches the delivery's reporter after worker transfer and retains it through deferred work", async () => {
+    const f = setup();
+    const held = defer<void>();
+    f.single.mockImplementation(async ({reportPeer}) => {
+      await held.promise;
+      reportPeer(PeerAction.LowToleranceError, "BadGossipBlock");
+    });
+    const incoming = message(1);
+    const transferred = structuredClone(incoming);
+    f.dispatch(transferred);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.single).toHaveBeenCalledOnce();
+    expect(structuredClone(transferred)).toEqual(incoming);
+    transferred.propagationSource = "replacement";
+    held.resolve();
+    await vi.runAllTimersAsync();
+    expect(f.core.reportPeer).toHaveBeenCalledExactlyOnceWith(source, PeerAction.LowToleranceError, "BadGossipBlock");
+    expect(f.results[0].propagationSource).toBe(source);
   });
 
   it.each(["stop", "dropAllJobs"] as const)(

@@ -174,7 +174,7 @@ export type GossipPeerReport = (action: PeerAction, reason: string) => void;
  * js-libp2p-gossipsub expects validation functions that look like this
  */
 export type GossipMessageInfo = {
-  reportPeer?: GossipPeerReport;
+  reportPeer: GossipPeerReport;
   topic: GossipTopic;
   msg: Message;
   propagationSource: PeerIdStr;
@@ -202,7 +202,7 @@ export type GossipData = {
 };
 
 export type GossipHandlerParam = {
-  reportPeer?: GossipPeerReport;
+  reportPeer: GossipPeerReport;
   gossipData: GossipData;
   topic: GossipTopicMap[GossipType];
   peerIdStr: string;
@@ -214,7 +214,7 @@ export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam) => Promis
 export type BatchGossipHandlerFn = (gossipHandlerParam: GossipHandlerParam[]) => Promise<(null | AttestationError)[]>;
 
 export type GossipHandlerParamGeneric<T extends GossipType> = {
-  reportPeer?: GossipPeerReport;
+  reportPeer: GossipPeerReport;
   gossipData: GossipData;
   topic: GossipTopicMap[T];
   peerIdStr: string;

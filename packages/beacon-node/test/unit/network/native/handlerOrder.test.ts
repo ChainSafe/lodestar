@@ -198,6 +198,7 @@ describe("native gossip handler order", () => {
     const validate = getGossipValidatorFn(getGossipHandlers(f.modules, {}), f.modules, vi.fn());
     try {
       const result = await validate({
+        reportPeer: vi.fn(),
         topic: {type: GossipType.voluntary_exit, boundary},
         msg: {type: "unsigned", topic: "", data: message(GossipType.voluntary_exit, 1).data},
         propagationSource: "peer",
