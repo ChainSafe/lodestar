@@ -316,10 +316,7 @@ describe("native peer datastore", () => {
   it("closes native cursors when consumers stop or abort a query", async () => {
     await datastore.put(new Key("/a"), Uint8Array.of(1));
     await datastore.put(new Key("/b"), Uint8Array.of(2));
-    const createIterator = LevelDb.prototype.iterator;
-    const iterator = vi.spyOn(LevelDb.prototype, "iterator").mockImplementation(function (this: LevelDb, options) {
-      return createIterator.call(this, {...options, maxEntries: 1});
-    });
+    const iterator = vi.spyOn(LevelDb.prototype, "iterator");
     const query = datastore.query({});
     await query.next();
     const native = iterator.mock.results[0].value;
@@ -338,10 +335,6 @@ describe("native peer datastore", () => {
   });
 
   it("keeps a query snapshot stable across writes and closes on filter failure", async () => {
-    const createIterator = LevelDb.prototype.iterator;
-    vi.spyOn(LevelDb.prototype, "iterator").mockImplementation(function (this: LevelDb, options) {
-      return createIterator.call(this, {...options, maxEntries: 1});
-    });
     await datastore.put(new Key("/a"), Uint8Array.of(1));
     await datastore.put(new Key("/b"), Uint8Array.of(2));
     const query = datastore.query({});
@@ -351,10 +344,7 @@ describe("native peer datastore", () => {
     expect((await query.next()).value?.value).toEqual(Uint8Array.of(2));
     expect((await query.next()).done).toBe(true);
 
-    const createKeys = LevelDb.prototype.keys;
-    const iterator = vi.spyOn(LevelDb.prototype, "keys").mockImplementation(function (this: LevelDb, options) {
-      return createKeys.call(this, {...options, maxEntries: 1});
-    });
+    const iterator = vi.spyOn(LevelDb.prototype, "keys");
     const failure = new Error("filter failed");
     const filtered = datastore.queryKeys({
       filters: [
@@ -368,10 +358,6 @@ describe("native peer datastore", () => {
   });
 
   it("releases snapshots after limited key queries", async () => {
-    const createKeys = LevelDb.prototype.keys;
-    vi.spyOn(LevelDb.prototype, "keys").mockImplementation(function (this: LevelDb, options) {
-      return createKeys.call(this, {...options, maxEntries: 1});
-    });
     await datastore.put(new Key("/a"), Uint8Array.of(1));
     await datastore.put(new Key("/b"), Uint8Array.of(2));
     for (let index = 0; index < 70; index++) {

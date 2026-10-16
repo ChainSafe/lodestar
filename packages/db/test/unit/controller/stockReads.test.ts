@@ -8,7 +8,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {LevelDbController, PrefixedRepository, Repository} from "../../../src/index.js";
 
-type Call = {call: string; fillCache?: boolean; maxEntries?: number; limit?: number};
+type Call = {call: string; fillCache?: boolean; limit?: number};
 
 const type = new ContainerType({value: new UintNumberType(8)});
 
@@ -65,7 +65,7 @@ describe("stock LevelDB serving reads", () => {
       return getMany(keys, opts);
     });
     vi.spyOn(storage, "iterator").mockImplementation((opts) => {
-      calls.push({call: "iterator", fillCache: opts?.fillCache, maxEntries: opts?.maxEntries, limit: opts?.limit});
+      calls.push({call: "iterator", fillCache: opts?.fillCache, limit: opts?.limit});
       return iterator(opts);
     });
   });
@@ -94,7 +94,7 @@ describe("stock LevelDB serving reads", () => {
       {call: "get", fillCache: false},
       {call: "get", fillCache: false},
       {call: "getMany", fillCache: false},
-      {call: "iterator", fillCache: false, maxEntries: undefined, limit: undefined},
+      {call: "iterator", fillCache: false, limit: undefined},
     ]);
     // Reads without the option keep the stock defaults
     calls.length = 0;
@@ -112,14 +112,14 @@ describe("stock LevelDB serving reads", () => {
     calls.length = 0;
     const all = await Array.fromAsync(rows.binaryEntriesStream({fillCache: false, gte: 0, lt: 5}));
     expect(all.map(({value}) => type.deserialize(value).value)).toEqual([0, 1, 2, 3, 4]);
-    expect(calls).toEqual([{call: "iterator", fillCache: false, maxEntries: undefined, limit: undefined}]);
+    expect(calls).toEqual([{call: "iterator", fillCache: false, limit: undefined}]);
 
     expect(await Array.fromAsync(rows.binaryEntriesStream({gte: 0, lt: 5, limit: -1}))).toHaveLength(5);
 
     calls.length = 0;
     const limited = await Array.fromAsync(rows.binaryEntriesStream({gte: 0, lt: 5, limit: 2}));
     expect(limited).toHaveLength(2);
-    expect(calls).toEqual([{call: "iterator", fillCache: false, maxEntries: undefined, limit: 2}]);
+    expect(calls).toEqual([{call: "iterator", fillCache: false, limit: 2}]);
 
     const stream = rows.binaryEntriesStream({gte: 0, lt: 5})[Symbol.asyncIterator]();
     expect((await stream.next()).done).toBe(false);

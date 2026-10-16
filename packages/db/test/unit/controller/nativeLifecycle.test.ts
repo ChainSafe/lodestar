@@ -100,7 +100,7 @@ describe("native LevelDB controller lifecycle", () => {
   });
 
   it("records partial reads and closes when a native pull fails", async () => {
-    const native = storage.iterator({maxEntries: 1});
+    const native = storage.iterator();
     vi.spyOn(storage, "iterator").mockReturnValueOnce(native);
     const close = vi.spyOn(native, "close");
     const next = native.next.bind(native);
