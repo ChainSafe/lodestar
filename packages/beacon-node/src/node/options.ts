@@ -2,7 +2,12 @@ import {ApiOptions, defaultApiOptions} from "../api/options.js";
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
 import {ValidatorMonitorOpts, defaultValidatorMonitorOpts} from "../chain/validatorMonitor.js";
 import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
-import {BUILDER_BID_LAG_BUFFER_MS} from "../execution/builder/apiClient.js";
+import {
+  BUILDER_BID_LAG_BUFFER_MS,
+  DEFAULT_BUILDER_BID_DEADLINE_MS,
+  DEFAULT_BUILDER_BID_DELAY_MS,
+  DEFAULT_BUILDER_BID_REQUESTS,
+} from "../execution/builder/apiClient.js";
 import {
   EngineApiMode,
   ExecutionBuilderOpts,
@@ -26,6 +31,9 @@ export {
   defaultExecutionEngineHttpOpts,
   defaultExecutionBuilderHttpOpts,
   BUILDER_BID_LAG_BUFFER_MS,
+  DEFAULT_BUILDER_BID_DEADLINE_MS,
+  DEFAULT_BUILDER_BID_DELAY_MS,
+  DEFAULT_BUILDER_BID_REQUESTS,
   engineApiModes,
   ArchiveMode,
   DEFAULT_ARCHIVE_MODE,
