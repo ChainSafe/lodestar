@@ -129,7 +129,7 @@ const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
  * Post-gloas the block only commits to a bid and is cheap to propagate, bids keep improving until
  * late in the slot, so the race starts at 2083 BPS (2.5 seconds for 12s slots).
  */
-export const BLOCK_PRODUCTION_RACE_CUTOFF_BPS_GLOAS = 2083;
+export const BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS = 2083;
 /** Rejection message of the bid block branch when there is no viable bid to commit to */
 const NO_BID_AVAILABLE = "No builder bid available";
 
@@ -1124,7 +1124,7 @@ export function getValidatorApi(
       // not delay the proposal when a builder bid block is available (and vice versa)
       const cutoffMs = Math.max(
         0,
-        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS_GLOAS) - chain.clock.msFromSlot(slot)
+        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
       );
 
       // use abort controller to stop waiting for the bid block if the engine block will be selected
