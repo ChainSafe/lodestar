@@ -98,35 +98,41 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
 
-    return this.db.put(key, value);
+    return this.db.put(key, value, {sync: opts?.sync});
   }
 
   delete(key: Uint8Array, opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
 
-    return this.db.del(key);
+    return this.db.del(key, {sync: opts?.sync});
   }
 
   batchPut(items: KeyValue<Uint8Array, Uint8Array>[], opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, items.length);
 
-    return this.db.batch(items.map((item) => ({type: "put", key: item.key, value: item.value})));
+    return this.db.batch(
+      items.map((item) => ({type: "put", key: item.key, value: item.value})),
+      {sync: opts?.sync}
+    );
   }
 
   batchDelete(keys: Uint8Array[], opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
 
-    return this.db.batch(keys.map((key) => ({type: "del", key: key})));
+    return this.db.batch(
+      keys.map((key) => ({type: "del", key: key})),
+      {sync: opts?.sync}
+    );
   }
 
   batch(batch: DbBatch<Uint8Array, Uint8Array>, opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, batch.length);
 
-    return this.db.batch(batch);
+    return this.db.batch(batch, {sync: opts?.sync});
   }
 
   keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {

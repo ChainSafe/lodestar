@@ -3,11 +3,7 @@ import {BLSPubkey, Epoch, Root} from "@lodestar/types";
 import {Logger, toPubkeyHex} from "@lodestar/utils";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
 import {LodestarValidatorDatabaseController} from "../types.js";
-import {
-  AttestationByTargetRepository,
-  AttestationLowerBoundRepository,
-  SlashingProtectionAttestationService,
-} from "./attestation/index.js";
+import {SlashingProtectionAttestationService} from "./attestation/index.js";
 import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
 import {
   Interchange,
@@ -19,7 +15,6 @@ import {
   serializeInterchange,
 } from "./interchange/index.js";
 import {ISlashingProtection} from "./interface.js";
-import {DistanceStoreRepository, MinMaxSurround} from "./minMaxSurround/index.js";
 import {SlashingProtectionAttestation, SlashingProtectionBlock} from "./types.js";
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation/index.js";
@@ -37,17 +32,8 @@ export class SlashingProtection implements ISlashingProtection {
 
   constructor(protected db: LodestarValidatorDatabaseController) {
     const blockBySlotRepository = new BlockBySlotRepository(db);
-    const attestationByTargetRepository = new AttestationByTargetRepository(db);
-    const attestationLowerBoundRepository = new AttestationLowerBoundRepository(db);
-    const distanceStoreRepository = new DistanceStoreRepository(db);
-    const minMaxSurround = new MinMaxSurround(distanceStoreRepository);
-
     this.blockService = new SlashingProtectionBlockService(blockBySlotRepository);
-    this.attestationService = new SlashingProtectionAttestationService(
-      attestationByTargetRepository,
-      attestationLowerBoundRepository,
-      minMaxSurround
-    );
+    this.attestationService = new SlashingProtectionAttestationService(db);
   }
 
   async checkAndInsertBlockProposal(pubKey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {

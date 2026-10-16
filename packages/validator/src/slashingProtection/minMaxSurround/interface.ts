@@ -15,9 +15,15 @@ export type DistanceEntry = {
   distance: Epoch;
 };
 
+export type SpanUpdates = {
+  minSpan: DistanceEntry[];
+  maxSpan: DistanceEntry[];
+};
+
 export type IDistanceStore = {
   [P in "minSpan" | "maxSpan"]: {
     get(pubKey: BLSPubkey, epoch: Epoch): Promise<Epoch | null>;
-    setBatch(pubKey: BLSPubkey, values: DistanceEntry[]): Promise<void>;
   };
+} & {
+  setBatch(pubKey: BLSPubkey, updates: SpanUpdates): Promise<void>;
 };

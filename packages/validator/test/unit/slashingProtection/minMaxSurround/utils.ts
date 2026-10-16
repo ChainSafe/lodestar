@@ -1,5 +1,5 @@
 import {BLSPubkey, ssz} from "@lodestar/types";
-import {DistanceEntry, IDistanceStore} from "../../../../src/slashingProtection/minMaxSurround/index.js";
+import {DistanceEntry, IDistanceStore, SpanUpdates} from "../../../../src/slashingProtection/minMaxSurround/index.js";
 
 export const emptyPubkey = ssz.BLSPubkey.defaultValue();
 export class DistanceMapStore {
@@ -26,6 +26,11 @@ export class DistanceStoreMemory implements IDistanceStore {
   constructor() {
     this.minSpan = new DistanceMapStore();
     this.maxSpan = new DistanceMapStore();
+  }
+
+  async setBatch(pubkey: BLSPubkey, updates: SpanUpdates): Promise<void> {
+    await this.minSpan.setBatch(pubkey, updates.minSpan);
+    await this.maxSpan.setBatch(pubkey, updates.maxSpan);
   }
 }
 

@@ -6,11 +6,6 @@ import {BlockBySlotRepository} from "./blockBySlotRepository.js";
 import {InvalidBlockError, InvalidBlockErrorCode} from "./errors.js";
 export {BlockBySlotRepository, InvalidBlockError, InvalidBlockErrorCode};
 
-enum SafeStatus {
-  SAME_DATA = "SAFE_STATUS_SAME_DATA",
-  OK = "SAFE_STATUS_OK",
-}
-
 export class SlashingProtectionBlockService {
   private blockBySlot: BlockBySlotRepository;
   private readonly pendingProposals = new Map<string, Promise<void>>();
@@ -33,11 +28,8 @@ export class SlashingProtectionBlockService {
       if (previous !== undefined) {
         await previous;
       }
-      const safeStatus = await this.checkBlockProposal(pubkey, block);
-
-      if (safeStatus !== SafeStatus.SAME_DATA) {
-        await this.insertBlockProposal(pubkey, block);
-      }
+      await this.checkBlockProposal(pubkey, block);
+      await this.insertBlockProposal(pubkey, block);
     } finally {
       resolve();
       if (this.pendingProposals.get(pubkeyHex) === promise) {
@@ -51,13 +43,13 @@ export class SlashingProtectionBlockService {
   /**
    * Check a block proposal from `pubKey` for slash safety.
    */
-  async checkBlockProposal(pubkey: BLSPubkey, block: SlashingProtectionBlock): Promise<SafeStatus> {
+  async checkBlockProposal(pubkey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
     // Double proposal
     const sameSlotBlock = await this.blockBySlot.get(pubkey, block.slot);
     if (sameSlotBlock && block.slot === sameSlotBlock.slot) {
       // Interchange format allows for blocks without signing_root, then assume root is equal
       if (isEqualNonZeroRoot(sameSlotBlock.signingRoot, block.signingRoot)) {
-        return SafeStatus.SAME_DATA;
+        return;
       }
 
       throw new InvalidBlockError({
@@ -78,8 +70,6 @@ export class SlashingProtectionBlockService {
         minSlot: minBlock.slot,
       });
     }
-
-    return SafeStatus.OK;
   }
 
   /**

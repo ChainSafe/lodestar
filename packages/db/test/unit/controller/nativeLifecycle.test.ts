@@ -150,6 +150,21 @@ describe("native LevelDB controller lifecycle", () => {
     await db.batchDelete([]);
   });
 
+  it("forwards durability for every write operation", async () => {
+    const put = vi.spyOn(storage, "put");
+    const del = vi.spyOn(storage, "del");
+    const batch = vi.spyOn(storage, "batch");
+    const {key, value} = entries[0];
+    await db.put(key, value, {sync: true});
+    expect(put).toHaveBeenCalledExactlyOnceWith(key, value, {sync: true});
+    await db.delete(key, {sync: true});
+    expect(del).toHaveBeenCalledExactlyOnceWith(key, {sync: true});
+    await db.batchPut([{key, value}], {sync: true});
+    await db.batchDelete([key], {sync: true});
+    await db.batch([{type: "put", key, value}], {sync: true});
+    expect(batch.mock.calls.map(([, options]) => options)).toEqual([{sync: true}, {sync: true}, {sync: true}]);
+  });
+
   it("passes ordered writes as one native batch", async () => {
     const batch = vi.spyOn(storage, "batch");
     const key = entries[0].key;
@@ -159,7 +174,7 @@ describe("native LevelDB controller lifecycle", () => {
       {type: "put" as const, key, value},
     ];
     await db.batch(operations);
-    expect(batch).toHaveBeenCalledExactlyOnceWith(operations);
+    expect(batch).toHaveBeenCalledExactlyOnceWith(operations, {sync: undefined});
     expect(await db.get(key)).toEqual(value);
     expect(metrics.dbWriteItems.inc).toHaveBeenLastCalledWith({bucket: "unknown"}, 2);
   });
