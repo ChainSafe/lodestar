@@ -30,7 +30,7 @@ export type ExecutionBuilderHttpOpts = {
   timeout?: number;
   faultInspectionWindow?: number;
   allowedFaults?: number;
-  /** Post-gloas only, time from the slot start by which builder bids must be received, in milliseconds */
+  /** Post-gloas only, time builders are given to provide a bid once block production starts, in milliseconds */
   bidDeadline?: number;
 
   // Only required for merge-mock runs, no need to expose it to cli

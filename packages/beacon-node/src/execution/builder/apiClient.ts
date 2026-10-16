@@ -31,7 +31,7 @@ export const DEFAULT_BUILDER_BID_DEADLINE_MS = 500;
 export type BuilderApiClientOpts = {
   /** Timeout for builder api requests, bid requests are bounded by `bidDeadline` instead */
   timeout?: number;
-  /** Time from the slot start by which builder bids must be received, in milliseconds */
+  /** Time builders are given to provide a bid once block production starts, in milliseconds */
   bidDeadline?: number;
   // Add User-Agent header to all requests
   userAgent?: string;

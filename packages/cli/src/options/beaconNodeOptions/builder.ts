@@ -63,7 +63,7 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
 
   "builder.bidDeadline": {
     description:
-      "Time in milliseconds from the start of the slot by which builder bids must be received. Advertised to builder API endpoints via the `X-Timeout-Ms` header and applied to bids received via p2p. Post-Gloas only",
+      "Time in milliseconds builders are given to provide a bid once block production starts. Advertised to builder API endpoints via the `X-Timeout-Ms` header and applied to bids received via p2p. Post-Gloas only",
     type: "number",
     defaultDescription: String(defaultExecutionBuilderHttpOpts.bidDeadline),
     group: "builder",
