@@ -18,7 +18,7 @@ import {
   totalBits,
 } from "./dcolFormat.js";
 import {DataColumnStoreError, DataColumnStoreErrorCode, isFsNotFoundError} from "./errors.js";
-import type {DataColumnReadOpts, IFlatFileStore} from "./interface.js";
+import type {IFlatFileStore} from "./interface.js";
 import {type FlatFileStoreMetrics, FlatFileStoreOperation, observeFlatFileStoreOperation} from "./metrics.js";
 import {assertValidRootHex, padSlot} from "./path.js";
 import {SlotIndex} from "./slotIndex.js";
@@ -101,11 +101,10 @@ export class FlatFileStore implements IFlatFileStore {
   async getDataColumnsBinary(
     slot: Slot,
     blockRoot: RootHex,
-    indices: number[],
-    opts?: DataColumnReadOpts
+    indices: number[]
   ): Promise<(Uint8Array | undefined)[] | null> {
     return observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.read, () =>
-      this.getColumnsBinaryUninstrumented(slot, blockRoot, indices, opts)
+      this.getColumnsBinaryUninstrumented(slot, blockRoot, indices)
     );
   }
 
@@ -223,8 +222,7 @@ export class FlatFileStore implements IFlatFileStore {
   private async getColumnsBinaryUninstrumented(
     slot: Slot,
     rootHex: RootHex,
-    indices: number[],
-    opts?: DataColumnReadOpts
+    indices: number[]
   ): Promise<(Uint8Array | undefined)[] | null> {
     let fd: fs.promises.FileHandle;
     try {
@@ -250,14 +248,13 @@ export class FlatFileStore implements IFlatFileStore {
       const offsets = parseDcolOffsets(offsetTable, N, fileSize - DCOL_HEADER_SIZE - tableSize);
 
       const results: (Uint8Array | undefined)[] = [];
-      let totalBytes = 0;
+      const maxBytes = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar.maxSize;
       for (const idx of indices) {
         const range = getColumnByteRange(header, offsets, idx);
         if (!range) {
           results.push(undefined);
           continue;
         }
-        const maxBytes = Math.min(opts?.maxValueBytes ?? Infinity, (opts?.maxTotalBytes ?? Infinity) - totalBytes);
         // Snappy's worst-case compressed size; check before allocating the read buffer.
         const maxCompressedBytes = 32 + maxBytes + Math.floor(maxBytes / 6);
         if (range.length > maxCompressedBytes) {
@@ -271,7 +268,6 @@ export class FlatFileStore implements IFlatFileStore {
         await readExactly(fd, buf, range.offset);
         this.metrics?.readBytes.inc(buf.length);
         const value = uncompress(buf, maxBytes);
-        totalBytes += value.byteLength;
         results.push(value);
       }
 

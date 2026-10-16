@@ -1,7 +1,4 @@
-import {DbReqOpts} from "@lodestar/db";
 import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
-
-export type DataColumnReadOpts = Pick<DbReqOpts, "maxValueBytes" | "maxTotalBytes">;
 
 /**
  * Flat file storage interface for data columns.
@@ -16,12 +13,7 @@ export interface IFlatFileStore {
 
   getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]>;
   /** Returns null if the file is absent, and undefined entries for columns missing from an existing file. */
-  getDataColumnsBinary(
-    slot: Slot,
-    blockRoot: RootHex,
-    indices: number[],
-    opts?: DataColumnReadOpts
-  ): Promise<(Uint8Array | undefined)[] | null>;
+  getDataColumnsBinary(slot: Slot, blockRoot: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[] | null>;
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
 
   deleteMany(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;

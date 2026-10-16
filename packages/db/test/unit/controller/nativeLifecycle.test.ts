@@ -85,7 +85,7 @@ describe("native LevelDB controller lifecycle", () => {
   it.each(["keysStream", "valuesStream", "entriesStream"] as const)(
     "%s counts yielded rows and closes on an early break",
     async (method) => {
-      for await (const _item of db[method]({bucketId: "rows", rowAtATime: true})) break;
+      for await (const _item of db[method]({bucketId: "rows"})) break;
       expect(metrics.dbReadReq.inc).toHaveBeenCalledExactlyOnceWith({bucket: "rows"}, 1);
       expect(metrics.dbReadItems.inc).toHaveBeenCalledExactlyOnceWith({bucket: "rows"}, 1);
     }
@@ -129,7 +129,7 @@ describe("native LevelDB controller lifecycle", () => {
 
   it.each([-1, -2, 1.5, Number.NaN, Infinity])("treats invalid limit %s as unlimited", async (limit) => {
     expect(await db.entries({limit})).toEqual(entries);
-    expect(await Array.fromAsync(db.entriesStream({limit, rowAtATime: true}))).toEqual(entries);
+    expect(await Array.fromAsync(db.entriesStream({limit}))).toEqual(entries);
   });
 
   it("honors exclusive bounds, reverse traversal and zero limits", async () => {

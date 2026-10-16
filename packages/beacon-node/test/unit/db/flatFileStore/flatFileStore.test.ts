@@ -6,7 +6,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPostFulu, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fulu, gloas, ssz} from "@lodestar/types";
 import {DCOL_VERSION} from "../../../../src/db/flatFileStore/dcolFormat.js";
 import {DataColumnStoreErrorCode} from "../../../../src/db/flatFileStore/errors.js";
@@ -58,21 +58,22 @@ describe("FlatFileStore", () => {
       expect(result).toEqual([col0, col5, undefined]);
     });
 
-    it("bounds decompression and cumulative output, including duplicate column requests", async () => {
-      const value = new Uint8Array(1024).fill(1);
-      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: value}]);
-      await expect(
-        store.getDataColumnsBinary(1000, ROOT_A, [0, 0], {
-          maxValueBytes: 1024,
-          maxTotalBytes: 2048,
-        })
-      ).resolves.toEqual([value, value]);
-      for (const opts of [{maxValueBytes: 1023}, {maxTotalBytes: 2047}]) {
-        await expect(store.getDataColumnsBinary(1000, ROOT_A, [0, 0], opts)).rejects.toMatchObject({
-          type: {code: DataColumnStoreErrorCode.READ_LIMIT_EXCEEDED},
+    it("rejects decompressed columns larger than their fork schema", async () => {
+      for (const slot of [0, SLOTS_PER_EPOCH]) {
+        const limit = config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar.maxSize;
+        const value = new Uint8Array(limit).fill(1);
+        await store.putDataColumnsBinary(slot, ROOT_A, [{index: 0, data: value}]);
+        const columns = await store.getDataColumnsBinary(slot, ROOT_A, [0, 0]);
+        expect(columns).toHaveLength(2);
+        for (const column of columns ?? []) {
+          expect(column?.byteLength).toBe(limit);
+          expect(Buffer.compare(column ?? new Uint8Array(), value)).toBe(0);
+        }
+        await store.putDataColumnsBinary(slot, ROOT_B, [{index: 0, data: new Uint8Array(limit + 1)}]);
+        await expect(store.getDataColumnsBinary(slot, ROOT_B, [0])).rejects.toMatchObject({
+          type: {code: DataColumnStoreErrorCode.READ_LIMIT_EXCEEDED, bytes: limit + 1, limit},
         });
       }
-      await expect(store.getDataColumnsBinary(1000, ROOT_A, [0])).resolves.toEqual([value]);
     });
 
     it("should distinguish missing files from missing column indices", async () => {

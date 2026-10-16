@@ -65,7 +65,6 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     return this.type.hashTreeRoot(value) as I;
   }
 
-  /** Preserve repository attribution while forwarding the caller's read bounds and cache option. */
   protected readOptions(opts?: DbReqOpts): DbReqOpts {
     return opts ? {...opts, ...this.dbReqOpts} : this.dbReqOpts;
   }
@@ -293,9 +292,6 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     }
 
     if (opts?.fillCache !== undefined) optsBuff.fillCache = opts.fillCache;
-    if (opts?.rowAtATime !== undefined) optsBuff.rowAtATime = opts.rowAtATime;
-    if (opts?.maxValueBytes !== undefined) optsBuff.maxValueBytes = opts.maxValueBytes;
-    if (opts?.maxTotalBytes !== undefined) optsBuff.maxTotalBytes = opts.maxTotalBytes;
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 

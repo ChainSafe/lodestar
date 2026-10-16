@@ -8,14 +8,8 @@ export type DatabaseOptions = {
 };
 
 export interface FilterOptions<K> {
-  /** Defaults to true. False keeps the blocks this read loads out of the LevelDB block cache. */
+  /** False keeps the blocks this read loads out of the LevelDB block cache. */
   fillCache?: boolean;
-  /** Request native iterator pages of one row. */
-  rowAtATime?: boolean;
-  /** Maximum bytes per returned value, enforced before copying native output. */
-  maxValueBytes?: number;
-  /** Maximum key and value bytes per native iterator page. */
-  maxTotalBytes?: number;
   gt?: K;
   gte?: K;
   lt?: K;
@@ -27,11 +21,7 @@ export interface FilterOptions<K> {
 }
 
 export type DbReqOpts = {
-  /** Maximum bytes per returned value, enforced before copying native output. */
-  maxValueBytes?: number;
-  /** Maximum total value bytes returned by getMany. */
-  maxTotalBytes?: number;
-  /** Defaults to true. False keeps the blocks this read loads out of the LevelDB block cache. */
+  /** False keeps the blocks this read loads out of the LevelDB block cache. */
   fillCache?: boolean;
   /** For metrics */
   bucketId?: string;

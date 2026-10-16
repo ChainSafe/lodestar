@@ -32,7 +32,6 @@ import {defer, prettyPrintIndices, sleep} from "@lodestar/utils";
 import type {ProcessShutdownCallback} from "@lodestar/validator";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
-import {ServingConfigurationError} from "../chain/serving/context.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
@@ -65,7 +64,6 @@ import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
-import {BoundedServing} from "./reqresp/serving/handler.js";
 import {
   GetReqRespHandlerFn,
   ResponseIncoming,
@@ -105,7 +103,6 @@ export type NetworkInitModules = {
   chain: IBeaconChain;
   db: IBeaconDb;
   getReqRespHandler: GetReqRespHandlerFn;
-  nativeServing?: BoundedServing;
   // Optionally pass custom GossipHandlers, for testing
   gossipHandlers?: GossipHandlers;
 };
@@ -176,7 +173,6 @@ export class Network implements INetwork {
     privateKey,
     peerStoreDir,
     getReqRespHandler,
-    nativeServing,
     processShutdownCallback,
   }: NetworkInitModules): Promise<Network> {
     const events = new NetworkEventBus();
@@ -193,7 +189,6 @@ export class Network implements INetwork {
     // Native construction and consumer attachment stay together after any optional collector barrier.
     let core: INetworkCore;
     if (opts.backend === "native") {
-      if (!nativeServing) throw new ServingConfigurationError("Native network requires bounded serving handlers");
       core = await NativeNetworkCore.init({
         opts,
         config,
@@ -202,7 +197,7 @@ export class Network implements INetwork {
         logger,
         clock: chain.clock,
         events,
-        serving: nativeServing,
+        getReqRespHandler,
         initialStatus,
         initialCustodyGroupCount,
         activeValidatorCount,

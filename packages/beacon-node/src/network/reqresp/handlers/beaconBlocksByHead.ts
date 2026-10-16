@@ -6,7 +6,6 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {fulu} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {ServingContext} from "../../../chain/serving/context.js";
 import {getParentRootFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 import {prettyPrintPeerId} from "../../util.js";
 
@@ -15,8 +14,7 @@ export async function* onBeaconBlocksByHead(
   request: fulu.BeaconBlocksByHeadRequest,
   chain: IBeaconChain,
   peerId: PeerId,
-  peerClient: string,
-  context?: ServingContext
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   const currentFork = chain.config.getForkName(chain.clock.currentSlot);
   const {beaconRoot, count} = validateBeaconBlocksByHeadRequest(currentFork, chain.config, request);
@@ -30,7 +28,7 @@ export async function* onBeaconBlocksByHead(
   const minimumRequestSlot = computeStartSlotAtEpoch(minimumRequestEpoch);
 
   for (let blocksSent = 0; blocksSent < count; blocksSent++) {
-    const blockBytes = await chain.getSerializedBlockByRoot(blockRootHex, context);
+    const blockBytes = await chain.getSerializedBlockByRoot(blockRootHex);
     if (!blockBytes) {
       if (blocksSent === 0) {
         throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `Unknown block root ${requestedRootHex}`);

@@ -106,70 +106,26 @@ describe("stock LevelDB serving reads", () => {
     ]);
   });
 
-  it("reads a row-at-a-time stream with one row per native read and closes it on return", async () => {
+  it("streams rows with default prefetch, honors limits and closes on return", async () => {
     const rows = new Rows(db);
     for (let value = 0; value < 5; value++) await rows.put(value, {value});
     calls.length = 0;
-    const all = await Array.fromAsync(rows.binaryEntriesStream({fillCache: false, rowAtATime: true, gte: 0, lt: 5}));
+    const all = await Array.fromAsync(rows.binaryEntriesStream({fillCache: false, gte: 0, lt: 5}));
     expect(all.map(({value}) => type.deserialize(value).value)).toEqual([0, 1, 2, 3, 4]);
-    expect(calls).toEqual([{call: "iterator", fillCache: false, maxEntries: 1, limit: undefined}]);
+    expect(calls).toEqual([{call: "iterator", fillCache: false, maxEntries: undefined, limit: undefined}]);
 
-    expect(await Array.fromAsync(rows.binaryEntriesStream({rowAtATime: true, gte: 0, lt: 5, limit: -1}))).toHaveLength(
-      5
-    );
+    expect(await Array.fromAsync(rows.binaryEntriesStream({gte: 0, lt: 5, limit: -1}))).toHaveLength(5);
 
     calls.length = 0;
-    const limited = await Array.fromAsync(rows.binaryEntriesStream({rowAtATime: true, gte: 0, lt: 5, limit: 2}));
+    const limited = await Array.fromAsync(rows.binaryEntriesStream({gte: 0, lt: 5, limit: 2}));
     expect(limited).toHaveLength(2);
-    expect(calls).toEqual([{call: "iterator", fillCache: false, maxEntries: 1, limit: 2}]);
+    expect(calls).toEqual([{call: "iterator", fillCache: false, maxEntries: undefined, limit: 2}]);
 
-    const stream = rows.binaryEntriesStream({rowAtATime: true, gte: 0, lt: 5})[Symbol.asyncIterator]();
+    const stream = rows.binaryEntriesStream({gte: 0, lt: 5})[Symbol.asyncIterator]();
     expect((await stream.next()).done).toBe(false);
     await stream.return?.();
     // Once closed, the database closes without waiting for the iterator
     await db.close();
-  });
-
-  it("enforces native value and batch byte limits through ordinary and prefixed repositories", async () => {
-    const rows = new Rows(db);
-    const prefixed = new PrefixedRows(db);
-    await rows.put(1, {value: 1});
-    await prefixed.put(7, {value: 1});
-    await prefixed.put(7, {value: 2});
-    expect(await rows.get(1, {maxValueBytes: 8})).toEqual({value: 1});
-    await expect(rows.get(1, {maxValueBytes: 7})).rejects.toMatchObject({code: "ValueTooLarge"});
-    await expect(rows.getBinary(1, {maxValueBytes: 7})).rejects.toMatchObject({code: "ValueTooLarge"});
-    expect((await prefixed.getBinary(7, 1, {maxValueBytes: 8}))?.byteLength).toBe(8);
-    await expect(prefixed.getBinary(7, 1, {maxValueBytes: 7})).rejects.toMatchObject({code: "ValueTooLarge"});
-    expect(await prefixed.getMany(7, [1, 2], {maxValueBytes: 8, maxTotalBytes: 16})).toEqual([{value: 1}, {value: 2}]);
-    await expect(prefixed.getManyBinary(7, [1, 2], {maxValueBytes: 8, maxTotalBytes: 15})).rejects.toMatchObject({
-      code: "BatchTooLarge",
-    });
-    await expect(prefixed.getManyBinary(7, [1, 1], {maxValueBytes: 8, maxTotalBytes: 15})).rejects.toMatchObject({
-      code: "BatchTooLarge",
-    });
-    expect(await rows.get(1)).toEqual({value: 1});
-    expect(await prefixed.getMany(7, [1, 2])).toEqual([{value: 1}, {value: 2}]);
-  });
-
-  it("bounds native range values and page output, including exact-size keys, and closes rejected streams", async () => {
-    const rows = new Rows(db);
-    await rows.put(1, {value: 1});
-    const opts = {rowAtATime: true, maxValueBytes: 8, maxTotalBytes: 17};
-    const entries = await Array.fromAsync(rows.binaryEntriesStream(opts));
-    expect(entries).toEqual([{key: new Uint8Array(rows.encodeKey(1)), value: type.serialize({value: 1})}]);
-    for (let i = 0; i < 65; i++) {
-      await expect(Array.fromAsync(rows.binaryEntriesStream({...opts, maxValueBytes: 7}))).rejects.toMatchObject({
-        code: "ValueTooLarge",
-      });
-      await expect(Array.fromAsync(rows.binaryEntriesStream({...opts, maxTotalBytes: 16}))).rejects.toMatchObject({
-        code: "BatchTooLarge",
-      });
-    }
-    expect(await Array.fromAsync(rows.binaryEntriesStream(opts))).toEqual(entries);
-    expect(await Array.fromAsync(rows.keysStream({rowAtATime: true, maxValueBytes: 1, maxTotalBytes: 9}))).toHaveLength(
-      1
-    );
   });
 
   it("keeps fillCache false reads out of the LevelDB block cache", async () => {

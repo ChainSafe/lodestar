@@ -5,16 +5,14 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, deneb} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {ServingContext, servingRead} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
-import {collectServingHeadRange} from "./beaconBlocksByRange.js";
+import {collectHeadRange} from "./beaconBlocksByRange.js";
 
 export async function* onBlobSidecarsByRange(
   request: deneb.BlobSidecarsByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb,
-  context?: ServingContext
+  db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of blobs
   const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, chain.clock.currentEpoch, request);
@@ -32,17 +30,18 @@ export async function* onBlobSidecarsByRange(
   if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
-      ...(context ? {...context.streamOptions(), limit: count} : {}),
+      fillCache: false,
+      limit: count,
       gte: startSlot,
       lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {
-      yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key), context);
+      yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key));
     }
   }
 
   // Non-finalized range of blobs
   if (endSlot > archiveMaxSlot) {
-    const headChain = collectServingHeadRange(chain, startSlot, endSlot, archiveMaxSlot, context);
+    const headChain = collectHeadRange(chain, startSlot, endSlot, archiveMaxSlot);
     for (const block of headChain) {
       // Must include only blobs in the range requested, and skip anything the archive loop
       // above already served via the block.slot > archiveMaxSlot filter.
@@ -52,14 +51,12 @@ export async function* onBlobSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blobSideCarsBytesWrapped = await servingRead(context, (opts) =>
-          unfinalized.getBinary(fromHex(block.blockRoot), opts)
-        );
+        const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot), {fillCache: false});
         if (!blobSideCarsBytesWrapped) {
           // Handle the same to onBeaconBlocksByRange
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
         }
-        yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, block.slot, context);
+        yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, block.slot);
       }
 
       // If block is after endSlot, stop iterating
@@ -73,10 +70,8 @@ export async function* onBlobSidecarsByRange(
 export function* iterateBlobBytesFromWrapper(
   chain: IBeaconChain,
   blobSideCarsBytesWrapped: Uint8Array,
-  blockSlot: Slot,
-  context?: ServingContext
+  blockSlot: Slot
 ): Iterable<ResponseOutgoing> {
-  context?.checkBacking(blobSideCarsBytesWrapped);
   const allBlobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
   const blobsLen = allBlobSideCarsBytes.length / BLOB_SIDECAR_FIXED_SIZE;
 

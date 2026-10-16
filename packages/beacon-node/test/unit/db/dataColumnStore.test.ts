@@ -34,8 +34,8 @@ describe("LegacyDataColumnStore", () => {
       hotData,
       archiveData,
     ]);
-    expect(getHot).toHaveBeenCalledWith(fromHex(ROOT), [0, 1, 2]);
-    expect(getArchived).toHaveBeenCalledWith(10, [0, 2]);
+    expect(getHot).toHaveBeenCalledWith(fromHex(ROOT), [0, 1, 2], {fillCache: false});
+    expect(getArchived).toHaveBeenCalledWith(10, [0, 2], {fillCache: false});
   });
 
   it.each([{columns: [new Uint8Array([1]), undefined]}, {columns: [undefined, undefined]}])(

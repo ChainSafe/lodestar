@@ -7,22 +7,20 @@ import {computeEpochAtSlot, getBlobDataRetentionStartEpoch} from "@lodestar/stat
 import {ColumnIndex, Epoch, RootHex, fulu} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {ServingContext, servingRead} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
 } from "../utils/dataColumnResponseValidation.js";
-import {collectServingHeadRange} from "./beaconBlocksByRange.js";
+import {collectHeadRange} from "./beaconBlocksByRange.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb,
   peerId: PeerId,
-  peerClient: string,
-  context?: ServingContext
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of columns
   const {
@@ -58,7 +56,7 @@ export async function* onDataColumnSidecarsByRange(
   // fork-choice-backed section until the following finalization, matching ExecutionPayloadEnvelopesByRange.
   const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
   const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
-  const headChain = collectServingHeadRange(chain, startSlot, endSlot, -1, context).reverse();
+  const headChain = collectHeadRange(chain, startSlot, endSlot, -1).reverse();
 
   for await (const block of resolveCanonicalDataColumnBlocks(
     chain,
@@ -67,14 +65,13 @@ export async function* onDataColumnSidecarsByRange(
     startSlot,
     endSlot,
     archiveMaxSlot,
-    finalizedSlot,
-    context
+    finalizedSlot
   )) {
     const dataColumnSidecars =
       block.blockRoot === null
-        ? await db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns)
-        : await chain.getSerializedDataColumnSidecars(block.slot, block.blockRoot, availableColumns, context);
-    context?.checkBatch(dataColumnSidecars, context.limits.sourceBytes, context.limits.columnBytes);
+        ? await db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns, {fillCache: false})
+        : await chain.getSerializedDataColumnSidecars(block.slot, block.blockRoot, availableColumns);
+
     if (block.blockRoot === null && dataColumnSidecars.every((sidecar) => sidecar === undefined)) continue;
     const unavailableColumnIndices: ColumnIndex[] = [];
     for (let i = 0; i < dataColumnSidecars.length; i++) {
@@ -92,7 +89,6 @@ export async function* onDataColumnSidecarsByRange(
     if (unavailableColumnIndices.length > 0) {
       await handleColumnSidecarUnavailability({
         chain,
-        context,
         db,
         metrics: chain.metrics,
         unavailableColumnIndices,
@@ -116,12 +112,11 @@ type CanonicalDataColumnBlock = {
 async function* resolveCanonicalDataColumnBlocks(
   chain: IBeaconChain,
   db: IBeaconDb,
-  headChain: ReturnType<typeof collectServingHeadRange>,
+  headChain: ReturnType<typeof collectHeadRange>,
   startSlot: number,
   endSlot: number,
   archiveMaxSlot: number,
-  finalizedSlot: number,
-  context?: ServingContext
+  finalizedSlot: number
 ): AsyncIterable<CanonicalDataColumnBlock> {
   const canonicalBlocksBySlot = new Map(headChain.map((block) => [block.slot, block]));
   const oldestForkChoiceSlot = headChain.at(-1)?.slot ?? Number.POSITIVE_INFINITY;
@@ -145,7 +140,7 @@ async function* resolveCanonicalDataColumnBlocks(
     let blockRoot = recentRoots.get(slot);
     if (blockRoot === null) continue;
     if (blockRoot === undefined) {
-      const root = await servingRead(context, (opts) => db.blockArchive.getRootBySlot(slot, opts), 32);
+      const root = await db.blockArchive.getRootBySlot(slot, {fillCache: false});
       blockRoot = root === null ? null : toRootHex(root);
     }
     if (blockRoot === null && (db.lastLegacyArchiveSlot === null || slot > db.lastLegacyArchiveSlot)) continue;
@@ -202,9 +197,9 @@ async function hasExecutionPayloadEnvelope(
 ): Promise<boolean> {
   if (blockRoot !== null) {
     if (chain.seenPayloadEnvelopeInputCache.hasPayload(blockRoot)) return true;
-    if ((await db.executionPayloadEnvelope.getBinary(fromHex(blockRoot))) !== null) return true;
+    if ((await db.executionPayloadEnvelope.getBinary(fromHex(blockRoot), {fillCache: false})) !== null) return true;
   }
-  return (await db.executionPayloadEnvelopeArchive.getBinary(slot)) !== null;
+  return (await db.executionPayloadEnvelopeArchive.getBinary(slot, {fillCache: false})) !== null;
 }
 
 export function validateDataColumnSidecarsByRangeRequest(

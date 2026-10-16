@@ -6,7 +6,6 @@ import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
-import {ServingCapacityError, ServingContext} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 
@@ -17,8 +16,7 @@ export async function* onBeaconBlocksByRange(
   chain: IBeaconChain,
   db: IBeaconDb,
   peerId: PeerId,
-  peerClient: string,
-  context?: ServingContext
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   const {startSlot, count} = validateBeaconBlocksByRangeRequest(chain.config, request);
   const endSlot = startSlot + count;
@@ -52,11 +50,11 @@ export async function* onBeaconBlocksByRange(
   if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of finalized.binaryEntriesStream({
-      ...(context ? {...context.streamOptions(context.limits.blockBytes), limit: count} : {}),
+      fillCache: false,
+      limit: count,
       gte: startSlot,
       lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {
-      context?.checkResponse(value, context.limits.blockBytes);
       yield {
         data: value,
         boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(finalized.decodeKey(key))),
@@ -66,7 +64,7 @@ export async function* onBeaconBlocksByRange(
 
   // Non-finalized range of blocks
   if (endSlot > archiveMaxSlot) {
-    const headChain = collectServingHeadRange(chain, startSlot, endSlot, archiveMaxSlot, context);
+    const headChain = collectHeadRange(chain, startSlot, endSlot, archiveMaxSlot);
     for (const block of headChain) {
       // Must include only blocks in the range requested, and skip anything the archive loop
       // above already served via the block.slot > archiveMaxSlot filter.
@@ -76,7 +74,7 @@ export async function* onBeaconBlocksByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blockBytes = await chain.getSerializedBlockByRoot(block.blockRoot, context);
+        const blockBytes = await chain.getSerializedBlockByRoot(block.blockRoot);
         if (!blockBytes) {
           throw new ResponseError(
             RespStatus.SERVER_ERROR,
@@ -135,26 +133,21 @@ export function validateBeaconBlocksByRangeRequest(
   return {startSlot, count};
 }
 
-export function collectServingHeadRange(
+export function collectHeadRange(
   chain: IBeaconChain,
   startSlot: number,
   endSlot: number,
-  archiveMaxSlot: number,
-  context?: ServingContext
+  archiveMaxSlot: number
 ): Pick<ProtoBlock, "slot" | "blockRoot" | "payloadStatus">[] {
   const head = chain.forkChoice.getHead();
-  if (!context) return chain.forkChoice.getAllAncestorBlocks(head.blockRoot, head.payloadStatus).reverse();
-  context.assertActive();
-  if (!Number.isSafeInteger(endSlot) || endSlot < startSlot || endSlot - startSlot > context.limits.maxIteratorRows)
-    throw new ServingCapacityError("range slots");
   const records: Pick<ProtoBlock, "slot" | "blockRoot" | "payloadStatus">[] = [];
   const visit = (block: ProtoBlock): boolean => {
-    if (block.slot <= archiveMaxSlot || block.slot < startSlot) return false;
+    if (block.slot <= archiveMaxSlot) return false;
     if (block.slot < endSlot) {
-      if (records.length >= endSlot - startSlot) throw new ServingCapacityError("ancestry records");
       records.push({slot: block.slot, blockRoot: block.blockRoot, payloadStatus: block.payloadStatus});
     }
-    return true;
+    // Keep one predecessor so column serving can recognize skipped slots within fork choice.
+    return block.slot >= startSlot;
   };
   if (visit(head)) {
     for (const block of chain.forkChoice.iterateAncestorBlocks(head.blockRoot, head.payloadStatus)) {

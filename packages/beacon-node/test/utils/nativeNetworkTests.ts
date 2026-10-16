@@ -357,6 +357,45 @@ describe("native Lodestar integration", () => {
       expect(results.filter((result) => result.status === "rejected")).toEqual([]);
     }
   }, 15000);
+  it("keeps the native serving slot while a database read outlives peer disconnection", async () => {
+    const config = fuluConfig();
+    const node = await nativeNetworkFixture(config);
+    let remote: Awaited<ReturnType<typeof nativeNetworkProcess>> | undefined;
+    const read = defer<null>();
+    const started = defer<void>();
+    const serving = vi.spyOn(BeaconChain.prototype, "getSerializedBlockByRoot").mockImplementationOnce(() => {
+      started.resolve();
+      return read.promise;
+    });
+    try {
+      remote = await nativeNetworkProcess(config, node.chain.clock.genesisTime);
+      const identity = await node.network.getNetworkIdentity();
+      const peer = await remote.network.getNetworkIdentity();
+      await remote.network.connectToPeer(identity.peerId, identity.p2pAddresses);
+      const request = remote.network
+        .sendBeaconBlocksByRoot(identity.peerId, [new Uint8Array(32).fill(7)])
+        .catch((error: unknown) => error);
+      await withTimeout(() => started.promise, 5000);
+      await node.network.disconnectPeer(peer.peerId);
+      await vi.waitFor(
+        async () => {
+          expect(await node.network.scrapeMetrics()).toContain("beacon_reqresp_retiring_count 1\n");
+        },
+        {timeout: 5000}
+      );
+      expect(await request).toBeInstanceOf(Error);
+      read.resolve(null);
+      await vi.waitFor(async () => {
+        expect(await node.network.scrapeMetrics()).toContain("beacon_reqresp_retiring_count 0\n");
+      });
+      expect(serving).toHaveBeenCalledOnce();
+    } finally {
+      read.resolve(null);
+      serving.mockRestore();
+      const results = await Promise.allSettled([node.close(), remote?.close()]);
+      expect(results.filter((result) => result.status === "rejected")).toEqual([]);
+    }
+  }, 30000);
   it("closes while real serving and gossip handlers retain unfinished host work", async () => {
     const config = fuluConfig();
     const old = await nativeNetworkFixture(config);
@@ -388,19 +427,16 @@ describe("native Lodestar integration", () => {
         timeout: 5000,
       });
       await vi.waitFor(() => expect(verifying).toHaveBeenCalledOnce(), {timeout: 5000});
-      expect(old.budget.snapshot().occupancy).toBe(1);
       const closing = old.network.close();
       expect(old.network.close()).toBe(closing);
       await withTimeout(() => closing, 3000);
       expect(old.network.getConnectedPeerCount()).toBe(0);
-      expect(old.budget.snapshot()).toMatchObject({occupancy: 1, outstandingRetirements: 1});
       expect(await request).toBeInstanceOf(Error);
       block.resolve(null);
       signature.resolve(false);
       await vi.waitFor(
         () => {
           expect(retired).toHaveBeenCalledOnce();
-          expect(old.budget.snapshot().occupancy).toBe(0);
         },
         {timeout: 5000}
       );
@@ -532,11 +568,7 @@ describe("native Lodestar integration", () => {
             // The binding renders the family once
             expect(metrics.match(/^# TYPE lodestar_network_log_delivery_errors_total counter$/gm)).toHaveLength(1);
             expect(metrics).toContain("lodestar_network_log_delivery_errors_total 0\n");
-            // The adapter renders its serving gauges once, and the served request returned its charges
-            expect(metrics.match(/^# TYPE beacon_reqresp_host_serving_reserved_bytes gauge$/gm)).toHaveLength(1);
-            expect(metrics.match(/^# TYPE beacon_reqresp_host_serving_source_pending_bytes gauge$/gm)).toHaveLength(1);
-            expect(metrics).toContain('beacon_reqresp_host_serving_reserved_bytes{scope="total"} 0\n');
-            expect(metrics).toContain("beacon_reqresp_host_serving_source_pending_bytes 0\n");
+            // The adapter and native registry must not duplicate metric families
             // The adapter renders its report counter once, with the report above
             expect(metrics.match(/^# TYPE lodestar_peers_report_peer_count counter$/gm)).toHaveLength(1);
             expect(metrics).toContain('lodestar_peers_report_peer_count{reason="InvalidResponseSsz"} 1\n');

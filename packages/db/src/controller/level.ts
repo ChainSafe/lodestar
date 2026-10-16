@@ -1,4 +1,4 @@
-import {LevelDb, LevelDbIteratorOptions, LevelDbReadManyOptions} from "@chainsafe/lodestar-z/leveldb";
+import {LevelDb, LevelDbIteratorOptions} from "@chainsafe/lodestar-z/leveldb";
 import {Logger} from "@lodestar/utils";
 import {DatabaseController, DatabaseOptions, DbBatch, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
@@ -84,14 +84,14 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   async get(key: Uint8Array, opts?: DbReqOpts): Promise<Uint8Array | null> {
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
-    return this.db.get(key, levelReadOptions(opts));
+    return this.db.get(key, {fillCache: opts?.fillCache});
   }
 
   /** Returns values in key order, with undefined for missing keys. */
   async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]> {
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
-    return (await this.db.getMany(keys, levelReadOptions(opts))).map((value) => value ?? undefined);
+    return (await this.db.getMany(keys, {fillCache: opts?.fillCache})).map((value) => value ?? undefined);
   }
 
   put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {
@@ -240,22 +240,15 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 }
 
-function levelReadOptions(opts?: DbReqOpts): LevelDbReadManyOptions {
-  return {fillCache: opts?.fillCache, maxValueBytes: opts?.maxValueBytes, maxTotalBytes: opts?.maxTotalBytes};
-}
-
 function levelIteratorOptions(opts: FilterOptions<Uint8Array>): LevelDbIteratorOptions {
-  const {gt, gte, lt, lte, reverse, fillCache, limit, maxValueBytes, maxTotalBytes} = opts;
+  const {gt, gte, lt, lte, reverse, fillCache, limit} = opts;
   return {
     gt,
     gte,
     lt,
     lte,
     reverse,
-    maxValueBytes,
-    maxTotalBytes,
     fillCache: fillCache ?? false,
     limit: limit !== undefined && Number.isInteger(limit) && limit >= 0 ? limit : undefined,
-    maxEntries: opts.rowAtATime === true ? 1 : undefined,
   };
 }

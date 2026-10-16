@@ -3,7 +3,6 @@ import {ForkSeq} from "@lodestar/params";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
-import {ServingContext} from "../../../chain/serving/context.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -17,11 +16,9 @@ export async function handleColumnSidecarUnavailability({
   availableColumns,
   slot,
   blockRoot,
-  context,
   finalized,
 }: {
   chain: IBeaconChain;
-  context?: ServingContext;
   db: IBeaconDb;
   metrics: Metrics | null;
   slot: Slot;
@@ -43,23 +40,23 @@ export async function handleColumnSidecarUnavailability({
 
   chain.logger.debug("dataColumnSidecar requested unavailable", logData);
 
-  // Diagnostic reads must stay outside a bounded serving response.
-  if (context) return;
-
   // Post-gloas, columns exist only for FULL blocks. The envelope may still be hot while finalization
   // archiving is in progress. Bid blobsCount is unreliable since an EMPTY block's bid may still commit to blobs.
   if (chain.config.getForkSeq(slot) >= ForkSeq.gloas) {
     const hasCachedEnvelope = blockRoot ? chain.seenPayloadEnvelopeInputCache.hasPayload(toRootHex(blockRoot)) : false;
     if (!hasCachedEnvelope) {
-      const hotEnvelopeBytes = blockRoot ? await db.executionPayloadEnvelope.getBinary(blockRoot) : null;
+      const hotEnvelopeBytes = blockRoot
+        ? await db.executionPayloadEnvelope.getBinary(blockRoot, {fillCache: false})
+        : null;
       const envelopeBytes =
-        hotEnvelopeBytes ?? (finalized ? await db.executionPayloadEnvelopeArchive.getBinary(slot) : null);
+        hotEnvelopeBytes ??
+        (finalized ? await db.executionPayloadEnvelopeArchive.getBinary(slot, {fillCache: false}) : null);
       if (!envelopeBytes) return;
     }
   }
 
-  const hotBlockBytes = blockRoot ? await db.block.getBinary(blockRoot) : null;
-  const blockBytes = hotBlockBytes ?? (finalized ? await db.blockArchive.getBinary(slot) : null);
+  const hotBlockBytes = blockRoot ? await db.block.getBinary(blockRoot, {fillCache: false}) : null;
+  const blockBytes = hotBlockBytes ?? (finalized ? await db.blockArchive.getBinary(slot, {fillCache: false}) : null);
   if (!blockBytes) {
     chain.logger.verbose(
       `Expected ${finalized ? "finalized" : "unfinalized"} block not found while handling unavailable dataColumnSidecar`,

@@ -128,8 +128,6 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
-import {ServingCapacityError, ServingConfigurationError, ServingContext, servingRead} from "./serving/context.js";
-import {preflightServingBlock, preflightServingColumn, serializeServingValue} from "./serving/serialization.js";
 import {ShufflingCache, ShufflingPromiseCancelReason} from "./shufflingCache.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
@@ -895,81 +893,44 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getSerializedBlockByRoot(
-    root: string,
-    context?: ServingContext
+    root: string
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
-    let block = this.forkChoice.getBlockHexDefaultStatus(root);
-    const executionOptimistic = block ? isOptimisticBlock(block) : false;
-    const acceptedRoot = block?.blockRoot;
-    if (context) block = null;
-    if (acceptedRoot) {
-      {
-        // Block found in fork-choice.
-        // It may be in the block input cache, awaiting full DA reconstruction, check there first
-        // Otherwise (most likely), check the hot db
-        const blockInput = this.seenBlockInputCache.get(acceptedRoot);
-        if (blockInput?.hasBlock()) {
-          const signedBlock = blockInput.getBlock();
-          const serialized = this.serializedCache.get(signedBlock);
-          if (serialized) {
-            return {
-              block: context ? context.checkResponse(serialized, context.limits.blockBytes) : serialized,
-              executionOptimistic,
-              finalized: false,
-              slot: blockInput.slot,
-            };
-          }
-          if (context) preflightServingBlock(signedBlock, blockInput.forkName, context);
-          const type = sszTypesFor(blockInput.forkName).SignedBeaconBlock;
+    const block = this.forkChoice.getBlockHexDefaultStatus(root);
+    if (block) {
+      // Block found in fork-choice.
+      // It may be in the block input cache, awaiting full DA reconstruction, check there first
+      // Otherwise (most likely), check the hot db
+      const blockInput = this.seenBlockInputCache.get(block.blockRoot);
+      if (blockInput?.hasBlock()) {
+        const signedBlock = blockInput.getBlock();
+        const serialized = this.serializedCache.get(signedBlock);
+        if (serialized) {
           return {
-            block: context
-              ? serializeServingValue(type, signedBlock, context, context.limits.blockBytes)
-              : type.serialize(signedBlock),
-            executionOptimistic,
+            block: serialized,
+            executionOptimistic: isOptimisticBlock(block),
             finalized: false,
             slot: blockInput.slot,
           };
         }
+        return {
+          block: sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(signedBlock),
+          executionOptimistic: isOptimisticBlock(block),
+          finalized: false,
+          slot: blockInput.slot,
+        };
       }
-      const data = await servingRead(
-        context,
-        (opts) => this.db.block.getBinary(fromHex(root), opts),
-        context ? Math.min(context.limits.blockBytes, context.limits.sourceBytes) : undefined
-      );
-      if (data) context?.checkResponse(data, context.limits.blockBytes);
+      const data = await this.db.block.getBinary(fromHex(root), {fillCache: false});
       if (data) {
         const slot = getSlotFromSignedBeaconBlockSerialized(data);
         if (slot === null) throw new Error(`Invalid block data stored in DB for root: ${root}`);
-        return {
-          block: data,
-          executionOptimistic: block ? isOptimisticBlock(block) : executionOptimistic,
-          finalized: false,
-          slot,
-        };
+        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false, slot};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
-    if (!context) {
-      const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root));
-      return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
-    }
-    // Bound the root index row separately from the block it points to
-    const slot = await servingRead(context, (opts) => this.db.blockArchive.getSlotByRoot(fromHex(root), opts), 8);
-    if (slot === null) return null;
-    const data = await servingRead(
-      context,
-      (opts) => this.db.blockArchive.getBinary(slot, opts),
-      Math.min(context.limits.blockBytes, context.limits.sourceBytes)
-    );
-    if (data === null) return null;
-    return {
-      block: context.checkResponse(data, context.limits.blockBytes),
-      executionOptimistic: false,
-      finalized: true,
-      slot,
-    };
+    const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root), {fillCache: false});
+    return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
   }
 
   async getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null> {
@@ -990,40 +951,25 @@ export class BeaconChain implements IBeaconChain {
     return (await this.db.blobSidecarsArchive.get(blockSlot))?.blobSidecars ?? null;
   }
 
-  async getSerializedBlobSidecars(
-    blockSlot: Slot,
-    blockRootHex: string,
-    context?: ServingContext
-  ): Promise<Uint8Array | null> {
-    {
-      const blockInput = this.seenBlockInputCache.get(blockRootHex);
-      if (blockInput) {
-        if (!isBlockInputBlobs(blockInput)) {
-          throw new Error(`Expected block input to have blobs: slot=${blockSlot} root=${blockRootHex}`);
-        }
-        if (!blockInput.hasAllData()) {
-          return null;
-        }
-        const blobs = blockInput.getBlobs();
-        if (context && blobs.length > this.config.getMaxBlobsPerBlock(computeEpochAtSlot(blockSlot)))
-          throw new ServingCapacityError("blob list work");
-        return context
-          ? serializeServingValue(ssz.deneb.BlobSidecars, blobs, context, context.limits.sourceBytes)
-          : ssz.deneb.BlobSidecars.serialize(blobs);
+  async getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
+    const blockInput = this.seenBlockInputCache.get(blockRootHex);
+    if (blockInput) {
+      if (!isBlockInputBlobs(blockInput)) {
+        throw new Error(`Expected block input to have blobs: slot=${blockSlot} root=${blockRootHex}`);
       }
+      if (!blockInput.hasAllData()) {
+        return null;
+      }
+      return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
     }
-    const unfinalizedBlobSidecarsWrapper = await servingRead(context, (opts) =>
-      this.db.blobSidecars.getBinary(fromHex(blockRootHex), opts)
-    );
+    const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex), {
+      fillCache: false,
+    });
     if (unfinalizedBlobSidecarsWrapper) {
-      context?.checkBacking(unfinalizedBlobSidecarsWrapper);
       return unfinalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
     }
-    const finalizedBlobSidecarsWrapper = await servingRead(context, (opts) =>
-      this.db.blobSidecarsArchive.getBinary(blockSlot, opts)
-    );
+    const finalizedBlobSidecarsWrapper = await this.db.blobSidecarsArchive.getBinary(blockSlot, {fillCache: false});
     if (finalizedBlobSidecarsWrapper) {
-      context?.checkBacking(finalizedBlobSidecarsWrapper);
       return finalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
     }
     return null;
@@ -1185,13 +1131,9 @@ export class BeaconChain implements IBeaconChain {
   async getSerializedDataColumnSidecars(
     blockSlot: Slot,
     blockRootHex: string,
-    indices: number[],
-    context?: ServingContext
+    indices: number[]
   ): Promise<(Uint8Array | undefined)[]> {
     const fork = this.config.getForkName(blockSlot);
-    if (context && isForkPostGloas(fork)) throw new ServingConfigurationError("Unsupported serving fork gloas");
-    if (context && indices.length > context.limits.maxEntries) throw new ServingCapacityError("column occurrences");
-    let retainedBytes = 0;
     const dataColumnSidecars: (Uint8Array | undefined)[] = indices.map(() => undefined);
 
     if (isForkPostGloas(fork)) {
@@ -1225,24 +1167,14 @@ export class BeaconChain implements IBeaconChain {
           if (!sidecar) {
             continue;
           }
-          let serialized = this.serializedCache.get(sidecar);
+          const serialized = this.serializedCache.get(sidecar);
           if (serialized) {
-            if (context)
-              context.checkBatch([serialized], context.limits.sourceBytes - retainedBytes, context.limits.columnBytes);
             dataColumnSidecars[i] = serialized;
-          } else if (context) {
-            preflightServingColumn(sidecar, this.config.getMaxBlobsPerBlock(computeEpochAtSlot(blockSlot)));
-            serialized = serializeServingValue(
-              ssz.fulu.DataColumnSidecar,
-              sidecar,
-              context,
-              Math.min(context.limits.columnBytes, context.limits.sourceBytes - retainedBytes)
-            );
           } else {
-            serialized = sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
+            dataColumnSidecars[i] = sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(
+              sidecar
+            );
           }
-          dataColumnSidecars[i] = serialized;
-          retainedBytes += serialized.buffer.byteLength;
         }
       }
     }
@@ -1252,19 +1184,10 @@ export class BeaconChain implements IBeaconChain {
       .filter((position) => position !== -1);
 
     if (missingPositions.length > 0) {
-      const remainingBytes = context ? context.limits.sourceBytes - retainedBytes : undefined;
-      const persistedSidecars = await servingRead(
-        context,
-        (opts) =>
-          this.db.dataColumns.getManyBinary(
-            {slot: blockSlot, blockRoot: blockRootHex},
-            missingPositions.map((position) => indices[position]),
-            opts
-          ),
-        remainingBytes,
-        1
+      const persistedSidecars = await this.db.dataColumns.getManyBinary(
+        {slot: blockSlot, blockRoot: blockRootHex},
+        missingPositions.map((position) => indices[position])
       );
-      context?.checkBatch(persistedSidecars, remainingBytes, context.limits.columnBytes);
       for (let i = 0; i < missingPositions.length; i++) {
         const sidecar = persistedSidecars[i];
         if (sidecar !== undefined) {

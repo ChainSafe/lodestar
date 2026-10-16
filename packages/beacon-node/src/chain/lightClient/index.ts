@@ -52,7 +52,6 @@ import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
-import {ServingContext, servingRead} from "../serving/context.js";
 import {
   getBlockBodyExecutionBlockHashProof,
   getBlockBodyExecutionHeaderProof,
@@ -294,12 +293,8 @@ export class LightClientServer {
   /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
-  async getBootstrap(blockRoot: Uint8Array, context?: ServingContext): Promise<LightClientBootstrap> {
-    const syncCommitteeWitness = await servingRead(
-      context,
-      (opts) => this.db.syncCommitteeWitness.get(blockRoot, opts),
-      context?.limits.lightClient.witness
-    );
+  async getBootstrap(blockRoot: Uint8Array): Promise<LightClientBootstrap> {
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot, {fillCache: false});
     if (!syncCommitteeWitness) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
@@ -307,24 +302,18 @@ export class LightClientServer {
       );
     }
 
-    const [currentSyncCommittee, nextSyncCommittee] = await Promise.all([
-      servingRead(
-        context,
-        (opts) => this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot, opts),
-        context?.limits.lightClient.committee
-      ),
-      servingRead(
-        context,
-        (opts) => this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot, opts),
-        context?.limits.lightClient.committee
-      ),
-    ]);
+    const currentSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot, {
+      fillCache: false,
+    });
     if (!currentSyncCommittee) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
         "currentSyncCommittee not available"
       );
     }
+    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot, {
+      fillCache: false,
+    });
     if (!nextSyncCommittee) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
@@ -332,11 +321,7 @@ export class LightClientServer {
       );
     }
 
-    const header = await servingRead(
-      context,
-      (opts) => this.db.checkpointHeader.get(blockRoot, opts),
-      context?.limits.lightClient.header
-    );
+    const header = await this.db.checkpointHeader.get(blockRoot, {fillCache: false});
     if (!header) {
       throw new LightClientServerError({code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE}, "header not available");
     }
@@ -355,13 +340,9 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getUpdate(period: number, context?: ServingContext): Promise<LightClientUpdate> {
+  async getUpdate(period: number): Promise<LightClientUpdate> {
     // Signature data
-    const update = await servingRead(
-      context,
-      (opts) => this.db.bestLightClientUpdate.get(period, opts),
-      context?.limits.lightClient.update
-    );
+    const update = await this.db.bestLightClientUpdate.get(period, {fillCache: false});
     if (!update) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
@@ -378,7 +359,7 @@ export class LightClientServer {
     const {attestedHeader} = await this.getUpdate(period);
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader.beacon);
 
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot, {fillCache: false});
     if (!syncCommitteeWitness) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
@@ -678,7 +659,9 @@ export class LightClientServer {
       throw Error(`Expected ${NUM_WITNESS} witnesses in pre-Electra numWitness=${numWitness}`);
     }
 
-    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
+    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot, {
+      fillCache: false,
+    });
     if (!nextSyncCommittee) {
       throw Error("nextSyncCommittee not available");
     }

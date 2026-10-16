@@ -20,6 +20,14 @@ When a peer store directory is configured, native loads and checkpoints up to 25
 
 Building or publishing an exchange result while JavaScript remains runnable is part of the bridge contract: a failure there is process-fatal, not an operation-local `NetworkResultAllocationFailed` rejection. If the JavaScript environment has stopped, native teardown reclaims the outstanding obligations.
 
+## Request serving
+
+Both backends use the same request handlers. Native holds each serving slot until the stream has ended and the host callback has settled, including its pending database read and iterator cleanup. The adapter waits for `ready()` before invoking a handler and awaits each response before pulling another. Native owns the slot, chunk-size, chunk-count and bridge-byte limits; Lodestar advertises a constant request allowance equal to native's incoming capacity. Gossip capacity remains dynamic.
+
+The default 32 serving slots bound concurrent handlers within one runtime. Source reads and serialization use ordinary repository and cache allocations, without a separate JavaScript byte budget. A column request can retain one block's requested columns; a range streams through the database iterator's bounded prefetch. An oversized stored row can be read before native rejects its response. Serving reads bypass the LevelDB block cache, and flat-file decompression is bounded by the column schema.
+
+Network close does not wait for host tasks. A caller replacing a runtime must drain the old tasks or separately bound their overlap with the replacement; the slot limit alone is per runtime.
+
 ## Rules
 
 Gossipsub also uses `gossipKindLimits` for compressed messages awaiting validation. Pending items, bytes and source shares stay charged until a verdict is applied or validation expires. Retained messages use a separate compressed history allowance until eviction or expiry. These allowances have different lifetimes from the decoded storage and host execution credits described below.

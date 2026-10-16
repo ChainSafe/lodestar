@@ -1,6 +1,6 @@
 import {ColumnIndex, DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import type {DataColumnReadOpts, IFlatFileStore} from "./flatFileStore/interface.js";
+import type {IFlatFileStore} from "./flatFileStore/interface.js";
 import type {
   BlockArchiveRepository,
   DataColumnSidecarArchiveRepository,
@@ -19,11 +19,7 @@ type BlockRootIndex = Pick<BlockArchiveRepository, "getSlotByRoot">;
 
 export interface IDataColumnStore {
   getAll(key: DataColumnKey): Promise<DataColumnSidecar[]>;
-  getManyBinary(
-    key: DataColumnKey,
-    indices: ColumnIndex[],
-    opts?: DataColumnReadOpts
-  ): Promise<(Uint8Array | undefined)[]>;
+  getManyBinary(key: DataColumnKey, indices: ColumnIndex[]): Promise<(Uint8Array | undefined)[]>;
   putManyBinary(key: DataColumnKey, columns: IndexedDataColumnBytes[]): Promise<void>;
   deleteMany(keys: DataColumnKey[]): Promise<void>;
   pruneBefore(slot: Slot): Promise<Slot[]>;
@@ -60,24 +56,22 @@ export class LegacyDataColumnStore implements IDataColumnStore {
     return [...sidecarsByIndex.values()].sort((a, b) => a.index - b.index);
   }
 
-  async getManyBinary(
-    {slot, blockRoot}: DataColumnKey,
-    indices: ColumnIndex[],
-    opts?: DataColumnReadOpts
-  ): Promise<(Uint8Array | undefined)[]> {
-    const flatFileSidecars = await this.flatFiles.getDataColumnsBinary(slot, blockRoot, indices, opts);
+  async getManyBinary({slot, blockRoot}: DataColumnKey, indices: ColumnIndex[]): Promise<(Uint8Array | undefined)[]> {
+    const flatFileSidecars = await this.flatFiles.getDataColumnsBinary(slot, blockRoot, indices);
     if (flatFileSidecars !== null) return flatFileSidecars;
     if (indices.length === 0) return [];
 
     const root = fromHex(blockRoot);
-    const result = await this.legacyHot.getManyBinary(root, indices);
+    const result = await this.legacyHot.getManyBinary(root, indices, {fillCache: false});
 
     const missingPositions = getMissingPositions(result);
-    if (missingPositions.length === 0 || (await this.blockArchive.getSlotByRoot(root)) !== slot) return result;
+    if (missingPositions.length === 0 || (await this.blockArchive.getSlotByRoot(root, {fillCache: false})) !== slot)
+      return result;
 
     const archivedSidecars = await this.legacyArchive.getManyBinary(
       slot,
-      missingPositions.map((position) => indices[position])
+      missingPositions.map((position) => indices[position]),
+      {fillCache: false}
     );
     fillMissing(result, missingPositions, archivedSidecars);
     return result;

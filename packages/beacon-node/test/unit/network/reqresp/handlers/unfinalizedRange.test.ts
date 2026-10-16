@@ -1,19 +1,16 @@
 import {PeerId} from "@libp2p/interface";
 import {describe, expect, it, vi} from "vitest";
+import {createBeaconConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../../src/chain/interface.js";
-import {ServingContext} from "../../../../../src/chain/serving/context.js";
 import {IBeaconDb} from "../../../../../src/db/interface.js";
 import {
-  collectServingHeadRange,
+  collectHeadRange,
   onBeaconBlocksByRange,
 } from "../../../../../src/network/reqresp/handlers/beaconBlocksByRange.js";
-import {resolveServingPolicy} from "../../../../../src/network/reqresp/serving/policy.js";
-import {servingConfig} from "../../../../utils/network/reqresp/servingCases.js";
 
-const config = servingConfig();
-const policy = resolveServingPolicy(config, 6, 0);
+const config = createBeaconConfig({}, new Uint8Array(32));
 const peer = {toString: () => "peer"} as PeerId;
 
 function fixture(slots: number[]) {
@@ -32,7 +29,7 @@ function fixture(slots: number[]) {
       getFinalizedCheckpointSlot: () => 0,
       iterateAncestorBlocks: () => nodes.slice(1).values(),
       getAllAncestorBlocks: vi.fn(() => {
-        throw Error("Bounded serving must not materialize the full chain");
+        throw Error("Range serving must not materialize the full chain");
       }),
     },
     getSerializedBlockByRoot: read,
@@ -53,7 +50,7 @@ describe("unfinalized serving range", () => {
   it("serves an available one-slot range more than 8192 ancestors behind the head", async () => {
     const {chain, db, read} = fixture(Array.from({length: 9001}, (_, index) => 9000 - index));
     const responses = await Array.fromAsync(
-      onBeaconBlocksByRange({startSlot: 1, count: 1, step: 1}, chain, db, peer, "test", new ServingContext(policy))
+      onBeaconBlocksByRange({startSlot: 1, count: 1, step: 1}, chain, db, peer, "test")
     );
     expect(responses).toHaveLength(1);
     expect(read).toHaveBeenCalledOnce();
@@ -67,14 +64,9 @@ describe("unfinalized serving range", () => {
       .filter(({slot}) => slot === 2 || slot === 4)
       .map(({blockRoot}) => blockRoot)
       .reverse();
-    const iterator = onBeaconBlocksByRange(
-      {startSlot: 1, count: 4, step: 1},
-      chain,
-      db,
-      peer,
-      "test",
-      new ServingContext(policy)
-    )[Symbol.asyncIterator]();
+    const iterator = onBeaconBlocksByRange({startSlot: 1, count: 4, step: 1}, chain, db, peer, "test")[
+      Symbol.asyncIterator
+    ]();
     try {
       expect((await iterator.next()).done).toBe(false);
       reorg();
@@ -88,12 +80,9 @@ describe("unfinalized serving range", () => {
     }
   });
 
-  it("retains range-size, archive-boundary and cancellation checks", () => {
+  it("keeps only requested ancestors above the archive boundary", () => {
     const {chain} = fixture([10, 8, 4, 2, 0]);
-    const context = new ServingContext(policy);
-    expect(collectServingHeadRange(chain, 1, 5, 2, context).map(({slot}) => slot)).toEqual([4]);
-    expect(() => collectServingHeadRange(chain, 0, policy.maxIteratorRows + 1, 0, context)).toThrow("range slots");
-    context.cancel();
-    expect(() => collectServingHeadRange(chain, 1, 5, 0, context)).toThrow("Serving cancelled");
+    expect(collectHeadRange(chain, 1, 5, 2).map(({slot}) => slot)).toEqual([4]);
+    expect(collectHeadRange(chain, 5, 8, 0).map(({slot}) => slot)).toEqual([4]);
   });
 });

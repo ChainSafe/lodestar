@@ -583,39 +583,6 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 32
-      },
-      "id": 660,
-      "targets": [
-        {
-          "expr": "beacon_reqresp_host_serving_reserved_bytes",
-          "legendFormat": "reserved {{scope}}",
-          "refId": "A"
-        },
-        {
-          "expr": "beacon_reqresp_host_serving_source_pending_bytes",
-          "legendFormat": "source reads pending",
-          "refId": "B"
-        }
-      ],
-      "title": "Native host serving reservations",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
           "unit": "short"
         },
         "overrides": []

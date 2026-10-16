@@ -6,7 +6,6 @@ import {NativeNetworkCore} from "../../../../src/network/core/native/nativeNetwo
 function fixture() {
   const core = Object.create(NativeNetworkCore.prototype) as NativeNetworkCore;
   const gossip = {close: vi.fn()};
-  const requests = {close: vi.fn(), metrics: () => "requests"};
   const peers = {close: vi.fn()};
   const intent = {close: vi.fn()};
   const nativeClosed = defer<CloseResult>();
@@ -21,14 +20,14 @@ function fixture() {
       return nativeClosed.promise;
     }),
   };
-  Object.assign(core, {gossip, requests, peers, intent, network, reports: {metrics: () => "reports"}});
-  return {core, gossip, requests, peers, intent, network, nativeClosed};
+  Object.assign(core, {gossip, peers, intent, network, reports: {metrics: () => "reports"}});
+  return {core, gossip, peers, intent, network, nativeClosed};
 }
 
 describe("native core close", () => {
   it("omits native metrics when a scrape races shutdown but preserves unexpected errors", async () => {
     const {core, network} = fixture();
-    await expect(core.scrapeMetrics()).resolves.toBe("networkrequestsreports");
+    await expect(core.scrapeMetrics()).resolves.toBe("networkreports");
     network.metrics.mockRejectedValueOnce(Object.assign(new Error("NetworkClosed"), {code: "NetworkClosed"}));
     await expect(core.scrapeMetrics()).resolves.toBe("");
     const failure = new Error("unexpected scrape failure");
@@ -74,13 +73,13 @@ describe("native core close", () => {
   });
 
   it("stops delivery before cleanup, then joins native with one shared completion", async () => {
-    const {core, network, gossip, requests, peers, intent} = fixture();
+    const {core, network, gossip, peers, intent} = fixture();
     const joined = defer<CloseResult>();
     network.close.mockReturnValue(joined.promise);
     const first = core.close();
     expect(core.close()).toBe(first);
     expect(network.stopDelivery).toHaveBeenCalledOnce();
-    for (const cleanup of [gossip.close, requests.close, peers.close, intent.close]) {
+    for (const cleanup of [gossip.close, peers.close, intent.close]) {
       expect(cleanup).toHaveBeenCalledOnce();
       expect(network.stopDelivery).toHaveBeenCalledBefore(cleanup);
       expect(cleanup).toHaveBeenCalledBefore(network.close);
@@ -108,7 +107,7 @@ describe("native core close", () => {
   });
 
   it("continues all cleanup and native close after a synchronous cleanup failure", async () => {
-    const {core, gossip, requests, peers, intent, network} = fixture();
+    const {core, gossip, peers, intent, network} = fixture();
     const error = new Error("gossip cleanup failed");
     gossip.close.mockImplementation(() => {
       throw error;
@@ -118,7 +117,7 @@ describe("native core close", () => {
       first = core.close();
     }).not.toThrow();
     await expect(first).rejects.toBe(error);
-    for (const close of [requests.close, peers.close, intent.close, network.close]) {
+    for (const close of [peers.close, intent.close, network.close]) {
       expect(close).toHaveBeenCalledOnce();
     }
     expect(core.close()).toBe(first);

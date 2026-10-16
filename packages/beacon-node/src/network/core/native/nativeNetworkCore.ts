@@ -7,7 +7,6 @@ import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
 import {PeerAction} from "../../peers/index.js";
 import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
-import {BoundedServing} from "../../reqresp/serving/handler.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {BaseNetworkInit} from "../networkCore.js";
@@ -22,16 +21,14 @@ import {NativeIntent} from "./intent.js";
 import {NativeLogs} from "./logs.js";
 import {NativePeers, formatNativePeer} from "./peers.js";
 import {NativePeerReports} from "./reports.js";
-import {NativeRequests, outgoingNativeRequest} from "./requests.js";
+import {outgoingNativeRequest, serveNativeRequest} from "./requests.js";
 
-/** The binding renders its metric families, and the adapter adds its serving reservation gauges and report counter. */
-type NativeNetworkInit = Omit<BaseNetworkInit, "metricsRegistry" | "getReqRespHandler"> & {serving: BoundedServing};
+type NativeNetworkInit = Omit<BaseNetworkInit, "metricsRegistry">;
 
 export class NativeNetworkCore implements INetworkCore {
   private intent!: NativeIntent;
   private gossip!: NativeGossip;
   private peers!: NativePeers;
-  private requests!: NativeRequests;
   private reports!: NativePeerReports;
   private network!: NativeNetwork;
   private logs!: NativeLogs;
@@ -42,7 +39,7 @@ export class NativeNetworkCore implements INetworkCore {
 
   static async init(modules: NativeNetworkInit): Promise<NativeNetworkCore> {
     const {opts, config, privateKey, clock, initialStatus, initialCustodyGroupCount, activeValidatorCount} = modules;
-    const {peerStoreDir, logger} = modules;
+    const {peerStoreDir} = modules;
     const {application, directPeers, bootPeers} = createNativeConfig(
       opts,
       config,
@@ -70,7 +67,6 @@ export class NativeNetworkCore implements INetworkCore {
       core.reports = new NativePeerReports(core.network);
       core.gossip = new NativeGossip(core.network, config, core.modules.opts, core.onOperationError, core.reports);
       core.peers = new NativePeers(core.network, config, modules.events, core.network.limits.peerCapacity);
-      core.requests = new NativeRequests(config, modules.serving, core.network.limits.incomingCapacity, logger);
       void core.network.closed
         .then((result) => {
           if (result.reason === "failed" && !core.failure)
@@ -134,25 +130,13 @@ export class NativeNetworkCore implements INetworkCore {
   private readonly host: NativeHost = {
     capacity: () => ({
       gossipValidation: this.gossip.ready() ? "ready" : "backpressured",
-      incomingRequestSlots: this.requests.capacity(),
+      incomingRequestSlots: this.network.limits.incomingCapacity,
     }),
-    subscribeCapacity: (wake) => {
-      const unsubscribeGossip = this.gossip.subscribeCapacity(wake);
-      let unsubscribeRequests: () => void;
-      try {
-        unsubscribeRequests = this.requests.subscribeCapacity(wake);
-      } catch (error) {
-        unsubscribeGossip();
-        throw error;
-      }
-      return () => {
-        unsubscribeGossip();
-        unsubscribeRequests();
-      };
-    },
+    subscribeCapacity: (wake) => this.gossip.subscribeCapacity(wake),
     validate: (job) => this.gossip.validate(job),
     checkDependencies: (checks) => this.gossip.checkDependencies(checks),
-    serve: (request) => this.requests.serve(request),
+    serve: (request) =>
+      serveNativeRequest(request, this.modules.getReqRespHandler, this.modules.config, this.modules.logger),
     peers: (events) => this.peers.deliver(events),
     failed: (error) => this.onFailure(error),
     logs: (records, lost) => this.logs.deliver(records, lost),
@@ -186,7 +170,6 @@ export class NativeNetworkCore implements INetworkCore {
       for (const cleanup of [
         () => this.network?.stopDelivery(),
         () => this.gossip?.close(),
-        () => this.requests?.close(),
         () => this.peers?.close(),
         () => this.intent?.close(),
       ]) {
@@ -304,7 +287,7 @@ export class NativeNetworkCore implements INetworkCore {
   }
   async scrapeMetrics(): Promise<string> {
     try {
-      return (await this.network.metrics()) + this.requests.metrics() + this.reports.metrics();
+      return (await this.network.metrics()) + this.reports.metrics();
     } catch (error) {
       if (error instanceof Error && "code" in error && error.code === "NetworkClosed") return "";
       throw error;
