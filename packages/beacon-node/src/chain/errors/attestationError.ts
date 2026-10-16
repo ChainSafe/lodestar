@@ -151,6 +151,10 @@ export enum AttestationErrorCode {
    * Gloas: index-1 attestation but the execution payload has not been seen yet
    */
   EXECUTION_PAYLOAD_NOT_SEEN = "ATTESTATION_ERROR_EXECUTION_PAYLOAD_NOT_SEEN",
+  /**
+   * Gloas: index-1 attestation but the execution engine invalidated the execution payload
+   */
+  EXECUTION_PAYLOAD_INVALID = "ATTESTATION_ERROR_EXECUTION_PAYLOAD_INVALID",
 }
 
 export type AttestationErrorType =
@@ -190,7 +194,8 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE}
   | {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE; attDataIndex: number}
   | {code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT}
-  | {code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN; beaconBlockRoot: RootHex};
+  | {code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN; beaconBlockRoot: RootHex}
+  | {code: AttestationErrorCode.EXECUTION_PAYLOAD_INVALID; beaconBlockRoot: RootHex};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {

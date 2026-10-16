@@ -5,7 +5,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
-import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {SeenPayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
 import {IBeaconDb} from "../../../../src/db/index.js";
@@ -218,6 +218,20 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(cache.get(rootHex1)).toBeUndefined();
     expect(cache.get(rootHex2)).toBeDefined();
     expect(cache.size()).toBe(1);
+  });
+
+  it("markPayloadInvalid is remembered until the block is finalized", () => {
+    const rootHex1 = `0x${"01".repeat(32)}`;
+    const rootHex2 = `0x${"02".repeat(32)}`;
+    cache.markPayloadInvalid(rootHex1, 1);
+    cache.markPayloadInvalid(rootHex2, SLOTS_PER_EPOCH);
+    expect(cache.isPayloadInvalid(rootHex1)).toBe(true);
+    expect(cache.isPayloadInvalid(rootHex2)).toBe(true);
+
+    chainEvents.emit(ChainEvent.forkChoiceFinalized, {epoch: 1, root: new Uint8Array(32), rootHex: rootHex2});
+
+    expect(cache.isPayloadInvalid(rootHex1)).toBe(false);
+    expect(cache.isPayloadInvalid(rootHex2)).toBe(true);
   });
 
   it("removeInvalid keeps an entry that was recreated for the same root", () => {
