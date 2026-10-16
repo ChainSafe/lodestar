@@ -52,7 +52,9 @@ jobs:
           set -euo pipefail
 
           PUBKEY="0x$(jq -r .pubkey "$BUILDER_TEMP/keystore.json")"
-          BN_URL="$(kurtosis port print "$ENCLAVE" cl-2-lodestar-geth http)"
+          # the builder uses the beacon node and execution client of the first participant
+          BN_URL="$(kurtosis port print "$ENCLAVE" cl-1-lodestar-geth http)"
+          EL_URL="http://$(kurtosis port print "$ENCLAVE" el-1-geth-lodestar engine-rpc)"
 
           # wait for BN to be healthy
           timeout 120 bash -c "until curl -sf $BN_URL/eth/v1/node/health >/dev/null; do sleep 3; done"
@@ -65,6 +67,8 @@ jobs:
             --keystorePassword "$BUILDER_TEMP/password.txt" \
             --builderPubkey "$PUBKEY" \
             --beaconNodeUrl "$BN_URL" \
+            --execution.urls "$EL_URL" \
+            --jwtSecret "$BUILDER_TEMP/jwt/jwtsecret" \
             --executionFeeRecipient 0x8943545177806ed17b9f23f0a21ee5948ecaa776 \
             --paramsFile "$BUILDER_TEMP/netcfg/config.yaml" \
             --metrics \
@@ -100,6 +104,19 @@ jobs:
 
           if grep -qE '\]\s+error:' builder.log; then
             echo "error-level lines in builder.log"; exit 1
+          fi
+
+          # the builder is the only bidder, it must have won bids and revealed their payloads
+          metric() { curl -sf "localhost:$METRICS_PORT/metrics" | awk -v name="$1" '$1 == name {print $2}'; }
+          BIDS="$(metric 'bc_builder_bids_total{result="published"}')"
+          WINS="$(metric 'bc_builder_bids_won_total')"
+          REVEALS="$(metric 'bc_builder_reveals_total{result="published"}')"
+          echo "bids=${BIDS:-0} wins=${WINS:-0} reveals=${REVEALS:-0}"
+          if [ "${BIDS:-0}" -lt 1 ] || [ "${WINS:-0}" -lt 1 ]; then
+            echo "builder did not win any bids"; exit 1
+          fi
+          if [ "${REVEALS:-0}" -ne "${WINS:-0}" ]; then
+            echo "builder did not reveal the payloads of all won bids"; exit 1
           fi
 
           echo "smoke check passed"
