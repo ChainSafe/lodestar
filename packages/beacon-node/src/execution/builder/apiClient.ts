@@ -189,7 +189,7 @@ export class BuilderApiClient {
             if (e instanceof ErrorAborted) return;
             throw e;
           }
-          if (signal.aborted) return;
+          if (signal?.aborted) return;
         }
         await Promise.all(
           requests.map(async ({requestKey, url, entry}) => {
