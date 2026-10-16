@@ -197,7 +197,8 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
       logger,
       metrics: null,
     },
-    {}
+    {},
+    () => false
   );
   const executionPayloadHandler = handlers[
     GossipType.execution_payload
@@ -275,7 +276,8 @@ async function runBeaconBlockProcessingError(
       logger,
       metrics: null,
     },
-    {}
+    {},
+    () => false
   );
   const beaconBlockHandler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
 
@@ -389,7 +391,8 @@ async function runBeaconBlockRepeatProposal(
       logger,
       metrics: null,
     },
-    {}
+    {},
+    () => false
   );
   const beaconBlockHandler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
 

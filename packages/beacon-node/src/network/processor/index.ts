@@ -287,12 +287,12 @@ export class NetworkProcessor {
     this.gossipQueues = createGossipQueues();
     this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
     this.gossipValidatorFn = getGossipValidatorFn(
-      modules.gossipHandlers ?? getGossipHandlers(modules, opts),
+      modules.gossipHandlers ?? getGossipHandlers(modules, opts, this.isFatalPeer),
       modules,
       this.onFatalPeer
     );
     this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
-      modules.gossipHandlers ?? getGossipHandlers(modules, opts),
+      modules.gossipHandlers ?? getGossipHandlers(modules, opts, this.isFatalPeer),
       modules,
       this.onFatalPeer
     );
@@ -431,6 +431,8 @@ export class NetworkProcessor {
   private onFatalPeer = (peer: PeerIdStr): void => {
     this.fatalPeers.set(peer, this.chain.clock.currentSlot);
   };
+
+  private isFatalPeer = (peer: PeerIdStr): boolean => this.fatalPeers.has(peer);
 
   private onPendingGossipsubMessage = (message: PendingGossipsubMessage): void => {
     const topicType = message.topic.type;

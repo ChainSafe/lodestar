@@ -91,6 +91,7 @@ import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {PeerIdStr} from "../../util/peerId.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -123,6 +124,8 @@ export type ValidatorFnsModules = {
   core: INetworkCore;
 };
 
+export type IsFatalPeerFn = (peer: PeerIdStr) => boolean;
+
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
 
@@ -140,15 +143,23 @@ const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
  *   the handler function scope is hard to achieve without very hacky strategies
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
-export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  return {...getSequentialHandlers(modules, options), ...getBatchHandlers(modules, options)};
+export function getGossipHandlers(
+  modules: ValidatorFnsModules,
+  options: GossipHandlerOpts,
+  isFatalPeer: IsFatalPeerFn
+): GossipHandlers {
+  return {...getSequentialHandlers(modules, options, isFatalPeer), ...getBatchHandlers(modules, options)};
 }
 
 /**
  * Default handlers validate gossip messages one by one.
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
-function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
+function getSequentialHandlers(
+  modules: ValidatorFnsModules,
+  options: GossipHandlerOpts,
+  isFatalPeer: IsFatalPeerFn
+): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
 
   /**
@@ -1272,7 +1283,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // unlike BlockInput, we send the envelope into UnknownBlockInput sync
       // inside the sync it'll reconcile into PayloadEnvelopeInput and share the same cache with gossip
       try {
-        await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+        await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope, () => isFatalPeer(peerIdStr));
       } catch (e) {
         if (e instanceof ExecutionPayloadEnvelopeError) {
           const {beaconBlockRoot} = signedEnvelope.message;
