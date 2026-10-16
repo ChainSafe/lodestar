@@ -4,7 +4,7 @@ import {CommitteeSubscription} from "../../subnets/interface.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
 type Attesters = NonNullable<NativeLocalIntent["attesters"]>[number];
-export type CommitteeDemand = {attesters: Map<number, Attesters>; sync: Map<number, number>};
+type CommitteeDemand = {attesters: Map<number, Attesters>; sync: Map<number, number>};
 
 export function normalizeCommitteeSubscriptions(
   subscriptions: CommitteeSubscription[],
@@ -28,19 +28,4 @@ export function normalizeCommitteeSubscriptions(
     }
   }
   return demand;
-}
-
-export function mergeCommitteeDemand(target: CommitteeDemand, incoming: CommitteeDemand): CommitteeDemand {
-  const merged: CommitteeDemand = {attesters: new Map(target.attesters), sync: new Map(target.sync)};
-  for (const [slot, row] of incoming.attesters) {
-    const prior = merged.attesters.get(slot);
-    merged.attesters.set(slot, {
-      slot,
-      subnets: (prior?.subnets ?? 0n) | row.subnets,
-      aggregators: (prior?.aggregators ?? 0n) | row.aggregators,
-    });
-  }
-  nativeInteger(merged.attesters.size, "duty slots", 4 * SLOTS_PER_EPOCH);
-  for (const [subnet, expiry] of incoming.sync) merged.sync.set(subnet, Math.max(merged.sync.get(subnet) ?? 0, expiry));
-  return merged;
 }

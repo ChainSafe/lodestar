@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {mergeCommitteeDemand, normalizeCommitteeSubscriptions} from "../../../../src/network/core/native/committee.js";
+import {normalizeCommitteeSubscriptions} from "../../../../src/network/core/native/committee.js";
 
 const duty = {slot: 0, subnet: 0, validatorIndex: 0, isAggregator: true};
 
@@ -20,11 +20,14 @@ describe("native committee inputs", () => {
     }
   });
   it("unions aggregators and keeps non-aggregators as peer demand only", () => {
-    const first = normalizeCommitteeSubscriptions([{...duty, slot: 2, subnet: 63}], false);
-    const second = normalizeCommitteeSubscriptions([{...duty, slot: 2, subnet: 1, isAggregator: false}], false);
-    const merged = mergeCommitteeDemand(first, second);
-    expect(merged.attesters.get(2)).toEqual({slot: 2, subnets: (1n << 63n) | 2n, aggregators: 1n << 63n});
-    expect(first.attesters.get(2)?.subnets).toBe(1n << 63n);
+    const demand = normalizeCommitteeSubscriptions(
+      [
+        {...duty, slot: 2, subnet: 63},
+        {...duty, slot: 2, subnet: 1, isAggregator: false},
+      ],
+      false
+    );
+    expect(demand.attesters.get(2)).toEqual({slot: 2, subnets: (1n << 63n) | 2n, aggregators: 1n << 63n});
   });
   it("retains absolute sync expiries without interpreting a host clock", () => {
     const demand = normalizeCommitteeSubscriptions(
@@ -43,14 +46,13 @@ describe("native committee inputs", () => {
     );
     expect(demand.attesters.size).toBe(0);
   });
-  it("bounds distinct slots when merging pending batches", () => {
-    const first = normalizeCommitteeSubscriptions(
-      Array.from({length: 4 * SLOTS_PER_EPOCH}, (_, slot) => ({...duty, slot})),
-      false
-    );
-    const extra = normalizeCommitteeSubscriptions([{...duty, slot: 4 * SLOTS_PER_EPOCH}], false);
-    expect(() => mergeCommitteeDemand(first, extra)).toThrow("duty slots");
-    expect(first.attesters.size).toBe(4 * SLOTS_PER_EPOCH);
+  it("bounds distinct duty slots", () => {
+    expect(() =>
+      normalizeCommitteeSubscriptions(
+        Array.from({length: 4 * SLOTS_PER_EPOCH + 1}, (_, slot) => ({...duty, slot})),
+        false
+      )
+    ).toThrow("duty slots");
   });
   it.each([
     {...duty, slot: Number.NaN},

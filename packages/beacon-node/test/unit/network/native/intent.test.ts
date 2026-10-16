@@ -11,7 +11,7 @@ function fixture() {
   return {applyIntent, updateStatus, intent: new NativeIntent({applyIntent, updateStatus})};
 }
 
-describe("native local intent coalescing", () => {
+describe("native local intent ordering", () => {
   it("submits nothing until the host changes state", async () => {
     const node = fixture();
     await setImmediate();
@@ -19,19 +19,19 @@ describe("native local intent coalescing", () => {
     expect(node.updateStatus).not.toHaveBeenCalled();
     node.intent.close();
   });
-  it("coalesces Status bursts beside an active update and snapshots caller roots", async () => {
+  it("serializes Status updates and snapshots caller roots", async () => {
     const node = fixture();
     const held = defer<void>();
     node.updateStatus.mockReturnValueOnce(held.promise);
     const active = node.intent.updateStatus({...ssz.fulu.Status.defaultValue(), headSlot: 1});
     await Promise.resolve();
-    const pending = Array.from({length: 1000}, (_, index) =>
+    const pending = Array.from({length: 3}, (_, index) =>
       node.intent.updateStatus({...ssz.fulu.Status.defaultValue(), headSlot: index + 2})
     );
-    expect(new Set(pending).size).toBe(1);
+    expect(node.updateStatus).toHaveBeenCalledTimes(1);
     held.resolve();
     await Promise.all([active, ...pending]);
-    expect(node.updateStatus.mock.calls.map(([status]) => status.headSlot)).toEqual([1n, 1001n]);
+    expect(node.updateStatus.mock.calls.map(([status]) => status.headSlot)).toEqual([1n, 2n, 3n, 4n]);
     const status = ssz.fulu.Status.defaultValue();
     status.headRoot.fill(7);
     const changed = node.intent.updateStatus(status);
@@ -40,7 +40,7 @@ describe("native local intent coalescing", () => {
     expect(node.updateStatus.mock.calls.at(-1)?.[0].headRoot).toEqual(new Uint8Array(32).fill(7));
     node.intent.close();
   });
-  it("merges sparse flags, status and duties without replacing native-owned state", async () => {
+  it("submits sparse flags, status and duties without replacing native-owned state", async () => {
     const node = fixture();
     const first = node.intent.coreTopics(true);
     const status = node.intent.updateStatus({...ssz.fulu.Status.defaultValue(), headSlot: 12});
@@ -48,32 +48,33 @@ describe("native local intent coalescing", () => {
     const duty = {slot: 2, subnet: 1, validatorIndex: 0, isAggregator: true};
     const att = node.intent.committee([duty], false);
     const sync = node.intent.committee([duty], true);
-    expect(new Set([first, status, custody, att, sync]).size).toBe(1);
-    await first;
-    expect(node.applyIntent.mock.calls[0][0]).toMatchObject({
-      coreTopics: true,
-      custodyGroupCount: 16n,
-      status: {headSlot: 12n},
-      attesters: [{slot: 2, subnets: 2n, aggregators: 2n}],
-      syncCommittees: [{subnet: 1, untilSlot: 2}],
-    });
+    await Promise.all([first, status, custody, att, sync]);
+    expect(node.updateStatus).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({headSlot: 12n}));
+    expect(node.applyIntent.mock.calls.map(([patch]) => patch)).toEqual([
+      {coreTopics: true},
+      {custodyGroupCount: 16n},
+      {attesters: [{slot: 2, subnets: 2n, aggregators: 2n}], syncCommittees: []},
+      {attesters: [], syncCommittees: [{subnet: 1, untilSlot: 2}]},
+    ]);
     expect(node.intent.isSubscribedToCoreTopics()).toBe(true);
     await node.intent.custody(8);
     expect(node.applyIntent.mock.calls.at(-1)?.[0]).toEqual({custodyGroupCount: 8n});
     node.intent.close();
   });
-  it("acknowledges coalesced core subscriptions only after native commits and preserves state on rejection", async () => {
+  it("acknowledges core subscriptions in submission order only after native commits and preserves state on rejection", async () => {
     const node = fixture();
     const held = defer<Awaited<ReturnType<NativeNetwork["applyIntent"]>>>();
     node.applyIntent.mockReturnValueOnce(held.promise);
     const enabled = node.intent.coreTopics(true);
     const disabled = node.intent.coreTopics(false);
-    expect(enabled).toBe(disabled);
+    expect(enabled).not.toBe(disabled);
     await Promise.resolve();
     expect(node.intent.isSubscribedToCoreTopics()).toBe(false);
     held.resolve();
     await enabled;
-    expect(node.applyIntent.mock.calls[0][0]).toEqual({coreTopics: false});
+    await disabled;
+    expect(node.applyIntent.mock.calls.slice(0, 2)).toEqual([[{coreTopics: true}], [{coreTopics: false}]]);
+    expect(node.intent.isSubscribedToCoreTopics()).toBe(false);
     await node.intent.coreTopics(true);
     node.applyIntent.mockRejectedValueOnce(new Error("rejected"));
     await expect(node.intent.coreTopics(false)).rejects.toThrow("rejected");
@@ -105,17 +106,18 @@ describe("native local intent coalescing", () => {
     expect(node.applyIntent.mock.calls[0][0]).toEqual({coreTopics: true});
     node.intent.close();
   });
-  it("rejects active and pending work on close without waiting for native completion", async () => {
+  it("does not submit queued work after close and leaves admitted work to native", async () => {
     const node = fixture();
     const held = defer<void>();
     node.updateStatus.mockReturnValueOnce(held.promise);
-    const active = expect(node.intent.updateStatus(ssz.fulu.Status.defaultValue())).rejects.toThrow("CLOSED");
+    const active = node.intent.updateStatus(ssz.fulu.Status.defaultValue());
     await Promise.resolve();
     const pending = node.intent.coreTopics(true);
     const rejected = expect(pending).rejects.toThrow("CLOSED");
     node.intent.close();
-    await Promise.all([active, rejected]);
-    held.resolve();
+    held.reject(new Error("NetworkClosed"));
+    await expect(active).rejects.toThrow("NetworkClosed");
+    await rejected;
     await setImmediate();
     expect(node.applyIntent).not.toHaveBeenCalled();
     expect(node.intent.isSubscribedToCoreTopics()).toBe(false);
