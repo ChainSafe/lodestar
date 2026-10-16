@@ -106,7 +106,6 @@ export const defaultSkipOpts: SkipOpts = {
     "gossip_execution_payload_envelope",
     "gossip_payload_attestation_message",
     "gossip_proposer_preferences",
-    "gossip_inclusion_list",
   ],
 };
 

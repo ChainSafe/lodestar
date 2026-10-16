@@ -32,6 +32,7 @@ import {
   capella,
   fulu,
   gloas,
+  heze,
   phase0,
 } from "@lodestar/types";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
@@ -113,6 +114,7 @@ export interface INetwork extends INetworkCorePublic {
   publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number>;
   publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
   publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number>;
+  publishInclusionList(signedInclusionList: heze.SignedInclusionList): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;

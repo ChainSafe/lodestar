@@ -4,6 +4,11 @@ import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
 import {OrphanedPayloadEnvelope} from "./utils/chainSegment.js";
 
+export enum InclusionListSource {
+  gossip = "gossip",
+  api = "api",
+}
+
 type DataColumnData = {
   dataColumn: fulu.DataColumnSidecar;
   dataColumnBytes: Uint8Array | null;

@@ -1,6 +1,16 @@
 import {Type} from "@chainsafe/ssz";
 import {CELLS_PER_EXT_BLOB, ForkName, ForkSeq, isForkPostBellatrix} from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, capella, deneb, electra, gloas} from "@lodestar/types";
+import {
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  RootHex,
+  bellatrix,
+  capella,
+  deneb,
+  electra,
+  gloas,
+} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {EndTimer, LodestarError, fromHex, strip0xPrefix, toHex, toRootHex} from "@lodestar/utils";
 import {isValidBlobVersionedHashes} from "./blobVersionedHashes.js";
@@ -432,6 +442,10 @@ export class RestEngineTransport implements IEngineTransport {
         commit: strip0xPrefix(cv.commit),
       };
     });
+  }
+
+  getInclusionList(): Promise<bellatrix.Transactions> {
+    throw Error("engine_getInclusionListV1 is not available over the REST engine API");
   }
 }
 

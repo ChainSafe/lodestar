@@ -1,6 +1,6 @@
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkPostFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -215,9 +215,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse> {
     // Validate before queueing, argument errors must not be reported as an unavailable execution client
+    if (ForkSeq[fork] >= ForkSeq.heze && inclusionListTransactions === undefined) {
+      throw Error(`inclusionListTransactions required in notifyNewPayload for fork=${fork}`);
+    }
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       if (versionedHashes === undefined) {
         throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
@@ -234,7 +238,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     try {
       result = await this.enqueue(() =>
         this.withTransport(fork, undefined, (transport) =>
-          transport.newPayload(fork, executionPayload, versionedHashes, parentBlockRoot, executionRequests)
+          transport.newPayload(
+            fork,
+            executionPayload,
+            versionedHashes,
+            parentBlockRoot,
+            executionRequests,
+            inclusionListTransactions
+          )
         )
       );
     } catch (e) {
@@ -255,7 +266,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     switch (status) {
       case ExecutionPayloadStatus.VALID:
-        return {status, latestValidHash: latestValidHash ?? "0x0", validationError: null};
+        return {
+          status,
+          latestValidHash: latestValidHash ?? "0x0",
+          validationError: null,
+          inclusionListSatisfied: result.inclusionListSatisfied ?? null,
+        };
 
       case ExecutionPayloadStatus.INVALID:
         // As per latest specs if latestValidHash can be null and it would mean only
@@ -339,7 +355,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           }
 
           const payloadAttributesRpc = serializePayloadAttributes(payloadAttributes);
-          this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...payloadAttributesRpc}, payloadId);
+          this.payloadIdCache.add(
+            {
+              headBlockHash,
+              finalizedBlockHash,
+              ...payloadAttributesRpc,
+              inclusionListTransactions: payloadAttributes.inclusionListTransactions,
+            },
+            payloadId
+          );
           void this.prunePayloadIdCache();
         }
         return payloadId;
@@ -399,6 +423,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | null> {
     return this.withTransport(undefined, "v2", (transport) => transport.getBlobsV2(versionedHashes, buffers));
+  }
+
+  /**
+   * `engine_getInclusionListV1`, JSON-RPC only as the REST engine API defines no inclusion list route.
+   * Queued so it runs after the forkchoiceUpdated of a payload imported just before, which prunes that
+   * payload's transactions from the mempool the list is built from.
+   */
+  async getInclusionList(): Promise<bellatrix.Transactions> {
+    return this.enqueue(() => {
+      this.metrics?.engineApiRequests.inc({transport: "json-rpc"});
+      return this.jsonRpc.getInclusionList();
+    });
   }
 
   private enqueue<T>(job: () => Promise<T>): Promise<T> {

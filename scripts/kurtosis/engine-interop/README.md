@@ -8,7 +8,8 @@ node 1 is a non-supernode that fetches blobs from its EL, node 2 a supernode) an
 - `gloas`: fulu at genesis and gloas at epoch 2, finality 5, archived payload envelopes rebuilt from EL bodies
 
 Everything before the first finalized epoch is startup noise and is not judged, and so is the window between the
-EL restart and node 2 reporting its EL back in sync. From then on a run fails when:
+EL restart and node 2 reporting its EL back in sync and, with the REST transport, probing its capabilities again. From
+then on a run fails when:
 
 - finality is not reached in time, or a slot is missed
 - an engine request errors (the capabilities probe aside), or `newPayload` or `forkchoiceUpdated` returns anything but

@@ -4,6 +4,7 @@ import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
   ForkSeq,
+  MAX_SIGNED_INCLUSION_LIST_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkPostAltair,
   isForkPostElectra,
@@ -91,6 +92,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.payload_attestation_message:
     case GossipType.execution_payload_bid:
     case GossipType.proposer_preferences:
+    case GossipType.inclusion_list:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -140,6 +142,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.proposer_preferences:
       return ssz.gloas.SignedProposerPreferences;
+    case GossipType.inclusion_list:
+      return ssz.heze.SignedInclusionList;
   }
 }
 
@@ -148,6 +152,9 @@ export function getGossipSSZType(topic: GossipTopic) {
  */
 export function getGossipSSZMaxSize(topic: GossipTopic, config: ChainForkConfig, sszType: CompositeTypeAny): number {
   const maxSize = Math.min(sszType.maxSize, config.MAX_PAYLOAD_SIZE);
+  if (topic.type === GossipType.inclusion_list) {
+    return Math.min(maxSize, MAX_SIGNED_INCLUSION_LIST_SIZE);
+  }
   if (isForkPostGloas(topic.boundary.fork) && topic.type === GossipType.data_column_sidecar) {
     return Math.min(maxSize, computeMaxGloasDataColumnSidecarSize(config));
   }
@@ -231,6 +238,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.payload_attestation_message:
       case GossipType.execution_payload_bid:
       case GossipType.proposer_preferences:
+      case GossipType.inclusion_list:
         return {type: gossipTypeStr, boundary, encoding};
     }
 
@@ -279,6 +287,10 @@ export function getCoreTopicsAtFork(
     topics.push({type: GossipType.payload_attestation_message});
     topics.push({type: GossipType.execution_payload_bid});
     topics.push({type: GossipType.proposer_preferences});
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.heze) {
+    topics.push({type: GossipType.inclusion_list});
   }
 
   // After fulu also track data_column_sidecar_{index}
@@ -385,6 +397,7 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.payload_attestation_message]: true,
   [GossipType.execution_payload_bid]: true,
   [GossipType.proposer_preferences]: true,
+  [GossipType.inclusion_list]: true,
 };
 
 /**
@@ -422,4 +435,5 @@ export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
   [GossipType.payload_attestation_message]: false,
   [GossipType.execution_payload_bid]: false,
   [GossipType.proposer_preferences]: false,
+  [GossipType.inclusion_list]: false,
 };

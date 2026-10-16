@@ -25,6 +25,7 @@ import {
   capella,
   fulu,
   gloas,
+  heze,
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
@@ -515,6 +516,16 @@ export class Network implements INetwork {
     return this.publishGossip<GossipType.payload_attestation_message>(
       {type: GossipType.payload_attestation_message, boundary},
       payloadAttestationMessage
+    );
+  }
+
+  async publishInclusionList(signedInclusionList: heze.SignedInclusionList): Promise<number> {
+    const epoch = computeEpochAtSlot(signedInclusionList.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.inclusion_list>(
+      {type: GossipType.inclusion_list, boundary},
+      signedInclusionList
     );
   }
 
