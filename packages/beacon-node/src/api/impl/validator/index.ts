@@ -126,7 +126,7 @@ import {
  *
  * TODO GLOAS: re-evaluate cutoff timing due to attestation deadline changes in gloas
  */
-const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
+export const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
 /** Rejection message of the bid block branch when there is no viable bid to commit to */
 const NO_BID_AVAILABLE = "No builder bid available";
 
@@ -233,16 +233,6 @@ export function getValidatorApi(
   {chain, config, logger, metrics, network, sync}: ApiModules
 ): ApplicationMethods<routes.validator.Endpoints> {
   let genesisBlockRoot: Root | null = null;
-
-  // A bid deadline past the race cutoff would select the local block before any bid is considered
-  for (const {name: fork} of config.forksAscendingEpochOrder) {
-    const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS);
-    if (isForkPostGloas(fork) && chain.builderApiClient.bidDeadline >= raceCutoffMs) {
-      throw Error(
-        `Builder bid deadline of ${chain.builderApiClient.bidDeadline}ms must be below ${raceCutoffMs}ms for fork ${fork}`
-      );
-    }
-  }
 
   /**
    * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a

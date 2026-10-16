@@ -4,10 +4,11 @@ import {SignableENR} from "@chainsafe/enr";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
+import {BLOCK_PRODUCTION_RACE_CUTOFF_BPS} from "@lodestar/beacon-node/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
-import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
+import {ACTIVE_PRESET, PresetName, isForkPostGloas} from "@lodestar/params";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -236,6 +237,17 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     throw Error(
       `--chain.nativeStateTransition does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
     );
+  }
+
+  // A bid deadline past the race cutoff would select the local block before any bid is considered
+  const bidDeadline = options.executionBuilder.bidDeadline;
+  if (bidDeadline !== undefined) {
+    for (const {name: fork} of config.forksAscendingEpochOrder) {
+      const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS);
+      if (isForkPostGloas(fork) && bidDeadline >= raceCutoffMs) {
+        throw Error(`--builder.bidDeadline of ${bidDeadline}ms must be below ${raceCutoffMs}ms for fork ${fork}`);
+      }
+    }
   }
 
   return {config, options, beaconPaths, network, version, commit, privateKey, logger};
