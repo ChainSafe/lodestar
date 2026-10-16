@@ -1295,6 +1295,15 @@ export class ProtoArray {
 
     // For Gloas: check if from previous slot
     if (node.slot + 1 !== currentSlot) {
+      // During the block's own slot a payload known to not satisfy the inclusion list
+      // constraints ranks below its EMPTY variant, as it will from the next slot on
+      if (
+        node.slot === currentSlot &&
+        node.payloadStatus === PayloadStatus.FULL &&
+        this.payloadInclusionListSatisfaction.get(node.blockRoot) === false
+      ) {
+        return PayloadStatus.PENDING;
+      }
       return node.payloadStatus;
     }
 
