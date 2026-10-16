@@ -19,7 +19,7 @@ import {IClock} from "../../util/clock.js";
  * Additional duration to account for potential event loop lag which causes
  * builder bids to be rejected even though the response was sent in time.
  */
-const EVENT_LOOP_LAG_BUFFER = 250;
+export const BUILDER_BID_LAG_BUFFER_MS = 250;
 
 /**
  * Default duration given to a builder to provide a `SignedExecutionPayloadBid` before the deadline
@@ -144,7 +144,7 @@ export class BuilderApiClient {
               timeoutMs: this.bidDeadline,
             },
             // Event loop lag must not discard bids that arrived in time
-            {timeoutMs: this.bidDeadline + EVENT_LOOP_LAG_BUFFER}
+            {timeoutMs: this.bidDeadline + BUILDER_BID_LAG_BUFFER_MS}
           );
           const signedBid = res.value();
           if (signedBid === undefined) {

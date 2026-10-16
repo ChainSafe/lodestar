@@ -3,7 +3,7 @@ import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
+import {BUILDER_BID_LAG_BUFFER_MS, BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {BLOCK_PRODUCTION_RACE_CUTOFF_BPS} from "@lodestar/beacon-node/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -239,13 +239,16 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     );
   }
 
-  // A bid deadline past the race cutoff would select the local block before any bid is considered
+  // Bids received up to the deadline plus the lag buffer must still have a chance to win the block
+  // production race, otherwise the local block is selected at the race cutoff before any bid
   const bidDeadline = options.executionBuilder.bidDeadline;
   if (bidDeadline !== undefined) {
     for (const {name: fork} of config.forksAscendingEpochOrder) {
       const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS);
-      if (isForkPostGloas(fork) && bidDeadline >= raceCutoffMs) {
-        throw Error(`--builder.bidDeadline of ${bidDeadline}ms must be below ${raceCutoffMs}ms for fork ${fork}`);
+      if (isForkPostGloas(fork) && bidDeadline + BUILDER_BID_LAG_BUFFER_MS >= raceCutoffMs) {
+        throw Error(
+          `--builder.bidDeadline of ${bidDeadline}ms plus the ${BUILDER_BID_LAG_BUFFER_MS}ms lag buffer must be below ${raceCutoffMs}ms for fork ${fork}`
+        );
       }
     }
   }
