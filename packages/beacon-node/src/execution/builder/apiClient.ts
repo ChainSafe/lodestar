@@ -180,13 +180,17 @@ export class BuilderApiClient {
     const rounds = getBidRounds(this.clock.msFromSlot(slot), this.bidDelay, this.bidDeadline, this.bidRequests);
     const collection = Promise.all(
       rounds.map(async (round) => {
-        try {
-          await sleep(round.startMs - this.clock.msFromSlot(slot), signal);
-        } catch (e) {
-          if (e instanceof ErrorAborted) return;
-          throw e;
+        // A round due now is sent even if the signal is about to abort, it is the last fallback
+        const waitMs = round.startMs - this.clock.msFromSlot(slot);
+        if (waitMs > 0) {
+          try {
+            await sleep(waitMs, signal);
+          } catch (e) {
+            if (e instanceof ErrorAborted) return;
+            throw e;
+          }
+          if (signal.aborted) return;
         }
-        if (signal?.aborted) return;
         await Promise.all(
           requests.map(async ({requestKey, url, entry}) => {
             this.metrics?.builderApi.bidRequests.inc();

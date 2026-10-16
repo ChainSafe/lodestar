@@ -113,9 +113,9 @@ describe("execution/builder/apiClient", () => {
     const slot = 1;
     const entry = getBuilderEntry("https://builder.example.com", slot);
     const controller = new AbortController();
-    getExecutionPayloadBid.mockImplementation(async () => {
+    getExecutionPayloadBid.mockImplementationOnce(async () => {
       controller.abort();
-      return {value: () => ssz.gloas.SignedExecutionPayloadBid.defaultValue()};
+      return {value: () => undefined};
     });
 
     const client = new BuilderApiClient({bidDeadline: 10, bidRequests: 3}, config, clock, bls);
@@ -129,7 +129,7 @@ describe("execution/builder/apiClient", () => {
     );
 
     expect(getExecutionPayloadBid).toHaveBeenCalledOnce();
-    expect(bids).toHaveLength(1);
+    expect(bids).toHaveLength(0);
   });
 
   it("returns the bids collected so far once aborted while a later round is in flight", async () => {
