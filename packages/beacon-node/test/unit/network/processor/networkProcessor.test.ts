@@ -15,6 +15,7 @@ import {
   MAX_AWAITING_MESSAGES_PER_ROOT,
   MAX_BUFFERED_ROOTS_PER_SLOT,
   MAX_SEARCHED_ROOTS_PER_SLOT,
+  MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE,
   NetworkProcessor,
   NetworkProcessorModules,
 } from "../../../../src/network/processor/index.js";
@@ -94,18 +95,18 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   }
 
   /** An aggregate that votes for a different unknown block per `rootByte` (each becomes a distinct unknown block). */
-  function processAggregate(rootByte: number): void {
+  function processAggregate(rootByte: number, slot = clockSlot): void {
     const signedAggregateAndProof = ssz.phase0.SignedAggregateAndProof.defaultValue();
-    signedAggregateAndProof.message.aggregate.data.slot = clockSlot;
+    signedAggregateAndProof.message.aggregate.data.slot = slot;
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = Buffer.alloc(32, rootByte);
     const data = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
     emit(GossipType.beacon_aggregate_and_proof, ForkName.phase0, data);
   }
 
   /** A gloas aggregate voting that the payload of the unknown block is present (index = 1). */
-  function processGloasAggregatePayloadPresent(rootByte: number): void {
+  function processGloasAggregatePayloadPresent(rootByte: number, slot = clockSlot): void {
     const signedAggregateAndProof = ssz.gloas.SignedAggregateAndProof.defaultValue();
-    signedAggregateAndProof.message.aggregate.data.slot = clockSlot;
+    signedAggregateAndProof.message.aggregate.data.slot = slot;
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = Buffer.alloc(32, rootByte);
     signedAggregateAndProof.message.aggregate.data.index = 1;
     const data = ssz.gloas.SignedAggregateAndProof.serialize(signedAggregateAndProof);
@@ -154,6 +155,10 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
 
   function bufferedBlockCount(): number {
     return (processor as unknown as {awaitingBlockMessageCount: number}).awaitingBlockMessageCount;
+  }
+
+  function bufferedPayloadCount(): number {
+    return (processor as unknown as {awaitingPayloadMessageCount: number}).awaitingPayloadMessageCount;
   }
 
   /** number of distinct block roots we currently hold messages for */
@@ -210,6 +215,28 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       }
       // still only 5 distinct blocks are held, no matter how many times each is repeated
       expect(distinctBlockRoots()).toBe(MAX_BUFFERED_ROOTS_PER_SLOT);
+    });
+
+    it("applies the per-slot hold limit only to slots we have not expired yet", () => {
+      // we accept messages up to 32 slots old, but expire held messages after a few slots. Holding messages
+      // for an already expired slot would give each of those old slots its own 5-block budget
+      let rootByte = 1;
+      for (let slot = clockSlot - 32; slot <= clockSlot; slot++) {
+        for (let i = 0; i < MAX_BUFFERED_ROOTS_PER_SLOT; i++) {
+          processAggregate(rootByte++, slot);
+        }
+      }
+      expect(distinctBlockRoots()).toBe(MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE * MAX_BUFFERED_ROOTS_PER_SLOT);
+    });
+
+    it("does not hold messages waiting on an unknown payload from an already expired slot", () => {
+      processGloasAggregatePayloadPresent(1, clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE);
+      // the payload is still looked up, the message is just not held
+      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
+      expect(bufferedPayloadCount()).toBe(0);
+
+      processGloasAggregatePayloadPresent(2, clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE + 1);
+      expect(bufferedPayloadCount()).toBe(1);
     });
   });
 

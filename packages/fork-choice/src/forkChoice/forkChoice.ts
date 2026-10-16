@@ -422,6 +422,24 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 
+  /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine */
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {
+    const changed = this.protoArray.recordPayloadInclusionListSatisfaction(blockRoot, satisfied);
+    if (changed && !satisfied) {
+      this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
+      this.logger?.verbose("Payload does not satisfy the inclusion list constraints, not extending it", {blockRoot});
+    }
+    return changed;
+  }
+
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {
+    return this.protoArray.isPayloadInclusionListSatisfied(blockRoot);
+  }
+
+  getPayloadInclusionListSatisfaction(blockRoot: RootHex): boolean | null {
+    return this.protoArray.getPayloadInclusionListSatisfaction(blockRoot);
+  }
+
   /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
     return this.protoArray.shouldBuildOnFull(head, slot);
@@ -648,7 +666,12 @@ export class ForkChoice implements IForkChoice {
       // splitting them would let the two passes update weights and recompute best child/descendant
       // once at the end.
       // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/fork-choice.md#new-should_apply_proposer_boost
-      this.protoArray.applyScoreChanges({attestationDeltas, proposerBoost: null, ...checkpoints});
+      this.protoArray.applyScoreChanges({
+        attestationDeltas,
+        proposerBoost: null,
+        proposerBoostRoot: this.proposerBoostRoot,
+        ...checkpoints,
+      });
       const proposerBoost = this.shouldApplyProposerBoost() ? this.getProposerBoost() : null;
       // The first pass already rolled back the previous boost and left a coherent tree, so a
       // withheld boost needs no second pass
@@ -1769,7 +1792,10 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockPtcTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const ptcThresholdMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
+    const ptcThresholdMs = this.config.getSlotComponentDurationMs(
+      this.config.getForkName(block.slot),
+      this.config.PAYLOAD_ATTESTATION_DUE_BPS
+    );
     return this.fcStore.currentSlot === block.slot && blockDelaySec * 1000 < ptcThresholdMs;
   }
 

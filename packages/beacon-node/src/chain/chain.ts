@@ -58,7 +58,7 @@ import {
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
+import {GENESIS_EPOCH, HALF_SLOT_BPS, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {decodeArchivedEnvelope} from "../db/repositories/index.js";
@@ -100,6 +100,7 @@ import {
   AttestationPool,
   DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
+  InclusionListStore,
   OpPool,
   PayloadAttestationPool,
   ProposerPreferencesPool,
@@ -198,6 +199,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
+  readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;
   readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
@@ -335,6 +337,7 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
+    this.inclusionListStore = new InclusionListStore(config);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -509,6 +512,7 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       metrics,
       config,
+      signal,
     });
 
     this.archiveStore = new ArchiveStore(
@@ -1831,6 +1835,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.proposerPreferencesPool.prune(slot);
+    this.inclusionListStore.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 
@@ -1841,7 +1846,8 @@ export class BeaconChain implements IBeaconChain {
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
       // On the last slot of the epoch
-      sleep(this.config.SLOT_DURATION_MS / 2)
+      const fork = this.config.getForkName(slot);
+      sleep(this.config.getSlotComponentDurationMs(fork, HALF_SLOT_BPS))
         .then(() => this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
           if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);
@@ -1931,6 +1937,21 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (newValidatorCount > previousValidatorCount) {
+      const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+      await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
+    }
+  }
+
+  async updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void> {
+    let hasNewValidators = false;
+    for (const validatorIndex of validatorIndices) {
+      if (this.beaconProposerCache.track(epoch, validatorIndex)) {
+        hasNewValidators = true;
+      }
+    }
+
+    // Only update validator custody if we discovered new validators
+    if (hasNewValidators) {
       const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }

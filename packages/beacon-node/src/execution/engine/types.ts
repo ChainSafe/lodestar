@@ -1,3 +1,4 @@
+import {Type} from "@chainsafe/ssz";
 import {
   BUILDER_DEPOSIT_REQUEST_TYPE,
   BUILDER_EXIT_REQUEST_TYPE,
@@ -53,6 +54,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
   engine_newPayloadV5: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
+  engine_newPayloadV6: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc, InclusionListRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -74,6 +76,10 @@ export type EngineApiRpcParamTypes = {
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
     custodyColumns?: DATA | null,
+  ];
+  engine_forkchoiceUpdatedV5: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
   ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
@@ -97,12 +103,16 @@ export type EngineApiRpcParamTypes = {
 
   engine_getBlobsV1: [DATA[]];
   engine_getBlobsV2: [DATA[]];
+
+  engine_getInclusionListV1: [];
 };
 
 export type PayloadStatus = {
   status: ExecutionPayloadStatus;
   latestValidHash: DATA | null;
   validationError: string | null;
+  /** PayloadStatusV2: whether a VALID payload satisfied the inclusion list constraints, null otherwise */
+  inclusionListSatisfied?: boolean | null;
 };
 
 export type EngineApiRpcReturnTypes = {
@@ -115,6 +125,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV3: PayloadStatus;
   engine_newPayloadV4: PayloadStatus;
   engine_newPayloadV5: PayloadStatus;
+  engine_newPayloadV6: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -128,6 +139,10 @@ export type EngineApiRpcReturnTypes = {
     payloadId: QUANTITY | null;
   };
   engine_forkchoiceUpdatedV4: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
+  engine_forkchoiceUpdatedV5: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
@@ -147,6 +162,8 @@ export type EngineApiRpcReturnTypes = {
 
   engine_getBlobsV1: (BlobAndProofRpc | null)[];
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
+
+  engine_getInclusionListV1: InclusionListRpc;
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -261,7 +278,12 @@ export type PayloadAttributesRpc = {
   slotNumber?: QUANTITY;
   /** QUANTITY, 64 Bits - target value for the gasLimit field of the new payload (GLOAS, execution-apis#796) */
   targetGasLimit?: QUANTITY;
+  /** Array of DATA - transactions that the built payload must include (PayloadAttributesV5, HEZE) */
+  inclusionListTransactions?: InclusionListRpc;
 };
+
+/** Array of DATA - array of transaction objects */
+export type InclusionListRpc = DATA[];
 
 export type ClientVersionRpc = {
   /** ClientCode */
@@ -442,11 +464,22 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
     slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? numToQuantity(data.targetGasLimit) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions
+      ? serializeInclusionList(data.inclusionListTransactions)
+      : undefined,
   };
 }
 
 export function serializeBeaconBlockRoot(data: Root): DATA {
   return bytesToData(data);
+}
+
+export function serializeInclusionList(data: bellatrix.Transactions): InclusionListRpc {
+  return data.map((transaction) => bytesToData(transaction));
+}
+
+export function deserializeInclusionList(data: InclusionListRpc): bellatrix.Transactions {
+  return data.map((transaction) => dataToBytes(transaction, null));
 }
 
 export function deserializePayloadAttributes(data: PayloadAttributesRpc): PayloadAttributes {
@@ -460,6 +493,9 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
     slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? quantityToBigint(data.targetGasLimit) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions
+      ? deserializeInclusionList(data.inclusionListTransactions)
+      : undefined,
   };
 }
 
@@ -501,14 +537,15 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
 }
 
 /**
- * Prepend a single-byte requestType to requestsBytes
+ * Serialize requests prefixed with a single-byte requestType in one allocation
  */
-function prefixRequests(requestsBytes: Uint8Array, requestType: ExecutionRequestType): Uint8Array {
-  const prefixedRequests = new Uint8Array(1 + requestsBytes.length);
-  prefixedRequests[0] = requestType;
-  prefixedRequests.set(requestsBytes, 1);
+function serializePrefixedRequests<T>(type: Type<T>, requests: T, requestType: ExecutionRequestType): Uint8Array {
+  const uint8Array = new Uint8Array(1 + type.value_serializedSize(requests));
+  const dataView = new DataView(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
+  uint8Array[0] = requestType;
+  type.value_serializeToBytes({uint8Array, dataView}, 1, requests);
 
-  return prefixedRequests;
+  return uint8Array;
 }
 
 /**
@@ -523,16 +560,16 @@ export function serializeExecutionRequestsToBytes(fork: ForkName, executionReque
   const result: Uint8Array[] = [];
 
   if (deposits.length !== 0) {
-    result.push(prefixRequests(ssz.electra.DepositRequests.serialize(deposits), DEPOSIT_REQUEST_TYPE));
+    result.push(serializePrefixedRequests(ssz.electra.DepositRequests, deposits, DEPOSIT_REQUEST_TYPE));
   }
 
   if (withdrawals.length !== 0) {
-    result.push(prefixRequests(ssz.electra.WithdrawalRequests.serialize(withdrawals), WITHDRAWAL_REQUEST_TYPE));
+    result.push(serializePrefixedRequests(ssz.electra.WithdrawalRequests, withdrawals, WITHDRAWAL_REQUEST_TYPE));
   }
 
   if (consolidations.length !== 0) {
     result.push(
-      prefixRequests(ssz.electra.ConsolidationRequests.serialize(consolidations), CONSOLIDATION_REQUEST_TYPE)
+      serializePrefixedRequests(ssz.electra.ConsolidationRequests, consolidations, CONSOLIDATION_REQUEST_TYPE)
     );
   }
 
@@ -541,12 +578,12 @@ export function serializeExecutionRequestsToBytes(fork: ForkName, executionReque
 
     if (builderDeposits.length !== 0) {
       result.push(
-        prefixRequests(ssz.gloas.BuilderDepositRequests.serialize(builderDeposits), BUILDER_DEPOSIT_REQUEST_TYPE)
+        serializePrefixedRequests(ssz.gloas.BuilderDepositRequests, builderDeposits, BUILDER_DEPOSIT_REQUEST_TYPE)
       );
     }
 
     if (builderExits.length !== 0) {
-      result.push(prefixRequests(ssz.gloas.BuilderExitRequests.serialize(builderExits), BUILDER_EXIT_REQUEST_TYPE));
+      result.push(serializePrefixedRequests(ssz.gloas.BuilderExitRequests, builderExits, BUILDER_EXIT_REQUEST_TYPE));
     }
   }
 

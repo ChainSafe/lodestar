@@ -37,7 +37,7 @@ describe("voluntary exit from api", () => {
         // Disable bearer token auth to simplify testing
         "--keymanager.auth=false",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev"}
+      {pipeStdioToParent: true, logPrefix: "dev"}
     );
     onTestFinished(async () => {
       await stopChildProcess(devProc);

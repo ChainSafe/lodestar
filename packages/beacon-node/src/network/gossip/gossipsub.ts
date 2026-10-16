@@ -21,6 +21,7 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@lodestar/params";
+import {getSlotDurations} from "@lodestar/state-transition";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
@@ -172,7 +173,8 @@ export class Eth2Gossipsub {
       mcacheLength: 6,
       mcacheGossip: 3,
       // this should be in ms
-      seenTTL: config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2,
+      // use the largest configured slot duration so the TTL stays conservative across duration changes
+      seenTTL: Math.max(...getSlotDurations(config).map(([, slotDurationMs]) => slotDurationMs)) * SLOTS_PER_EPOCH * 2,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // For a single stream, await processing each RPC before processing the next

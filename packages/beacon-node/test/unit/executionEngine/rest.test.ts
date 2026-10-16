@@ -337,7 +337,12 @@ describe("ExecutionEngine / rest", () => {
 
         const res = await engine.notifyNewPayload(fork, payload, [], hash, executionRequests);
 
-        expect(res).toEqual({status: "VALID", latestValidHash: hashHex, validationError: null});
+        expect(res).toEqual({
+          status: "VALID",
+          latestValidHash: hashHex,
+          validationError: null,
+          inclusionListSatisfied: null,
+        });
 
         const req = lastRequest("/engine/v1/payloads");
         expect(req.headers["eth-execution-version"]).toBe(executionForkName[fork]);
