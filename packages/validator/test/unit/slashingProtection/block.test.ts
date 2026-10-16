@@ -134,6 +134,47 @@ describe("SlashingProtection overlapping block proposal checks", () => {
     });
   });
 
+  it("defers checks until a running import has recorded every key", async () => {
+    const started = defer<void>();
+    const release = defer<void>();
+    const batchPut = db.batchPut.bind(db);
+    vi.spyOn(db, "batchPut").mockImplementationOnce(async (...args) => {
+      started.resolve();
+      await release.promise;
+      await batchPut(...args);
+    });
+
+    const genesisValidatorsRoot = ssz.Root.defaultValue();
+    const imported = slashingProtection.importInterchange(
+      {
+        metadata: {interchange_format_version: "5", genesis_validators_root: toHex(genesisValidatorsRoot)},
+        data: [
+          {
+            pubkey: toHex(Buffer.alloc(48, 1)),
+            signed_blocks: [{slot: "1", signing_root: toHex(Buffer.alloc(32, 1))}],
+            signed_attestations: [],
+          },
+          {
+            pubkey: toHex(pubkey),
+            signed_blocks: [{slot: String(conflict.slot), signing_root: toHex(conflict.signingRoot)}],
+            signed_attestations: [],
+          },
+        ],
+      },
+      genesisValidatorsRoot
+    );
+    await started.promise;
+
+    // A check that does not wait for the import is approved before the conflicting block is recorded
+    const pending = slashingProtection.checkAndInsertBlockProposal(pubkey, block);
+    await Promise.race([pending, sleep(10)]);
+    release.resolve();
+    await imported;
+
+    await expect(pending).rejects.toMatchObject({type: {code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL}});
+    expect(await blocks.getAll(pubkey)).toEqual([conflict]);
+  });
+
   it("does not block other validators while a write is pending", async () => {
     const started = defer<void>();
     const release = defer<void>();

@@ -1,5 +1,5 @@
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
@@ -9,7 +9,7 @@ import {
   isStartSlotOfEpoch,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
+import {RootHex, Slot, ValidatorIndex, gloas, heze} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
@@ -142,6 +142,18 @@ export async function validateApiExecutionPayloadBid(
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
+
+  // [IGNORE] The bid is received after the inclusion list deadline of `bid.slot - 1`
+  if (
+    isForkPostHeze(chain.config.getForkName(bid.slot)) &&
+    chain.clock.msFromSlot(bid.slot - 1) < chain.config.getInclusionListDueMs(chain.config.getForkName(bid.slot - 1))
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BEFORE_INCLUSION_LIST_DEADLINE,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
     });
@@ -309,6 +321,18 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] The bid is received after the inclusion list deadline of `bid.slot - 1`
+  if (
+    isForkPostHeze(chain.config.getForkName(bid.slot)) &&
+    chain.clock.msFromSlot(bid.slot - 1) < chain.config.getInclusionListDueMs(chain.config.getForkName(bid.slot - 1))
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BEFORE_INCLUSION_LIST_DEADLINE,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
+
   // [IGNORE] The bid is compatible with the current head branch.
   const head = chain.forkChoice.getHead();
   if (!isBidCompatibleWithHead(chain, head, bid.slot, bidParentBlockRoot, bidParentBlockHash)) {
@@ -355,6 +379,32 @@ async function validateExecutionPayloadBid(
       parentSlot: parentBlock.slot,
       slot: bid.slot,
     });
+  }
+
+  // [IGNORE] bid.inclusionListBits is inclusive of our timely inclusion lists for
+  // (bid.slot - 1, get_shuffling_dependent_root(store, bid.parent_block_root, epoch)).
+  if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
+    const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
+    const inclusionListSlot = bid.slot - 1;
+    const inclusionListDependentRoot = getShufflingDependentRoot(
+      chain.forkChoice,
+      computeEpochAtSlot(inclusionListSlot),
+      computeEpochAtSlot(parentBlock.slot),
+      parentBlock
+    );
+    if (
+      !chain.inclusionListStore.isInclusionListBitsInclusive(
+        inclusionListSlot,
+        inclusionListDependentRoot,
+        inclusionListBits
+      )
+    ) {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE,
+        builderIndex: bid.builderIndex,
+        slot: bid.slot,
+      });
+    }
   }
 
   // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been

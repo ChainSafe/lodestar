@@ -201,6 +201,8 @@ for (const rootSource of ["archive index", "head state"] as const) {
       },
     });
 
+    // Range reads are bimodal on the shared runner, the same legacy bench measures ~0.2ms or ~11ms per op
+    // on unrelated commits, which no threshold can tell apart from a regression. Report only.
     for (const count of [1, slotCount]) {
       for (const columns of [1, 8, NUMBER_OF_COLUMNS]) {
         const request: fulu.DataColumnSidecarsByRangeRequest = {
@@ -211,7 +213,7 @@ for (const rootSource of ["archive index", "head state"] as const) {
         for (const backend of ["legacy", "flat files"] as const) {
           bench({
             id: `${rootSource} / ${count} slots / ${columns} columns / ${backend}`,
-            threshold: 10,
+            noThreshold: true,
             minRuns: 25,
             maxMs: 15_000,
             timeoutBench: 60_000,

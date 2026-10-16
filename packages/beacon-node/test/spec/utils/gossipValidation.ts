@@ -51,6 +51,7 @@ import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../..
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
+import {validateGossipInclusionList} from "../../../src/chain/validation/inclusionList.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
@@ -175,6 +176,7 @@ const gossipTopicByHandler = {
   gossip_sync_committee_message: GossipType.sync_committee,
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
+  gossip_inclusion_list: GossipType.inclusion_list,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -274,6 +276,7 @@ function getDataAvailabilityStatusForFork(fork: ForkName): DataAvailabilityStatu
     case ForkName.electra:
     case ForkName.fulu:
     case ForkName.gloas:
+    case ForkName.heze:
       return DataAvailabilityStatus.Available;
 
     default:
@@ -733,6 +736,14 @@ async function validateMessageForTopic(
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      break;
+    }
+
+    case GossipType.inclusion_list: {
+      const signedInclusionList = rejectOnInvalidSerializedBytes(() => ssz.heze.SignedInclusionList.deserialize(bytes));
+      const {committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList);
+      // Mirror gossip handler: store the list so later vectors see it
+      chain.inclusionListStore.process(signedInclusionList, committeeIndices, true);
       break;
     }
 
