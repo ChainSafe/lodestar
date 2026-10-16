@@ -22,9 +22,9 @@ import {IClock} from "../../util/clock.js";
 const EVENT_LOOP_LAG_BUFFER = 250;
 
 /**
- * Default duration given to a builder to provide a `SignedExecutionPayloadBid` before the deadline
- * is reached, advertised on each bid request via the `X-Timeout-Ms` header. The p2p bid is
- * selected after the same duration, only considering bids received up to that point.
+ * Default time from the slot start by which a builder must provide a `SignedExecutionPayloadBid`,
+ * the remaining time is advertised on each bid request via the `X-Timeout-Ms` header. The p2p bid
+ * is selected at the same time, only considering bids received up to that point.
  */
 export const DEFAULT_BUILDER_BID_DEADLINE_MS = 500;
 
@@ -126,6 +126,9 @@ export class BuilderApiClient {
       requests.push({url, entry});
     }
 
+    // The advertised timeout is relative to the request, only the time left until the deadline is granted
+    const timeoutMs = Math.max(0, this.bidDeadline - this.clock.msFromSlot(slot));
+
     // Collected in arrival order so an earlier received bid wins ties during candidate ranking
     const bids: BuilderApiBid[] = [];
     await Promise.all(
@@ -141,10 +144,10 @@ export class BuilderApiClient {
               proposerPubkey,
               requestAuth: entry.auth,
               dateMilliseconds: Date.now(),
-              timeoutMs: this.bidDeadline,
+              timeoutMs,
             },
             // Event loop lag must not discard bids that arrived in time
-            {timeoutMs: this.bidDeadline + EVENT_LOOP_LAG_BUFFER}
+            {timeoutMs: timeoutMs + EVENT_LOOP_LAG_BUFFER}
           );
           const signedBid = res.value();
           if (signedBid === undefined) {

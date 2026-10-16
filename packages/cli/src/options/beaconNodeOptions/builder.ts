@@ -21,15 +21,16 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
     );
   }
 
-  if (args["builder.bidDeadline"] !== undefined && args["builder.bidDeadline"] <= 0) {
-    throw new YargsError("builder.bidDeadline must be greater than 0");
+  const bidDeadline = args["builder.bidDeadline"];
+  if (bidDeadline !== undefined && (!Number.isInteger(bidDeadline) || bidDeadline <= 0)) {
+    throw new YargsError("builder.bidDeadline must be a positive integer");
   }
 
   return {
     enabled: args.builder,
     url: args["builder.url"] ?? defaultExecutionBuilderHttpOpts.url,
     timeout: args["builder.timeout"],
-    bidDeadline: args["builder.bidDeadline"],
+    bidDeadline,
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
   };
