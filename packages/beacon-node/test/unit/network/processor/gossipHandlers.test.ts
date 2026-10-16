@@ -139,6 +139,18 @@ describe("getGossipHandlers", () => {
     expect(threw).toBe(true);
   });
 
+  it("does not import a signature-verified REPEAT_PROPOSAL gloas block whose parent conflicts with finalization", async () => {
+    const {processBlock, threw, getByBlock, getBlockHexAndBlockHash} = await runBeaconBlockRepeatProposal(gloasConfig, {
+      recorded: true,
+      parentKnown: false,
+    });
+    expect(getBlockHexAndBlockHash).not.toHaveBeenCalled();
+    expect(getByBlock).not.toHaveBeenCalled();
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
+  });
+
   it("does not import a signature-verified REPEAT_PROPOSAL gloas block whose parent payload is unknown", async () => {
     const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(gloasConfig, {
       recorded: true,
@@ -413,7 +425,7 @@ async function runBeaconBlockRepeatProposal(
 
   const processBlock = vi.fn().mockResolvedValue(undefined);
   const getByBlock = vi.fn().mockReturnValue(blockInput);
-  const getBlockHexAndBlockHash = vi.fn().mockReturnValue(parentKnown && parentPayloadKnown ? {} : null);
+  const getBlockHexAndBlockHash = vi.fn().mockReturnValue(parentPayloadKnown ? {} : null);
   const chain = {
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
