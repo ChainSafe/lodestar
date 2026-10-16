@@ -1,4 +1,3 @@
-import {setTimeout as delay, setImmediate as yieldToIO} from "node:timers/promises";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {DependencyCheck, GossipJob, GossipMessage, NativeNetwork, Verdict} from "@chainsafe/lodestar-z/network";
@@ -112,34 +111,18 @@ export class NativeGossip {
       ignoreDuplicate: opts?.ignoreDuplicatePublishError ?? false,
       flood: opts?.floodPublish ?? !this.opts.disableFloodPublish,
     };
-    const deadline = performance.now() + this.config.SLOT_DURATION_MS;
-    for (let retry = 0; ; retry++) {
-      if (this.closed)
-        throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "gossip publication"});
-      try {
-        return (await this.network.publish(topic, data, options)).queued;
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          "code" in error &&
-          error.code === "NetworkGossipPublishFailed" &&
-          "reason" in error
-        ) {
-          if (error.reason === "duplicate") throw new Error("PublishError.Duplicate", {cause: error});
-          // Admission refusal has no publication side effects. Keep the validated bytes here, so an API
-          // retry cannot lose the message to the validator's already-seen check.
-          if (
-            error.reason === "admission_full" &&
-            retry < this.config.SLOT_DURATION_MS &&
-            performance.now() < deadline
-          ) {
-            if (retry === 0) await yieldToIO();
-            else await delay(1);
-            continue;
-          }
-        }
-        throw error;
-      }
+    try {
+      return (await this.network.publish(topic, data, options)).queued;
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        error.code === "NetworkGossipPublishFailed" &&
+        "reason" in error &&
+        error.reason === "duplicate"
+      )
+        throw new Error("PublishError.Duplicate", {cause: error});
+      throw error;
     }
   }
 

@@ -192,20 +192,12 @@ describe("native gossip host", () => {
     expect(isPublishDuplicateError(error as Error)).toBe(true);
   });
 
-  it("retries admission pressure after yielding, with the same bytes and options", async () => {
+  it.each(["admission_full", "expired"])("preserves the binding's %s failure without resubmitting", async (reason) => {
     const node = await fixture();
-    const pressure = Object.assign(new Error("full"), {code: "NetworkGossipPublishFailed", reason: "admission_full"});
-    node.network.publish.mockRejectedValueOnce(pressure).mockRejectedValueOnce(pressure);
-    const data = new Uint8Array(112);
-    const published = node.gossip.publish(topic, data, {floodPublish: true});
-    await Promise.resolve();
+    const failure = Object.assign(new Error(reason), {code: "NetworkGossipPublishFailed", reason});
+    node.network.publish.mockRejectedValueOnce(failure);
+    await expect(node.gossip.publish(topic, new Uint8Array(112))).rejects.toBe(failure);
     expect(node.network.publish).toHaveBeenCalledTimes(1);
-    expect(await published).toBe(1);
-    expect(node.network.publish).toHaveBeenCalledTimes(3);
-    for (const call of node.network.publish.mock.calls) {
-      expect(call[1]).toBe(data);
-      expect(call[2]).toEqual(node.network.publish.mock.calls[0][2]);
-    }
   });
 
   it("does not retry protocol resource exhaustion or a completed publication under peer pressure", async () => {
@@ -226,34 +218,6 @@ describe("native gossip host", () => {
     });
     expect(await node.gossip.publish(topic, new Uint8Array(112))).toBe(1);
     expect(node.network.publish).toHaveBeenCalledTimes(2);
-  });
-
-  it("terminates a waiting publication on close", async () => {
-    const node = await fixture();
-    node.network.publish.mockRejectedValue(
-      Object.assign(new Error("full"), {
-        code: "NetworkGossipPublishFailed",
-        reason: "admission_full",
-      })
-    );
-    const published = node.gossip.publish(topic, new Uint8Array(112));
-    await Promise.resolve();
-    node.gossip.close();
-    await expect(published).rejects.toMatchObject({type: {code: "NATIVE_NETWORK_CLOSED"}});
-    expect(node.network.publish).toHaveBeenCalledTimes(1);
-  });
-
-  it("fails explicitly if admission remains blocked for a slot", async () => {
-    const node = await fixture();
-    const now = vi.spyOn(performance, "now").mockReturnValueOnce(0).mockReturnValue(config.SLOT_DURATION_MS);
-    try {
-      const pressure = Object.assign(new Error("full"), {code: "NetworkGossipPublishFailed", reason: "admission_full"});
-      node.network.publish.mockRejectedValue(pressure);
-      await expect(node.gossip.publish(topic, new Uint8Array(112))).rejects.toBe(pressure);
-      expect(node.network.publish).toHaveBeenCalledTimes(1);
-    } finally {
-      now.mockRestore();
-    }
   });
 });
 
