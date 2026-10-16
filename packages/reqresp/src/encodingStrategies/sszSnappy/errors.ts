@@ -11,6 +11,8 @@ export enum SszSnappyErrorCode {
   DECOMPRESSOR_ERROR = "SSZ_SNAPPY_ERROR_DECOMPRESSOR_ERROR",
   /** Received more bytes than specified sszDataLength */
   TOO_MANY_BYTES = "SSZ_SNAPPY_ERROR_TOO_MANY_BYTES",
+  /** Received extra bytes after a complete request payload */
+  TRAILING_BYTES = "SSZ_SNAPPY_ERROR_TRAILING_BYTES",
   /** Source aborted before reading sszDataLength bytes */
   SOURCE_ABORTED = "SSZ_SNAPPY_ERROR_SOURCE_ABORTED",
 }
@@ -22,6 +24,7 @@ type SszSnappyErrorType =
   | {code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ; readBytes: number; sszDataLength: number}
   | {code: SszSnappyErrorCode.DECOMPRESSOR_ERROR; decompressorError: Error}
   | {code: SszSnappyErrorCode.TOO_MANY_BYTES; sszDataLength: number}
+  | {code: SszSnappyErrorCode.TRAILING_BYTES; sszDataLength: number}
   | {code: SszSnappyErrorCode.SOURCE_ABORTED};
 
 export class SszSnappyError extends LodestarError<SszSnappyErrorType> {}

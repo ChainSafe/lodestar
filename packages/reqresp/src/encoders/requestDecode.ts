@@ -27,7 +27,7 @@ export async function requestDecode(
   const bytes = byteStream(stream);
   let requestReadDone = false;
   try {
-    const requestBody = await readEncodedPayload(bytes, protocol.encoding, type, signal);
+    const requestBody = await readEncodedPayload(bytes, protocol.encoding, type, signal, true);
     requestReadDone = true;
     return requestBody;
   } finally {

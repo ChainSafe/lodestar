@@ -58,6 +58,13 @@ export const requestEncodersErrorCases: {
     requestBody: null,
     errorDecode: new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED}),
   },
+  {
+    id: "Trailing bytes after Ping request body",
+    protocol: pingNoHandler,
+    chunks: [...sszSnappyPing.chunks, Buffer.from([0xde, 0xad, 0xbe, 0xef])],
+    requestBody: null,
+    errorDecode: new SszSnappyError({code: SszSnappyErrorCode.TRAILING_BYTES, sszDataLength: 8}),
+  },
 ];
 
 export type SuccessResponseChunk = {status: RespStatus.SUCCESS; payload: ResponseIncoming};
