@@ -37,6 +37,20 @@ describe("BuilderStatusTracker", () => {
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
+  it("starts from the resolved status and lets later polls replace it", async () => {
+    builderStatusTracker = new BuilderStatusTracker(api, logger, builderIndex, metrics, {
+      status: "active",
+      balance: 100,
+    });
+    expect(builderStatusTracker.getStatus()).toEqual({status: "active", balance: 100});
+    expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockGetStateBuildersResponse(builderIndex, {status: "exited", balance: 90})
+    );
+    await builderStatusTracker.poll(epoch);
+    expect(builderStatusTracker.getStatus()).toEqual({status: "exited", balance: 90});
+  });
+
   it("updates balance across polls", async () => {
     await builderStatusTracker.poll(epoch);
     const {status, balance} = builderStatusTracker.getStatus();

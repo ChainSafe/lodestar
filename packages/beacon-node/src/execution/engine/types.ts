@@ -75,6 +75,7 @@ export type EngineApiRpcParamTypes = {
   engine_forkchoiceUpdatedV4: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
+    custodyColumns?: DATA | null,
   ];
   engine_forkchoiceUpdatedV5: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},

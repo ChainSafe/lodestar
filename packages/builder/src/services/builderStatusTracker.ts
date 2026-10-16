@@ -17,11 +17,23 @@ export class BuilderStatusTracker {
   private status?: BuilderStatus;
   private balanceGwei?: number;
 
-  constructor(api: ApiClient, logger: Logger, index: BuilderIndex, metrics: Metrics | null) {
+  constructor(
+    api: ApiClient,
+    logger: Logger,
+    index: BuilderIndex,
+    metrics: Metrics | null,
+    initialStatus?: {status: BuilderStatus; balance: number}
+  ) {
     this.api = api;
     this.logger = logger;
     this.index = index;
     this.metrics = metrics;
+    this.status = initialStatus?.status;
+    this.balanceGwei = initialStatus?.balance;
+    if (initialStatus) {
+      metrics?.builderStatus.set(builderStatusValue[initialStatus.status]);
+      metrics?.builderBalance.set(initialStatus.balance);
+    }
   }
 
   async poll(currentEpoch: Epoch) {

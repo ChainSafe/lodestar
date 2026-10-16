@@ -19,6 +19,9 @@ import {ExecutionEngineMockJsonRpcClient, JsonRpcBackend} from "./utils.js";
 
 export {ExecutionEngineHttp, ExecutionEngineDisabled, defaultExecutionEngineHttpOpts, engineApiModes};
 export type {EngineApiMode};
+export {ExecutionPayloadStatus} from "./interface.js";
+export {HttpRpcError} from "./jsonRpcHttpClient.js";
+export {isRetryableEngineRestError} from "./restHttpClient.js";
 
 export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)
@@ -37,7 +40,7 @@ export function getExecutionEngineFromBackend(
 export function getExecutionEngineHttp(
   opts: ExecutionEngineHttpOpts,
   modules: ExecutionEngineModules
-): IExecutionEngine {
+): ExecutionEngineHttp {
   const jwtSecret = opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined;
   const metrics = modules.metrics?.executionEnginerHttpClient;
   const engineApi = opts.engineApi ?? "auto";
