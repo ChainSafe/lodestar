@@ -16,6 +16,7 @@ import {
   type InvalidAttestationData,
   ScannedSlotsTerminationReason,
 } from "../../chain/opPools/aggregatedAttestationPool.js";
+import {InclusionListInsertOutcome} from "../../chain/opPools/inclusionListStore.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -1202,11 +1203,31 @@ export function createLodestarMetrics(
       help: "The total result of calling notifyForkchoiceUpdate execution engine api",
       labelNames: ["result"],
     }),
+    getInclusionListV1Requests: register.counter({
+      name: "lodestar_execution_engine_get_inclusion_list_v1_requests_total",
+      help: "Total number of engine_getInclusionListV1 requests",
+    }),
+    getInclusionListV1RequestsDuration: register.histogram({
+      name: "lodestar_execution_engine_get_inclusion_list_v1_duration_seconds",
+      help: "Duration of engine_getInclusionListV1 requests",
+      buckets: [0.05, 0.1, 0.25, 0.5, 1],
+    }),
     engineApiRequests: register.counter<{transport: string}>({
       name: "lodestar_execution_engine_api_requests_total",
       help: "Total engine API requests by transport",
       labelNames: ["transport"],
     }),
+    inclusionListStore: {
+      size: register.gauge({
+        name: "lodestar_inclusion_list_store_size",
+        help: "Current number of inclusion lists retained in the InclusionListStore",
+      }),
+      insertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
+        name: "lodestar_inclusion_list_store_insert_outcome_total",
+        help: "Total number of InclusionListStore insertions by outcome",
+        labelNames: ["insertOutcome"],
+      }),
+    },
     opPool: {
       aggregatedAttestationPool: {
         size: register.gauge({

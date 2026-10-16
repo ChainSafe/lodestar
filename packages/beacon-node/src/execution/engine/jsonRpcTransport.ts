@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, RootHex} from "@lodestar/types";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, bellatrix} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix, toHex} from "@lodestar/utils";
@@ -17,10 +17,12 @@ import {
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
   deserializeExecutionPayloadBodyV2,
+  deserializeInclusionList,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
   serializeExecutionPayload,
   serializeExecutionRequests,
+  serializeInclusionList,
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
@@ -41,6 +43,7 @@ const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
+const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList"};
 
 /**
  * Legacy `engine_*` JSON-RPC methods
@@ -58,7 +61,8 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<PayloadStatusResult> {
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -76,6 +80,28 @@ export class JsonRpcEngineTransport implements IEngineTransport {
       if (ForkSeq[fork] >= ForkSeq.electra) {
         if (executionRequests === undefined) {
           throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
+        }
+        if (ForkSeq[fork] >= ForkSeq.heze) {
+          if (inclusionListTransactions === undefined) {
+            throw Error(`inclusionListTransactions required in notifyNewPayload for fork=${fork}`);
+          }
+          const method = "engine_newPayloadV6";
+          return this.rpc.fetchWithRetries<
+            EngineApiRpcReturnTypes[typeof method],
+            EngineApiRpcParamTypes[typeof method]
+          >(
+            {
+              method,
+              params: [
+                serializedExecutionPayload,
+                serializedVersionedHashes,
+                serializedParentBeaconBlockRoot,
+                serializeExecutionRequests(fork, executionRequests),
+                serializeInclusionList(inclusionListTransactions),
+              ],
+            },
+            notifyNewPayloadOpts
+          );
         }
         const method = ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4";
         return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
@@ -116,13 +142,15 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     opts?: ReqOpts
   ): Promise<ForkchoiceUpdatedResult> {
     const method =
-      ForkSeq[fork] >= ForkSeq.gloas
-        ? "engine_forkchoiceUpdatedV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_forkchoiceUpdatedV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_forkchoiceUpdatedV2"
-            : "engine_forkchoiceUpdatedV1";
+      ForkSeq[fork] >= ForkSeq.heze
+        ? "engine_forkchoiceUpdatedV5"
+        : ForkSeq[fork] >= ForkSeq.gloas
+          ? "engine_forkchoiceUpdatedV4"
+          : ForkSeq[fork] >= ForkSeq.deneb
+            ? "engine_forkchoiceUpdatedV3"
+            : ForkSeq[fork] >= ForkSeq.capella
+              ? "engine_forkchoiceUpdatedV2"
+              : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
@@ -253,5 +281,14 @@ export class JsonRpcEngineTransport implements IEngineTransport {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
       return {code, name: cv.name, version: cv.version, commit: strip0xPrefix(cv.commit)};
     });
+  }
+
+  async getInclusionList(): Promise<bellatrix.Transactions> {
+    const method = "engine_getInclusionListV1";
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({method, params: []}, getInclusionListOpts);
+    return deserializeInclusionList(response);
   }
 }
