@@ -42,7 +42,8 @@ const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
-const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList"};
+// Retrying inclusion lists delays other time-sensitive requests in the engine queue.
+const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList", retries: 0};
 
 /**
  * Legacy `engine_*` JSON-RPC methods
