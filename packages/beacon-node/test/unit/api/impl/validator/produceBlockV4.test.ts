@@ -282,6 +282,43 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(bidBlock);
   });
 
+  it("considers a p2p bid pooled while the builder API bid requests were still pending", async () => {
+    const builderUrl = "https://builder.example.com";
+    const entry = {
+      url: new TextEncoder().encode(builderUrl),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+      builderPubkeys: [],
+      maxExecutionPayment: 0n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
+    };
+    const apiBidsDeferred = defer<never[]>();
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
+    modules.chain.builderApiClient.getExecutionPayloadBids.mockReturnValue(apiBidsDeferred.promise);
+
+    const blockPromise = api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [entry]},
+    });
+
+    await vi.waitFor(() => expect(modules.chain.builderApiClient.getExecutionPayloadBids).toHaveBeenCalledOnce());
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+    apiBidsDeferred.resolve([]);
+
+    const {data: block} = await blockPromise;
+
+    expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid}));
+    expect(block).toEqual(bidBlock);
+  });
+
   it("counts a builder API bid's execution payment only up to its entry cap", async () => {
     const builderUrl = "https://builder.example.com";
     const entry = {

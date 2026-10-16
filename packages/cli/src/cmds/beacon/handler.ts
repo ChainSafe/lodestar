@@ -244,9 +244,9 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Only enforced on an explicitly configured deadline, the default is used as is on short slots
   const bidDeadline = args["builder.bidDeadline"];
   if (bidDeadline !== undefined) {
-    for (const {name: fork} of config.forksAscendingEpochOrder) {
+    for (const {name: fork, epoch} of config.forksAscendingEpochOrder) {
       const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS);
-      if (isForkPostGloas(fork) && bidDeadline + BUILDER_BID_LAG_BUFFER_MS >= raceCutoffMs) {
+      if (isForkPostGloas(fork) && epoch !== Infinity && bidDeadline + BUILDER_BID_LAG_BUFFER_MS >= raceCutoffMs) {
         throw Error(
           `--builder.bidDeadline of ${bidDeadline}ms must be below ${raceCutoffMs - BUILDER_BID_LAG_BUFFER_MS}ms for fork ${fork}`
         );

@@ -23,8 +23,8 @@ export const BUILDER_BID_LAG_BUFFER_MS = 250;
 
 /**
  * Default duration given to a builder to provide a `SignedExecutionPayloadBid` before the deadline
- * is reached, advertised on each bid request via the `X-Timeout-Ms` header. The p2p bid is
- * selected after the same duration from the request, only considering bids received by then.
+ * is reached, advertised on each bid request via the `X-Timeout-Ms` header. Bids received via
+ * p2p are given the same time to bid up.
  */
 export const DEFAULT_BUILDER_BID_DEADLINE_MS = 500;
 

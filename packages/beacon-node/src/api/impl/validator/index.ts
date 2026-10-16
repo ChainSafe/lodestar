@@ -1008,9 +1008,19 @@ export function getValidatorApi(
         (!circuitBreakerActive &&
           chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
+      // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
+      // not delay the proposal when a builder bid block is available (and vice versa)
+      const cutoffMs = Math.max(
+        0,
+        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
+      );
+
       // Give p2p bids the same time to bid up as granted to builder API bid requests via the advertised
-      // deadline, the pool is read once the deadline passed and the bid requests settled
-      const bidDeadlinePromise = circuitBreakerActive ? Promise.resolve() : sleep(chain.builderApiClient.bidDeadline);
+      // deadline, the pool is read once the deadline passed and the bid requests settled. A late request
+      // does not wait past the race cutoff, a pooled bid is still the fastest fallback if the local block fails
+      const bidDeadlinePromise = circuitBreakerActive
+        ? Promise.resolve()
+        : sleep(Math.min(chain.builderApiClient.bidDeadline, cutoffMs));
 
       // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
       // by the top-level factors and each builder API bid by its own entry. Ties prefer the
@@ -1119,13 +1129,6 @@ export function getValidatorApi(
         const t = metrics?.blockProductionTime.startTimer();
         return fn().finally(() => t?.({source}));
       };
-
-      // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
-      // not delay the proposal when a builder bid block is available (and vice versa)
-      const cutoffMs = Math.max(
-        0,
-        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
-      );
 
       // use abort controller to stop waiting for the bid block if the engine block will be selected
       const controller = new AbortController();
