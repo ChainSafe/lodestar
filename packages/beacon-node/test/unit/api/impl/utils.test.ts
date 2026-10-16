@@ -25,8 +25,69 @@ describe("api / impl / utils", () => {
     try {
       await yieldToIO();
       expect(visited).toHaveLength(300);
-      expect(highWater).toBe(64);
+      expect(highWater).toBe(32);
       expect(active).toBe(1);
+    } finally {
+      blocked.resolve();
+      await submitted;
+    }
+  });
+  it("shares capacity across concurrent batches and hands released slots to waiting callers", async () => {
+    const blocked = defer<void>();
+    const first = defer<void>();
+    const waiting = defer<void>();
+    const calls: [number, number][] = [];
+    let active = 0;
+    let highWater = 0;
+    const submissions = Array.from({length: 4}, (_, batch) =>
+      forEachGossipSubmission(
+        Array.from({length: 100}, (_, i) => i),
+        async (item, index) => {
+          expect(item).toBe(index);
+          calls.push([batch, index]);
+          active++;
+          highWater = Math.max(highWater, active);
+          if (batch === 0 && index === 0) await first.promise;
+          else if (batch === 0) await blocked.promise;
+          else await waiting.promise;
+          active--;
+        }
+      )
+    );
+    try {
+      expect(calls).toHaveLength(32);
+      first.resolve();
+      await yieldToIO();
+      expect(calls.at(-1)).toEqual([1, 0]);
+      expect(highWater).toBe(32);
+    } finally {
+      first.resolve();
+      blocked.resolve();
+      waiting.resolve();
+      await Promise.all(submissions);
+    }
+    expect(highWater).toBe(32);
+    expect(active).toBe(0);
+    expect(new Set(calls.map(([batch, index]) => `${batch}:${index}`)).size).toBe(400);
+  });
+
+  it.each([false, true])("releases all capacity after submit throws (async: %s)", async (asyncFailure) => {
+    const failure = new Error("publication failed");
+    const fail = (): Promise<void> => {
+      if (asyncFailure) return Promise.reject(failure);
+      throw failure;
+    };
+    await expect(forEachGossipSubmission(Array.from({length: 32}), fail)).rejects.toBe(failure);
+
+    const blocked = defer<void>();
+    let started = 0;
+    const submitted = forEachGossipSubmission(Array.from({length: 32}), async () => {
+      started++;
+      await blocked.promise;
+    });
+    try {
+      await yieldToIO();
+      expect(started).toBe(32);
     } finally {
       blocked.resolve();
       await submitted;

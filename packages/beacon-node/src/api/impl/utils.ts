@@ -1,6 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import type {IBeaconChain} from "../../chain/index.js";
 import {SyncState} from "../../sync/index.js";
+import {LinkedList} from "../../util/array.js";
 import {ApiError, NodeIsSyncing} from "./errors.js";
 
 /**
@@ -74,15 +75,32 @@ export function assertUniqueItems(array: unknown[] | undefined, message: string)
   }
 }
 
-/** Bounds concurrent validation and publication while retaining each original failure index. */
+// A submission can publish on four sync subnets or up to six overlapping fork boundaries.
+// Leave capacity for publications outside the bulk APIs.
+const GOSSIP_SUBMISSION_CONCURRENCY = 32;
+let activeGossipSubmissions = 0;
+const gossipSubmissionWaiters = new LinkedList<() => void>();
+
+/** Bounds validation and publication across API calls. Callbacks must await every started publication. */
 export async function forEachGossipSubmission<T>(
   items: readonly T[],
   submit: (item: T, index: number) => Promise<void>
 ): Promise<void> {
   let next = 0;
   await Promise.all(
-    Array.from({length: Math.min(64, items.length)}, async () => {
-      for (let index = next++; index < items.length; index = next++) await submit(items[index], index);
+    Array.from({length: Math.min(GOSSIP_SUBMISSION_CONCURRENCY, items.length)}, async () => {
+      for (let index = next++; index < items.length; index = next++) {
+        if (activeGossipSubmissions < GOSSIP_SUBMISSION_CONCURRENCY) activeGossipSubmissions++;
+        else await new Promise<void>((resolve) => gossipSubmissionWaiters.push(resolve));
+
+        try {
+          await submit(items[index], index);
+        } finally {
+          const nextSubmission = gossipSubmissionWaiters.shift();
+          if (nextSubmission) nextSubmission();
+          else activeGossipSubmissions--;
+        }
+      }
     })
   );
 }

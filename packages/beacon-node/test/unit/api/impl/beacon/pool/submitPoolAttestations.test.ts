@@ -88,21 +88,24 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     expect(modules.network.publishBeaconAttestation).toHaveBeenCalledWith(attestation, subnet);
   });
 
-  it("waits for publication before validating more of a large batch", async () => {
+  it("shares publication capacity between simultaneous validator-client batches", async () => {
     const publication = defer<number>();
     modules.network.publishBeaconAttestation = vi.fn().mockReturnValue(publication.promise);
     const signedAttestations = Array.from({length: 300}, () => ssz.electra.SingleAttestation.defaultValue());
-    const submitted = api.submitPoolAttestationsV2({signedAttestations});
-    await Promise.resolve();
-    expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledTimes(64);
-    expect(modules.network.publishBeaconAttestation).toHaveBeenCalledTimes(64);
-    publication.resolve(1);
-    await submitted;
-    expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledTimes(300);
-    expect(modules.network.publishBeaconAttestation).toHaveBeenCalledTimes(300);
+    const submitted = Promise.all(Array.from({length: 4}, () => api.submitPoolAttestationsV2({signedAttestations})));
+    try {
+      await Promise.resolve();
+      expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledTimes(32);
+      expect(modules.network.publishBeaconAttestation).toHaveBeenCalledTimes(32);
+    } finally {
+      publication.resolve(1);
+      await submitted;
+    }
+    expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledTimes(1200);
+    expect(modules.network.publishBeaconAttestation).toHaveBeenCalledTimes(1200);
   });
 
-  it("retries native admission without validating or inserting the attestation again", async () => {
+  it("reports native admission failure without retrying or revalidating the attestation", async () => {
     const publish = vi
       .fn()
       .mockRejectedValueOnce(
@@ -119,11 +122,12 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     const data = ssz.electra.SingleAttestation.serialize(ssz.electra.SingleAttestation.defaultValue());
     modules.network.publishBeaconAttestation = vi.fn(() => gossip.publish("attestation-topic", data));
     try {
-      await api.submitPoolAttestationsV2({signedAttestations: [ssz.electra.SingleAttestation.defaultValue()]});
+      await expect(
+        api.submitPoolAttestationsV2({signedAttestations: [ssz.electra.SingleAttestation.defaultValue()]})
+      ).rejects.toMatchObject({failures: [{index: 0, message: "full"}]});
       expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledOnce();
       expect(attestationPool.add).toHaveBeenCalledOnce();
-      expect(publish).toHaveBeenCalledTimes(2);
-      expect(publish.mock.calls[0][1]).toBe(publish.mock.calls[1][1]);
+      expect(publish).toHaveBeenCalledOnce();
     } finally {
       gossip.close();
     }
