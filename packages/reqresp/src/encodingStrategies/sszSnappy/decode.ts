@@ -19,11 +19,27 @@ export const MAX_VARINT_BYTES = 10;
 export async function readSszSnappyPayload(
   stream: ByteStream<Stream>,
   type: TypeSizes,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  expectEndOfStream = false
 ): Promise<Uint8Array> {
   const sszDataLength = await readSszSnappyHeader(stream, type, signal);
 
-  return readSszSnappyBody(stream, sszDataLength, signal);
+  const data = await readSszSnappyBody(stream, sszDataLength, signal);
+
+  if (expectEndOfStream) {
+    // The p2p spec lists any remaining bytes after the n SSZ bytes as invalid input.
+    // A requester closes the write side of the stream after the request, so a clean
+    // request reads as end of stream here, within the caller's request timeout.
+    const extra = await stream.read({bytes: 1, signal}).catch((e) => {
+      if ((e as Error).name === "UnexpectedEOFError") return null;
+      throw e;
+    });
+    if (extra !== null && extra.length > 0) {
+      throw new SszSnappyError({code: SszSnappyErrorCode.TRAILING_BYTES, sszDataLength});
+    }
+  }
+
+  return data;
 }
 
 /**

@@ -19,11 +19,12 @@ export async function readEncodedPayload(
   stream: ByteStream<Stream>,
   encoding: Encoding,
   type: TypeSizes,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  expectEndOfStream = false
 ): Promise<Uint8Array> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
-      return readSszSnappyPayload(stream, type, signal);
+      return readSszSnappyPayload(stream, type, signal, expectEndOfStream);
 
     default:
       throw Error("Unsupported encoding");
