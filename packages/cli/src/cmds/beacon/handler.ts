@@ -247,7 +247,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
       const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS);
       if (isForkPostGloas(fork) && bidDeadline + BUILDER_BID_LAG_BUFFER_MS >= raceCutoffMs) {
         throw Error(
-          `--builder.bidDeadline of ${bidDeadline}ms plus the ${BUILDER_BID_LAG_BUFFER_MS}ms lag buffer must be below ${raceCutoffMs}ms for fork ${fork}`
+          `--builder.bidDeadline of ${bidDeadline}ms must be below ${raceCutoffMs - BUILDER_BID_LAG_BUFFER_MS}ms for fork ${fork}`
         );
       }
     }
