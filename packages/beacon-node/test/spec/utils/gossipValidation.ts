@@ -5,7 +5,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import snappyWasm from "@chainsafe/snappy-wasm";
-import {createBeaconConfig} from "@lodestar/config";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
@@ -28,7 +28,9 @@ import {
   ExecutionPayloadStatus,
   IBeaconStateView,
   computeEpochAtSlot,
+  computeSlotAtTimeMs,
   computeStartSlotAtEpoch,
+  computeTimeAtSlotMs,
   createCachedBeaconState,
   isExecutionStateType,
 } from "@lodestar/state-transition";
@@ -73,19 +75,27 @@ import {loadSpecTestConfig} from "./loadSpecTestConfig.js";
 class GossipTestClock extends EventEmitter implements IClock {
   genesisTime: number;
   private currentTimeMs: number;
-  private secondsPerSlot: number;
+  private config: ChainConfig;
   private maxDisparityMs: number;
 
-  constructor(genesisTimeSec: number, secondsPerSlot: number, maxDisparityMs: number) {
+  constructor(genesisTimeSec: number, config: ChainConfig, maxDisparityMs: number) {
     super();
     this.genesisTime = genesisTimeSec;
     this.currentTimeMs = genesisTimeSec * 1000;
-    this.secondsPerSlot = secondsPerSlot;
+    this.config = config;
     this.maxDisparityMs = maxDisparityMs;
   }
 
+  private slotTimeMs(slot: number): number {
+    return computeTimeAtSlotMs(this.config, slot, this.genesisTime * 1000);
+  }
+
+  private slotAtTimeMs(timeMs: number): number {
+    return computeSlotAtTimeMs(this.config, timeMs, this.genesisTime * 1000);
+  }
+
   get currentSlot(): number {
-    return Math.floor((this.currentTimeMs / 1000 - this.genesisTime) / this.secondsPerSlot);
+    return this.slotAtTimeMs(this.currentTimeMs);
   }
 
   get currentSlotWithGossipDisparity(): number {
@@ -93,7 +103,7 @@ class GossipTestClock extends EventEmitter implements IClock {
     // Spec: current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY >= block_time_ms
     // This means: nextSlotTimeMs - currentTimeMs <= maxDisparityMs
     const slot = this.currentSlot;
-    const nextSlotTimeMs = (this.genesisTime + (slot + 1) * this.secondsPerSlot) * 1000;
+    const nextSlotTimeMs = this.slotTimeMs(slot + 1);
     if (nextSlotTimeMs - this.currentTimeMs <= this.maxDisparityMs) {
       return slot + 1;
     }
@@ -105,21 +115,21 @@ class GossipTestClock extends EventEmitter implements IClock {
   }
 
   slotWithFutureTolerance(toleranceSec: number): number {
-    return Math.floor((this.currentTimeMs / 1000 + toleranceSec - this.genesisTime) / this.secondsPerSlot);
+    return this.slotAtTimeMs(this.currentTimeMs + toleranceSec * 1000);
   }
 
   slotWithPastTolerance(toleranceSec: number): number {
-    return Math.floor((this.currentTimeMs / 1000 - toleranceSec - this.genesisTime) / this.secondsPerSlot);
+    return this.slotAtTimeMs(this.currentTimeMs - toleranceSec * 1000);
   }
 
   isCurrentSlotGivenGossipDisparity(slot: number): boolean {
     const current = this.currentSlot;
     if (slot === current) return true;
-    const nextSlotTimeMs = (this.genesisTime + (current + 1) * this.secondsPerSlot) * 1000;
+    const nextSlotTimeMs = this.slotTimeMs(current + 1);
     if (nextSlotTimeMs - this.currentTimeMs <= this.maxDisparityMs) {
       return slot === current + 1;
     }
-    const currentSlotTimeMs = (this.genesisTime + current * this.secondsPerSlot) * 1000;
+    const currentSlotTimeMs = this.slotTimeMs(current);
     if (this.currentTimeMs - currentSlotTimeMs <= this.maxDisparityMs) {
       return slot === current - 1;
     }
@@ -131,13 +141,11 @@ class GossipTestClock extends EventEmitter implements IClock {
   }
 
   secFromSlot(slot: number, toSec?: number): number {
-    const slotTimeSec = this.genesisTime + slot * this.secondsPerSlot;
-    return (toSec ?? this.currentTimeMs / 1000) - slotTimeSec;
+    return ((toSec !== undefined ? toSec * 1000 : this.currentTimeMs) - this.slotTimeMs(slot)) / 1000;
   }
 
   msFromSlot(slot: number, toMs?: number): number {
-    const slotTimeMs = (this.genesisTime + slot * this.secondsPerSlot) * 1000;
-    return (toMs ?? this.currentTimeMs) - slotTimeMs;
+    return (toMs ?? this.currentTimeMs) - this.slotTimeMs(slot);
   }
 
   /** Set the current Unix time in milliseconds */
@@ -147,7 +155,7 @@ class GossipTestClock extends EventEmitter implements IClock {
 
   /** Also support setSlot for block import phases */
   setSlot(slot: number): void {
-    this.currentTimeMs = (this.genesisTime + slot * this.secondsPerSlot) * 1000;
+    this.currentTimeMs = this.slotTimeMs(slot);
   }
 }
 
@@ -355,11 +363,7 @@ export async function runGossipValidationTest(
   const beaconConfig = createBeaconConfig(testCaseConfig, anchorState.genesisValidatorsRoot);
 
   const genesisTimeSec = Number(anchorState.genesisTime);
-  const clock = new GossipTestClock(
-    genesisTimeSec,
-    beaconConfig.SLOT_DURATION_MS / 1000,
-    beaconConfig.MAXIMUM_GOSSIP_CLOCK_DISPARITY
-  );
+  const clock = new GossipTestClock(genesisTimeSec, beaconConfig, beaconConfig.MAXIMUM_GOSSIP_CLOCK_DISPARITY);
 
   const controller = new AbortController();
   const executionEngineBackend = new ExecutionEngineMockBackend({

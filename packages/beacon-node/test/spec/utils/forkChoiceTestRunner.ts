@@ -1,12 +1,14 @@
+import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
-import {createBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {
+  ACTIVE_PRESET,
   ForkPostDeneb,
   ForkPostFulu,
   ForkPostGloas,
@@ -22,6 +24,8 @@ import {
   DataAvailabilityStatus,
   IBeaconStateViewGloas,
   computeEpochAtSlot,
+  computeSlotAtTimeMs,
+  computeTimeAtSlotMs,
   createCachedBeaconState,
   createIndexedSignatureSetFromComponents,
   getIndexedAttestation,
@@ -70,6 +74,8 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {loadSpecTestConfig} from "./loadSpecTestConfig.js";
 import {
   createSpecTestBeaconMetrics,
   expectNoProgressiveBalancesMismatches,
@@ -89,14 +95,22 @@ const PAYLOAD_ATTESTATION_MESSAGE_FILE_NAME = "^(payload_attestation_message)_([
 
 const logger = testLogger("spec-test");
 
+const specTestDir = path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET);
+
 export const forkChoiceTestRunner =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
   (fork) => {
     return {
-      testFunction: async (testcase, _directoryName, testCaseName) => {
+      testFunction: async (testcase, directoryName, testCaseName) => {
         const {steps, anchorState, anchorBlock} = testcase;
         const currentSlot = anchorState.slot;
-        const config = getConfig(fork);
+        const config = createChainForkConfig({
+          ...getConfig(fork),
+          ...loadSpecTestConfig(path.join(specTestDir, directoryName, testCaseName)),
+        });
+        const slotAtTime = (timeSec: number): number => computeSlotAtTimeMs(config, timeSec * 1000, 0);
+        const secIntoSlot = (timeSec: number): number =>
+          (timeSec * 1000 - computeTimeAtSlotMs(config, slotAtTime(timeSec), 0)) / 1000;
         // const state = createCachedBeaconStateTest(anchorState, config);
 
         /** This is to track test's tickTime to be used in proposer boost */
@@ -182,7 +196,7 @@ export const forkChoiceTestRunner =
           for (const [i, step] of steps.entries()) {
             if (isTick(step)) {
               tickTime = bnToNum(step.tick);
-              const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
+              const currentSlot = slotAtTime(tickTime);
               logger.debug(`Step ${i}/${stepsLen} tick`, {currentSlot, valid: Boolean(step.valid), time: tickTime});
               clock.emit(ClockEvent.slot, currentSlot);
               clock.setSlot(currentSlot);
@@ -655,7 +669,7 @@ export const forkChoiceTestRunner =
               // slot boundary.
               if (step.checks.time !== undefined && step.checks.time > 0)
                 expect(chain.forkChoice.getTime()).toEqualWithMessage(
-                  Math.floor(bnToNum(step.checks.time) / (config.SLOT_DURATION_MS / 1000)),
+                  slotAtTime(bnToNum(step.checks.time)),
                   `Invalid forkchoice time at step ${i}`
                 );
               if (step.checks.justified_checkpoint) {
@@ -671,10 +685,10 @@ export const forkChoiceTestRunner =
                 );
               }
               if (step.checks.get_proposer_head) {
-                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
+                const currentSlot = slotAtTime(tickTime);
                 const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  secIntoSlot(tickTime),
                   currentSlot
                 );
                 logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
@@ -721,10 +735,10 @@ export const forkChoiceTestRunner =
                 }
               }
               if (step.checks.should_override_forkchoice_update) {
-                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
+                const currentSlot = slotAtTime(tickTime);
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  secIntoSlot(tickTime),
                   currentSlot
                 );
                 if (result.shouldOverrideFcu === false) {
