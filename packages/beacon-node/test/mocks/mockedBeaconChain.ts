@@ -6,12 +6,14 @@ import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEventBus} from "../../src/chain/beaconEngine/events.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
+import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../src/chain/forkChoice/index.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
@@ -90,6 +92,15 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   };
   lightClientServer: Mocked<LightClientServer>;
 };
+
+/** Wrap the flat core mock with the real main-thread engine for chain processing tests. */
+export function withBeaconEngineFacade(chain: MockedBeaconChain): BeaconChain {
+  const emitter = new ChainEventEmitter();
+  return Object.assign(Object.create(chain) as BeaconChain, {
+    emitter,
+    beaconEngine: new BeaconEngine({core: chain.beaconEngine, emitter, clock: chain.clock}),
+  });
+}
 
 vi.mock("@lodestar/fork-choice", async (importActual) => {
   const mod = await importActual<typeof import("@lodestar/fork-choice")>();

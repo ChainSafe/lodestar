@@ -24,7 +24,7 @@ import {BeaconDb} from "../../../../src/db/beacon.js";
 import {encodeArchivedHeaderEnvelope} from "../../../../src/db/repositories/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {toSignedHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
-import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 import {generateState, zeroProtoBlock} from "../../../utils/state.js";
 
 const config = createBeaconConfig(
@@ -74,9 +74,8 @@ describe("BeaconEngineCore execution requests persistence", () => {
     chain.beaconEngine.getParentExecutionRequests = BeaconEngineCore.prototype.getParentExecutionRequests.bind(
       chain.beaconEngine
     );
-    chain.beaconEngine.importExecutionPayload = vi.fn(
-      BeaconEngineCore.prototype.importExecutionPayload.bind(chain.beaconEngine)
-    );
+    const core: BeaconEngineCore = chain.beaconEngine;
+    core.importExecutionPayload = vi.fn(BeaconEngineCore.prototype.importExecutionPayload.bind(core));
     chain.forkChoice.onExecutionPayload = vi.fn();
     chain.forkChoice.getBlockHex.mockReturnValue(null);
     const state = new BeaconStateView(createCachedBeaconState(generateState({slot: 1}, config), {config, pubkeyCache}));
@@ -140,11 +139,13 @@ describe("BeaconEngineCore execution requests persistence", () => {
 
   async function importEnvelope(): Promise<void> {
     const envelope = makeEnvelope();
-    await chain.beaconEngine.importExecutionPayload(
-      ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
-      DataAvailabilityStatus.Available,
-      {validSignature: true}
-    );
+    await expect(
+      chain.beaconEngine.importExecutionPayload(
+        ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+        DataAvailabilityStatus.Available,
+        {validSignature: true}
+      )
+    ).resolves.toEqual({err: null, result: {executionOptimistic: false}});
   }
 
   it("produces on a FULL parent while the facade column write queue is blocked", async () => {
@@ -163,13 +164,12 @@ describe("BeaconEngineCore execution requests persistence", () => {
     envelope.message.payload.slotNumber = 1;
     envelope.message.executionRequests = requests;
     input.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
-    Object.defineProperty(chain, "serializedCache", {value: new Map()});
     const queuedWrite = vi.fn().mockReturnValue(new Promise<void>(() => {}));
     Object.defineProperty(chain, "unfinalizedPayloadEnvelopeWrites", {
       value: {waitForSpace: vi.fn().mockResolvedValue(undefined), push: queuedWrite},
     });
 
-    await importExecutionPayload.call(chain, input, DataAvailabilityStatus.Available);
+    await importExecutionPayload.call(withBeaconEngineFacade(chain), input, DataAvailabilityStatus.Available);
     expect(chain.beaconEngine.importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
       DataAvailabilityStatus.Available,

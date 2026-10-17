@@ -16,7 +16,7 @@ import {verifyBlocksExecutionPayload} from "../../../../src/chain/blocks/verifyB
 import {verifyBlocksSignatures} from "../../../../src/chain/blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../../../../src/chain/blocks/verifyBlocksStateTransitionOnly.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
-import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 vi.mock("../../../../src/chain/blocks/verifyBlocksExecutionPayloads.js");
@@ -128,7 +128,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     vi.mocked(verifyBlocksSignatures).mockResolvedValue({verifySignaturesTime: 0});
 
     const result = await verifyBlocksInEpoch.call(
-      chain,
+      withBeaconEngineFacade(chain),
       generateProtoBlock({slot: 0}),
       [blockInput],
       new Map([[block.message.slot, payloadInput]]),

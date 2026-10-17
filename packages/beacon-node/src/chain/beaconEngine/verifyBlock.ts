@@ -11,7 +11,7 @@ import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransi
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
-import {VerifyBlocksOpts} from "./interface.js";
+import {VerifyBlocksOpts, VerifyBlocksSuccess} from "./interface.js";
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@ba0411b482 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
@@ -24,7 +24,7 @@ export async function verifyBlocks(
   blockData: BlockBytes[],
   opts: VerifyBlocksOpts,
   retainForImport = true
-): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
+): Promise<VerifyBlocksSuccess> {
   const entries = blockData.map(({blockRoot, blockBytes}) =>
     this.blockSerializedCache.getOrDeserialize(toRootHex(blockRoot), blockBytes)
   );

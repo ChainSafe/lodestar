@@ -34,23 +34,9 @@ export class PayloadImportError extends PayloadError {
  * [beacon-engine] moved from unstable@1bf214377e chain/blocks/importExecutionPayload.ts:
  * consensus/EL verification, envelope persistence, fork choice and FCU live in
  * chain/beaconEngine/importExecutionPayload.ts. Sync upstream steps 2-7 there;
- * keep DA, column writes, input error context and source metrics here.
+ * keep DA, column writes and source metrics here. The main-thread BeaconEngine attaches input error context.
  */
 export async function importExecutionPayload(
-  this: BeaconChain,
-  payloadInput: PayloadEnvelopeInput,
-  dataAvailabilityStatus: DataAvailabilityStatus,
-  opts: ImportPayloadOpts = {}
-): Promise<void> {
-  try {
-    await importExecutionPayloadInner.call(this, payloadInput, dataAvailabilityStatus, opts);
-  } catch (e) {
-    if (e instanceof PayloadError) throw new PayloadImportError(payloadInput, e.type, e.message);
-    throw e;
-  }
-}
-
-async function importExecutionPayloadInner(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
   dataAvailabilityStatus: DataAvailabilityStatus,
@@ -79,7 +65,7 @@ async function importExecutionPayloadInner(
     this.serializedCache.get(signedEnvelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope);
 
   const {source, seenTimestampSec} = payloadInput.getPayloadEnvelopeSource();
-  await this.beaconEngine.importExecutionPayload(envelopeBytes, dataAvailabilityStatus, {
+  await this.beaconEngine.importExecutionPayload(payloadInput, envelopeBytes, dataAvailabilityStatus, {
     validSignature: opts.validSignature === true,
     source,
     seenTimestampSec,

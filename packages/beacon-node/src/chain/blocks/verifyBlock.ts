@@ -67,7 +67,7 @@ export async function verifyBlocksInEpoch(
   }));
 
   const abortController = new AbortController();
-  const verificationPromise = this.beaconEngine.verifyBlocks(blockBytes, opts);
+  const verificationPromise = this.beaconEngine.verifyBlocks(blockInputs, blockBytes, opts);
 
   try {
     // Pick the data-availability source by fork:

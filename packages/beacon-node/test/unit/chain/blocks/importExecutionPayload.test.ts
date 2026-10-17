@@ -3,6 +3,7 @@ import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {payloadFailureFromError} from "../../../../src/chain/beaconEngine/processingResult.js";
 import {PayloadImportError, importExecutionPayload} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {
   PayloadEnvelopeInput,
@@ -10,7 +11,7 @@ import {
 } from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
-import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 
 describe("payload import error context", () => {
   it("attaches the facade input to a payload error returned by the engine", async () => {
@@ -36,18 +37,35 @@ describe("payload import error context", () => {
       value: {waitForSpace: vi.fn().mockResolvedValue(undefined), push: vi.fn()},
     });
     const error = new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
-    chain.beaconEngine.importExecutionPayload = vi.fn().mockRejectedValue(error);
+    chain.beaconEngine.importExecutionPayload = vi
+      .fn()
+      .mockResolvedValue(structuredClone({err: payloadFailureFromError(error)}));
     chain.executionEngine.notifyNewPayload = vi.fn<typeof chain.executionEngine.notifyNewPayload>().mockResolvedValue({
       status: ExecutionPayloadStatus.VALID,
       latestValidHash: toRootHex(new Uint8Array(32)),
       validationError: null,
     });
 
-    const importing = importExecutionPayload.call(chain, payloadInput, DataAvailabilityStatus.Available);
+    const importing = importExecutionPayload.call(
+      withBeaconEngineFacade(chain),
+      payloadInput,
+      DataAvailabilityStatus.Available
+    );
     await expect(importing).rejects.toBeInstanceOf(PayloadImportError);
-    await expect(importing).rejects.toMatchObject({payloadInput, type: error.type, message: error.message});
+    await expect(importing).rejects.toBeInstanceOf(PayloadError);
+    await importing.catch((error: PayloadImportError) => expect(error.payloadInput).toBe(payloadInput));
+    await expect(importing).rejects.toMatchObject({
+      payloadInput,
+      type: error.type,
+      message: error.message,
+      stack: error.stack,
+    });
     expect("payloadInput" in error).toBe(false);
-    expect(chain.beaconEngine.importExecutionPayload).toHaveBeenCalledOnce();
+    expect(chain.beaconEngine.importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
+      ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+      DataAvailabilityStatus.Available,
+      {validSignature: false, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 0}
+    );
     expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
     expect(chain.unfinalizedPayloadEnvelopeWrites.push).not.toHaveBeenCalled();
   });

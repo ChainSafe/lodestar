@@ -88,6 +88,7 @@ import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {SerializedCache} from "../../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
+import {Result, wrapError} from "../../util/wrapError.js";
 import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
 import {ArchiveMode, StateArchiveStrategy} from "../archiveStore/interface.js";
 import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
@@ -96,7 +97,6 @@ import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCac
 import {BlockBytes, BlockSerializedCache} from "../blocks/blockSerializedCache.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
-import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
@@ -238,6 +238,7 @@ import {
   ProduceBlockV4Response,
   SerializedLightClientData,
   VerifyBlocksOpts,
+  VerifyBlocksSuccess,
 } from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
 import {prepareForNextSlot} from "./prepareNextSlot.js";
@@ -250,6 +251,7 @@ import {
   persistOrphanedBlocks,
   pruneHistory,
 } from "./processFinalizedCheckpoint.js";
+import {BlockFailure, PayloadFailure, blockFailureFromError, payloadFailureFromError} from "./processingResult.js";
 import {produceBlockWrapper, produceCommonBlockBody} from "./produceBlock.js";
 import {produceBlockV4, produceEngineOrBuilderBlock} from "./produceEngineOrBuilderBlock.js";
 import {SeenEnginePayloadEnvelopeInput} from "./seenEnginePayloadEnvelopeInput.js";
@@ -1627,37 +1629,51 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return this.seenBlockProposers.isKnown(slot, proposerIndex);
   }
 
-  async validateApiBlock(blockRoot: Root, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void> {
-    await verifyBlocks.call(this, [{blockRoot, blockBytes}], {...opts, skipVerifyExecutionPayload: true}, false);
+  async validateApiBlock(
+    blockRoot: Root,
+    blockBytes: Uint8Array,
+    opts: VerifyBlocksOpts
+  ): Promise<Result<void, BlockFailure>> {
+    return wrapError(
+      async () => {
+        await verifyBlocks.call(this, [{blockRoot, blockBytes}], {...opts, skipVerifyExecutionPayload: true}, false);
+      },
+      (error) => blockFailureFromError(error, this.config, [blockRoot])
+    );
   }
 
-  async verifyBlocks(
-    blocks: BlockBytes[],
-    opts: VerifyBlocksOpts
-  ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
-    try {
-      return await verifyBlocks.call(this, blocks, opts);
-    } catch (error) {
-      this.publishChainView();
-      throw error;
-    }
+  async verifyBlocks(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>> {
+    return wrapError(
+      () => verifyBlocks.call(this, blocks, opts),
+      (error) => {
+        this.publishChainView();
+        return blockFailureFromError(
+          error,
+          this.config,
+          blocks.map(({blockRoot}) => blockRoot)
+        );
+      }
+    );
   }
 
   async importBlock(
     blockRoot: Root,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
-  ): Promise<ImportBlockResult> {
+  ): Promise<Result<ImportBlockResult, BlockFailure>> {
     // bytes-first input (native engine FFI); the JS cache is keyed by hex.
     const blockRootHex = toRootHex(blockRoot);
     const v = this.verifiedBlocks.get(blockRootHex);
     if (!v) throw Error(`No verified block found for root ${blockRootHex}`);
 
     try {
-      return await importBlock.call(this, v, dataAvailabilityStatus, opts);
-    } catch (error) {
-      this.publishChainView();
-      throw error;
+      return await wrapError(
+        () => importBlock.call(this, v, dataAvailabilityStatus, opts),
+        (error) => {
+          this.publishChainView();
+          return blockFailureFromError(error, this.config, [blockRoot]);
+        }
+      );
     } finally {
       this.verifiedBlocks.delete(blockRootHex);
     }
@@ -1668,8 +1684,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     envelopeBytes: Uint8Array,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts
-  ): Promise<{executionOptimistic: boolean}> {
-    return importExecutionPayload.call(this, envelopeBytes, dataAvailabilityStatus, opts);
+  ): Promise<Result<{executionOptimistic: boolean}, PayloadFailure>> {
+    return wrapError(
+      () => importExecutionPayload.call(this, envelopeBytes, dataAvailabilityStatus, opts),
+      payloadFailureFromError
+    );
   }
 
   discardVerifiedBlocks(blockRootHexes: string[]): void {

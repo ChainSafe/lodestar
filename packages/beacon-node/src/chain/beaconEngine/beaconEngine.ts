@@ -30,10 +30,14 @@ import {
   phase0,
   rewards,
 } from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
+import {IBlockInput} from "../blocks/blockInput/index.js";
 import {BlockBytes} from "../blocks/blockSerializedCache.js";
+import {PayloadImportError} from "../blocks/importExecutionPayload.js";
+import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
@@ -67,6 +71,7 @@ import {
   SerializedLightClientData,
   VerifyBlocksOpts,
 } from "./interface.js";
+import {blockErrorFromFailure} from "./processingResult.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
@@ -951,23 +956,29 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.isBlockProposerSeen(slot, proposerIndex);
   }
 
-  validateApiBlock(blockRoot: Root, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void> {
-    return this.core.validateApiBlock(blockRoot, blockBytes, opts);
+  async validateApiBlock(blockInput: IBlockInput, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void> {
+    const res = await this.core.validateApiBlock(fromHex(blockInput.blockRootHex), blockBytes, opts);
+    if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
   }
 
-  verifyBlocks(
+  async verifyBlocks(
+    blockInputs: IBlockInput[],
     blocks: BlockBytes[],
     opts: VerifyBlocksOpts
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
-    return this.core.verifyBlocks(blocks, opts);
+    const res = await this.core.verifyBlocks(blocks, opts);
+    if (res.err !== null) throw blockErrorFromFailure(res.err, blockInputs);
+    return res.result;
   }
 
-  importBlock(
-    blockRoot: Root,
+  async importBlock(
+    blockInput: IBlockInput,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult> {
-    return this.core.importBlock(blockRoot, dataAvailabilityStatus, opts);
+    const res = await this.core.importBlock(fromHex(blockInput.blockRootHex), dataAvailabilityStatus, opts);
+    if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
+    return res.result;
   }
 
   discardVerifiedBlocks(blockRootHexes: RootHex[]): void {
@@ -978,12 +989,19 @@ export class BeaconEngine implements IBeaconEngine {
     this.core.updateTime(currentSlot);
   }
 
-  importExecutionPayload(
+  async importExecutionPayload(
+    payloadInput: PayloadEnvelopeInput,
     envelopeBytes: Uint8Array,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts
   ): Promise<{executionOptimistic: boolean}> {
-    return this.core.importExecutionPayload(envelopeBytes, dataAvailabilityStatus, opts);
+    const res = await this.core.importExecutionPayload(envelopeBytes, dataAvailabilityStatus, opts);
+    if (res.err !== null) {
+      const error = new PayloadImportError(payloadInput, res.err.type, res.err.message);
+      error.stack = res.err.stack;
+      throw error;
+    }
+    return res.result;
   }
 
   migrateCanonicalBlocks(): Promise<Slot[]> {

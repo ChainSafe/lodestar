@@ -1,4 +1,3 @@
-import {fromHex} from "@lodestar/utils";
 import {VerifyBlocksOpts} from "../beaconEngine/interface.js";
 import type {BeaconChain} from "../chain.js";
 import {IBlockInput} from "./blockInput/index.js";
@@ -21,7 +20,7 @@ export async function validateApiBlock(
   try {
     await Promise.all([
       verifyBlocksDataAvailability([blockInput], abortController.signal),
-      this.beaconEngine.validateApiBlock(fromHex(root), bytes, opts),
+      this.beaconEngine.validateApiBlock(blockInput, bytes, opts),
     ]);
     // Proposer observation must follow both consensus validation and data availability.
     this.beaconEngine.observeVerifiedBlocks([{block, root}], true);

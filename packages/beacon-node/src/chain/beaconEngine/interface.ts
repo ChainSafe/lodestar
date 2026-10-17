@@ -43,8 +43,11 @@ import {Metrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
 import {SerializedCache} from "../../util/serializedCache.js";
+import {Result} from "../../util/wrapError.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
+import {IBlockInput} from "../blocks/blockInput/index.js";
 import {BlockBytes, BlockSerializedCache} from "../blocks/blockSerializedCache.js";
+import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
@@ -62,6 +65,7 @@ import {ValidatorMonitorAttestation, ValidatorMonitorBlock, ValidatorMonitorOpts
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import {IBeaconEngineOptions} from "./options.js";
+import {BlockFailure, PayloadFailure} from "./processingResult.js";
 import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
 
 export type HeadParentPayload = {
@@ -100,6 +104,12 @@ export type BeaconEngineCoreModules = {
 };
 
 export type VerifyBlocksOpts = BlockProcessOpts & ImportBlockOpts;
+
+export type VerifyBlocksSuccess = {
+  segmentExecStatus: Extract<SegmentExecStatus, {execAborted: null}>;
+  verifyStateTime: number;
+  verifySignaturesTime: number;
+};
 
 export type ImportBlockResult = {
   headChanged: boolean;
@@ -214,7 +224,27 @@ export type ImportExecutionPayloadOpts = {
   seenTimestampSec?: number;
 };
 
-export type IBeaconEngine = IBeaconEngineCore;
+/** Main-thread facade; processing methods reconstruct errors with their local inputs. */
+export interface IBeaconEngine
+  extends Omit<IBeaconEngineCore, "validateApiBlock" | "verifyBlocks" | "importBlock" | "importExecutionPayload"> {
+  validateApiBlock(blockInput: IBlockInput, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void>;
+  verifyBlocks(
+    blockInputs: IBlockInput[],
+    blocks: BlockBytes[],
+    opts: VerifyBlocksOpts
+  ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}>;
+  importBlock(
+    blockInput: IBlockInput,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportBlockOpts
+  ): Promise<ImportBlockResult>;
+  importExecutionPayload(
+    payloadInput: PayloadEnvelopeInput,
+    envelopeBytes: Uint8Array,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportExecutionPayloadOpts
+  ): Promise<{executionOptimistic: boolean}>;
+}
 
 export interface IBeaconEngineCore {
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
@@ -594,19 +624,20 @@ export interface IBeaconEngineCore {
    * Never changes verifiedBlocks: a concurrent import may already own a bundle for this root.
    * The facade must still wait for DA before observing the proposer and publishing the block.
    */
-  validateApiBlock(blockRoot: Root, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void>;
-  /** Retains verified block bundles until importBlock or discardVerifiedBlocks releases them. */
-  verifyBlocks(
-    blocks: BlockBytes[],
+  validateApiBlock(
+    blockRoot: Root,
+    blockBytes: Uint8Array,
     opts: VerifyBlocksOpts
-  ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}>;
+  ): Promise<Result<void, BlockFailure>>;
+  /** Retains verified block bundles until importBlock or discardVerifiedBlocks releases them. */
+  verifyBlocks(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>>;
   // `blockRoot` is the SSZ root as raw bytes (the verify output handle, import input) — bytes-first for
   // the native engine FFI. The JS engine keys its internal cache by hex (converted here).
   importBlock(
     blockRoot: Root,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
-  ): Promise<ImportBlockResult>;
+  ): Promise<Result<ImportBlockResult, BlockFailure>>;
   discardVerifiedBlocks(blockRootHexes: RootHex[]): void;
 
   // Fork-choice writes routed through the engine (so the facade never writes fork choice directly).
@@ -618,7 +649,7 @@ export interface IBeaconEngineCore {
     envelopeBytes: Uint8Array,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts
-  ): Promise<{executionOptimistic: boolean}>;
+  ): Promise<Result<{executionOptimistic: boolean}, PayloadFailure>>;
 
   // --- DB ownership (blocks + states + payload envelopes) ---
 

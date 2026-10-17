@@ -243,8 +243,8 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
         })),
         {}
       )
-    ).rejects.toMatchObject({
-      type: {code: BlockErrorCode.PRESTATE_MISSING},
+    ).resolves.toMatchObject({
+      err: {type: {code: BlockErrorCode.PRESTATE_MISSING}},
     });
     expect(engine.seenPayloadEnvelopeInputCache.size()).toBe(2);
   });

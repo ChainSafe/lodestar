@@ -6,7 +6,6 @@ import {ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import type {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../../src/chain/errors/index.js";
-import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {
   ApiAttestation,
   GossipAttestation,
@@ -18,7 +17,11 @@ import {
 import {getAttDataFromAttestationSerialized} from "../../../../../src/util/sszBytes.js";
 import {memoOnce} from "../../../../utils/cache.js";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
-import {AttestationValidDataOpts, getAttestationValidData} from "../../../../utils/validationData/attestation.js";
+import {
+  AttestationValidDataOpts,
+  ValidationTestChain,
+  getAttestationValidData,
+} from "../../../../utils/validationData/attestation.js";
 
 // TODO: more tests for electra
 describe("validateAttestation", () => {
@@ -301,7 +304,7 @@ describe("validateAttestation", () => {
 
   /** Alias to reduce code duplication */
   async function expectApiError(
-    chain: IBeaconChain,
+    chain: ValidationTestChain,
     attestationOrBytes: ApiAttestation,
     errorCode: string
   ): Promise<void> {
@@ -313,7 +316,7 @@ describe("validateAttestation", () => {
   }
 
   async function expectGossipError(
-    chain: IBeaconChain,
+    chain: ValidationTestChain,
     attestationOrBytes: GossipAttestation,
     errorCode: string
   ): Promise<void> {

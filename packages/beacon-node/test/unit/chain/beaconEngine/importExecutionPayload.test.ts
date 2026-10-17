@@ -10,6 +10,7 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import * as payloadVerification from "../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import * as envelopeValidation from "../../../../src/chain/validation/executionPayloadEnvelope.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
@@ -89,6 +90,30 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
+  it.each([
+    [ExecutionPayloadStatus.INVALID, PayloadErrorCode.EXECUTION_ENGINE_INVALID],
+    [ExecutionPayloadStatus.UNAVAILABLE, PayloadErrorCode.EXECUTION_ENGINE_ERROR],
+  ] as const)("returns typed details for %s without importing the payload", async (status, code) => {
+    chain.executionEngine.notifyNewPayload.mockResolvedValue({
+      status,
+      latestValidHash: null,
+      validationError: "EL failure",
+    });
+    const result = structuredClone(
+      await BeaconEngineCore.prototype.importExecutionPayload.call(
+        chain.beaconEngine,
+        envelopeBytes,
+        DataAvailabilityStatus.Available,
+        {validSignature: true}
+      )
+    );
+    expect(result).toMatchObject({err: {type: {code, execStatus: status, errorMessage: "EL failure"}, message: code}});
+    expect(result.err).not.toBeInstanceOf(Error);
+    expect(putEnvelope).not.toHaveBeenCalled();
+    expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
+    expect(emitImported).not.toHaveBeenCalled();
+  });
+
   it.each([false, true])(
     "reuses gossip envelope decoding through import with beaconEngineWorker=%s",
     async (beaconEngineWorker) => {
@@ -116,7 +141,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
             validSignature: true,
           }
         )
-      ).toEqual({executionOptimistic: false});
+      ).toEqual({err: null, result: {executionOptimistic: false}});
       expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 2 : 0);
       expect(putEnvelope.mock.calls[0][1]).toBe(envelopeBytes);
     }
@@ -140,7 +165,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
   }
 
   it("imports the payload before sending FCU with the head, safe, and finalized hashes", async () => {
-    expect(await importPayload()).toEqual({executionOptimistic: false});
+    expect(await importPayload()).toEqual({err: null, result: {executionOptimistic: false}});
     expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledWith(
       blockRootHex,
       blockHashHex,
@@ -195,7 +220,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
 
   it("imports without FCU when import updates are disabled", async () => {
     chain.opts.disableImportExecutionFcU = true;
-    expect(await importPayload(ExecutionStatus.Syncing)).toEqual({executionOptimistic: true});
+    expect(await importPayload(ExecutionStatus.Syncing)).toEqual({err: null, result: {executionOptimistic: true}});
     expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
     expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
   });
@@ -208,13 +233,13 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
 
   it("does not wait for the EL response", async () => {
     chain.executionEngine.notifyForkchoiceUpdate.mockReturnValue(new Promise(() => {}));
-    expect(await importPayload()).toEqual({executionOptimistic: false});
+    expect(await importPayload()).toEqual({err: null, result: {executionOptimistic: false}});
   });
 
   it("logs an EL failure without rejecting import", async () => {
     const error = new Error("EL unavailable");
     chain.executionEngine.notifyForkchoiceUpdate.mockRejectedValue(error);
-    expect(await importPayload()).toEqual({executionOptimistic: false});
+    expect(await importPayload()).toEqual({err: null, result: {executionOptimistic: false}});
     await Promise.resolve();
     expect(chain.logger.error).toHaveBeenCalledWith(
       "Error pushing notifyForkchoiceUpdate()",

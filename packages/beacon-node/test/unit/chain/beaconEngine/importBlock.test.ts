@@ -6,11 +6,13 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {VerifiedBlockBundle, importBlock} from "../../../../src/chain/beaconEngine/importBlock.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {BlockInputBlobs, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {writeBlockInputToDb} from "../../../../src/chain/blocks/writeBlockInputToDb.js";
+import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {generateCachedState, zeroProtoBlock} from "../../../utils/state.js";
 
@@ -60,6 +62,35 @@ describe("BeaconEngine block persistence", () => {
   });
 
   afterEach(() => vi.restoreAllMocks());
+
+  it.each([false, true])("releases the verification bundle after an import failure (typed: %s)", async (typed) => {
+    const error = typed
+      ? new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockInput.blockRootHex})
+      : reachedForkChoice;
+    chain.forkChoice.onBlock.mockImplementation(() => {
+      throw error;
+    });
+    chain.beaconEngine.verifiedBlocks.set(blockInput.blockRootHex, bundle);
+    const importing = BeaconEngineCore.prototype.importBlock.call(
+      chain.beaconEngine,
+      root,
+      DataAvailabilityStatus.PreData,
+      {}
+    );
+    if (typed) {
+      await expect(importing).resolves.toMatchObject({
+        err: {
+          blockIndex: 0,
+          blockRoot: blockInput.blockRootHex,
+          type: {code: BlockErrorCode.ALREADY_KNOWN, root: blockInput.blockRootHex},
+        },
+      });
+    } else {
+      await expect(importing).rejects.toBe(error);
+    }
+    expect(chain.publishChainView).toHaveBeenCalledOnce();
+    expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
+  });
 
   it("seeds Gloas bid metadata before notifying block consumers", async () => {
     const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();

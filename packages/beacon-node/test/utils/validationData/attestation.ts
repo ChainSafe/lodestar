@@ -14,6 +14,7 @@ import {
   getSecretKeyFromIndexCached,
 } from "@lodestar/state-transition/test-utils";
 import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
+import {BeaconEngineCore} from "../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -45,6 +46,7 @@ export type AttestationValidDataOpts = {
  * doubles as the engine). Lets tests reach `chain.seenX` even though they are off `IBeaconChain`.
  */
 export type ValidationTestChain = IBeaconChain & {
+  beaconEngine: BeaconEngineCore;
   seenAttesters: SeenAttesters;
   seenAggregators: SeenAggregators;
   seenAggregatedAttestations: SeenAggregatedAttestations;

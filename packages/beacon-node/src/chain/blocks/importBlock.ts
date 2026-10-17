@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {capella, isGloasBeaconBlock} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -43,11 +43,11 @@ export async function importBlock(
   });
 
   // 2-5. Delegate to engine: state transition, fork choice, head computation.
-  // Engine takes the root as bytes (native-engine bytes-first contract).
+  // The main-thread engine retains the input; its core takes only the root as bytes.
   // [beacon-engine] moved: consensus import, addAttestationPreElectra/addAttestationPostElectra,
   // and import FCU now live in packages/beacon-node/src/chain/beaconEngine/importBlock.ts.
   // On unstable merges, sync that logic there; retain facade side effects here.
-  const r = await this.beaconEngine.importBlock(fromHex(blockInput.blockRootHex), dataAvailabilityStatus, opts);
+  const r = await this.beaconEngine.importBlock(blockInput, dataAvailabilityStatus, opts);
   // The engine already removes persisted roots from the shared cache.
   if (this.opts.beaconEngineWorker) {
     this.blockSerializedCache.delete(blockInput.blockRootHex, undefined, "persisted");
