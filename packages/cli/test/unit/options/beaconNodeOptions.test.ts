@@ -294,6 +294,43 @@ describe("options / network / tcp and quic flags", () => {
     expect(result.tcp).toBe(false);
   });
 
+  it("should pass Xray options through to the network worker", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      port: 9000,
+      "network.xrayAddress": " /tmp/xray.sock ",
+      "network.xrayWaitForAttach": true,
+      "network.xrayMaxBufferBytes": 128 * 1024 * 1024,
+    } as NetworkArgs);
+    expect(result.xrayAddress).toBe("/tmp/xray.sock");
+    expect(result.xrayWaitForAttach).toBe(true);
+    expect(result.xrayMaxBufferBytes).toBe(128 * 1024 * 1024);
+  });
+
+  it.each([0, 128 * 1024 - 1, 128 * 1024 + 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
+    "should reject an invalid Xray replay buffer size %s",
+    (size) => {
+      expect(() =>
+        parseNetworkArgs({
+          listenAddress: "0.0.0.0",
+          port: 9000,
+          "network.xrayMaxBufferBytes": size,
+        } as NetworkArgs)
+      ).toThrow("network.xrayMaxBufferBytes must be a safe integer of at least 131072 bytes");
+    }
+  );
+
+  it("should require a collector address when waiting for Xray", () => {
+    expect(() =>
+      parseNetworkArgs({
+        listenAddress: "0.0.0.0",
+        port: 9000,
+        "network.xrayAddress": " ",
+        "network.xrayWaitForAttach": true,
+      } as NetworkArgs)
+    ).toThrow("network.xrayWaitForAttach requires network.xrayAddress");
+  });
+
   it("should throw when both TCP and QUIC are disabled", () => {
     expect(() =>
       parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: false} as NetworkArgs)
