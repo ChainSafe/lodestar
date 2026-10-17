@@ -122,6 +122,11 @@ export class ProtoArray {
    * when called with the negative parameter value.
    */
   private ptcAttested = new Map<RootHex, BitArray>();
+  /**
+   * Execution engine inclusion list verdict per block, recorded on payload import from heze.
+   * Spec: heze/fork-choice.md#modified-store (payload_inclusion_list_satisfaction)
+   */
+  private payloadInclusionListSatisfaction = new Map<RootHex, boolean>();
 
   constructor({
     pruneThreshold,
@@ -938,6 +943,27 @@ export class ProtoArray {
     return this.getParentPayloadStatus(block) === PayloadStatus.FULL;
   }
 
+  /** Spec: heze/fork-choice.md#new-record_payload_inclusion_list_satisfaction. Returns whether the verdict changed */
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {
+    const previous = this.payloadInclusionListSatisfaction.get(blockRoot);
+    this.payloadInclusionListSatisfaction.set(blockRoot, satisfied);
+    return previous !== satisfied;
+  }
+
+  /**
+   * Spec: heze/fork-choice.md#new-is_payload_inclusion_list_satisfied
+   *
+   * False until the payload is delivered. A delivered payload without a verdict is pre-heze, where
+   * no inclusion list constraints apply.
+   */
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {
+    return this.hasPayload(blockRoot) && this.payloadInclusionListSatisfaction.get(blockRoot) !== false;
+  }
+
+  getPayloadInclusionListSatisfaction(blockRoot: RootHex): boolean | null {
+    return this.payloadInclusionListSatisfaction.get(blockRoot) ?? null;
+  }
+
   /**
    * Determine if we should extend the payload (prefer FULL over EMPTY)
    * Spec: gloas/fork-choice.md#new-should_extend_payload
@@ -953,6 +979,10 @@ export class ProtoArray {
    */
   shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {
     if (!this.hasPayload(blockRoot)) {
+      return false;
+    }
+
+    if (this.payloadInclusionListSatisfaction.get(blockRoot) === false) {
       return false;
     }
 
@@ -1399,6 +1429,7 @@ export class ProtoArray {
       this.payloadTimelinessVotes.delete(root);
       this.ptcAttested.delete(root);
       this.payloadDataAvailabilityVotes.delete(root);
+      this.payloadInclusionListSatisfaction.delete(root);
     }
 
     // Store nodes prior to finalization

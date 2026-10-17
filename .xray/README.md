@@ -39,21 +39,19 @@ Regenerate it from the companion Xray checkout with:
 .xray/stage-probe.sh /path/to/xray
 ```
 
-`patches/libp2p@3.3.9.patch` contains the companion upstream changes: global
-`use(middleware)` and `unuse(middleware)` overloads and per-stream middleware array
-copies. Existing protocol registrations still replace their middleware, and `"*"`
-is a literal protocol name. The copy fixes repeated inbound handlers mutating the
-registered chain. `patches/@libp2p__interface@3.3.0.patch` supplies the corresponding
-public type declarations until the interface package is released.
+Lodestar uses released `libp2p 3.4.0` and `@libp2p/interface ^3.4.0`, including
+global `use(middleware)` and `unuse(middleware)` overloads and per-stream middleware
+array copies. No libp2p runtime or interface patches are needed.
 
-This Lodestar PR remains a draft until the upstream dependencies are released:
+This Lodestar PR remains a draft until the
+[Xray Node.js probe and collector support](https://github.com/ethp2p/xray/pull/1)
+is merged and released. The
+[js-libp2p global stream middleware](https://github.com/libp2p/js-libp2p/pull/3650)
+dependency has shipped in 3.4.0.
 
-- [Xray Node.js probe and collector support](https://github.com/ethp2p/xray/pull/1)
-- [js-libp2p global stream middleware](https://github.com/libp2p/js-libp2p/pull/3650)
-
-Before marking it ready for review, replace the archive and patch with released
-dependencies and remove this staging directory and its Dockerfile copy. The local
-archive and patch allow reviewers to reproduce the integration in the meantime.
+Before marking it ready for review, replace the SDK archive with a registry
+dependency and remove this staging directory and its Dockerfile copy. The local
+archive allows reviewers to reproduce the integration in the meantime.
 
 ## Validation
 
@@ -72,9 +70,9 @@ the CLI's `options/beaconNodeOptions.test.ts`.
 
 Companion commits used for validation:
 
-- Xray: `983ccc7` from [ethp2p/xray#1](https://github.com/ethp2p/xray/pull/1)
-- js-libp2p: `14b63af` from [libp2p/js-libp2p#3650](https://github.com/libp2p/js-libp2p/pull/3650)
-- Lodestar base: `unstable` at `01cc10ce70bc3c6cd3f6d6169a740330f5882f3d`
+- Xray: `21d4d26` from [ethp2p/xray#1](https://github.com/ethp2p/xray/pull/1)
+- js-libp2p: published `libp2p 3.4.0` and `@libp2p/interface 3.4.0`
+- Lodestar base: `unstable` at `b3beff224608ff26c0d07421cb7f1ed232039a91`
 
 `devnet/main.star` runs two Lodestar/geth pairs with 256 validators on Fulu using
 pinned ethereum-package and client versions. It expects local images

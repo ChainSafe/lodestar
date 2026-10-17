@@ -102,3 +102,26 @@ The staged SDK now uses Xray `983ccc74d1b40e7ef3ecff7d9eda7d41f7bd5f81`,
 including batched socket writes. SDK type checks, build, and all 12 tests pass.
 Lodestar's frozen installation, lint, beacon-node type checks, and all four
 real-collector TCP/QUIC main-thread/worker tests pass against the refreshed archive.
+
+## Released libp2p integration, 2026-10-16
+
+Merged `unstable` at `b3beff224608ff26c0d07421cb7f1ed232039a91`, which uses
+published `libp2p 3.4.0` and `@libp2p/interface 3.4.0`. Removed both temporary
+libp2p patches. The staged SDK is built from Xray `21d4d26`; it requires
+`@libp2p/interface ^3.4.0` and uses the public middleware types directly.
+
+- A clean SDK install, build, type checks, formatting, and all 12 SDK tests pass.
+- The staged archive matches all 17 SDK source, build, and metadata files.
+- Lodestar's frozen installation, repository lint, documentation formatting,
+  beacon-node and CLI builds, and beacon-node/CLI type checks pass.
+- All 29 targeted CLI option tests pass.
+- The networking, request/response, and Xray interoperability suites pass 36
+  tests, with two existing TODOs. Capture works against the real Go collector
+  over TCP and QUIC in both main-thread and worker modes, including gossip,
+  repeated request/response streams, attribution, and shutdown.
+
+The previous CI failure was the high-variance data column range benchmark;
+`unstable` already includes its report-only fix from PR #10377. Mainnet and devnet
+runs were not repeated for this dependency refresh. Xray publication remains the
+only unreleased dependency; the local SDK archive and Dockerfile copy remain
+until that release is available.
