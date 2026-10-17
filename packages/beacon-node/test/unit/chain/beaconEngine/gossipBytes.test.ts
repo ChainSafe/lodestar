@@ -76,7 +76,7 @@ describe("BeaconEngineCore gossip bytes", () => {
           seenTimestampSec: 1,
           topic: {boundary: {fork: ForkName.phase0, epoch: 0}, type: GossipType.voluntary_exit},
         })
-      ).toMatchObject({status: "accept"});
+      ).toMatchObject({err: null});
       expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 2 : 1);
       expect(observed).not.toHaveBeenCalled();
       await vi.runAllTimersAsync();
@@ -124,7 +124,7 @@ describe("BeaconEngineCore gossip bytes", () => {
           seenTimestampSec: 1,
           topic: {boundary: {fork, epoch: 0}, type: GossipType.beacon_aggregate_and_proof},
         })
-      ).toMatchObject({status: "ignore", code: "TEST_IGNORE"});
+      ).toMatchObject({err: {status: "ignore", code: "TEST_IGNORE"}});
       expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 2 : 1);
       expect(validate).toHaveBeenCalledExactlyOnceWith(fork, value, bytes);
       expect(bytes).toEqual(originalBytes);
@@ -254,7 +254,7 @@ describe("BeaconEngineCore gossip bytes", () => {
       Object.defineProperty(engine, "serializedCache", {value: beaconEngineWorker ? undefined : cache});
       const error = new GossipActionError(GossipAction.IGNORE, {code: "TEST_IGNORE"});
       const validate = testCase.validate().mockRejectedValue(error);
-      expect(await testCase.invoke(bytes)).toMatchObject({status: "ignore", code: "TEST_IGNORE", error});
+      expect(await testCase.invoke(bytes)).toMatchObject({err: {status: "ignore", code: "TEST_IGNORE", error}});
       expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
       expect(validate).toHaveBeenCalledOnce();
       expect(validate.mock.calls.flat()).toContainEqual(value);
@@ -265,8 +265,10 @@ describe("BeaconEngineCore gossip bytes", () => {
     it("rejects malformed SSZ without running validation", async () => {
       const validate = testCase.validate();
       expect(await testCase.invoke(new Uint8Array())).toMatchObject({
-        status: "reject",
-        code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE,
+        err: {
+          status: "reject",
+          code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE,
+        },
       });
       expect(validate).not.toHaveBeenCalled();
       expect(engine.logger.error).not.toHaveBeenCalled();
@@ -276,7 +278,7 @@ describe("BeaconEngineCore gossip bytes", () => {
       const {bytes} = testCase.createMessage();
       const error = new GossipActionError(GossipAction.REJECT, {code: "TEST_REJECT"});
       testCase.validate().mockRejectedValue(error);
-      expect(await testCase.invoke(bytes)).toMatchObject({status: "reject", code: "TEST_REJECT", error});
+      expect(await testCase.invoke(bytes)).toMatchObject({err: {status: "reject", code: "TEST_REJECT", error}});
       expect(engine.logger.error).not.toHaveBeenCalled();
     });
 
@@ -284,7 +286,7 @@ describe("BeaconEngineCore gossip bytes", () => {
       const {bytes} = testCase.createMessage();
       const error = new Error("validation failed");
       testCase.validate().mockRejectedValue(error);
-      expect(await testCase.invoke(bytes)).toEqual({status: "ignore", code: "UNEXPECTED_ERROR"});
+      expect(await testCase.invoke(bytes)).toEqual({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
       expect(engine.logger.error).toHaveBeenCalledWith(expect.any(String), {code: "UNEXPECTED_ERROR"}, error);
     });
 
@@ -294,7 +296,7 @@ describe("BeaconEngineCore gossip bytes", () => {
       testCase.validate().mockImplementation(() => {
         throw error;
       });
-      expect(await testCase.invoke(bytes)).toEqual({status: "ignore", code: "UNEXPECTED_ERROR"});
+      expect(await testCase.invoke(bytes)).toEqual({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
       expect(engine.logger.error).toHaveBeenCalledWith(expect.any(String), {code: "UNEXPECTED_ERROR"}, error);
     });
 
@@ -306,7 +308,7 @@ describe("BeaconEngineCore gossip bytes", () => {
       vi.spyOn(cache, "getDeserialized").mockImplementation(() => {
         throw error;
       });
-      expect(await testCase.invoke(bytes)).toEqual({status: "ignore", code: "UNEXPECTED_ERROR"});
+      expect(await testCase.invoke(bytes)).toEqual({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
       expect(engine.logger.error).toHaveBeenCalledWith(expect.any(String), {code: "UNEXPECTED_ERROR"}, error);
     });
   });
@@ -319,8 +321,10 @@ describe("BeaconEngineCore gossip bytes", () => {
       throw error;
     });
     expect(await BeaconEngineCore.prototype.validateGossipProposerPreferences.call(engine, bytes)).toEqual({
-      status: "ignore",
-      code: "UNEXPECTED_ERROR",
+      err: {
+        status: "ignore",
+        code: "UNEXPECTED_ERROR",
+      },
     });
     expect(engine.logger.error).toHaveBeenCalledWith(expect.any(String), {code: "UNEXPECTED_ERROR"}, error);
   });
@@ -343,8 +347,8 @@ describe("BeaconEngineCore gossip bytes", () => {
     );
     expect(result).toEqual({
       results: [
-        {status: "ignore", code: "UNEXPECTED_ERROR"},
-        {status: "ignore", code: "UNEXPECTED_ERROR"},
+        {err: {status: "ignore", code: "UNEXPECTED_ERROR"}},
+        {err: {status: "ignore", code: "UNEXPECTED_ERROR"}},
       ],
       batchableBls: false,
     });

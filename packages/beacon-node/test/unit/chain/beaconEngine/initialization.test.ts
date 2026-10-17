@@ -117,7 +117,7 @@ describe("bytes-based engine startup", () => {
     chain.serializedCache.set(exit, exitBytes);
     const deserializeExit = vi.spyOn(ssz.phase0.SignedVoluntaryExit, "deserialize");
     const validateExit = vi.spyOn(voluntaryExitValidation, "validateGossipVoluntaryExit").mockResolvedValue(undefined);
-    expect((await engine.validateGossipVoluntaryExit(exitBytes)).status).toBe("accept");
+    expect((await engine.validateGossipVoluntaryExit(exitBytes)).err).toBeNull();
     expect(deserializeExit).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
     expect(validateExit.mock.calls[0][0] === exit).toBe(!beaconEngineWorker);
     expect(chain.serializedCache.getDeserialized(exitBytes)).toBe(beaconEngineWorker ? undefined : exit);

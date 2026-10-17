@@ -37,7 +37,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
-import {GossipValidationStatus} from "../../../../chain/beaconEngine/gossipValidationResult.js";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
@@ -227,11 +226,11 @@ export function getBeaconBlockApi({
         if (!blockLocallyProduced) {
           try {
             const result = await chain.beaconEngine.validateGossipBlock(fromHex(blockRoot), blockBytes, fork);
-            if (result.status !== GossipValidationStatus.Accept) {
-              if (result.code === "UNEXPECTED_ERROR") {
+            if (result.err !== null) {
+              if (result.err.code === "UNEXPECTED_ERROR") {
                 throw new ApiError(500, "Internal error validating block");
               }
-              throw result.error ?? new ApiError(400, `Invalid block: ${result.code}`);
+              throw result.err.error ?? new ApiError(400, `Invalid block: ${result.err.code}`);
             }
           } catch (error) {
             if (error instanceof BlockGossipError) {
@@ -825,8 +824,8 @@ export function getBeaconBlockApi({
           signedExecutionPayloadEnvelope,
           seenTimestampSec
         );
-        if (result.status !== GossipValidationStatus.Accept) {
-          throw result.error ?? new ApiError(400, `Invalid execution payload envelope: ${result.code}`);
+        if (result.err !== null) {
+          throw result.err.error ?? new ApiError(400, `Invalid execution payload envelope: ${result.err.code}`);
         }
       };
       try {
@@ -1088,8 +1087,8 @@ export function getBeaconBlockApi({
         ssz.gloas.SignedExecutionPayloadBid.serialize(signedExecutionPayloadBid),
         signedExecutionPayloadBid
       );
-      if (bidValidation.status !== GossipValidationStatus.Accept) {
-        throw bidValidation.error ?? new ApiError(400, `Invalid execution payload bid: ${bidValidation.code}`);
+      if (bidValidation.err !== null) {
+        throw bidValidation.err.error ?? new ApiError(400, `Invalid execution payload bid: ${bidValidation.err.code}`);
       }
       validationTimer?.();
 

@@ -710,19 +710,19 @@ export function getValidatorApi(
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const res = await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
-            if (res.status !== GossipValidationStatus.Accept) {
-              if (res.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
+            if (res.err !== null) {
+              if (res.err.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
                 logger.debug("Ignoring known signedAggregateAndProof", logCtx);
                 return; // Ok to submit the same aggregate twice
               }
-              failures.push({index: i, message: res.error?.message ?? res.code});
-              logger.verbose(`Error on publishAggregateAndProofs [${i}]`, logCtx, res.error);
-              if (res.status === GossipValidationStatus.Reject) {
+              failures.push({index: i, message: res.err.error?.message ?? res.err.code});
+              logger.verbose(`Error on publishAggregateAndProofs [${i}]`, logCtx, res.err.error);
+              if (res.err.status === GossipValidationStatus.Reject) {
                 chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "api_reject");
               }
               return;
             }
-            const {indexedAttestation} = res.value;
+            const {indexedAttestation} = res.result;
 
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
             await chain.beaconEngine.onPoolSubmitAggregatedAttestation(
@@ -780,14 +780,14 @@ export function getValidatorApi(
               contributionBytes[i],
               contributionAndProof
             );
-            if (res.status !== GossipValidationStatus.Accept) {
-              if (res.code === SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN) {
+            if (res.err !== null) {
+              if (res.err.code === SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN) {
                 logger.debug("Ignoring known contributionAndProof", logCtx);
                 return; // Ok to submit the same aggregate twice
               }
-              failures.push({index: i, message: res.error?.message ?? res.code});
-              logger.verbose(`Error on publishContributionAndProofs [${i}]`, logCtx, res.error);
-              if (res.status === GossipValidationStatus.Reject) {
+              failures.push({index: i, message: res.err.error?.message ?? res.err.code});
+              logger.verbose(`Error on publishContributionAndProofs [${i}]`, logCtx, res.err.error);
+              if (res.err.status === GossipValidationStatus.Reject) {
                 chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "api_reject");
               }
               return;
@@ -973,15 +973,15 @@ export function getValidatorApi(
           try {
             if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signed, preferencesBytes[i]);
             const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes[i]);
-            if (res.status !== GossipValidationStatus.Accept) {
-              if (res.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+            if (res.err !== null) {
+              if (res.err.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
                 attachedValidatorIndices.push(signed.message.validatorIndex);
                 logger.debug("Ignoring known signed proposer preferences", logCtx);
                 return;
               }
-              failures.push({index: i, message: res.error?.message ?? res.code});
-              logger.verbose(`Error on submitProposerPreferences [${i}]`, logCtx, res.error);
-              if (res.status === GossipValidationStatus.Reject) {
+              failures.push({index: i, message: res.err.error?.message ?? res.err.code});
+              logger.verbose(`Error on submitProposerPreferences [${i}]`, logCtx, res.err.error);
+              if (res.err.status === GossipValidationStatus.Reject) {
                 chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
               }
               return;

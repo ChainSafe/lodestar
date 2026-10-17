@@ -95,10 +95,10 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
         0
       );
       if (scenario === "unexpected")
-        await expect(pending).resolves.toMatchObject({status: "ignore", code: "UNEXPECTED_ERROR"});
+        await expect(pending).resolves.toMatchObject({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
       else
         await expect(pending).resolves.toMatchObject({
-          status: scenario === "accept" ? "accept" : scenario === "reject" ? "reject" : "ignore",
+          err: scenario === "accept" ? null : {status: scenario === "reject" ? "reject" : "ignore"},
         });
       expect(engine.blockSerializedCache.get(root) !== undefined).toBe(
         ["accept", "unknown_parent", "observed_sibling"].includes(scenario)
@@ -133,8 +133,10 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
         new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID, slot: 1, root})
       );
     expect(await pending).toMatchObject({
-      status: valid ? "ignore" : "reject",
-      code: valid ? BlockErrorCode.PARENT_BLOCK_UNKNOWN : BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      err: {
+        status: valid ? "ignore" : "reject",
+        code: valid ? BlockErrorCode.PARENT_BLOCK_UNKNOWN : BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      },
     });
     expect(engine.seenPayloadEnvelopeInputCache.get(root) !== undefined).toBe(valid);
     expect(engine.hasObservedBlockRoot(1, 7, root)).toBe(valid);
@@ -162,10 +164,12 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       const result = await engine.validateGossipBlock(fromHex(root), bytes, ForkName.gloas, 0);
 
       expect(result).toMatchObject({
-        status: "reject",
-        code: scenario === "root_mismatch" ? "BLOCK_ROOT_MISMATCH" : "INVALID_BLOCK_SSZ",
+        err: {
+          status: "reject",
+          code: scenario === "root_mismatch" ? "BLOCK_ROOT_MISMATCH" : "INVALID_BLOCK_SSZ",
+        },
       });
-      expect(result).toHaveProperty("error", undefined);
+      expect(result).toHaveProperty("err.error", undefined);
       expect(structuredClone(result)).toEqual(result);
       expect(validate).not.toHaveBeenCalled();
       expect(engine.blockSerializedCache.get(root)).toBe(entry);
@@ -182,7 +186,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
 
     await expect(
       engine.validateGossipBlock(fromHex(root), ssz.gloas.SignedBeaconBlock.serialize(block), ForkName.gloas, 0)
-    ).resolves.toMatchObject({status: "ignore", code: "UNEXPECTED_ERROR"});
+    ).resolves.toMatchObject({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
     expect(engine.blockSerializedCache.get(root)).toBeUndefined();
     expect(engine.logger.error).toHaveBeenCalledWith(
       "Error validating gossip block",
@@ -204,7 +208,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
     );
     expect(
       (await engine.validateGossipBlock(fromHex(root), ssz.gloas.SignedBeaconBlock.serialize(block), ForkName.gloas))
-        .status
+        .err?.status
     ).toBe("reject");
     expect(engine.seenPayloadEnvelopeInputCache.get(root)).toBe(input);
     expect(input?.getPayloadEnvelope()).toBe(envelope);

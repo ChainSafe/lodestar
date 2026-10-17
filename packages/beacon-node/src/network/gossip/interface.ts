@@ -19,7 +19,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {GossipValidationVerdict} from "../../chain/beaconEngine/gossipValidationResult.js";
+import {GossipValidationResult} from "../../chain/beaconEngine/gossipValidationResult.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 
@@ -202,9 +202,11 @@ export type GossipHandlerParam = {
   seenTimestampSec: number;
 };
 
-export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam) => Promise<GossipValidationVerdict>;
+export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam) => Promise<GossipValidationResult<void>>;
 
-export type BatchGossipHandlerFn = (gossipHandlerParam: GossipHandlerParam[]) => Promise<GossipValidationVerdict[]>;
+export type BatchGossipHandlerFn = (
+  gossipHandlerParam: GossipHandlerParam[]
+) => Promise<GossipValidationResult<unknown>[]>;
 
 export type GossipHandlerParamGeneric<T extends GossipType> = {
   gossipData: GossipData;
@@ -219,7 +221,7 @@ export type GossipHandlers = {
 
 export type SequentialGossipHandler<K extends GossipType> = (
   gossipHandlerParam: GossipHandlerParamGeneric<K>
-) => Promise<GossipValidationVerdict>;
+) => Promise<GossipValidationResult<void>>;
 
 export type SequentialGossipHandlers = {
   [K in SequentialGossipType]: SequentialGossipHandler<K>;
@@ -231,7 +233,7 @@ export type BatchGossipHandlers = {
 
 export type BatchGossipHandler<K extends GossipType> = (
   gossipHandlerParams: GossipHandlerParamGeneric<K>[]
-) => Promise<GossipValidationVerdict[]>;
+) => Promise<GossipValidationResult<unknown>[]>;
 
 // biome-ignore lint/suspicious/noExplicitAny: Need the usage of `any` here to infer any type
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>

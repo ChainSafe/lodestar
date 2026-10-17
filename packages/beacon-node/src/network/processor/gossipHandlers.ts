@@ -32,8 +32,6 @@ import {LogLevel, Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {
   GossipValidationResult,
   GossipValidationStatus,
-  GossipValidationVerdict,
-  accept,
   runGossipValidation,
 } from "../../chain/beaconEngine/gossipValidationResult.js";
 import {
@@ -208,7 +206,7 @@ function getSequentialHandlers(
         fork,
         seenTimestampSec
       );
-      if (result.status === GossipValidationStatus.Reject) {
+      if (result.err?.status === GossipValidationStatus.Reject) {
         chain.persistInvalidSszValue(
           forkTypes.SignedBeaconBlock,
           signedBlock,
@@ -1499,11 +1497,10 @@ function getBatchHandlers(modules: ValidatorFnsModules, _options: GossipHandlerO
   return {
     [GossipType.beacon_attestation]: async (
       gossipHandlerParams: GossipHandlerParamGeneric<GossipType.beacon_attestation>[]
-    ): Promise<GossipValidationVerdict[]> => {
-      const results: GossipValidationVerdict[] = [];
+    ): Promise<GossipValidationResult<unknown>[]> => {
       const attestationCount = gossipHandlerParams.length;
       if (attestationCount === 0) {
-        return results;
+        return [];
       }
       // all attestations should have same attestation data as filtered by network processor
       const {fork} = gossipHandlerParams[0].topic.boundary;
@@ -1519,11 +1516,6 @@ function getBatchHandlers(modules: ValidatorFnsModules, _options: GossipHandlerO
         validationParams,
         gossipHandlerParams.map(({seenTimestampSec}) => seenTimestampSec)
       );
-      // verdicts computed synchronously and returned immediately
-      for (const validationResult of validationResults) {
-        results.push(validationResult.status === GossipValidationStatus.Accept ? accept(undefined) : validationResult);
-      }
-
       if (batchableBls) {
         metrics?.gossipAttestation.attestationBatchHistogram.observe(attestationCount);
       } else {
@@ -1533,8 +1525,8 @@ function getBatchHandlers(modules: ValidatorFnsModules, _options: GossipHandlerO
       // Handler - deferred to next event loop so the validation result propagates first.
       callInNextEventLoop(() => {
         for (const validationResult of validationResults) {
-          if (validationResult.status !== GossipValidationStatus.Accept) continue;
-          const {indexedAttestation, attestation, subnet} = validationResult.value;
+          if (validationResult.err !== null) continue;
+          const {indexedAttestation, attestation, subnet} = validationResult.result;
           try {
             if (isForkPostElectra(fork)) {
               chain.emitter.emit(
@@ -1557,7 +1549,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, _options: GossipHandlerO
         }
       });
 
-      return results;
+      return validationResults;
     },
   };
 }
@@ -1617,11 +1609,14 @@ function getCutoffTimeMs(
 
 /** TODO - beacon engine: replace transitional JS error reconstruction with code-based handling for the worker. */
 function unwrapGossipResult<T>(result: GossipValidationResult<T>): T {
-  if (result.status === GossipValidationStatus.Accept) return result.value;
+  if (result.err === null) return result.result;
   throw (
-    result.error ??
-    new GossipActionError(result.status === GossipValidationStatus.Reject ? GossipAction.REJECT : GossipAction.IGNORE, {
-      code: result.code,
-    })
+    result.err.error ??
+    new GossipActionError(
+      result.err.status === GossipValidationStatus.Reject ? GossipAction.REJECT : GossipAction.IGNORE,
+      {
+        code: result.err.code,
+      }
+    )
   );
 }

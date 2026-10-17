@@ -82,7 +82,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
     const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope");
     const elapsed = vi.spyOn(engine.clock, "secFromSlot").mockReturnValue(1.25);
     const outcome = await validateEnvelope();
-    expect(outcome).toEqual({status: "accept", value: undefined});
+    expect(outcome).toEqual({err: null, result: undefined});
     expect(observed).toHaveBeenCalledExactlyOnceWith(OpSource.gossip, 1.25, envelope);
     expect(elapsed).toHaveBeenCalledWith(1, 1);
     const input = engine.seenPayloadEnvelopeInputCache.get(root);
@@ -102,15 +102,19 @@ describe("BeaconEngineCore payload gossip validation", () => {
     const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope");
     envelope.message.builderIndex = 0;
     expect(await validateEnvelope()).toMatchObject({
-      status: "reject",
-      code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      err: {
+        status: "reject",
+        code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      },
     });
     expect(engine.bls.verifySignatureSets).not.toHaveBeenCalled();
     envelope.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
     vi.mocked(engine.bls.verifySignatureSets).mockResolvedValue(false);
     expect(await validateEnvelope()).toMatchObject({
-      status: "reject",
-      code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      err: {
+        status: "reject",
+        code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      },
     });
     expect(engine.seenPayloadEnvelopeInputCache.get(root)?.hasPayloadEnvelope()).toBe(false);
     expect(observed).not.toHaveBeenCalled();
@@ -119,11 +123,13 @@ describe("BeaconEngineCore payload gossip validation", () => {
   it("preserves FULL-only duplicate suppression even when validation is cached", async () => {
     const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope");
     await validateEnvelope();
-    expect((await validateEnvelope()).status).toBe("accept");
+    expect((await validateEnvelope()).err).toBeNull();
     chain.forkChoice.getBlockHex.mockReturnValue({...zeroProtoBlock, payloadStatus: PayloadStatus.FULL});
     expect(await validateEnvelope()).toMatchObject({
-      status: "ignore",
-      code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+      err: {
+        status: "ignore",
+        code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+      },
     });
     expect(engine.bls.verifySignatureSets).toHaveBeenCalledTimes(2);
     expect(observed).toHaveBeenCalledTimes(2);
@@ -137,7 +143,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
       envelope,
       1
     );
-    expect(result.status).toBe("accept");
+    expect(result.err).toBeNull();
     expect(engine.seenPayloadEnvelopeInputCache.get(root)?.getPayloadEnvelopeSource().source).toBe(
       PayloadEnvelopeInputSource.api
     );
@@ -156,7 +162,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
       source
     );
-    expect(result.status).toBe("accept");
+    expect(result.err).toBeNull();
     expect(get).toHaveBeenCalledExactlyOnceWith(envelope.message.beaconBlockRoot);
     expect(engine.seenPayloadEnvelopeInputCache.get(root)?.getPayloadEnvelopeSource()).toEqual(source);
     expect(observed).not.toHaveBeenCalled();
@@ -166,7 +172,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
     const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope").mockImplementation(() => {
       throw new Error("monitor failed");
     });
-    expect((await validateEnvelope()).status).toBe("accept");
+    expect((await validateEnvelope()).err).toBeNull();
     expect(observed).toHaveBeenCalledOnce();
     expect(chain.logger.debug).toHaveBeenCalledWith(
       "Error monitoring gossip execution payload envelope",
@@ -177,7 +183,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
 
   it("accepts envelopes and API observations when monitoring is disabled", async () => {
     engine.validatorMonitor = null;
-    expect((await validateEnvelope()).status).toBe("accept");
+    expect((await validateEnvelope()).err).toBeNull();
     await expect(
       BeaconEngineCore.prototype.registerApiExecutionPayloadEnvelope.call(engine, 1.25, envelope)
     ).resolves.toBeUndefined();
@@ -210,7 +216,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
     const bytes = ssz.gloas.DataColumnSidecar.serialize(column);
     const subnet = computeSubnetForDataColumnSidecar(config, column);
     const result = await BeaconEngineCore.prototype.validateGossipGloasDataColumnSidecar.call(engine, bytes, subnet);
-    expect(result).toEqual({status: "accept", value: undefined});
+    expect(result).toEqual({err: null, result: undefined});
   });
 
   it("ignores columns whose bid cannot be recovered", async () => {
@@ -222,6 +228,8 @@ describe("BeaconEngineCore payload gossip validation", () => {
       ssz.gloas.DataColumnSidecar.serialize(column),
       0
     );
-    expect(result).toMatchObject({status: "ignore", code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING});
+    expect(result).toMatchObject({
+      err: {status: "ignore", code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING},
+    });
   });
 });

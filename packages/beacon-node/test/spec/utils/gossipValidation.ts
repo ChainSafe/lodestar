@@ -336,9 +336,9 @@ function isDescendantAtFinalizedCheckpoint(
  * (as a GossipActionError keyed on status/code) so the surrounding throw-based test flow is preserved.
  */
 function assertAccepted(res: GossipValidationResult<unknown>): void {
-  if (res.status === GossipValidationStatus.Accept) return;
-  const action = res.status === GossipValidationStatus.Reject ? GossipAction.REJECT : GossipAction.IGNORE;
-  throw res.error ?? new GossipActionError(action, {code: res.code});
+  if (res.err === null) return;
+  const action = res.err.status === GossipValidationStatus.Reject ? GossipAction.REJECT : GossipAction.IGNORE;
+  throw res.err.error ?? new GossipActionError(action, {code: res.err.code});
 }
 
 function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {

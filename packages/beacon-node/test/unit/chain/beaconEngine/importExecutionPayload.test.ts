@@ -106,7 +106,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
             seenTimestampSec: 1,
           }
         )
-      ).toMatchObject({status: "accept"});
+      ).toMatchObject({err: null});
       expect(
         await BeaconEngineCore.prototype.importExecutionPayload.call(
           chain.beaconEngine,

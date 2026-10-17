@@ -1,4 +1,4 @@
-import {Result} from "../../util/wrapError.js";
+import {Result, wrapError} from "../../util/wrapError.js";
 import {GossipAction, GossipActionError} from "../errors/gossipValidation.js";
 
 /**
@@ -11,7 +11,7 @@ export enum GossipValidationStatus {
   Reject = "reject",
 }
 
-/** Shared failure arm (ignore/reject). The facade branches on `code`/`status` only — never on `error`. */
+/** Gossip failure metadata shared by engine results and network handlers. */
 export type GossipValidationFailure = {
   status: GossipValidationStatus.Ignore | GossipValidationStatus.Reject;
   /** LodestarError code — drives metrics + facade branching */
@@ -22,19 +22,10 @@ export type GossipValidationFailure = {
   error?: Error;
 };
 
-/** Value-bearing result — the engine seam + facade inner helpers (`validateBeaconBlock`, …) use this. */
-export type GossipValidationResult<T> = {status: GossipValidationStatus.Accept; value: T} | GossipValidationFailure;
-
-/**
- * Slim verdict — the handler → verdict-mapper boundary. No `value`: the mapper only needs `status`
- * (+ `code` for metrics, `error` for logs). Shares the failure arm with `GossipValidationResult`, so a
- * handler holding a `GossipValidationResult<T>` on its failure branch can `return` it as a verdict with no
- * conversion, and `accept(undefined)` is assignable to the verdict's accept arm.
- */
-export type GossipValidationVerdict = {status: GossipValidationStatus.Accept} | GossipValidationFailure;
+export type GossipValidationResult<T> = Result<T, GossipValidationFailure>;
 
 export function accept<T>(value: T): GossipValidationResult<T> {
-  return {status: GossipValidationStatus.Accept, value};
+  return {err: null, result: value};
 }
 
 export function ignore(
@@ -42,7 +33,7 @@ export function ignore(
   data?: Record<string, string | number>,
   error?: Error
 ): GossipValidationResult<never> {
-  return {status: GossipValidationStatus.Ignore, code, data, error};
+  return {err: {status: GossipValidationStatus.Ignore, code, data, error}};
 }
 
 export function reject(
@@ -50,7 +41,7 @@ export function reject(
   data?: Record<string, string | number>,
   error?: Error
 ): GossipValidationResult<never> {
-  return {status: GossipValidationStatus.Reject, code, data, error};
+  return {err: {status: GossipValidationStatus.Reject, code, data, error}};
 }
 
 function failureFromGossipActionError(e: GossipActionError<{code: string}>): GossipValidationFailure {
@@ -58,33 +49,23 @@ function failureFromGossipActionError(e: GossipActionError<{code: string}>): Gos
   return {status, code: e.type.code, data: e.type as unknown as Record<string, string | number>, error: e};
 }
 
-/**
- * JS adapter — wraps a throwing validator and converts a caught `GossipActionError` into a result;
- * rethrows anything else (truly unexpected). Called INSIDE each `BeaconEngine.validateGossip*`/`validateApi*`
- * method — the facade never calls it, and the native engine builds the result struct directly.
- */
+/** Converts gossip validation errors to results; unexpected failures still reject. */
 export async function runGossipValidation<T>(fn: () => Promise<T>): Promise<GossipValidationResult<T>> {
-  try {
-    return accept(await fn());
-  } catch (e) {
+  return wrapError(fn, (e) => {
     if (e instanceof GossipActionError) {
       return failureFromGossipActionError(e);
     }
     throw e;
-  }
+  });
 }
 
-/**
- * Batch adapter — the batch validator already returns `Result<T>[]` (caught internally, never throws out).
- * Convert each item to a `GossipValidationResult` so the batch is FFI-safe too (a `Result`'s `.err` is a
- * live JS Error, which a native engine cannot produce).
- */
+/** Converts per-item batch failures, mapping unexpected errors to Ignore. */
 export function fromResult<T>(r: Result<T>): GossipValidationResult<T> {
   if (r.err == null) {
     return accept(r.result);
   }
   if (r.err instanceof GossipActionError) {
-    return failureFromGossipActionError(r.err);
+    return {err: failureFromGossipActionError(r.err)};
   }
   return ignore("UNEXPECTED_ERROR", undefined, r.err);
 }

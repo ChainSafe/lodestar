@@ -6,7 +6,6 @@ import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, gloas, ssz} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
-import {GossipValidationStatus} from "../chain/beaconEngine/gossipValidationResult.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
@@ -1282,11 +1281,11 @@ export class BlockInputSync {
         source: PayloadEnvelopeInputSource.byRoot,
         seenTimestampSec: pendingPayload.timeAddedSec,
       });
-      if (validationResult.status !== GossipValidationStatus.Accept) {
+      if (validationResult.err !== null) {
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
           {slot: pendingPayload.envelope.message.payload.slotNumber, root: rootHex},
-          validationResult.error
+          validationResult.err.error
         );
 
         const pendingPayloadByRoot: PendingPayloadRootHex = {
@@ -1590,8 +1589,8 @@ export class BlockInputSync {
             seenTimestampSec: Date.now() / 1000,
             peerIdStr: peerId,
           });
-          if (res.status !== GossipValidationStatus.Accept) {
-            throw res.error ?? new Error(`Execution payload envelope validation failed: ${res.code}`);
+          if (res.err !== null) {
+            throw res.err.error ?? new Error(`Execution payload envelope validation failed: ${res.err.code}`);
           }
         }
 

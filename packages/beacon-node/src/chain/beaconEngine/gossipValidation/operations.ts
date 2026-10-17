@@ -7,13 +7,7 @@ import * as proposerPreferencesValidation from "../../validation/proposerPrefere
 import * as proposerSlashingValidation from "../../validation/proposerSlashing.js";
 import * as voluntaryExitValidation from "../../validation/voluntaryExit.js";
 import type {BeaconEngineCore} from "../beaconEngineCore.js";
-import {
-  GossipValidationResult,
-  GossipValidationStatus,
-  fromResult,
-  ignore,
-  runGossipValidation,
-} from "../gossipValidationResult.js";
+import {GossipValidationResult, fromResult, ignore, runGossipValidation} from "../gossipValidationResult.js";
 import {deserializeGossipMessage} from "./deserialize.js";
 
 /**
@@ -35,7 +29,7 @@ export async function validateGossipProposerPreferences(
       proposerPreferencesValidation.validateGossipProposerPreferences.call(this, signedProposerPreferences)
     );
     // Insert on Accept — the pool is engine-internal, so the facade (gossip handler / API) no longer adds.
-    if (res.status === GossipValidationStatus.Accept) {
+    if (res.err === null) {
       this.proposerPreferencesPool.add(signedProposerPreferences);
     }
     return res;
@@ -65,16 +59,16 @@ export async function validateGossipAttesterSlashing(
     const res = await runGossipValidation(() =>
       attesterSlashingValidation.validateGossipAttesterSlashing.call(this, attesterSlashing)
     );
-    if (res.status === GossipValidationStatus.Accept) {
+    if (res.err === null) {
       // Contain insert failures — a pool error must not flip the gossip verdict (matches prior handler).
       try {
-        this.opPool.insertAttesterSlashing(fork, attesterSlashing, res.value);
+        this.opPool.insertAttesterSlashing(fork, attesterSlashing, res.result);
         this.forkChoice.onAttesterSlashing(attesterSlashing);
       } catch (e) {
         this.logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
     }
-    return res.status === GossipValidationStatus.Accept ? {...res, value: undefined} : res;
+    return res.err === null ? {...res, result: undefined} : res;
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip attester slashing", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -114,14 +108,14 @@ export async function validateGossipProposerSlashing(
     const res = await runGossipValidation(() =>
       proposerSlashingValidation.validateGossipProposerSlashing.call(this, proposerSlashing)
     );
-    if (res.status === GossipValidationStatus.Accept) {
+    if (res.err === null) {
       try {
-        this.opPool.insertProposerSlashing(proposerSlashing, res.value);
+        this.opPool.insertProposerSlashing(proposerSlashing, res.result);
       } catch (e) {
         this.logger.error("Error adding proposerSlashing to pool", {}, e as Error);
       }
     }
-    return res.status === GossipValidationStatus.Accept ? {...res, value: undefined} : res;
+    return res.err === null ? {...res, result: undefined} : res;
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip proposer slashing", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -160,7 +154,7 @@ export async function validateGossipVoluntaryExit(
     const res = await runGossipValidation(() =>
       voluntaryExitValidation.validateGossipVoluntaryExit.call(this, voluntaryExit)
     );
-    if (res.status === GossipValidationStatus.Accept) {
+    if (res.err === null) {
       try {
         this.opPool.insertVoluntaryExit(voluntaryExit);
       } catch (e) {
@@ -212,7 +206,7 @@ export async function validateGossipBlsToExecutionChange(
     const res = await runGossipValidation(() =>
       blsToExecutionChangeValidation.validateGossipBlsToExecutionChange.call(this, blsToExecutionChange)
     );
-    if (res.status === GossipValidationStatus.Accept) {
+    if (res.err === null) {
       try {
         this.opPool.insertBlsToExecutionChange(blsToExecutionChange);
       } catch (e) {

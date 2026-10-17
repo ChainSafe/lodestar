@@ -78,9 +78,11 @@ describe("getGossipHandlers", () => {
       const getByBlock = vi.fn();
       const addPayloadInput = vi.fn();
       const validateEngineBlock = vi.fn().mockResolvedValue({
-        status: GossipValidationStatus.Ignore,
-        code: BlockErrorCode.ALREADY_KNOWN,
-        error: new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex}),
+        err: {
+          status: GossipValidationStatus.Ignore,
+          code: BlockErrorCode.ALREADY_KNOWN,
+          error: new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex}),
+        },
       });
       const blockSerializedCache = new BlockSerializedCache(config);
       const chain = {
@@ -109,7 +111,7 @@ describe("getGossipHandlers", () => {
         topic: {boundary: {fork, epoch: 0}, type: GossipType.beacon_block},
       });
 
-      expect(result).toMatchObject({status: GossipValidationStatus.Ignore, code: BlockErrorCode.ALREADY_KNOWN});
+      expect(result).toMatchObject({err: {status: GossipValidationStatus.Ignore, code: BlockErrorCode.ALREADY_KNOWN}});
       expect(hasBlockHex).toHaveBeenCalledExactlyOnceWith(blockRootHex);
       expect(blockSerializedCache.get(blockRootHex)).toBeUndefined();
       expect(getByBlock).not.toHaveBeenCalled();
@@ -146,7 +148,7 @@ describe("getGossipHandlers", () => {
         },
         persistInvalidSszValue,
         beaconEngine: {
-          validateGossipBlock: vi.fn().mockResolvedValue({status, code}),
+          validateGossipBlock: vi.fn().mockResolvedValue({err: {status, code}}),
           isBlockProposerEquivocating: () => false,
         },
       } as unknown as IBeaconChain;
@@ -167,7 +169,7 @@ describe("getGossipHandlers", () => {
           seenTimestampSec: 0,
           topic: {boundary: {fork: ForkName.deneb, epoch: 0}, type: GossipType.beacon_block},
         })
-      ).resolves.toMatchObject({status, code});
+      ).resolves.toMatchObject({err: {status, code}});
 
       if (status === GossipValidationStatus.Reject) {
         expect(persistInvalidSszValue).toHaveBeenCalledExactlyOnceWith(
@@ -220,12 +222,14 @@ describe("getGossipHandlers", () => {
         seenPayloadEnvelopeInputCache: {add: addPayloadInput},
         beaconEngine: {
           validateGossipBlock: vi.fn().mockResolvedValue({
-            status: GossipValidationStatus.Ignore,
-            code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
-            error: new BlockGossipError(GossipAction.IGNORE, {
+            err: {
+              status: GossipValidationStatus.Ignore,
               code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
-              parentRoot: toRootHex(signedBlock.message.parentRoot),
-            }),
+              error: new BlockGossipError(GossipAction.IGNORE, {
+                code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
+                parentRoot: toRootHex(signedBlock.message.parentRoot),
+              }),
+            },
           }),
           isBlockProposerEquivocating: () => false,
         },
@@ -249,8 +253,10 @@ describe("getGossipHandlers", () => {
         });
 
         expect(result).toMatchObject({
-          status: GossipValidationStatus.Ignore,
-          code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
+          err: {
+            status: GossipValidationStatus.Ignore,
+            code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
+          },
         });
         const blockInput = seenBlockInputCache.get(blockRootHex);
         expect(blockInput).toBeDefined();
@@ -384,7 +390,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
     emitter: new ChainEventEmitter(),
     logger,
     beaconEngine: {
-      validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue({status: "accept", value: undefined}),
+      validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue({err: null, result: undefined}),
     },
     processExecutionPayload: vi.fn().mockRejectedValue(new PayloadError(errorType)),
     seenPayloadEnvelopeInputCache: {
@@ -624,7 +630,7 @@ async function runBeaconBlockRepeatProposal(
         type: GossipType.beacon_block,
       },
     });
-    threw = result.status !== GossipValidationStatus.Accept;
+    threw = result.err !== null;
   } catch {
     threw = true;
   }

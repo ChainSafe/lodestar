@@ -1,7 +1,7 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {GossipValidationStatus, GossipValidationVerdict} from "../../chain/beaconEngine/gossipValidationResult.js";
+import {GossipValidationResult, GossipValidationStatus} from "../../chain/beaconEngine/gossipValidationResult.js";
 import {
   AttestationErrorCode,
   AttesterSlashingErrorCode,
@@ -147,29 +147,34 @@ export function getGossipValidatorBatchFn(
       );
 
       return results.map((res, i): TopicValidatorResult => {
-        if (res.status === GossipValidationStatus.Accept) {
+        if (res.err === null) {
           return TopicValidatorResult.Accept;
         }
 
         const {clientAgent, clientVersion, propagationSource} = messageInfos[i];
+        const failure = res.err;
 
-        switch (res.status) {
+        switch (failure.status) {
           case GossipValidationStatus.Ignore:
             metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
             // only beacon_attestation topic is validated in batch
-            metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({reason: res.code as AttestationErrorCode});
+            metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({
+              reason: failure.code as AttestationErrorCode,
+            });
             return TopicValidatorResult.Ignore;
           case GossipValidationStatus.Reject: {
             metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
             // only beacon_attestation topic is validated in batch
-            metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: res.code as AttestationErrorCode});
-            const peerAction = rejectPeerAction(type, res.code);
-            core.reportPeer(propagationSource, peerAction, res.code);
+            metrics?.networkProcessor.gossipAttestationRejectByReason.inc({
+              reason: failure.code as AttestationErrorCode,
+            });
+            const peerAction = rejectPeerAction(type, failure.code);
+            core.reportPeer(propagationSource, peerAction, failure.code);
             if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
             logger.debug(
               `Gossip validation ${type} rejected`,
               {peer: propagationSource, clientAgent, clientVersion, peerAction},
-              res.error
+              failure.error
             );
             return TopicValidatorResult.Reject;
           }
@@ -220,7 +225,7 @@ export function getGossipValidatorFn(
   }) {
     const type = topic.type;
 
-    let result: GossipValidationVerdict;
+    let result: GossipValidationResult<void>;
     try {
       result = await (gossipHandlers[type] as GossipHandlerFn)({
         gossipData: {serializedData: msg.data, msgSlot},
@@ -239,27 +244,29 @@ export function getGossipValidatorFn(
       return TopicValidatorResult.Ignore;
     }
 
-    switch (result.status) {
-      case GossipValidationStatus.Accept:
-        metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});
-        return TopicValidatorResult.Accept;
+    if (result.err === null) {
+      metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});
+      return TopicValidatorResult.Accept;
+    }
 
+    const failure = result.err;
+    switch (failure.status) {
       case GossipValidationStatus.Ignore:
         // Note: LodestarError.code are bounded pre-declared error messages, not from arbitrary error.message
-        metrics?.networkProcessor.gossipValidationError.inc({topic: type, error: result.code});
+        metrics?.networkProcessor.gossipValidationError.inc({topic: type, error: failure.code});
         metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
         return TopicValidatorResult.Ignore;
 
       case GossipValidationStatus.Reject: {
-        metrics?.networkProcessor.gossipValidationError.inc({topic: type, error: result.code});
+        metrics?.networkProcessor.gossipValidationError.inc({topic: type, error: failure.code});
         metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
-        const peerAction = rejectPeerAction(type, result.code);
-        core.reportPeer(propagationSource, peerAction, result.code);
+        const peerAction = rejectPeerAction(type, failure.code);
+        core.reportPeer(propagationSource, peerAction, failure.code);
         if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
         logger.debug(
           `Gossip validation ${type} rejected`,
           {peer: propagationSource, clientAgent, clientVersion, peerAction},
-          result.error
+          failure.error
         );
         return TopicValidatorResult.Reject;
       }

@@ -3,7 +3,6 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {GossipValidationStatus} from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -112,7 +111,9 @@ describe("BeaconEngineCore gossip monitoring", () => {
         ForkName.phase0,
         12.5
       );
-      expect(result.status).toBe(scenario === "accept" ? "accept" : scenario === "reject" ? "reject" : "ignore");
+      expect(result.err?.status ?? "accept").toBe(
+        scenario === "accept" ? "accept" : scenario === "reject" ? "reject" : "ignore"
+      );
       expect(observed).toHaveBeenCalledTimes(scenario === "sibling" ? 1 : 0);
       await vi.runAllTimersAsync();
       expect(observed).toHaveBeenCalledTimes(scenario === "accept" || scenario === "sibling" ? 1 : 0);
@@ -135,7 +136,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
       ForkName.phase0
     );
     await vi.runAllTimersAsync();
-    expect(result.status).toBe(GossipValidationStatus.Accept);
+    expect(result.err).toBeNull();
     expect(observed).not.toHaveBeenCalled();
   });
 
@@ -149,7 +150,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
       1
     );
 
-    expect(result.status).toBe(GossipValidationStatus.Accept);
+    expect(result.err).toBeNull();
     expect(observed).not.toHaveBeenCalled();
     await engine.close();
     await vi.runAllTimersAsync();
@@ -168,7 +169,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
       1
     );
     await vi.runAllTimersAsync();
-    expect(result.status).toBe(GossipValidationStatus.Accept);
+    expect(result.err).toBeNull();
     expect(engine.logger.debug).toHaveBeenCalledWith(
       "Error monitoring gossip block",
       expect.anything(),
@@ -208,7 +209,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
       subnet: 0,
     }));
     const {results} = await engine.validateGossipAttestationsSameAttData(ForkName.electra, inputs, [1, 2, 3, 4]);
-    expect(results.map(({status}) => status)).toEqual(["accept", "ignore", "reject", "accept"]);
+    expect(results.map(({err}) => err?.status ?? "accept")).toEqual(["accept", "ignore", "reject", "accept"]);
     expect(observed).not.toHaveBeenCalled();
     await vi.runAllTimersAsync();
     expect(observed).toHaveBeenCalledTimes(2);
@@ -236,10 +237,8 @@ describe("BeaconEngineCore gossip monitoring", () => {
     const contributionBytes = ssz.altair.SignedContributionAndProof.serialize(contribution);
     engine.serializedCache?.set(aggregate, aggregateBytes);
     engine.serializedCache?.set(contribution, contributionBytes);
-    expect((await engine.validateGossipAggregateAndProof(aggregateBytes, ForkName.electra, 12.5)).status).toBe(
-      "accept"
-    );
-    expect((await engine.validateSyncCommitteeGossipContributionAndProof(contributionBytes)).status).toBe("accept");
+    expect((await engine.validateGossipAggregateAndProof(aggregateBytes, ForkName.electra, 12.5)).err).toBeNull();
+    expect((await engine.validateSyncCommitteeGossipContributionAndProof(contributionBytes)).err).toBeNull();
     expect(observedAggregate).not.toHaveBeenCalled();
     expect(observedContribution).not.toHaveBeenCalled();
     await vi.runAllTimersAsync();
@@ -263,7 +262,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
     );
     expect(observed).not.toHaveBeenCalled();
     await vi.runAllTimersAsync();
-    expect(result.status).toBe("accept");
+    expect(result.err).toBeNull();
     expect(observed).toHaveBeenCalledExactlyOnceWith(OpSource.gossip, 7, bid.message);
   });
 });

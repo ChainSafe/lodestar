@@ -103,7 +103,7 @@ describe("api - beacon - publishBlockV2", () => {
           })
         );
         Object.defineProperty(modules.chain.beaconEngine, "validateGossipBlock", {
-          value: vi.fn().mockResolvedValue({status, code}),
+          value: vi.fn().mockResolvedValue({err: {status, code}}),
           configurable: true,
         });
 

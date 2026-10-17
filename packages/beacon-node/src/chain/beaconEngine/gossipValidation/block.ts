@@ -76,11 +76,11 @@ export async function validateGossipBlock(
       }
     });
     const retained =
-      result.status === GossipValidationStatus.Accept ||
-      (result.status === GossipValidationStatus.Ignore &&
-        (result.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
-          result.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN ||
-          (result.code === BlockErrorCode.REPEAT_PROPOSAL &&
+      result.err === null ||
+      (result.err.status === GossipValidationStatus.Ignore &&
+        (result.err.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+          result.err.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN ||
+          (result.err.code === BlockErrorCode.REPEAT_PROPOSAL &&
             this.hasObservedBlockRoot(block.message.slot, block.message.proposerIndex, blockRootHex) &&
             this.forkChoice.getBlockHexDefaultStatus(toRootHex(block.message.parentRoot)) !== null)));
     if (retained) {
@@ -112,11 +112,11 @@ export async function validateGossipBlock(
       // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#handleValidBeaconBlock.
       // [beacon-engine] deviation: accepted-block monitoring has its own deferred callback, preceding
       // the facade import handler. Observed siblings are still monitored before returning IGNORE.
-      if (result.status === GossipValidationStatus.Accept) {
+      if (result.err === null) {
         callInNextEventLoop(registerBlock);
       } else if (
-        result.status === GossipValidationStatus.Ignore &&
-        result.code === BlockErrorCode.REPEAT_PROPOSAL &&
+        result.err.status === GossipValidationStatus.Ignore &&
+        result.err.code === BlockErrorCode.REPEAT_PROPOSAL &&
         this.hasObservedBlockRoot(slot, proposerIndex, blockRoot) &&
         retained
       ) {

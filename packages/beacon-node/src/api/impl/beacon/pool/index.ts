@@ -86,22 +86,22 @@ export function getBeaconPoolApi({
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const res = await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
-            if (res.status !== GossipValidationStatus.Accept) {
-              if (res.code === AttestationErrorCode.ATTESTATION_ALREADY_KNOWN) {
+            if (res.err !== null) {
+              if (res.err.code === AttestationErrorCode.ATTESTATION_ALREADY_KNOWN) {
                 // Attestations might already be published by another node as part of a fallback setup or DVT cluster
                 // and can reach our node by gossip before the api. Should not result in a 500 response.
                 logger.debug("Ignoring known attestation", logCtx);
                 return;
               }
-              failures.push({index: i, message: res.error?.message ?? res.code});
-              logger.verbose(`Error on submitPoolAttestations [${i}]`, logCtx, res.error);
-              if (res.status === GossipValidationStatus.Reject) {
+              failures.push({index: i, message: res.err.error?.message ?? res.err.code});
+              logger.verbose(`Error on submitPoolAttestations [${i}]`, logCtx, res.err.error);
+              if (res.err.status === GossipValidationStatus.Reject) {
                 chain.persistInvalidSszValue(sszTypesFor(fork).SingleAttestation, attestation, "api_reject");
               }
               return;
             }
             const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
-              res.value;
+              res.result;
 
             try {
               // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
@@ -248,14 +248,14 @@ export function getBeaconPoolApi({
               chain.beaconEngine.validateApiPayloadAttestationMessage(messageBytes[i], payloadAttestationMessage);
             const {slot, beaconBlockRoot} = payloadAttestationMessage.data;
             const res = await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
-            if (res.status !== GossipValidationStatus.Accept) {
-              if (res.code === PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN) {
+            if (res.err !== null) {
+              if (res.err.code === PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN) {
                 logger.debug("Ignoring known payload attestation message", logCtx);
                 return;
               }
-              failures.push({index: i, message: res.error?.message ?? res.code});
-              logger.verbose(`Error on submitPayloadAttestationMessages [${i}]`, logCtx, res.error);
-              if (res.status === GossipValidationStatus.Reject) {
+              failures.push({index: i, message: res.err.error?.message ?? res.err.code});
+              logger.verbose(`Error on submitPayloadAttestationMessages [${i}]`, logCtx, res.err.error);
+              if (res.err.status === GossipValidationStatus.Reject) {
                 chain.persistInvalidSszValue(
                   ssz.gloas.PayloadAttestationMessage,
                   payloadAttestationMessage,
@@ -308,14 +308,14 @@ export function getBeaconPoolApi({
             // inserts into its (internal) pool, and returns the subnets to broadcast to (empty if this
             // validator isn't in the sync committee).
             const res = await chain.beaconEngine.validateApiSyncCommittee(signatureBytes[i], signature);
-            if (res.status !== GossipValidationStatus.Accept) {
-              failures.push({index: i, message: res.error?.message ?? res.code});
+            if (res.err !== null) {
+              failures.push({index: i, message: res.err.error?.message ?? res.err.code});
               logger.verbose(
                 `Error on submitPoolSyncCommitteeSignatures [${i}]`,
                 {slot: signature.slot, validatorIndex: signature.validatorIndex},
-                res.error
+                res.err.error
               );
-              if (res.status === GossipValidationStatus.Reject) {
+              if (res.err.status === GossipValidationStatus.Reject) {
                 chain.persistInvalidSszValue(ssz.altair.SyncCommitteeMessage, signature, "api_reject");
               }
               return;
@@ -323,7 +323,7 @@ export function getBeaconPoolApi({
 
             // TODO: Broadcast at once to all topics
             await Promise.all(
-              res.value.subnets.map(async (subnet) => network.publishSyncCommitteeSignature(signature, subnet))
+              res.result.subnets.map(async (subnet) => network.publishSyncCommitteeSignature(signature, subnet))
             );
           } catch (e) {
             // TODO: gossipsub should allow publishing same message to different topics

@@ -70,10 +70,7 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
     });
     const {results} = await processing;
 
-    expect(results.map((result) => result.status)).toEqual([
-      GossipValidationStatus.Accept,
-      GossipValidationStatus.Accept,
-    ]);
+    expect(results.map((result) => result.err)).toEqual([null, null]);
     expect(engine.attestationPool.add).toHaveBeenCalledExactlyOnceWith(
       aggregator.committeeIndex,
       aggregator.attestation,
@@ -114,7 +111,7 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
       aggregator.committeeSize
     );
     expect(engine.forkChoice.onAttestation).toHaveBeenCalledTimes(2);
-    expect(results[2].status).toBe(GossipValidationStatus.Reject);
+    expect(results[2].err?.status).toBe(GossipValidationStatus.Reject);
   });
 });
 

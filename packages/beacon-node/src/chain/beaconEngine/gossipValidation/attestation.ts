@@ -6,13 +6,7 @@ import * as aggregateAndProofValidation from "../../validation/aggregateAndProof
 import * as attestationValidation from "../../validation/attestation.js";
 import type {AggregatorTracker} from "../aggregatorTracker.js";
 import type {BeaconEngineCore} from "../beaconEngineCore.js";
-import {
-  GossipValidationResult,
-  GossipValidationStatus,
-  fromResult,
-  ignore,
-  runGossipValidation,
-} from "../gossipValidationResult.js";
+import {GossipValidationResult, fromResult, ignore, runGossipValidation} from "../gossipValidationResult.js";
 import {deserializeGossipMessage} from "./deserialize.js";
 
 /**
@@ -42,10 +36,10 @@ export async function validateGossipAttestationsSameAttData(
     // Consult current duties after validation. [beacon-engine] deviation: pool/fork-choice writes
     // still precede the returned verdict instead of running in the deferred network handler.
     for (const res of mapped) {
-      if (res.status !== GossipValidationStatus.Accept) {
+      if (res.err !== null) {
         continue;
       }
-      const value = res.value;
+      const value = res.result;
       if (aggregatorTracker.shouldAggregate(value.subnet, value.indexedAttestation.data.slot)) {
         try {
           const insertOutcome = this.attestationPool.add(
@@ -77,16 +71,16 @@ export async function validateGossipAttestationsSameAttData(
       callInNextEventLoop(() => {
         if (isClosed()) return;
         for (const [i, res] of mapped.entries()) {
-          if (res.status !== GossipValidationStatus.Accept) continue;
+          if (res.err !== null) continue;
           try {
             this.validatorMonitor?.registerGossipUnaggregatedAttestation(
               seenTimestampSecs[i],
-              res.value.indexedAttestation
+              res.result.indexedAttestation
             );
           } catch (e) {
             this.logger.debug(
               "Error monitoring gossip attestation",
-              {slot: res.value.indexedAttestation.data.slot},
+              {slot: res.result.indexedAttestation.data.slot},
               e as Error
             );
           }
