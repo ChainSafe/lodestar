@@ -11,7 +11,6 @@ import {IChainOptions} from "../../src/chain/options.js";
 import {DbCPStateDatastore} from "../../src/chain/stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "../../src/chain/stateCache/datastore/file.js";
 import {ValidatorMonitorOpts} from "../../src/chain/validatorMonitor.js";
-import {BuilderApiClientOpts} from "../../src/execution/builder/apiClient.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/interface.js";
 import {Clock, IClock} from "../../src/util/clock.js";
 import {CustodyConfig} from "../../src/util/dataColumns.js";
@@ -37,7 +36,6 @@ export type TestBeaconEngineModules = Omit<
   clock?: IClock;
   anchorStateBytes: Uint8Array;
   isAnchorStateFinalized: boolean;
-  builderApiClientOpts?: BuilderApiClientOpts;
 };
 
 export function createTestBeaconEngine(

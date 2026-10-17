@@ -294,6 +294,9 @@ export interface IBeaconEngineCore {
   produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse>;
   produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response>;
 
+  /** Register a URL already authenticated by the facade, so the engine can warm its local connection. */
+  registerAuthenticatedBuilder(url: string): Promise<void>;
+
   // Advance preparation for the next slot: recompute head, regen the prepare-state, predict a
   // proposer-boost-reorg, precompute the epoch transition and prepare the EL/builder.
   // Returns requested payload attributes and an optional parent for facade-owned DA pruning.

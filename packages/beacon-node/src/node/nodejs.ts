@@ -235,6 +235,10 @@ export class BeaconNode {
     const executionBuilder = opts.executionBuilder.enabled
       ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
       : undefined;
+    const builderApiClientOpts = {
+      timeout: opts.executionBuilder.timeout,
+      userAgent: opts.executionBuilder.userAgent,
+    };
     const serializedCache = new SerializedCache({cacheDeserialized: !opts.chain.beaconEngineWorker});
     const blockSerializedCache = new BlockSerializedCache(config, {
       owner: opts.chain.beaconEngineWorker ? "chain" : "shared",
@@ -261,10 +265,7 @@ export class BeaconNode {
       cpStateDatastore,
       executionEngine,
       executionBuilder,
-      builderApiClientOpts: {
-        timeout: opts.executionBuilder.timeout,
-        userAgent: opts.executionBuilder.userAgent,
-      },
+      builderApiClientOpts,
     });
     const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter, clock});
     const {earliestAvailableSlot} = await executeStateInitialization(
@@ -309,10 +310,10 @@ export class BeaconNode {
       custodyConfig,
       anchor,
       earliestAvailableSlot,
-      // TODO - beacon engine: BeaconChain and BeaconEngine need separate BuilderApiClient instances,
-      // using their own Metrics and BeaconEngineMetrics respectively.
-      // Preserve authenticated builder registration on the facade: submitSignedBeaconBlock() uses its local client cache.
-      builderApiClient: beaconEngineCore.builderApiClient,
+      // Share the engine client and its metrics in-process. Worker mode needs a facade-local client,
+      // with its own HTTP state, BLS verifier and metrics; only authenticated URL registrations cross owners.
+      builderApiClient: opts.chain.beaconEngineWorker ? undefined : beaconEngineCore.builderApiClient,
+      builderApiClientOpts,
     });
 
     // Load persisted data from disk to in-memory caches

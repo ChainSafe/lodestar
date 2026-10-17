@@ -2175,39 +2175,6 @@ function createEngineLodestarMetrics(register: RegistryMetricCreator) {
         help: "Total number of stale light client updates that were not emitted",
       }),
     },
-    builderApi: {
-      statusChecks: register.counter<{status: "success" | "error"}>({
-        name: "lodestar_builder_api_status_checks_total",
-        help: "Total count of status checks sent to external builders ahead of a proposal",
-        labelNames: ["status"],
-      }),
-      bidRequests: register.counter({
-        name: "lodestar_builder_api_bid_requests_total",
-        help: "Total count of execution payload bid requests sent to external builders",
-      }),
-      bidRequestErrors: register.counter({
-        name: "lodestar_builder_api_bid_request_errors_total",
-        help: "Total count of failed execution payload bid requests to external builders",
-      }),
-      bidsReceived: register.counter({
-        name: "lodestar_builder_api_bids_received_total",
-        help: "Total count of execution payload bids received from external builders",
-      }),
-      bidsDiscarded: register.counter({
-        name: "lodestar_builder_api_bids_discarded_total",
-        help: "Total count of execution payload bids from external builders discarded due to failed validation",
-      }),
-      blockSubmissions: register.counter<{status: "success" | "error"}>({
-        name: "lodestar_builder_api_block_submissions_total",
-        help: "Total count of signed beacon blocks submitted to external builders",
-        labelNames: ["status"],
-      }),
-      preferencesForwarded: register.counter<{status: "success" | "error"}>({
-        name: "lodestar_builder_api_preferences_forwarded_total",
-        help: "Total count of builder preferences forwarded to external builders",
-        labelNames: ["status"],
-      }),
-    },
     pruneHistory: {
       pruneCount: register.gauge({
         name: "lodestar_prune_history_prune_count_total",
@@ -2291,6 +2258,39 @@ function createSharedLodestarMetrics(register: RegistryMetricCreator) {
         name: "lodestar_precompute_next_epoch_transition_result_total",
         labelNames: ["result"],
         help: "Total number of precomputeNextEpochTransition runs by result",
+      }),
+    },
+    builderApi: {
+      statusChecks: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_status_checks_total",
+        help: "Total count of status checks sent to external builders ahead of a proposal",
+        labelNames: ["status"],
+      }),
+      bidRequests: register.counter({
+        name: "lodestar_builder_api_bid_requests_total",
+        help: "Total count of execution payload bid requests sent to external builders",
+      }),
+      bidRequestErrors: register.counter({
+        name: "lodestar_builder_api_bid_request_errors_total",
+        help: "Total count of failed execution payload bid requests to external builders",
+      }),
+      bidsReceived: register.counter({
+        name: "lodestar_builder_api_bids_received_total",
+        help: "Total count of execution payload bids received from external builders",
+      }),
+      bidsDiscarded: register.counter({
+        name: "lodestar_builder_api_bids_discarded_total",
+        help: "Total count of execution payload bids from external builders discarded due to failed validation",
+      }),
+      blockSubmissions: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_block_submissions_total",
+        help: "Total count of signed beacon blocks submitted to external builders",
+        labelNames: ["status"],
+      }),
+      preferencesForwarded: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_builder_api_preferences_forwarded_total",
+        help: "Total count of builder preferences forwarded to external builders",
+        labelNames: ["status"],
       }),
     },
     builderHttpClient: {

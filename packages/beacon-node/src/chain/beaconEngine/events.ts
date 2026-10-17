@@ -7,6 +7,7 @@ import type {SerializedLightClientData} from "./interface.js";
 
 export enum BeaconEngineEvent {
   fatalError = "fatalError",
+  builderRegistered = "builderRegistered",
   executionPayloadImported = "executionPayloadImported",
   chainViewUpdated = "chainViewUpdated",
   earliestAvailableSlotUpdated = "earliestAvailableSlotUpdated",
@@ -56,6 +57,7 @@ export type BeaconEngineEventData = {
   [BeaconEngineEvent.headUpdated]: HeadUpdate;
   [BeaconEngineEvent.earliestAvailableSlotUpdated]: Slot;
   [BeaconEngineEvent.fatalError]: Error;
+  [BeaconEngineEvent.builderRegistered]: string;
   [BeaconEngineEvent.executionPayloadImported]: ExecutionPayloadImported;
   [BeaconEngineEvent.chainViewUpdated]: ChainViewUpdate;
   [BeaconEngineEvent.chainReorg]: ChainReorg;

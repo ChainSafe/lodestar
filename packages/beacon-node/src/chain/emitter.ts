@@ -20,6 +20,7 @@ export enum ChainEvent {
   chainViewUpdated = "chainViewUpdated",
   earliestAvailableSlotUpdated = "earliestAvailableSlotUpdated",
   fatalError = "fatalError",
+  builderRegistered = "builderRegistered",
   /**
    * This event signals that the fork choice store has been updated.
    *
@@ -107,6 +108,7 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.chainViewUpdated]: (update: ChainViewUpdate) => void;
   [ChainEvent.earliestAvailableSlotUpdated]: (slot: Slot) => void;
   [ChainEvent.fatalError]: (error: Error) => void;
+  [ChainEvent.builderRegistered]: (url: string) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;

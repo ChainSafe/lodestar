@@ -33,7 +33,7 @@ export async function initializeTestChain(opts: IChainOptions, modules: TestChai
       ...dependencies,
       anchor,
       earliestAvailableSlot,
-      builderApiClient: dependencies.beaconEngineCore.builderApiClient,
+      builderApiClient: opts.beaconEngineWorker ? undefined : dependencies.beaconEngineCore.builderApiClient,
     };
   } catch (error) {
     dependencies.abortController.abort();

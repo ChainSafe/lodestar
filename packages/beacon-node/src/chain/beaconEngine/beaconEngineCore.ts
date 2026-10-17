@@ -682,14 +682,16 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       logger: this.logger,
       metrics: this.metrics,
     });
-    // TODO - beacon engine (codex_beacon_engine_worker.md Task 10): replace shared JS services at the worker boundary.
     this.builderApiClient = new BuilderApiClient(
       modules.builderApiClientOpts ?? {},
       this.config,
       this.clock,
       this.bls,
       this.metrics,
-      this.logger
+      this.logger,
+      (url) => {
+        this.emitter.emit(BeaconEngineEvent.builderRegistered, url);
+      }
     );
   }
 
@@ -950,6 +952,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         payload: {message: e instanceof Error ? e.message : String(e)},
       };
     }
+  }
+
+  async registerAuthenticatedBuilder(url: string): Promise<void> {
+    this.builderApiClient.registerAuthenticatedBuilder(url);
   }
 
   /** Runs inside BeaconEngineCore. Single Gloas V4 production entry and plain-data error boundary. */

@@ -97,6 +97,7 @@ export class BeaconEngine implements IBeaconEngine {
     this.core.emitter.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
     this.core.emitter.on(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.core.emitter.on(BeaconEngineEvent.fatalError, this.onFatalError);
+    this.core.emitter.on(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
     this.core.emitter.on(BeaconEngineEvent.headUpdated, this.onHeadUpdated);
     this.core.emitter.on(BeaconEngineEvent.chainReorg, this.onChainReorg);
     this.core.emitter.on(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
@@ -113,6 +114,7 @@ export class BeaconEngine implements IBeaconEngine {
       this.core.emitter.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
       this.core.emitter.off(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
       this.core.emitter.off(BeaconEngineEvent.fatalError, this.onFatalError);
+      this.core.emitter.off(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
       this.core.emitter.off(BeaconEngineEvent.headUpdated, this.onHeadUpdated);
       this.core.emitter.off(BeaconEngineEvent.chainReorg, this.onChainReorg);
       this.core.emitter.off(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
@@ -129,6 +131,11 @@ export class BeaconEngine implements IBeaconEngine {
 
   private readonly onEarliestAvailableSlotUpdated = (slot: Slot): void => {
     this.emitter.emit(ChainEvent.earliestAvailableSlotUpdated, slot);
+  };
+
+  private readonly onBuilderRegistered = (url: string): void => {
+    // Worker transport must deliver registration before resolving production, so publication can use the URL.
+    this.emitter.emit(ChainEvent.builderRegistered, url);
   };
 
   private readonly onFatalError = (error: Error): void => {
@@ -324,6 +331,10 @@ export class BeaconEngine implements IBeaconEngine {
 
   produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response> {
     return this.core.produceBlockV4(request);
+  }
+
+  registerAuthenticatedBuilder(url: string): Promise<void> {
+    return this.core.registerAuthenticatedBuilder(url);
   }
 
   prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {

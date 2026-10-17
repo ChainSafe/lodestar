@@ -2,6 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
+import {getClient} from "@lodestar/api/builder";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -29,6 +30,15 @@ import {ClockStopped} from "../../../mocks/clock.js";
 import {TestChainModules, createBeaconChain, initializeTestChain} from "../../../utils/chain.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 import {createTestBeaconEngine, getBeaconEngineCore} from "../../../utils/engine.js";
+
+vi.mock("@lodestar/api/builder", () => ({
+  getClient: vi.fn(() => ({
+    submitBuilderPreferences: vi.fn().mockResolvedValue({assertOk: () => {}}),
+    getExecutionPayloadBid: vi.fn().mockResolvedValue({value: () => undefined}),
+    submitSignedBeaconBlock: vi.fn().mockResolvedValue({assertOk: () => {}}),
+    status: vi.fn().mockResolvedValue({assertOk: () => {}}),
+  })),
+}));
 
 describe("bytes-based engine startup", () => {
   const config = createChainForkConfig(chainConfig);
@@ -123,6 +133,75 @@ describe("bytes-based engine startup", () => {
     expect(validateExit.mock.calls[0][0] === exit).toBe(!beaconEngineWorker);
     expect(chain.serializedCache.getDeserialized(exitBytes)).toBe(beaconEngineWorker ? undefined : exit);
   });
+
+  it.each([false, true])(
+    "wires builder clients and registrations with beaconEngineWorker=%s",
+    async (beaconEngineWorker) => {
+      const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+      modules.metrics = metrics;
+      modules.builderApiClientOpts = {timeout: 1234, userAgent: "test-builder-client"};
+      chain = await createBeaconChain({...opts, beaconEngineWorker}, modules);
+      const core = getBeaconEngineCore(chain.beaconEngine);
+      const engineBls = vi.spyOn(core.bls, "verifySignatureSets").mockResolvedValue(true);
+      const chainBls = vi.spyOn(chain.bls, "verifySignatureSets").mockResolvedValue(true);
+      expect(chain.builderApiClient === core.builderApiClient).toBe(!beaconEngineWorker);
+
+      const preferencesUrl = "https://preferences.builder.example.com";
+      const bidUrl = "https://bid.builder.example.com";
+      const request = ssz.gloas.BuilderPreferencesRequest.defaultValue();
+      request.auth.message.slot = 1;
+      request.auth.message.data = new Uint8Array([1]);
+      await chain.builderApiClient.submitBuilderPreferences(preferencesUrl, new Uint8Array(48), request);
+      await core.builderApiClient.checkStatus();
+      await core.builderApiClient.getExecutionPayloadBids(
+        [
+          {
+            url: new TextEncoder().encode(bidUrl),
+            auth: request.auth,
+            builderPubkeys: [],
+            maxExecutionPayment: 0n,
+            minBid: 0n,
+            builderBoostFactor: 100n,
+          },
+        ],
+        1,
+        new Uint8Array(32),
+        new Uint8Array(32),
+        new Uint8Array(48)
+      );
+      await chain.builderApiClient.submitSignedBeaconBlock(bidUrl, {data: ssz.gloas.SignedBeaconBlock.defaultValue()});
+      expect(chainBls).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
+      expect(engineBls).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 2);
+
+      const calls = vi.mocked(getClient).mock.calls;
+      expect(calls).toHaveLength(beaconEngineWorker ? 4 : 2);
+      for (const [clientOpts, clientModules] of calls) {
+        expect(clientOpts, "builder client options").toMatchObject({
+          globalInit: {timeoutMs: 1234, headers: {"User-Agent": "test-builder-client"}},
+        });
+        expect([metrics.builderHttpClient, core.metrics?.builderHttpClient], "builder client metric owner").toContain(
+          clientModules.metrics
+        );
+      }
+      expect(calls.filter(([, clientModules]) => clientModules.metrics === metrics.builderHttpClient)).toHaveLength(
+        beaconEngineWorker ? 2 : 0
+      );
+
+      const engineText = await core.metrics?.register.metrics();
+      const facadeText = await metrics.register.metrics();
+      const preferenceMetric = 'lodestar_builder_api_preferences_forwarded_total{status="success"} 1';
+      const blockMetric = 'lodestar_builder_api_block_submissions_total{status="success"} 1';
+      expect(engineText).toContain('lodestar_builder_api_status_checks_total{status="success"} 1');
+      expect(engineText).toContain("lodestar_builder_api_bid_requests_total 1");
+      expect(beaconEngineWorker ? facadeText : engineText).toContain(preferenceMetric);
+      expect(beaconEngineWorker ? facadeText : engineText).toContain(blockMetric);
+      expect(beaconEngineWorker ? engineText : facadeText).not.toContain(preferenceMetric);
+      expect(beaconEngineWorker ? engineText : facadeText).not.toContain(blockMetric);
+      await chain.close();
+      expect(core.emitter.listenerCount(BeaconEngineEvent.builderRegistered)).toBe(0);
+      expect(chain.emitter.listenerCount(ChainEvent.builderRegistered)).toBe(0);
+    }
+  );
 
   it("starts with the persisted serving floor and advances it monotonically from engine events", async () => {
     const dependencies = await initializeTestChain(opts, modules);

@@ -31,7 +31,7 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {decodeArchivedEnvelope} from "../db/repositories/index.js";
-import {BuilderApiClient} from "../execution/builder/apiClient.js";
+import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent, IClock} from "../util/clock.js";
@@ -109,7 +109,9 @@ export type BeaconChainModules = {
   executionEngine: IExecutionEngine;
   executionBuilder?: IExecutionBuilder;
   beaconEngine: IBeaconEngine;
-  builderApiClient: BuilderApiClient;
+  /** Shared in-process client; omitted when the facade needs its own worker-mode client. */
+  builderApiClient?: BuilderApiClient;
+  builderApiClientOpts?: BuilderApiClientOpts;
   anchor: EngineBootstrap;
   earliestAvailableSlot: Slot;
   abortController: AbortController;
@@ -135,7 +137,7 @@ export class BeaconChain implements IBeaconChain {
 
   readonly anchorStateLatestBlockSlot: Slot;
 
-  // TODO - beacon engine: retained only for pre-Gloas blob and data-column sidecar proposer signatures.
+  // Facade-local verification for pre-Gloas sidecars and builder request authentication in worker mode.
   readonly bls: IBlsVerifier;
   private readonly chainView: ChainView;
   readonly clock: IClock;
@@ -244,8 +246,12 @@ export class BeaconChain implements IBeaconChain {
       logger,
     });
     this.beaconEngine = beaconEngine;
-    // TODO - beacon engine: replace shared builder HTTP client when the worker transport is introduced.
-    this.builderApiClient = modules.builderApiClient;
+    this.builderApiClient =
+      modules.builderApiClient ??
+      new BuilderApiClient(modules.builderApiClientOpts ?? {}, config, clock, this.bls, metrics, logger, (url) =>
+        // Register preference-authenticated URLs in the engine before its pre-slot connection checks.
+        beaconEngine.registerAuthenticatedBuilder(url)
+      );
     this.chainView = new ChainView(beaconEngine.getChainViewSnapshot(), logger);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
@@ -296,6 +302,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter.on(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
     this.emitter.on(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.on(ChainEvent.fatalError, this.onEngineFatalError);
+    if (!modules.builderApiClient) this.emitter.on(ChainEvent.builderRegistered, this.onBuilderRegistered);
 
     this.getBlobsTracker = new GetBlobsTracker({
       logger,
@@ -372,6 +379,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter.off(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
     this.emitter.off(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.off(ChainEvent.fatalError, this.onEngineFatalError);
+    this.emitter.off(ChainEvent.builderRegistered, this.onBuilderRegistered);
 
     // Since we don't persist unfinalized fork-choice,
     // we can abort any ongoing unfinalized block writes.
@@ -966,6 +974,10 @@ export class BeaconChain implements IBeaconChain {
       earliestAvailableSlot: this._earliestAvailableSlot,
     };
   }
+
+  private onBuilderRegistered = (url: string): void => {
+    this.builderApiClient.registerAuthenticatedBuilder(url);
+  };
 
   private onEngineFatalError = (error: Error): void => {
     this.processShutdownCallback(error);

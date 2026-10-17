@@ -2,6 +2,7 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
+import {defer} from "@lodestar/utils";
 import type {IBlsVerifier} from "../../../../src/chain/bls/index.js";
 import {BuilderApiClient} from "../../../../src/execution/builder/apiClient.js";
 import {IClock} from "../../../../src/util/clock.js";
@@ -108,6 +109,81 @@ describe("execution/builder/apiClient", () => {
 
     expect(verifySignatureSets).toHaveBeenCalledOnce();
     expect(submitSignedBeaconBlock).toHaveBeenCalledWith({signedBlock}, {redirect: "manual"});
+  });
+
+  it("waits for registration before concurrent requests can use the builder", async () => {
+    const url = "https://builder.example.com";
+    const registrationStarted = defer<void>();
+    const registrationFinished = defer<void>();
+    const onRegistered = vi.fn(() => {
+      registrationStarted.resolve();
+      return registrationFinished.promise;
+    });
+    const client = new BuilderApiClient({}, config, clock, bls, null, undefined, onRegistered);
+    const request = ssz.gloas.BuilderPreferencesRequest.defaultValue();
+    request.auth.message.data = new Uint8Array([1]);
+    submitBuilderPreferences.mockResolvedValue({assertOk: vi.fn()});
+
+    const first = client.submitBuilderPreferences(url, new Uint8Array(48), request);
+    await registrationStarted.promise;
+    const second = client.submitBuilderPreferences(url, new Uint8Array(48), request);
+    await Promise.resolve();
+    expect(submitBuilderPreferences).not.toHaveBeenCalled();
+    registrationFinished.resolve();
+    await Promise.all([first, second]);
+    expect(submitBuilderPreferences).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not propagate invalid authentication or cache a failed registration", async () => {
+    const url = "https://builder.example.com";
+    const onRegistered = vi.fn().mockRejectedValueOnce(Error("Registration failed"));
+    const client = new BuilderApiClient({}, config, clock, bls, null, undefined, onRegistered);
+    const request = ssz.gloas.BuilderPreferencesRequest.defaultValue();
+    request.auth.message.data = new Uint8Array([1]);
+    verifySignatureSets.mockResolvedValueOnce(false);
+    await expect(client.submitBuilderPreferences(url, new Uint8Array(48), request)).rejects.toThrow(
+      "Invalid builder request auth"
+    );
+    expect(onRegistered).not.toHaveBeenCalled();
+
+    await expect(client.submitBuilderPreferences(url, new Uint8Array(48), request)).rejects.toThrow(
+      "Registration failed"
+    );
+    await client.submitSignedBeaconBlock(url, {data: ssz.gloas.SignedBeaconBlock.defaultValue()});
+    expect(submitSignedBeaconBlock).not.toHaveBeenCalled();
+    expect(submitBuilderPreferences).not.toHaveBeenCalled();
+
+    submitBuilderPreferences.mockResolvedValue({assertOk: vi.fn()});
+    await client.submitBuilderPreferences(url, new Uint8Array(48), request);
+    expect(onRegistered).toHaveBeenCalledTimes(2);
+    expect(submitBuilderPreferences).toHaveBeenCalledOnce();
+  });
+
+  it("retains registration after a builder HTTP failure without notifying the other owner again", async () => {
+    const url = "https://builder.example.com";
+    const onPeerRegistered = vi.fn();
+    const peer = new BuilderApiClient({}, config, clock, bls, null, undefined, onPeerRegistered);
+    const onRegistered = vi.fn((builderUrl: string) => {
+      peer.registerAuthenticatedBuilder(builderUrl);
+    });
+    const client = new BuilderApiClient({}, config, clock, bls, null, undefined, onRegistered);
+    const request = ssz.gloas.BuilderPreferencesRequest.defaultValue();
+    request.auth.message.data = new Uint8Array([1]);
+    submitBuilderPreferences.mockRejectedValueOnce(Error("Builder unavailable"));
+    submitSignedBeaconBlock.mockResolvedValue({assertOk: vi.fn()});
+    status.mockResolvedValue({assertOk: vi.fn()});
+
+    await expect(client.submitBuilderPreferences(url, new Uint8Array(48), request)).rejects.toThrow(
+      "Builder unavailable"
+    );
+    peer.registerAuthenticatedBuilder(url);
+    await peer.checkStatus();
+    await peer.submitSignedBeaconBlock(url, {data: ssz.gloas.SignedBeaconBlock.defaultValue()});
+    expect(onRegistered).toHaveBeenCalledExactlyOnceWith(url);
+    expect(onPeerRegistered).not.toHaveBeenCalled();
+    expect(verifySignatureSets).toHaveBeenCalledOnce();
+    expect(status).toHaveBeenCalledOnce();
+    expect(submitSignedBeaconBlock).toHaveBeenCalledOnce();
   });
 
   it("rejects empty request auth data even when the builder client is cached", async () => {

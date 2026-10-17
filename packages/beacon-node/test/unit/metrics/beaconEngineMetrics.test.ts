@@ -47,6 +47,8 @@ describe("BeaconEngine metrics registries", () => {
     engine.blockSerializedCache.size.set({owner: "engine"}, 4);
     node.precomputeNextEpochTransition.count.inc({result: "error"});
     engine.precomputeNextEpochTransition.count.inc({result: "success"});
+    node.builderApi.preferencesForwarded.inc({status: "success"});
+    engine.builderApi.preferencesForwarded.inc({status: "success"}, 2);
 
     const collect = async (): Promise<string> =>
       aggregateMetrics([
@@ -61,6 +63,7 @@ describe("BeaconEngine metrics registries", () => {
     expect(text).toContain('lodestar_block_cache_entries{owner="engine"} 4\n');
     expect(text).toContain('lodestar_precompute_next_epoch_transition_result_total{result="error"} 1\n');
     expect(text).toContain('lodestar_precompute_next_epoch_transition_result_total{result="success"} 1\n');
+    expect(text).toContain('lodestar_builder_api_preferences_forwarded_total{status="success"} 3\n');
     expect(await collect()).toBe(text);
     expect(await node.register.metrics()).toContain("lodestar_bls_aggregated_pubkeys_total 3\n");
     expect(await engine.register.metrics()).toContain("lodestar_bls_aggregated_pubkeys_total 5\n");
