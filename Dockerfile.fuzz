@@ -1,0 +1,79 @@
+# AFL++ fuzzing image for the targets in test/fuzz/.
+#
+# One image carries every target; FUZZ_TARGET picks which one a container
+# runs. Built and pushed by .github/workflows/fuzz-image.yml, and run by the
+# ChainSafe fuzz platform, which provides the FUZZ_* environment and the
+# /fuzz volume. See test/fuzz/README.md, "Container image".
+#
+#   docker build -f Dockerfile.fuzz -t lodestar-z-fuzz .
+#
+# The build context must be the repository root: test/fuzz depends on the
+# root package via a relative path.
+
+# --- build: Zig + Ubuntu's AFL++/LLVM, the same toolchain CI's build-fuzz uses
+FROM ubuntu:24.04 AS build
+
+ARG ZIG_VERSION=0.16.0
+# From https://ziglang.org/download/index.json -- update together with ZIG_VERSION.
+ARG ZIG_SHA256_X86_64=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+ARG ZIG_SHA256_AARCH64=ea4b09bfb22ec6f6c6ceac57ab63efb6b46e17ab08d21f69f3a48b38e1534f17
+ARG TARGETARCH
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends afl++ llvm ca-certificates curl xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN case "${TARGETARCH}" in \
+        amd64) arch=x86_64;  sum="${ZIG_SHA256_X86_64}" ;; \
+        arm64) arch=aarch64; sum="${ZIG_SHA256_AARCH64}" ;; \
+        *) echo "unsupported TARGETARCH '${TARGETARCH}'" >&2; exit 1 ;; \
+    esac \
+    && curl -fsSL -o /tmp/zig.tar.xz \
+        "https://ziglang.org/download/${ZIG_VERSION}/zig-${arch}-linux-${ZIG_VERSION}.tar.xz" \
+    && echo "${sum}  /tmp/zig.tar.xz" | sha256sum -c - \
+    && mkdir /opt/zig && tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1 \
+    && rm /tmp/zig.tar.xz
+ENV PATH=/opt/zig:$PATH
+
+WORKDIR /src
+COPY . .
+
+# ReleaseFast, as in CI: Debug's sanitize_c emits __ubsan_handle_* calls into
+# blst's C objects that afl-cc cannot resolve. The cache mount only speeds up
+# rebuilds; nothing in it reaches the image.
+#
+# -Dcpu=baseline: Zig otherwise targets the build machine's CPU, so an image
+# built on a runner with AVX-512 dies with SIGILL on hosts without it, and
+# every such fault is recorded as a crash.
+RUN --mount=type=cache,target=/root/.cache/zig \
+    cd test/fuzz && zig build -Doptimize=ReleaseFast -Dcpu=baseline --prefix /out
+
+# --- runtime: the instrumented binaries, afl-fuzz and the seed corpora only.
+# Ubuntu's afl++ package pulls in two clang toolchains (~1.2 GB) that running
+# a campaign does not need.
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpython3.12t64 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /usr/bin/afl-fuzz /usr/bin/afl-showmap /usr/bin/afl-tmin /usr/bin/afl-whatsup /usr/local/bin/
+COPY --from=build /out/bin/ /opt/fuzz/bin/
+COPY test/fuzz/corpus/ /opt/fuzz/corpus/
+COPY test/fuzz/docker/run-fuzz.sh /opt/fuzz/run-fuzz.sh
+
+# The harness starts AFL++'s fork server itself (deferred mode, pkg/afl++/afl.c).
+# afl-fuzz sets this for such targets; setting it here lets a target also run
+# standalone -- replaying a crash -- instead of aborting with "forkserver is
+# already up". replay-crashes.sh does the same.
+ENV __AFL_DEFER_FORKSRV=1
+
+ARG REVISION=unknown
+LABEL org.opencontainers.image.source="https://github.com/ChainSafe/lodestar-z" \
+      org.opencontainers.image.title="lodestar-z-fuzz" \
+      org.opencontainers.image.description="AFL++ fuzz targets for lodestar-z" \
+      org.opencontainers.image.revision="${REVISION}"
+
+ENTRYPOINT ["/opt/fuzz/run-fuzz.sh"]

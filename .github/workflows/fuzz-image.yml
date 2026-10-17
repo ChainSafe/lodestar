@@ -1,0 +1,185 @@
+name: Fuzz image
+
+# Builds Dockerfile.fuzz -- every AFL++ target in test/fuzz in one image -- and
+# publishes it to GHCR for the ChainSafe fuzz platform.
+#
+# When an image is built:
+#   - manual run on main (Actions tab)              -> build, test, publish `main`
+#   - manual run on any other branch                -> build, test, publish `branch-<name>`
+#   - pull request touching code the targets compile -> build and test only
+# Publishing is deliberately manual: the fuzz platform follows the `main` tag
+# and restarts campaigns on every publish, so run this once enough good
+# changes have landed, not on every commit. Pull requests still build and test
+# so a broken Dockerfile.fuzz is caught before the next publish.
+#
+# Two jobs: `build and test` runs for every event with read-only permissions;
+# `publish` runs only on a manual run, holds the only write token, and pushes
+# the exact image the build job tested.
+#
+# Tags: `main` is what the fuzz platform runs, and only a run on main moves it.
+# A run on another branch publishes `branch-<name>` instead, for trying a branch
+# on the platform before it merges. `sha-<short>` names each build's source
+# commit, also recorded as the org.opencontainers.image.revision label.
+# Old versions beyond the newest 20 are deleted.
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "pkg/**"
+      - "test/fuzz/**"
+      - "build.zig"
+      - "build.zig.zon"
+      - "Dockerfile.fuzz"
+      - "Dockerfile.fuzz.dockerignore"
+      - ".github/workflows/fuzz-image.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: fuzz-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/chainsafe/lodestar-z-fuzz
+
+jobs:
+  build:
+    name: build and test
+    runs-on: ubuntu-latest
+    # Read-only: this job runs on pull requests and never pushes.
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.fuzz
+          platforms: linux/amd64
+          build-args: REVISION=${{ github.sha }}
+          tags: lodestar-z-fuzz:ci
+          load: true
+          # Off so the image is a single manifest: one package version per
+          # publish, which the version cleanup below relies on.
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=fuzz-image
+          cache-to: type=gha,scope=fuzz-image,mode=max
+
+      - name: Every target runs its first seed without crashing
+        run: |
+          docker run --rm --entrypoint sh lodestar-z-fuzz:ci -c '
+            rc=0
+            for bin in /opt/fuzz/bin/fuzz-*; do
+              t=${bin#/opt/fuzz/bin/fuzz-}
+              seed=$(ls -d /opt/fuzz/corpus/$t-cmin/* /opt/fuzz/corpus/$t-initial/* 2>/dev/null | head -1)
+              if [ -n "$seed" ]; then "$bin" < "$seed"; else printf "\000" | "$bin"; fi \
+                && echo "ok   $t" || { echo "FAIL $t (exit $?)"; rc=1; }
+            done
+            exit $rc'
+
+      # The same restrictions the fuzz platform applies: a non-root uid, read-only
+      # root filesystem, no capabilities, no network, an init process.
+      - name: A campaign starts and reports status under the platform's restrictions
+        run: |
+          # As on the fuzz host: AFL++ refuses to start if cores are piped to apport.
+          sudo sysctl -w kernel.core_pattern=core
+          mkdir -p /tmp/fz/state /tmp/fz/artifacts /tmp/fz/failures /tmp/fz/metrics /tmp/fz/local
+          sudo chown -R 60001:60001 /tmp/fz
+          docker run -d --name smoke --user 60001:60001 --read-only --cap-drop all \
+            --security-opt no-new-privileges --network none --init --pids-limit 4096 \
+            -e FUZZ_PROJECT=lodestar-z -e FUZZ_TARGET=ssz-basic \
+            -e FUZZ_STATE=/fuzz/state -e FUZZ_ARTIFACTS=/fuzz/artifacts \
+            -e FUZZ_FAILURES=/fuzz/failures -e FUZZ_METRICS=/fuzz/metrics \
+            -e TMPDIR=/local -e STATS_INTERVAL=10 \
+            -v /tmp/fz/state:/fuzz/state -v /tmp/fz/artifacts:/fuzz/artifacts \
+            -v /tmp/fz/failures:/fuzz/failures -v /tmp/fz/metrics:/fuzz/metrics \
+            -v /tmp/fz/local:/local \
+            lodestar-z-fuzz:ci
+          sleep 45
+          docker logs smoke
+          test "$(docker inspect -f '{{.State.Running}}' smoke)" = true
+          ! docker logs smoke 2>&1 | grep -q '^FATAL'
+          cat /tmp/fz/metrics/status
+          awk '$1 == "execs_total" && $2 > 0 { ok = 1 } END { exit !ok }' /tmp/fz/metrics/status
+          docker stop -t 30 smoke
+
+      # Hand the tested image itself to the publish job, so what is published is
+      # exactly what passed above -- no second build.
+      - name: Save the tested image
+        if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/heads/')
+        run: docker save lodestar-z-fuzz:ci -o /tmp/lodestar-z-fuzz.tar
+
+      - name: Upload the tested image
+        if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/heads/')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lodestar-z-fuzz-image
+          path: /tmp/lodestar-z-fuzz.tar
+          retention-days: 1
+
+  publish:
+    name: publish
+    needs: build
+    # Manual runs on a branch only; see the header comment.
+    if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/heads/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download the tested image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: lodestar-z-fuzz-image
+          path: /tmp
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        id: push
+        run: |
+          # main moves `main`; any other branch gets its own tag, sanitized to
+          # Docker's tag charset and length.
+          if [ "$GITHUB_REF_NAME" = main ]; then
+            tag=main
+          else
+            tag="branch-$(printf '%s' "$GITHUB_REF_NAME" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9._-' '-' | cut -c1-100)"
+          fi
+          docker load -i /tmp/lodestar-z-fuzz.tar
+          docker tag lodestar-z-fuzz:ci "${IMAGE}:sha-${GITHUB_SHA::7}"
+          docker tag lodestar-z-fuzz:ci "${IMAGE}:${tag}"
+          docker push "${IMAGE}:sha-${GITHUB_SHA::7}"
+          docker push "${IMAGE}:${tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "digest=$(docker image inspect -f '{{index .RepoDigests 0}}' "${IMAGE}:${tag}" | sed 's/.*@//')" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        run: |
+          {
+            echo "### Fuzz image published"
+            echo
+            echo "\`${IMAGE}:${{ steps.push.outputs.tag }}\` now points at \`${{ steps.push.outputs.digest }}\`,"
+            echo "built from \`${GITHUB_SHA}\`. Fuzz platform targets following this tag"
+            echo "restart on the new image; their corpora carry over."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Without provenance or SBOM attestations, each publish is exactly one
+      # package version, so this keeps the newest 20 builds.
+      - name: Delete old image versions
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
+        with:
+          package-name: lodestar-z-fuzz
+          package-type: container
+          min-versions-to-keep: 20

@@ -132,8 +132,12 @@ issue. The filename encodes metadata about how it was found (e.g.
 Replay any crashing input by piping it into the harness:
 
 ```sh
-cat afl-out/ssz_basic/default/crashes/<filename> | zig-out/bin/fuzz-ssz_basic
+cat afl-out/ssz_basic/default/crashes/<filename> | __AFL_DEFER_FORKSRV=1 zig-out/bin/fuzz-ssz_basic
 ```
+
+`__AFL_DEFER_FORKSRV=1` is required outside `afl-fuzz`: the harness starts the
+fork server itself, and without it the binary aborts with "forkserver is
+already up" before reading any input.
 
 ## Corpus Management
 
@@ -188,6 +192,101 @@ rename the output files to replace colons with underscores before committing:
 | `corpus/<target>-initial/` | Hand-crafted seeds + spec test vectors |
 | `corpus/<target>-cmin/` | Output of `afl-cmin` (edge-deduplicated corpus) |
 
+## Container image
+
+`Dockerfile.fuzz` (repository root) packages **every target** into one image,
+`ghcr.io/chainsafe/lodestar-z-fuzz`, for the ChainSafe fuzz platform. The
+image contains the instrumented binaries, `afl-fuzz` and the seed corpora; the
+Zig and LLVM toolchain stays in the build stage. `FUZZ_TARGET` picks the
+target a container runs.
+
+### When it is built
+
+[`.github/workflows/fuzz-image.yml`](../../.github/workflows/fuzz-image.yml):
+
+| Event | Result |
+|---|---|
+| Manual run on `main` (Actions → Fuzz image → Run workflow) | build, test, **publish** `main` |
+| Manual run on any other branch | build, test, **publish** `branch-<name>` |
+| Pull request touching `src/`, `pkg/`, `test/fuzz/`, `build.zig*` or the Dockerfile | build and test only |
+
+Publishing is manual on purpose. The fuzz platform follows the `main` tag and
+restarts every lodestar-z campaign on the new image, so publish once a useful
+batch of changes has landed rather than on every commit. Pull requests still
+build and test, so a broken `Dockerfile.fuzz` is caught before the next publish.
+
+Each publish is tagged `main` and `sha-<short commit>`; the full commit is also
+in the `org.opencontainers.image.revision` label. Only the newest 20 versions are
+kept.
+
+A run on another branch publishes `branch-<name>` (lowercased, other characters
+turned into `-`) instead of `main`, to try a branch on the platform before it
+merges: point a target at that tag, then back at `main` once merged. Only a run
+on `main` moves `main`.
+
+### Running it on the fuzz platform
+
+One entry per target in `fuzz_jobs` (lodestar-ansible-development,
+`group_vars/fuzzer/vars.yml`), referencing the `main` tag. It never needs editing
+when a new image is published. The platform's target names allow hyphens but not
+underscores, so write the harness name with hyphens; the entrypoint maps
+`ssz-basic` back to `fuzz-ssz_basic`:
+
+```yaml
+- project: lodestar-z
+  target: ssz-basic                       # becomes FUZZ_TARGET
+  image: ghcr.io/chainsafe/lodestar-z-fuzz:main
+  cores: 1
+  memory_mb: 2048
+  duration: 0
+  uid: 61001                              # unique per target
+  gid: 61001
+```
+
+When `main` moves, the platform stops each campaign (`SIGTERM`, so AFL++ saves
+its state) and starts it on the new image, resuming from the same corpus. To
+freeze a target on one build, for example while investigating a crash, use
+`image: ghcr.io/chainsafe/lodestar-z-fuzz@sha256:<digest>` instead; a pinned
+target is never switched. To find the commit a campaign is running:
+
+```sh
+docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' <image>
+```
+
+### What a campaign produces
+
+[`docker/run-fuzz.sh`](docker/run-fuzz.sh) is the entrypoint. It resumes from
+the AFL++ state in `$FUZZ_STATE` after any restart, and:
+
+- copies each new crash to `$FUZZ_FAILURES/crash-<hash>` and each hang to
+  `hang-<hash>`, deduplicated by content, logging `NEW_CRASH` / `NEW_HANG`;
+- logs a `STATS` line every minute;
+- writes `$FUZZ_METRICS/status` every minute — executions, coverage, corpus
+  size, crashes — which the platform turns into metrics and uses to detect a
+  hung campaign.
+
+Targets without a seed corpus (`ssz_nested_opaque_proof`,
+`ssz_opaque_roundtrip` today) start from a single zero byte and log a warning.
+
+### Locally
+
+```sh
+docker build -f Dockerfile.fuzz -t lodestar-z-fuzz .
+mkdir -p /tmp/fuzz && docker run --rm -e FUZZ_TARGET=ssz_basic \
+  -v /tmp/fuzz:/fuzz lodestar-z-fuzz
+```
+
+AFL++ refuses to start if `/proc/sys/kernel/core_pattern` pipes cores to a
+handler, as Ubuntu's apport does; set it to `core`, or add
+`-e AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1` for a quick local run. Replay a
+crash with `--init`, or the target runs as PID 1, ignores `SIGABRT`, and the
+crash reports as `SIGTRAP`:
+
+```sh
+docker run --rm -i --init --entrypoint /opt/fuzz/bin/fuzz-ssz_basic \
+  lodestar-z-fuzz < /tmp/fuzz/failures/crash-<hash>
+```
+
 ## Adding a New Target
 
 1. Create `src/fuzz_<name>.zig` exporting `zig_fuzz_init` and
@@ -196,6 +295,8 @@ rename the output files to replace colons with underscores before committing:
    against blst (i.e. it uses BLS operations), set extra_libs if you're facing similar situation that bls has: e.g., `.extra_libs = &.{dep_blst.artifact("blst")}`.
 3. Create `corpus/<name>-initial/` with hand-crafted seed files.
 4. Add the target to `replay-crashes.sh` target list.
+5. Nothing else for the container image: it builds every target in `build.zig`.
+   To run it on the fuzz platform, add a `fuzz_jobs` entry (see above).
 
 ## On MacOs
 
