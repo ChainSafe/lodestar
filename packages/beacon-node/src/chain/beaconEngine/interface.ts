@@ -93,7 +93,9 @@ export type BeaconEngineCoreModules = {
   dbName: string;
   dataColumnDir: string;
   metricsEnabled: boolean;
-  clock: IClock;
+  genesisTime: number;
+  /** Shared in-process clock; omitted when the core needs its own worker-local clock. */
+  clock?: IClock;
   pubkeyCache: PubkeyCache;
   cpStateDatastore: CPStateDatastore;
   signal: AbortSignal;
@@ -636,6 +638,9 @@ export interface IBeaconEngineCore {
     opts: ImportBlockOpts
   ): Promise<Result<ImportBlockResult, BlockFailure>>;
   discardVerifiedBlocks(blockRootHexes: RootHex[]): void;
+
+  onSlot(slot: Slot): void;
+  onEpoch(epoch: Epoch): void;
 
   // Fork-choice writes routed through the engine (so the facade never writes fork choice directly).
   updateTime(currentSlot: Slot): void;

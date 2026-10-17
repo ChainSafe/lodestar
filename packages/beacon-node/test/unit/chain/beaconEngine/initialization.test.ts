@@ -25,7 +25,7 @@ import {BeaconDb} from "../../../../src/db/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
 import {aggregateMetrics, createMetrics} from "../../../../src/metrics/index.js";
 import {initDevState} from "../../../../src/node/utils/state.js";
-import {ClockEvent} from "../../../../src/util/clock.js";
+import {Clock, ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {TestChainModules, createBeaconChain, initializeTestChain} from "../../../utils/chain.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
@@ -100,7 +100,131 @@ describe("bytes-based engine startup", () => {
     await closeDb();
   });
 
+  it("forwards clock maintenance through the chain and stops forwarding before engine teardown", async () => {
+    const dependencies = await initializeTestChain(opts, modules);
+    const core = getBeaconEngineCore(dependencies.beaconEngine);
+    const pruneSlots = vi.spyOn(core.attestationPool, "prune");
+    const pruneEpochs = vi.spyOn(core.seenAttesters, "prune");
+    expect(core.clock).toBe(clock);
+    expect(clock.listenerCount(ClockEvent.slot)).toBe(0);
+    expect(clock.listenerCount(ClockEvent.epoch)).toBe(0);
+
+    clock.setSlot(SLOTS_PER_EPOCH);
+    clock.emit(ClockEvent.slot, clock.currentSlot);
+    clock.emit(ClockEvent.epoch, clock.currentEpoch);
+    expect(pruneSlots).not.toHaveBeenCalled();
+    expect(pruneEpochs).not.toHaveBeenCalled();
+
+    chain = new BeaconChain(opts, dependencies);
+    const updateTime = vi.spyOn(core, "updateTime");
+    const reprocess = vi.spyOn(chain.reprocessController, "onSlot");
+    clock.emit(ClockEvent.slot, clock.currentSlot);
+    clock.emit(ClockEvent.epoch, clock.currentEpoch);
+    expect(core.forkChoice.getTime()).toBe(SLOTS_PER_EPOCH);
+    expect(pruneSlots).toHaveBeenCalledExactlyOnceWith(SLOTS_PER_EPOCH);
+    expect(pruneEpochs).toHaveBeenCalledExactlyOnceWith(1);
+    expect(reprocess).toHaveBeenCalledExactlyOnceWith(SLOTS_PER_EPOCH);
+    expect(updateTime.mock.invocationCallOrder[0]).toBeLessThan(pruneSlots.mock.invocationCallOrder[0]);
+    expect(pruneSlots.mock.invocationCallOrder[0]).toBeLessThan(reprocess.mock.invocationCallOrder[0]);
+
+    const close = chain.beaconEngine.close.bind(chain.beaconEngine);
+    vi.spyOn(chain.beaconEngine, "close").mockImplementation(async () => {
+      expect(clock.listenerCount(ClockEvent.slot)).toBe(0);
+      expect(clock.listenerCount(ClockEvent.epoch)).toBe(0);
+      clock.emit(ClockEvent.slot, SLOTS_PER_EPOCH + 1);
+      clock.emit(ClockEvent.epoch, 2);
+      expect(updateTime).toHaveBeenCalledOnce();
+      expect(pruneSlots).toHaveBeenCalledOnce();
+      expect(pruneEpochs).toHaveBeenCalledOnce();
+      await close();
+    });
+    await chain.close();
+  });
+
+  it("forwards missed slots and epochs in order when an engine clock read catches up", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const controller = new AbortController();
+    modules.clock = new Clock({config, genesisTime: 0, signal: controller.signal});
+    try {
+      chain = await createBeaconChain(opts, modules);
+      const core = getBeaconEngineCore(chain.beaconEngine);
+      const forwarded: string[] = [];
+      const onSlot = core.onSlot;
+      const onEpoch = core.onEpoch;
+      vi.spyOn(core, "onSlot").mockImplementation((slot) => {
+        forwarded.push(`slot:${slot}`);
+        onSlot(slot);
+      });
+      vi.spyOn(core, "onEpoch").mockImplementation((epoch) => {
+        forwarded.push(`epoch:${epoch}`);
+        onEpoch(epoch);
+      });
+
+      vi.setSystemTime((SLOTS_PER_EPOCH + 1) * config.SLOT_DURATION_MS);
+      expect(core.clock.currentSlot).toBe(SLOTS_PER_EPOCH + 1);
+      expect(forwarded).toEqual([
+        ...Array.from({length: SLOTS_PER_EPOCH}, (_, i) => `slot:${i + 1}`),
+        "epoch:1",
+        `slot:${SLOTS_PER_EPOCH + 1}`,
+      ]);
+      expect(core.forkChoice.getTime()).toBe(SLOTS_PER_EPOCH + 1);
+      await chain.close();
+      const sharedTick = vi.fn();
+      modules.clock.on(ClockEvent.slot, sharedTick);
+      await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
+      expect(sharedTick).toHaveBeenCalledExactlyOnceWith(SLOTS_PER_EPOCH + 2);
+    } finally {
+      controller.abort();
+    }
+  });
+
+  it("uses a worker-local clock for reads while only forwarded ticks drive maintenance", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    chain = await createBeaconChain({...opts, beaconEngineWorker: true}, modules);
+    const core = getBeaconEngineCore(chain.beaconEngine);
+    const pruneSlots = vi.spyOn(core.attestationPool, "prune");
+    const pruneEpochs = vi.spyOn(core.seenAttesters, "prune");
+    expect(core.clock).not.toBe(clock);
+    expect(core.clock.genesisTime).toBe(clock.genesisTime);
+    await vi.advanceTimersByTimeAsync((SLOTS_PER_EPOCH + 1) * config.SLOT_DURATION_MS);
+    expect(core.clock.currentSlot).toBe(SLOTS_PER_EPOCH + 1);
+    expect(core.clock.msFromSlot(SLOTS_PER_EPOCH)).toBe(config.SLOT_DURATION_MS);
+    expect(clock.currentSlot).toBe(0);
+    expect(core.forkChoice.getTime()).toBe(0);
+    expect(pruneSlots).not.toHaveBeenCalled();
+    expect(pruneEpochs).not.toHaveBeenCalled();
+
+    clock.setSlot(SLOTS_PER_EPOCH);
+    clock.emit(ClockEvent.slot, clock.currentSlot);
+    clock.emit(ClockEvent.epoch, clock.currentEpoch);
+    expect(core.forkChoice.getTime()).toBe(SLOTS_PER_EPOCH);
+    expect(pruneSlots).toHaveBeenCalledExactlyOnceWith(SLOTS_PER_EPOCH);
+    expect(pruneEpochs).toHaveBeenCalledExactlyOnceWith(1);
+    await vi.advanceTimersByTimeAsync(0);
+    await chain.close();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each(["abort", "failed startup"])("stops the worker-local clock after %s", async (shutdown) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const dependencies = createTestBeaconEngine({...opts, beaconEngineWorker: true}, modules);
+    engine = dependencies.beaconEngineCore;
+    expect(vi.getTimerCount()).toBe(1);
+    if (shutdown === "abort") {
+      dependencies.abortController.abort();
+    } else {
+      await expect(engine.prepareAnchorState(new Uint8Array())).rejects.toThrow();
+      await engine.close();
+    }
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it.each([false, true])("selects cache sharing with beaconEngineWorker=%s", async (beaconEngineWorker) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
     const options = {...opts, beaconEngineWorker};
     const dependencies = await initializeTestChain(options, modules);
     chain = new BeaconChain(options, dependencies);
@@ -137,6 +261,8 @@ describe("bytes-based engine startup", () => {
   it.each([false, true])(
     "wires builder clients and registrations with beaconEngineWorker=%s",
     async (beaconEngineWorker) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(0);
       const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
       modules.metrics = metrics;
       modules.builderApiClientOpts = {timeout: 1234, userAgent: "test-builder-client"};
@@ -145,6 +271,7 @@ describe("bytes-based engine startup", () => {
       const engineBls = vi.spyOn(core.bls, "verifySignatureSets").mockResolvedValue(true);
       const chainBls = vi.spyOn(chain.bls, "verifySignatureSets").mockResolvedValue(true);
       expect(chain.builderApiClient === core.builderApiClient).toBe(!beaconEngineWorker);
+      expect(chain.clock === core.clock).toBe(!beaconEngineWorker);
 
       const preferencesUrl = "https://preferences.builder.example.com";
       const bidUrl = "https://bid.builder.example.com";
@@ -303,6 +430,8 @@ describe("bytes-based engine startup", () => {
   });
 
   it.each([false, true])("isolates engine metrics with beaconEngineWorker=%s", async (beaconEngineWorker) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
     const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.metrics = metrics;
     chain = await createBeaconChain({...opts, beaconEngineWorker}, modules);
@@ -407,7 +536,7 @@ describe("bytes-based engine startup", () => {
     expect(scraped.extra).toContain("# TYPE lodestar_stfn_process_block_seconds histogram");
   });
 
-  it.each(["abort", "close"])("runs epoch monitoring on the engine clock and cancels it on %s", async (shutdown) => {
+  it.each(["abort", "close"])("runs epoch monitoring on forwarded ticks and cancels it on %s", async (shutdown) => {
     modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.validatorMonitorOpts = {};
     const dependencies = await initializeTestChain(opts, modules);
@@ -417,13 +546,13 @@ describe("bytes-based engine startup", () => {
     vi.useFakeTimers();
     const halfSlot = config.SLOT_DURATION_MS / 2;
 
-    clock.emit(ClockEvent.slot, SLOTS_PER_EPOCH - 1);
+    dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
     await vi.advanceTimersByTimeAsync(halfSlot - 1);
     expect(monitorEpoch).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(monitorEpoch).toHaveBeenCalledExactlyOnceWith(beaconEngine.getHeadState());
 
-    clock.emit(ClockEvent.slot, 2 * SLOTS_PER_EPOCH - 1);
+    dependencies.beaconEngine.onSlot(2 * SLOTS_PER_EPOCH - 1);
     expect(vi.getTimerCount()).toBe(1);
     if (shutdown === "abort") dependencies.abortController.abort();
     else await beaconEngine.close();
@@ -442,7 +571,7 @@ describe("bytes-based engine startup", () => {
     expect(await beaconEngine.getMonitoredValidatorIndices()).toEqual([1]);
     expect(await beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
     vi.useFakeTimers();
-    clock.emit(ClockEvent.slot, SLOTS_PER_EPOCH - 1);
+    dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
     expect(vi.getTimerCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
     expect(monitorEpoch).not.toHaveBeenCalled();
@@ -609,8 +738,9 @@ describe("bytes-based engine startup", () => {
       },
     };
     const dependencies = await initializeTestChain(opts, modules);
-    expect(clock.listenerCount(ClockEvent.epoch)).toBeGreaterThan(0);
+    expect(clock.listenerCount(ClockEvent.epoch)).toBe(0);
     chain = new BeaconChain(opts, dependencies);
+    expect(clock.listenerCount(ClockEvent.epoch)).toBe(1);
     await chain.init();
     expect(order).toEqual(["validate", "log"]);
     expect(createView).toHaveBeenCalledTimes(1);
@@ -671,7 +801,7 @@ describe("bytes-based engine startup", () => {
     expect(engine?.getHeadState().hashTreeRoot()).toEqual(stateRoot);
     expect(await db.stateArchive.keys()).toEqual([]);
     await chain.close();
-    expect(clock.listenerCount(ClockEvent.slot)).toBe(1);
+    expect(clock.listenerCount(ClockEvent.slot)).toBe(0);
   });
   it("returns plain Gloas bootstrap data and seeds independent engine and facade anchor inputs", async () => {
     const gloasConfig = getConfig(ForkName.gloas);

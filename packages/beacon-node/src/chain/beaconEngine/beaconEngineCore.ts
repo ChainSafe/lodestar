@@ -84,7 +84,7 @@ import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
 import {BeaconEngineMetrics, createBeaconEngineMetrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {BufferPool} from "../../util/bufferPool.js";
-import {ClockEvent, IClock} from "../../util/clock.js";
+import {Clock, IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -380,9 +380,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private pendingPersistence?: Promise<void>;
   private anchorState?: IBeaconStateView;
   private anchorStateBytes?: Uint8Array;
+  private readonly clockAbortController?: AbortController;
+  private readonly onClockAbort = (): void => this.clockAbortController?.abort();
 
   constructor(private readonly modules: BeaconEngineCoreModules) {
-    const {opts, config, logger, clock, pubkeyCache, signal, db} = modules;
+    const {opts, config, logger, pubkeyCache, signal, db} = modules;
     const metrics = modules.metricsEnabled ? createBeaconEngineMetrics(opts.nativeStateTransition) : null;
     if (metrics && opts.nativeStateTransition) initNativeMetrics();
     this.executionEngine = modules.executionEngine;
@@ -399,6 +401,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       modules.blockSerializedCache ??
       new BlockSerializedCache(config, {owner: "engine", metrics: metrics?.blockSerializedCache, logger});
     this.metrics = metrics;
+    let clock = modules.clock;
+    if (!clock) {
+      this.clockAbortController = new AbortController();
+      clock = new Clock({config, genesisTime: modules.genesisTime, signal: this.clockAbortController.signal});
+      if (signal.aborted) this.onClockAbort();
+      else signal.addEventListener("abort", this.onClockAbort, {once: true});
+    }
     this.clock = clock;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     this.pubkeyCache = pubkeyCache;
@@ -498,14 +507,14 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
   }
 
-  private onSlot?: (slot: Slot) => void;
-  private onEpoch?: (epoch: Epoch) => void;
+  onSlot!: (slot: Slot) => void;
+  onEpoch!: (epoch: Epoch) => void;
   private readonly checkpointListener = this.onCheckpoint.bind(this);
 
   private initializeRuntime(anchorState: IBeaconStateView): void {
     const modules = this.modules;
-    const {opts, config, logger, clock, cpStateDatastore, signal, db, validatorMonitorOpts, isAnchorStateFinalized} =
-      modules;
+    const {opts, config, logger, cpStateDatastore, signal, db, validatorMonitorOpts, isAnchorStateFinalized} = modules;
+    const clock = this.clock;
     const metrics = this.metrics;
     metrics?.previousJustifiedEpoch.set(anchorState.previousJustifiedCheckpoint.epoch);
     metrics?.currentJustifiedEpoch.set(anchorState.currentJustifiedCheckpoint.epoch);
@@ -633,18 +642,17 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
     }
 
-    // The engine prunes its OWN caches on the clock tick (the facade no longer reaches in). More
-    // engine-owned pools/caches move under this listener in later slices.
+    // Source: unstable@75239241d4 chain/chain.ts#onClockSlot and #onClockEpoch.
+    // [beacon-engine] BeaconChain forwards clock events; engine-owned maintenance stays here.
     this.onSlot = (slot: Slot) => {
       this.attestationPool.prune(slot);
       this.aggregatedAttestationPool.prune(slot);
       this.syncCommitteeMessagePool.prune(slot);
+      this.seenSyncCommitteeMessages.prune(slot);
       this.payloadAttestationPool.prune(slot);
       this.executionPayloadBidPool.prune(slot);
-
-      this.proposerPreferencesPool.prune(slot);
-      this.seenSyncCommitteeMessages.prune(slot);
       this.seenExecutionPayloadBids.prune(slot);
+      this.proposerPreferencesPool.prune(slot);
       this.seenAttestationDatas.onSlot(slot);
 
       // Source: unstable@2593063a82 chain/chain.ts#onClockSlot.
@@ -672,8 +680,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       this.seenBlockAttesters.prune(epoch);
       this.beaconProposerCache.prune(epoch);
     };
-    this.clock.on(ClockEvent.slot, this.onSlot);
-    this.clock.on(ClockEvent.epoch, this.onEpoch);
     this.signal.addEventListener("abort", this.onValidatorMonitorAbort, {once: true});
     this.emitter.on(BeaconEngineEvent.checkpoint, this.checkpointListener);
 
@@ -1915,12 +1921,12 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   /** Tear down engine-owned resources: historical-state worker + BLS pool (graceful shutdown). */
   async close(): Promise<void> {
     this.closed = true;
+    this.onClockAbort();
+    this.signal.removeEventListener("abort", this.onClockAbort);
     this.onValidatorMonitorAbort();
     this.signal.removeEventListener("abort", this.onValidatorMonitorAbort);
     await this.pendingPersistence?.catch(() => {});
     this.pendingPersistence = undefined;
-    if (this.onSlot) this.clock.off(ClockEvent.slot, this.onSlot);
-    if (this.onEpoch) this.clock.off(ClockEvent.epoch, this.onEpoch);
     this.emitter?.off(BeaconEngineEvent.checkpoint, this.checkpointListener);
     try {
       await this.historicalStateRegen?.close();

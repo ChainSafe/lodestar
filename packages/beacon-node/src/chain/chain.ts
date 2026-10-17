@@ -356,9 +356,8 @@ export class BeaconChain implements IBeaconChain {
       metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
     }
 
-    // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
-    clock.addListener(ClockEvent.slot, this.onClockSlot.bind(this));
-    clock.addListener(ClockEvent.epoch, this.onClockEpoch.bind(this));
+    clock.addListener(ClockEvent.slot, this.clockSlotListener);
+    clock.addListener(ClockEvent.epoch, this.clockEpochListener);
     emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
   }
@@ -373,6 +372,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async close(): Promise<void> {
+    this.clock.off(ClockEvent.slot, this.clockSlotListener);
+    this.clock.off(ClockEvent.epoch, this.clockEpochListener);
     // Engine owns teardown of its resources (historical-state regen + BLS pool).
     await this.beaconEngine.close();
     await this.bls.close();
@@ -1073,6 +1074,9 @@ export class BeaconChain implements IBeaconChain {
     metrics.bls.pubkeyCacheCapacity.set(this.pubkeyCache.capacity);
   }
 
+  private readonly clockSlotListener = this.onClockSlot.bind(this);
+  private readonly clockEpochListener = this.onClockEpoch.bind(this);
+
   private onClockSlot(slot: Slot): void {
     this.logger.verbose("Clock slot", {slot});
 
@@ -1080,7 +1084,7 @@ export class BeaconChain implements IBeaconChain {
     this.beaconEngine.updateTime(slot);
     this.metrics?.clockSlot.set(slot);
 
-    // Engine-owned pools + seen-caches are pruned by the engine's own clock listener.
+    this.beaconEngine.onSlot(slot);
     this.reprocessController.onSlot(slot);
 
     // Prune old cached block production artifacts, those are only useful on their slot
@@ -1090,8 +1094,7 @@ export class BeaconChain implements IBeaconChain {
 
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
-    // Engine-owned caches (seen-caches, seenBlockAttesters, beaconProposerCache) are pruned by the
-    // engine's own clock listener; nothing epoch-scoped remains facade-side.
+    this.beaconEngine.onEpoch(epoch);
   }
 
   private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {

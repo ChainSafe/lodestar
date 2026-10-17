@@ -984,6 +984,14 @@ export class BeaconEngine implements IBeaconEngine {
     this.core.discardVerifiedBlocks(blockRootHexes);
   }
 
+  onSlot(slot: Slot): void {
+    this.core.onSlot(slot);
+  }
+
+  onEpoch(epoch: Epoch): void {
+    this.core.onEpoch(epoch);
+  }
+
   updateTime(currentSlot: Slot): void {
     this.core.updateTime(currentSlot);
   }

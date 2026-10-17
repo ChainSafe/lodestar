@@ -36,6 +36,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
       opts: {...defaultChainOptions},
       logger: modules.logger,
       metricsEnabled: false,
+      genesisTime: modules.chain.clock.genesisTime,
       clock: modules.chain.clock,
       db: modules.db,
       dbName: "test",
