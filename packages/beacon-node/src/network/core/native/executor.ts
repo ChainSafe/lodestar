@@ -26,7 +26,7 @@ export class NativeGossipExecutor {
     private readonly gossip: Pick<NativeGossip, "attach" | "notifyBlock" | "dropQueued">
   ) {
     const handlers = modules.gossipHandlers ?? getGossipHandlers(modules, opts);
-    // Native retains already queued messages until validation or expiry after a peer ban.
+    // Native purges queued work when the owner applies the fatal report.
     const onFatalPeer = (): void => {};
     this.validate = getGossipValidatorFn(handlers, modules, onFatalPeer);
     this.validateBatch = getGossipValidatorBatchFn(handlers, modules, onFatalPeer);
