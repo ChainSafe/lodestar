@@ -38,14 +38,23 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
     vi.mocked(validateApiExecutionPayloadBid).mockResolvedValue(undefined);
   });
 
-  it("publishes the bid", async () => {
+  it("publishes the bid without validation by default", async () => {
     const api = getBeaconBlockApi(modules);
     await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
 
+    expect(validateApiExecutionPayloadBid).not.toHaveBeenCalled();
     expect(modules.network.publishSignedExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
   });
 
-  it("does not publish a bid that fails the reject checks", async () => {
+  it("validates the bid before publishing when requested", async () => {
+    const api = getBeaconBlockApi(modules);
+    await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid, validate: true});
+
+    expect(validateApiExecutionPayloadBid).toHaveBeenCalledWith(modules.chain, signedBid);
+    expect(modules.network.publishSignedExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
+  });
+
+  it("does not publish a bid that fails the reject checks when validation is requested", async () => {
     vi.mocked(validateApiExecutionPayloadBid).mockRejectedValue(
       new ExecutionPayloadBidError(GossipAction.REJECT, {
         code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
@@ -54,9 +63,9 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
       })
     );
     const api = getBeaconBlockApi(modules);
-    await expect(api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid})).rejects.toThrow(
-      ExecutionPayloadBidError
-    );
+    await expect(
+      api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid, validate: true})
+    ).rejects.toThrow(ExecutionPayloadBidError);
 
     expect(modules.network.publishSignedExecutionPayloadBid).not.toHaveBeenCalled();
   });

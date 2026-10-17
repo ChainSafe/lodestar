@@ -1067,7 +1067,7 @@ export function getBeaconBlockApi({
       });
     },
 
-    async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+    async publishExecutionPayloadBid({signedExecutionPayloadBid, validate}) {
       const seenTimestampSec = Date.now() / 1000;
       const bid = signedExecutionPayloadBid.message;
       const slot = bid.slot;
@@ -1077,11 +1077,12 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
-      // TODO: once the builder is tested and can be trusted, skip this local validation
-      // to publish faster, accepting peer-score risk if it ever emits an invalid bid.
-      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
-      validationTimer?.();
+      // Validation is off by default to publish faster, the builder is trusted not to emit invalid bids.
+      if (validate) {
+        const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
+        await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+        validationTimer?.();
+      }
 
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);

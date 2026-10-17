@@ -224,12 +224,15 @@ export type Endpoints = {
    * Publish signed execution payload bid.
    * Instructs the beacon node to broadcast a signed execution payload bid to the network,
    * to be gossiped for potential inclusion in block building. A success response (20x) indicates
-   * that the bid passed gossip validation and was successfully broadcast onto the network.
+   * that the bid was successfully broadcast onto the network.
+   *
+   * The `validate` query parameter is a Lodestar extension. When set to `true`, the beacon node
+   * runs gossip validation before broadcasting and rejects the bid if it fails. Defaults to `false`.
    */
   publishExecutionPayloadBid: Endpoint<
     "POST",
-    {signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid},
-    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    {signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid; validate?: boolean},
+    {body: unknown; headers: {[MetaHeader.Version]: string}; query: {validate?: boolean}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -554,38 +557,43 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/execution_payload_bids",
       method: "POST",
       req: {
-        writeReqJson: ({signedExecutionPayloadBid}) => {
+        writeReqJson: ({signedExecutionPayloadBid, validate}) => {
           const fork = config.getForkName(signedExecutionPayloadBid.message.slot);
           return {
             body: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.toJson(signedExecutionPayloadBid),
             headers: {
               [MetaHeader.Version]: fork,
             },
+            query: {validate},
           };
         },
-        parseReqJson: ({body, headers}) => {
+        parseReqJson: ({body, headers, query}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             signedExecutionPayloadBid: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.fromJson(body),
+            validate: query.validate,
           };
         },
-        writeReqSsz: ({signedExecutionPayloadBid}) => {
+        writeReqSsz: ({signedExecutionPayloadBid, validate}) => {
           const fork = config.getForkName(signedExecutionPayloadBid.message.slot);
           return {
             body: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.serialize(signedExecutionPayloadBid),
             headers: {
               [MetaHeader.Version]: fork,
             },
+            query: {validate},
           };
         },
-        parseReqSsz: ({body, headers}) => {
+        parseReqSsz: ({body, headers, query}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             signedExecutionPayloadBid: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.deserialize(body),
+            validate: query.validate,
           };
         },
         schema: {
           body: Schema.Object,
+          query: {validate: Schema.Boolean},
           headers: {[MetaHeader.Version]: Schema.String},
         },
       },
