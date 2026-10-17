@@ -82,6 +82,11 @@ jobs:
           check-latest: true
           cache: pnpm
 
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        if: steps.versions.outputs.missing != '' && github.event.inputs.dry_run != 'true'
+        with:
+          version: 0.16.0
+
       - name: Backfill missing versions
         if: steps.versions.outputs.missing != '' && github.event.inputs.dry_run != 'true'
         run: |
