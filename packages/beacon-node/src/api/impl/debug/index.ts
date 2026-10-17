@@ -114,6 +114,10 @@ export function getDebugApi({
                 unrealizedJustifiedRoot: node.unrealizedJustifiedRoot,
                 unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
                 unrealizedFinalizedRoot: node.unrealizedFinalizedRoot,
+                inclusionListSatisfied:
+                  node.payloadStatus === PayloadStatus.FULL
+                    ? forkChoice.getPayloadInclusionListSatisfaction(node.blockRoot)
+                    : null,
               },
             };
           }),

@@ -17,6 +17,7 @@ import {
   deneb,
   fulu,
   gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -56,6 +57,7 @@ export enum ReqRespMethod {
   LightClientUpdatesByRange = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
   LightClientOptimisticUpdate = "light_client_optimistic_update",
+  InclusionListsByIndices = "inclusion_lists_by_indices",
 }
 
 // To typesafe events to network
@@ -77,6 +79,7 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
   [ReqRespMethod.LightClientOptimisticUpdate]: null;
+  [ReqRespMethod.InclusionListsByIndices]: heze.InclusionListsByIndicesRequest;
 };
 
 type ResponseBodyByMethod = {
@@ -99,6 +102,7 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
   [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
+  [ReqRespMethod.InclusionListsByIndices]: heze.SignedInclusionList;
 };
 
 /** Request SSZ type for each method and ForkName */
@@ -129,6 +133,7 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
   [ReqRespMethod.LightClientOptimisticUpdate]: null,
+  [ReqRespMethod.InclusionListsByIndices]: ssz.heze.InclusionListsByIndicesRequest,
 });
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
@@ -161,6 +166,7 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
+  [ReqRespMethod.InclusionListsByIndices]: () => ssz.heze.SignedInclusionList,
 };
 
 function onlyPostAltairFork(fork: ForkName): ForkPostAltair {

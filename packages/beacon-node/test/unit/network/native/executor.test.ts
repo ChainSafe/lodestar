@@ -59,6 +59,7 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
     payload_attestation_message: single,
     execution_payload_bid: single,
     proposer_preferences: single,
+    inclusion_list: single,
   };
   const config = createBeaconConfig({}, new Uint8Array(32));
   const base = getMockedBeaconChain({config});

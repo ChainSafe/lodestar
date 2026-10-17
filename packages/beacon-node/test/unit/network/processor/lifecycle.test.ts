@@ -97,6 +97,7 @@ function fixture() {
     payload_attestation_message: single,
     execution_payload_bid: single,
     proposer_preferences: single,
+    inclusion_list: single,
   };
   const results: Result[] = [];
   events.on(NetworkEvent.gossipMessageValidationResult, (result) => results.push(result));

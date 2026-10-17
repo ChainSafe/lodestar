@@ -16,6 +16,7 @@ import {
   capella,
   deneb,
   gloas,
+  heze,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -43,6 +44,7 @@ export enum GossipType {
   payload_attestation_message = "payload_attestation_message",
   execution_payload_bid = "execution_payload_bid",
   proposer_preferences = "proposer_preferences",
+  inclusion_list = "inclusion_list",
 }
 
 export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
@@ -81,6 +83,7 @@ export type GossipTopicTypeMap = {
   [GossipType.payload_attestation_message]: {type: GossipType.payload_attestation_message};
   [GossipType.execution_payload_bid]: {type: GossipType.execution_payload_bid};
   [GossipType.proposer_preferences]: {type: GossipType.proposer_preferences};
+  [GossipType.inclusion_list]: {type: GossipType.inclusion_list};
 };
 
 export type GossipTopicMap = {
@@ -114,6 +117,7 @@ export type GossipTypeMap = {
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
   [GossipType.proposer_preferences]: gloas.SignedProposerPreferences;
+  [GossipType.inclusion_list]: heze.SignedInclusionList;
 };
 
 export type GossipFnByType = {
@@ -148,6 +152,7 @@ export type GossipFnByType = {
   [GossipType.proposer_preferences]: (
     signedProposerPreferences: gloas.SignedProposerPreferences
   ) => Promise<void> | void;
+  [GossipType.inclusion_list]: (signedInclusionList: heze.SignedInclusionList) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];
