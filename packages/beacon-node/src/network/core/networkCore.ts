@@ -478,7 +478,11 @@ export class NetworkCore implements INetworkCore {
     return this.gossip.getDirectPeers();
   }
 
-  private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
+  private _dumpPeer(
+    peerIdStr: string,
+    connections: Connection[],
+    enr?: string | null
+  ): routes.lodestar.LodestarNodePeer {
     const peerData = this.peersData.connectedPeers.get(peerIdStr);
     const fork = this.config.getForkName(this.clock.currentSlot);
     if (isForkPostFulu(fork) && peerData?.status) {
@@ -486,7 +490,7 @@ export class NetworkCore implements INetworkCore {
         (peerData.status as fulu.Status).earliestAvailableSlot ?? 0;
     }
     return {
-      ...formatNodePeer(peerIdStr, connections),
+      ...formatNodePeer(peerIdStr, connections, enr),
       agentVersion: peerData?.agentVersion ?? "NA",
       status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
@@ -499,13 +503,36 @@ export class NetworkCore implements INetworkCore {
 
   async dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
     const connections = this.getConnectionsByPeer().get(peerIdStr);
-    return connections ? this._dumpPeer(peerIdStr, connections) : undefined;
+    if (!connections) return undefined;
+    const enrMap = await this.getPeerEnrMap();
+    return this._dumpPeer(peerIdStr, connections, enrMap.get(peerIdStr));
   }
 
   async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
+    const enrMap = await this.getPeerEnrMap();
     return Array.from(this.getConnectionsByPeer().entries()).map(([peerIdStr, connections]) =>
-      this._dumpPeer(peerIdStr, connections)
+      this._dumpPeer(peerIdStr, connections, enrMap.get(peerIdStr))
     );
+  }
+
+  /**
+   * Build a map of PeerIdStr → ENR text for the peers API response.
+   * Starts from the discovery cache, then overlays fresher kadValues entries.
+   */
+  private async getPeerEnrMap(): Promise<Map<string, string>> {
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
+    const discovery = this.peerManager["discovery"];
+    const enrMap = new Map(discovery?.getDiscoveredEnrs() ?? []);
+
+    try {
+      for (const enr of (await discovery?.discv5?.kadValues()) ?? []) {
+        enrMap.set(enr.peerId.toString(), enr.encodeTxt());
+      }
+    } catch (e) {
+      this.logger.debug("Could not overlay ENRs from discv5 kadValues", {}, e as Error);
+    }
+
+    return enrMap;
   }
 
   async dumpPeerScoreStats(): Promise<PeerScoreStats> {
