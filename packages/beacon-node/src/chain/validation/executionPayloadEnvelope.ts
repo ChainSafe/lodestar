@@ -6,7 +6,13 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
+import {
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+  GossipAction,
+  GossipActionError,
+  GossipErrorCode,
+} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
@@ -19,14 +25,16 @@ export async function validateApiExecutionPayloadEnvelope(
 
 export async function validateGossipExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  isSenderFatal?: () => boolean
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope, isSenderFatal);
 }
 
 async function validateExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  isSenderFatal?: () => boolean
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
   const {payload} = envelope;
@@ -133,6 +141,10 @@ async function validateExecutionPayloadEnvelope(
         slot: payload.slotNumber,
       });
     });
+  // the sender may have been reported Fatal while regen was pending, skip hashing the full payload for the signing root
+  if (isSenderFatal?.()) {
+    throw new GossipActionError(GossipAction.IGNORE, {code: GossipErrorCode.FATAL_PEER});
+  }
   if (!isStatePostGloas(blockState)) {
     throw new Error(`Expected gloas+ state for execution payload envelope validation, got fork=${blockState.forkName}`);
   }
