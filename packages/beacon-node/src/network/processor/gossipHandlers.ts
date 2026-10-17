@@ -91,6 +91,7 @@ import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized} from "../../util/sszBytes.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -1265,7 +1266,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
-      const {serializedData} = gossipData;
+      const {serializedData, msgSlot} = gossipData;
+      // same check as validation, done on the bytes to avoid deserializing a payload that was already imported
+      const rootHex = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(serializedData);
+      if (rootHex !== null && chain.seenPayloadEnvelope(rootHex)) {
+        throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+          code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+          blockRoot: rootHex,
+          slot: msgSlot ?? null,
+        });
+      }
+
       const signedEnvelope = sszDeserialize(topic, serializedData);
       const envelope = signedEnvelope.message;
 

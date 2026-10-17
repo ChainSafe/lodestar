@@ -23,7 +23,7 @@ export type ExecutionPayloadEnvelopeErrorType =
   | {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN;
       blockRoot: RootHex;
-      slot: Slot;
+      slot: Slot | null;
     }
   | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK; blockRoot: RootHex}
   | {
