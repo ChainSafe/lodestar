@@ -22,7 +22,7 @@ import {
 import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {BeaconEngineEvent, IBeaconEngineEventBus} from "../beaconEngine/events.js";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
@@ -44,7 +44,7 @@ export function initializeForkChoice(
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   stateGetter: ForkChoiceStateGetter,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   logger?: Logger
 ): ForkChoice {
   return isFinalizedState
@@ -83,7 +83,7 @@ export function initializeForkChoiceFromFinalizedState(
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   stateGetter: ForkChoiceStateGetter,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   logger?: Logger
 ): ForkChoice {
   const {blockHeader, checkpoint} = state.computeAnchorCheckpoint();
@@ -176,7 +176,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   stateGetter: ForkChoiceStateGetter,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   logger?: Logger
 ): ForkChoice {
   const {blockHeader} = unfinalizedState.computeAnchorCheckpoint();

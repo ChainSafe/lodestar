@@ -4,6 +4,7 @@ import {Registry} from "prom-client";
 import {Logger} from "@lodestar/utils";
 import {HttpActiveSocketsTracker} from "../../api/rest/activeSockets.js";
 import {wrapError} from "../../util/wrapError.js";
+import {ScrapedMetrics, aggregateMetrics} from "../utils/aggregateMetrics.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type HttpMetricsServerOpts = {
@@ -26,7 +27,7 @@ export async function getHttpMetricsServer(
     register,
     getOtherMetrics = async () => [],
     logger,
-  }: {register: Registry; getOtherMetrics?: () => Promise<string[]>; logger: Logger}
+  }: {register: Registry; getOtherMetrics?: () => Promise<(string | ScrapedMetrics)[]>; logger: Logger}
 ): Promise<HttpMetricsServer> {
   // New registry to metric the metrics. Using the same registry would deadlock the .metrics promise
   const httpServerRegister = new RegistryMetricCreator();
@@ -44,16 +45,24 @@ export async function getHttpMetricsServer(
   ): Promise<void> {
     if (req.method === "GET" && req.url && req.url.includes("/metrics")) {
       const timer = scrapeTimeMetric.startTimer();
-      const metricsRes = await Promise.all([wrapError(register.metrics()), getOtherMetrics()]);
-      timer({status: metricsRes[0].err ? RequestStatus.error : RequestStatus.success});
+      const metricsRes = await wrapError(
+        Promise.all([register.getMetricsAsJSON(), getOtherMetrics()]).then(async ([mainMetrics, otherMetrics]) => [
+          await aggregateMetrics([
+            ...otherMetrics.flatMap((metrics) => (typeof metrics === "string" ? [] : [metrics.metrics])),
+            mainMetrics,
+          ]),
+          ...otherMetrics.map((metrics) => (typeof metrics === "string" ? metrics : metrics.extra)),
+        ])
+      );
+      timer({status: metricsRes.err ? RequestStatus.error : RequestStatus.success});
 
       // Ensure we only writeHead once
-      if (metricsRes[0].err) {
-        res.writeHead(500, {"content-type": "text/plain"}).end(metricsRes[0].err.stack);
+      if (metricsRes.err) {
+        res.writeHead(500, {"content-type": "text/plain"}).end(metricsRes.err.stack);
       } else {
         // Get scrape time metrics
         const httpServerMetrics = await httpServerRegister.metrics();
-        const metrics = [metricsRes[0].result, httpServerMetrics, ...metricsRes[1]];
+        const metrics = [httpServerMetrics, ...metricsRes.result];
         const metricsStr = metrics.join("\n\n");
         res.writeHead(200, {"content-type": register.contentType}).end(metricsStr);
       }

@@ -6,7 +6,7 @@ import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {WorkResultCode} from "../../../../src/chain/bls/multithread/types.js";
-import {createMetricsTest} from "../../../unit/metrics/utils.js";
+import {createBeaconEngineMetrics} from "../../../../src/metrics/index.js";
 
 describe("chain / bls / multithread queue", () => {
   const logger = testLogger();
@@ -96,7 +96,7 @@ describe("chain / bls / multithread queue", () => {
   }
 
   it("Should record BLS scheduler and verification call metrics", async () => {
-    const metrics = createMetricsTest();
+    const metrics = createBeaconEngineMetrics();
     const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics});
     afterEachCallbacks.push(() => pool.close());
     await pool["waitTillInitialized"]();
@@ -171,7 +171,7 @@ describe("chain / bls / multithread queue", () => {
   });
 
   it("Should distinguish verifier and worker result errors", async () => {
-    const metrics = createMetricsTest();
+    const metrics = createBeaconEngineMetrics();
     const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics});
     afterEachCallbacks.push(() => pool.close());
     await pool["waitTillInitialized"]();
@@ -262,7 +262,7 @@ describe("chain / bls / multithread queue", () => {
   }
 
   it("Should not retry batchable jobs that fit the verifier bound", async () => {
-    const metrics = createMetricsTest();
+    const metrics = createBeaconEngineMetrics();
     const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics});
     afterEachCallbacks.push(() => pool.close());
     await pool["waitTillInitialized"]();

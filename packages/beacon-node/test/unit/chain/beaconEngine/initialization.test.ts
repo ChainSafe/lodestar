@@ -10,6 +10,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
+import {HistoricalStateRegen} from "../../../../src/chain/archiveStore/historicalState/historicalStateRegen.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine/initialization.js";
@@ -21,13 +22,13 @@ import * as proposerSlashingValidation from "../../../../src/chain/validation/pr
 import * as voluntaryExitValidation from "../../../../src/chain/validation/voluntaryExit.js";
 import {BeaconDb} from "../../../../src/db/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
-import {createMetrics} from "../../../../src/metrics/index.js";
+import {aggregateMetrics, createMetrics} from "../../../../src/metrics/index.js";
 import {initDevState} from "../../../../src/node/utils/state.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {TestChainModules, createBeaconChain, initializeTestChain} from "../../../utils/chain.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
-import {getBeaconEngineCore} from "../../../utils/engine.js";
+import {createTestBeaconEngine, getBeaconEngineCore} from "../../../utils/engine.js";
 
 describe("bytes-based engine startup", () => {
   const config = createChainForkConfig(chainConfig);
@@ -138,6 +139,8 @@ describe("bytes-based engine startup", () => {
   });
 
   it("applies a view update once before downstream chain listeners read the head", async () => {
+    const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    modules.metrics = metrics;
     const dependencies = await initializeTestChain(opts, modules);
     const beaconChain = new BeaconChain(opts, dependencies);
     chain = beaconChain;
@@ -159,6 +162,9 @@ describe("bytes-based engine startup", () => {
     core.emitter.emit(BeaconEngineEvent.chainViewUpdated, structuredClone(update));
 
     expect(onUpdate).toHaveBeenCalledExactlyOnceWith(update);
+    expect(await metrics.register.getSingleMetricAsString("beacon_head_slot")).toContain(
+      `beacon_head_slot ${head.slot}`
+    );
     await beaconChain.close();
     core.emitter.emit(BeaconEngineEvent.chainViewUpdated, update);
     expect(onUpdate).toHaveBeenCalledOnce();
@@ -211,10 +217,115 @@ describe("bytes-based engine startup", () => {
     await beaconEngine.registerLocalValidatorsInSyncCommittee([{validatorIndex: 1, untilEpoch: 3}]);
     expect(await beaconEngine.getMonitoredValidatorIndices()).toEqual([1, 2]);
     await beaconEngine.registerApiBlock(1, {slot: 0, proposerIndex: 1, blockRoot: toRootHex(stateRoot)});
-    const monitorMetrics = await beaconEngine.scrapeValidatorMonitorMetrics();
+    const monitorMetrics = await aggregateMetrics([(await beaconEngine.scrapeMetrics()).metrics]);
     expect(monitorMetrics).toContain("validator_monitor_validators 2");
     expect(monitorMetrics).toContain('validator_monitor_beacon_block_total{src="api"} 1');
     expect(metrics.register.getSingleMetric("validator_monitor_validators")).toBeUndefined();
+  });
+
+  it.each([false, true])("isolates engine metrics with beaconEngineWorker=%s", async (beaconEngineWorker) => {
+    const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    modules.metrics = metrics;
+    chain = await createBeaconChain({...opts, beaconEngineWorker}, modules);
+    const core = getBeaconEngineCore(chain.beaconEngine);
+    expect(core.metrics?.register).not.toBe(metrics.register);
+    const getHeadState = vi.spyOn(core, "getHeadState");
+    core.opPool.insertVoluntaryExit(ssz.phase0.SignedVoluntaryExit.defaultValue());
+
+    const mainText = await metrics.register.metrics();
+    expect(getHeadState).not.toHaveBeenCalled();
+    expect(mainText).not.toContain("lodestar_oppool_voluntary_exit_pool_size");
+    const scraped = await chain.beaconEngine.scrapeMetrics();
+    expect(structuredClone(scraped)).toEqual(scraped);
+    expect(await aggregateMetrics([scraped.metrics])).toContain("lodestar_oppool_voluntary_exit_pool_size 1\n");
+    expect(getHeadState).toHaveBeenCalledOnce();
+    const poolSize = scraped.metrics.find((metric) => metric.name === "lodestar_oppool_voluntary_exit_pool_size");
+    if (!poolSize) throw Error("Missing pool size metric");
+    poolSize.values[0].value = 99;
+    expect(await aggregateMetrics([(await chain.beaconEngine.scrapeMetrics()).metrics])).toContain(
+      "lodestar_oppool_voluntary_exit_pool_size 1\n"
+    );
+
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    const root = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+    const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
+    chain.blockSerializedCache.set(root, block, bytes);
+    core.blockSerializedCache.getOrDeserialize(root, bytes);
+    const shared = await aggregateMetrics([
+      (await chain.beaconEngine.scrapeMetrics()).metrics,
+      await metrics.register.getMetricsAsJSON(),
+    ]);
+    const owners = beaconEngineWorker ? ["chain", "engine"] : ["shared"];
+    for (const owner of owners) {
+      expect(shared, `cache size for ${owner}`).toContain(`lodestar_block_cache_entries{owner="${owner}"} 1\n`);
+      expect(shared, `insertions for ${owner}`).toContain(
+        `lodestar_block_cache_insertions_total{owner="${owner}"} 1\n`
+      );
+    }
+    expect(shared.match(/^lodestar_block_cache_entries\{/gm)).toHaveLength(owners.length);
+
+    await chain.close();
+    expect(await chain.beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
+    expect(metrics.register.getSingleMetric("beacon_head_slot")).toBeDefined();
+  });
+
+  it("collects pending-state counts inside the engine", async () => {
+    const electraConfig = getConfig(ForkName.electra);
+    const state = ssz.electra.BeaconState.deserializeToViewDU(
+      initDevState(electraConfig, 16, {genesisTime: 0}).serialize()
+    );
+    state.pendingDeposits.push(ssz.electra.PendingDeposit.defaultViewDU());
+    state.pendingPartialWithdrawals.push(ssz.electra.PendingPartialWithdrawal.defaultViewDU());
+    state.pendingConsolidations.push(ssz.electra.PendingConsolidation.defaultViewDU());
+    state.commit();
+    modules.config = createBeaconConfig(electraConfig, state.genesisValidatorsRoot);
+    modules.anchorStateBytes = state.serialize();
+    modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    chain = await createBeaconChain(opts, modules);
+    const text = await aggregateMetrics([(await chain.beaconEngine.scrapeMetrics()).metrics]);
+    for (const name of [
+      "beacon_pending_deposits",
+      "beacon_pending_partial_withdrawals",
+      "beacon_pending_consolidations",
+    ]) {
+      expect(text, name).toContain(`${name} 1\n`);
+      expect(modules.metrics.register.getSingleMetric(name), name).toBeUndefined();
+    }
+  });
+
+  it("does not create engine registries when metrics are disabled", async () => {
+    chain = await createBeaconChain(opts, modules);
+    expect(getBeaconEngineCore(chain.beaconEngine).metrics).toBeNull();
+    expect(await chain.beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
+  });
+
+  it("collects historical worker metrics in the engine scrape and propagates failures", async () => {
+    modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    const historicalMetrics =
+      "# HELP historical_test Historical metrics\n# TYPE historical_test gauge\nhistorical_test 3\n";
+    vi.spyOn(HistoricalStateRegen, "init").mockResolvedValue(HistoricalStateRegen.prototype);
+    const scrapeHistorical = vi
+      .spyOn(HistoricalStateRegen.prototype, "scrapeMetrics")
+      .mockResolvedValue(historicalMetrics);
+    vi.spyOn(HistoricalStateRegen.prototype, "close").mockResolvedValue();
+    chain = await createBeaconChain({...opts, serveHistoricalState: true}, modules);
+    await chain.beaconEngine.loadHistoricalStateRegen();
+    expect((await chain.beaconEngine.scrapeMetrics()).extra).toBe(historicalMetrics);
+    expect(scrapeHistorical).toHaveBeenCalledOnce();
+
+    const error = Error("historical scrape failed");
+    scrapeHistorical.mockRejectedValueOnce(error);
+    await expect(chain.beaconEngine.scrapeMetrics()).rejects.toBe(error);
+  });
+
+  it("initializes and collects native metrics inside the engine before runtime startup", async () => {
+    modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    const dependencies = createTestBeaconEngine({...opts, nativeStateTransition: true}, modules);
+    engine = dependencies.beaconEngineCore;
+    const scraped = await dependencies.beaconEngine.scrapeMetrics();
+    expect(engine.metrics?.stateTransition).toBeNull();
+    expect(scraped.metrics.some((metric) => metric.name === "lodestar_stfn_process_block_seconds")).toBe(false);
+    expect(scraped.extra).toContain("# TYPE lodestar_stfn_process_block_seconds histogram");
   });
 
   it.each(["abort", "close"])("runs epoch monitoring on the engine clock and cancels it on %s", async (shutdown) => {
@@ -250,7 +361,7 @@ describe("bytes-based engine startup", () => {
     const monitorEpoch = vi.spyOn(beaconEngine.validatorMonitor, "onceEveryEndOfEpoch");
     await beaconEngine.registerLocalValidators([1]);
     expect(await beaconEngine.getMonitoredValidatorIndices()).toEqual([1]);
-    expect(await beaconEngine.scrapeValidatorMonitorMetrics()).toBe("");
+    expect(await beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
     vi.useFakeTimers();
     clock.emit(ClockEvent.slot, SLOTS_PER_EPOCH - 1);
     expect(vi.getTimerCount()).toBe(0);
@@ -262,7 +373,7 @@ describe("bytes-based engine startup", () => {
     const dependencies = await initializeTestChain(opts, modules);
     await dependencies.beaconEngine.registerLocalValidators([1]);
     expect(await dependencies.beaconEngine.getMonitoredValidatorIndices()).toEqual([]);
-    expect(await dependencies.beaconEngine.scrapeValidatorMonitorMetrics()).toBe("");
+    expect(await dependencies.beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
   });
 
   it("forwards engine payload imports to SSE only for recent payloads", async () => {

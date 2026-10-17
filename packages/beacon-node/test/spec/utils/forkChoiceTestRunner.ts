@@ -173,6 +173,8 @@ export const forkChoiceTestRunner =
         chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
         const engine = getBeaconEngineCore(chain.beaconEngine);
+        const engineMetrics = engine.metrics;
+        if (!engineMetrics) throw Error("Missing engine metrics");
         const specStoreBlockRoots = new Set<RootHex>([
           toHex(config.getForkTypes(anchorBlock.slot).BeaconBlock.hashTreeRoot(anchorBlock)),
         ]);
@@ -534,7 +536,7 @@ export const forkChoiceTestRunner =
                   throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
                 }
                 const postState = await engine.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
-                expectValidProgressiveBalances(postState, metrics.stateTransition);
+                expectValidProgressiveBalances(postState, engineMetrics.stateTransition);
                 if (!isValid) throw Error("Expect error since this is a negative test");
                 specStoreBlockRoots.add(blockRootHex);
               } catch (e) {
@@ -759,7 +761,7 @@ export const forkChoiceTestRunner =
               throw Error(`Unknown step ${i}/${stepsLen}: ${JSON.stringify(Object.keys(step))}`);
             }
           }
-          await expectNoProgressiveBalancesMismatches(metrics.register, testCaseName);
+          await expectNoProgressiveBalancesMismatches(engineMetrics.register, testCaseName, metrics.register);
         } finally {
           await chain.close();
         }

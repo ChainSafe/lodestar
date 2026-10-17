@@ -12,7 +12,7 @@ import {
 import {BeaconBlock, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../db/index.js";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {BeaconEngineEvent, IBeaconEngineEventBus} from "../beaconEngine/events.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
@@ -29,7 +29,7 @@ export type RegenModules = {
   config: ChainForkConfig;
   emitter: IBeaconEngineEventBus;
   logger: Logger;
-  metrics: Metrics | null;
+  metrics: BeaconEngineMetrics | null;
   validatorMonitor: ValidatorMonitor | null;
 };
 
@@ -299,7 +299,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
 async function processSlotsByCheckpoint(
   modules: {
     checkpointStateCache: CheckpointStateCache;
-    metrics: Metrics | null;
+    metrics: BeaconEngineMetrics | null;
     validatorMonitor: ValidatorMonitor | null;
     emitter: IBeaconEngineEventBus;
     config: ChainForkConfig;
@@ -330,7 +330,7 @@ async function processSlotsByCheckpoint(
 export async function processSlotsToNearestCheckpoint(
   modules: {
     checkpointStateCache: CheckpointStateCache;
-    metrics: Metrics | null;
+    metrics: BeaconEngineMetrics | null;
     validatorMonitor: ValidatorMonitor | null;
     emitter: IBeaconEngineEventBus | null;
     config: ChainForkConfig;

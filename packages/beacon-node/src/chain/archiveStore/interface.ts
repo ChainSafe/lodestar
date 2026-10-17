@@ -1,6 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {RootHex} from "@lodestar/types";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 
 export enum ArchiveMode {
   Frequency = "frequency",
@@ -54,10 +54,10 @@ export type FinalizedStats = {
 };
 
 export interface StateArchiveStrategy {
-  onCheckpoint(stateRoot: RootHex, metrics?: Metrics | null): Promise<void>;
-  onFinalizedCheckpoint(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
-  maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
-  archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
+  onCheckpoint(stateRoot: RootHex, metrics?: BeaconEngineMetrics | null): Promise<void>;
+  onFinalizedCheckpoint(finalized: CheckpointWithHex, metrics?: BeaconEngineMetrics | null): Promise<void>;
+  maybeArchiveState(finalized: CheckpointWithHex, metrics?: BeaconEngineMetrics | null): Promise<void>;
+  archiveState(finalized: CheckpointWithHex, metrics?: BeaconEngineMetrics | null): Promise<void>;
 }
 
 export interface IArchiveStore {

@@ -23,7 +23,7 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
       config,
       opts: defaultChainOptions,
       logger: modules.logger,
-      metrics: null,
+      metricsEnabled: false,
       clock: modules.chain.clock,
       db: modules.db,
       dbName: "test",

@@ -1,5 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {createBeaconEngineMetrics} from "../../../src/metrics/index.js";
 import {
+  createSpecTestBeaconMetrics,
   createSpecTestMetrics,
   expectInvalidStateTransitionWithNoProgressiveBalancesMismatches,
   expectNoProgressiveBalancesMismatches,
@@ -46,6 +48,25 @@ describe("native progressive balance assertion", () => {
     await expect(expectNoProgressiveBalancesMismatches(register, "injected mismatch")).rejects.toThrow(
       `injected mismatch incremented native ${name}`
     );
+  });
+
+  it("checks engine counters with the native baseline captured at node startup", async () => {
+    const metrics = createSpecTestBeaconMetrics(0);
+    const engineMetrics = createBeaconEngineMetrics();
+    expect(metrics.register.getSingleMetric(name)).toBeUndefined();
+    await expectNoProgressiveBalancesMismatches(engineMetrics.register, "baseline", metrics.register);
+
+    if (!engineMetrics.stateTransition) throw Error("Missing state transition metrics");
+    engineMetrics.stateTransition.progressiveBalancesMismatches.inc({target: "current"});
+    await expect(
+      expectNoProgressiveBalancesMismatches(engineMetrics.register, "engine mismatch", metrics.register)
+    ).rejects.toThrow(`engine mismatch incremented ${name}`);
+
+    engineMetrics.register.resetMetrics();
+    scrapeMetrics.mockReturnValue(`${declaration}${name}{target="previous"} 1\n`);
+    await expect(
+      expectNoProgressiveBalancesMismatches(engineMetrics.register, "native mismatch", metrics.register)
+    ).rejects.toThrow(`native mismatch incremented native ${name}`);
   });
 
   it("rejects a missing native counter at initialization and assertion", async () => {

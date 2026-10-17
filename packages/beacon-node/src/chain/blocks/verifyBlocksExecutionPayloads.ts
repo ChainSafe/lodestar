@@ -12,7 +12,7 @@ import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "
 import {SignedBeaconBlock, bellatrix, deneb, electra, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -23,7 +23,7 @@ export type VerifyBlockExecutionPayloadModules = {
   executionEngine: IExecutionEngine;
   clock: IClock;
   logger: Logger;
-  metrics: Metrics | null;
+  metrics: BeaconEngineMetrics | null;
   forkChoice: IForkChoice;
   config: ChainForkConfig;
 };

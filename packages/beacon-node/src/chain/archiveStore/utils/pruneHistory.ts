@@ -3,13 +3,13 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, prettyPrintIndices} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../../db/interface.js";
-import {Metrics} from "../../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../../metrics/index.js";
 
 export async function pruneHistory(
   config: ChainConfig,
   db: IBeaconEngineDb,
   logger: Logger,
-  metrics: Metrics | null | undefined,
+  metrics: BeaconEngineMetrics | null | undefined,
   finalizedEpoch: Epoch,
   currentEpoch: Epoch,
   statePruneFromSlot: Slot,

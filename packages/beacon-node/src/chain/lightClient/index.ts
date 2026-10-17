@@ -47,7 +47,7 @@ import {Logger, MapDef, byteArrayEquals, pruneSetToMax, toRootHex} from "@lodest
 import {ZERO_HASH} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {BeaconEngineEvent, IBeaconEngineEventBus} from "../beaconEngine/events.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
@@ -86,7 +86,7 @@ type LightClientServerModules = {
   config: ChainForkConfig;
   clock: IClock;
   db: IBeaconEngineDb;
-  metrics: Metrics | null;
+  metrics: BeaconEngineMetrics | null;
   emitter: IBeaconEngineEventBus;
   logger: Logger;
   signal: AbortSignal;
@@ -198,7 +198,7 @@ const MAX_PREV_HEAD_DATA = 32;
 export class LightClientServer {
   private readonly db: IBeaconEngineDb;
   private readonly config: ChainForkConfig;
-  private readonly metrics: Metrics | null;
+  private readonly metrics: BeaconEngineMetrics | null;
   private readonly emitter: IBeaconEngineEventBus;
   private readonly logger: Logger;
   private readonly clock: IClock;

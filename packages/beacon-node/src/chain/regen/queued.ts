@@ -3,7 +3,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {BlockStateCache, CheckpointHex, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
@@ -40,7 +40,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private readonly forkChoice: IForkChoice;
   private readonly blockStateCache: BlockStateCache;
   private readonly checkpointStateCache: CheckpointStateCache;
-  private readonly metrics: Metrics | null;
+  private readonly metrics: BeaconEngineMetrics | null;
   private readonly logger: Logger;
 
   constructor(modules: QueuedStateRegeneratorModules) {

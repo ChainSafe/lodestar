@@ -85,7 +85,11 @@ export function createTestBeaconEngine(
   });
 
   const serializedCache = new SerializedCache({cacheDeserialized: !opts.beaconEngineWorker});
-  const blockSerializedCache = new BlockSerializedCache(config);
+  const blockSerializedCache = new BlockSerializedCache(config, {
+    owner: opts.beaconEngineWorker ? "chain" : "shared",
+    metrics: metrics?.blockSerializedCache,
+    logger,
+  });
   const beaconEngineCore = new BeaconEngineCore({
     serializedCache: opts.beaconEngineWorker ? undefined : serializedCache,
     blockSerializedCache: opts.beaconEngineWorker ? undefined : blockSerializedCache,
@@ -97,7 +101,7 @@ export function createTestBeaconEngine(
     logger,
     dbName,
     dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
-    metrics,
+    metricsEnabled: metrics !== null,
     clock,
     pubkeyCache,
     cpStateDatastore,

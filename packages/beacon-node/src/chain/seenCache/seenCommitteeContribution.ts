@@ -1,7 +1,7 @@
 import {Slot, ValidatorIndex} from "@lodestar/types";
 import {ContributionAndProof, SyncCommitteeContribution} from "@lodestar/types/altair";
 import {MapDef, toRootHex} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 import {AggregationInfo, insertDesc} from "./seenAggregateAndProof.js";
 
@@ -30,7 +30,7 @@ export class SeenContributionAndProof {
     () => new MapDef(() => [])
   );
 
-  constructor(private readonly metrics: Metrics | null) {}
+  constructor(private readonly metrics: BeaconEngineMetrics | null) {}
 
   /**
    * _[IGNORE]_ A valid sync committee contribution with equal `slot`, `beacon_block_root` and `subcommittee_index` whose

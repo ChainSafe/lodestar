@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {IBeaconEngineOptions} from "../beaconEngine/options.js";
 import {IBlsVerifier} from "../bls/index.js";
@@ -26,7 +26,7 @@ export async function verifyBlocksSignatures(
   config: BeaconConfig,
   bls: IBlsVerifier,
   logger: Logger,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
   indexedAttestationsByBlock: IndexedAttestation[][],

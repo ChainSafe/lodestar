@@ -377,14 +377,6 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getActiveValidatorCount();
   }
 
-  getHeadPendingCounts(): {
-    pendingDeposits: number;
-    pendingPartialWithdrawals: number;
-    pendingConsolidations: number;
-  } | null {
-    return this.core.getHeadPendingCounts();
-  }
-
   registerLocalValidators(indices: ValidatorIndex[]): Promise<void> {
     return this.core.registerLocalValidators(indices);
   }
@@ -427,8 +419,8 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getMonitoredValidatorIndices();
   }
 
-  scrapeValidatorMonitorMetrics(): Promise<string> {
-    return this.core.scrapeValidatorMonitorMetrics();
+  scrapeMetrics(): ReturnType<IBeaconEngine["scrapeMetrics"]> {
+    return this.core.scrapeMetrics();
   }
 
   initRegen(): Promise<void> {
@@ -445,10 +437,6 @@ export class BeaconEngine implements IBeaconEngine {
 
   loadHistoricalStateRegen(): Promise<void> {
     return this.core.loadHistoricalStateRegen();
-  }
-
-  scrapeHistoricalStateMetrics(): Promise<string> {
-    return this.core.scrapeHistoricalStateMetrics();
   }
 
   getSerializedState(

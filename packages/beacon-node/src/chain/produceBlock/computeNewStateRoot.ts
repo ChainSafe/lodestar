@@ -7,7 +7,7 @@ import {
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
 } from "@lodestar/types";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 
 /**
  * Instead of running fastStateTransition(), only need to process block since
@@ -19,7 +19,7 @@ import {Metrics} from "../../metrics/index.js";
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function computeNewStateRoot(
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   state: IBeaconStateView,
   block: BeaconBlock | BlindedBeaconBlock
 ): {newStateRoot: Root; proposerReward: Gwei; postState: IBeaconStateView} {

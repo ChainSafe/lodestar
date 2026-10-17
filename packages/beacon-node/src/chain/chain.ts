@@ -975,6 +975,7 @@ export class BeaconChain implements IBeaconChain {
     const previousJustified = this.getJustifiedCheckpoint();
     const previousFinalized = this.getFinalizedCheckpoint();
     this.chainView.applyUpdate(update);
+    this.metrics?.headSlot.set(update.head.slot);
     if (update.justified.epoch !== previousJustified.epoch || update.justified.rootHex !== previousJustified.rootHex) {
       this.emitter.emit(ChainEvent.forkChoiceJustified, this.getJustifiedCheckpoint());
     }
@@ -1058,14 +1059,6 @@ export class BeaconChain implements IBeaconChain {
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
     metrics.bls.pubkeyCacheSize.set(this.pubkeyCache.size);
     metrics.bls.pubkeyCacheCapacity.set(this.pubkeyCache.capacity);
-
-    // TODO - beacon engine: move metrics to BeaconEngine?
-    const pendingCounts = this.beaconEngine.getHeadPendingCounts();
-    if (pendingCounts) {
-      metrics.pendingDeposits.set(pendingCounts.pendingDeposits);
-      metrics.pendingPartialWithdrawals.set(pendingCounts.pendingPartialWithdrawals);
-      metrics.pendingConsolidations.set(pendingCounts.pendingConsolidations);
-    }
   }
 
   private onClockSlot(slot: Slot): void {

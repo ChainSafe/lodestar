@@ -13,8 +13,7 @@ import {
 } from "@lodestar/state-transition";
 import {DataColumnSidecar, Root, RootHex, Slot, SubnetID, ValidatorIndex, fulu, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
-import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
@@ -33,7 +32,7 @@ export async function validateGossipFuluDataColumnSidecar(
   this: BeaconEngineCore,
   dataColumnSidecar: fulu.DataColumnSidecar,
   gossipSubnet: SubnetID,
-  metrics: Metrics | null
+  metrics: Pick<BeaconEngineMetrics, "peerDas"> | null
 ): Promise<void> {
   const blockHeader = dataColumnSidecar.signedBlockHeader.message;
   const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
@@ -228,7 +227,7 @@ export async function validateGossipGloasDataColumnSidecar(
   this: BeaconEngineCore,
   dataColumnSidecar: gloas.DataColumnSidecar,
   gossipSubnet: SubnetID,
-  metrics: Metrics | null
+  metrics: Pick<BeaconEngineMetrics, "peerDas"> | null
 ): Promise<void> {
   const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
   const block = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
@@ -449,7 +448,7 @@ export async function validateFuluBlockDataColumnSidecars(
   blockRoot: Root,
   blockBlobCount: number,
   dataColumnSidecars: fulu.DataColumnSidecar[],
-  metrics?: BeaconMetrics["peerDas"] | null
+  metrics?: BeaconEngineMetrics["peerDas"] | null
 ): Promise<void> {
   metrics?.dataColumnSidecarProcessingRequests.inc(dataColumnSidecars.length);
   const verificationTimer = metrics?.dataColumnSidecarGossipVerificationTime.startTimer();
@@ -634,7 +633,7 @@ export async function validateGloasBlockDataColumnSidecars(
   blockRoot: Root,
   blockKzgCommitments: Uint8Array[],
   dataColumnSidecars: gloas.DataColumnSidecar[],
-  metrics?: BeaconMetrics["peerDas"] | null
+  metrics?: BeaconEngineMetrics["peerDas"] | null
 ): Promise<void> {
   metrics?.dataColumnSidecarProcessingRequests.inc(dataColumnSidecars.length);
   const verificationTimer = metrics?.dataColumnSidecarGossipVerificationTime.startTimer();

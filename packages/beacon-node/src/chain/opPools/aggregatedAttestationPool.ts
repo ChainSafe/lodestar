@@ -31,7 +31,7 @@ import {
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
 import {Logger, MapDef, assert, toRootHex} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ShufflingCache} from "../shufflingCache.js";
@@ -140,7 +140,7 @@ export class AggregatedAttestationPool {
 
   constructor(
     private readonly config: BeaconConfig,
-    private readonly metrics: Metrics | null = null,
+    private readonly metrics: BeaconEngineMetrics | null = null,
     private readonly logger: Logger | null = null
   ) {
     metrics?.opPool.aggregatedAttestationPool.attDataPerSlot.addCollect(() => this.onScrapeMetrics(metrics));
@@ -465,7 +465,7 @@ export class AggregatedAttestationPool {
     return attestations;
   }
 
-  private onScrapeMetrics(metrics: Metrics): void {
+  private onScrapeMetrics(metrics: BeaconEngineMetrics): void {
     const poolMetrics = metrics.opPool.aggregatedAttestationPool;
     const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
 

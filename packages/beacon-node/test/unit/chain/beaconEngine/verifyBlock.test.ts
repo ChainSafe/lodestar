@@ -253,7 +253,7 @@ describe("BeaconEngineCore block execution verification", () => {
   );
 
   it("does not submit an empty pre-merge Bellatrix payload", async () => {
-    expect(await verifyBlockExecutionPayload(chain, bellatrixInput().getBlock(), state)).toMatchObject({
+    expect(await verifyBlockExecutionPayload(core, bellatrixInput().getBlock(), state)).toMatchObject({
       executionStatus: ExecutionStatus.PreMerge,
     });
     expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
@@ -261,7 +261,7 @@ describe("BeaconEngineCore block execution verification", () => {
 
   it("submits the transition payload when execution becomes enabled", async () => {
     const input = bellatrixInput(true);
-    expect(await verifyBlockExecutionPayload(chain, input.getBlock(), state)).toMatchObject({
+    expect(await verifyBlockExecutionPayload(core, input.getBlock(), state)).toMatchObject({
       executionStatus: ExecutionStatus.Valid,
     });
     expect(chain.executionEngine.notifyNewPayload).toHaveBeenCalledOnce();
@@ -281,7 +281,7 @@ describe("BeaconEngineCore block execution verification", () => {
       seenTimestampSec: 0,
     });
     const facadeHashes = vi.spyOn(input, "getVersionedHashes").mockReturnValue([Buffer.alloc(32, 3)]);
-    await verifyBlockExecutionPayload(chain, input.getBlock(), state);
+    await verifyBlockExecutionPayload(core, input.getBlock(), state);
     expect(chain.executionEngine.notifyNewPayload).toHaveBeenCalledExactlyOnceWith(
       ForkName.deneb,
       block.message.body.executionPayload,
@@ -335,7 +335,7 @@ describe("BeaconEngineCore block execution verification", () => {
     const response = defer<Awaited<ReturnType<typeof chain.executionEngine.notifyNewPayload>>>();
     chain.executionEngine.notifyNewPayload.mockReturnValueOnce(response.promise);
     const verification = verifyBlocksExecutionPayload(
-      chain,
+      core,
       zeroProtoBlock,
       [bellatrixInput(true).getBlock(), bellatrixInput(true).getBlock()],
       state,
@@ -358,7 +358,7 @@ describe("BeaconEngineCore block execution verification", () => {
       source: BlockInputSource.gossip,
       seenTimestampSec: 0,
     });
-    expect(await verifyBlockExecutionPayload(chain, input.getBlock(), state)).toMatchObject({
+    expect(await verifyBlockExecutionPayload(core, input.getBlock(), state)).toMatchObject({
       executionStatus: ExecutionStatus.Syncing,
     });
     expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();

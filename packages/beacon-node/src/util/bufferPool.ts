@@ -1,4 +1,4 @@
-import {Metrics} from "../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../metrics/beaconEngineMetrics.js";
 
 /**
  * If consumer wants more memory than available, we grow the buffer by this ratio.
@@ -20,9 +20,9 @@ export class BufferPool {
   private buffer: Uint8Array;
   private inUse = false;
   private currentKey: number;
-  private readonly metrics: Metrics["bufferPool"] | null = null;
+  private readonly metrics: BeaconEngineMetrics["bufferPool"] | null = null;
 
-  constructor(size: number, metrics: Metrics | null = null) {
+  constructor(size: number, metrics: BeaconEngineMetrics | null = null) {
     this.buffer = new Uint8Array(Math.floor(size * GROW_RATIO));
     this.currentKey = 0;
     if (metrics) {

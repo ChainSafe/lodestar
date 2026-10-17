@@ -1,12 +1,11 @@
 import {describe, expect, it} from "vitest";
 import {StateHashTreeRootSource} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
-import {createMetrics} from "../../../src/metrics/index.js";
-import {createMetricsTest} from "./utils.js";
+import {createBeaconEngineMetrics, createMetrics} from "../../../src/metrics/index.js";
 
 describe("Metrics", () => {
   it("should get default metrics from register", async () => {
-    const metrics = createMetricsTest();
+    const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    metrics.close();
     const metricsAsArray = metrics.register.getMetricsAsArray();
     const metricsAsText = await metrics.register.metrics();
     expect(metricsAsArray.length).toBeGreaterThan(0);
@@ -14,11 +13,7 @@ describe("Metrics", () => {
   });
 
   it("can exclude state-transition metrics from the registry", async () => {
-    const state = ssz.phase0.BeaconState.defaultViewDU();
-    const metrics = createMetrics({enabled: true, port: 0}, state.genesisTime, [], {
-      includeStateTransitionMetrics: false,
-    });
-    metrics.close();
+    const metrics = createBeaconEngineMetrics(true);
 
     expect(metrics.stateTransition).toBeNull();
     const metricsAsText = await metrics.register.metrics();
@@ -28,13 +23,9 @@ describe("Metrics", () => {
   });
 
   it("keeps state hash tree root metrics when state-transition metrics are excluded", async () => {
-    const state = ssz.phase0.BeaconState.defaultViewDU();
-    const metrics = createMetrics({enabled: true, port: 0}, state.genesisTime, [], {
-      includeStateTransitionMetrics: false,
-    });
+    const metrics = createBeaconEngineMetrics(true);
 
     metrics.stateHashTreeRootTime.observe({source: StateHashTreeRootSource.blockTransition}, 0.125);
-    metrics.close();
 
     const metricsAsText = await metrics.register.metrics();
     expect(metricsAsText).toContain('lodestar_stfn_hash_tree_root_seconds_count{source="block_transition"} 1');

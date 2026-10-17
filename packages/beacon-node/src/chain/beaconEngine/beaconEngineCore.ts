@@ -1,5 +1,7 @@
 import {
+  init as initNativeMetrics,
   registerLocalValidator as registerNativeLocalValidator,
+  scrapeMetrics as scrapeNativeMetrics,
   unregisterLocalValidator as unregisterNativeLocalValidator,
 } from "@chainsafe/lodestar-z/metrics";
 import type {PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
@@ -79,7 +81,7 @@ import {decodeArchivedEnvelope} from "../../db/repositories/index.js";
 import {BuilderApiClient} from "../../execution/builder/apiClient.js";
 import {BuilderStatus} from "../../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
-import {Metrics, RegistryMetricCreator} from "../../metrics/index.js";
+import {BeaconEngineMetrics, createBeaconEngineMetrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {BufferPool} from "../../util/bufferPool.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
@@ -265,7 +267,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   readonly config: BeaconConfig;
   readonly opts: IBeaconEngineOptions;
   readonly logger: Logger;
-  readonly metrics: Metrics | null;
+  readonly metrics: BeaconEngineMetrics | null;
   readonly clock: IClock;
   genesisTime!: number;
   readonly pubkeyCache: PubkeyCache;
@@ -329,7 +331,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private readonly verifiedProposerSignatures = new Map<RootHex, BLSSignature>();
   validatorMonitor: ValidatorMonitor | null = null;
-  private validatorMonitorMetrics: RegistryMetricCreator | null = null;
   private validatorMonitorTimeout?: ReturnType<typeof setTimeout>;
   private readonly onValidatorMonitorAbort = (): void => {
     clearTimeout(this.validatorMonitorTimeout);
@@ -381,7 +382,9 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private anchorStateBytes?: Uint8Array;
 
   constructor(private readonly modules: BeaconEngineCoreModules) {
-    const {opts, config, logger, metrics, clock, pubkeyCache, signal, db} = modules;
+    const {opts, config, logger, clock, pubkeyCache, signal, db} = modules;
+    const metrics = modules.metricsEnabled ? createBeaconEngineMetrics(opts.nativeStateTransition) : null;
+    if (metrics && opts.nativeStateTransition) initNativeMetrics();
     this.executionEngine = modules.executionEngine;
     this.executionBuilder = modules.executionBuilder;
     this.config = config;
@@ -501,23 +504,15 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private initializeRuntime(anchorState: IBeaconStateView): void {
     const modules = this.modules;
-    const {
-      opts,
-      config,
-      logger,
-      metrics,
-      clock,
-      cpStateDatastore,
-      signal,
-      db,
-      validatorMonitorOpts,
-      isAnchorStateFinalized,
-    } = modules;
+    const {opts, config, logger, clock, cpStateDatastore, signal, db, validatorMonitorOpts, isAnchorStateFinalized} =
+      modules;
+    const metrics = this.metrics;
+    metrics?.previousJustifiedEpoch.set(anchorState.previousJustifiedCheckpoint.epoch);
+    metrics?.currentJustifiedEpoch.set(anchorState.currentJustifiedCheckpoint.epoch);
     // Source: unstable@0edec865c8 node/nodejs.ts#init. The monitor and registry stay with engine state.
     if (validatorMonitorOpts !== null) {
-      this.validatorMonitorMetrics = metrics ? new RegistryMetricCreator() : null;
       this.validatorMonitor = createValidatorMonitor(
-        this.validatorMonitorMetrics,
+        metrics?.register ?? null,
         config,
         anchorState.genesisTime,
         modules.validatorMonitorLogger ?? logger,
@@ -681,20 +676,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.clock.on(ClockEvent.epoch, this.onEpoch);
     this.signal.addEventListener("abort", this.onValidatorMonitorAbort, {once: true});
     this.emitter.on(BeaconEngineEvent.checkpoint, this.checkpointListener);
-
-    // The engine reports metrics for its own (internal) op pools.
-    if (metrics) {
-      metrics.clockSlot.addCollect(() => {
-        metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
-        metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
-        metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
-        metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
-        metrics.opPool.attestationPool.size.set(this.attestationPool.getAttestationCount());
-        metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
-        metrics.opPool.payloadAttestationPool.size.set(this.payloadAttestationPool.size);
-        metrics.opPool.executionPayloadBidPool.size.set(this.executionPayloadBidPool.size);
-      });
-    }
 
     this.builderCircuitBreaker = new BuilderCircuitBreaker(this.opts, {
       forkChoice: this.forkChoice,
@@ -1794,23 +1775,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return this.getHeadState().activeValidatorCount;
   }
 
-  /** Head-state electra queue counts (facade metrics); null pre-electra. */
-  getHeadPendingCounts(): {
-    pendingDeposits: number;
-    pendingPartialWithdrawals: number;
-    pendingConsolidations: number;
-  } | null {
-    const state = this.getHeadState();
-    if (!isStatePostElectra(state)) {
-      return null;
-    }
-    return {
-      pendingDeposits: state.pendingDepositsCount,
-      pendingPartialWithdrawals: state.pendingPartialWithdrawalsCount,
-      pendingConsolidations: state.pendingConsolidationsCount,
-    };
-  }
-
   async registerLocalValidators(indices: ValidatorIndex[]): Promise<void> {
     for (const index of indices) this.validatorMonitor?.registerLocalValidator(index);
   }
@@ -1859,8 +1823,39 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return this.validatorMonitor?.getMonitoredValidatorIndices() ?? [];
   }
 
-  async scrapeValidatorMonitorMetrics(): Promise<string> {
-    return this.validatorMonitorMetrics?.metrics() ?? "";
+  async scrapeMetrics(): ReturnType<IBeaconEngineCore["scrapeMetrics"]> {
+    const metrics = this.metrics;
+    if (!metrics || this.closed) return {metrics: [], extra: ""};
+    if (this.startupPhase === "ready") {
+      metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
+      metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
+      metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
+      metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
+      metrics.opPool.attestationPool.size.set(this.attestationPool.getAttestationCount());
+      metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
+      metrics.opPool.payloadAttestationPool.size.set(this.payloadAttestationPool.size);
+      metrics.opPool.executionPayloadBidPool.size.set(this.executionPayloadBidPool.size);
+      const state = this.getHeadState();
+      if (isStatePostElectra(state)) {
+        metrics.pendingDeposits.set(state.pendingDepositsCount);
+        metrics.pendingPartialWithdrawals.set(state.pendingPartialWithdrawalsCount);
+        metrics.pendingConsolidations.set(state.pendingConsolidationsCount);
+      }
+    }
+    const [collectedMetrics, historicalMetrics] = await Promise.all([
+      metrics.register.getMetricsAsJSON(),
+      this.historicalStateRegen?.scrapeMetrics(),
+    ]);
+    const extra = [historicalMetrics ?? ""];
+    if (this.opts.nativeStateTransition) {
+      try {
+        extra.push(scrapeNativeMetrics());
+      } catch (e) {
+        this.logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
+      }
+    }
+    // Detach prom-client samples in main-thread mode too.
+    return {metrics: structuredClone(collectedMetrics), extra: extra.filter(Boolean).join("\n\n")};
   }
 
   /**
@@ -1921,16 +1916,15 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     if (this.onSlot) this.clock.off(ClockEvent.slot, this.onSlot);
     if (this.onEpoch) this.clock.off(ClockEvent.epoch, this.onEpoch);
     this.emitter?.off(BeaconEngineEvent.checkpoint, this.checkpointListener);
-    await this.historicalStateRegen?.close();
-    await this.bls?.close();
+    try {
+      await this.historicalStateRegen?.close();
+      await this.bls?.close();
+    } finally {
+      this.metrics?.register.clear();
+    }
     this.anchorState = undefined;
     this.anchorStateBytes = undefined;
     this.startupPhase = "closed";
-  }
-
-  /** Prometheus metrics from the historical-state worker. */
-  async scrapeHistoricalStateMetrics(): Promise<string> {
-    return (await this.historicalStateRegen?.scrapeMetrics()) ?? "";
   }
 
   /** Serialized historical (below-finalized) state by slot; null if unavailable / not enabled. */

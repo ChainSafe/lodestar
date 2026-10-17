@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
 import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache} from "./types.js";
@@ -48,9 +48,9 @@ export class FIFOBlockStateCache implements BlockStateCache {
    * Key order to implement FIFO cache
    */
   private readonly keyOrder: LinkedList<string>;
-  private readonly metrics: Metrics["stateCache"] | null | undefined;
+  private readonly metrics: BeaconEngineMetrics["stateCache"] | null | undefined;
 
-  constructor(opts: FIFOBlockStateCacheOpts, {metrics}: {metrics?: Metrics | null}) {
+  constructor(opts: FIFOBlockStateCacheOpts, {metrics}: {metrics?: BeaconEngineMetrics | null}) {
     this.maxStates = opts.maxBlockStates ?? DEFAULT_MAX_BLOCK_STATES;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {

@@ -1,7 +1,6 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
-import {init as initNativeMetrics, scrapeMetrics as scrapeNativeMetrics} from "@chainsafe/lodestar-z/metrics";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
@@ -180,13 +179,7 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      if (opts.chain.nativeStateTransition) {
-        initNativeMetrics();
-      }
-
-      metrics = createMetrics(opts.metrics, metadata.genesisTime, metricsRegistries, {
-        includeStateTransitionMetrics: !opts.chain.nativeStateTransition,
-      });
+      metrics = createMetrics(opts.metrics, metadata.genesisTime, metricsRegistries);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db, metrics.flatFileStore);
       signal.addEventListener("abort", metrics.close, {once: true});
@@ -262,7 +255,7 @@ export class BeaconNode {
       dbName: opts.db.name,
       dataColumnDir,
       logger: chainLogger,
-      metrics,
+      metricsEnabled: metrics !== null,
       clock,
       signal: chainController.signal,
       cpStateDatastore,
@@ -316,6 +309,9 @@ export class BeaconNode {
       custodyConfig,
       anchor,
       earliestAvailableSlot,
+      // TODO - beacon engine: BeaconChain and BeaconEngine need separate BuilderApiClient instances,
+      // using their own Metrics and BeaconEngineMetrics respectively.
+      // Preserve authenticated builder registration on the facade: submitSignedBeaconBlock() uses its local client cache.
       builderApiClient: beaconEngineCore.builderApiClient,
     });
 
@@ -359,21 +355,7 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async () => {
-            const otherMetrics = await Promise.all([
-              network.scrapeMetrics(),
-              chain.beaconEngine.scrapeHistoricalStateMetrics(),
-              chain.beaconEngine.scrapeValidatorMonitorMetrics(),
-            ]);
-            if (opts.chain.nativeStateTransition) {
-              try {
-                otherMetrics.push(scrapeNativeMetrics());
-              } catch (e) {
-                logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
-              }
-            }
-            return otherMetrics;
-          },
+          getOtherMetrics: () => Promise.all([network.scrapeMetrics(), chain.beaconEngine.scrapeMetrics()]),
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;

@@ -63,7 +63,7 @@ describe("BeaconEngineCore light client ownership", () => {
       config,
       opts: {...defaultChainOptions, disableLightClientServer},
       logger,
-      metrics: null,
+      metricsEnabled: false,
       clock,
       db: db as unknown as IBeaconEngineDb,
       dbName: "test",

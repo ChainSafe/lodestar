@@ -8,7 +8,7 @@ self = undefined;
 
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
-import {Metrics} from "../../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../../metrics/index.js";
 import {LinkedList} from "../../../util/array.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
@@ -32,7 +32,7 @@ const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/m
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
-  metrics: Metrics | null;
+  metrics: BeaconEngineMetrics | null;
 };
 
 export type BlsMultiThreadWorkerPoolOptions = {
@@ -114,7 +114,7 @@ type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "worker
  */
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: Logger;
-  private readonly metrics: Metrics | null;
+  private readonly metrics: BeaconEngineMetrics | null;
 
   private readonly workers: WorkerDescriptor[];
   private readonly jobs = new LinkedList<JobQueueItem>();

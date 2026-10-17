@@ -27,7 +27,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       config,
       opts: {...defaultChainOptions},
       logger: modules.logger,
-      metrics: null,
+      metricsEnabled: false,
       clock: modules.chain.clock,
       db: modules.db,
       dbName: "test",

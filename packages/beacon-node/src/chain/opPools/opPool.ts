@@ -32,7 +32,7 @@ import {
 } from "@lodestar/types";
 import {byteArrayEquals, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../db/index.js";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {IBlsVerifier} from "../bls/interface.js";
 import {BlockType} from "../interface.js";
@@ -252,7 +252,7 @@ export class OpPool {
   getSlashingsAndExits(
     state: IBeaconStateView,
     blockType: BlockType,
-    metrics: Metrics | null
+    metrics: BeaconEngineMetrics | null
   ): [
     AttesterSlashing[],
     phase0.ProposerSlashing[],

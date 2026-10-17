@@ -89,7 +89,5 @@ export function initBeaconMetrics(
   >
 ): void {
   metrics.headSlot.set(state.slot);
-  metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
-  metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
   metrics.finalizedEpoch.set(state.finalizedCheckpoint.epoch);
 }

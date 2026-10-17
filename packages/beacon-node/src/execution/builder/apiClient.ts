@@ -12,7 +12,7 @@ import {
 import {BLSPubkey, Root, SignedBeaconBlock, Slot, WithOptionalBytes, gloas, ssz} from "@lodestar/types";
 import {isValidAsciiHttpUrl, toHex, toPrintableUrl} from "@lodestar/utils";
 import type {IBlsVerifier} from "../../chain/bls/index.js";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {IClock} from "../../util/clock.js";
 
 /**
@@ -76,7 +76,7 @@ export class BuilderApiClient {
     private readonly config: ChainForkConfig,
     private readonly clock: IClock,
     private readonly bls: IBlsVerifier,
-    private readonly metrics: Metrics | null = null,
+    private readonly metrics: BeaconEngineMetrics | null = null,
     private readonly logger?: Logger
   ) {}
 

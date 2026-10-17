@@ -13,7 +13,7 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {LateCanonicalBlockReason} from "../../../../src/chain/beaconEngine/interface.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
-import {createMetrics} from "../../../../src/metrics/index.js";
+import {BeaconEngineMetrics, createMetrics} from "../../../../src/metrics/index.js";
 import {initDevState} from "../../../../src/node/utils/state.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
@@ -33,6 +33,7 @@ describe("BeaconEngineCore finalized-block audit", () => {
   let head: ProtoBlock;
   let finalized: CheckpointWithHex;
   let metrics: ReturnType<typeof createMetrics>;
+  let engineMetrics: BeaconEngineMetrics;
 
   beforeEach(async () => {
     const {db, close} = await startIsolatedTmpBeaconDb(config);
@@ -67,6 +68,8 @@ describe("BeaconEngineCore finalized-block audit", () => {
     ));
     await engine.prepareAnchorState(state.serialize());
     await engine.initializeFromAnchor();
+    assert(engine.metrics);
+    engineMetrics = engine.metrics;
     finalized = engine.forkChoice.getFinalizedCheckpoint();
     anchor = {
       ...engine.forkChoice.getHead(),
@@ -87,7 +90,7 @@ describe("BeaconEngineCore finalized-block audit", () => {
       return protoArray.getAllAncestorAndNonAncestorNodes(blockRoot, status);
     });
     vi.spyOn(engine.forkChoice, "updateTime").mockImplementation(() => {});
-    vi.spyOn(metrics.importBlock.lateCanonicalBlock, "inc");
+    vi.spyOn(engineMetrics.importBlock.lateCanonicalBlock, "inc");
     vi.clearAllMocks();
   });
 
@@ -138,15 +141,15 @@ describe("BeaconEngineCore finalized-block audit", () => {
     const block = await canonicalBlocks();
     prepareFinality(block, 1);
     engine.updateTime(clock.currentSlot);
-    expect(metrics.importBlock.lateCanonicalBlock.inc).not.toHaveBeenCalled();
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).not.toHaveBeenCalled();
 
     expect(await engine.migrateCanonicalBlocks()).toEqual([0, 8, 9, 10]);
     expect(engine.forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus).toHaveBeenCalledWith(block.blockRoot);
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(2);
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledWith({
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(2);
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledWith({
       reason: LateCanonicalBlockReason.SlowImport,
     });
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledWith({
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledWith({
       reason: LateCanonicalBlockReason.LateReceive,
     });
     expect(logger.verbose).toHaveBeenCalledWith(
@@ -162,7 +165,7 @@ describe("BeaconEngineCore finalized-block audit", () => {
     );
     expect(await engine.db.block.getBinary(fromHex(root(99)))).not.toBeNull();
     expect(await engine.migrateCanonicalBlocks()).toEqual([]);
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(2);
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(2);
   });
 
   it("excludes archived blocks even when fork choice retains all older nodes", async () => {
@@ -174,8 +177,8 @@ describe("BeaconEngineCore finalized-block audit", () => {
     prepareFinality(second, 2);
     expect(await engine.migrateCanonicalBlocks()).toEqual([16]);
     expect(protoArray.nodes[0].blockRoot).toBe(anchor.blockRoot);
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(3);
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenLastCalledWith({
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(3);
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenLastCalledWith({
       reason: LateCanonicalBlockReason.SlowImport,
     });
   });
@@ -185,12 +188,12 @@ describe("BeaconEngineCore finalized-block audit", () => {
     prepareFinality(first, 1);
     clock.setSlot(first.slot + SLOTS_PER_EPOCH + 1);
     expect(await engine.migrateCanonicalBlocks()).toEqual([0, 8, 9, 10]);
-    expect(metrics.importBlock.lateCanonicalBlock.inc).not.toHaveBeenCalled();
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).not.toHaveBeenCalled();
     const second = add(4, clock.currentSlot, first);
     await storeBlocks(second);
     prepareFinality(second, 2);
     await engine.migrateCanonicalBlocks();
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledExactlyOnceWith({
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledExactlyOnceWith({
       reason: LateCanonicalBlockReason.LateReceive,
     });
   });
@@ -201,7 +204,7 @@ describe("BeaconEngineCore finalized-block audit", () => {
     await engine.migrateCanonicalBlocks();
     prepareFinality(block, 2);
     await engine.migrateCanonicalBlocks();
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(2);
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(2);
   });
 
   it("counts the finalized Gloas PENDING block and each canonical ancestor root once", async () => {
@@ -220,11 +223,11 @@ describe("BeaconEngineCore finalized-block audit", () => {
     await storeBlocks(parent, block);
     prepareFinality(block, 2);
     expect(await engine.migrateCanonicalBlocks()).toEqual([8, 16]);
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(2);
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledWith({
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledTimes(2);
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledWith({
       reason: LateCanonicalBlockReason.SlowImport,
     });
-    expect(metrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledWith({
+    expect(engineMetrics.importBlock.lateCanonicalBlock.inc).toHaveBeenCalledWith({
       reason: LateCanonicalBlockReason.LateReceive,
     });
   });
@@ -254,7 +257,7 @@ describe("BeaconEngineCore finalized-block audit", () => {
   it("does not fail migration if audit reporting fails", async () => {
     prepareFinality(await canonicalBlocks(), 1);
     const error = new Error("metric reporting failed");
-    vi.mocked(metrics.importBlock.lateCanonicalBlock.inc).mockImplementation(() => {
+    vi.mocked(engineMetrics.importBlock.lateCanonicalBlock.inc).mockImplementation(() => {
       throw error;
     });
     expect(await engine.migrateCanonicalBlocks()).toEqual([0, 8, 9, 10]);

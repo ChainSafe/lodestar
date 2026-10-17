@@ -2,7 +2,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {getFaultInspectionParams} from "../execution/builder/http.js";
-import {Metrics} from "../metrics/index.js";
+import {BeaconEngineMetrics} from "../metrics/index.js";
 
 export type BuilderCircuitBreakerOpts = {
   faultInspectionWindow?: number;
@@ -12,7 +12,7 @@ export type BuilderCircuitBreakerOpts = {
 export type BuilderCircuitBreakerModules = {
   forkChoice: IForkChoice;
   logger: Logger;
-  metrics: Metrics | null;
+  metrics: BeaconEngineMetrics | null;
 };
 
 /** Four observations is the minimum useful recovery sample for the default ~25% fault budget */

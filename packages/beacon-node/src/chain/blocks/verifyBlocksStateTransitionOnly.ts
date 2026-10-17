@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {IBeaconEngineOptions} from "../beaconEngine/options.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -31,7 +31,7 @@ export async function verifyBlocksStateTransitionOnly(
   dataAvailabilityStatuses: DataAvailabilityStatus[],
   blockBytes: Uint8Array[],
   logger: Logger,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   validatorMonitor: ValidatorMonitor | null,
   signal: AbortSignal,
   // Persist config read off `IBeaconEngineOptions` (engine-owned); persisting the pre/post state bytes here

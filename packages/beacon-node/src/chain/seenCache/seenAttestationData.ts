@@ -1,6 +1,6 @@
 import {CommitteeIndex, RootHex, Slot, SubnetID, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {InsertOutcome} from "../opPools/types.js";
 
 export type SeenAttDataKey = AttDataBase64;
@@ -64,7 +64,7 @@ export class SeenAttestationDatas {
   private lowestPermissibleSlot = 0;
 
   constructor(
-    private readonly metrics: Metrics | null,
+    private readonly metrics: BeaconEngineMetrics | null,
     private readonly cacheSlotDistance = DEFAULT_CACHE_SLOT_DISTANCE,
     // mainly for unit test
     private readonly maxCacheSizePerSlot = DEFAULT_MAX_CACHE_SIZE_PER_SLOT
@@ -130,7 +130,7 @@ export class SeenAttestationDatas {
     }
   }
 
-  private onScrapeLodestarMetrics(metrics: Metrics): void {
+  private onScrapeLodestarMetrics(metrics: BeaconEngineMetrics): void {
     metrics?.seenCache.attestationData.totalSlot.set(this.cacheEntryByAttDataByIndexBySlot.size);
     // tracking number of attestation data at current slot may not be correct if scrape time is not at the end of slot
     // so we track it at the previous slot

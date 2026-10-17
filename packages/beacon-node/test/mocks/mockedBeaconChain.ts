@@ -376,7 +376,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "onPoolSubmitUnaggregatedAttestation",
     "onPoolSubmitAggregatedAttestation",
     "getMonitoredValidatorIndices",
-    "scrapeValidatorMonitorMetrics",
+    "scrapeMetrics",
     // Fork-choice write wrappers (forward to the mock's forkChoice).
     "updateTime",
     // Developer API diagnostics (forward to the engine-owned fork choice).

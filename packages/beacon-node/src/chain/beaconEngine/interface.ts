@@ -39,7 +39,7 @@ import {Logger} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../db/index.js";
 import type {BuilderApiClientOpts} from "../../execution/builder/apiClient.js";
 import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
-import {Metrics} from "../../metrics/index.js";
+import {ScrapedMetrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
 import {SerializedCache} from "../../util/serializedCache.js";
@@ -92,7 +92,7 @@ export type BeaconEngineCoreModules = {
   /** Engine-owned DB directory (historical-state worker location). */
   dbName: string;
   dataColumnDir: string;
-  metrics: Metrics | null;
+  metricsEnabled: boolean;
   clock: IClock;
   pubkeyCache: PubkeyCache;
   cpStateDatastore: CPStateDatastore;
@@ -330,11 +330,6 @@ export interface IBeaconEngineCore {
   dropCache(): Promise<void>;
   dumpRegenQueueItems(): {key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[];
   getActiveValidatorCount(): number;
-  getHeadPendingCounts(): {
-    pendingDeposits: number;
-    pendingPartialWithdrawals: number;
-    pendingConsolidations: number;
-  } | null;
   registerLocalValidators(indices: ValidatorIndex[]): Promise<void>;
   registerLocalValidatorsInSyncCommittee(
     subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]
@@ -356,7 +351,7 @@ export interface IBeaconEngineCore {
     sentPeers: number
   ): Promise<void>;
   getMonitoredValidatorIndices(): Promise<ValidatorIndex[]>;
-  scrapeValidatorMonitorMetrics(): Promise<string>;
+  scrapeMetrics(): Promise<ScrapedMetrics>;
   initRegen(): Promise<void>;
   /** Tear down engine-owned resources (historical-state regen worker, BLS pool, …). */
   close(): Promise<void>;
@@ -364,7 +359,6 @@ export interface IBeaconEngineCore {
   getLatestWeakSubjectivityCheckpointEpoch(): Epoch;
   // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
   loadHistoricalStateRegen(): Promise<void>;
-  scrapeHistoricalStateMetrics(): Promise<string>;
   // API state queries — the engine resolves the state internally (no IBeaconStateView crosses). `id` is
   // the resolved stateId (root / slot / checkpoint); the API keeps `resolveStateId` (400 on bad input).
   getSerializedState(

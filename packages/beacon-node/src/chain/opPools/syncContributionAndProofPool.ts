@@ -5,7 +5,7 @@ import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params"
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
 import {Logger, MapDef, toRootHex} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
@@ -53,7 +53,7 @@ export class SyncContributionAndProofPool {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly clock: IClock,
-    private readonly metrics: Metrics | null = null,
+    private readonly metrics: BeaconEngineMetrics | null = null,
     private logger: Logger | null = null
   ) {
     // Param guarantee for optimizations below that merge syncSubcommitteeBits as bytes
@@ -154,7 +154,7 @@ export class SyncContributionAndProofPool {
     this.lowestPermissibleSlot = Math.max(headSlot - SLOTS_RETAINED, 0);
   }
 
-  private onScrapeMetrics(metrics: Metrics): void {
+  private onScrapeMetrics(metrics: BeaconEngineMetrics): void {
     const poolMetrics = metrics.opPool.syncContributionAndProofPool;
     poolMetrics.size.set(this.size);
     const previousSlot = this.clock.currentSlot - 1;
@@ -215,7 +215,7 @@ export function contributionToFast(
  */
 export function aggregate(
   bestContributionBySubnet: Map<number, SyncContributionFast>,
-  metrics: Metrics | null = null
+  metrics: BeaconEngineMetrics | null = null
 ): altair.SyncAggregate {
   // check for empty/undefined bestContributionBySubnet earlier
   const syncCommitteeBits = BitArray.fromBitLen(SYNC_COMMITTEE_SIZE);
