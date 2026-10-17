@@ -52,10 +52,8 @@ function serializeBlocks(...inputs: IBlockInput[]): BlockBytes[] {
 describe("BeaconEngineCore block execution verification", () => {
   let chain: ReturnType<typeof getMockedBeaconChain>;
   let state: BeaconStateView;
-  let signal: AbortSignal;
 
   beforeEach(() => {
-    signal = new AbortController().signal;
     chain = getMockedBeaconChain({config: createBeaconConfig(getConfig(ForkName.bellatrix), Buffer.alloc(32))});
     const cachedState = generateCachedBellatrixState();
     cachedState.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU(
@@ -87,7 +85,7 @@ describe("BeaconEngineCore block execution verification", () => {
     if (cached) chain.blockSerializedCache.set(input.blockRootHex, block, bytes);
     const deserialize = vi.spyOn(ssz.bellatrix.SignedBeaconBlock, "deserialize");
     const opts = structuredClone({validSignatures: true});
-    await chain.beaconEngine.verifyBlocks([{blockRoot, blockBytes: bytes}], opts, signal);
+    await chain.beaconEngine.verifyBlocks([{blockRoot, blockBytes: bytes}], opts);
     const verifiedBlock = chain.beaconEngine.verifiedBlocks.get(input.blockRootHex)?.block;
     expect(verifiedBlock).toEqual(block);
     if (cached) {
@@ -98,32 +96,35 @@ describe("BeaconEngineCore block execution verification", () => {
       expect(verifiedBlock?.signature.buffer).toBe(bytes.buffer);
       expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: true});
     }
-    await chain.beaconEngine.verifyBlocks([{blockRoot, blockBytes: Uint8Array.from(bytes)}], opts, signal);
+    await chain.beaconEngine.verifyBlocks([{blockRoot, blockBytes: Uint8Array.from(bytes)}], opts);
     expect(deserialize).toHaveBeenCalledTimes(cached ? 0 : 1);
     expect(chain.beaconEngine.verifiedBlocks.get(input.blockRootHex)?.block).toBe(verifiedBlock);
     expect(chain.beaconEngine.verifiedBlocks.get(input.blockRootHex)?.blockBytes).toBe(bytes);
   });
 
-  it("honors the caller's AbortSignal while pre-state regeneration is pending", async () => {
-    const preState = defer<BeaconStateView>();
-    chain.regen.getPreState.mockReturnValueOnce(preState.promise);
-    const bytes = serializeBlocks(bellatrixInput());
-    const opts = structuredClone({validSignatures: true});
-    const controller = new AbortController();
-    const verification = chain.beaconEngine.verifyBlocks(bytes, opts, controller.signal);
-    const rejected = expect(verification).rejects.toBeInstanceOf(ErrorAborted);
-    controller.abort();
-    preState.resolve(state);
+  it("stops further EL submissions when engine state transition fails", async () => {
+    const execution = defer<Awaited<ReturnType<typeof chain.executionEngine.notifyNewPayload>>>();
+    chain.executionEngine.notifyNewPayload.mockReturnValueOnce(execution.promise);
+    const payloads = vi.spyOn(executionVerification, "verifyBlocksExecutionPayload");
+    const error = new Error("invalid consensus block");
+    vi.mocked(stf.verifyBlocksStateTransitionOnly).mockRejectedValueOnce(error);
+
+    await expect(
+      chain.beaconEngine.verifyBlocks(serializeBlocks(bellatrixInput(true), bellatrixInput(true)), {
+        validSignatures: true,
+      })
+    ).rejects.toBe(error);
+
+    const rejected = expect(payloads.mock.results[0].value).rejects.toBeInstanceOf(ErrorAborted);
+    execution.resolve({status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null});
     await rejected;
-    expect(stf.verifyBlocksStateTransitionOnly).not.toHaveBeenCalled();
+    expect(chain.executionEngine.notifyNewPayload).toHaveBeenCalledOnce();
     expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
-    await chain.beaconEngine.verifyBlocks(bytes, opts, signal);
-    expect(chain.beaconEngine.verifiedBlocks.size).toBe(1);
   });
 
   it("validates an API block without retaining an import bundle or submitting its payload to the EL", async () => {
     const [{blockRoot, blockBytes}] = serializeBlocks(bellatrixInput(true));
-    await chain.beaconEngine.validateApiBlock(blockRoot, blockBytes, {validSignatures: true}, signal);
+    await chain.beaconEngine.validateApiBlock(blockRoot, blockBytes, {validSignatures: true});
     expect(stf.verifyBlocksStateTransitionOnly).toHaveBeenCalledOnce();
     expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
     expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
@@ -131,17 +132,12 @@ describe("BeaconEngineCore block execution verification", () => {
 
   it.each([false, true])("preserves a pending import bundle during API validation (failure: %s)", async (failure) => {
     const [data] = serializeBlocks(bellatrixInput());
-    await chain.beaconEngine.verifyBlocks([data], {validSignatures: true}, signal);
+    await chain.beaconEngine.verifyBlocks([data], {validSignatures: true});
     const pending = chain.beaconEngine.verifiedBlocks.get(toRootHex(data.blockRoot));
     const error = new Error("API state transition failed");
     if (failure) vi.mocked(stf.verifyBlocksStateTransitionOnly).mockRejectedValueOnce(error);
 
-    const validating = chain.beaconEngine.validateApiBlock(
-      data.blockRoot,
-      data.blockBytes,
-      {validSignatures: true},
-      signal
-    );
+    const validating = chain.beaconEngine.validateApiBlock(data.blockRoot, data.blockBytes, {validSignatures: true});
     if (failure) await expect(validating).rejects.toBe(error);
     else await validating;
 
@@ -150,7 +146,7 @@ describe("BeaconEngineCore block execution verification", () => {
 
   it("rejects malformed block bytes before regenerating state", async () => {
     await expect(
-      chain.beaconEngine.verifyBlocks([{blockRoot: new Uint8Array(32), blockBytes: new Uint8Array()}], {}, signal)
+      chain.beaconEngine.verifyBlocks([{blockRoot: new Uint8Array(32), blockBytes: new Uint8Array()}], {})
     ).rejects.toMatchObject({
       type: {code: "INVALID_BLOCK_SSZ"},
     });
@@ -171,7 +167,7 @@ describe("BeaconEngineCore block execution verification", () => {
 
   it("rejects a parent missing from the engine before regenerating state", async () => {
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
-    await expect(chain.beaconEngine.verifyBlocks(serializeBlocks(bellatrixInput()), {}, signal)).rejects.toMatchObject({
+    await expect(chain.beaconEngine.verifyBlocks(serializeBlocks(bellatrixInput()), {})).rejects.toMatchObject({
       type: {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN},
     });
     expect(chain.regen.getPreState).not.toHaveBeenCalled();
@@ -203,12 +199,7 @@ describe("BeaconEngineCore block execution verification", () => {
         executionStatuses: [ExecutionStatus.Syncing],
         executionTime: 0,
       });
-      await verifyEngineBlocks.call(
-        chain.beaconEngine,
-        serializeBlocks(input),
-        {validSignatures: true},
-        new AbortController().signal
-      );
+      await verifyEngineBlocks.call(chain.beaconEngine, serializeBlocks(input), {validSignatures: true});
       expect(chain.forkChoice.getBlockHexAndBlockHash).toHaveBeenCalledWith(
         toRootHex(block.message.parentRoot),
         toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
@@ -269,11 +260,9 @@ describe("BeaconEngineCore block execution verification", () => {
         : {status, latestValidHash: null, validationError: null}
     );
     const blockBytes = ssz.bellatrix.SignedBeaconBlock.serialize(input.getBlock() as bellatrix.SignedBeaconBlock);
-    const result = await chain.beaconEngine.verifyBlocks(
-      [{blockRoot: fromHex(input.blockRootHex), blockBytes}],
-      {validSignatures: true},
-      signal
-    );
+    const result = await chain.beaconEngine.verifyBlocks([{blockRoot: fromHex(input.blockRootHex), blockBytes}], {
+      validSignatures: true,
+    });
     expect(result.segmentExecStatus).toMatchObject({executionStatuses: [expected]});
     expect(chain.beaconEngine.verifiedBlocks.get(input.blockRootHex)?.executionStatus).toBe(expected);
     expect(chain.beaconEngine.verifiedBlocks.get(input.blockRootHex)?.blockBytes).toBe(blockBytes);
@@ -285,7 +274,7 @@ describe("BeaconEngineCore block execution verification", () => {
     const signatures = vi
       .spyOn(signatureVerification, "verifyBlocksSignatures")
       .mockResolvedValue({verifySignaturesTime: 0});
-    const verification = chain.beaconEngine.verifyBlocks(serializeBlocks(bellatrixInput(true)), {}, signal);
+    const verification = chain.beaconEngine.verifyBlocks(serializeBlocks(bellatrixInput(true)), {});
     await vi.waitFor(() => expect(signatures).toHaveBeenCalledOnce());
     expect(stf.verifyBlocksStateTransitionOnly).toHaveBeenCalledOnce();
     expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
@@ -332,11 +321,10 @@ describe("BeaconEngineCore block execution verification", () => {
   });
 
   it("skips the EL request when requested", async () => {
-    await chain.beaconEngine.verifyBlocks(
-      serializeBlocks(bellatrixInput()),
-      {validSignatures: true, skipVerifyExecutionPayload: true},
-      signal
-    );
+    await chain.beaconEngine.verifyBlocks(serializeBlocks(bellatrixInput()), {
+      validSignatures: true,
+      skipVerifyExecutionPayload: true,
+    });
     expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
   });
 
@@ -357,7 +345,7 @@ describe("BeaconEngineCore block execution verification", () => {
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
     });
     await expect(
-      chain.beaconEngine.verifyBlocks(serializeBlocks(input), {validSignatures: true}, signal)
+      chain.beaconEngine.verifyBlocks(serializeBlocks(input), {validSignatures: true})
     ).rejects.toMatchObject({type: {code: BlockErrorCode.EXECUTION_ENGINE_INVALID}});
     expect(chain.forkChoice.validateLatestHash).toHaveBeenCalledWith(
       expect.objectContaining({latestValidExecHash: latestValidHash})
@@ -382,7 +370,7 @@ describe("BeaconEngineCore block execution verification", () => {
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
     });
     await expect(
-      chain.beaconEngine.verifyBlocks(serializeBlocks(bellatrixInput(true)), {validSignatures: true}, signal)
+      chain.beaconEngine.verifyBlocks(serializeBlocks(bellatrixInput(true)), {validSignatures: true})
     ).rejects.toBe(error);
     expect(chain.forkChoice.validateLatestHash).not.toHaveBeenCalled();
     expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
@@ -411,42 +399,57 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
   });
 
-  it.each([false, true])("cleans up a DA failure after engine verification completes: %s", async (engineComplete) => {
-    vi.spyOn(chain.config, "getForkName").mockReturnValue(ForkName.deneb);
-    vi.spyOn(chain.config, "getForkTypes").mockReturnValue(
-      createBeaconConfig(getConfig(ForkName.deneb), Buffer.alloc(32)).getForkTypes(0)
-    );
-    const block = ssz.deneb.SignedBeaconBlock.defaultValue();
-    block.message.body.executionPayload.blockHash = Buffer.alloc(32, 1);
-    block.message.body.blobKzgCommitments = [Buffer.alloc(48, 2)];
-    const input = BlockInputBlobs.createFromBlock({
-      block,
-      blockRootHex: toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message)),
-      forkName: ForkName.deneb,
-      daOutOfRange: false,
-      source: BlockInputSource.gossip,
-      seenTimestampSec: 0,
-    });
-    const data = defer<Awaited<ReturnType<typeof input.waitForAllData>>>();
-    vi.spyOn(input, "waitForAllData").mockReturnValue(data.promise);
-    const execution = defer<Awaited<ReturnType<typeof chain.executionEngine.notifyNewPayload>>>();
-    if (!engineComplete) chain.executionEngine.notifyNewPayload.mockReturnValue(execution.promise);
-    const error = new Error("DA unavailable");
-    const verification = verifyBlocksInEpoch.call(chain, zeroProtoBlock, [input], null, {validSignatures: true});
-    const rejected = expect(verification).rejects.toBe(error);
-    await vi.waitFor(() => expect(chain.executionEngine.notifyNewPayload).toHaveBeenCalledOnce());
-    const engineVerification = vi.mocked(chain.beaconEngine.verifyBlocks).mock.results[0].value;
-    if (engineComplete) {
-      await engineVerification;
-      expect(chain.beaconEngine.verifiedBlocks.size).toBe(1);
+  it.each(["complete", "pending", "rejecting", "regenerating"] as const)(
+    "cleans up DA failure with engine verification %s",
+    async (engineStatus) => {
+      vi.spyOn(chain.config, "getForkName").mockReturnValue(ForkName.deneb);
+      vi.spyOn(chain.config, "getForkTypes").mockReturnValue(
+        createBeaconConfig(getConfig(ForkName.deneb), Buffer.alloc(32)).getForkTypes(0)
+      );
+      const block = ssz.deneb.SignedBeaconBlock.defaultValue();
+      block.message.body.executionPayload.blockHash = Buffer.alloc(32, 1);
+      block.message.body.blobKzgCommitments = [Buffer.alloc(48, 2)];
+      const input = BlockInputBlobs.createFromBlock({
+        block,
+        blockRootHex: toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message)),
+        forkName: ForkName.deneb,
+        daOutOfRange: false,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: 0,
+      });
+      const data = defer<Awaited<ReturnType<typeof input.waitForAllData>>>();
+      const waitingForData = vi.spyOn(input, "waitForAllData").mockReturnValue(data.promise);
+      const execution = defer<Awaited<ReturnType<typeof chain.executionEngine.notifyNewPayload>>>();
+      if (engineStatus === "pending" || engineStatus === "rejecting") {
+        chain.executionEngine.notifyNewPayload.mockReturnValue(execution.promise);
+      }
+      const preState = defer<BeaconStateView>();
+      if (engineStatus === "regenerating") chain.regen.getPreState.mockReturnValue(preState.promise);
+      const discard = vi.spyOn(chain.beaconEngine, "discardVerifiedBlocks");
+      const observe = vi.spyOn(chain.beaconEngine, "observeVerifiedBlocks");
+      const error = new Error("DA unavailable");
+      const verification = verifyBlocksInEpoch.call(chain, zeroProtoBlock, [input], null, {validSignatures: true});
+      const rejected = expect(verification).rejects.toBe(error);
+      await vi.waitFor(() => expect(chain.regen.getPreState).toHaveBeenCalledOnce());
+      const engineVerification = vi.mocked(chain.beaconEngine.verifyBlocks).mock.results[0].value;
+      if (engineStatus === "complete") {
+        await engineVerification;
+        expect(chain.beaconEngine.verifiedBlocks.size).toBe(1);
+      }
+      data.reject(error);
+      await vi.waitFor(() => expect(waitingForData.mock.calls[0][1]?.aborted).toBe(true));
+      if (engineStatus !== "complete") expect(discard).not.toHaveBeenCalled();
+      if (engineStatus === "pending") {
+        execution.resolve({status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null});
+      } else if (engineStatus === "rejecting") {
+        execution.reject(new Error("EL disconnected"));
+      } else if (engineStatus === "regenerating") {
+        preState.resolve(state);
+      }
+      await rejected;
+      expect(discard).toHaveBeenCalledExactlyOnceWith([input.blockRootHex]);
+      expect(observe).not.toHaveBeenCalled();
+      expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
     }
-    data.reject(error);
-    await rejected;
-    if (!engineComplete) {
-      const engineRejected = expect(engineVerification).rejects.toBeInstanceOf(ErrorAborted);
-      execution.resolve({status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null});
-      await engineRejected;
-    }
-    expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
-  });
+  );
 });

@@ -951,23 +951,15 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.isBlockProposerSeen(slot, proposerIndex);
   }
 
-  validateApiBlock(
-    blockRoot: Root,
-    blockBytes: Uint8Array,
-    opts: VerifyBlocksOpts,
-    // TODO - beacon engine: handle AbortSignal across the worker boundary.
-    signal: AbortSignal
-  ): Promise<void> {
-    return this.core.validateApiBlock(blockRoot, blockBytes, opts, signal);
+  validateApiBlock(blockRoot: Root, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void> {
+    return this.core.validateApiBlock(blockRoot, blockBytes, opts);
   }
 
   verifyBlocks(
     blocks: BlockBytes[],
-    opts: VerifyBlocksOpts,
-    // TODO - beacon engine: handle AbortSignal across the worker boundary.
-    signal: AbortSignal
+    opts: VerifyBlocksOpts
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
-    return this.core.verifyBlocks(blocks, opts, signal);
+    return this.core.verifyBlocks(blocks, opts);
   }
 
   importBlock(

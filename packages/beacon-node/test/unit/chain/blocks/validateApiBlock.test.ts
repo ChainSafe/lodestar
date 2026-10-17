@@ -34,12 +34,7 @@ describe("API block validation", () => {
     const result = failure ? expect(validation).rejects.toBe(error) : validation;
     await Promise.resolve();
     expect(observe).not.toHaveBeenCalled();
-    expect(validate).toHaveBeenCalledExactlyOnceWith(
-      root,
-      ssz.phase0.SignedBeaconBlock.serialize(block),
-      {},
-      expect.any(AbortSignal)
-    );
+    expect(validate).toHaveBeenCalledExactlyOnceWith(root, ssz.phase0.SignedBeaconBlock.serialize(block), {});
 
     if (failure) available.reject(error);
     else available.resolve({dataAvailabilityStatuses: [DataAvailabilityStatus.PreData], availableTime: 0});

@@ -237,8 +237,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
           blockRoot: ssz.gloas.BeaconBlock.hashTreeRoot(block.message),
           blockBytes: ssz.gloas.SignedBeaconBlock.serialize(block),
         })),
-        {},
-        new AbortController().signal
+        {}
       )
     ).rejects.toMatchObject({
       type: {code: BlockErrorCode.PRESTATE_MISSING},

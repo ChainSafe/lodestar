@@ -21,7 +21,7 @@ export async function validateApiBlock(
   try {
     await Promise.all([
       verifyBlocksDataAvailability([blockInput], abortController.signal),
-      this.beaconEngine.validateApiBlock(fromHex(root), bytes, opts, abortController.signal),
+      this.beaconEngine.validateApiBlock(fromHex(root), bytes, opts),
     ]);
     // Proposer observation must follow both consensus validation and data availability.
     this.beaconEngine.observeVerifiedBlocks([{block, root}], true);

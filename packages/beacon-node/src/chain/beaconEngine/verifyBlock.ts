@@ -3,7 +3,7 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, getIndexedAttestation} from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock, isGloasBeaconBlock} from "@lodestar/types";
-import {ErrorAborted, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {BlockBytes} from "../blocks/blockSerializedCache.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
@@ -23,10 +23,8 @@ export async function verifyBlocks(
   // [beacon-engine] deviation: bytes/POJO seam leaves DA verification in the facade.
   blockData: BlockBytes[],
   opts: VerifyBlocksOpts,
-  signal: AbortSignal,
   retainForImport = true
 ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
-  if (signal.aborted) throw new ErrorAborted("verifyBlocks");
   const entries = blockData.map(({blockRoot, blockBytes}) =>
     this.blockSerializedCache.getOrDeserialize(toRootHex(blockRoot), blockBytes)
   );
@@ -62,8 +60,6 @@ export async function verifyBlocks(
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
 
-  if (signal.aborted) throw new ErrorAborted("verifyBlocks");
-
   // [beacon-engine] deviation: retain branch omission of upstream pre-state SSZ-cache diagnostic logs.
   if (block0Epoch !== computeEpochAtSlot(preState0.slot)) {
     throw Error(`preState at slot ${preState0.slot} must be dialed to block epoch ${block0Epoch}`);
@@ -89,74 +85,78 @@ export async function verifyBlocks(
     persistInvalidSszObjects: this.opts.persistInvalidSszObjects,
     persistInvalidSszObjectsDir: this.opts.persistInvalidSszObjectsDir,
   };
-  // [beacon-engine] deviation: reject EL failures internally so the facade aborts its concurrent DA wait.
-  const verifyExecutionPayloadsPromise =
-    opts.skipVerifyExecutionPayload !== true
-      ? verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, signal, opts)
-      : Promise.resolve<SegmentExecStatus>({
-          execAborted: null,
-          executionStatuses: blocks.map(() => ExecutionStatus.Syncing),
-          executionTime: Date.now(),
+  const abortController = new AbortController();
+  try {
+    // [beacon-engine] deviation: reject EL failures internally so the facade aborts its concurrent DA wait.
+    const verifyExecutionPayloadsPromise =
+      opts.skipVerifyExecutionPayload !== true
+        ? verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts)
+        : Promise.resolve<SegmentExecStatus>({
+            execAborted: null,
+            executionStatuses: blocks.map(() => ExecutionStatus.Syncing),
+            executionTime: Date.now(),
+          });
+    const [segmentExecStatus, {postStates, proposerBalanceDeltas, verifyStateTime}, {verifySignaturesTime}] =
+      await Promise.all([
+        verifyExecutionPayloadsPromise,
+        verifyBlocksStateTransitionOnly(
+          this.config,
+          preState0,
+          blocks,
+          // [beacon-engine] deviation: DA gates import facade-side, outside consensus verification.
+          blocks.map(() => DataAvailabilityStatus.Available),
+          // [beacon-engine] deviation: retain the bytes paired with the cached block across worker calls.
+          blockBytes,
+          this.logger,
+          this.metrics,
+          this.validatorMonitor,
+          abortController.signal,
+          stfOpts
+        ),
+        opts.validSignatures !== true
+          ? verifyBlocksSignatures(
+              this.config,
+              this.bls,
+              this.logger,
+              this.metrics,
+              preState0,
+              blocks,
+              indexedAttestationsByBlock,
+              stfOpts
+            )
+          : Promise.resolve({verifySignaturesTime: Date.now()}),
+      ]);
+
+    // [beacon-engine] deviation: keep invalid-ancestor propagation engine-owned after consensus verification.
+    if (segmentExecStatus.execAborted !== null) {
+      if (segmentExecStatus.invalidSegmentLVH !== undefined) {
+        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
+      }
+      throw segmentExecStatus.execAborted.execError;
+    }
+
+    // [beacon-engine] deviation: retain verification bundles instead of returning FullyVerifiedBlock state objects.
+    // API validation may reject publication after consensus succeeds. Its post-states must stay local
+    // to this call, and it must not overwrite a bundle belonging to a concurrent import of the same root.
+    if (retainForImport) {
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        const blockRootHex = toRootHex(blockData[i].blockRoot);
+        this.verifiedBlocks.set(blockRootHex, {
+          executionStatus: segmentExecStatus.executionStatuses[i],
+          postState: postStates[i],
+          block,
+          blockBytes: blockBytes[i],
+          indexedAttestations: indexedAttestationsByBlock[i],
+          proposerBalanceDelta: proposerBalanceDeltas[i],
+          parentBlockSlot: i === 0 ? parentBlock.slot : blocks[i - 1].message.slot,
+          seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
         });
-  const [segmentExecStatus, {postStates, proposerBalanceDeltas, verifyStateTime}, {verifySignaturesTime}] =
-    await Promise.all([
-      verifyExecutionPayloadsPromise,
-      verifyBlocksStateTransitionOnly(
-        this.config,
-        preState0,
-        blocks,
-        // [beacon-engine] deviation: DA gates import facade-side, outside consensus verification.
-        blocks.map(() => DataAvailabilityStatus.Available),
-        // [beacon-engine] deviation: retain the bytes paired with the cached block across worker calls.
-        blockBytes,
-        this.logger,
-        this.metrics,
-        this.validatorMonitor,
-        signal,
-        stfOpts
-      ),
-      opts.validSignatures !== true
-        ? verifyBlocksSignatures(
-            this.config,
-            this.bls,
-            this.logger,
-            this.metrics,
-            preState0,
-            blocks,
-            indexedAttestationsByBlock,
-            stfOpts
-          )
-        : Promise.resolve({verifySignaturesTime: Date.now()}),
-    ]);
-
-  // [beacon-engine] deviation: keep invalid-ancestor propagation engine-owned after consensus verification.
-  if (segmentExecStatus.execAborted !== null) {
-    if (segmentExecStatus.invalidSegmentLVH !== undefined) {
-      this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
+      }
     }
-    throw segmentExecStatus.execAborted.execError;
-  }
 
-  // [beacon-engine] deviation: retain verification bundles instead of returning FullyVerifiedBlock state objects.
-  if (signal.aborted) throw new ErrorAborted("verifyBlocks");
-  // API validation may reject publication after consensus succeeds. Its post-states must stay local
-  // to this call, and it must not overwrite a bundle belonging to a concurrent import of the same root.
-  if (retainForImport) {
-    for (let i = 0; i < blocks.length; i++) {
-      const block = blocks[i];
-      const blockRootHex = toRootHex(blockData[i].blockRoot);
-      this.verifiedBlocks.set(blockRootHex, {
-        executionStatus: segmentExecStatus.executionStatuses[i],
-        postState: postStates[i],
-        block,
-        blockBytes: blockBytes[i],
-        indexedAttestations: indexedAttestationsByBlock[i],
-        proposerBalanceDelta: proposerBalanceDeltas[i],
-        parentBlockSlot: i === 0 ? parentBlock.slot : blocks[i - 1].message.slot,
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-      });
-    }
+    return {segmentExecStatus, verifyStateTime, verifySignaturesTime};
+  } finally {
+    abortController.abort();
   }
-
-  return {segmentExecStatus, verifyStateTime, verifySignaturesTime};
 }

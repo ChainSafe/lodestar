@@ -594,19 +594,11 @@ export interface IBeaconEngineCore {
    * Never changes verifiedBlocks: a concurrent import may already own a bundle for this root.
    * The facade must still wait for DA before observing the proposer and publishing the block.
    */
-  validateApiBlock(
-    blockRoot: Root,
-    blockBytes: Uint8Array,
-    opts: VerifyBlocksOpts,
-    // TODO - beacon engine: handle AbortSignal across the worker boundary.
-    signal: AbortSignal
-  ): Promise<void>;
+  validateApiBlock(blockRoot: Root, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void>;
   /** Retains verified block bundles until importBlock or discardVerifiedBlocks releases them. */
   verifyBlocks(
     blocks: BlockBytes[],
-    opts: VerifyBlocksOpts,
-    // TODO - beacon engine: handle AbortSignal across the worker boundary.
-    signal: AbortSignal
+    opts: VerifyBlocksOpts
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}>;
   // `blockRoot` is the SSZ root as raw bytes (the verify output handle, import input) — bytes-first for
   // the native engine FFI. The JS engine keys its internal cache by hex (converted here).

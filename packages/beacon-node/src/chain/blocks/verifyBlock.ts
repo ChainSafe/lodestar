@@ -28,7 +28,7 @@ import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.j
  * - Verify all block's signatures in parallel
  * - Submit execution payloads to EL in sequence
  *
- * If there's an error during one of the steps, the rest are aborted with an AbortController.
+ * Engine failures abort the DA wait. DA failures wait for engine verification before discarding its bundles.
  */
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
@@ -67,6 +67,7 @@ export async function verifyBlocksInEpoch(
   }));
 
   const abortController = new AbortController();
+  const verificationPromise = this.beaconEngine.verifyBlocks(blockBytes, opts);
 
   try {
     // Pick the data-availability source by fork:
@@ -127,7 +128,7 @@ export async function verifyBlocksInEpoch(
       // [beacon-engine] moved: verifyBlocksInEpoch state-transition/signature/EL verification now lives in
       // packages/beacon-node/src/chain/beaconEngine/verifyBlock.ts#verifyBlocks.
       // On unstable merges, sync that logic there; retain DA verification here.
-      this.beaconEngine.verifyBlocks(blockBytes, opts, abortController.signal),
+      verificationPromise,
     ]);
 
     // Observation must follow both consensus verification and the facade DA wait.
@@ -220,6 +221,9 @@ export async function verifyBlocksInEpoch(
 
     return {segmentExecStatus, blockDAStatuses, payloadDAStatuses};
   } catch (error) {
+    abortController.abort();
+    // Verification may still retain bundles after DA fails; discard only once it has settled.
+    await verificationPromise.catch(() => {});
     this.beaconEngine.discardVerifiedBlocks(blockInputs.map((blockInput) => blockInput.blockRootHex));
     throw error;
   } finally {

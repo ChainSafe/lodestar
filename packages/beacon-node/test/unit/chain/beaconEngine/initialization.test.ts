@@ -104,9 +104,7 @@ describe("bytes-based engine startup", () => {
     await engine.validateGossipBlock(blockRoot, structuredClone(bytes), ForkName.phase0);
     const cached = engine.blockSerializedCache.get(toRootHex(blockRoot));
     vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
-    await expect(
-      engine.verifyBlocks([{blockRoot, blockBytes: structuredClone(bytes)}], {}, new AbortController().signal)
-    ).rejects.toMatchObject({
+    await expect(engine.verifyBlocks([{blockRoot, blockBytes: structuredClone(bytes)}], {})).rejects.toMatchObject({
       type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"},
     });
     expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);

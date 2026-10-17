@@ -1627,28 +1627,16 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return this.seenBlockProposers.isKnown(slot, proposerIndex);
   }
 
-  async validateApiBlock(
-    blockRoot: Root,
-    blockBytes: Uint8Array,
-    opts: VerifyBlocksOpts,
-    signal: AbortSignal
-  ): Promise<void> {
-    await verifyBlocks.call(
-      this,
-      [{blockRoot, blockBytes}],
-      {...opts, skipVerifyExecutionPayload: true},
-      signal,
-      false
-    );
+  async validateApiBlock(blockRoot: Root, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void> {
+    await verifyBlocks.call(this, [{blockRoot, blockBytes}], {...opts, skipVerifyExecutionPayload: true}, false);
   }
 
   async verifyBlocks(
     blocks: BlockBytes[],
-    opts: VerifyBlocksOpts,
-    signal: AbortSignal
+    opts: VerifyBlocksOpts
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
     try {
-      return await verifyBlocks.call(this, blocks, opts, signal);
+      return await verifyBlocks.call(this, blocks, opts);
     } catch (error) {
       this.publishChainView();
       throw error;
