@@ -89,9 +89,9 @@ export type Endpoints = {
   >;
 };
 
-export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig | BeaconConfig): RouteDefinitions<Endpoints> {
   // Cache config so fork digests don't need to be recomputed
-  let beaconConfig: BeaconConfig | undefined;
+  let beaconConfig: BeaconConfig | undefined = "genesisValidatorsRoot" in config ? config : undefined;
 
   const cachedBeaconConfig = (): BeaconConfig => {
     if (beaconConfig === undefined) {
