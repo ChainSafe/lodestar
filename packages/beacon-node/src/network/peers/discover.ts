@@ -89,8 +89,8 @@ export type SubnetDiscvQueryMs = {
 
 type CachedENR = {
   peerId: PeerId;
-  multiaddrTCP?: Multiaddr;
-  multiaddrQUIC?: Multiaddr;
+  multiaddrsTCP: Multiaddr[];
+  multiaddrsQUIC: Multiaddr[];
   subnets: Record<SubnetType, boolean[]>;
   addedUnixMs: number;
   // custodyGroups is null for pre-fulu
@@ -391,15 +391,16 @@ export class PeerDiscovery {
       return;
     }
 
-    // Select multiaddrs by protocol rather than index — libp2p discovery events
-    // don't guarantee ordering or number of addresses
-    const multiaddrTCP = multiaddrs.find((ma) => ma.toString().includes("/tcp/"));
-    const multiaddrQUIC = multiaddrs.find((ma) => ma.toString().includes("/quic-v1"));
+    // Select multiaddrs by protocol rather than index. libp2p discovery events
+    // don't guarantee ordering or number of addresses, and a peer may advertise
+    // both IPv4 and IPv6 addresses per transport, all of which are dial candidates
+    const multiaddrsTCP = multiaddrs.filter((ma) => ma.toString().includes("/tcp/"));
+    const multiaddrsQUIC = multiaddrs.filter((ma) => ma.toString().includes("/quic-v1"));
 
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
 
-    const status = this.handleDiscoveredPeer(id, multiaddrTCP, multiaddrQUIC, attnets, syncnets, undefined);
+    const status = this.handleDiscoveredPeer(id, multiaddrsTCP, multiaddrsQUIC, attnets, syncnets, undefined);
     this.logger.debug("Discovered peer via libp2p", {peer: prettyPrintPeerId(id), status});
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
@@ -412,10 +413,17 @@ export class PeerDiscovery {
       this.randomNodeQuery.count++;
     }
     const peerId = enr.peerId;
-    // At least one transport is known to be present, checked inside the worker
-    const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
-    const multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);
-    if (!multiaddrTCP && !multiaddrQUIC) {
+    // At least one transport is known to be present, checked inside the worker.
+    // Query each address family separately: getLocationMultiaddr("tcp") returns
+    // only the IPv4 multiaddr when the ENR advertises both families, which would
+    // drop the IPv6 dial candidate. See https://github.com/ChainSafe/lodestar/issues/10256
+    const multiaddrsTCP = [enr.getLocationMultiaddr("tcp4"), enr.getLocationMultiaddr("tcp6")].filter(
+      (ma) => ma !== undefined
+    );
+    const multiaddrsQUIC = [enr.getLocationMultiaddr("quic4"), enr.getLocationMultiaddr("quic6")].filter(
+      (ma) => ma !== undefined
+    );
+    if (multiaddrsTCP.length === 0 && multiaddrsQUIC.length === 0) {
       this.logger.warn("Discv5 worker sent enr without any transport multiaddr", {enr: enr.encodeTxt()});
       this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.no_multiaddrs});
       return;
@@ -440,7 +448,14 @@ export class PeerDiscovery {
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
     const custodyGroupCount = custodyGroupCountBytes ? bytesToInt(custodyGroupCountBytes, "be") : undefined;
 
-    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, multiaddrQUIC, attnets, syncnets, custodyGroupCount);
+    const status = this.handleDiscoveredPeer(
+      peerId,
+      multiaddrsTCP,
+      multiaddrsQUIC,
+      attnets,
+      syncnets,
+      custodyGroupCount
+    );
     this.logger.debug("Discovered peer via discv5", {
       peer: prettyPrintPeerId(peerId),
       status,
@@ -454,8 +469,8 @@ export class PeerDiscovery {
    */
   private handleDiscoveredPeer(
     peerId: PeerId,
-    multiaddrTCP: Multiaddr | undefined,
-    multiaddrQUIC: Multiaddr | undefined,
+    multiaddrsTCP: Multiaddr[],
+    multiaddrsQUIC: Multiaddr[],
     attnets: boolean[],
     syncnets: boolean[],
     custodySubnetCount?: number
@@ -482,8 +497,8 @@ export class PeerDiscovery {
       }
 
       // ignore peers if they don't share any transport with us
-      const hasTcpMatch = this.transports.includes("tcp") && multiaddrTCP;
-      const hasQuicMatch = this.transports.includes("quic") && multiaddrQUIC;
+      const hasTcpMatch = this.transports.includes("tcp") && multiaddrsTCP.length > 0;
+      const hasQuicMatch = this.transports.includes("quic") && multiaddrsQUIC.length > 0;
       if (!hasTcpMatch && !hasQuicMatch) {
         return DiscoveredPeerStatus.transport_incompatible;
       }
@@ -502,8 +517,8 @@ export class PeerDiscovery {
       // Should dial peer?
       const cachedPeer: CachedENR = {
         peerId,
-        multiaddrTCP,
-        multiaddrQUIC,
+        multiaddrsTCP,
+        multiaddrsQUIC,
         subnets: {attnets, syncnets},
         addedUnixMs: Date.now(),
         // for pre-fulu, custodyGroups is null
@@ -601,12 +616,12 @@ export class PeerDiscovery {
     // are not successful.
     this.peersToConnect = Math.max(this.peersToConnect - 1, 0);
 
-    const {peerId, multiaddrTCP, multiaddrQUIC} = cachedPeer;
+    const {peerId, multiaddrsTCP, multiaddrsQUIC} = cachedPeer;
 
     // Must add the multiaddrs array to the address book before dialing
     // https://github.com/libp2p/js-libp2p/blob/aec8e3d3bb1b245051b60c2a890550d262d5b062/src/index.js#L638
     const peer = await this.libp2p.peerStore.merge(peerId, {
-      multiaddrs: [multiaddrQUIC, multiaddrTCP].filter(Boolean) as Multiaddr[],
+      multiaddrs: [...multiaddrsQUIC, ...multiaddrsTCP],
     });
     if (peer.addresses.length === 0) {
       this.metrics?.discovery.notDialReason.inc({reason: NotDialReason.no_multiaddrs});
