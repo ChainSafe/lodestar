@@ -13,6 +13,7 @@ import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
 } from "../utils/dataColumnResponseValidation.js";
+import {collectHeadRange} from "./beaconBlocksByRange.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -55,8 +56,7 @@ export async function* onDataColumnSidecarsByRange(
   // fork-choice-backed section until the following finalization, matching ExecutionPayloadEnvelopesByRange.
   const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
   const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
-  const headBlock = chain.forkChoice.getHead();
-  const headChain = chain.forkChoice.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
+  const headChain = collectHeadRange(chain, startSlot, endSlot, -1).reverse();
 
   for await (const block of resolveCanonicalDataColumnBlocks(
     chain,
@@ -69,8 +69,9 @@ export async function* onDataColumnSidecarsByRange(
   )) {
     const dataColumnSidecars =
       block.blockRoot === null
-        ? await db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns)
+        ? await db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns, {fillCache: false})
         : await chain.getSerializedDataColumnSidecars(block.slot, block.blockRoot, availableColumns);
+
     if (block.blockRoot === null && dataColumnSidecars.every((sidecar) => sidecar === undefined)) continue;
     const unavailableColumnIndices: ColumnIndex[] = [];
     for (let i = 0; i < dataColumnSidecars.length; i++) {
@@ -111,7 +112,7 @@ type CanonicalDataColumnBlock = {
 async function* resolveCanonicalDataColumnBlocks(
   chain: IBeaconChain,
   db: IBeaconDb,
-  headChain: ReturnType<IBeaconChain["forkChoice"]["getAllAncestorBlocks"]>,
+  headChain: ReturnType<typeof collectHeadRange>,
   startSlot: number,
   endSlot: number,
   archiveMaxSlot: number,
@@ -139,7 +140,7 @@ async function* resolveCanonicalDataColumnBlocks(
     let blockRoot = recentRoots.get(slot);
     if (blockRoot === null) continue;
     if (blockRoot === undefined) {
-      const root = await db.blockArchive.getRootBySlot(slot);
+      const root = await db.blockArchive.getRootBySlot(slot, {fillCache: false});
       blockRoot = root === null ? null : toRootHex(root);
     }
     if (blockRoot === null && (db.lastLegacyArchiveSlot === null || slot > db.lastLegacyArchiveSlot)) continue;
@@ -196,9 +197,9 @@ async function hasExecutionPayloadEnvelope(
 ): Promise<boolean> {
   if (blockRoot !== null) {
     if (chain.seenPayloadEnvelopeInputCache.hasPayload(blockRoot)) return true;
-    if ((await db.executionPayloadEnvelope.getBinary(fromHex(blockRoot))) !== null) return true;
+    if ((await db.executionPayloadEnvelope.getBinary(fromHex(blockRoot), {fillCache: false})) !== null) return true;
   }
-  return (await db.executionPayloadEnvelopeArchive.getBinary(slot)) !== null;
+  return (await db.executionPayloadEnvelopeArchive.getBinary(slot, {fillCache: false})) !== null;
 }
 
 export function validateDataColumnSidecarsByRangeRequest(
@@ -215,6 +216,9 @@ export function validateDataColumnSidecarsByRangeRequest(
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
+  if (!Number.isSafeInteger(startSlot)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot is not a safe integer");
+  }
 
   // Spec: [max(compute_blob_data_retention_start_epoch(current_epoch), FULU_FORK_EPOCH), current_epoch]
   const minimumRequestEpoch = Math.max(getBlobDataRetentionStartEpoch(config, currentEpoch), config.FULU_FORK_EPOCH);
@@ -224,6 +228,10 @@ export function validateDataColumnSidecarsByRangeRequest(
 
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
     count = config.MAX_REQUEST_BLOCKS_DENEB;
+  }
+
+  if (!Number.isSafeInteger(startSlot + count)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "range end is not a safe integer");
   }
 
   return {startSlot, count, columns};

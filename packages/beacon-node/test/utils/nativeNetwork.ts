@@ -1,0 +1,125 @@
+import {mkdtemp, rm} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
+import {LevelDbController} from "@lodestar/db";
+import {testLogger} from "@lodestar/logger/test-utils";
+import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
+import {BeaconChain} from "../../src/chain/chain.js";
+import {BeaconDb} from "../../src/db/beacon.js";
+import {ExecutionEngineDisabled} from "../../src/execution/index.js";
+import {ArchiveMode} from "../../src/index.js";
+import {Metrics, createMetrics} from "../../src/metrics/index.js";
+import {NativeBackendOptions} from "../../src/network/core/native/options.js";
+import {Network} from "../../src/network/network.js";
+import {defaultNetworkOptions} from "../../src/network/options.js";
+import {getReqRespHandlers} from "../../src/network/reqresp/handlers/index.js";
+import {ClockStopped} from "../mocks/clock.js";
+import {generateState} from "./state.js";
+
+export async function nativeNetworkFixture(
+  config: BeaconConfig,
+  backend: "native" | "libp2p" = "native",
+  native: NativeBackendOptions = {},
+  localMultiaddrs = ["/ip4/127.0.0.1/udp/0/quic-v1"],
+  processShutdownCallback: (error: Error) => void = (error) => {
+    throw error;
+  },
+  genesisTime = Math.floor(Date.now() / 1000)
+) {
+  const directory = await mkdtemp(join(tmpdir(), "lodestar-native-integration-"));
+  const logger = testLogger(backend);
+  let controller: LevelDbController | undefined;
+  let chain: BeaconChain | undefined;
+  let network: Network | undefined;
+  let metrics: Metrics | undefined;
+  const close = async (): Promise<void> => {
+    try {
+      await network?.close();
+    } finally {
+      try {
+        await chain?.close();
+      } finally {
+        try {
+          await controller?.close();
+        } finally {
+          metrics?.close();
+          await rm(directory, {recursive: true, force: true});
+        }
+      }
+    }
+  };
+  try {
+    controller = await LevelDbController.create({name: directory}, {logger});
+    const db = new BeaconDb(config, controller, {dataColumnDir: join(directory, "columns"), logger});
+    await db.init();
+    const privateKey = await generateKeyPair("secp256k1");
+    const state = generateState({slot: 0, genesisTime}, config, true);
+    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
+    pubkeyCache.syncPubkeys(state.validators.getAllReadonlyValues());
+    const cached = createCachedBeaconState(state, {config: beaconConfig, pubkeyCache}, {skipSyncPubkeys: true});
+    const clock = new ClockStopped(0);
+    clock.genesisTime = state.genesisTime;
+    metrics = createMetrics({enabled: true, port: 0}, state.genesisTime, [], {
+      includeNetworkJsMetrics: backend !== "native",
+      collectNodeMetrics: false,
+    });
+    chain = new BeaconChain(
+      {
+        archiveStateEpochFrequency: 0,
+        suggestedFeeRecipient: "",
+        blsVerifyAllMainThread: true,
+        disableOnBlockError: true,
+        disableArchiveOnCheckpoint: true,
+        disableLightClientServerOnImportBlockHead: true,
+        disablePrepareNextSlot: true,
+        minSameMessageSignatureSetsToBatch: 32,
+        archiveMode: ArchiveMode.Frequency,
+      },
+      {
+        privateKey,
+        config: beaconConfig,
+        pubkeyCache,
+        db,
+        dataDir: directory,
+        dbName: directory,
+        logger,
+        processShutdownCallback: () => {},
+        clock,
+        metrics,
+        validatorMonitor: null,
+        anchorState: new BeaconStateView(cached),
+        isAnchorStateFinalized: true,
+        earliestAvailableSlot: cached.slot,
+        executionEngine: new ExecutionEngineDisabled(),
+      }
+    );
+    network = await Network.init({
+      processShutdownCallback,
+      opts: {
+        ...defaultNetworkOptions,
+        backend,
+        native,
+        useWorker: backend === "native",
+        tcp: false,
+        localMultiaddrs,
+        targetPeers: 8,
+        maxPeers: 12,
+        skipParamsLog: true,
+      },
+      config: beaconConfig,
+      privateKey,
+      logger,
+      metrics,
+      chain,
+      db,
+      getReqRespHandler: getReqRespHandlers({db, chain}),
+    });
+    return {network, chain, db, clock, privateKey, metrics, close};
+  } catch (error) {
+    await close();
+    throw error;
+  }
+}

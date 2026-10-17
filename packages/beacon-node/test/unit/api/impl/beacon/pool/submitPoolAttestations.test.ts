@@ -1,15 +1,17 @@
 import {Mocked, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
-import {createChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {defer, toRootHex} from "@lodestar/utils";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool/index.js";
 import {AttestationPool} from "../../../../../../src/chain/opPools/attestationPool.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "../../../../../../src/chain/opPools/types.js";
 import {AttestationValidationResult} from "../../../../../../src/chain/validation/attestation.js";
+import {NativeGossip} from "../../../../../../src/network/core/native/gossip.js";
+import {defaultNetworkOptions} from "../../../../../../src/network/options.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 
 vi.mock("../../../../../../src/network/processor/gossipHandlers.js", async (importActual) => {
@@ -84,6 +86,51 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     await api.submitPoolAttestationsV2({signedAttestations: [attestation]});
 
     expect(modules.network.publishBeaconAttestation).toHaveBeenCalledWith(attestation, subnet);
+  });
+
+  it("shares publication capacity between simultaneous validator-client batches", async () => {
+    const publication = defer<number>();
+    modules.network.publishBeaconAttestation = vi.fn().mockReturnValue(publication.promise);
+    const signedAttestations = Array.from({length: 300}, () => ssz.electra.SingleAttestation.defaultValue());
+    const submitted = Promise.all(Array.from({length: 4}, () => api.submitPoolAttestationsV2({signedAttestations})));
+    try {
+      await Promise.resolve();
+      expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledTimes(32);
+      expect(modules.network.publishBeaconAttestation).toHaveBeenCalledTimes(32);
+    } finally {
+      publication.resolve(1);
+      await submitted;
+    }
+    expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledTimes(1200);
+    expect(modules.network.publishBeaconAttestation).toHaveBeenCalledTimes(1200);
+  });
+
+  it("reports native admission failure without retrying or revalidating the attestation", async () => {
+    const publish = vi
+      .fn()
+      .mockRejectedValueOnce(
+        Object.assign(new Error("full"), {code: "NetworkGossipPublishFailed", reason: "admission_full"})
+      )
+      .mockResolvedValue({queued: 1, selected: 1, pressured: 0, unavailable: 0, duplicate: false});
+    const gossip = new NativeGossip(
+      {publish, blockImported: () => {}, dropQueuedGossip: () => {}},
+      createBeaconConfig(config, new Uint8Array(32)),
+      defaultNetworkOptions,
+      vi.fn(),
+      {forGossip: () => vi.fn()}
+    );
+    const data = ssz.electra.SingleAttestation.serialize(ssz.electra.SingleAttestation.defaultValue());
+    modules.network.publishBeaconAttestation = vi.fn(() => gossip.publish("attestation-topic", data));
+    try {
+      await expect(
+        api.submitPoolAttestationsV2({signedAttestations: [ssz.electra.SingleAttestation.defaultValue()]})
+      ).rejects.toMatchObject({failures: [{index: 0, message: "full"}]});
+      expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledOnce();
+      expect(attestationPool.add).toHaveBeenCalledOnce();
+      expect(publish).toHaveBeenCalledOnce();
+    } finally {
+      gossip.close();
+    }
   });
 
   it("exposes a submitted single attestation through the filtered pool endpoint", async () => {

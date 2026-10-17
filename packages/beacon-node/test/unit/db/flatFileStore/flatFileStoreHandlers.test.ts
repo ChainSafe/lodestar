@@ -45,7 +45,11 @@ describe("FlatFileStore reqresp handler integration", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-handlers-"));
-    store = new FlatFileStore(path.join(tmpDir, "data_columns"), defaultConfig, testLogger);
+    store = new FlatFileStore(
+      path.join(tmpDir, "data_columns"),
+      createChainForkConfig({...defaultConfig, FULU_FORK_EPOCH: 0}),
+      testLogger
+    );
     await store.init();
   });
 
@@ -171,19 +175,20 @@ describe("FlatFileStore reqresp handler integration", () => {
         db,
       } as unknown as BeaconChain;
 
+      const headChain = (opts.headChain ?? []).map((block) => ({
+        ...block,
+        payloadStatus: block.payloadStatus ?? PayloadStatus.FULL,
+      }));
       const chain = {
         config,
         getHeadState: () => opts.headState ?? {slot: 0},
         clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
+          getHead: () =>
+            headChain[0] ?? {slot: opts.finalizedSlot + 1, blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL},
           getBlockHexDefaultStatus: vi.fn().mockReturnValue(opts.forkChoiceBlockByRoot ?? null),
-          getAllAncestorBlocks: () =>
-            (opts.headChain ?? []).map((block) => ({
-              ...block,
-              payloadStatus: block.payloadStatus ?? PayloadStatus.FULL,
-            })),
+          iterateAncestorBlocks: () => headChain.slice(1).values(),
         },
         custodyConfig: {
           custodyColumns: opts.custodyColumns,
@@ -272,7 +277,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
       expect(responses).toHaveLength(1);
       expect(new Uint8Array(responses[0].data)).toEqual(column);
-      expect(getRootBySlot).toHaveBeenCalledWith(10);
+      expect(getRootBySlot).toHaveBeenCalledWith(10, {fillCache: false});
     });
 
     it("should not load a block when its archive slot index entry is absent", async () => {
@@ -308,7 +313,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(responses.map(({data}) => new Uint8Array(data))).toEqual([archivedData, flatFileData]);
-      expect(getArchivedDataColumnSidecars).toHaveBeenCalledExactlyOnceWith(10, [0, 1]);
+      expect(getArchivedDataColumnSidecars).toHaveBeenCalledExactlyOnceWith(10, [0, 1], {fillCache: false});
     });
 
     it("should read hot then archived LevelDB when the flat file is absent", async () => {
@@ -342,8 +347,8 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(dataColumnSidecars).toEqual([undefined, hotData, archivedData]);
-      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [0, 1, 2]);
-      expect(getArchivedDataColumnSidecars).toHaveBeenCalledWith(10, [0, 2]);
+      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [0, 1, 2], {fillCache: false});
+      expect(getArchivedDataColumnSidecars).toHaveBeenCalledWith(10, [0, 2], {fillCache: false});
     });
 
     it.each([{indices: [0, 1, 2]}, {indices: [0, 2]}])(
@@ -591,7 +596,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(responses).toHaveLength(0);
-      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10, {fillCache: false});
       expect(db.block.getBinary).not.toHaveBeenCalled();
       expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
     });
@@ -613,7 +618,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(responses).toHaveLength(0);
-      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A), {fillCache: false});
       expect(db.blockArchive.getBinary).not.toHaveBeenCalled();
       expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
     });
@@ -635,8 +640,8 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(responses).toHaveLength(0);
-      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
-      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A), {fillCache: false});
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10, {fillCache: false});
       expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
     });
 
@@ -661,10 +666,10 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(responses).toHaveLength(0);
-      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A), {fillCache: false});
       expect(db.executionPayloadEnvelopeArchive.getBinary).not.toHaveBeenCalled();
-      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
-      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A), {fillCache: false});
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10, {fillCache: false});
       expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
     });
 
@@ -726,7 +731,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       expect(responses).toHaveLength(1);
       expect(new Uint8Array(responses[0].data)).toEqual(canonicalData);
-      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [0]);
+      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [0], {fillCache: false});
     });
 
     it("should not serve losing-fork columns at a canonically skipped slot", async () => {
@@ -765,8 +770,8 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(responses).toHaveLength(0);
-      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(blockRootHex));
-      expect(db.executionPayloadEnvelopeArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(blockRootHex), {fillCache: false});
+      expect(db.executionPayloadEnvelopeArchive.getBinary).toHaveBeenCalledWith(10, {fillCache: false});
     });
 
     it("should serve old finalized Gloas columns while the payload envelope is still hot", async () => {
@@ -790,7 +795,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       expect(responses).toHaveLength(1);
       expect(new Uint8Array(responses[0].data)).toEqual(columnBytes);
-      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(blockRootHex));
+      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(blockRootHex), {fillCache: false});
       expect(db.executionPayloadEnvelopeArchive.getBinary).not.toHaveBeenCalled();
     });
 
@@ -818,7 +823,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         slot: 10,
       });
 
-      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A), {fillCache: false});
       expect(db.executionPayloadEnvelopeArchive.getBinary).not.toHaveBeenCalled();
       expect(db.block.getBinary).not.toHaveBeenCalled();
       expect(missingCustodyColumnsInc).not.toHaveBeenCalled();
@@ -852,7 +857,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       expect(chain.seenPayloadEnvelopeInputCache.hasPayload).toHaveBeenCalledWith(ROOT_A);
       expect(db.executionPayloadEnvelope.getBinary).not.toHaveBeenCalled();
-      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A), {fillCache: false});
       expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
     });
 
@@ -877,9 +882,9 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(responses).toHaveLength(0);
-      expect(db.blockArchive.getSlotByRoot).toHaveBeenCalledWith(blockRoot);
-      expect(db.block.getBinary).toHaveBeenCalledWith(blockRoot);
-      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(db.blockArchive.getSlotByRoot).toHaveBeenCalledWith(blockRoot, {fillCache: false});
+      expect(db.block.getBinary).toHaveBeenCalledWith(blockRoot, {fillCache: false});
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10, {fillCache: false});
       expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
     });
 
@@ -903,9 +908,9 @@ describe("FlatFileStore reqresp handler integration", () => {
       );
 
       expect(responses).toHaveLength(0);
-      expect(db.blockArchive.getSlotByRoot).toHaveBeenCalledWith(blockRoot);
-      expect(db.block.getBinary).toHaveBeenCalledWith(blockRoot);
-      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(db.blockArchive.getSlotByRoot).toHaveBeenCalledWith(blockRoot, {fillCache: false});
+      expect(db.block.getBinary).toHaveBeenCalledWith(blockRoot, {fillCache: false});
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10, {fillCache: false});
       expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
     });
   });

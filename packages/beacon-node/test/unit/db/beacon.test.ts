@@ -57,12 +57,10 @@ describe("BeaconDb.pruneHotDb", () => {
 
     expect((await db.dataColumnSidecar.keys()).length).toBe(0);
     expect((await db.blobSidecars.keys()).length).toBe(0);
-    expect(await db.block.getBinary(root)).toEqual(Buffer.from(ssz.fulu.SignedBeaconBlock.serialize(block)));
-    expect(await db.blobSidecarsArchive.getBinary(slot)).toEqual(
-      Buffer.from(blobSidecarsWrapperSsz.serialize(blobSidecars))
-    );
+    expect(await db.block.getBinary(root)).toEqual(ssz.fulu.SignedBeaconBlock.serialize(block));
+    expect(await db.blobSidecarsArchive.getBinary(slot)).toEqual(blobSidecarsWrapperSsz.serialize(blobSidecars));
     expect(await db.dataColumnSidecarArchive.getBinary(slot, column.index)).toEqual(
-      Buffer.from(ssz.fulu.DataColumnSidecar.serialize(column))
+      ssz.fulu.DataColumnSidecar.serialize(column)
     );
     expect(await db.dataColumns.getAll({slot, blockRoot: toRootHex(root)})).toEqual([column]);
   });

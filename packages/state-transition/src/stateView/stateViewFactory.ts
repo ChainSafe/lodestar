@@ -1,8 +1,9 @@
 import bindings from "@chainsafe/lodestar-z";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
 import {createCachedBeaconState} from "../cache/stateCache.js";
-import {getStateTypeFromBytes} from "../util/sszBytes.js";
+import {getForkFromStateBytes, getStateTypeFromBytes} from "../util/sszBytes.js";
 import {BeaconStateView} from "./beaconStateView.js";
 import {IBeaconStateView, IBeaconStateViewNative} from "./interface.js";
 import {NativeBeaconStateView} from "./nativeBeaconStateView.js";
@@ -62,6 +63,9 @@ export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | 
 }
 
 function createNativeBeaconStateView(config: BeaconConfig, stateBytes: Uint8Array): IBeaconStateView {
+  if (getForkFromStateBytes(config, stateBytes) >= ForkSeq.gloas) {
+    throw Error("NativeBeaconStateView does not support Gloas");
+  }
   const nativeConfig = new bindings.BeaconConfig(config, config.genesisValidatorsRoot);
   return new NativeBeaconStateView(
     config,

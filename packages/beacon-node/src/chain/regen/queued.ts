@@ -5,6 +5,7 @@ import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockStateCache, CheckpointHex, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {
@@ -42,6 +43,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private readonly checkpointStateCache: CheckpointStateCache;
   private readonly metrics: Metrics | null;
   private readonly logger: Logger;
+  private readonly emitter: ChainEventEmitter;
 
   constructor(modules: QueuedStateRegeneratorModules) {
     this.regen = new StateRegenerator(modules);
@@ -55,6 +57,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.checkpointStateCache = modules.checkpointStateCache;
     this.metrics = modules.metrics;
     this.logger = modules.logger;
+    this.emitter = modules.emitter;
   }
 
   async init(): Promise<void> {
@@ -243,6 +246,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<IBeaconStateView> => {
+    if (this.jobQueue.jobLen === REGEN_CAN_ACCEPT_WORK_THRESHOLD - 1) this.emitter.emit(ChainEvent.validationCapacity);
     const metricsLabels = {
       caller: regenRequest.args.at(-1) as RegenCaller,
       entrypoint: regenRequest.key as RegenFnName,

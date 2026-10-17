@@ -324,7 +324,11 @@ export class BeaconChain implements IBeaconChain {
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
       ? new BlsSingleThreadVerifier({metrics})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
+      : new BlsMultiThreadWorkerPool(opts, {
+          logger,
+          metrics,
+          onCapacity: () => emitter.emit(ChainEvent.validationCapacity),
+        });
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
@@ -918,7 +922,7 @@ export class BeaconChain implements IBeaconChain {
           slot: blockInput.slot,
         };
       }
-      const data = await this.db.block.getBinary(fromHex(root));
+      const data = await this.db.block.getBinary(fromHex(root), {fillCache: false});
       if (data) {
         const slot = getSlotFromSignedBeaconBlockSerialized(data);
         if (slot === null) throw new Error(`Invalid block data stored in DB for root: ${root}`);
@@ -928,7 +932,7 @@ export class BeaconChain implements IBeaconChain {
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
-    const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root));
+    const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root), {fillCache: false});
     return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
   }
 
@@ -961,11 +965,13 @@ export class BeaconChain implements IBeaconChain {
       }
       return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
     }
-    const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex));
+    const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex), {
+      fillCache: false,
+    });
     if (unfinalizedBlobSidecarsWrapper) {
       return unfinalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
     }
-    const finalizedBlobSidecarsWrapper = await this.db.blobSidecarsArchive.getBinary(blockSlot);
+    const finalizedBlobSidecarsWrapper = await this.db.blobSidecarsArchive.getBinary(blockSlot, {fillCache: false});
     if (finalizedBlobSidecarsWrapper) {
       return finalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
     }

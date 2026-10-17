@@ -94,7 +94,6 @@ describe("block archiver task", () => {
       }));
 
     expect(dbStub.blockArchive.batchPutBinary).toHaveBeenNthCalledWith(1, expectedData);
-
     // delete canonical blocks
     expect(dbStub.block.batchDelete).toBeCalledWith(
       [blocks[4], blocks[3], blocks[1], blocks[0]].map((summary) => fromHexString(summary.blockRoot))

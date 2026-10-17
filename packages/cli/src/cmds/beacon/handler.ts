@@ -61,6 +61,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
   // forkchoice errors
   const processShutdownCallback: ProcessShutdownCallback = (err) => {
+    process.exitCode = 1;
     logger.error("Process shutdown requested", {}, err);
     process.kill(process.pid, "SIGINT");
   };
@@ -127,7 +128,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         try {
           const networkIdentity = await node.network.getNetworkIdentity();
           const enrPath = path.join(beaconPaths.beaconDir, "enr");
-          writeFile600Perm(enrPath, networkIdentity.enr);
+          if (networkIdentity.enr) writeFile600Perm(enrPath, networkIdentity.enr);
         } catch (e) {
           logger.warn("Unable to persist enr", {}, e as Error);
         }
@@ -142,7 +143,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     abortController.signal.addEventListener(
       "abort",
       async () => {
-        let exitCode = 0;
         try {
           await node.close();
           logger.debug("Beacon node closed");
@@ -150,13 +150,11 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
           // If we start from unfinalized state, we don't have checkpoint state so there is this error
           // "No state in cache for finalized checkpoint state epoch"
           logger.warn("Error closing beacon node", {}, e as Error);
-          // Make sure db is always closed gracefully
-          await db.close();
-          exitCode = 1;
+          process.exitCode = 1;
         }
         savePubkeysFile(pubkeyCache, beaconPaths.pubkeysFile, logger);
         // Explicitly exit process due to potential active handles
-        process.exit(exitCode);
+        process.exit(process.exitCode ?? 0);
       },
       {once: true}
     );
@@ -194,11 +192,37 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   beaconNodeOptions.set({api: {commit, version}});
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
-  const {privateKey, enr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
+  const {privateKey, enr, initialEnr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
 
+  if (args["network.backend"] === "native") {
+    beaconNodeOptions.set({
+      network: {
+        native: {
+          discovery: {
+            initialEnr,
+            fixed: {
+              ip4: args["enr.ip"] !== undefined ? enr.ip : undefined,
+              ip6: args["enr.ip6"] !== undefined ? enr.ip6 : undefined,
+              udp: args["enr.udp"],
+              udp6: args["enr.udp6"],
+              quic: args["enr.quic"],
+              quic6: args["enr.quic6"],
+            },
+          },
+        },
+      },
+    });
+  }
   if (args.discv5 !== false) {
     // Inject ENR to beacon options
-    beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+    beaconNodeOptions.set({
+      network: {
+        discv5: {
+          enr: enr.encodeTxt(),
+          config: args["network.backend"] === "native" ? {} : {enrUpdate: !enr.ip && !enr.ip6},
+        },
+      },
+    });
 
     // Combine bootnodes from different sources
     const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
@@ -231,12 +255,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
-
-  if (options.chain.nativeStateTransition && config.GLOAS_FORK_EPOCH !== Infinity) {
-    throw Error(
-      `--chain.nativeStateTransition does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
-    );
-  }
 
   return {config, options, beaconPaths, network, version, commit, privateKey, logger};
 }

@@ -1,3 +1,4 @@
+import {NativeBackendOptions} from "./core/native/options.js";
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
 import {PeerManagerOpts, PeerRpcScoreOpts} from "./peers/index.js";
 import {NetworkProcessorOpts} from "./processor/index.js";
@@ -14,6 +15,8 @@ export interface NetworkOptions
     SubnetsServiceOpts,
     Omit<Eth2GossipsubOpts, "disableLightClientServer"> {
   localMultiaddrs: string[];
+  backend?: "libp2p" | "native";
+  native?: NativeBackendOptions;
   bootMultiaddrs?: string[];
   /**
    * Direct peers for GossipSub - these peers maintain permanent mesh connections without GRAFT/PRUNE.
@@ -21,6 +24,8 @@ export interface NetworkOptions
    * Both peers must configure each other as direct peers for the feature to work properly.
    */
   directPeers?: string[];
+  xrayAddress?: string;
+  xrayWaitForAttach?: boolean;
   subscribeAllSubnets?: boolean;
   mdns?: boolean;
   connectToDiscv5Bootnodes?: boolean;
@@ -52,6 +57,7 @@ export interface NetworkOptions
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
+  backend: "libp2p",
   maxPeers: 210, // Allow some room above targetPeers for new inbound peers
   targetPeers: 200,
   // In CLI usage this is typically overridden; when unset it serves as a fallback default (e.g. programmatic usage/tests)

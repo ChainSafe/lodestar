@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, DbBatch, FilterOptions, KeyValue, Repository} from "@lodestar/db";
+import {Db, DbBatch, DbReqOpts, FilterOptions, KeyValue, Repository} from "@lodestar/db";
 import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {bytesToInt, fromHex, intToBytes} from "@lodestar/utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
@@ -118,7 +118,9 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
     for (let i = 0; i < sorted.length; i += DELETE_RANGE_CHUNK_SIZE) {
       const chunk = sorted.slice(i, i + DELETE_RANGE_CHUNK_SIZE);
-      const roots = await Promise.all(chunk.map((slot) => this.getRootBySlot(slot)));
+      const roots = await this.db.getMany(chunk.map(getSlotIndexKey), {
+        bucketId: getBucketNameByValue(Bucket.index_mainChain),
+      });
 
       const keys: Uint8Array[] = [];
       for (let j = 0; j < chunk.length; j++) {
@@ -134,7 +136,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
           parentRoot = parentRootHex ? fromHex(parentRootHex) : null;
         }
         if (parentRoot) keys.push(getParentRootIndexKey(parentRoot));
-        prevRoot = root;
+        prevRoot = root ?? null;
       }
       await this.db.batchDelete(keys, this.dbReqOpts);
     }
@@ -222,9 +224,11 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     return slot !== null ? this.get(slot) : null;
   }
 
-  async getBinaryEntryByRoot(root: Root): Promise<KeyValue<Slot, Buffer> | null> {
-    const slot = await this.getSlotByRoot(root);
-    return slot !== null ? ({key: slot, value: await this.getBinary(slot)} as KeyValue<Slot, Buffer>) : null;
+  async getBinaryEntryByRoot(root: Root, opts?: DbReqOpts): Promise<KeyValue<Slot, Uint8Array> | null> {
+    const slot = await this.getSlotByRoot(root, opts);
+    if (slot === null) return null;
+    const value = await this.getBinary(slot, opts);
+    return value === null ? null : {key: slot, value};
   }
 
   async getByParentRoot(root: Root): Promise<SignedBeaconBlock | null> {
@@ -232,12 +236,12 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     return slot !== null ? this.get(slot) : null;
   }
 
-  async getRootBySlot(slot: Slot): Promise<Root | null> {
-    return this.db.get(getSlotIndexKey(slot), {bucketId: getBucketNameByValue(Bucket.index_mainChain)});
+  async getRootBySlot(slot: Slot, opts?: DbReqOpts): Promise<Root | null> {
+    return this.db.get(getSlotIndexKey(slot), {bucketId: getBucketNameByValue(Bucket.index_mainChain), ...opts});
   }
 
-  async getSlotByRoot(root: Root): Promise<Slot | null> {
-    return this.parseSlot(await getRootIndex(this.db, root));
+  async getSlotByRoot(root: Root, opts?: DbReqOpts): Promise<Slot | null> {
+    return this.parseSlot(await getRootIndex(this.db, root, opts));
   }
 
   async getSlotByParentRoot(root: Root): Promise<Slot | null> {

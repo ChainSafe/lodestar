@@ -663,6 +663,9 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     options: StateTransitionOpts,
     _modules: StateTransitionModules
   ): IBeaconStateView {
+    if (this.config.getForkSeq(block.message.slot) >= ForkSeq.gloas) {
+      throw Error("NativeBeaconStateView does not support Gloas");
+    }
     const isBlinded = isBlindedBeaconBlock(block.message);
     const signedBlockBytes =
       ssz ??
@@ -675,6 +678,9 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, _modules?: StateTransitionModules): IBeaconStateView {
+    if (this.config.getForkSeq(slot) >= ForkSeq.gloas) {
+      throw Error("NativeBeaconStateView does not support Gloas");
+    }
     return new NativeBeaconStateView(this.config, this.binding.processSlots(slot, opts));
   }
 

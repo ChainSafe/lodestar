@@ -1,0 +1,57 @@
+import bindings from "@chainsafe/lodestar-z";
+import {createNativeNetwork} from "@chainsafe/lodestar-z/network";
+
+let network;
+let active = 0;
+const peers = new Map();
+// The least a host does: take no work, so the binding only settles results.
+const host = {
+  capacity: () => ({gossipValidation: "backpressured", incomingRequestSlots: 0}),
+  subscribeCapacity: () => () => {},
+  validate: async (job) => job.messages.map(() => "ignore"),
+  checkDependencies: (checks) => checks.map(() => false),
+  serve: (request) => request.cancel(),
+  peers: (events) => {
+    for (const event of events) {
+      if (event.type === "closed") peers.delete(event.identity);
+      else if (event.state.connection) peers.set(event.state.identity, event.state);
+      else peers.delete(event.state.identity);
+    }
+  },
+  failed: (error) => {
+    throw error;
+  },
+  logs: () => {},
+};
+process.on("message", async ({id, method, args}) => {
+  if (++active > 16) process.exit(2);
+  try {
+    let value;
+    switch (method) {
+      case "initialize":
+        network = createNativeNetwork({...args[0], beaconConfig: new bindings.BeaconConfig(args[1], args[2]), logLevel: "off"}, host);
+        value = await network.getIdentity();
+        break;
+      case "applyIntent":
+        value = await network.applyIntent(...args);
+        break;
+      case "getPeers":
+        value = {peers: [...peers.values()]};
+        break;
+      case "close":
+        value = await network.close();
+        break;
+      default:
+        throw new Error("Unknown native binding peer command");
+    }
+    process.send({id, value});
+  } catch (error) {
+    process.send({id, error});
+  } finally {
+    active--;
+  }
+});
+process.on("disconnect", async () => {
+  await network?.close();
+  process.exit(0);
+});

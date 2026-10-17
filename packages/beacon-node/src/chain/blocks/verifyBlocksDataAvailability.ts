@@ -8,7 +8,7 @@ export const BLOB_AVAILABILITY_TIMEOUT = 12_000;
 /**
  * Verifies that all block inputs have data available.
  * - Waits a max of BLOB_AVAILABILITY_TIMEOUT for all data to be available
- * - Returns the time at which all data was available
+ * - Returns the time at which all data was available, in Unix milliseconds
  * - Returns the data availability status for each block input
  */
 export async function verifyBlocksDataAvailability(
@@ -27,7 +27,7 @@ export async function verifyBlocksDataAvailability(
   }
   await Promise.all(promises);
 
-  const availableTime = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete())));
+  const availableTime = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete()))) * 1000;
   const dataAvailabilityStatuses: DataAvailabilityStatus[] = blocks.map((blockInput) => {
     if (blockInput.type === DAType.NoData) {
       return DataAvailabilityStatus.NotRequired;

@@ -1,5 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {GENESIS_SLOT, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -49,6 +50,8 @@ export async function* onBeaconBlocksByRange(
   if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of finalized.binaryEntriesStream({
+      fillCache: false,
+      limit: count,
       gte: startSlot,
       lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {
@@ -61,21 +64,13 @@ export async function* onBeaconBlocksByRange(
 
   // Non-finalized range of blocks
   if (endSlot > archiveMaxSlot) {
-    const headBlock = chain.forkChoice.getHead();
-    const headRoot = headBlock.blockRoot;
-    // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
-    // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
-
-    // Iterate head chain with ascending block numbers
-    for (let i = headChain.length - 1; i >= 0; i--) {
-      const block = headChain[i];
-
+    const headChain = collectHeadRange(chain, startSlot, endSlot, archiveMaxSlot);
+    for (const block of headChain) {
       // Must include only blocks in the range requested, and skip anything the archive loop
       // above already served via the block.slot > archiveMaxSlot filter.
       if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
-        // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
+        // after the archive reads. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
@@ -114,6 +109,9 @@ export function validateBeaconBlocksByRangeRequest(
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
+  if (!Number.isSafeInteger(startSlot)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot is not a safe integer");
+  }
 
   // The phase0 req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained blocks to allow genesis sync.
@@ -128,5 +126,33 @@ export function validateBeaconBlocksByRangeRequest(
     count = maxRequestBlocks;
   }
 
+  if (!Number.isSafeInteger(startSlot + count)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "range end is not a safe integer");
+  }
+
   return {startSlot, count};
+}
+
+export function collectHeadRange(
+  chain: IBeaconChain,
+  startSlot: number,
+  endSlot: number,
+  archiveMaxSlot: number
+): Pick<ProtoBlock, "slot" | "blockRoot" | "payloadStatus">[] {
+  const head = chain.forkChoice.getHead();
+  const records: Pick<ProtoBlock, "slot" | "blockRoot" | "payloadStatus">[] = [];
+  const visit = (block: ProtoBlock): boolean => {
+    if (block.slot <= archiveMaxSlot) return false;
+    if (block.slot < endSlot) {
+      records.push({slot: block.slot, blockRoot: block.blockRoot, payloadStatus: block.payloadStatus});
+    }
+    // Keep one predecessor so column serving can recognize skipped slots within fork choice.
+    return block.slot >= startSlot;
+  };
+  if (visit(head)) {
+    for (const block of chain.forkChoice.iterateAncestorBlocks(head.blockRoot, head.payloadStatus)) {
+      if (!visit(block)) break;
+    }
+  }
+  return records.reverse();
 }

@@ -42,6 +42,13 @@ export function hasGlobalIPv6Address(interfaces = os.networkInterfaces()): boole
 }
 
 export type NetworkArgs = {
+  "network.xrayAddress"?: string;
+  "network.xrayWaitForAttach"?: boolean;
+  "network.backend"?: "libp2p" | "native";
+  "network.native.traceGossip"?: boolean;
+  "network.native.receiveBudgetBytes"?: number;
+  "network.native.initialCongestionWindowPackets"?: number;
+  "network.native.receiveDatagramsPerTurn"?: number;
   discv5?: boolean;
   listenAddress?: string;
   port?: number;
@@ -123,6 +130,10 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const quic = args.quic ?? defaultOptions.network.quic;
   const tcp = args.tcp ?? defaultOptions.network.tcp;
 
+  if (args["network.backend"] === "native" && (tcp || !quic)) {
+    throw new YargsError("Native networking requires --tcp=false and QUIC");
+  }
+
   if (!quic && !tcp) {
     throw new YargsError("Cannot disable both TCP and QUIC transports");
   }
@@ -177,6 +188,10 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const localMu6 = listenAddress6 && tcp ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
   const quicMu6 = listenAddress6 && quic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
+  const xrayAddress = args["network.xrayAddress"]?.trim() || undefined;
+  if (args["network.xrayWaitForAttach"] && !xrayAddress) {
+    throw new YargsError("network.xrayWaitForAttach requires network.xrayAddress");
+  }
   const targetPeers = args.targetPeers;
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
   if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
@@ -196,7 +211,16 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     }
   }
 
+  const native = {
+    traceGossip: args["network.native.traceGossip"],
+    receiveBudgetBytes: args["network.native.receiveBudgetBytes"],
+    initialCongestionWindowPackets: args["network.native.initialCongestionWindowPackets"],
+    receiveDatagramsPerTurn: args["network.native.receiveDatagramsPerTurn"],
+  };
+
   return {
+    xrayAddress,
+    xrayWaitForAttach: args["network.xrayWaitForAttach"],
     discv5: enableDiscv5
       ? {
           config: {},
@@ -212,6 +236,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [quicMu, quicMu6, localMu, localMu6].filter(Boolean) as string[],
+    backend: args["network.backend"] ?? defaultOptions.network.backend,
+    native: Object.values(native).some((value) => value !== undefined) ? native : undefined,
     subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
@@ -238,6 +264,52 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 }
 
 export const options: CliCommandOptions<NetworkArgs> = {
+  "network.xrayAddress": {
+    description: "Xray collector ingest address (Unix socket path or host:port). Enables application stream capture",
+    type: "string",
+    group: "network",
+  },
+  "network.xrayWaitForAttach": {
+    description: "Wait up to 30 seconds for the Xray collector before starting networking",
+    type: "boolean",
+    group: "network",
+  },
+  "network.native.traceGossip": {
+    type: "boolean",
+    group: "network",
+    description: "Emit bounded lifecycle logs for blocks and a stable 1/64 sample of columns",
+    defaultDescription: "false",
+    hidden: true,
+  },
+  "network.native.receiveBudgetBytes": {
+    type: "number",
+    group: "network",
+    description: "Native QUIC receive flow-control budget shared across connection slots, in bytes",
+    defaultDescription: String(512 * 1024 * 1024),
+    hidden: true,
+  },
+  "network.native.initialCongestionWindowPackets": {
+    type: "number",
+    group: "network",
+    description: "Native QUIC initial congestion window in packets (1-64); congestion control adapts it afterwards",
+    defaultDescription: "10",
+    hidden: true,
+  },
+  "network.native.receiveDatagramsPerTurn": {
+    type: "number",
+    group: "network",
+    description: "Maximum native QUIC datagrams received per network turn (1-256)",
+    defaultDescription: "32",
+    hidden: true,
+  },
+  "network.backend": {
+    type: "string",
+    choices: ["libp2p", "native"],
+    default: "libp2p",
+    group: "network",
+    description:
+      "Networking backend. Native requires TCP disabled and QUIC enabled, supports one listener per IP family, and remembers qualified peers when a peer store is configured.",
+  },
   discv5: {
     type: "boolean",
     // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type

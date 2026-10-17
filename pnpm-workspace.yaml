@@ -14,7 +14,7 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
-  "@chainsafe/lodestar-z": "2.0.0"
+  "@chainsafe/lodestar-z": "github:ChainSafe/lodestar-z#1594025c514100986607b34346a3c35643d208ed"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
@@ -26,7 +26,6 @@ allowBuilds:
   "@swc/core": true
   aws-sdk: true
   "@vekexasia/bigint-buffer2": true
-  classic-level: true
   core-js: true
   cpu-features: true
   electron: true
@@ -45,4 +44,6 @@ overrides:
   sigstore: "4.0.0"
 
 patchedDependencies:
+  "@libp2p/interface@3.3.0": patches/@libp2p__interface@3.3.0.patch
+  libp2p@3.3.9: patches/libp2p@3.3.9.patch
   sigstore@4.0.0: patches/sigstore@4.0.0.patch

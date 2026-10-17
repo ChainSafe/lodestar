@@ -50,6 +50,7 @@ export function quicFirstAddressSorter(a: Address, b: Address): -1 | 0 | 1 {
 }
 
 export type NodeJsLibp2pOpts = {
+  start?: boolean;
   peerStoreDir?: string;
   disablePeerDiscovery?: boolean;
   metrics?: boolean;
@@ -82,11 +83,7 @@ export async function createNodeJsLibp2p(
   const quicEnabled = networkOpts.quic ?? defaultNetworkOptions.quic;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
-  let datastore: undefined | Eth2PeerDataStore = undefined;
-  if (peerStoreDir) {
-    datastore = new Eth2PeerDataStore(peerStoreDir);
-    await datastore.open();
-  }
+  const datastore = peerStoreDir ? new Eth2PeerDataStore(peerStoreDir) : undefined;
 
   const peerDiscovery = [];
   if (!disablePeerDiscovery) {
@@ -146,6 +143,7 @@ export async function createNodeJsLibp2p(
   }
 
   return createLibp2p({
+    start: nodeJsLibp2pOpts.start,
     privateKey,
     nodeInfo: {
       name: "lodestar",

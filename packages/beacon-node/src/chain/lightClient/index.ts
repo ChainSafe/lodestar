@@ -294,7 +294,7 @@ export class LightClientServer {
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
   async getBootstrap(blockRoot: Uint8Array): Promise<LightClientBootstrap> {
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot, {fillCache: false});
     if (!syncCommitteeWitness) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
@@ -302,16 +302,18 @@ export class LightClientServer {
       );
     }
 
-    const [currentSyncCommittee, nextSyncCommittee] = await Promise.all([
-      this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot),
-      this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot),
-    ]);
+    const currentSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot, {
+      fillCache: false,
+    });
     if (!currentSyncCommittee) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
         "currentSyncCommittee not available"
       );
     }
+    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot, {
+      fillCache: false,
+    });
     if (!nextSyncCommittee) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
@@ -319,7 +321,7 @@ export class LightClientServer {
       );
     }
 
-    const header = await this.db.checkpointHeader.get(blockRoot);
+    const header = await this.db.checkpointHeader.get(blockRoot, {fillCache: false});
     if (!header) {
       throw new LightClientServerError({code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE}, "header not available");
     }
@@ -340,7 +342,7 @@ export class LightClientServer {
    */
   async getUpdate(period: number): Promise<LightClientUpdate> {
     // Signature data
-    const update = await this.db.bestLightClientUpdate.get(period);
+    const update = await this.db.bestLightClientUpdate.get(period, {fillCache: false});
     if (!update) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
@@ -357,7 +359,7 @@ export class LightClientServer {
     const {attestedHeader} = await this.getUpdate(period);
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader.beacon);
 
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot, {fillCache: false});
     if (!syncCommitteeWitness) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
@@ -657,7 +659,9 @@ export class LightClientServer {
       throw Error(`Expected ${NUM_WITNESS} witnesses in pre-Electra numWitness=${numWitness}`);
     }
 
-    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
+    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot, {
+      fillCache: false,
+    });
     if (!nextSyncCommittee) {
       throw Error("nextSyncCommittee not available");
     }

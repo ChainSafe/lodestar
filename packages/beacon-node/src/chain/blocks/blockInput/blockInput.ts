@@ -825,12 +825,15 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     const hasComputedAllData =
       // has all sampled columns
       sampledColumns.length === this.sampledColumns.length;
+    // A column after the block and its data were complete does not move the completion time
+    const timeCompleteSec =
+      this.state.hasBlock && this.state.hasAllData ? this.state.timeCompleteSec : seenTimestampSec;
 
     this.state = {
       ...this.state,
       hasAllData: hasAllData || this.state.hasAllData,
       hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
-      timeCompleteSec: hasAllData ? seenTimestampSec : undefined,
+      timeCompleteSec: hasAllData ? timeCompleteSec : undefined,
     } as BlockInputColumnsState;
 
     if (hasAllData && sampledColumns !== null) {

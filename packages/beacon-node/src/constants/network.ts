@@ -8,6 +8,9 @@ export enum GoodByeReasonCode {
   BANNED = 251,
 }
 
+/** Keep publication routes to column groups outside our own sampling set. */
+export const TARGET_GROUP_PEERS_PER_SUBNET = 4;
+
 export const GOODBYE_KNOWN_CODES: Record<string, string> = {
   "-1": "InboundDisconnect",
   0: "Unknown",

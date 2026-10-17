@@ -15,7 +15,7 @@ import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {IBeaconStateView, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {defer, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
@@ -111,6 +111,7 @@ export class BeaconNode {
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
+  private closePromise: Promise<void> | undefined;
 
   constructor({
     opts,
@@ -186,6 +187,7 @@ export class BeaconNode {
 
       metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
         includeStateTransitionMetrics: !opts.chain.nativeStateTransition,
+        includeNetworkJsMetrics: opts.network.backend !== "native",
       });
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
@@ -291,6 +293,7 @@ export class BeaconNode {
     // Network needs to be initialized before the sync
     // See https://github.com/ChainSafe/lodestar/issues/4543
     const network = await Network.init({
+      processShutdownCallback,
       opts: opts.network,
       config,
       logger: logger.child({module: LoggerModule.network}),
@@ -375,23 +378,40 @@ export class BeaconNode {
   /**
    * Stop beacon node and its sub-components.
    */
-  async close(): Promise<void> {
-    if (this.status === BeaconNodeStatus.started) {
-      this.status = BeaconNodeStatus.closing;
-      this.sync.close();
-      if (this.restApi) await this.restApi.close();
-      await this.network.close();
-      if (this.metricsServer) await this.metricsServer.close();
-      if (this.monitoring) await this.monitoring.close();
-      await this.chain.persistToDisk();
-      await this.chain.close();
+  close(): Promise<void> {
+    if (this.closePromise) return this.closePromise;
+    const completion = defer<void>();
+    this.closePromise = completion.promise;
+    this.status = BeaconNodeStatus.closing;
+    void this.closeInternal().then(completion.resolve, completion.reject);
+    return this.closePromise;
+  }
+
+  private async closeInternal(): Promise<void> {
+    const errors: unknown[] = [];
+    for (const cleanup of [
+      () => this.sync.close(),
+      () => this.restApi?.close(),
+      () => this.network.close(),
+      () => this.metricsServer?.close(),
+      () => this.monitoring?.close(),
+      () => this.chain.persistToDisk(),
+      () => this.chain.close(),
       // Abort signal last: close() calls above clear intervals/timeouts so no new
       // operations get scheduled. If we aborted first, a still-pending interval could
       // fire and schedule a new operation after abort, leaving it stuck and delaying shutdown.
-      if (this.controller) this.controller.abort();
-      await sleep(DELAY_BEFORE_CLOSING_DB_MS);
-      await this.db.close();
-      this.status = BeaconNodeStatus.closed;
+      () => this.controller?.abort(),
+      () => sleep(DELAY_BEFORE_CLOSING_DB_MS),
+      () => this.db.close(),
+    ]) {
+      try {
+        await cleanup();
+      } catch (error) {
+        errors.push(error);
+      }
     }
+    this.status = BeaconNodeStatus.closed;
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, "Beacon node cleanup failed");
   }
 }

@@ -45,15 +45,18 @@ export async function handleColumnSidecarUnavailability({
   if (chain.config.getForkSeq(slot) >= ForkSeq.gloas) {
     const hasCachedEnvelope = blockRoot ? chain.seenPayloadEnvelopeInputCache.hasPayload(toRootHex(blockRoot)) : false;
     if (!hasCachedEnvelope) {
-      const hotEnvelopeBytes = blockRoot ? await db.executionPayloadEnvelope.getBinary(blockRoot) : null;
+      const hotEnvelopeBytes = blockRoot
+        ? await db.executionPayloadEnvelope.getBinary(blockRoot, {fillCache: false})
+        : null;
       const envelopeBytes =
-        hotEnvelopeBytes ?? (finalized ? await db.executionPayloadEnvelopeArchive.getBinary(slot) : null);
+        hotEnvelopeBytes ??
+        (finalized ? await db.executionPayloadEnvelopeArchive.getBinary(slot, {fillCache: false}) : null);
       if (!envelopeBytes) return;
     }
   }
 
-  const hotBlockBytes = blockRoot ? await db.block.getBinary(blockRoot) : null;
-  const blockBytes = hotBlockBytes ?? (finalized ? await db.blockArchive.getBinary(slot) : null);
+  const hotBlockBytes = blockRoot ? await db.block.getBinary(blockRoot, {fillCache: false}) : null;
+  const blockBytes = hotBlockBytes ?? (finalized ? await db.blockArchive.getBinary(slot, {fillCache: false}) : null);
   if (!blockBytes) {
     chain.logger.verbose(
       `Expected ${finalized ? "finalized" : "unfinalized"} block not found while handling unavailable dataColumnSidecar`,
