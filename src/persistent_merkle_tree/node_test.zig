@@ -1231,3 +1231,145 @@ test "editChunkedLeaf invalidates computed roots without allocating" {
     try std.testing.expectError(error.InvalidNode, leaf.editChunkedLeaf(&pool, 0, 1, u256, 0, &42, Writer.write));
     try std.testing.expectEqualSlices(u8, &leaf_hash, leaf.getRoot(&pool));
 }
+
+test "memory_safety: batch node updates should restore the pool on exhaustion" {
+    // Neighboring indices share prefixes of many lengths, so a batch that runs out of slots fails
+    // while subtrees built for earlier indices still wait for their parents.
+    const batch_depth: Depth = 9;
+    const batch_indices = [_]usize{ 0, 1, 2, 5, 9, 17, 33, 64, 65, 130, 255, 256, 300, 301, 400, 511 };
+    const methods = [_]enum { set_nodes, set_nodes_at_depth }{ .set_nodes, .set_nodes_at_depth };
+
+    for (methods) |method| {
+        const allocator = std.testing.allocator;
+        var pool = try Node.Pool.init(.{
+            .page_allocator = allocator,
+            .allocator = allocator,
+            .pool_size = 2048,
+        });
+        defer pool.deinit();
+
+        var contents: [1 << batch_depth]Node.Id = undefined;
+        for (&contents, 0..) |*leaf, i| leaf.* = try pool.createLeafFromUint(i + 1);
+        const leaves = contents;
+        const root = try Node.fillWithContents(&pool, &contents, batch_depth);
+        try pool.ref(root);
+        defer pool.unref(root);
+
+        var gindices: [batch_indices.len]Gindex = undefined;
+        var nodes_in: [batch_indices.len]Node.Id = undefined;
+        for (batch_indices, &gindices, &nodes_in) |index, *gindex, *node| {
+            gindex.* = Gindex.fromDepth(batch_depth, index);
+            node.* = try pool.createLeafFromUint(10_000 + index);
+            // Retained like `TreeViewState.commitStagedNodes` retains its inputs, so a failed batch
+            // must leave them as they were.
+            try pool.ref(node.*);
+        }
+        defer for (nodes_in) |node| pool.unref(node);
+
+        const baseline = pool.getNodesInUse();
+        var filler: std.ArrayList(Node.Id) = .empty;
+        defer filler.deinit(allocator);
+
+        var failures: usize = 0;
+        var free_slots: usize = 0;
+        while (true) : (free_slots += 1) {
+            try fillPoolToCapacity(&pool, &filler);
+            for (0..free_slots) |_| pool.unref(filler.pop().?);
+            const result = switch (method) {
+                .set_nodes => root.setNodes(&pool, &gindices, &nodes_in),
+                .set_nodes_at_depth => root.setNodesAtDepth(&pool, batch_depth, &batch_indices, &nodes_in),
+            };
+            for (filler.items) |id| pool.unref(id);
+            filler.clearRetainingCapacity();
+
+            const new_root = result catch |err| {
+                try std.testing.expectEqual(error.PoolExhausted, err);
+                failures += 1;
+                try std.testing.expectEqual(baseline, pool.getNodesInUse());
+                for (nodes_in) |node| {
+                    try std.testing.expectEqual(@as(u32, 1), node.getState(&pool).refCount());
+                }
+                for (leaves, 0..) |leaf, i| {
+                    try std.testing.expectEqual(@as(u32, 1), leaf.getState(&pool).refCount());
+                    const gindex = Gindex.fromDepth(batch_depth, i);
+                    try std.testing.expectEqual(leaf, try root.getNode(&pool, gindex));
+                }
+                continue;
+            };
+            for (gindices, nodes_in) |gindex, node| {
+                try std.testing.expectEqual(node, try new_root.getNode(&pool, gindex));
+            }
+            pool.unref(new_root);
+            try std.testing.expectEqual(baseline, pool.getNodesInUse());
+            break;
+        }
+        try std.testing.expect(failures > batch_indices.len);
+    }
+}
+
+test "memory_safety: setNodes should keep the original tree when a later path hits a leaf" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 64,
+    });
+    defer pool.deinit();
+
+    // The second gindex needs a child of `short_leaf`, which sits one level above the target depth.
+    const short_leaf = try pool.createLeafFromUint(3);
+    const left = try pool.createBranch(
+        try pool.createLeafFromUint(1),
+        try pool.createLeafFromUint(2),
+    );
+    const root = try pool.createBranch(left, short_leaf);
+    try pool.ref(root);
+    defer pool.unref(root);
+
+    var nodes_in = [_]Node.Id{ try pool.createLeafFromUint(100), try pool.createLeafFromUint(102) };
+    for (nodes_in) |node| try pool.ref(node);
+    defer for (nodes_in) |node| pool.unref(node);
+
+    const baseline = pool.getNodesInUse();
+    const gindices = [_]Gindex{ Gindex.fromDepth(2, 0), Gindex.fromDepth(2, 2) };
+    try std.testing.expectError(error.InvalidNode, root.setNodes(&pool, &gindices, &nodes_in));
+
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+    try std.testing.expectEqual(@as(u32, 1), short_leaf.getState(&pool).refCount());
+    for (nodes_in) |node| try std.testing.expectEqual(@as(u32, 1), node.getState(&pool).refCount());
+}
+
+test "memory_safety: setNodesAtDepth should keep the original tree when a later path hits a leaf" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 64,
+    });
+    defer pool.deinit();
+
+    // The second index needs a child of `short_leaf`, which sits one level above the target depth.
+    const short_leaf = try pool.createLeafFromUint(3);
+    const left = try pool.createBranch(
+        try pool.createLeafFromUint(1),
+        try pool.createLeafFromUint(2),
+    );
+    const root = try pool.createBranch(left, short_leaf);
+    try pool.ref(root);
+    defer pool.unref(root);
+
+    var nodes_in = [_]Node.Id{ try pool.createLeafFromUint(100), try pool.createLeafFromUint(102) };
+    for (nodes_in) |node| try pool.ref(node);
+    defer for (nodes_in) |node| pool.unref(node);
+
+    const baseline = pool.getNodesInUse();
+    const indices = [_]usize{ 0, 2 };
+    try std.testing.expectError(
+        error.InvalidNode,
+        root.setNodesAtDepth(&pool, 2, &indices, &nodes_in),
+    );
+
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+    try std.testing.expectEqual(@as(u32, 1), short_leaf.getState(&pool).refCount());
+    for (nodes_in) |node| try std.testing.expectEqual(@as(u32, 1), node.getState(&pool).refCount());
+}
