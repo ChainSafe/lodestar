@@ -26,7 +26,7 @@ type RevealedPayload = {
 
 type MutableBidLedgerRecord = SubmittedBid & {
   wonBlockRoots: Set<RootHex>;
-  paymentSettled: boolean;
+  obligationResolved: boolean;
 };
 
 export enum BidLedgerErrorCode {
@@ -113,7 +113,7 @@ export class BidLedger {
     }
 
     const key = tupleKey(bid.parentBlockHash, bid.parentBlockRoot);
-    const record = {...bid, wonBlockRoots: new Set<RootHex>(), paymentSettled: false};
+    const record = {...bid, wonBlockRoots: new Set<RootHex>(), obligationResolved: false};
     bidsForSlot.set(key, record);
     return toRecord(record);
   }
@@ -135,13 +135,12 @@ export class BidLedger {
 
   /** Release a winning bid liability only after its payment is known to be reflected in Builder balance. */
   recordPaymentSettled(identity: BidIdentity): BidLedgerRecord | null {
-    const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
-    if (record === null || record.blockHash !== identity.blockHash || record.wonBlockRoots.size === 0) {
-      return null;
-    }
+    return this.resolveObligation(identity);
+  }
 
-    record.paymentSettled = true;
-    return toRecord(record);
+  /** Requires canonical, finalized evidence that the exact obligation cannot be paid. */
+  recordPaymentCancelled(identity: BidIdentity): BidLedgerRecord | null {
+    return this.resolveObligation(identity);
   }
 
   canReveal(blockRoot: RootHex, blockHash: RootHex, envelopeRoot: RootHex): boolean {
@@ -194,7 +193,7 @@ export class BidLedger {
     let total = 0;
     for (const bidsForSlot of this.bidsBySlot.values()) {
       for (const record of bidsForSlot.values()) {
-        if (record.wonBlockRoots.size === 0 || record.paymentSettled) {
+        if (record.wonBlockRoots.size === 0 || record.obligationResolved) {
           continue;
         }
 
@@ -224,7 +223,7 @@ export class BidLedger {
       }
 
       for (const [key, record] of bidsForSlot) {
-        if (record.wonBlockRoots.size === 0 || record.paymentSettled) {
+        if (record.wonBlockRoots.size === 0 || record.obligationResolved) {
           bidsForSlot.delete(key);
           removed++;
         }
@@ -240,6 +239,15 @@ export class BidLedger {
       }
     }
     return removed;
+  }
+
+  private resolveObligation(identity: BidIdentity): BidLedgerRecord | null {
+    const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
+    if (record === null || record.blockHash !== identity.blockHash || record.wonBlockRoots.size === 0) {
+      return null;
+    }
+    record.obligationResolved = true;
+    return toRecord(record);
   }
 
   private getBid(slot: Slot, parentBlockHash: RootHex, parentBlockRoot: RootHex): MutableBidLedgerRecord | null {
