@@ -1,6 +1,7 @@
 import {execSync} from "node:child_process";
 import os from "node:os";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {ClassicLevel} from "classic-level";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {LevelDbController} from "../../../src/index.js";
 
@@ -13,17 +14,28 @@ describe("LevelDB controller", () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await db.close();
     await LevelDbController.destroy(dbLocation);
   });
 
-  it.each(["keys", "values", "entries"] as const)(
-    "%s rejects after close instead of throwing synchronously",
-    async (method) => {
-      await db.close();
-      await expect(db[method]()).rejects.toMatchObject({code: "DatabaseClosed"});
-    }
-  );
+  it("forwards durability for every write operation", async () => {
+    const put = vi.spyOn(ClassicLevel.prototype, "put");
+    const del = vi.spyOn(ClassicLevel.prototype, "del");
+    const batch = vi.spyOn(ClassicLevel.prototype, "batch");
+    const key = Uint8Array.of(1);
+    const value = Uint8Array.of(2);
+    await db.put(key, value, {sync: true});
+    expect(put).toHaveBeenCalledExactlyOnceWith(key, value, {sync: true});
+    await db.delete(key, {sync: true});
+    expect(del).toHaveBeenCalledExactlyOnceWith(key, {sync: true});
+    await db.batchPut([{key, value}], {sync: true});
+    await db.batchDelete([key], {sync: true});
+    await db.batch([{type: "put", key, value}], {sync: true});
+    expect(batch).toHaveBeenNthCalledWith(1, [{type: "put", key, value}], {sync: true});
+    expect(batch).toHaveBeenNthCalledWith(2, [{type: "del", key}], {sync: true});
+    expect(batch).toHaveBeenNthCalledWith(3, [{type: "put", key, value}], {sync: true});
+  });
 
   it("test get not found", async () => {
     const key = Buffer.from("not-existing-key");
@@ -34,7 +46,7 @@ describe("LevelDB controller", () => {
     const key = Buffer.from("test");
     const value = Buffer.from("some value");
     await db.put(key, value);
-    expect(await db.get(key)).toEqual(Uint8Array.from(value));
+    expect(await db.get(key)).toEqual(value);
     await db.delete(key);
     expect(await db.get(key)).toBe(null);
   });
@@ -48,9 +60,9 @@ describe("LevelDB controller", () => {
     const value2 = Buffer.from("some value 2");
     await db.put(key2, value2);
 
-    await expect(db.getMany([key1, key2])).resolves.toEqual([Uint8Array.from(value1), Uint8Array.from(value2)]);
+    await expect(db.getMany([key1, key2])).resolves.toEqual([value1, value2]);
     await db.delete(key1);
-    await expect(db.getMany([key1, key2])).resolves.toEqual([undefined, Uint8Array.from(value2)]);
+    await expect(db.getMany([key1, key2])).resolves.toEqual([undefined, value2]);
   });
 
   it("test batchPut", async () => {
@@ -97,8 +109,8 @@ describe("LevelDB controller", () => {
       {key: k4, value: v4},
       {key: k5, value: v5},
     ] = Array.from({length: 5}, (_, i) => ({
-      key: new TextEncoder().encode(`test${i}`),
-      value: new TextEncoder().encode(`some value ${i}`),
+      key: Buffer.from(`test${i}`),
+      value: Buffer.from(`some value ${i}`),
     }));
     await db.put(k1, v1);
     await db.put(k2, v2);

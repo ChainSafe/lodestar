@@ -1,8 +1,8 @@
 import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
+import {ClassicLevel} from "classic-level";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {LevelDb} from "@chainsafe/lodestar-z/leveldb";
 import {ContainerType, UintNumberType} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {getEnvLogger} from "@lodestar/logger/env";
@@ -42,12 +42,12 @@ class PrefixedRows extends PrefixedRepository<number, number, {value: number}> {
 describe("stock LevelDB serving reads", () => {
   let directory: string;
   let db: LevelDbController;
-  let storage: LevelDb;
+  let storage: ClassicLevel<Uint8Array, Uint8Array>;
   let calls: Call[];
 
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), "lodestar-stock-reads-"));
-    storage = await LevelDb.open(join(directory, "db"));
+    storage = new ClassicLevel(join(directory, "db"), {keyEncoding: "binary", valueEncoding: "binary"});
     db = await LevelDbController.create(
       {name: join(directory, "db"), db: storage},
       {metrics: null, logger: getEnvLogger()}
@@ -76,7 +76,7 @@ describe("stock LevelDB serving reads", () => {
     await rm(directory, {recursive: true, force: true});
   });
 
-  it("forwards fillCache through repositories and the controller to the native binding", async () => {
+  it("forwards fillCache through repositories and the controller to classic-level", async () => {
     const rows = new Rows(db);
     const prefixed = new PrefixedRows(db);
     for (let value = 0; value < 3; value++) {
@@ -119,7 +119,7 @@ describe("stock LevelDB serving reads", () => {
     calls.length = 0;
     const limited = await Array.fromAsync(rows.binaryEntriesStream({gte: 0, lt: 5, limit: 2}));
     expect(limited).toHaveLength(2);
-    expect(calls).toEqual([{call: "iterator", fillCache: false, limit: 2}]);
+    expect(calls).toEqual([{call: "iterator", fillCache: undefined, limit: 2}]);
 
     const stream = rows.binaryEntriesStream({gte: 0, lt: 5})[Symbol.asyncIterator]();
     expect((await stream.next()).done).toBe(false);

@@ -2,10 +2,10 @@ import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {LevelDatastore} from "datastore-level";
 import {Key} from "interface-datastore";
 import {Libp2p, createLibp2p} from "libp2p";
 import {afterEach, beforeEach, expect, it} from "vitest";
-import {LevelDb} from "@chainsafe/lodestar-z/leveldb";
 import {createNodeJsLibp2p} from "../../../../src/network/libp2p/index.js";
 import {Eth2PeerDataStore} from "../../../../src/network/peers/datastore.js";
 
@@ -38,9 +38,10 @@ it("flushes peers and releases the database lock when the node stops", async () 
   await peers.put(new Key("/peer"), Uint8Array.of(7));
   await node.stop();
 
-  const reopened = await LevelDb.open(directory);
+  const reopened = new LevelDatastore(directory);
+  await reopened.open();
   try {
-    expect(await reopened.get(Buffer.from("/peer"))).toEqual(Uint8Array.of(7));
+    expect(Uint8Array.from(await reopened.get(new Key("/peer")))).toEqual(Uint8Array.of(7));
   } finally {
     await reopened.close();
   }
@@ -71,9 +72,10 @@ it.each([false, true])("keeps the database open through component shutdown, star
     await node.stop();
   }
 
-  const reopened = await LevelDb.open(directory);
+  const reopened = new LevelDatastore(directory);
+  await reopened.open();
   try {
-    expect(await reopened.get(Buffer.from("/peer"))).toEqual(Uint8Array.of(9));
+    expect(Uint8Array.from(await reopened.get(new Key("/peer")))).toEqual(Uint8Array.of(9));
   } finally {
     await reopened.close();
   }

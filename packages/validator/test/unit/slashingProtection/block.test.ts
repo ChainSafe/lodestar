@@ -11,8 +11,8 @@ import {testLogger} from "../../utils/logger.js";
 
 describe("SlashingProtection overlapping block proposal checks", () => {
   const pubkey = ssz.BLSPubkey.defaultValue();
-  const block = {slot: 32, signingRoot: new Uint8Array(32).fill(1)};
-  const conflict = {slot: 32, signingRoot: new Uint8Array(32).fill(2)};
+  const block = {slot: 32, signingRoot: Buffer.alloc(32).fill(1)};
+  const conflict = {slot: 32, signingRoot: Buffer.alloc(32).fill(2)};
   let dbLocation: string;
   let db: LevelDbController;
   let slashingProtection: SlashingProtection;
@@ -136,7 +136,7 @@ describe("SlashingProtection overlapping block proposal checks", () => {
     release.resolve();
     await Promise.all([pending, imported]);
 
-    expect(await blocks.getAll(pubkey)).toEqual([{slot: block.slot, signingRoot: new Uint8Array(32)}]);
+    expect(await blocks.getAll(pubkey)).toEqual([{slot: block.slot, signingRoot: Buffer.alloc(32)}]);
     await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, conflict)).rejects.toMatchObject({
       type: {code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL},
     });

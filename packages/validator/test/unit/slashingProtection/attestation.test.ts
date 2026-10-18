@@ -136,8 +136,8 @@ describe("SlashingProtection attestation min-span lookback", () => {
 
 describe("SlashingProtection overlapping attestation checks", () => {
   const pubkey = ssz.BLSPubkey.defaultValue();
-  const attestation = {sourceEpoch: 9, targetEpoch: 10, signingRoot: new Uint8Array(32).fill(1)};
-  const conflict = {sourceEpoch: 9, targetEpoch: 10, signingRoot: new Uint8Array(32).fill(2)};
+  const attestation = {sourceEpoch: 9, targetEpoch: 10, signingRoot: Buffer.alloc(32).fill(1)};
+  const conflict = {sourceEpoch: 9, targetEpoch: 10, signingRoot: Buffer.alloc(32).fill(2)};
   let dbLocation: string;
   let db: LevelDbController;
   let slashingProtection: SlashingProtection;
@@ -179,7 +179,7 @@ describe("SlashingProtection overlapping attestation checks", () => {
   });
 
   it("rejects a surround vote when checks for different targets overlap", async () => {
-    const surrounding = {sourceEpoch: 8, targetEpoch: 11, signingRoot: new Uint8Array(32).fill(3)};
+    const surrounding = {sourceEpoch: 8, targetEpoch: 11, signingRoot: Buffer.alloc(32).fill(3)};
     const results = await Promise.allSettled([
       slashingProtection.checkAndInsertAttestation(pubkey, attestation),
       slashingProtection.checkAndInsertAttestation(pubkey, surrounding),
@@ -194,7 +194,7 @@ describe("SlashingProtection overlapping attestation checks", () => {
 
   it("continues queued checks after a double vote is rejected", async () => {
     await slashingProtection.checkAndInsertAttestation(pubkey, attestation);
-    const next = {sourceEpoch: 10, targetEpoch: 11, signingRoot: new Uint8Array(32).fill(1)};
+    const next = {sourceEpoch: 10, targetEpoch: 11, signingRoot: Buffer.alloc(32).fill(1)};
     const results = await Promise.allSettled([
       slashingProtection.checkAndInsertAttestation(pubkey, conflict),
       slashingProtection.checkAndInsertAttestation(pubkey, next),
@@ -259,7 +259,7 @@ describe("SlashingProtection overlapping attestation checks", () => {
     release.resolve();
     await Promise.all([pending, imported]);
 
-    expect(await attestations.getAll(pubkey)).toEqual([{...attestation, signingRoot: new Uint8Array(32)}]);
+    expect(await attestations.getAll(pubkey)).toEqual([{...attestation, signingRoot: Buffer.alloc(32)}]);
     await expect(slashingProtection.checkAndInsertAttestation(pubkey, conflict)).rejects.toMatchObject({
       type: {code: InvalidAttestationErrorCode.DOUBLE_VOTE},
     });
@@ -282,7 +282,7 @@ describe("SlashingProtection overlapping attestation checks", () => {
         data: [
           {
             pubkey: toHex(Buffer.alloc(48, 1)),
-            signed_blocks: [{slot: "1", signing_root: toHex(new Uint8Array(32).fill(1))}],
+            signed_blocks: [{slot: "1", signing_root: toHex(Buffer.alloc(32).fill(1))}],
             signed_attestations: [],
           },
           {
@@ -330,7 +330,7 @@ describe("SlashingProtection overlapping attestation checks", () => {
         data: [
           {
             pubkey: toHex(Buffer.alloc(48, 1)),
-            signed_blocks: [{slot: "1", signing_root: toHex(new Uint8Array(32).fill(1))}],
+            signed_blocks: [{slot: "1", signing_root: toHex(Buffer.alloc(32).fill(1))}],
             signed_attestations: [],
           },
           {
@@ -350,7 +350,7 @@ describe("SlashingProtection overlapping attestation checks", () => {
     );
     await started.promise;
 
-    const next = {sourceEpoch: 10, targetEpoch: 11, signingRoot: new Uint8Array(32).fill(2)};
+    const next = {sourceEpoch: 10, targetEpoch: 11, signingRoot: Buffer.alloc(32).fill(2)};
     const second = slashingProtection.importInterchange(
       {
         metadata,
@@ -399,7 +399,7 @@ describe("SlashingProtection overlapping attestation checks", () => {
         data: [
           {
             pubkey: toHex(Buffer.alloc(48, 1)),
-            signed_blocks: [{slot: "1", signing_root: toHex(new Uint8Array(32).fill(1))}],
+            signed_blocks: [{slot: "1", signing_root: toHex(Buffer.alloc(32).fill(1))}],
             signed_attestations: [],
           },
           {pubkey: toHex(pubkey), signed_blocks: [], signed_attestations: []},

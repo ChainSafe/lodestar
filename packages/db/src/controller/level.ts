@@ -1,4 +1,4 @@
-import {LevelDb, LevelDbIteratorOptions} from "@chainsafe/lodestar-z/leveldb";
+import {ClassicLevel} from "classic-level";
 import {Logger} from "@lodestar/utils";
 import {DatabaseController, DatabaseOptions, DbBatch, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
@@ -9,8 +9,7 @@ enum Status {
 }
 
 export interface LevelDBOptions extends DatabaseOptions {
-  /** An already-open database whose ownership transfers to the controller. */
-  db?: LevelDb;
+  db?: ClassicLevel<Uint8Array, Uint8Array>;
 }
 
 export type LevelDbControllerModules = {
@@ -28,13 +27,12 @@ const DB_SIZE_METRIC_INTERVAL_MS = 5 * 60 * 1000;
  */
 export class LevelDbController implements DatabaseController<Uint8Array, Uint8Array> {
   private status = Status.started;
-  private closing?: Promise<void>;
 
   private dbSizeMetricInterval?: NodeJS.Timeout;
 
   constructor(
     private readonly logger: Logger,
-    private readonly db: LevelDb,
+    private readonly db: ClassicLevel<Uint8Array, Uint8Array>,
     private metrics: LevelDbControllerMetrics | null
   ) {
     this.metrics = metrics ?? null;
@@ -45,24 +43,35 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   static async create(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules): Promise<LevelDbController> {
-    const db = opts.db ?? (await LevelDb.open(opts.name || "beaconchain", {multithreading: true}));
+    const db =
+      opts.db ||
+      new ClassicLevel(opts.name || "beaconchain", {
+        keyEncoding: "binary",
+        valueEncoding: "binary",
+        multithreading: true,
+      });
+
+    try {
+      await db.open();
+    } catch (e) {
+      if ((e as LevelDbError).cause?.code === "LEVEL_LOCKED") {
+        throw new Error("Database already in use by another process");
+      }
+      throw e;
+    }
 
     return new LevelDbController(logger, db, metrics ?? null);
   }
 
-  close(): Promise<void> {
-    if (this.closing) return this.closing;
+  async close(): Promise<void> {
+    if (this.status === Status.closed) return;
     this.status = Status.closed;
 
     if (this.dbSizeMetricInterval) {
       clearInterval(this.dbSizeMetricInterval);
     }
 
-    this.closing = this.db.close().catch((error: unknown) => {
-      this.closing = undefined;
-      throw error;
-    });
-    return this.closing;
+    await this.db.close();
   }
 
   /** To inject metrics after CLI initialization */
@@ -82,16 +91,28 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   async get(key: Uint8Array, opts?: DbReqOpts): Promise<Uint8Array | null> {
-    this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
-    this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
-    return this.db.get(key, {fillCache: opts?.fillCache});
+    try {
+      this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+      this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+      return (await this.db.get(key, {fillCache: opts?.fillCache})) as Uint8Array | null;
+    } catch (e) {
+      if ((e as LevelDbError).code === "LEVEL_NOT_FOUND") {
+        return null;
+      }
+      throw e;
+    }
   }
 
-  /** Returns values in key order, with undefined for missing keys. */
+  /**
+   * Return the multiple items in the order of the given keys
+   * Will return `null` for the keys which does not exists
+   *
+   * https://github.com/Level/abstract-level?tab=readme-ov-file#dbgetmanykeys-options
+   */
   async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]> {
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
-    return (await this.db.getMany(keys, {fillCache: opts?.fillCache})).map((value) => value ?? undefined);
+    return await this.db.getMany(keys, {fillCache: opts?.fillCache});
   }
 
   put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {
@@ -136,27 +157,32 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
-    return this.metricsIterator(this.db.keys(levelIteratorOptions(opts)), opts.bucketId ?? BUCKET_ID_UNKNOWN);
+    return this.metricsIterator(this.db.keys(opts), (key) => key, opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
   valuesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
-    return this.metricsIterator(this.db.values(levelIteratorOptions(opts)), opts.bucketId ?? BUCKET_ID_UNKNOWN);
+    return this.metricsIterator(this.db.values(opts), (value) => value, opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
   entriesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<KeyValue<Uint8Array, Uint8Array>> {
-    return this.metricsIterator(this.db.iterator(levelIteratorOptions(opts)), opts.bucketId ?? BUCKET_ID_UNKNOWN);
+    return this.metricsIterator(
+      this.db.iterator(opts),
+      (entry) => ({key: entry[0], value: entry[1]}),
+      opts.bucketId ?? BUCKET_ID_UNKNOWN
+    );
   }
 
-  async keys(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
-    return Array.fromAsync(this.keysStream(opts));
+  keys(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+    return this.metricsAll(this.db.keys(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
-  async values(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
-    return Array.fromAsync(this.valuesStream(opts));
+  values(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+    return this.metricsAll(this.db.values(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
   async entries(opts: FilterOptions<Uint8Array> = {}): Promise<KeyValue<Uint8Array, Uint8Array>[]> {
-    return Array.fromAsync(this.entriesStream(opts));
+    const entries = await this.metricsAll(this.db.iterator(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
+    return entries.map((entry) => ({key: entry[0], value: entry[1]}));
   }
 
   /**
@@ -174,49 +200,32 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     return this.db.compactRange(start, end);
   }
 
-  private metricsIterator<T>(
-    iterator: AsyncIterableIterator<T> & {close(): Promise<void>},
+  /** Capture metrics for db.iterator, db.keys, db.values .all() calls */
+  private async metricsAll<T>(promise: Promise<T[]>, bucket: string): Promise<T[]> {
+    this.metrics?.dbReadReq.inc({bucket}, 1);
+    const items = await promise;
+    this.metrics?.dbReadItems.inc({bucket}, items.length);
+    return items;
+  }
+
+  /** Capture metrics for db.iterator, db.keys, db.values AsyncIterable calls */
+  private async *metricsIterator<T, K>(
+    iterator: AsyncIterable<T>,
+    getValue: (item: T) => K,
     bucket: string
-  ): AsyncIterableIterator<T> {
-    let started = false;
+  ): AsyncIterable<K> {
+    this.metrics?.dbReadReq.inc({bucket}, 1);
+
     let itemsRead = 0;
-    let closing: Promise<void> | undefined;
-    const close = (): Promise<void> => {
-      if (!closing) {
-        if (started) this.metrics?.dbReadItems.inc({bucket}, itemsRead);
-        closing = iterator.close();
-      }
-      return closing;
-    };
-    return {
-      [Symbol.asyncIterator]() {
-        return this;
-      },
-      next: async () => {
-        if (closing) return {done: true, value: undefined};
-        if (!started) {
-          started = true;
-          this.metrics?.dbReadReq.inc({bucket}, 1);
-        }
-        try {
-          const result = await iterator.next();
-          if (result.done) await close();
-          else itemsRead++;
-          return result;
-        } catch (error) {
-          await close();
-          throw error;
-        }
-      },
-      return: async () => {
-        await close();
-        return {done: true, value: undefined};
-      },
-      throw: async (error: unknown) => {
-        await close();
-        throw error;
-      },
-    };
+
+    for await (const item of iterator) {
+      // Count metrics after done condition
+      itemsRead++;
+
+      yield getValue(item);
+    }
+
+    this.metrics?.dbReadItems.inc({bucket}, itemsRead);
   }
 
   /** Start interval to capture metric for db size */
@@ -242,19 +251,9 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   static async destroy(location: string): Promise<void> {
-    return LevelDb.destroy(location);
+    return ClassicLevel.destroy(location);
   }
 }
 
-function levelIteratorOptions(opts: FilterOptions<Uint8Array>): LevelDbIteratorOptions {
-  const {gt, gte, lt, lte, reverse, fillCache, limit} = opts;
-  return {
-    gt,
-    gte,
-    lt,
-    lte,
-    reverse,
-    fillCache: fillCache ?? false,
-    limit: limit !== undefined && Number.isInteger(limit) && limit >= 0 ? limit : undefined,
-  };
-}
+/** From https://www.npmjs.com/package/level */
+type LevelDbError = {code: "LEVEL_NOT_FOUND"; cause?: {code: "LEVEL_LOCKED"}};

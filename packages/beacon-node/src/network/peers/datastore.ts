@@ -1,8 +1,8 @@
 import {AbortOptions, Startable} from "@libp2p/interface";
 import {BaseDatastore} from "datastore-core";
+import {LevelDatastore} from "datastore-level";
 import {Datastore, Key, KeyQuery, Pair, Query} from "interface-datastore";
 import {NotFoundError} from "interface-store";
-import {NativeDatastore} from "./nativeDatastore.js";
 
 type MemoryItem = {
   lastAccessedMs: number;
@@ -47,7 +47,7 @@ export class Eth2PeerDataStore extends BaseDatastore implements Startable {
       throw Error(`Threshold ${threshold} should be at most maxMemoryItems ${maxMemoryItems}`);
     }
 
-    this.dbDatastore = typeof dbDatastore === "string" ? new NativeDatastore(dbDatastore) : dbDatastore;
+    this.dbDatastore = typeof dbDatastore === "string" ? new LevelDatastore(dbDatastore) : dbDatastore;
     this.memoryDatastore = new Map();
     this.threshold = threshold;
     this.maxMemoryItems = maxMemoryItems;

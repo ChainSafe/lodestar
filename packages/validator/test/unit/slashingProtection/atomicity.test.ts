@@ -19,7 +19,7 @@ import {testLogger} from "../../utils/logger.js";
 
 describe("durable attestation decisions", () => {
   const pubkey = ssz.BLSPubkey.defaultValue();
-  const attestation = {sourceEpoch: 5, targetEpoch: 10, signingRoot: new Uint8Array(32).fill(1)};
+  const attestation = {sourceEpoch: 5, targetEpoch: 10, signingRoot: Buffer.alloc(32).fill(1)};
   let directory: string;
   let db: LevelDbController;
   let protection: SlashingProtection;
@@ -89,13 +89,9 @@ describe("durable attestation decisions", () => {
   });
 
   it("leaves no partial record or span when the atomic batch is rejected", async () => {
-    const batch = db.batch.bind(db);
-    vi.spyOn(db, "batch").mockImplementationOnce((operations, options) =>
-      batch([...operations, {type: "put", key: new Uint8Array(4097), value: new Uint8Array()}], options)
-    );
-    await expect(protection.checkAndInsertAttestation(pubkey, attestation)).rejects.toMatchObject({
-      code: "KeyTooLarge",
-    });
+    const failure = new Error("batch write failed");
+    vi.spyOn(db, "batch").mockRejectedValueOnce(failure);
+    await expect(protection.checkAndInsertAttestation(pubkey, attestation)).rejects.toBe(failure);
     expect(await db.entries()).toEqual([]);
     await expect(protection.checkAndInsertAttestation(pubkey, attestation)).resolves.toBeUndefined();
   });
@@ -112,7 +108,7 @@ describe("durable attestation decisions", () => {
   it.each([
     {
       name: "double vote",
-      conflict: {...attestation, signingRoot: new Uint8Array(32).fill(2)},
+      conflict: {...attestation, signingRoot: Buffer.alloc(32).fill(2)},
       code: InvalidAttestationErrorCode.DOUBLE_VOTE,
     },
     {
@@ -174,14 +170,14 @@ describe("durable attestation decisions", () => {
     });
     const signing = service.checkAndInsertAttestation(pubkey, attestation);
     await started.promise;
-    const imported = service.importAttestations(pubkey, [{...attestation, signingRoot: new Uint8Array(32).fill(2)}]);
+    const imported = service.importAttestations(pubkey, [{...attestation, signingRoot: Buffer.alloc(32).fill(2)}]);
     try {
       expect(getLatest).toHaveBeenCalledTimes(1);
     } finally {
       release.resolve();
       await Promise.all([signing, imported]);
     }
-    expect(await records.getAll(pubkey)).toEqual([{...attestation, signingRoot: new Uint8Array(32)}]);
+    expect(await records.getAll(pubkey)).toEqual([{...attestation, signingRoot: Buffer.alloc(32)}]);
     expect(await new AttestationLowerBoundRepository(db).get(pubkey)).toEqual({minSourceEpoch: 5, minTargetEpoch: 10});
     for (const [, options] of writes.mock.calls) expect(options).toEqual({sync: true});
   });
@@ -222,15 +218,13 @@ describe("durable attestation decisions", () => {
   it("leaves records, spans and lower bounds unchanged when an import batch is rejected", async () => {
     await protection.checkAndInsertAttestation(pubkey, attestation);
     const before = await db.entries();
-    const batch = db.batch.bind(db);
-    vi.spyOn(db, "batch").mockImplementationOnce((operations, options) =>
-      batch([...operations, {type: "put", key: new Uint8Array(4097), value: new Uint8Array()}], options)
-    );
+    const failure = new Error("batch write failed");
+    vi.spyOn(db, "batch").mockRejectedValueOnce(failure);
     await expect(
       new SlashingProtectionAttestationService(db).importAttestations(pubkey, [
         {...attestation, sourceEpoch: 6, targetEpoch: 12},
       ])
-    ).rejects.toMatchObject({code: "KeyTooLarge"});
+    ).rejects.toBe(failure);
     expect(await db.entries()).toEqual(before);
   });
 });
