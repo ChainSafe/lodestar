@@ -38,6 +38,7 @@ describe("execution/builder/bidStream", () => {
         socket.close();
       });
       const request = makeRequest(`${server.url}${prefix}?network=test#fragment`);
+      const began = Date.now();
       const result = await getExecutionPayloadBidStream(request);
 
       expect(result).toMatchObject({upgraded: true, opened: true, reason: "closed", updates: 0, discarded: 0});
@@ -46,13 +47,15 @@ describe("execution/builder/bidStream", () => {
       );
       expect(received?.headers).toMatchObject({
         "eth-consensus-version": "gloas",
-        "date-milliseconds": String(request.dateMilliseconds),
-        "x-timeout-ms": String(request.timeoutMs),
         "x-request-auth": Buffer.from(ssz.gloas.SignedBuilderRequestAuth.serialize(request.requestAuth)).toString(
           "base64"
         ),
         "user-agent": request.userAgent,
       });
+      expect(Number(received?.headers["date-milliseconds"])).toBeGreaterThanOrEqual(began);
+      expect(Number(received?.headers["date-milliseconds"])).toBeLessThanOrEqual(Date.now());
+      expect(Number(received?.headers["x-timeout-ms"])).toBeGreaterThan(0);
+      expect(Number(received?.headers["x-timeout-ms"])).toBeLessThanOrEqual(request.timeoutMs);
       expect(received?.headers["sec-websocket-extensions"]).toBeUndefined();
     }
   );
@@ -146,6 +149,17 @@ describe("execution/builder/bidStream", () => {
     expectBid(result.bid, valid);
     expect(performance.now() - started).toBeGreaterThanOrEqual(75);
     expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
+  it("keeps the caller's original absolute deadline instead of restarting it inside the helper", async () => {
+    const server = await startServer();
+    server.ws.once("connection", (socket) => socket.send(frame(makeBid())));
+    const began = performance.now();
+    const result = await getExecutionPayloadBidStream(
+      makeRequest(server.url, {startedAt: began - 150, timeoutMs: 250, requestTimeoutMs: 250})
+    );
+    expect(result).toMatchObject({opened: true, reason: "deadline", updates: 1});
+    expect(performance.now() - began).toBeLessThan(225);
   });
 
   it("bounds a handshake that never responds", async () => {
@@ -450,7 +464,6 @@ function makeRequest(url: string, overrides: Partial<StreamRequest> = {}): Strea
     parentRoot,
     proposerPubkey,
     requestAuth,
-    dateMilliseconds: 1_792_317_600_000,
     timeoutMs: 500,
     requestTimeoutMs: 2_000,
     userAgent: "lodestar-stream-test",

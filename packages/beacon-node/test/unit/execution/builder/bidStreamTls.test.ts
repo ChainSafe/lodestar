@@ -1,9 +1,10 @@
 import {once} from "node:events";
 import {readFileSync} from "node:fs";
-import {Agent, Server, createServer} from "node:https";
+import {ClientRequest} from "node:http";
+import {Agent, Server, createServer, get} from "node:https";
 import {Duplex} from "node:stream";
 import {TLSSocket} from "node:tls";
-import {afterEach, describe, expect, it} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {WebSocketServer} from "ws";
 import {gloas, ssz} from "@lodestar/types";
 import {getExecutionPayloadBidStream} from "../../../../src/execution/builder/bidStream.js";
@@ -29,6 +30,7 @@ const agents: Agent[] = [];
 
 describe("execution/builder/bidStream TLS", () => {
   afterEach(async () => {
+    vi.restoreAllMocks();
     for (const agent of agents.splice(0)) agent.destroy();
     for (const server of servers.splice(0)) {
       for (const socket of server.ws.clients) socket.terminate();
@@ -66,6 +68,77 @@ describe("execution/builder/bidStream TLS", () => {
     expect(server.connections[0].socket).not.toBe(server.connections[1].socket);
     expect(server.connections.map((connection) => connection.protocol)).toEqual(["TLSv1.2", "TLSv1.2"]);
     expect(server.connections.map((connection) => connection.reused)).toEqual([false, shared]);
+  });
+
+  it("uses an already-connected pooled TLS socket and ends the upgrade request exactly once", async () => {
+    const server = await startServer();
+    const agent = createAgent(true);
+    const free = once(agent, "free");
+    await new Promise<void>((resolve, reject) => {
+      get(`${server.url}/warmup`, {agent}, (response) => {
+        response.resume();
+        response.once("end", resolve);
+      }).once("error", reject);
+    });
+    await free;
+    expect(server.connections).toHaveLength(1);
+    const expected = makeBid(30, 6);
+    server.ws.once("connection", (socket) => {
+      socket.send(frame(expected));
+      socket.close();
+    });
+    const end = vi.spyOn(ClientRequest.prototype, "end");
+
+    const result = await getExecutionPayloadBidStream(makeRequest(server.url, agent));
+
+    expect(result).toMatchObject({upgraded: true, opened: true, updates: 1});
+    if (!result.bid) throw Error("Expected the retained bid");
+    expect(ssz.gloas.SignedExecutionPayloadBid.toJson(result.bid.signedBid)).toEqual(
+      ssz.gloas.SignedExecutionPayloadBid.toJson(expected)
+    );
+    expect(server.connections).toHaveLength(1);
+    expect(end).toHaveBeenCalledOnce();
+  });
+
+  it("sends on a TLS socket handed directly from a completed request to the agent queue", async () => {
+    const server = await startServer();
+    const agent = createAgent(true);
+    agent.maxSockets = 1;
+    agent.maxTotalSockets = 1;
+    let releaseWarmup: (() => void) | undefined;
+    server.https.removeAllListeners("request");
+    const accepted = new Promise<void>((resolve) => {
+      server.https.once("request", (_request, response) => {
+        releaseWarmup = () => response.end();
+        resolve();
+      });
+    });
+    const warmup = new Promise<void>((resolve, reject) => {
+      get(`${server.url}/warmup`, {agent}, (response) => {
+        response.resume();
+        response.once("end", resolve);
+      }).once("error", reject);
+    });
+    await accepted;
+    const expected = makeBid(40, 7);
+    server.ws.once("connection", (socket) => {
+      socket.send(frame(expected));
+      socket.close();
+    });
+    const end = vi.spyOn(ClientRequest.prototype, "end");
+    const pending = getExecutionPayloadBidStream(makeRequest(server.url, agent));
+    expect(Object.values(agent.requests).flat()).toHaveLength(1);
+    releaseWarmup?.();
+    await warmup;
+    const result = await pending;
+
+    expect(result).toMatchObject({upgraded: true, opened: true, updates: 1});
+    if (!result.bid) throw Error("Expected the queued stream bid");
+    expect(ssz.gloas.SignedExecutionPayloadBid.toJson(result.bid.signedBid)).toEqual(
+      ssz.gloas.SignedExecutionPayloadBid.toJson(expected)
+    );
+    expect(server.connections).toHaveLength(1);
+    expect(end).toHaveBeenCalledOnce();
   });
 
   it("rejects an untrusted certificate before HTTP upgrade or bid delivery", async () => {
@@ -138,7 +211,6 @@ function makeRequest(url: string, agent: Agent): StreamRequest {
     proposerPubkey,
     requestAuth,
     agent,
-    dateMilliseconds: 1_792_317_600_000,
     timeoutMs: 500,
     requestTimeoutMs: 2_000,
     msFromSlot: () => 123,

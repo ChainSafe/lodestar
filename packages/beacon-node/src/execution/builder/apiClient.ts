@@ -299,7 +299,7 @@ export class BuilderApiClient {
           parentRoot,
           proposerPubkey,
           requestAuth: entry.auth,
-          dateMilliseconds: Date.now(),
+          startedAt: started,
           timeoutMs,
           requestTimeoutMs,
           userAgent: this.opts.userAgent,

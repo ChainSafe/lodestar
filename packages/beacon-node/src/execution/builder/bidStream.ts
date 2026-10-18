@@ -1,4 +1,7 @@
+import {ClientRequest} from "node:http";
 import {Agent} from "node:https";
+import {Socket} from "node:net";
+import {TLSSocket} from "node:tls";
 import {WebSocket} from "ws";
 import {BLSPubkey, Root, Slot, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex} from "@lodestar/utils";
@@ -21,7 +24,7 @@ type BidStreamRequest = {
   parentRoot: Root;
   proposerPubkey: BLSPubkey;
   requestAuth: gloas.SignedBuilderRequestAuth;
-  dateMilliseconds: number;
+  startedAt?: number;
   timeoutMs: number;
   requestTimeoutMs: number;
   userAgent?: string;
@@ -48,7 +51,9 @@ export type BidStreamResult = {
  * must run the normal builder bid validation before selecting it. There is no per-frame BLS work.
  */
 export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise<BidStreamResult> {
-  if (request.signal?.aborted || request.requestTimeoutMs <= 0) {
+  const startedAt = request.startedAt ?? performance.now();
+  const deadline = startedAt + request.requestTimeoutMs;
+  if (request.signal?.aborted || performance.now() >= deadline) {
     return Promise.resolve({
       upgraded: false,
       opened: false,
@@ -80,19 +85,46 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
     let pings = 0;
     let pongSending = false;
     let pendingPong: Buffer | undefined;
-    const deadline = performance.now() + request.requestTimeoutMs;
     // autoPong is supported by the pinned ws version. Bound control writes as well as data reads.
     const options = {
       followRedirects: false,
       perMessageDeflate: false,
       maxPayload: MAX_FRAME_BYTES,
       autoPong: false,
-      handshakeTimeout: request.requestTimeoutMs,
+      handshakeTimeout: Math.max(1, Math.ceil(deadline - performance.now())),
       agent: request.agent,
+      finishRequest(httpRequest: ClientRequest) {
+        let ended = false;
+        const send = (): void => {
+          if (ended) return;
+          ended = true;
+          if (stopped || request.signal?.aborted) {
+            httpRequest.destroy();
+            return;
+          }
+          const remaining = Math.floor(request.timeoutMs - (performance.now() - startedAt));
+          if (remaining <= 0 || performance.now() >= deadline) {
+            finish("deadline");
+            return;
+          }
+          // Charge setup once; only the HTTP transit is doubled by the builder's reply reserve.
+          httpRequest.setHeader("Date-Milliseconds", String(Date.now()));
+          httpRequest.setHeader("X-Timeout-Ms", String(remaining));
+          httpRequest.end();
+        };
+        const onSocket = (connection: Socket): void => {
+          // Direct queue handoff of a connected socket may leave reusedSocket=false.
+          const tlsReady =
+            connection instanceof TLSSocket && (connection.authorized || connection.authorizationError != null);
+          if (url.protocol === "wss:" && !tlsReady) connection.once("secureConnect", send);
+          else if (connection.connecting) connection.once("connect", send);
+          else queueMicrotask(send);
+        };
+        if (httpRequest.socket) onSocket(httpRequest.socket);
+        else httpRequest.once("socket", onSocket);
+      },
       headers: {
         "Eth-Consensus-Version": "gloas",
-        "Date-Milliseconds": String(request.dateMilliseconds),
-        "X-Timeout-Ms": String(request.timeoutMs),
         "X-Request-Auth": Buffer.from(ssz.gloas.SignedBuilderRequestAuth.serialize(request.requestAuth)).toString(
           "base64"
         ),
@@ -116,7 +148,7 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
       if (latest) finish("aborted");
     };
     const expired = (): boolean => performance.now() >= deadline;
-    const timer = setTimeout(() => finish("deadline"), request.requestTimeoutMs);
+    const timer = setTimeout(() => finish("deadline"), Math.max(0, deadline - performance.now()));
     socket.on("error", () => finish("error"));
     socket.once("upgrade", () => {
       upgraded = true;

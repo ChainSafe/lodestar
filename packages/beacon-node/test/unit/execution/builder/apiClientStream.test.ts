@@ -144,7 +144,8 @@ describe("execution/builder/apiClient stream integration", () => {
     expect(bids).toHaveLength(1);
     expect(getExecutionPayloadBid).toHaveBeenCalledOnce();
     const [request, options] = getExecutionPayloadBid.mock.calls[0];
-    expect(streamRequest?.headers["x-timeout-ms"]).toBe("200");
+    expect(Number(streamRequest?.headers["x-timeout-ms"])).toBeGreaterThan(0);
+    expect(Number(streamRequest?.headers["x-timeout-ms"])).toBeLessThanOrEqual(200);
     expect(request.timeoutMs).toBeGreaterThan(0);
     expect(request.timeoutMs).toBeLessThanOrEqual(180);
     expect(options.timeoutMs).toBe(request.timeoutMs + BUILDER_BID_LAG_BUFFER_MS);
@@ -323,7 +324,11 @@ describe("execution/builder/apiClient stream integration", () => {
     expect(bids.map(({signedBid}) => signedBid.message.value)).toEqual([100, 25]);
     expect(requestedAt).toHaveLength(3);
     expect(requestedAt[2] - requestedAt[0]).toBeGreaterThanOrEqual(35);
-    expect(advertised).toEqual(["30", "30", "30"]);
+    expect(advertised).toHaveLength(3);
+    for (const [index, budget] of advertised.entries()) {
+      expect(Number(budget), `round ${index} remaining budget`).toBeGreaterThan(0);
+      expect(Number(budget), `round ${index} original budget`).toBeLessThanOrEqual(30);
+    }
     expect(getExecutionPayloadBid).not.toHaveBeenCalled();
   });
 
