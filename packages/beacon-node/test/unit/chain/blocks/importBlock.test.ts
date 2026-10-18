@@ -97,3 +97,96 @@ describe("chain / blocks / importBlock", () => {
     expect(forkChoice.onBlock).not.toHaveBeenCalled();
   });
 });
+
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
+import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
+import {SeenBlockAttesters} from "../../../../src/chain/seenCache/seenBlockAttesters.js";
+import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {MockBlockInput} from "../../../utils/blockInput.js";
+import {generateCachedState} from "../../../utils/state.js";
+import {generateProtoBlock} from "../../../utils/typeGenerator.js";
+
+describe("chain / blocks / importBlock attester liveness", () => {
+  it("registers block attesters under the attestation epoch, not the block epoch", async () => {
+    const config = createChainForkConfig({
+      ...configDef,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+    });
+    const chain: MockedBeaconChain = getMockedBeaconChain({config});
+
+    // First block of epoch 1 carrying an attestation for the last slot of epoch 0,
+    // the normal inclusion pattern at an epoch boundary
+    const blockSlot = SLOTS_PER_EPOCH;
+    const attSlot = blockSlot - 1;
+    const blockEpoch = computeEpochAtSlot(blockSlot);
+    const attEpoch = computeEpochAtSlot(attSlot);
+    // Test setup must straddle an epoch boundary
+    expect(blockEpoch).toBe(attEpoch + 1);
+    const attesterIndex = 103;
+
+    const attestation = ssz.phase0.Attestation.defaultValue();
+    attestation.data.slot = attSlot;
+    attestation.data.target.epoch = attEpoch;
+
+    const indexedAttestation = ssz.phase0.IndexedAttestation.defaultValue();
+    indexedAttestation.data = attestation.data;
+    indexedAttestation.attestingIndices = [attesterIndex];
+
+    const block = ssz.deneb.SignedBeaconBlock.defaultValue();
+    block.message.slot = blockSlot;
+    block.message.body.attestations = [attestation];
+    const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
+
+    const blockInput = new MockBlockInput({forkName: ForkName.deneb, slot: blockSlot, blockRootHex});
+    blockInput.block = block;
+
+    const seenBlockAttesters = new SeenBlockAttesters();
+    Object.defineProperty(chain, "seenBlockAttesters", {value: seenBlockAttesters});
+    Object.defineProperty(chain, "seenAggregatedAttestations", {value: new SeenAggregatedAttestations(null)});
+    Object.defineProperty(chain, "reprocessController", {value: {onBlockImported: vi.fn()}});
+    Object.defineProperty(chain, "clock", {
+      value: {...chain.clock, slotWithFutureTolerance: vi.fn().mockReturnValue(blockSlot)},
+    });
+    Object.defineProperty(chain, "checkpointBalancesCache", {value: {processState: vi.fn()}});
+    Object.defineProperty(chain, "unfinalizedBlockWrites", {
+      value: {waitForSpace: vi.fn().mockResolvedValue(undefined), push: vi.fn().mockResolvedValue(undefined)},
+    });
+
+    // Head does not change, so importBlock skips the head and forkchoice update paths
+    const head = generateProtoBlock({slot: blockSlot, blockRoot: blockRootHex});
+    vi.mocked(chain.recomputeForkChoiceHead).mockReturnValue(head);
+    vi.mocked(chain.forkChoice.getHead).mockReturnValue(head);
+    vi.mocked(chain.forkChoice.getFinalizedCheckpoint).mockReturnValue({
+      epoch: 0,
+      root: new Uint8Array(32),
+      rootHex: ZERO_HASH_HEX,
+    });
+    Object.defineProperty(chain.forkChoice, "getTime", {value: vi.fn().mockReturnValue(blockSlot)});
+    Object.defineProperty(chain.forkChoice, "onBlock", {value: vi.fn().mockReturnValue(head)});
+    Object.defineProperty(chain.forkChoice, "onAttestation", {value: vi.fn()});
+    Object.defineProperty(chain.forkChoice, "updateAndGetHead", {value: vi.fn().mockReturnValue({head})});
+
+    const fullyVerifiedBlock: FullyVerifiedBlock = {
+      blockInput,
+      postState: new BeaconStateView(generateCachedState()),
+      parentBlockSlot: blockSlot - 1,
+      proposerBalanceDelta: 0,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
+      indexedAttestations: [indexedAttestation],
+      seenTimestampSec: Math.floor(Date.now() / 1000),
+      executionStatus: ExecutionStatus.PreMerge,
+    };
+
+    await importBlock.call(chain, fullyVerifiedBlock, {});
+
+    // The attester must be registered under the epoch of the attestation slot,
+    // not under the epoch of the block that included the attestation
+    expect(seenBlockAttesters.isKnown(attEpoch, attesterIndex)).toBe(true);
+    expect(seenBlockAttesters.isKnown(blockEpoch, attesterIndex)).toBe(false);
+  });
+});

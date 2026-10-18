@@ -211,7 +211,10 @@ export async function importBlock(
         }
 
         // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
-        this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
+        this.seenBlockAttesters.addIndices(
+          computeEpochAtSlot(attestation.data.slot),
+          indexedAttestation.attestingIndices
+        );
 
         const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
         const missedSlotVote =
