@@ -651,15 +651,39 @@ export class BeaconChain implements IBeaconChain {
   async getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<IBeaconStateView> {
     // using getHeadState() means we'll use checkpointStateCache if it's available
     const headState = this.getHeadState();
-    // head state is in the same epoch, or we pulled up head state already from past epoch
-    if (epoch <= computeEpochAtSlot(headState.slot)) {
+    const headStateEpoch = computeEpochAtSlot(headState.slot);
+    // head state is in the same epoch
+    if (epoch === headStateEpoch) {
       // should go to this most of the time
       return headState;
     }
-    // only use regen queue if necessary, it'll cache in checkpointStateCache if regen gets through epoch transition
     const head = this.forkChoice.getHead();
-    const startSlot = computeStartSlotAtEpoch(epoch);
-    return this.regen.getBlockSlotState(head, startSlot, {dontTransferCache: true}, regenCaller);
+    if (epoch > headStateEpoch) {
+      // only use regen queue if necessary, it'll cache in checkpointStateCache if regen gets through epoch transition
+      const startSlot = computeStartSlotAtEpoch(epoch);
+      return this.regen.getBlockSlotState(head, startSlot, {dontTransferCache: true}, regenCaller);
+    }
+    // The closest head state is already in a later epoch: PrepareNextSlotScheduler
+    // precomputes the epoch transition in the last slot of an epoch and the result
+    // lands in checkpointStateCache, so getClosestHeadState hands out a state past
+    // the requested epoch. Its currentJustifiedCheckpoint has already moved on, so
+    // callers asking for this epoch (e.g. produceAttestationData for its source)
+    // must be handed a state in the requested epoch instead.
+    if (computeEpochAtSlot(head.slot) === epoch) {
+      // The head block itself is in the requested epoch: its post-block state is
+      // the state this epoch's attestations should be based on.
+      const blockState = this.regen.getStateSync(head.stateRoot);
+      if (blockState) {
+        return blockState;
+      }
+      return this.regen.getBlockSlotState(head, head.slot, {dontTransferCache: true}, regenCaller);
+    }
+    // The head block is past the requested epoch too (a late request): regen the
+    // state at the requested epoch's last slot from the closest canonical block
+    // at or before it.
+    const lastSlot = computeStartSlotAtEpoch(epoch + 1) - 1;
+    const block = this.forkChoice.getCanonicalBlockClosestLteSlot(lastSlot) ?? head;
+    return this.regen.getBlockSlotState(block, lastSlot, {dontTransferCache: true}, regenCaller);
   }
 
   async getStateBySlot(
