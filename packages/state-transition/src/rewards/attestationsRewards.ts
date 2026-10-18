@@ -4,6 +4,7 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
   ForkSeq,
+  GENESIS_EPOCH,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
   INACTIVITY_PENALTY_QUOTIENT_BELLATRIX,
   MAX_EFFECTIVE_BALANCE,
@@ -26,6 +27,7 @@ import {
   FLAG_PREV_HEAD_ATTESTER_UNSLASHED,
   FLAG_PREV_SOURCE_ATTESTER_UNSLASHED,
   FLAG_PREV_TARGET_ATTESTER_UNSLASHED,
+  getSlotDurationMsAtEpoch,
   hasMarkers,
   isInInactivityLeak,
 } from "../util/index.js";
@@ -168,7 +170,16 @@ function computeTotalAttestationsRewardsAltair(
     config.getForkSeq(state.slot) === ForkSeq.altair
       ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR
       : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
-  const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenaltyQuotient;
+  let inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenaltyQuotient;
+  // The penalty pays for the previous epoch and scales with the square of its slot duration
+  const genesisSlotDurationMs = getSlotDurationMsAtEpoch(config, GENESIS_EPOCH);
+  const prevEpochSlotDurationMs = getSlotDurationMsAtEpoch(config, Math.max(epochCtx.epoch - 1, GENESIS_EPOCH));
+  if (prevEpochSlotDurationMs !== genesisSlotDurationMs) {
+    inactivityPenaltyDenominator = Number(
+      (BigInt(inactivityPenaltyDenominator) * BigInt(genesisSlotDurationMs) ** 2n) /
+        BigInt(prevEpochSlotDurationMs) ** 2n
+    );
+  }
 
   for (let i = 0; i < flags.length; i++) {
     if (validatorIndices.length && !validatorIndices.includes(i)) {

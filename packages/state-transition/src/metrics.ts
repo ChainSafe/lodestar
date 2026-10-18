@@ -156,19 +156,20 @@ export function getMetrics(register: MetricsRegister) {
 }
 
 export function onStateCloneMetrics(
-  state: CachedBeaconStateAllForks,
+  clonedState: CachedBeaconStateAllForks,
+  clonedCount: number,
   metrics: BeaconStateTransitionMetrics,
   source: StateCloneSource
 ): void {
-  metrics.preStateClonedCount.observe(state.clonedCount);
+  metrics.preStateClonedCount.observe(clonedCount);
 
-  if (isBalancesNodesPopulated(state)) {
+  if (isBalancesNodesPopulated(clonedState)) {
     metrics.preStateBalancesNodesPopulatedHit.inc({source});
   } else {
     metrics.preStateBalancesNodesPopulatedMiss.inc({source});
   }
 
-  if (isValidatorsNodesPopulated(state)) {
+  if (isValidatorsNodesPopulated(clonedState)) {
     metrics.preStateValidatorsNodesPopulatedHit.inc({source});
   } else {
     metrics.preStateValidatorsNodesPopulatedMiss.inc({source});
