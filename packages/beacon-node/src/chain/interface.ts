@@ -22,7 +22,7 @@ import {
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BuilderApiClient} from "../execution/builder/apiClient.js";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
@@ -69,7 +69,6 @@ export interface IBeaconChain extends IChainView {
   readonly genesisValidatorsRoot: Root;
   earliestAvailableSlot: Slot;
   readonly executionEngine: IExecutionEngine;
-  readonly executionBuilder?: IExecutionBuilder;
 
   readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions

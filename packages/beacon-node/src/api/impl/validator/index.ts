@@ -925,10 +925,6 @@ export function getValidatorApi(
         );
       }
 
-      if (!chain.executionBuilder) {
-        throw Error("External builder not configured");
-      }
-
       // should only send active or pending validator to builder
       // Spec: https://ethereum.github.io/builder-specs/#/Builder/registerValidator
       const currentEpoch = chain.clock.currentEpoch;
@@ -944,7 +940,10 @@ export function getValidatorApi(
       const activeOrPending = chain.beaconEngine.getActiveOrPendingValidators(withIndex.map((x) => x.index));
       const filteredRegistrations = withIndex.filter((x) => activeOrPending.has(x.index)).map((x) => x.registration);
 
-      await chain.executionBuilder.registerValidator(currentEpoch, filteredRegistrations);
+      const registrationsBytes =
+        routes.validator.SignedValidatorRegistrationV1ListType.serialize(filteredRegistrations);
+      if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(filteredRegistrations, registrationsBytes);
+      await chain.beaconEngine.registerValidator(currentEpoch, registrationsBytes);
 
       logger.debug("Forwarded validator registrations to connected builder", {
         epoch: currentEpoch,

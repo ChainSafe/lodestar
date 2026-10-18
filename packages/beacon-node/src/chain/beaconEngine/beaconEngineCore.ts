@@ -19,7 +19,17 @@ import {
   UpdateHeadOpt,
 } from "@lodestar/fork-choice";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {ForkName, ForkPostGloas, ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostBellatrix,
+  ForkPostGloas,
+  ForkPreGloas,
+  ForkSeq,
+  GENESIS_SLOT,
+  SLOTS_PER_EPOCH,
+  isForkPostDeneb,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -50,12 +60,15 @@ import {
   RootHex,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
+  SignedBlockContents,
   SingleAttestation,
   Slot,
   SubcommitteeIndex,
   SubnetID,
   ValidatorIndex,
   altair,
+  bellatrix,
   capella,
   electra,
   fulu,
@@ -64,6 +77,7 @@ import {
   phase0,
   rewards,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {
   LodestarError,
@@ -80,7 +94,7 @@ import {IBeaconEngineDb} from "../../db/index.js";
 import {decodeArchivedEnvelope} from "../../db/repositories/index.js";
 import {BuilderApiClient} from "../../execution/builder/apiClient.js";
 import {BuilderStatus} from "../../execution/builder/http.js";
-import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
+import {IExecutionBuilder, IExecutionEngine, initializeExecutionBuilder} from "../../execution/index.js";
 import {BeaconEngineMetrics, createBeaconEngineMetrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {BufferPool} from "../../util/bufferPool.js";
@@ -388,7 +402,9 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     const metrics = modules.metricsEnabled ? createBeaconEngineMetrics(opts.nativeStateTransition) : null;
     if (metrics && opts.nativeStateTransition) initNativeMetrics();
     this.executionEngine = modules.executionEngine;
-    this.executionBuilder = modules.executionBuilder;
+    this.executionBuilder = modules.executionBuilderOpts?.enabled
+      ? initializeExecutionBuilder(modules.executionBuilderOpts, config, metrics, logger)
+      : undefined;
     this.config = config;
     this.opts = opts;
     this.logger = logger;
@@ -962,6 +978,56 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   async registerAuthenticatedBuilder(url: string): Promise<void> {
     this.builderApiClient.registerAuthenticatedBuilder(url);
+  }
+
+  async registerValidator(epoch: Epoch, registrationsBytes: Uint8Array): Promise<void> {
+    if (!this.executionBuilder) {
+      throw Error("External builder not configured");
+    }
+    const registrations =
+      this.serializedCache?.getDeserialized<bellatrix.SignedValidatorRegistrationV1[]>(registrationsBytes) ??
+      routes.validator.SignedValidatorRegistrationV1ListType.deserialize(registrationsBytes);
+    await this.executionBuilder.registerValidator(epoch, registrations);
+  }
+
+  async submitBlindedBlock(
+    signedBlindedBlockBytes: Uint8Array,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<Uint8Array> {
+    if (!this.executionBuilder) {
+      throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
+    }
+    const signedBlindedBlock =
+      this.serializedCache?.getDeserialized<SignedBlindedBeaconBlock>(signedBlindedBlockBytes) ??
+      sszTypesFor(fork).SignedBlindedBeaconBlock.deserialize(signedBlindedBlockBytes);
+    const contents = await this.executionBuilder.submitBlindedBlock({
+      data: signedBlindedBlock,
+      bytes: signedBlindedBlockBytes,
+    });
+    if (isForkPostDeneb(fork)) {
+      const bytes = sszTypesFor(fork).SignedBlockContents.serialize(contents as SignedBlockContents<typeof fork>);
+      this.serializedCache?.set(contents, bytes);
+      return bytes;
+    }
+    const bytes = sszTypesFor(fork).SignedBeaconBlock.serialize(contents.signedBlock as SignedBeaconBlock<typeof fork>);
+    this.serializedCache?.set(contents.signedBlock, bytes);
+    return bytes;
+  }
+
+  async submitBlindedBlockNoResponse(
+    signedBlindedBlockBytes: Uint8Array,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<void> {
+    if (!this.executionBuilder) {
+      throw Error("executionBuilder required to submit SignedBlindedBeaconBlock to builder");
+    }
+    const signedBlindedBlock =
+      this.serializedCache?.getDeserialized<SignedBlindedBeaconBlock>(signedBlindedBlockBytes) ??
+      sszTypesFor(fork).SignedBlindedBeaconBlock.deserialize(signedBlindedBlockBytes);
+    await this.executionBuilder.submitBlindedBlockNoResponse({
+      data: signedBlindedBlock,
+      bytes: signedBlindedBlockBytes,
+    });
   }
 
   /** Runs inside BeaconEngineCore. Single Gloas V4 production entry and plain-data error boundary. */

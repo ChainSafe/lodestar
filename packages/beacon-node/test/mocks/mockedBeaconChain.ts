@@ -356,6 +356,9 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "getHeadStateAtEpoch",
     "prepareForNextSlot",
     "getProposerTargetGasLimit",
+    "registerValidator",
+    "submitBlindedBlock",
+    "submitBlindedBlockNoResponse",
     // Proposer cache + finalized balances bridges (forward to the mock's collaborators).
     "getProposerFeeRecipient",
     "updateProposerPreparation",

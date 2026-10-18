@@ -25,9 +25,7 @@ import {
 import {
   ProducedBlockSource,
   SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   SignedBlockContents,
-  WithOptionalBytes,
   deneb,
   fulu,
   gloas,
@@ -532,22 +530,31 @@ export function getBeaconBlockApi({
     }
 
     const source = ProducedBlockSource.builder;
+    const signedBlindedBlockBytes =
+      context?.sszBytes ??
+      config.getPostBellatrixForkTypes(slot).SignedBlindedBeaconBlock.serialize(signedBlindedBlock);
+    if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signedBlindedBlock, signedBlindedBlockBytes);
 
     if (isForkPostFulu(fork)) {
-      await submitBlindedBlockToBuilder(chain, {
-        data: signedBlindedBlock,
-        bytes: context?.sszBytes,
-      });
+      await chain.beaconEngine.submitBlindedBlockNoResponse(signedBlindedBlockBytes, fork);
       chain.logger.info("Submitted blinded block to builder for publishing", {slot, blockRoot});
     } else {
       // TODO: After fulu is live and all builders support submitBlindedBlockV2, we can safely remove
       // this code block and related functions
       chain.logger.debug("Reconstructing full signed block contents", {slot, blockRoot, source});
 
-      const signedBlockContents = await reconstructBuilderSignedBlockContents(chain, {
-        data: signedBlindedBlock,
-        bytes: context?.sszBytes,
-      });
+      const contentsBytes = await chain.beaconEngine.submitBlindedBlock(
+        signedBlindedBlockBytes,
+        fork as ForkPostBellatrix & ForkPreGloas
+      );
+      const signedBlockContents = isForkPostDeneb(fork)
+        ? (chain.serializedCache.getDeserialized<SignedBlockContents<typeof fork>>(contentsBytes) ??
+          sszTypesFor(fork).SignedBlockContents.deserialize(contentsBytes))
+        : {
+            signedBlock:
+              chain.serializedCache.getDeserialized<SignedBeaconBlock<typeof fork>>(contentsBytes) ??
+              sszTypesFor(fork).SignedBeaconBlock.deserialize(contentsBytes),
+          };
 
       // the full block is published by relay and it's possible that the block is already known to us
       // by gossip
@@ -556,7 +563,7 @@ export function getBeaconBlockApi({
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       return publishBlockV2(
         {signedBlockContents, broadcastValidation},
-        {...context, sszBytes: null},
+        {...context, sszBytes: contentsBytes},
         {...opts, ignoreIfKnown: true}
       );
     }
@@ -1347,27 +1354,4 @@ export function getBeaconBlockApi({
       };
     },
   };
-}
-
-async function reconstructBuilderSignedBlockContents(
-  chain: ApiModules["chain"],
-  signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-): Promise<SignedBlockContents> {
-  const executionBuilder = chain.executionBuilder;
-  if (!executionBuilder) {
-    throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
-  }
-
-  return executionBuilder.submitBlindedBlock(signedBlindedBlock);
-}
-
-async function submitBlindedBlockToBuilder(
-  chain: ApiModules["chain"],
-  signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-): Promise<void> {
-  const executionBuilder = chain.executionBuilder;
-  if (!executionBuilder) {
-    throw Error("executionBuilder required to submit SignedBlindedBeaconBlock to builder");
-  }
-  await executionBuilder.submitBlindedBlockNoResponse(signedBlindedBlock);
 }

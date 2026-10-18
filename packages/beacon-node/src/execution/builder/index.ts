@@ -12,7 +12,7 @@ export const defaultExecutionBuilderOpts: ExecutionBuilderOpts = defaultExecutio
 export function initializeExecutionBuilder(
   opts: ExecutionBuilderOpts,
   config: ChainForkConfig,
-  metrics: Metrics | null = null,
+  metrics: Pick<Metrics, "builderHttpClient"> | null = null,
   logger?: Logger
 ): IExecutionBuilder {
   switch (opts.mode) {

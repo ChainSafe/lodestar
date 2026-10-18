@@ -418,7 +418,6 @@ export async function runGossipValidationTest(
       isAnchorStateFinalized: true,
       earliestAvailableSlot: anchorStateView.slot,
       executionEngine,
-      executionBuilder: undefined,
     }
   );
 

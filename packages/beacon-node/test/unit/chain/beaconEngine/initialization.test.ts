@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {routes} from "@lodestar/api";
+import {WireFormat, routes} from "@lodestar/api";
 import {getClient} from "@lodestar/api/builder";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
@@ -22,6 +22,7 @@ import * as blockValidation from "../../../../src/chain/validation/block.js";
 import * as proposerSlashingValidation from "../../../../src/chain/validation/proposerSlashing.js";
 import * as voluntaryExitValidation from "../../../../src/chain/validation/voluntaryExit.js";
 import {BeaconDb} from "../../../../src/db/index.js";
+import {defaultExecutionBuilderOpts} from "../../../../src/execution/builder/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
 import {aggregateMetrics, createMetrics} from "../../../../src/metrics/index.js";
 import {initDevState} from "../../../../src/node/utils/state.js";
@@ -31,8 +32,16 @@ import {TestChainModules, createBeaconChain, initializeTestChain} from "../../..
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 import {createTestBeaconEngine, getBeaconEngineCore} from "../../../utils/engine.js";
 
+const executionBuilderApi = vi.hoisted(() => ({
+  registerValidator: vi.fn(),
+  getHeader: vi.fn(),
+  submitBlindedBlock: vi.fn(),
+  submitBlindedBlockV2: vi.fn(),
+}));
+
 vi.mock("@lodestar/api/builder", () => ({
   getClient: vi.fn(() => ({
+    ...executionBuilderApi,
     submitBuilderPreferences: vi.fn().mockResolvedValue({assertOk: () => {}}),
     getExecutionPayloadBid: vi.fn().mockResolvedValue({value: () => undefined}),
     submitSignedBeaconBlock: vi.fn().mockResolvedValue({assertOk: () => {}}),
@@ -256,6 +265,155 @@ describe("bytes-based engine startup", () => {
     expect(deserializeExit).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
     expect(validateExit.mock.calls[0][0] === exit).toBe(!beaconEngineWorker);
     expect(chain.serializedCache.getDeserialized(exitBytes)).toBe(beaconEngineWorker ? undefined : exit);
+  });
+
+  it.each([false, true])("owns the execution builder with beaconEngineWorker=%s", async (beaconEngineWorker) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    modules.executionBuilderOpts = {
+      ...defaultExecutionBuilderOpts,
+      enabled: true,
+      timeout: 1234,
+      userAgent: "test-execution-builder",
+    };
+    chain = await createBeaconChain({...opts, beaconEngineWorker}, modules);
+    const core = getBeaconEngineCore(chain.beaconEngine);
+    const builder = core.executionBuilder;
+    if (!builder) throw Error("Expected engine-owned execution builder");
+    expect(chain).not.toHaveProperty("executionBuilder");
+    expect(getClient).toHaveBeenCalledExactlyOnceWith(
+      {
+        baseUrl: modules.executionBuilderOpts.url,
+        globalInit: {timeoutMs: 1234, headers: {"User-Agent": "test-execution-builder"}},
+      },
+      {config: modules.config, metrics: core.metrics?.builderHttpClient, logger: modules.logger}
+    );
+
+    const registration = ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue();
+    registration.message.gasLimit = 36_000_000;
+    const registrationsBytes = routes.validator.SignedValidatorRegistrationV1ListType.serialize([registration]);
+    executionBuilderApi.registerValidator.mockResolvedValue({assertOk: () => {}});
+    await chain.beaconEngine.registerValidator(1, registrationsBytes);
+    expect(executionBuilderApi.registerValidator).toHaveBeenCalledExactlyOnceWith({registrations: [registration]});
+    expect(builder.getValidatorRegistration(registration.message.pubkey)).toEqual({epoch: 1, gasLimit: 36_000_000});
+
+    const error = new Error("Builder registration failed");
+    executionBuilderApi.registerValidator.mockRejectedValueOnce(error);
+    await expect(
+      chain.beaconEngine.registerValidator(
+        2,
+        routes.validator.SignedValidatorRegistrationV1ListType.serialize([
+          {...registration, message: {...registration.message, gasLimit: 40_000_000}},
+        ])
+      )
+    ).rejects.toBe(error);
+    expect(builder.getValidatorRegistration(registration.message.pubkey)).toEqual({epoch: 1, gasLimit: 36_000_000});
+
+    const signedBlindedBlock = ssz.electra.SignedBlindedBeaconBlock.defaultValue();
+    signedBlindedBlock.message.slot = config.ELECTRA_FORK_EPOCH * SLOTS_PER_EPOCH;
+    const request = {
+      data: signedBlindedBlock,
+      bytes: ssz.electra.SignedBlindedBeaconBlock.serialize(signedBlindedBlock),
+    };
+    chain.serializedCache.set(request.data, request.bytes);
+    const requestBytes = beaconEngineWorker ? structuredClone(request.bytes) : request.bytes;
+    const deserialize = vi.spyOn(ssz.electra.SignedBlindedBeaconBlock, "deserialize");
+    const response = ssz.deneb.ExecutionPayloadAndBlobsBundle.defaultValue();
+    response.blobsBundle.blobs.push(ssz.deneb.Blob.defaultValue());
+    response.blobsBundle.proofs.push(ssz.deneb.KZGProof.defaultValue());
+    executionBuilderApi.submitBlindedBlock.mockResolvedValue({value: () => response});
+    executionBuilderApi.submitBlindedBlockV2.mockResolvedValue({assertOk: () => {}});
+
+    for (const wireFormat of [WireFormat.ssz, WireFormat.json]) {
+      executionBuilderApi.getHeader.mockResolvedValue({
+        value: () => ssz.electra.SignedBuilderBid.defaultValue(),
+        wireFormat: () => wireFormat,
+      });
+      await builder.getHeader(
+        ForkName.electra,
+        signedBlindedBlock.message.slot,
+        new Uint8Array(32),
+        new Uint8Array(48)
+      );
+      const contentsBytes = await chain.beaconEngine.submitBlindedBlock(requestBytes, ForkName.electra);
+      expect(contentsBytes, `serialized contents using ${wireFormat}`).toBeInstanceOf(Uint8Array);
+      const contents = ssz.electra.SignedBlockContents.deserialize(contentsBytes);
+      expect(contents, `reconstructed contents using ${wireFormat}`).toMatchObject({
+        signedBlock: {
+          message: {slot: signedBlindedBlock.message.slot, body: {executionPayload: response.executionPayload}},
+          signature: signedBlindedBlock.signature,
+        },
+        blobs: response.blobsBundle.blobs,
+        kzgProofs: response.blobsBundle.proofs,
+      });
+      expect(executionBuilderApi.submitBlindedBlock, `submission format ${wireFormat}`).toHaveBeenLastCalledWith(
+        {signedBlindedBlock: request},
+        {retries: 2, requestWireFormat: wireFormat}
+      );
+      const submitted = executionBuilderApi.submitBlindedBlock.mock.lastCall?.[0].signedBlindedBlock;
+      expect(submitted.bytes, `original submission bytes using ${wireFormat}`).toBe(requestBytes);
+      expect(submitted.data === signedBlindedBlock, `decoded input reuse using ${wireFormat}`).toBe(
+        !beaconEngineWorker
+      );
+      expect(
+        core.serializedCache?.getDeserialized(contentsBytes) !== undefined,
+        `decoded output reuse using ${wireFormat}`
+      ).toBe(!beaconEngineWorker);
+      await expect(
+        chain.beaconEngine.submitBlindedBlockNoResponse(requestBytes, ForkName.electra),
+        `submission acknowledgement using ${wireFormat}`
+      ).resolves.toBeUndefined();
+      expect(executionBuilderApi.submitBlindedBlockV2, `submission format ${wireFormat}`).toHaveBeenLastCalledWith(
+        {signedBlindedBlock: request},
+        {retries: 2, requestWireFormat: wireFormat}
+      );
+    }
+    expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 4 : 0);
+
+    const capellaBlock = ssz.capella.SignedBlindedBeaconBlock.defaultValue();
+    capellaBlock.message.slot = config.CAPELLA_FORK_EPOCH * SLOTS_PER_EPOCH;
+    const capellaPayload = ssz.capella.ExecutionPayload.defaultValue();
+    executionBuilderApi.submitBlindedBlock.mockResolvedValueOnce({value: () => capellaPayload});
+    const capellaBytes = await chain.beaconEngine.submitBlindedBlock(
+      ssz.capella.SignedBlindedBeaconBlock.serialize(capellaBlock),
+      ForkName.capella
+    );
+    expect(ssz.capella.SignedBeaconBlock.deserialize(capellaBytes).message.body.executionPayload).toEqual(
+      capellaPayload
+    );
+
+    executionBuilderApi.submitBlindedBlock.mockRejectedValueOnce(error);
+    executionBuilderApi.submitBlindedBlockV2.mockRejectedValueOnce(error);
+    await expect(chain.beaconEngine.submitBlindedBlock(requestBytes, ForkName.electra)).rejects.toBe(error);
+    await expect(chain.beaconEngine.submitBlindedBlockNoResponse(requestBytes, ForkName.electra)).rejects.toBe(error);
+
+    executionBuilderApi.registerValidator.mockClear();
+    executionBuilderApi.submitBlindedBlock.mockClear();
+    executionBuilderApi.submitBlindedBlockV2.mockClear();
+    await expect(chain.beaconEngine.registerValidator(1, Uint8Array.of(1))).rejects.toThrow();
+    await expect(chain.beaconEngine.submitBlindedBlock(Uint8Array.of(1), ForkName.electra)).rejects.toThrow();
+    await expect(chain.beaconEngine.submitBlindedBlockNoResponse(Uint8Array.of(1), ForkName.fulu)).rejects.toThrow();
+    expect(executionBuilderApi.registerValidator).not.toHaveBeenCalled();
+    expect(executionBuilderApi.submitBlindedBlock).not.toHaveBeenCalled();
+    expect(executionBuilderApi.submitBlindedBlockV2).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, false])("does not construct a disabled execution builder (enabled=%s)", async (enabled) => {
+    modules.executionBuilderOpts = enabled === undefined ? undefined : {...defaultExecutionBuilderOpts, enabled};
+    chain = await createBeaconChain(opts, modules);
+    expect(getBeaconEngineCore(chain.beaconEngine).executionBuilder).toBeUndefined();
+    expect(getClient).not.toHaveBeenCalled();
+    await expect(chain.beaconEngine.registerValidator(0, new Uint8Array())).rejects.toThrow(
+      "External builder not configured"
+    );
+    const request = ssz.electra.SignedBlindedBeaconBlock.serialize(ssz.electra.SignedBlindedBeaconBlock.defaultValue());
+    await expect(chain.beaconEngine.submitBlindedBlock(request, ForkName.electra)).rejects.toThrow(
+      "executionBuilder required to publish SignedBlindedBeaconBlock"
+    );
+    await expect(chain.beaconEngine.submitBlindedBlockNoResponse(request, ForkName.fulu)).rejects.toThrow(
+      "executionBuilder required to submit SignedBlindedBeaconBlock to builder"
+    );
   });
 
   it.each([false, true])(

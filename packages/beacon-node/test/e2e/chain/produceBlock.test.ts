@@ -26,6 +26,7 @@ import {BeaconChain} from "../../../src/chain/chain.js";
 import {BlockType} from "../../../src/chain/produceBlock/index.js";
 import {BeaconDb} from "../../../src/db/index.js";
 import {BuilderStatus} from "../../../src/execution/builder/http.js";
+import * as executionBuilder from "../../../src/execution/builder/index.js";
 import {IExecutionBuilder} from "../../../src/execution/builder/interface.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/engine/index.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
@@ -77,6 +78,7 @@ describe("engine block production", () => {
         submitBlindedBlock: vi.fn(),
         submitBlindedBlockNoResponse: vi.fn(),
       };
+      vi.spyOn(executionBuilder, "initializeExecutionBuilder").mockReturnValueOnce(builder);
       let chain: BeaconChain | undefined;
       try {
         chain = await createBeaconChain(
@@ -103,7 +105,7 @@ describe("engine block production", () => {
             anchorStateBytes: state.serialize(),
             isAnchorStateFinalized: true,
             executionEngine,
-            executionBuilder: builder,
+            executionBuilderOpts: {...executionBuilder.defaultExecutionBuilderOpts, enabled: true},
           }
         );
         const attrs = {slot: 1, randaoReveal: Buffer.alloc(96), graffiti: Buffer.alloc(32)};

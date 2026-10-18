@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {
   Attestation,
@@ -38,7 +38,7 @@ import {
 import {Logger} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../db/index.js";
 import type {BuilderApiClientOpts} from "../../execution/builder/apiClient.js";
-import {IExecutionBuilder, IExecutionEngine} from "../../execution/index.js";
+import {ExecutionBuilderOpts, IExecutionEngine} from "../../execution/index.js";
 import {ScrapedMetrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
@@ -85,7 +85,7 @@ export type BeaconEngineCoreModules = {
   blockSerializedCache?: BlockSerializedCache;
   builderApiClientOpts?: BuilderApiClientOpts;
   executionEngine: IExecutionEngine;
-  executionBuilder?: IExecutionBuilder;
+  executionBuilderOpts?: ExecutionBuilderOpts;
   opts: IBeaconEngineOptions;
   config: BeaconConfig;
   logger: Logger;
@@ -295,6 +295,18 @@ export interface IBeaconEngineCore {
 
   produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse>;
   produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response>;
+
+  registerValidator(epoch: Epoch, registrationsBytes: Uint8Array): Promise<void>;
+  /**
+   * Pre-Fulu path: submit via Builder API v1 and return full block contents for BeaconChain to gossip.
+   * Returns SSZ SignedBeaconBlock before Deneb, or SignedBlockContents from Deneb.
+   */
+  submitBlindedBlock(signedBlindedBlockBytes: Uint8Array, fork: ForkPostBellatrix & ForkPreGloas): Promise<Uint8Array>;
+  /** Fulu path (before Gloas): submit via Builder API v2; the relay publishes and returns only an acknowledgement. */
+  submitBlindedBlockNoResponse(
+    signedBlindedBlockBytes: Uint8Array,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<void>;
 
   /** Register a URL already authenticated by the facade, so the engine can warm its local connection. */
   registerAuthenticatedBuilder(url: string): Promise<void>;

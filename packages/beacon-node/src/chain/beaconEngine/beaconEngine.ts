@@ -2,7 +2,7 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {
   Attestation,
@@ -335,6 +335,21 @@ export class BeaconEngine implements IBeaconEngine {
 
   registerAuthenticatedBuilder(url: string): Promise<void> {
     return this.core.registerAuthenticatedBuilder(url);
+  }
+
+  registerValidator(epoch: Epoch, registrationsBytes: Uint8Array): Promise<void> {
+    return this.core.registerValidator(epoch, registrationsBytes);
+  }
+
+  submitBlindedBlock(signedBlindedBlockBytes: Uint8Array, fork: ForkPostBellatrix & ForkPreGloas): Promise<Uint8Array> {
+    return this.core.submitBlindedBlock(signedBlindedBlockBytes, fork);
+  }
+
+  submitBlindedBlockNoResponse(
+    signedBlindedBlockBytes: Uint8Array,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<void> {
+    return this.core.submitBlindedBlockNoResponse(signedBlindedBlockBytes, fork);
   }
 
   prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {

@@ -172,7 +172,6 @@ const fastConfirmationTest =
             isAnchorStateFinalized: true,
             earliestAvailableSlot: cachedState.slot,
             executionEngine,
-            executionBuilder: undefined,
           }
         );
 

@@ -32,7 +32,7 @@ import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
@@ -107,7 +107,6 @@ export type BeaconChainModules = {
   processShutdownCallback: ProcessShutdownCallback;
   metrics: Metrics | null;
   executionEngine: IExecutionEngine;
-  executionBuilder?: IExecutionBuilder;
   beaconEngine: IBeaconEngine;
   /** Shared in-process client; omitted when the facade needs its own worker-mode client. */
   builderApiClient?: BuilderApiClient;
@@ -126,7 +125,6 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly beaconEngine: IBeaconEngine;
   readonly executionEngine: IExecutionEngine;
-  readonly executionBuilder?: IExecutionBuilder;
 
   readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
@@ -207,7 +205,6 @@ export class BeaconChain implements IBeaconChain {
       processShutdownCallback,
       metrics,
       executionEngine,
-      executionBuilder,
       beaconEngine,
       anchor,
       abortController,
@@ -227,7 +224,6 @@ export class BeaconChain implements IBeaconChain {
     this.anchorStateLatestBlockSlot = anchor.latestBlockSlot;
     this.genesisValidatorsRoot = anchor.genesisValidatorsRoot;
     this.executionEngine = executionEngine;
-    this.executionBuilder = executionBuilder;
     this.abortController = abortController;
     const signal = abortController.signal;
     this.cpStateDatastore = cpStateDatastore;

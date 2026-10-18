@@ -11,6 +11,7 @@ import {IChainOptions} from "../../src/chain/options.js";
 import {DbCPStateDatastore} from "../../src/chain/stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "../../src/chain/stateCache/datastore/file.js";
 import {ValidatorMonitorOpts} from "../../src/chain/validatorMonitor.js";
+import {ExecutionBuilderOpts} from "../../src/execution/builder/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/interface.js";
 import {Clock, IClock} from "../../src/util/clock.js";
 import {CustodyConfig} from "../../src/util/dataColumns.js";
@@ -30,6 +31,7 @@ export type TestBeaconEngineModules = Omit<
   | "serializedCache"
   | "blockSerializedCache"
 > & {
+  executionBuilderOpts?: ExecutionBuilderOpts;
   earliestAvailableSlot?: Slot;
   validatorMonitorOpts?: ValidatorMonitorOpts | null;
   privateKey: PrivateKey;
@@ -45,6 +47,7 @@ export function createTestBeaconEngine(
   beaconEngine: BeaconEngine;
   beaconEngineCore: BeaconEngineCore;
 } {
+  const {executionBuilderOpts, ...chainModules} = modules;
   const {
     privateKey,
     config,
@@ -57,7 +60,6 @@ export function createTestBeaconEngine(
     metrics,
     isAnchorStateFinalized,
     executionEngine,
-    executionBuilder,
     builderApiClientOpts,
     anchorStateBytes,
   } = modules;
@@ -92,7 +94,7 @@ export function createTestBeaconEngine(
     serializedCache: opts.beaconEngineWorker ? undefined : serializedCache,
     blockSerializedCache: opts.beaconEngineWorker ? undefined : blockSerializedCache,
     executionEngine,
-    executionBuilder,
+    executionBuilderOpts,
     builderApiClientOpts,
     opts,
     config,
@@ -111,7 +113,7 @@ export function createTestBeaconEngine(
   });
   const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter, clock});
   return {
-    ...modules,
+    ...chainModules,
     serializedCache,
     blockSerializedCache,
     beaconEngine,

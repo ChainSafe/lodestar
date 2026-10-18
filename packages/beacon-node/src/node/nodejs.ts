@@ -23,7 +23,7 @@ import {DbCPStateDatastore} from "../chain/stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "../chain/stateCache/datastore/file.js";
 import {StateInitialization} from "../chain/stateInitialization.js";
 import {IBeaconDb} from "../db/index.js";
-import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
+import {initializeExecutionEngine} from "../execution/index.js";
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
@@ -232,9 +232,6 @@ export class BeaconNode {
       signal,
       logger: logger.child({module: LoggerModule.execution}),
     });
-    const executionBuilder = opts.executionBuilder.enabled
-      ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
-      : undefined;
     const builderApiClientOpts = {
       timeout: opts.executionBuilder.timeout,
       userAgent: opts.executionBuilder.userAgent,
@@ -265,7 +262,7 @@ export class BeaconNode {
       signal: chainController.signal,
       cpStateDatastore,
       executionEngine,
-      executionBuilder,
+      executionBuilderOpts: opts.executionBuilder,
       builderApiClientOpts,
     });
     const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter, clock});
@@ -302,7 +299,6 @@ export class BeaconNode {
       processShutdownCallback,
       metrics,
       executionEngine,
-      executionBuilder,
       beaconEngine,
       abortController: chainController,
       clock,

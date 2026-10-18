@@ -129,7 +129,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   constructor(
     opts: ExecutionBuilderHttpOpts,
     config: ChainForkConfig,
-    metrics: Metrics | null = null,
+    metrics: Pick<Metrics, "builderHttpClient"> | null = null,
     logger?: Logger
   ) {
     const baseUrl = opts.url;
