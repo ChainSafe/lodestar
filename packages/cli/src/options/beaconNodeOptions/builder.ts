@@ -9,6 +9,7 @@ export type ExecutionBuilderArgs = {
   "builder.bidDeadline"?: number;
   "builder.bidDelay"?: number;
   "builder.bidRequests"?: number;
+  "builder.bidStream"?: boolean;
   "builder.faultInspectionWindow"?: number;
   "builder.allowedFaults"?: number;
 };
@@ -45,6 +46,7 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
     bidDeadline,
     bidDelay,
     bidRequests,
+    bidStream: args["builder.bidStream"] ?? defaultExecutionBuilderHttpOpts.bidStream,
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
   };
@@ -96,6 +98,14 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
       "Number of consecutive bid requests sent to builder API endpoints per proposal, each granting `builder.bidDeadline`, the highest bid is selected. Post-Gloas only",
     type: "number",
     defaultDescription: String(defaultExecutionBuilderHttpOpts.bidRequests),
+    group: "builder",
+  },
+
+  "builder.bidStream": {
+    description:
+      "Request Gloas builder bids over WebSocket for each bid round, falling back to HTTP within the remaining deadline if the connection cannot be established",
+    type: "boolean",
+    default: defaultExecutionBuilderHttpOpts.bidStream,
     group: "builder",
   },
 

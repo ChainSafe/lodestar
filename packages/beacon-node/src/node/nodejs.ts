@@ -301,6 +301,7 @@ export class BeaconNode {
         bidDeadline: opts.executionBuilder.bidDeadline,
         bidDelay: opts.executionBuilder.bidDelay,
         bidRequests: opts.executionBuilder.bidRequests,
+        bidStream: opts.executionBuilder.bidStream,
         // Sent with all builder api requests, unless the node runs in private mode
         userAgent: opts.executionBuilder.userAgent,
       },

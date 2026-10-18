@@ -65,7 +65,10 @@ describe("execution/builder/apiClient", () => {
     const client = new BuilderApiClient({bidDeadline: 800}, config, clock, bls);
     await client.getExecutionPayloadBids([entry], slot, new Uint8Array(32), new Uint8Array(32), new Uint8Array(48));
 
-    expect(getExecutionPayloadBid).toHaveBeenCalledWith(expect.objectContaining({timeoutMs: 800}), {timeoutMs: 1050});
+    expect(getExecutionPayloadBid).toHaveBeenCalledWith(expect.objectContaining({timeoutMs: 800}), {
+      timeoutMs: 1050,
+      signal: expect.any(AbortSignal),
+    });
   });
 
   it("requests bids once per round and collects every distinct bid", async () => {

@@ -153,6 +153,7 @@
     "strict-event-emitter-types": "^2.0.0",
     "systeminformation": "^5.22.9",
     "uint8arraylist": "^2.4.7",
+    "ws": "8.22.0",
     "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
@@ -164,6 +165,7 @@
     "@types/js-yaml": "^4.0.5",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
+    "@types/ws": "8.5.5",
     "dotenv": "^16.4.5",
     "js-yaml": "^4.1.0",
     "tmp": "^0.2.1"
