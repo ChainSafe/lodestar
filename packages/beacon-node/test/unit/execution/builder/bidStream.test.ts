@@ -40,7 +40,7 @@ describe("execution/builder/bidStream", () => {
       const request = makeRequest(`${server.url}${prefix}?network=test#fragment`);
       const result = await getExecutionPayloadBidStream(request);
 
-      expect(result).toMatchObject({opened: true, reason: "closed", updates: 0, discarded: 0});
+      expect(result).toMatchObject({upgraded: true, opened: true, reason: "closed", updates: 0, discarded: 0});
       expect(received?.url).toBe(
         `${prefix.replace(/\/$/, "")}/eth/v1/builder/execution_payload_bid_stream/${slot}/${toHex(parentHash)}/${toHex(parentRoot)}/${toHex(proposerPubkey)}?network=test`
       );
@@ -278,22 +278,24 @@ describe("execution/builder/bidStream", () => {
 
     const result = await getExecutionPayloadBidStream(makeRequest(server.url));
 
-    expect(result).toMatchObject({opened: false, reason: "http", statusCode: status, updates: 0});
+    expect(result).toMatchObject({upgraded: false, opened: false, reason: "http", statusCode: status, updates: 0});
     expect(result.bid).toBeUndefined();
   });
 
-  it("rejects an invalid WebSocket upgrade rather than treating it as opened", async () => {
+  it.each([
+    ["invalid accept", "Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: invalid\r\n", "error"],
+    ["missing headers", "", "http"],
+    ["connection close", "Connection: close\r\n", "http"],
+  ])("records malformed HTTP101 with %s as upgraded but not opened", async (_name, headers, reason) => {
     const server = await startServer();
     server.http.removeAllListeners("upgrade");
     server.http.on("upgrade", (_request, socket) => {
-      socket.end(
-        "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: invalid\r\n\r\n"
-      );
+      socket.end(`HTTP/1.1 101 Switching Protocols\r\n${headers}\r\n`);
     });
 
     const result = await getExecutionPayloadBidStream(makeRequest(server.url));
 
-    expect(result).toMatchObject({opened: false, reason: "error", updates: 0});
+    expect(result).toMatchObject({upgraded: true, opened: false, reason, updates: 0});
     expect(result.bid).toBeUndefined();
   });
 

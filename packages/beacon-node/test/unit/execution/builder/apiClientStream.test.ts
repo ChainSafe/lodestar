@@ -71,7 +71,7 @@ describe("execution/builder/apiClient stream integration", () => {
     expect(connected).not.toHaveBeenCalled();
     expect(getExecutionPayloadBid).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({slot, parentHash, parentRoot, proposerPubkey, timeoutMs: 123}),
-      {timeoutMs: 123 + BUILDER_BID_LAG_BUFFER_MS, signal: expect.any(AbortSignal)}
+      {timeoutMs: 123 + BUILDER_BID_LAG_BUFFER_MS, signal: expect.any(AbortSignal), redirect: "manual"}
     );
   });
 
@@ -108,7 +108,7 @@ describe("execution/builder/apiClient stream integration", () => {
     expect(getClient).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
         baseUrl: server.url,
-        globalInit: {timeoutMs: undefined, headers: {"User-Agent": "test-stream-client"}},
+        globalInit: {timeoutMs: undefined, redirect: "manual", headers: {"User-Agent": "test-stream-client"}},
       }),
       expect.any(Object)
     );
@@ -148,6 +148,7 @@ describe("execution/builder/apiClient stream integration", () => {
     expect(request.timeoutMs).toBeGreaterThan(0);
     expect(request.timeoutMs).toBeLessThanOrEqual(180);
     expect(options.timeoutMs).toBe(request.timeoutMs + BUILDER_BID_LAG_BUFFER_MS);
+    expect(options.redirect).toBe("manual");
     expect(request.dateMilliseconds).toBeGreaterThan(Number(streamRequest?.headers["date-milliseconds"]));
     expect(request.requestAuth).toEqual(entry(server.url).auth);
   });
@@ -163,6 +164,99 @@ describe("execution/builder/apiClient stream integration", () => {
 
     expect(bids).toHaveLength(hasBid ? 1 : 0);
     expect(getExecutionPayloadBid).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["invalid accept", "Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: invalid\r\n"],
+    ["missing headers", ""],
+    ["connection close", "Connection: close\r\n"],
+  ])("does not fall back after malformed HTTP101 with %s", async (_name, headers) => {
+    const server = await startServer();
+    server.http.removeAllListeners("upgrade");
+    server.http.on("upgrade", (_request, socket) => {
+      socket.end(`HTTP/1.1 101 Switching Protocols\r\n${headers}\r\n`);
+    });
+
+    const bids = await collect(makeClient(), [entry(server.url)]);
+
+    expect(bids).toEqual([]);
+    expect(getExecutionPayloadBid).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])(
+    "does not follow an authenticated HTTP bid redirect, with streaming enabled: %s",
+    async (bidStream) => {
+      const actual = await vi.importActual<typeof import("@lodestar/api/builder")>("@lodestar/api/builder");
+      getClient.mockImplementation(actual.getClient);
+      const target = await startServer();
+      const targetRequest = vi.fn();
+      target.http.on("request", targetRequest);
+      target.http.on("upgrade", targetRequest);
+      const server = await startServer();
+      const upgradeRequest = vi.fn();
+      server.http.removeAllListeners("upgrade");
+      server.http.on("upgrade", (request, socket) => {
+        upgradeRequest(request);
+        socket.end("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+      });
+      const bidRequest = vi.fn();
+      server.http.removeAllListeners("request");
+      server.http.on("request", (request, response) => {
+        const chunks: Buffer[] = [];
+        request.on("data", (chunk: Buffer) => chunks.push(chunk));
+        request.on("end", () => {
+          bidRequest({method: request.method, body: Buffer.concat(chunks)});
+          response.writeHead(307, {Location: `${target.url}/untrusted`});
+          response.end();
+        });
+      });
+      const builderEntry = entry(server.url);
+
+      const bids = await collect(makeClient({bidStream}), [builderEntry]);
+
+      expect(bids).toEqual([]);
+      expect(upgradeRequest).toHaveBeenCalledTimes(bidStream ? 1 : 0);
+      expect(bidRequest).toHaveBeenCalledExactlyOnceWith({
+        method: "POST",
+        body: Buffer.from(ssz.gloas.SignedBuilderRequestAuth.serialize(builderEntry.auth)),
+      });
+      expect(targetRequest).not.toHaveBeenCalled();
+    }
+  );
+
+  it("does not follow a preferences redirect carrying signed request authentication", async () => {
+    const actual = await vi.importActual<typeof import("@lodestar/api/builder")>("@lodestar/api/builder");
+    getClient.mockImplementation(actual.getClient);
+    const target = await startServer();
+    const targetRequest = vi.fn();
+    target.http.on("request", targetRequest);
+    target.http.on("upgrade", targetRequest);
+    const server = await startServer();
+    const preferencesRequest = vi.fn();
+    server.http.removeAllListeners("request");
+    server.http.on("request", (request, response) => {
+      const chunks: Buffer[] = [];
+      request.on("data", (chunk: Buffer) => chunks.push(chunk));
+      request.on("end", () => {
+        preferencesRequest({method: request.method, body: Buffer.concat(chunks)});
+        response.writeHead(307, {Location: `${target.url}/untrusted`});
+        response.end();
+      });
+    });
+    const request: gloas.BuilderPreferencesRequest = {
+      auth: entry(server.url).auth,
+      preferences: {maxExecutionPayment: 100n},
+    };
+
+    await expect(makeClient().submitBuilderPreferences(server.url, proposerPubkey, request)).rejects.toMatchObject({
+      status: 307,
+    });
+
+    expect(preferencesRequest).toHaveBeenCalledExactlyOnceWith({
+      method: "POST",
+      body: Buffer.from(ssz.gloas.BuilderPreferencesRequest.serialize(request)),
+    });
+    expect(targetRequest).not.toHaveBeenCalled();
   });
 
   it("does not restart the HTTP budget after an unresponsive upgrade consumes the round", async () => {

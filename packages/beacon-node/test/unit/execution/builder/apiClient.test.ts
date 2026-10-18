@@ -68,6 +68,7 @@ describe("execution/builder/apiClient", () => {
     expect(getExecutionPayloadBid).toHaveBeenCalledWith(expect.objectContaining({timeoutMs: 800}), {
       timeoutMs: 1050,
       signal: expect.any(AbortSignal),
+      redirect: "manual",
     });
   });
 

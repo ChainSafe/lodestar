@@ -1,3 +1,4 @@
+import {Agent} from "node:https";
 import {WebSocket} from "ws";
 import {BLSPubkey, Root, Slot, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex} from "@lodestar/utils";
@@ -24,6 +25,7 @@ type BidStreamRequest = {
   timeoutMs: number;
   requestTimeoutMs: number;
   userAgent?: string;
+  agent?: Agent;
   signal?: AbortSignal;
   /** Stop with a bid if one exists; otherwise retain the bounded in-flight fallback. */
   stopSignal?: AbortSignal;
@@ -32,6 +34,7 @@ type BidStreamRequest = {
 };
 
 export type BidStreamResult = {
+  upgraded: boolean;
   opened: boolean;
   bid?: StreamedBuilderBid;
   updates: number;
@@ -47,6 +50,7 @@ export type BidStreamResult = {
 export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise<BidStreamResult> {
   if (request.signal?.aborted || request.requestTimeoutMs <= 0) {
     return Promise.resolve({
+      upgraded: false,
       opened: false,
       updates: 0,
       discarded: 0,
@@ -66,6 +70,7 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
 
   return new Promise((resolve) => {
     let stopped = false;
+    let upgraded = false;
     let opened = false;
     let latest: StreamedBuilderBid | undefined;
     let lastFrame: Buffer | undefined;
@@ -83,6 +88,7 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
       maxPayload: MAX_FRAME_BYTES,
       autoPong: false,
       handshakeTimeout: request.requestTimeoutMs,
+      agent: request.agent,
       headers: {
         "Eth-Consensus-Version": "gloas",
         "Date-Milliseconds": String(request.dateMilliseconds),
@@ -103,7 +109,7 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
       request.stopSignal?.removeEventListener("abort", stop);
       pendingPong = undefined;
       socket.terminate();
-      resolve({opened, bid: latest, updates, discarded, reason, statusCode});
+      resolve({upgraded, opened, bid: latest, updates, discarded, reason, statusCode});
     };
     const abort = (): void => finish("aborted");
     const stop = (): void => {
@@ -112,11 +118,15 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
     const expired = (): boolean => performance.now() >= deadline;
     const timer = setTimeout(() => finish("deadline"), request.requestTimeoutMs);
     socket.on("error", () => finish("error"));
+    socket.once("upgrade", () => {
+      upgraded = true;
+    });
     socket.once("open", () => {
       opened = true;
     });
     socket.once("close", () => finish("closed"));
     socket.once("unexpected-response", (_request, response) => {
+      if (response.statusCode === 101) upgraded = true;
       response.destroy();
       finish("http", response.statusCode);
     });

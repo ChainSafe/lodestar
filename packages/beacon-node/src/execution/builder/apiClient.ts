@@ -1,3 +1,4 @@
+import {Agent} from "node:https";
 import {routes} from "@lodestar/api";
 import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
 import {ChainForkConfig} from "@lodestar/config";
@@ -111,6 +112,7 @@ export class BuilderApiClient {
   readonly bidRequests: number;
   private readonly clients = new Map<BuilderUrl, BuilderApi>();
   private activeStreams = 0;
+  private streamAgent?: Agent;
 
   constructor(
     private readonly opts: BuilderApiClientOpts,
@@ -124,6 +126,7 @@ export class BuilderApiClient {
     this.bidDeadline = opts.bidDeadline ?? DEFAULT_BUILDER_BID_DEADLINE_MS;
     this.bidDelay = opts.bidDelay ?? DEFAULT_BUILDER_BID_DELAY_MS;
     this.bidRequests = opts.bidRequests ?? DEFAULT_BUILDER_BID_REQUESTS;
+    signal?.addEventListener("abort", () => this.streamAgent?.destroy(), {once: true});
   }
 
   /** Time from now until the last bid request of the slot reaches its deadline */
@@ -300,6 +303,7 @@ export class BuilderApiClient {
           timeoutMs,
           requestTimeoutMs,
           userAgent: this.opts.userAgent,
+          agent: new URL(url).protocol === "https:" ? this.getStreamAgent() : undefined,
           signal,
           stopSignal,
           msFromSlot: () => this.clock.msFromSlot(slot),
@@ -313,13 +317,14 @@ export class BuilderApiClient {
           builder: toPrintableUrl(url),
           parentHash: toHex(parentHash),
           parentRoot: toHex(parentRoot),
+          upgraded: result.upgraded,
           opened: result.opened,
           updates: result.updates,
           discarded: result.discarded,
           reason: result.reason,
           statusCode: result.statusCode,
           durationMs: Math.round(elapsed),
-          fallback: !result.opened && !signal.aborted && timeoutMs > 0,
+          fallback: !result.upgraded && !signal.aborted && timeoutMs > 0,
           ...(result.bid
             ? {
                 receivedMs: result.bid.receivedMs,
@@ -329,7 +334,7 @@ export class BuilderApiClient {
               }
             : {}),
         });
-        if (result.opened || signal.aborted || timeoutMs <= 0) return result.bid;
+        if (result.upgraded || signal.aborted || timeoutMs <= 0) return result.bid;
       } finally {
         this.activeStreams--;
       }
@@ -337,10 +342,22 @@ export class BuilderApiClient {
     if (signal.aborted) return undefined;
     const res = await client.getExecutionPayloadBid(
       {slot, parentHash, parentRoot, proposerPubkey, requestAuth: entry.auth, dateMilliseconds: Date.now(), timeoutMs},
-      {timeoutMs: requestTimeoutMs, signal}
+      {timeoutMs: requestTimeoutMs, signal, redirect: "manual"}
     );
     const signedBid = res.value();
     return signedBid ? {signedBid, receivedMs: this.clock.msFromSlot(slot)} : undefined;
+  }
+
+  private getStreamAgent(): Agent {
+    // ws supplies createConnection, bypassing Node's global agent and its TLS session cache.
+    this.streamAgent ??= new Agent({
+      keepAlive: true,
+      maxSockets: MAX_CONCURRENT_BID_STREAMS,
+      maxTotalSockets: MAX_CONCURRENT_BID_STREAMS,
+      maxFreeSockets: 16,
+      maxCachedSessions: 64,
+    });
+    return this.streamAgent;
   }
 
   /** Forward a proposer's builder preferences to the builder at the given url */
@@ -434,6 +451,7 @@ export class BuilderApiClient {
           baseUrl: url,
           globalInit: {
             timeoutMs: this.opts.timeout,
+            redirect: "manual",
             headers: this.opts.userAgent ? {"User-Agent": this.opts.userAgent} : undefined,
           },
         },
