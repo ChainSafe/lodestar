@@ -124,9 +124,9 @@ describe("abstractRepository", () => {
   });
 
   it("keys/values/entries and filters", async () => {
-    const k10 = Buffer.from([10]);
-    const k15 = Buffer.from([15]);
-    const k20 = Buffer.from([20]);
+    const k10 = Uint8Array.of(10);
+    const k15 = Uint8Array.of(15);
+    const k20 = Uint8Array.of(20);
     await repo.put(k10, "a");
     await repo.put(k15, "b");
     await repo.put(k20, "c");
@@ -148,8 +148,8 @@ describe("abstractRepository", () => {
   });
 
   it("streams yield decoded keys/values/entries", async () => {
-    const a = Buffer.from([1]);
-    const b = Buffer.from([2]);
+    const a = Uint8Array.of(1);
+    const b = Uint8Array.of(2);
     await repo.put(a, "x");
     await repo.put(b, "y");
 
@@ -182,6 +182,7 @@ describe("abstractRepository", () => {
 
     // And decodeKey slices BUCKET_LENGTH
     expect(Buffer.from(first.value!.key.slice(BUCKET_LENGTH))).toEqual(id);
+    await aiter.return?.();
   });
 
   it("first/last helpers", async () => {
@@ -192,8 +193,8 @@ describe("abstractRepository", () => {
     await expect(repo.firstEntry()).resolves.toBeNull();
     await expect(repo.lastEntry()).resolves.toBeNull();
 
-    const a = Buffer.from([1]);
-    const b = Buffer.from([2]);
+    const a = Uint8Array.of(1);
+    const b = Uint8Array.of(2);
     await repo.put(a, "x");
     await repo.put(b, "y");
 
