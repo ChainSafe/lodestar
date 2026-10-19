@@ -121,11 +121,19 @@ export async function validateGossipBlock(
   // (via gossip or non-gossip sources) (a client MAY queue blocks for processing once the parent payload is retrieved).
   if (isGloasBeaconBlock(block)) {
     const parentBlockHashHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
-    if (chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHashHex) === null) {
+    const parentPayloadBlock = chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHashHex);
+    if (parentPayloadBlock === null) {
       throw new BlockGossipError(GossipAction.IGNORE, {
         code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
         parentRoot,
         parentBlockHash: parentBlockHashHex,
+      });
+    }
+    // [IGNORE] The block's parent passed validation but the payload it builds on is invalid
+    if (parentPayloadBlock.executionStatus === ExecutionStatus.Invalid) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.PARENT_EXECUTION_INVALID,
+        parentRoot,
       });
     }
   }

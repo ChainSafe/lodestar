@@ -67,13 +67,20 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
     default: PeerAction.LowToleranceError,
     byCode: {[ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
+  // An invalidated payload is this node's execution engine opinion, peers relaying votes for it are not malicious
   [GossipType.beacon_aggregate_and_proof]: {
     default: PeerAction.MidToleranceError,
-    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+    byCode: {
+      [AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal,
+      [AttestationErrorCode.EXECUTION_PAYLOAD_INVALID]: PeerAction.HighToleranceError,
+    },
   },
   [GossipType.beacon_attestation]: {
     default: PeerAction.MidToleranceError,
-    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+    byCode: {
+      [AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal,
+      [AttestationErrorCode.EXECUTION_PAYLOAD_INVALID]: PeerAction.HighToleranceError,
+    },
   },
   [GossipType.sync_committee_contribution_and_proof]: {
     default: PeerAction.MidToleranceError,

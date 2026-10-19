@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
   ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_ATTESTER,
@@ -341,6 +341,20 @@ async function validateAttestationNoSignatureCheck(
   } else {
     // found a seen AttestationData
     committeeIndex = attestationOrCache.cache.committeeIndex;
+  }
+
+  // The payload status can change after the attestation data was cached, so this runs for cached data too
+  if (isForkPostGloas(fork) && attData.index === 1) {
+    const beaconBlockRoot = toRootHex(attData.beaconBlockRoot);
+    // [REJECT] The attested execution payload is processed and invalid
+    if (
+      chain.forkChoice.getBlockHex(beaconBlockRoot, PayloadStatus.FULL)?.executionStatus === ExecutionStatus.Invalid
+    ) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.EXECUTION_PAYLOAD_INVALID,
+        beaconBlockRoot,
+      });
+    }
   }
 
   chain.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(

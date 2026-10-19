@@ -1,3 +1,4 @@
+import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -105,6 +106,19 @@ async function validateAggregateAndProof(
     ) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+        beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
+      });
+    }
+
+    // [REJECT] The attested execution payload is processed and invalid
+    if (
+      block !== null &&
+      attData.index === 1 &&
+      chain.forkChoice.getBlockHex(toRootHex(attData.beaconBlockRoot), PayloadStatus.FULL)?.executionStatus ===
+        ExecutionStatus.Invalid
+    ) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.EXECUTION_PAYLOAD_INVALID,
         beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
       });
     }
