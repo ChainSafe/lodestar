@@ -44,6 +44,7 @@ import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
@@ -143,7 +144,7 @@ export async function importBlock(
       );
     }
     if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
-      throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
+      throw new BlockError(block, {code: BlockErrorCode.PARENT_EXECUTION_INVALID, parentRoot: parentRootHex});
     }
     executionStatus = parentBlock.executionStatus;
   }
