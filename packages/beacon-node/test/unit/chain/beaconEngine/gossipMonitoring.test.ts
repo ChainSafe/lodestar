@@ -41,7 +41,6 @@ describe("BeaconEngineCore gossip monitoring", () => {
       db: modules.db,
       dbName: "test",
       dataColumnDir: "test",
-      pubkeyCache: modules.chain.pubkeyCache,
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,

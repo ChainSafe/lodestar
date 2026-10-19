@@ -252,7 +252,6 @@ export class BeaconNode {
       isAnchorStateFinalized: stateInitialization.isFinalized,
       opts: opts.chain,
       config,
-      pubkeyCache,
       db,
       dbName: opts.db.name,
       dataColumnDir,

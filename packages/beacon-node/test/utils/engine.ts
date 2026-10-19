@@ -50,7 +50,6 @@ export function createTestBeaconEngine(
   const {
     privateKey,
     config,
-    pubkeyCache,
     db,
     dbName,
     dataDir,
@@ -103,7 +102,6 @@ export function createTestBeaconEngine(
     metricsEnabled: metrics !== null,
     genesisTime: metadata.genesisTime,
     clock: opts.beaconEngineWorker ? undefined : clock,
-    pubkeyCache,
     cpStateDatastore,
     db,
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,

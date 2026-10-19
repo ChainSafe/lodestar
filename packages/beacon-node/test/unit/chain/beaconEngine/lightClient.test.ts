@@ -1,5 +1,4 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -68,7 +67,6 @@ describe("BeaconEngineCore light client ownership", () => {
       db: db as unknown as IBeaconEngineDb,
       dbName: "test",
       dataColumnDir: "test",
-      pubkeyCache,
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,

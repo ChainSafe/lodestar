@@ -33,7 +33,6 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       db: modules.db,
       dbName: "test",
       dataColumnDir: "test",
-      pubkeyCache: modules.chain.pubkeyCache,
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,

@@ -1,4 +1,3 @@
-import type {PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
@@ -98,7 +97,6 @@ export type BeaconEngineCoreModules = {
   genesisTime: number;
   /** Shared in-process clock; omitted when the core needs its own worker-local clock. */
   clock?: IClock;
-  pubkeyCache: PubkeyCache;
   cpStateDatastore: CPStateDatastore;
   db: IBeaconEngineDb;
   validatorMonitorOpts: ValidatorMonitorOpts | null;

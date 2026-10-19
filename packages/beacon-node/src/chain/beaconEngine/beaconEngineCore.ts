@@ -5,7 +5,7 @@ import {
   scrapeMetrics as scrapeNativeMetrics,
   unregisterLocalValidator as unregisterNativeLocalValidator,
 } from "@chainsafe/lodestar-z/metrics";
-import type {PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
@@ -292,7 +292,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   readonly metrics: BeaconEngineMetrics | null;
   readonly clock: IClock;
   genesisTime!: number;
-  readonly pubkeyCache: PubkeyCache;
+  // Each thread imports a local wrapper over the same lock-protected native registry.
+  readonly pubkeyCache: PubkeyCache = pubkeyCache;
   // NodeJS-specific memory pool for state serialization; engine-internal (not on IBeaconEngine).
   bufferPool!: BufferPool;
   bls!: IBlsVerifier;
@@ -406,7 +407,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private anchorStateBytes?: Uint8Array;
 
   constructor(private readonly modules: BeaconEngineCoreModules) {
-    const {opts, config, logger, pubkeyCache, db} = modules;
+    const {opts, config, logger, db} = modules;
     const {signal} = this;
     setMaxListeners(Infinity, signal);
     const metrics = modules.metricsEnabled ? createBeaconEngineMetrics(opts.nativeStateTransition) : null;
@@ -429,7 +430,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       new BlockSerializedCache(config, {owner: "engine", metrics: metrics?.blockSerializedCache, logger});
     this.metrics = metrics;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
-    this.pubkeyCache = pubkeyCache;
     try {
       // Main-thread BeaconEngine shares the node's execution client; worker mode creates its own.
       if (modules.executionEngine !== undefined) {
@@ -2236,6 +2236,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     const currentEpoch = this.clock.currentEpoch;
     const kept = new Set<ValidatorIndex>();
     for (const index of indices) {
+      if (index >= state.validatorCount) continue;
       const status = getValidatorStatus(state.getValidator(index), currentEpoch);
       if (
         status === "active_exiting" ||

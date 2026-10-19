@@ -9,6 +9,7 @@ import {getConfig} from "@lodestar/config/test-utils";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
+import {ensureInteropPubkeyCache} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import {byteArrayEquals, defer, toRootHex} from "@lodestar/utils";
 import {getLodestarApi} from "../../../../src/api/impl/lodestar/index.js";
@@ -109,6 +110,16 @@ describe("bytes-based engine startup", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     await closeDb();
+  });
+
+  it("filters validator registrations against the head state when the shared pubkey cache is ahead", async () => {
+    chain = await createBeaconChain(opts, modules);
+    const validatorCount = getBeaconEngineCore(chain.beaconEngine).getHeadState().validatorCount;
+    ensureInteropPubkeyCache(validatorCount + 1);
+    const index = chain.pubkeyCache.getIndex(chain.pubkeyCache.getPubkeyBytesOrThrow(validatorCount));
+    expect(index).toBe(validatorCount);
+
+    expect(chain.beaconEngine.getActiveOrPendingValidators([0, validatorCount])).toEqual(new Set([0]));
   });
 
   it("serves persisted checkpoint bytes through the engine with latest-safe selection and API errors", async () => {
