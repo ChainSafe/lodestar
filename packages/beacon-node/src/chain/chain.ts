@@ -1477,6 +1477,10 @@ export class BeaconChain implements IBeaconChain {
       source,
       blockRoot: lvh.invalidateFromParentBlockRoot,
       blockHash: lvh.invalidateFromParentBlockHash,
+      executionStatus: this.forkChoice.getBlockHexAndBlockHash(
+        lvh.invalidateFromParentBlockRoot,
+        lvh.invalidateFromParentBlockHash
+      )?.executionStatus,
       latestValidHash: lvh.latestValidExecHash ?? "null",
     };
     const applied = this.forkChoice.validateLatestHash(lvh, {

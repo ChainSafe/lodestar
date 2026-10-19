@@ -1140,16 +1140,20 @@ export class ProtoArray {
       let nodeIndex: number | undefined = invalidateFromParentIndex;
       while (nodeIndex !== undefined && nodeIndex > latestValidHashIndex) {
         const node: ProtoNode = this.nodes[nodeIndex];
-        if (
-          node.executionStatus !== ExecutionStatus.Syncing ||
+        const conflict = node.executionStatus !== ExecutionStatus.Syncing;
+        const justified =
           nodeIndex <= justifiedIndex ||
-          (node.blockRoot === this.justifiedRoot && node.payloadStatus === PayloadStatus.EMPTY)
-        ) {
-          // Conflicting LVH: fall back to the unknown LVH bound, but never cross this node
-          latestValidHashIndex = Math.max(
-            nodeIndex,
-            fromNodeJudged ? this.getUnknownLVHIndex(invalidateFromParentIndex) : invalidateFromParentIndex
-          );
+          (node.blockRoot === this.justifiedRoot && node.payloadStatus === PayloadStatus.EMPTY);
+        if (conflict || justified) {
+          // Never cross this node. A judged from node falls back to the unknown LVH bound. A verdict about a child
+          // payload is dropped on a conflict, but an LVH found below the justified node still covers everything
+          // between the from node and the justified node
+          const fallback = fromNodeJudged
+            ? this.getUnknownLVHIndex(invalidateFromParentIndex)
+            : conflict
+              ? invalidateFromParentIndex
+              : nodeIndex;
+          latestValidHashIndex = Math.max(nodeIndex, fallback);
           break;
         }
         nodeIndex = node.parent;
