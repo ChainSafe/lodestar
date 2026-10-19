@@ -113,7 +113,6 @@ export type BeaconChainModules = {
   builderApiClientOpts?: BuilderApiClientOpts;
   anchor: EngineBootstrap;
   earliestAvailableSlot: Slot;
-  abortController: AbortController;
   clock: IClock;
   emitter: ChainEventEmitter;
   cpStateDatastore: CPStateDatastore;
@@ -178,7 +177,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly db: IBeaconChainDb;
   // this is only available if nHistoricalStates is enabled
   private readonly cpStateDatastore?: CPStateDatastore;
-  private readonly abortController: AbortController;
+  private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
   private _earliestAvailableSlot: Slot;
 
@@ -207,7 +206,6 @@ export class BeaconChain implements IBeaconChain {
       executionEngine,
       beaconEngine,
       anchor,
-      abortController,
       clock,
       emitter,
       cpStateDatastore,
@@ -224,8 +222,7 @@ export class BeaconChain implements IBeaconChain {
     this.anchorStateLatestBlockSlot = anchor.latestBlockSlot;
     this.genesisValidatorsRoot = anchor.genesisValidatorsRoot;
     this.executionEngine = executionEngine;
-    this.abortController = abortController;
-    const signal = abortController.signal;
+    const signal = this.abortController.signal;
     this.cpStateDatastore = cpStateDatastore;
     this.custodyConfig = custodyConfig;
     this.serializedCache = modules.serializedCache;

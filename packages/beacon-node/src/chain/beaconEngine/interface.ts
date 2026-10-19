@@ -38,7 +38,7 @@ import {
 import {Logger} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../db/index.js";
 import type {BuilderApiClientOpts} from "../../execution/builder/apiClient.js";
-import {ExecutionBuilderOpts, IExecutionEngine} from "../../execution/index.js";
+import {ExecutionBuilderOpts, ExecutionEngineOpts, IExecutionEngine} from "../../execution/index.js";
 import {ScrapedMetrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
@@ -84,7 +84,9 @@ export type BeaconEngineCoreModules = {
   serializedCache?: SerializedCache;
   blockSerializedCache?: BlockSerializedCache;
   builderApiClientOpts?: BuilderApiClientOpts;
-  executionEngine: IExecutionEngine;
+  executionEngine?: IExecutionEngine;
+  executionEngineOpts?: ExecutionEngineOpts;
+  executionEngineLogger?: Logger;
   executionBuilderOpts?: ExecutionBuilderOpts;
   opts: IBeaconEngineOptions;
   config: BeaconConfig;
@@ -98,7 +100,6 @@ export type BeaconEngineCoreModules = {
   clock?: IClock;
   pubkeyCache: PubkeyCache;
   cpStateDatastore: CPStateDatastore;
-  signal: AbortSignal;
   db: IBeaconEngineDb;
   validatorMonitorOpts: ValidatorMonitorOpts | null;
   validatorMonitorLogger?: Logger;

@@ -216,18 +216,16 @@ describe("bytes-based engine startup", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it.each(["abort", "failed startup"])("stops the worker-local clock after %s", async (shutdown) => {
+  it.each(["close", "failed startup"])("stops the worker-local clock after %s", async (shutdown) => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     const dependencies = createTestBeaconEngine({...opts, beaconEngineWorker: true}, modules);
     engine = dependencies.beaconEngineCore;
     expect(vi.getTimerCount()).toBe(1);
-    if (shutdown === "abort") {
-      dependencies.abortController.abort();
-    } else {
+    if (shutdown === "failed startup") {
       await expect(engine.prepareAnchorState(new Uint8Array())).rejects.toThrow();
-      await engine.close();
     }
+    await dependencies.beaconEngine.close();
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -248,8 +246,8 @@ describe("bytes-based engine startup", () => {
     await engine.validateGossipBlock(blockRoot, structuredClone(bytes), ForkName.phase0);
     const cached = engine.blockSerializedCache.get(toRootHex(blockRoot));
     vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
-    await expect(engine.verifyBlocks([{blockRoot, blockBytes: structuredClone(bytes)}], {})).rejects.toMatchObject({
-      type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"},
+    await expect(engine.verifyBlocks([{blockRoot, blockBytes: structuredClone(bytes)}], {})).resolves.toMatchObject({
+      err: {type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"}},
     });
     expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
     expect(engine.blockSerializedCache.get(toRootHex(blockRoot))).toBe(cached);
@@ -694,7 +692,7 @@ describe("bytes-based engine startup", () => {
     expect(scraped.extra).toContain("# TYPE lodestar_stfn_process_block_seconds histogram");
   });
 
-  it.each(["abort", "close"])("runs epoch monitoring on forwarded ticks and cancels it on %s", async (shutdown) => {
+  it("runs epoch monitoring on forwarded ticks and cancels it on close", async () => {
     modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.validatorMonitorOpts = {};
     const dependencies = await initializeTestChain(opts, modules);
@@ -712,8 +710,7 @@ describe("bytes-based engine startup", () => {
 
     dependencies.beaconEngine.onSlot(2 * SLOTS_PER_EPOCH - 1);
     expect(vi.getTimerCount()).toBe(1);
-    if (shutdown === "abort") dependencies.abortController.abort();
-    else await beaconEngine.close();
+    await dependencies.beaconEngine.close();
     expect(vi.getTimerCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(halfSlot);
     expect(monitorEpoch).toHaveBeenCalledOnce();

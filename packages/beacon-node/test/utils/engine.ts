@@ -22,7 +22,6 @@ export type TestBeaconEngineModules = Omit<
   | "beaconEngine"
   | "anchor"
   | "earliestAvailableSlot"
-  | "abortController"
   | "clock"
   | "emitter"
   | "cpStateDatastore"
@@ -46,6 +45,7 @@ export function createTestBeaconEngine(
 ): Omit<BeaconChainModules, "anchor" | "builderApiClient" | "beaconEngine" | "earliestAvailableSlot"> & {
   beaconEngine: BeaconEngine;
   beaconEngineCore: BeaconEngineCore;
+  abortController: AbortController;
 } {
   const {executionBuilderOpts, ...chainModules} = modules;
   const {
@@ -106,7 +106,6 @@ export function createTestBeaconEngine(
     clock: opts.beaconEngineWorker ? undefined : clock,
     pubkeyCache,
     cpStateDatastore,
-    signal,
     db,
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,

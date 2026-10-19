@@ -210,7 +210,6 @@ export class BeaconNode {
     }
 
     const chainLogger = logger.child({module: LoggerModule.chain});
-    const chainController = new AbortController();
     const emitter = new ChainEventEmitter();
     const fileDataStore = opts.chain.nHistoricalStatesFileDataStore ?? true;
     // checkpointState is an engine repo; build the datastore from the bootstrap `db` (union) param.
@@ -227,6 +226,8 @@ export class BeaconNode {
       initialCustodyGroupCount,
     });
 
+    // TODO - beacon engine: share mock backend state across worker and main-thread clients.
+    // Separate mock backends prevent BeaconChain's getPayloadBodiesByHashV2 from seeing engine-imported payloads.
     const executionEngine = initializeExecutionEngine(executionEngineOpts, {
       metrics,
       signal,
@@ -259,9 +260,10 @@ export class BeaconNode {
       metricsEnabled: metrics !== null,
       genesisTime: metadata.genesisTime,
       clock: opts.chain.beaconEngineWorker ? undefined : clock,
-      signal: chainController.signal,
       cpStateDatastore,
-      executionEngine,
+      executionEngine: opts.chain.beaconEngineWorker ? undefined : executionEngine,
+      executionEngineOpts,
+      executionEngineLogger: logger.child({module: LoggerModule.execution}),
       executionBuilderOpts: opts.executionBuilder,
       builderApiClientOpts,
     });
@@ -300,7 +302,6 @@ export class BeaconNode {
       metrics,
       executionEngine,
       beaconEngine,
-      abortController: chainController,
       clock,
       emitter,
       cpStateDatastore,

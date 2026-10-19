@@ -36,9 +36,14 @@ import {IEngineTransport, PayloadStatusResult} from "./transport.js";
 import {ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
+type ExecutionEngineMetrics = Pick<
+  Metrics,
+  "executionEnginerHttpClient" | "engineHttpProcessorQueue" | "engineNotifyForkchoiceUpdateResult" | "engineApiRequests"
+>;
+
 export type ExecutionEngineModules = {
   signal: AbortSignal;
-  metrics?: Metrics | null;
+  metrics?: ExecutionEngineMetrics | null;
   logger: Logger;
 };
 
@@ -126,7 +131,7 @@ const REST_PROBE_RETRY_MS = 12_000;
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
-  private metrics: Metrics | null;
+  private metrics: ExecutionEngineMetrics | null;
 
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications

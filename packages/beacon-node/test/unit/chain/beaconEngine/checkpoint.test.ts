@@ -131,11 +131,10 @@ describe("BeaconEngineCore checkpoint maintenance", () => {
     expect(engine.shufflingCache.processState).toHaveBeenCalledExactlyOnceWith(state);
   });
 
-  it.each(["abort", "close"])("stops checkpoint maintenance after %s", async (shutdown) => {
+  it("stops checkpoint maintenance after close", async () => {
     engine.emitter.emit(BeaconEngineEvent.checkpoint, checkpoint);
     await vi.advanceTimersByTimeAsync(1);
-    if (shutdown === "abort") abortController.abort();
-    else await engine.close();
+    await engine.close();
 
     engine.emitter.emit(BeaconEngineEvent.checkpoint, checkpoint);
     expect(engine.regen.onCheckpoint).toHaveBeenCalledOnce();

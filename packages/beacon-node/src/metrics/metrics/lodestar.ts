@@ -332,32 +332,6 @@ function createMainLodestarMetrics(register: RegistryMetricCreator, metadata?: L
         help: "Current concurrency of unfinalized payload envelope writes queue",
       }),
     },
-    engineHttpProcessorQueue: {
-      length: register.gauge({
-        name: "lodestar_engine_http_processor_queue_length",
-        help: "Count of total engine http processor queue length",
-      }),
-      droppedJobs: register.gauge({
-        name: "lodestar_engine_http_processor_queue_dropped_jobs_total",
-        help: "Count of total engine http processor queue dropped jobs",
-      }),
-      jobTime: register.histogram({
-        name: "lodestar_engine_http_processor_queue_job_time_seconds",
-        help: "Time to process engine http processor queue job in seconds",
-        // newPayload can vary from 100 of ms to 3-4 seconds and typically 300-400ms
-        buckets: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1, 2, 5, 10, 25],
-      }),
-      jobWaitTime: register.histogram({
-        name: "lodestar_engine_http_processor_queue_job_wait_time_seconds",
-        help: "Time from job added to the engine http processor queue to starting in seconds",
-        // Ideally it should be picked up < 100 of ms and could run upto 100 of secs
-        buckets: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1, 2, 5, 10, 25, 50, 100],
-      }),
-      concurrency: register.gauge({
-        name: "lodestar_engine_http_processor_queue_concurrency_total",
-        help: "Current concurrency of engine http processor queue",
-      }),
-    },
     apiRest: {
       responseTime: register.histogram<{operationId: string}>({
         name: "lodestar_api_rest_response_time_seconds",
@@ -834,16 +808,6 @@ function createMainLodestarMetrics(register: RegistryMetricCreator, metadata?: L
         labelNames: ["source"],
       }),
     },
-    engineNotifyForkchoiceUpdateResult: register.gauge<{result: ExecutionPayloadStatus}>({
-      name: "lodestar_execution_engine_notify_forkchoice_update_result_total",
-      help: "The total result of calling notifyForkchoiceUpdate execution engine api",
-      labelNames: ["result"],
-    }),
-    engineApiRequests: register.counter<{transport: string}>({
-      name: "lodestar_execution_engine_api_requests_total",
-      help: "Total engine API requests by transport",
-      labelNames: ["transport"],
-    }),
     opPool: {
       attestationPool: {
         apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
@@ -1025,62 +989,7 @@ function createMainLodestarMetrics(register: RegistryMetricCreator, metadata?: L
         labelNames: ["reason", "topic"],
       }),
     },
-    executionEnginerHttpClient: {
-      requestTime: register.histogram<{routeId: string}>({
-        name: "lodestar_execution_engine_http_client_request_time_seconds",
-        help: "ExecutionEngineHttp client - histogram or roundtrip request times",
-        labelNames: ["routeId"],
-        // Provide max resolution on problematic values around 1 second
-        buckets: [0.1, 0.5, 1, 2, 5, 15],
-      }),
-      streamTime: register.histogram<{routeId: string}>({
-        name: "lodestar_execution_engine_http_client_stream_time_seconds",
-        help: "ExecutionEngineHttp client - response body consumption time, including failures and excluding parsing",
-        labelNames: ["routeId"],
-        // Provide max resolution on problematic values around 1 second
-        buckets: [0.1, 0.5, 1, 2, 5, 15],
-      }),
-      responseParseTime: register.histogram<{routeId: string; encoding: "json" | "ssz"}>({
-        name: "lodestar_execution_engine_http_client_response_parse_time_seconds",
-        help: "ExecutionEngineHttp client - JSON.parse or SSZ deserialize time, including failures, excluding body reads and subsequent value conversion",
-        labelNames: ["routeId", "encoding"],
-        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
-      }),
-      requestErrors: register.gauge<{routeId: string}>({
-        name: "lodestar_execution_engine_http_client_request_errors_total",
-        help: "ExecutionEngineHttp client - total count of request errors",
-        labelNames: ["routeId"],
-      }),
-      retryCount: register.gauge<{routeId: string}>({
-        name: "lodestar_execution_engine_http_client_request_retries_total",
-        help: "ExecutionEngineHttp client - total count of request retries",
-        labelNames: ["routeId"],
-      }),
-      requestBytes: register.counter<{routeId: string}>({
-        name: "lodestar_execution_engine_http_client_request_bytes_total",
-        help: "ExecutionEngineHttp client - total bytes sent to the execution client by routeId",
-        labelNames: ["routeId"],
-      }),
-      responseBytes: register.counter<{routeId: string}>({
-        name: "lodestar_execution_engine_http_client_response_bytes_total",
-        help: "ExecutionEngineHttp client - total bytes received from the execution client by routeId",
-        labelNames: ["routeId"],
-      }),
-      requestUsedFallbackUrl: register.gauge<{routeId: string}>({
-        name: "lodestar_execution_engine_http_client_request_used_fallback_url_total",
-        help: "ExecutionEngineHttp client - total count of requests on fallback url(s)",
-        labelNames: ["routeId"],
-      }),
-      activeRequests: register.gauge<{routeId: string}>({
-        name: "lodestar_execution_engine_http_client_active_requests",
-        help: "ExecutionEngineHttp client - current count of active requests",
-        labelNames: ["routeId"],
-      }),
-      configUrlsCount: register.gauge({
-        name: "lodestar_execution_engine_http_client_config_urls_count",
-        help: "ExecutionEngineHttp client - static config urls count",
-      }),
-    },
+    // [beacon-engine] executionEnginerHttpClient moved to createSharedLodestarMetrics below; merge unstable changes there.
     db: {
       dbReadReq: register.gauge<{bucket: string}>({
         name: "lodestar_db_read_req_total",
@@ -2194,8 +2103,104 @@ function createEngineLodestarMetrics(register: RegistryMetricCreator) {
   };
 }
 
+/**
+ * Metric definitions used by both BeaconChain and BeaconEngine.
+ * Each creates separate metric instances in its own registry; samples are combined when scraped.
+ */
 function createSharedLodestarMetrics(register: RegistryMetricCreator) {
   return {
+    engineHttpProcessorQueue: {
+      length: register.gauge({
+        name: "lodestar_engine_http_processor_queue_length",
+        help: "Count of total engine http processor queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_engine_http_processor_queue_dropped_jobs_total",
+        help: "Count of total engine http processor queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_engine_http_processor_queue_job_time_seconds",
+        help: "Time to process engine http processor queue job in seconds",
+        // newPayload can vary from 100 of ms to 3-4 seconds and typically 300-400ms
+        buckets: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1, 2, 5, 10, 25],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_engine_http_processor_queue_job_wait_time_seconds",
+        help: "Time from job added to the engine http processor queue to starting in seconds",
+        // Ideally it should be picked up < 100 of ms and could run upto 100 of secs
+        buckets: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1, 2, 5, 10, 25, 50, 100],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_engine_http_processor_queue_concurrency_total",
+        help: "Current concurrency of engine http processor queue",
+      }),
+    },
+    engineNotifyForkchoiceUpdateResult: register.gauge<{result: ExecutionPayloadStatus}>({
+      name: "lodestar_execution_engine_notify_forkchoice_update_result_total",
+      help: "The total result of calling notifyForkchoiceUpdate execution engine api",
+      labelNames: ["result"],
+    }),
+    engineApiRequests: register.counter<{transport: string}>({
+      name: "lodestar_execution_engine_api_requests_total",
+      help: "Total engine API requests by transport",
+      labelNames: ["transport"],
+    }),
+    executionEnginerHttpClient: {
+      requestTime: register.histogram<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_request_time_seconds",
+        help: "ExecutionEngineHttp client - histogram or roundtrip request times",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      streamTime: register.histogram<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_stream_time_seconds",
+        help: "ExecutionEngineHttp client - response body consumption time, including failures and excluding parsing",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      responseParseTime: register.histogram<{routeId: string; encoding: "json" | "ssz"}>({
+        name: "lodestar_execution_engine_http_client_response_parse_time_seconds",
+        help: "ExecutionEngineHttp client - JSON.parse or SSZ deserialize time, including failures, excluding body reads and subsequent value conversion",
+        labelNames: ["routeId", "encoding"],
+        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
+      }),
+      requestErrors: register.gauge<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_request_errors_total",
+        help: "ExecutionEngineHttp client - total count of request errors",
+        labelNames: ["routeId"],
+      }),
+      retryCount: register.gauge<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_request_retries_total",
+        help: "ExecutionEngineHttp client - total count of request retries",
+        labelNames: ["routeId"],
+      }),
+      requestBytes: register.counter<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_request_bytes_total",
+        help: "ExecutionEngineHttp client - total bytes sent to the execution client by routeId",
+        labelNames: ["routeId"],
+      }),
+      responseBytes: register.counter<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_response_bytes_total",
+        help: "ExecutionEngineHttp client - total bytes received from the execution client by routeId",
+        labelNames: ["routeId"],
+      }),
+      requestUsedFallbackUrl: register.gauge<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_request_used_fallback_url_total",
+        help: "ExecutionEngineHttp client - total count of requests on fallback url(s)",
+        labelNames: ["routeId"],
+      }),
+      activeRequests: register.gauge<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_active_requests",
+        help: "ExecutionEngineHttp client - current count of active requests",
+        labelNames: ["routeId"],
+      }),
+      configUrlsCount: register.gauge({
+        name: "lodestar_execution_engine_http_client_config_urls_count",
+        help: "ExecutionEngineHttp client - static config urls count",
+      }),
+    },
     bls: {
       aggregatedPubkeys: register.counter({
         name: "lodestar_bls_aggregated_pubkeys_total",

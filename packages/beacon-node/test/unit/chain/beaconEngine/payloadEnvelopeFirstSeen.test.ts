@@ -35,7 +35,6 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       dataColumnDir: "test",
       pubkeyCache: modules.chain.pubkeyCache,
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
-      signal: new AbortController().signal,
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),

@@ -56,7 +56,6 @@ describe("BeaconEngineCore light client ownership", () => {
   let server: LightClientServer;
   let clock: ClockStopped;
   let chain: IBeaconChain;
-  let controller: AbortController;
 
   function createEngine(disableLightClientServer = false): BeaconEngineCore {
     return new BeaconEngineCore({
@@ -71,7 +70,6 @@ describe("BeaconEngineCore light client ownership", () => {
       dataColumnDir: "test",
       pubkeyCache,
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
-      signal: controller.signal,
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),
@@ -80,7 +78,6 @@ describe("BeaconEngineCore light client ownership", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    controller = new AbortController();
     clock = new ClockStopped(slot + 1);
     clock.setMsIntoSlot(config.getSyncMessageDueMs(ForkName.capella) + 1000);
     engine = createEngine();
@@ -102,7 +99,6 @@ describe("BeaconEngineCore light client ownership", () => {
 
   afterEach(async () => {
     await facade.close();
-    controller.abort();
     vi.restoreAllMocks();
   });
 

@@ -1,3 +1,4 @@
+import {setMaxListeners} from "node:events";
 import {
   init as initNativeMetrics,
   registerLocalValidator as registerNativeLocalValidator,
@@ -94,7 +95,12 @@ import {IBeaconEngineDb} from "../../db/index.js";
 import {decodeArchivedEnvelope} from "../../db/repositories/index.js";
 import {BuilderApiClient} from "../../execution/builder/apiClient.js";
 import {BuilderStatus} from "../../execution/builder/http.js";
-import {IExecutionBuilder, IExecutionEngine, initializeExecutionBuilder} from "../../execution/index.js";
+import {
+  IExecutionBuilder,
+  IExecutionEngine,
+  initializeExecutionBuilder,
+  initializeExecutionEngine,
+} from "../../execution/index.js";
 import {BeaconEngineMetrics, createBeaconEngineMetrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {BufferPool} from "../../util/bufferPool.js";
@@ -359,8 +365,9 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private historicalStateRegen?: HistoricalStateRegen;
   private readonly dbName: string;
   private readonly dataColumnDir: string;
+  private readonly abortController = new AbortController();
   // TODO - beacon engine: internal helper context; keep this off the worker-facing interface.
-  readonly signal: AbortSignal;
+  readonly signal = this.abortController.signal;
   readonly lightClientServer: LightClientServer | undefined;
   /**
    * Engine-owned verification results awaiting import, including post-states and execution status.
@@ -394,14 +401,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private pendingPersistence?: Promise<void>;
   private anchorState?: IBeaconStateView;
   private anchorStateBytes?: Uint8Array;
-  private readonly clockAbortController?: AbortController;
-  private readonly onClockAbort = (): void => this.clockAbortController?.abort();
 
   constructor(private readonly modules: BeaconEngineCoreModules) {
-    const {opts, config, logger, pubkeyCache, signal, db} = modules;
+    const {opts, config, logger, pubkeyCache, db} = modules;
+    const {signal} = this;
+    setMaxListeners(Infinity, signal);
     const metrics = modules.metricsEnabled ? createBeaconEngineMetrics(opts.nativeStateTransition) : null;
     if (metrics && opts.nativeStateTransition) initNativeMetrics();
-    this.executionEngine = modules.executionEngine;
     this.executionBuilder = modules.executionBuilderOpts?.enabled
       ? initializeExecutionBuilder(modules.executionBuilderOpts, config, metrics, logger)
       : undefined;
@@ -411,26 +417,41 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.db = db;
     this.dbName = modules.dbName;
     this.dataColumnDir = modules.dataColumnDir;
-    this.signal = signal;
+    // Main-thread BeaconEngine shares this cache with BeaconChain; worker mode deserializes independently.
     this.serializedCache = modules.serializedCache;
+    // Main-thread BeaconEngine shares this cache with BeaconChain; worker mode owns a separate instance.
     this.blockSerializedCache =
       modules.blockSerializedCache ??
       new BlockSerializedCache(config, {owner: "engine", metrics: metrics?.blockSerializedCache, logger});
     this.metrics = metrics;
-    let clock = modules.clock;
-    if (!clock) {
-      this.clockAbortController = new AbortController();
-      clock = new Clock({config, genesisTime: modules.genesisTime, signal: this.clockAbortController.signal});
-      if (signal.aborted) this.onClockAbort();
-      else signal.addEventListener("abort", this.onClockAbort, {once: true});
-    }
-    this.clock = clock;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     this.pubkeyCache = pubkeyCache;
-    // [beacon-engine] Previously owned by BeaconChain; LightClientServer is now owned by BeaconEngineCore.
-    this.lightClientServer = opts.disableLightClientServer
-      ? undefined
-      : new LightClientServer(opts, {config, clock, db, metrics, emitter: this.emitter, logger, signal});
+    try {
+      // Main-thread BeaconEngine shares the node's execution client; worker mode creates its own.
+      if (modules.executionEngine !== undefined) {
+        this.executionEngine = modules.executionEngine;
+      } else {
+        if (modules.executionEngineOpts === undefined) {
+          throw new LodestarError({code: "EXECUTION_ENGINE_OPTIONS_REQUIRED"});
+        }
+        this.executionEngine = initializeExecutionEngine(modules.executionEngineOpts, {
+          signal,
+          metrics,
+          logger: modules.executionEngineLogger ?? logger,
+        });
+      }
+      // Main-thread BeaconEngine shares the node's clock; worker mode creates its own.
+      const clock = modules.clock ?? new Clock({config, genesisTime: modules.genesisTime, signal});
+      this.clock = clock;
+      // [beacon-engine] Previously owned by BeaconChain; LightClientServer is now owned by BeaconEngineCore.
+      this.lightClientServer = opts.disableLightClientServer
+        ? undefined
+        : new LightClientServer(opts, {config, clock, db, metrics, emitter: this.emitter, logger, signal});
+    } catch (error) {
+      this.abortController.abort();
+      metrics?.register.clear();
+      throw error;
+    }
   }
 
   async prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {
@@ -529,7 +550,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private initializeRuntime(anchorState: IBeaconStateView): void {
     const modules = this.modules;
-    const {opts, config, logger, cpStateDatastore, signal, db, validatorMonitorOpts, isAnchorStateFinalized} = modules;
+    const {opts, config, logger, cpStateDatastore, db, validatorMonitorOpts, isAnchorStateFinalized} = modules;
+    const {signal} = this;
     const clock = this.clock;
     const metrics = this.metrics;
     metrics?.previousJustifiedEpoch.set(anchorState.previousJustifiedCheckpoint.epoch);
@@ -1987,8 +2009,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   /** Tear down engine-owned resources: historical-state worker + BLS pool (graceful shutdown). */
   async close(): Promise<void> {
     this.closed = true;
-    this.onClockAbort();
-    this.signal.removeEventListener("abort", this.onClockAbort);
     this.onValidatorMonitorAbort();
     this.signal.removeEventListener("abort", this.onValidatorMonitorAbort);
     await this.pendingPersistence?.catch(() => {});
@@ -1998,6 +2018,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       await this.historicalStateRegen?.close();
       await this.bls?.close();
     } finally {
+      this.abortController.abort();
       this.metrics?.register.clear();
     }
     this.anchorState = undefined;
