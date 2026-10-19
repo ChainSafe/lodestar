@@ -96,7 +96,7 @@ export function createTestBeaconEngine(
     builderApiClientOpts,
     opts,
     config,
-    logger,
+    logging: {type: "injected", logger},
     dbName,
     dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
     metricsEnabled: metrics !== null,

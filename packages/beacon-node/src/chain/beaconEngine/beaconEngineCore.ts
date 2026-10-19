@@ -19,7 +19,7 @@ import {
   ProtoNode,
   UpdateHeadOpt,
 } from "@lodestar/fork-choice";
-import type {LoggerNode} from "@lodestar/logger/node";
+import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {
   ForkName,
   ForkPostBellatrix,
@@ -355,6 +355,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private readonly verifiedProposerSignatures = new Map<RootHex, BLSSignature>();
   validatorMonitor: ValidatorMonitor | null = null;
+  private readonly validatorMonitorLogger: Logger;
   private validatorMonitorTimeout?: ReturnType<typeof setTimeout>;
   private readonly onValidatorMonitorAbort = (): void => {
     clearTimeout(this.validatorMonitorTimeout);
@@ -407,7 +408,18 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private anchorStateBytes?: Uint8Array;
 
   constructor(private readonly modules: BeaconEngineCoreModules) {
-    const {opts, config, logger, db} = modules;
+    const {opts, config, db} = modules;
+    let logging = modules.logging;
+    if (logging.type === "options") {
+      const rootLogger = getNodeLogger(logging.opts);
+      logging = {
+        type: "injected",
+        logger: rootLogger.child({module: "chain"}),
+        executionEngineLogger: rootLogger.child({module: "execution"}),
+        validatorMonitorLogger: rootLogger.child({module: "vmon"}),
+      };
+    }
+    const {logger, executionEngineLogger = logger, validatorMonitorLogger = logger} = logging;
     const {signal} = this;
     setMaxListeners(Infinity, signal);
     const metrics = modules.metricsEnabled ? createBeaconEngineMetrics(opts.nativeStateTransition) : null;
@@ -418,6 +430,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.config = config;
     this.opts = opts;
     this.logger = logger;
+    this.validatorMonitorLogger = validatorMonitorLogger;
     this.db = db;
     this.cpStateDatastore = modules.cpStateDatastore;
     this.dbName = modules.dbName;
@@ -441,7 +454,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         this.executionEngine = initializeExecutionEngine(modules.executionEngineOpts, {
           signal,
           metrics,
-          logger: modules.executionEngineLogger ?? logger,
+          logger: executionEngineLogger,
         });
       }
       // Main-thread BeaconEngine shares the node's clock; worker mode creates its own.
@@ -554,8 +567,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private initializeRuntime(anchorState: IBeaconStateView): void {
     const modules = this.modules;
-    const {opts, config, logger, db, validatorMonitorOpts, isAnchorStateFinalized} = modules;
-    const {signal} = this;
+    const {opts, config, db, validatorMonitorOpts, isAnchorStateFinalized} = modules;
+    const {signal, logger} = this;
     const clock = this.clock;
     const metrics = this.metrics;
     metrics?.previousJustifiedEpoch.set(anchorState.previousJustifiedCheckpoint.epoch);
@@ -566,7 +579,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         metrics?.register ?? null,
         config,
         anchorState.genesisTime,
-        modules.validatorMonitorLogger ?? logger,
+        this.validatorMonitorLogger,
         validatorMonitorOpts,
         opts.nativeStateTransition
           ? {

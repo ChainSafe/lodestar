@@ -22,7 +22,7 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
     engine = new BeaconEngineCore({
       config,
       opts: defaultChainOptions,
-      logger: modules.logger,
+      logging: {type: "injected", logger: modules.logger},
       metricsEnabled: false,
       genesisTime: modules.chain.clock.genesisTime,
       clock: modules.chain.clock,

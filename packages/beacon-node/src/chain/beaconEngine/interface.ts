@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
+import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {
@@ -79,17 +80,28 @@ export type HeadParentPayload = {
 /** The bootstrap or attested header slot determines the SSZ fork and network context. */
 export type SerializedLightClientData = {data: Uint8Array; slot: Slot};
 
+export type BeaconEngineLogging =
+  | {
+      type: "injected";
+      logger: Logger;
+      executionEngineLogger?: Logger;
+      validatorMonitorLogger?: Logger;
+    }
+  | {
+      type: "options";
+      opts: LoggerNodeOpts;
+    };
+
 export type BeaconEngineCoreModules = {
   serializedCache?: SerializedCache;
   blockSerializedCache?: BlockSerializedCache;
   builderApiClientOpts?: BuilderApiClientOpts;
   executionEngine?: IExecutionEngine;
   executionEngineOpts?: ExecutionEngineOpts;
-  executionEngineLogger?: Logger;
   executionBuilderOpts?: ExecutionBuilderOpts;
   opts: IBeaconEngineOptions;
   config: BeaconConfig;
-  logger: Logger;
+  logging: BeaconEngineLogging;
   /** Engine-owned DB directory (historical-state worker location). */
   dbName: string;
   dataColumnDir: string;
@@ -100,7 +112,6 @@ export type BeaconEngineCoreModules = {
   cpStateDatastore: CPStateDatastore;
   db: IBeaconEngineDb;
   validatorMonitorOpts: ValidatorMonitorOpts | null;
-  validatorMonitorLogger?: Logger;
   isAnchorStateFinalized: boolean;
 };
 

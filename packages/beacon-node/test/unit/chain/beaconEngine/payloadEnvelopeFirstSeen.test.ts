@@ -26,7 +26,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
     engine = new BeaconEngineCore({
       config,
       opts: {...defaultChainOptions},
-      logger: modules.logger,
+      logging: {type: "injected", logger: modules.logger},
       metricsEnabled: false,
       genesisTime: modules.chain.clock.genesisTime,
       clock: modules.chain.clock,

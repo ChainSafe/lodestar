@@ -34,7 +34,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
       serializedCache: new SerializedCache({cacheDeserialized: true}),
       config: modules.chain.config,
       opts: {...defaultChainOptions},
-      logger: modules.logger,
+      logging: {type: "injected", logger: modules.logger},
       metricsEnabled: false,
       genesisTime: modules.chain.clock.genesisTime,
       clock: modules.chain.clock,

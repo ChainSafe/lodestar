@@ -210,6 +210,7 @@ export class BeaconNode {
     }
 
     const chainLogger = logger.child({module: LoggerModule.chain});
+    const executionEngineLogger = logger.child({module: LoggerModule.execution});
     const emitter = new ChainEventEmitter();
     const fileDataStore = opts.chain.nHistoricalStatesFileDataStore ?? true;
     // checkpointState is an engine repo; build the datastore from the bootstrap `db` (union) param.
@@ -231,7 +232,7 @@ export class BeaconNode {
     const executionEngine = initializeExecutionEngine(executionEngineOpts, {
       metrics,
       signal,
-      logger: logger.child({module: LoggerModule.execution}),
+      logger: executionEngineLogger,
     });
     const builderApiClientOpts = {
       timeout: opts.executionBuilder.timeout,
@@ -246,7 +247,6 @@ export class BeaconNode {
     const beaconEngineCore = new BeaconEngineCore({
       serializedCache: opts.chain.beaconEngineWorker ? undefined : serializedCache,
       blockSerializedCache: opts.chain.beaconEngineWorker ? undefined : blockSerializedCache,
-      validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
       validatorMonitorOpts:
         opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
       isAnchorStateFinalized: stateInitialization.isFinalized,
@@ -255,14 +255,20 @@ export class BeaconNode {
       db,
       dbName: opts.db.name,
       dataColumnDir,
-      logger: chainLogger,
+      logging: opts.chain.beaconEngineWorker
+        ? {type: "options", opts: logger.toOpts()}
+        : {
+            type: "injected",
+            logger: chainLogger,
+            executionEngineLogger,
+            validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
+          },
       metricsEnabled: metrics !== null,
       genesisTime: metadata.genesisTime,
       clock: opts.chain.beaconEngineWorker ? undefined : clock,
       cpStateDatastore,
       executionEngine: opts.chain.beaconEngineWorker ? undefined : executionEngine,
       executionEngineOpts,
-      executionEngineLogger: logger.child({module: LoggerModule.execution}),
       executionBuilderOpts: opts.executionBuilder,
       builderApiClientOpts,
     });

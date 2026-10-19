@@ -6,6 +6,8 @@ import {getClient} from "@lodestar/api/builder";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
+import {TimestampFormatCode} from "@lodestar/logger";
+import * as nodeLogger from "@lodestar/logger/node";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
@@ -18,19 +20,24 @@ import {HistoricalStateRegen} from "../../../../src/chain/archiveStore/historica
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine/initialization.js";
+import {BeaconEngineCoreModules} from "../../../../src/chain/beaconEngine/interface.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
+import {DbCPStateDatastore} from "../../../../src/chain/stateCache/datastore/db.js";
 import * as blockValidation from "../../../../src/chain/validation/block.js";
 import * as proposerSlashingValidation from "../../../../src/chain/validation/proposerSlashing.js";
 import * as voluntaryExitValidation from "../../../../src/chain/validation/voluntaryExit.js";
+import * as validatorMonitor from "../../../../src/chain/validatorMonitor.js";
 import {BeaconDb} from "../../../../src/db/index.js";
 import {defaultExecutionBuilderOpts} from "../../../../src/execution/builder/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
+import * as execution from "../../../../src/execution/index.js";
 import {aggregateMetrics, createMetrics} from "../../../../src/metrics/index.js";
 import {initDevState} from "../../../../src/node/utils/state.js";
 import {Clock, ClockEvent} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../mocks/clock.js";
+import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {TestChainModules, createBeaconChain, initializeTestChain} from "../../../utils/chain.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 import {createTestBeaconEngine, getBeaconEngineCore} from "../../../utils/engine.js";
@@ -110,6 +117,104 @@ describe("bytes-based engine startup", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     await closeDb();
+  });
+
+  describe("logger ownership", () => {
+    let coreModules: BeaconEngineCoreModules;
+    let loggerOpts: nodeLogger.LoggerNodeOpts;
+
+    beforeEach(() => {
+      const logger = nodeLogger.getNodeLogger({
+        module: "beacon",
+        level: LogLevel.error,
+        format: "json",
+        timestampFormat: {format: TimestampFormatCode.Hidden},
+        levelModule: {"beacon/execution": LogLevel.warn},
+      });
+      loggerOpts = structuredClone(logger.toOpts());
+      coreModules = {
+        logging: {type: "options", opts: loggerOpts},
+        opts,
+        config: modules.config,
+        db,
+        dbName: modules.dbName,
+        dataColumnDir: "test",
+        metricsEnabled: false,
+        genesisTime: clock.genesisTime,
+        clock,
+        cpStateDatastore: new DbCPStateDatastore(db),
+        validatorMonitorOpts: {},
+        isAnchorStateFinalized: true,
+        executionEngineOpts: {mode: "disabled"},
+      };
+    });
+
+    async function initializeCore(overrides: Partial<BeaconEngineCoreModules> = {}): Promise<BeaconEngineCore> {
+      engine = new BeaconEngineCore({...coreModules, ...overrides});
+      await engine.prepareAnchorState(modules.anchorStateBytes);
+      await engine.initializeFromAnchor();
+      return engine;
+    }
+
+    it.each([undefined, "beacon"])("creates sibling loggers with parent module=%s", async (module) => {
+      loggerOpts.module = module;
+      const createLogger = vi.spyOn(nodeLogger, "getNodeLogger");
+      const createChild = vi.spyOn(nodeLogger.WinstonLoggerNode.prototype, "child");
+      const createExecution = vi.spyOn(execution, "initializeExecutionEngine");
+      const createMonitor = vi.spyOn(validatorMonitor, "createValidatorMonitor");
+      const core = await initializeCore();
+      const loggers = createChild.mock.results.map((result) => {
+        if (result.type !== "return") throw Error("Expected a constructed logger");
+        return result.value;
+      });
+
+      expect(createLogger).toHaveBeenCalledExactlyOnceWith(loggerOpts);
+      expect(loggers.map((logger) => logger.toOpts())).toEqual(
+        ["chain", "execution", "vmon"].map((name) => ({
+          ...loggerOpts,
+          module: [module, name].filter(Boolean).join("/"),
+        }))
+      );
+      expect(core.logger).toBe(loggers[0]);
+      expect(createExecution.mock.calls[0][1].logger).toBe(loggers[1]);
+      expect(createMonitor.mock.calls[0][3]).toBe(loggers[2]);
+      expect(core.getHeadState().slot).toBe(0);
+    });
+
+    it("preserves injected plain loggers without constructing a root logger", async () => {
+      const createLogger = vi.spyOn(nodeLogger, "getNodeLogger");
+      const createExecution = vi.spyOn(execution, "initializeExecutionEngine");
+      const createMonitor = vi.spyOn(validatorMonitor, "createValidatorMonitor");
+      const logger = getMockedLogger();
+      const executionEngineLogger = getMockedLogger();
+      const validatorMonitorLogger = getMockedLogger();
+      const core = await initializeCore({
+        logging: {type: "injected", logger, executionEngineLogger, validatorMonitorLogger},
+      });
+
+      expect(core.logger).toBe(logger);
+      expect(createExecution.mock.calls[0][1].logger).toBe(executionEngineLogger);
+      expect(createMonitor.mock.calls[0][3]).toBe(validatorMonitorLogger);
+      expect(createLogger).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the injected primary logger when specialized loggers are omitted", async () => {
+      const createExecution = vi.spyOn(execution, "initializeExecutionEngine");
+      const createMonitor = vi.spyOn(validatorMonitor, "createValidatorMonitor");
+      const core = await initializeCore({
+        logging: {type: "injected", logger: getMockedLogger()},
+      });
+
+      expect(createExecution.mock.calls[0][1].logger).toBe(core.logger);
+      expect(createMonitor.mock.calls[0][3]).toBe(core.logger);
+    });
+
+    it("creates one root logger when specialized consumers are disabled or injected", async () => {
+      const createLogger = vi.spyOn(nodeLogger, "getNodeLogger");
+      await initializeCore({executionEngine: modules.executionEngine, validatorMonitorOpts: null});
+
+      expect(createLogger).toHaveBeenCalledExactlyOnceWith(loggerOpts);
+    });
   });
 
   it("filters validator registrations against the head state when the shared pubkey cache is ahead", async () => {

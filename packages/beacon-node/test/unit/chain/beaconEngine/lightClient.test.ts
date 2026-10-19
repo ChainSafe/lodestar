@@ -60,7 +60,7 @@ describe("BeaconEngineCore light client ownership", () => {
     return new BeaconEngineCore({
       config,
       opts: {...defaultChainOptions, disableLightClientServer},
-      logger,
+      logging: {type: "injected", logger},
       metricsEnabled: false,
       genesisTime: clock.genesisTime,
       clock,
