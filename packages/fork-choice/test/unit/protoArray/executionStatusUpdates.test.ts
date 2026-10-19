@@ -527,6 +527,48 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
     );
   });
 
+  it("lenient VALID below an invalidated ancestor is a no-op and does not poison the tree", () => {
+    // 3A is Invalid from the previous case, insert 4A as a Syncing child of it
+    fc.onBlock(
+      {
+        slot: 4,
+        blockRoot: "4A",
+        parentRoot: "3A",
+        stateRoot: "-",
+        targetRoot: "-",
+        justifiedEpoch: 0,
+        justifiedRoot: "-",
+        finalizedEpoch: 0,
+        finalizedRoot: "-",
+        unrealizedJustifiedEpoch: 0,
+        unrealizedJustifiedRoot: "-",
+        unrealizedFinalizedEpoch: 0,
+        unrealizedFinalizedRoot: "-",
+        timeliness: false,
+        importedTimely: false,
+        ptcTimeliness: false,
+        proposerIndex: 0,
+        executionPayloadBlockHash: "4A",
+        executionPayloadNumber: 4,
+        executionPayloadGasLimit: 30000000,
+        executionStatus: ExecutionStatus.Syncing,
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
+      },
+      4,
+      null
+    );
+    const applied = fc.validateLatestHash(
+      {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "4A", blockRoot: "4A"},
+      4,
+      {strict: false}
+    );
+    expect(applied).toBe(false);
+    expect(fc.lvhError).toBeUndefined();
+    expect(fc.getNode("4A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Syncing);
+  });
+
   it("is a no-op for an already invalidated node", () => {
     const applied = fc.validateLatestHash(
       {

@@ -1071,8 +1071,19 @@ export class ProtoArray {
       if (executionStatus === ExecutionStatus.Valid || executionStatus === ExecutionStatus.PreMerge) {
         return false;
       }
-      if (!strict && executionStatus === ExecutionStatus.Invalid) {
-        return false;
+      if (!strict) {
+        // The walk up flips every Syncing ancestor, a lenient verdict must not contradict an invalidated one
+        let nodeIndex: number | undefined = latestValidHashIndex;
+        while (nodeIndex !== undefined) {
+          const node: ProtoNode = this.nodes[nodeIndex];
+          if (node.executionStatus === ExecutionStatus.Valid || node.executionStatus === ExecutionStatus.PreMerge) {
+            break;
+          }
+          if (node.executionStatus === ExecutionStatus.Invalid) {
+            return false;
+          }
+          nodeIndex = node.parent;
+        }
       }
       this.propagateValidExecutionStatusByIndex(latestValidHashIndex);
       return true;
