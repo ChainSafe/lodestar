@@ -11,6 +11,7 @@ import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
 import {FullyVerifiedBlock} from "../../../../src/chain/blocks/types.js";
 import type {BeaconChain} from "../../../../src/chain/chain.js";
+import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
 describe("chain / blocks / importBlock", () => {
@@ -86,7 +87,7 @@ describe("chain / blocks / importBlock", () => {
   it("rejects a gloas block building on an invalid parent payload", async () => {
     const {forkChoice, result} = importGloasBlock({executionStatus: ExecutionStatus.Invalid} as ProtoBlock);
 
-    await expect(result).rejects.toThrow("Parent block has invalid execution status");
+    await expect(result).rejects.toThrow(BlockErrorCode.PARENT_EXECUTION_INVALID);
     expect(forkChoice.onBlock).not.toHaveBeenCalled();
   });
 
