@@ -6,6 +6,7 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {
   BlockInputColumns,
   BlockInputPreData,
@@ -59,7 +60,7 @@ describe("api - beacon - publishBlockV2", () => {
         new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot})
       );
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -89,7 +90,7 @@ describe("api - beacon - publishBlockV2", () => {
       );
       modules.chain.forkChoice.hasBlockHex.mockReturnValue(true);
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -122,7 +123,7 @@ describe("api - beacon - publishBlockV2", () => {
         .fn()
         .mockRejectedValue(new BlockError(signedBlock, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot}));
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -155,7 +156,7 @@ describe("api - beacon - publishBlockV2", () => {
       modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
       vi.mocked(validateGossipBlock).mockRejectedValueOnce(error);
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -200,7 +201,7 @@ describe("api - beacon - publishBlockV2", () => {
         ssz.phase0.SignedBeaconBlockHeader.defaultValue()
       );
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -235,7 +236,7 @@ describe("api - beacon - publishBlockV2", () => {
         vi.spyOn(modules.chain.blockProductionCache, "has").mockReturnValue(true);
         modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
 
-        const api = getBeaconBlockApi(modules);
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
         await api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation});
 
         expect(modules.chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
@@ -271,7 +272,7 @@ describe("api - beacon - publishBlockV2", () => {
         modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(generateProtoBlock({slot: 0}));
         modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
 
-        const api = getBeaconBlockApi(modules);
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
         await api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation});
 
         expect(verifyBlocksInEpoch).toHaveBeenCalledOnce();
@@ -310,7 +311,7 @@ describe("api - beacon - publishBlockV2", () => {
     modules.network.publishBeaconBlock = vi.fn();
     modules.network.publishDataColumnSidecar = vi.fn().mockResolvedValue({sentPeers: 1, alreadyPublished: false});
 
-    const api = getBeaconBlockApi(modules);
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
     await expect(
       api.publishBlockV2({
         signedBlockContents: {signedBlock: block, blobs, kzgProofs},

@@ -15,6 +15,7 @@ describe("options / beaconNodeOptions", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
       "api.maxGindicesInProof": 1000,
+      "api.disableBidValidation": true,
       "rest.namespace": [],
       "rest.cors": "*",
       rest: true,
@@ -40,7 +41,6 @@ describe("options / beaconNodeOptions", () => {
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.maxSkipSlots": 100,
       "chain.disableProposerSlashings": true,
-      "chain.disableBidValidation": true,
       "chain.archiveStateEpochFrequency": 1024,
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
@@ -115,6 +115,7 @@ describe("options / beaconNodeOptions", () => {
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
         maxGindicesInProof: 1000,
+        disableBidValidation: true,
         rest: {
           api: [],
           cors: "*",
@@ -143,7 +144,6 @@ describe("options / beaconNodeOptions", () => {
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         maxSkipSlots: 100,
         disableProposerSlashings: true,
-        disableBidValidation: true,
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
         minSameMessageSignatureSetsToBatch: 32,

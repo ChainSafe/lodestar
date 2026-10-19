@@ -79,6 +79,7 @@ import {
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
+import {ApiOptions} from "../../../options.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
@@ -96,16 +97,10 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
  */
 const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 
-export function getBeaconBlockApi({
-  chain,
-  config,
-  metrics,
-  network,
-  db,
-}: Pick<
-  ApiModules,
-  "chain" | "config" | "metrics" | "network" | "db"
->): ApplicationMethods<routes.beacon.block.Endpoints> {
+export function getBeaconBlockApi(
+  opts: ApiOptions,
+  {chain, config, metrics, network, db}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">
+): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation, builderUrl},
     context,
@@ -1077,7 +1072,7 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      if (!chain.opts.disableBidValidation) {
+      if (!opts.disableBidValidation) {
         const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
         await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
         validationTimer?.();

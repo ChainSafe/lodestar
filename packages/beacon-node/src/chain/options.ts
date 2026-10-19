@@ -41,8 +41,6 @@ export type IChainOptions = BlockProcessOpts &
     maxSkipSlots?: number;
     /** Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks */
     disableProposerSlashings?: boolean;
-    /** Broadcast execution payload bids submitted via the API without running gossip validation */
-    disableBidValidation?: boolean;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
@@ -123,7 +121,6 @@ export const defaultChainOptions: IChainOptions = {
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
   disableProposerSlashings: false,
-  disableBidValidation: false,
   broadcastValidationStrictness: "warn",
   // should be less than or equal to MIN_SIGNATURE_SETS_TO_BATCH_VERIFY
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32

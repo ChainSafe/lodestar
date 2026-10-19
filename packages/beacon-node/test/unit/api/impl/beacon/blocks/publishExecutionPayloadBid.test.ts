@@ -3,6 +3,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {
   ExecutionPayloadBidError,
   ExecutionPayloadBidErrorCode,
@@ -39,7 +40,7 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
   });
 
   it("validates the bid before publishing by default", async () => {
-    const api = getBeaconBlockApi(modules);
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
     await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
 
     expect(validateApiExecutionPayloadBid).toHaveBeenCalledWith(modules.chain, signedBid);
@@ -47,8 +48,7 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
   });
 
   it("publishes the bid without validation if disabled", async () => {
-    modules.chain.opts.disableBidValidation = true;
-    const api = getBeaconBlockApi(modules);
+    const api = getBeaconBlockApi({...defaultApiOptions, disableBidValidation: true}, modules);
     await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
 
     expect(validateApiExecutionPayloadBid).not.toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
         slot: 1,
       })
     );
-    const api = getBeaconBlockApi(modules);
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
     await expect(api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid})).rejects.toThrow(
       ExecutionPayloadBidError
     );
