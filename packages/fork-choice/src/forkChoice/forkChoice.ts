@@ -1432,10 +1432,9 @@ export class ForkChoice implements IForkChoice {
    *
    * `ancestors` is the raw walk and includes the previous finalized block as its last element —
    * callers that don't want the boundary should slice it off themselves.
-   * Post-gloas the walk picks one EMPTY or FULL node per canonical block root into `ancestors`.
-   * Every other EMPTY or FULL node in the traversed range goes into `nonAncestors`, so a canonical
-   * root also appears there through its losing variant. Exclude roots present in `ancestors`
-   * before pruning by block root.
+   * For Gloas parent blocks, `ancestors` contains the selected EMPTY or FULL variant.
+   * The other variant, if present in the traversed range, goes into `nonAncestors` with the same root.
+   * Exclude roots present in `ancestors` before pruning by block root.
    */
   getAllAncestorAndNonAncestorBlocks(
     blockRoot: RootHex,

@@ -313,6 +313,8 @@ describe("block archiver task", () => {
       {slot: boundaryFull.slot, blockRoot: boundaryFull.blockRoot},
       {slot: orphan.slot, blockRoot: orphan.blockRoot},
     ]);
+    // root(1) is EMPTY-finalized, so its losing FULL envelope is deleted.
+    // Only root(2), the canonical FULL parent, is eligible for envelope migration to cold storage.
     expect(dbStub.executionPayloadEnvelope.batchDelete).toHaveBeenCalledTimes(1);
     expect(dbStub.executionPayloadEnvelope.batchDelete).toBeCalledWith([
       fromHexString(boundaryFull.blockRoot),
