@@ -97,7 +97,7 @@ export type BeaconEngineCoreModules = {
   blockSerializedCache?: BlockSerializedCache;
   builderApiClientOpts?: BuilderApiClientOpts;
   executionEngine?: IExecutionEngine;
-  executionEngineOpts?: ExecutionEngineOpts;
+  executionEngineOpts?: ExecutionEngineOpts & {config?: never};
   executionBuilderOpts?: ExecutionBuilderOpts;
   opts: IBeaconEngineOptions;
   logging: BeaconEngineLogging;

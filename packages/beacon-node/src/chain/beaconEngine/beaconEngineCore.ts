@@ -458,14 +458,18 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       if (modules.executionEngine !== undefined) {
         this.executionEngine = modules.executionEngine;
       } else {
-        if (modules.executionEngineOpts === undefined) {
+        const {executionEngineOpts} = modules;
+        if (executionEngineOpts === undefined) {
           throw new LodestarError({code: "EXECUTION_ENGINE_OPTIONS_REQUIRED"});
         }
-        this.executionEngine = initializeExecutionEngine(modules.executionEngineOpts, {
-          signal,
-          metrics,
-          logger: executionEngineLogger,
-        });
+        this.executionEngine = initializeExecutionEngine(
+          executionEngineOpts.mode === "mock" ? {...executionEngineOpts, config} : executionEngineOpts,
+          {
+            signal,
+            metrics,
+            logger: executionEngineLogger,
+          }
+        );
       }
       // Main-thread BeaconEngine shares the node's clock; worker mode creates its own.
       const clock = modules.clock ?? new Clock({config, genesisTime: modules.genesisTime, signal});

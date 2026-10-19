@@ -560,6 +560,56 @@ describe("bytes-based engine startup", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("constructs the mock execution engine with worker-local config from cloneable startup data", async () => {
+    vi.useFakeTimers({toFake: ["Date"]});
+    vi.setSystemTime(1000);
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const mainConfig = createBeaconConfig(
+      {...getConfig(ForkName.bellatrix), CAPELLA_FORK_EPOCH: 2, SLOT_DURATION_MS: 6000},
+      modules.config.genesisValidatorsRoot
+    );
+    const blockHash = toRootHex(Buffer.alloc(32, 9));
+    const workerData = structuredClone({
+      opts,
+      chainConfigJson: chainConfigToJson(mainConfig),
+      genesisValidatorsRoot: mainConfig.genesisValidatorsRoot,
+      logging: {type: "options", opts: {level: LogLevel.error}},
+      dbName: modules.dbName,
+      dataDir: modules.dataDir,
+      dataColumnDir: path.join(modules.dataDir, "data_columns"),
+      metricsEnabled: false,
+      genesisTime: 1,
+      validatorMonitorOpts: null,
+      isAnchorStateFinalized: true,
+      executionEngineOpts: {mode: "mock", genesisTime: 1, eth1BlockHash: blockHash},
+    } satisfies BeaconEngineCoreModules);
+    const createExecution = vi.spyOn(execution, "initializeExecutionEngine");
+    engine = new BeaconEngineCore(workerData);
+    expect(engine.config).not.toBe(mainConfig);
+
+    for (const slot of [2 * SLOTS_PER_EPOCH - 1, 2 * SLOTS_PER_EPOCH]) {
+      const fork = engine.config.getForkName(slot);
+      const timestamp = 1 + slot * 6;
+      const payloadId = await engine.executionEngine.notifyForkchoiceUpdate(fork, blockHash, blockHash, blockHash, {
+        timestamp,
+        prevRandao: new Uint8Array(32),
+        suggestedFeeRecipient: `0x${"00".repeat(20)}`,
+        withdrawals: fork === ForkName.capella ? [] : undefined,
+      });
+      expect(payloadId, `payload ID at slot ${slot}`).not.toBeNull();
+      if (payloadId === null) throw Error(`Missing payload ID at slot ${slot}`);
+      const {executionPayload} = await engine.executionEngine.getPayload(fork, payloadId);
+      expect(executionPayload.timestamp, `payload timestamp at slot ${slot}`).toBe(timestamp);
+      expect("withdrawals" in executionPayload, `payload fork at slot ${slot}`).toBe(fork === ForkName.capella);
+    }
+
+    expect(createExecution).toHaveBeenCalledOnce();
+    const executionOpts = createExecution.mock.calls[0][0];
+    if (executionOpts.mode !== "mock") throw Error("Expected mock execution engine options");
+    expect(executionOpts.config).toBe(engine.config);
+    expect(workerData.executionEngineOpts).not.toHaveProperty("config");
+  });
+
   it.each([false, true])("selects config ownership with beaconEngineWorker=%s", async (beaconEngineWorker) => {
     vi.useFakeTimers();
     vi.setSystemTime(0);

@@ -268,7 +268,8 @@ export class BeaconNode {
       genesisTime: metadata.genesisTime,
       clock: opts.chain.beaconEngineWorker ? undefined : clock,
       executionEngine: opts.chain.beaconEngineWorker ? undefined : executionEngine,
-      executionEngineOpts,
+      executionEngineOpts:
+        executionEngineOpts.mode === "mock" ? {...executionEngineOpts, config: undefined} : executionEngineOpts,
       executionBuilderOpts: opts.executionBuilder,
       builderApiClientOpts,
     });
