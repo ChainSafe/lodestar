@@ -19,10 +19,9 @@ export type WithdrawalV1 = {
   amount: QUANTITY;
 };
 
-type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<
-  PayloadAttributesRpc,
-  "withdrawals" | "inclusionListTransactions"
-> & {inclusionListTransactions?: bellatrix.Transactions};
+type FcuAttributes = {headBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals" | "inclusionListTransactions"> & {
+    inclusionListTransactions?: bellatrix.Transactions;
+  };
 
 export class PayloadIdCache {
   private readonly payloadIdByFcuAttributes = new Map<
@@ -30,8 +29,8 @@ export class PayloadIdCache {
     {payloadId: PayloadId; fullKey: string; inclusionListTransactions?: bellatrix.Transactions}
   >();
 
-  getFullKey({headBlockHash, finalizedBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
-    return `${headBlockHash}-${finalizedBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}`;
+  getFullKey({headBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
+    return `${headBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}`;
   }
   getKey({timestamp}: Pick<FcuAttributes, "timestamp">): string {
     return timestamp;
