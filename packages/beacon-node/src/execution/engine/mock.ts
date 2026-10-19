@@ -138,10 +138,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
       engine_newPayloadV4: this.notifyNewPayload.bind(this),
       engine_newPayloadV5: this.notifyNewPayload.bind(this),
+      engine_newPayloadV6: this.notifyNewPayload.bind(this),
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV4: this.notifyForkchoiceUpdate.bind(this),
+      engine_forkchoiceUpdatedV5: this.notifyForkchoiceUpdate.bind(this),
       engine_getPayloadV1: this.getPayloadV1.bind(this),
       engine_getPayloadV2: this.getPayloadV5.bind(this),
       engine_getPayloadV3: this.getPayloadV5.bind(this),
@@ -152,6 +154,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
       engine_getBlobsV2: this.getBlobsV2.bind(this),
+      engine_getInclusionListV1: this.getInclusionList.bind(this),
     };
   }
 
@@ -235,7 +238,13 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     // IF the payload has been fully validated while processing the call
     // RETURN payload status from the Payload validation process
     // If validation succeeds, the response MUST contain {status: VALID, latestValidHash: payload.blockHash}
-    return {status: ExecutionPayloadStatus.VALID, latestValidHash: blockHash, validationError: null};
+    // The mock does not check inclusion list constraints, so every payload satisfies them (PayloadStatusV2)
+    return {
+      status: ExecutionPayloadStatus.VALID,
+      latestValidHash: blockHash,
+      validationError: null,
+      inclusionListSatisfied: true,
+    };
   }
 
   /**
@@ -411,7 +420,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       // IF the payload is deemed VALID and the build process has begun
       // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: buildProcessId}
       return {
-        payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+        payloadStatus: {
+          status: ExecutionPayloadStatus.VALID,
+          latestValidHash: null,
+          validationError: null,
+          inclusionListSatisfied: true,
+        },
         payloadId: String(payloadId as number),
       };
     }
@@ -420,7 +434,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     // IF the payload is deemed VALID and a build process hasn't been started
     // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
     return {
-      payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+      payloadStatus: {
+        status: ExecutionPayloadStatus.VALID,
+        latestValidHash: null,
+        validationError: null,
+        inclusionListSatisfied: true,
+      },
       payloadId: null,
     };
   }
@@ -487,6 +506,10 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     _versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV2"][0]
   ): EngineApiRpcReturnTypes["engine_getBlobsV2"] {
     return null;
+  }
+
+  private getInclusionList(): EngineApiRpcReturnTypes["engine_getInclusionListV1"] {
+    return [];
   }
 
   private timestampToFork(timestamp: number): ForkPostBellatrix {
