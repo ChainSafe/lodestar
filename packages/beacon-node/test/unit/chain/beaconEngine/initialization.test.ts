@@ -5,14 +5,14 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {WireFormat, routes} from "@lodestar/api";
 import {getClient} from "@lodestar/api/builder";
-import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {chainConfigToJson, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {TimestampFormatCode} from "@lodestar/logger";
 import * as nodeLogger from "@lodestar/logger/node";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DOMAIN_BEACON_PROPOSER, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
 import {ensureInteropPubkeyCache} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
@@ -319,7 +319,9 @@ describe("bytes-based engine startup", () => {
       };
     });
 
-    async function initializeCore(overrides: Partial<BeaconEngineCoreModules> = {}): Promise<BeaconEngineCore> {
+    async function initializeCore(
+      overrides: Partial<Pick<BeaconEngineCoreModules, "logging" | "executionEngine" | "validatorMonitorOpts">> = {}
+    ): Promise<BeaconEngineCore> {
       engine = new BeaconEngineCore({...coreModules, ...overrides});
       await engine.init();
       await engine.prepareAnchorState(modules.anchorStateBytes);
@@ -558,6 +560,49 @@ describe("bytes-based engine startup", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it.each([false, true])("selects config ownership with beaconEngineWorker=%s", async (beaconEngineWorker) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    modules.config = createBeaconConfig(
+      {
+        ...config,
+        ALTAIR_FORK_EPOCH: 1,
+        BELLATRIX_FORK_EPOCH: 2,
+        CAPELLA_FORK_EPOCH: 3,
+        DENEB_FORK_EPOCH: 4,
+        ELECTRA_FORK_EPOCH: 5,
+        FULU_FORK_EPOCH: 6,
+        GLOAS_FORK_EPOCH: 7,
+        HEZE_FORK_EPOCH: Infinity,
+        BLOB_SCHEDULE: [{EPOCH: 8, MAX_BLOBS_PER_BLOCK: 12}],
+        GAS_LIMIT_SCHEDULE: [{EPOCH: 7, GAS_LIMIT: 60_000_000}],
+      },
+      modules.config.genesisValidatorsRoot
+    );
+    chain = await createBeaconChain({...opts, beaconEngineWorker}, modules);
+    const core = getBeaconEngineCore(chain.beaconEngine);
+    const mainConfig = modules.config;
+    expect(chain.config).toBe(mainConfig);
+    expect(chain.beaconEngine.config).toBe(mainConfig);
+    expect(core.config === mainConfig).toBe(!beaconEngineWorker);
+    expect(core.config.genesisValidatorsRoot === mainConfig.genesisValidatorsRoot).toBe(!beaconEngineWorker);
+    expect(byteArrayEquals(core.config.genesisValidatorsRoot, mainConfig.genesisValidatorsRoot)).toBe(true);
+    expect(chainConfigToJson(core.config)).toEqual(chainConfigToJson(mainConfig));
+    expect(core.config.HEZE_FORK_EPOCH).toBe(Infinity);
+
+    for (const boundary of mainConfig.forkBoundariesAscendingEpochOrder) {
+      const slot = boundary.epoch * SLOTS_PER_EPOCH;
+      expect(core.config.getForkName(slot), `fork at slot ${slot}`).toBe(mainConfig.getForkName(slot));
+      const domain = core.config.getDomain(slot, DOMAIN_BEACON_PROPOSER);
+      const mainDomain = mainConfig.getDomain(slot, DOMAIN_BEACON_PROPOSER);
+      expect(domain, `domain at slot ${slot}`).toEqual(mainDomain);
+      expect(domain === mainDomain, `domain ownership at slot ${slot}`).toBe(!beaconEngineWorker);
+      const digest = mainConfig.forkBoundary2ForkDigest(boundary);
+      expect(core.config.forkBoundary2ForkDigest(boundary), `digest at epoch ${boundary.epoch}`).toEqual(digest);
+      expect(core.config.forkDigest2ForkBoundary(digest), `digest lookup at epoch ${boundary.epoch}`).toEqual(boundary);
+    }
+  });
+
   it.each([false, true])("selects cache sharing with beaconEngineWorker=%s", async (beaconEngineWorker) => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
@@ -614,7 +659,7 @@ describe("bytes-based engine startup", () => {
         baseUrl: modules.executionBuilderOpts.url,
         globalInit: {timeoutMs: 1234, headers: {"User-Agent": "test-execution-builder"}},
       },
-      {config: modules.config, metrics: core.metrics?.builderHttpClient, logger: modules.logger}
+      {config: core.config, metrics: core.metrics?.builderHttpClient, logger: modules.logger}
     );
 
     const registration = ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue();

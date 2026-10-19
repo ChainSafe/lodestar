@@ -4,7 +4,7 @@ import {Registry} from "prom-client";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
@@ -246,7 +246,12 @@ export class BeaconNode {
         opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
       isAnchorStateFinalized: stateInitialization.isFinalized,
       opts: opts.chain,
-      config,
+      ...(opts.chain.beaconEngineWorker
+        ? {
+            chainConfigJson: chainConfigToJson(config),
+            genesisValidatorsRoot: Uint8Array.from(config.genesisValidatorsRoot),
+          }
+        : {config}),
       db: opts.chain.beaconEngineWorker ? undefined : db,
       dataDir,
       dbName: opts.db.name,
@@ -267,7 +272,7 @@ export class BeaconNode {
       executionBuilderOpts: opts.executionBuilder,
       builderApiClientOpts,
     });
-    const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter, clock});
+    const beaconEngine = new BeaconEngine({core: beaconEngineCore, config, emitter, clock});
     await beaconEngineCore.init();
     const {earliestAvailableSlot} = await executeStateInitialization(
       beaconEngine,

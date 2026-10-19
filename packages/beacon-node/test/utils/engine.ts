@@ -1,5 +1,6 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
+import {chainConfigToJson} from "@lodestar/config";
 import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
@@ -90,7 +91,12 @@ export function createTestBeaconEngine(
     executionBuilderOpts,
     builderApiClientOpts,
     opts,
-    config,
+    ...(opts.beaconEngineWorker
+      ? {
+          chainConfigJson: chainConfigToJson(config),
+          genesisValidatorsRoot: Uint8Array.from(config.genesisValidatorsRoot),
+        }
+      : {config}),
     logging: {type: "injected", logger},
     dbName,
     dataDir,
@@ -102,7 +108,7 @@ export function createTestBeaconEngine(
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
   });
-  const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter, clock});
+  const beaconEngine = new BeaconEngine({core: beaconEngineCore, config, emitter, clock});
   return {
     ...chainModules,
     serializedCache,

@@ -87,7 +87,7 @@ describe("BeaconEngine head notifications", () => {
         });
       },
     });
-    engine = new BeaconEngine({core, emitter, clock: new ClockStopped(0)});
+    engine = new BeaconEngine({core, config, emitter, clock: new ClockStopped(0)});
     emitter.on(ChainEvent.chainViewUpdated, () => order.push("view"));
     events.on(BeaconEngineEvent.headUpdated, onHeadUpdated);
     emitter.on(routes.events.EventType.head, (event) => {

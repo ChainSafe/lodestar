@@ -82,7 +82,7 @@ describe("BeaconEngineCore light client ownership", () => {
     engine = createEngine();
     await engine.init();
     emitter = new ChainEventEmitter();
-    facade = new BeaconEngine({core: engine, emitter, clock});
+    facade = new BeaconEngine({core: engine, config, emitter, clock});
     if (!engine.lightClientServer) throw Error("Expected an engine-owned light client server");
     server = engine.lightClientServer;
     chain = {beaconEngine: facade, opts: {}, config} as unknown as IBeaconChain;

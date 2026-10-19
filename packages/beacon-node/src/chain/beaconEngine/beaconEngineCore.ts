@@ -8,7 +8,7 @@ import {
 import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {Db} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {
@@ -416,7 +416,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private anchorStateBytes?: Uint8Array;
 
   constructor(private readonly modules: BeaconEngineCoreModules) {
-    const {opts, config} = modules;
+    const {opts} = modules;
+    const config =
+      modules.config !== undefined
+        ? modules.config
+        : createBeaconConfig(chainConfigFromJson(modules.chainConfigJson), modules.genesisValidatorsRoot);
     let logging = modules.logging;
     if (logging.type === "options") {
       const rootLogger = getNodeLogger(logging.opts);
@@ -596,8 +600,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private initializeRuntime(anchorState: IBeaconStateView): void {
     const modules = this.modules;
-    const {opts, config, validatorMonitorOpts, isAnchorStateFinalized} = modules;
-    const {signal, logger, db} = this;
+    const {opts, validatorMonitorOpts, isAnchorStateFinalized} = modules;
+    const {config, signal, logger, db} = this;
     const clock = this.clock;
     const metrics = this.metrics;
     metrics?.previousJustifiedEpoch.set(anchorState.previousJustifiedCheckpoint.epoch);

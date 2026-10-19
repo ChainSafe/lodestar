@@ -1,7 +1,7 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, SpecJson} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
@@ -100,7 +100,6 @@ export type BeaconEngineCoreModules = {
   executionEngineOpts?: ExecutionEngineOpts;
   executionBuilderOpts?: ExecutionBuilderOpts;
   opts: IBeaconEngineOptions;
-  config: BeaconConfig;
   logging: BeaconEngineLogging;
   /** Shared LevelDB location, also used by the historical-state worker. */
   dbName: string;
@@ -115,7 +114,10 @@ export type BeaconEngineCoreModules = {
   db?: IBeaconEngineDb;
   validatorMonitorOpts: ValidatorMonitorOpts | null;
   isAnchorStateFinalized: boolean;
-};
+} & (
+  | {config: BeaconConfig; chainConfigJson?: never; genesisValidatorsRoot?: never}
+  | {config?: never; chainConfigJson: SpecJson; genesisValidatorsRoot: Uint8Array}
+);
 
 export type VerifyBlocksOpts = BlockProcessOpts & ImportBlockOpts;
 

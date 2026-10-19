@@ -77,6 +77,7 @@ const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
 export type BeaconEngineModules = {
   core: BeaconEngineCore;
+  config: BeaconConfig;
   emitter: ChainEventEmitter;
   clock: IClock;
 };
@@ -87,9 +88,9 @@ export class BeaconEngine implements IBeaconEngine {
   private readonly emitter: ChainEventEmitter;
   private readonly clock: IClock;
 
-  constructor({core, emitter, clock}: BeaconEngineModules) {
+  constructor({core, config, emitter, clock}: BeaconEngineModules) {
     this.core = core;
-    this.config = core.config;
+    this.config = config;
     this.emitter = emitter;
     this.clock = clock;
     // TODO - beacon engine: in worker mode, post core notifications to a main-thread event bus,

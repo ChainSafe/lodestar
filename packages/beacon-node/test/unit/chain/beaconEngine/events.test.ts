@@ -43,11 +43,10 @@ describe("BeaconEngine event forwarding", () => {
     emitter = new ChainEventEmitter();
     clock = new ClockStopped(slot);
     const core = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
-      config,
       emitter: events,
       close,
     });
-    engine = new BeaconEngine({core, emitter, clock});
+    engine = new BeaconEngine({core, config, emitter, clock});
   });
 
   it("publishes a produced slashing to SSE and gossip in order", () => {
