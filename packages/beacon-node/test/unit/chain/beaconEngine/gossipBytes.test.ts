@@ -1,11 +1,16 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray, Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
+import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import * as aggregateValidation from "../../../../src/chain/validation/aggregateAndProof.js";
 import * as attestationValidation from "../../../../src/chain/validation/attestation.js";
 import * as attesterSlashingValidation from "../../../../src/chain/validation/attesterSlashing.js";
@@ -89,6 +94,48 @@ describe("BeaconEngineCore gossip bytes", () => {
   );
 
   describe.each([ForkName.phase0, ForkName.electra])("%s aggregate bytes", (fork) => {
+    it("preserves signed API aggregates while the pool combines disjoint participants", async () => {
+      const types = sszTypesFor(fork);
+      const config = createBeaconConfig(getConfig(fork), Buffer.alloc(32));
+      engine.aggregatedAttestationPool = new AggregatedAttestationPool(config);
+      const aggregates = [0, 1].map((index) => {
+        const value = types.SignedAggregateAndProof.defaultValue();
+        const aggregate = value.message.aggregate;
+        aggregate.aggregationBits = BitArray.fromSingleBit(9, index);
+        if ("committeeBits" in aggregate) aggregate.committeeBits.set(0, true);
+        const key = SecretKey.fromBytes(Buffer.alloc(32, index + 1));
+        aggregate.signature = key.sign(ssz.phase0.AttestationData.hashTreeRoot(aggregate.data)).toBytes();
+        value.message.aggregatorIndex = index;
+        value.signature = key.sign(types.AggregateAndProof.hashTreeRoot(value.message)).toBytes();
+        return value;
+      });
+      const originalBytes = aggregates.map((aggregate) => types.SignedAggregateAndProof.serialize(aggregate));
+      vi.spyOn(aggregateValidation, "validateApiAggregateAndProof").mockImplementation(async (_fork, value) => ({
+        indexedAttestation: {
+          attestingIndices: [value.message.aggregatorIndex],
+          data: value.message.aggregate.data,
+          signature: value.message.aggregate.signature,
+        },
+        committeeValidatorIndices: Uint32Array.from({length: 9}, (_, i) => i),
+        attDataRootHex: toRootHex(ssz.phase0.AttestationData.hashTreeRoot(value.message.aggregate.data)),
+      }));
+
+      const results = await Promise.all(
+        aggregates.map((aggregate, i) =>
+          BeaconEngineCore.prototype.validateApiAggregateAndProof.call(engine, originalBytes[i], fork, aggregate)
+        )
+      );
+
+      expect(results.every(({err}) => err === null)).toBe(true);
+      expect(engine.aggregatedAttestationPool.getAll()).toHaveLength(1);
+      expect(engine.aggregatedAttestationPool.getAll()[0].aggregationBits.getTrueBitIndexes()).toEqual([0, 1]);
+      for (const [i, aggregate] of aggregates.entries()) {
+        expect(types.SignedAggregateAndProof.serialize(aggregate), `signed aggregate ${i} changed`).toEqual(
+          originalBytes[i]
+        );
+      }
+    });
+
     it.each([false, true])("preserves bitlists with beaconEngineWorker=%s", async (beaconEngineWorker) => {
       const chain = getMockedBeaconChain();
       const cache = new SerializedCache({cacheDeserialized: !beaconEngineWorker});

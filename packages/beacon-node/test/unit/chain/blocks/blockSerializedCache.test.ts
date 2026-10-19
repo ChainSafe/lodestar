@@ -1,7 +1,9 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerializedCache.js";
 import {createLodestarMetrics} from "../../../../src/metrics/metrics/lodestar.js";
@@ -36,16 +38,40 @@ describe("BlockSerializedCache", () => {
     expect(deserialize).not.toHaveBeenCalled();
   });
 
-  it("deserializes once with reuseBytes in a separate engine cache", () => {
+  it("deserializes once without sharing mutable fields with the retained bytes", () => {
     const cache = new BlockSerializedCache(config);
     const {block, bytes, root} = candidate();
     const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
     const entry = cache.getOrDeserialize(root, bytes);
     expect(entry.block).toEqual(block);
-    expect(entry.block.signature.buffer).toBe(bytes.buffer);
+    expect(entry.block.signature.buffer).not.toBe(bytes.buffer);
     expect(cache.getOrDeserialize(root, structuredClone(bytes))).toBe(entry);
-    expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: true});
+    expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: false});
   });
+
+  it.each([ForkName.phase0, ForkName.electra, ForkName.fulu])(
+    "preserves %s block bytes containing non-byte-aligned aggregation bits",
+    (fork) => {
+      const types = sszTypesFor(fork);
+      const block = types.SignedBeaconBlock.defaultValue();
+      const attestation = types.Attestation.defaultValue();
+      attestation.aggregationBits = BitArray.fromSingleBit(9, 8);
+      block.message.body.attestations = [attestation];
+      const bytes = types.SignedBeaconBlock.serialize(block);
+      const originalBytes = Uint8Array.from(bytes);
+      const root = toRootHex(types.BeaconBlock.hashTreeRoot(block.message));
+      const cache = new BlockSerializedCache(config);
+
+      const entry = cache.getOrDeserialize(root, bytes, fork);
+
+      expect(entry.block).toEqual(block);
+      expect(bytes).toEqual(originalBytes);
+      expect(entry.bytes).toBe(bytes);
+      expect(types.SignedBeaconBlock.equals(types.SignedBeaconBlock.deserialize(entry.bytes), block)).toBe(true);
+      entry.block.message.body.attestations[0].aggregationBits.set(0, true);
+      expect(bytes).toEqual(originalBytes);
+    }
+  );
 
   it("does not reuse another signature for the same block root", () => {
     const cache = new BlockSerializedCache(config);

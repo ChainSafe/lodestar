@@ -125,6 +125,7 @@ export async function validateGossipAggregateAndProof(
       aggregateBytes,
       this.serializedCache,
       // SSZ byte reuse can clear bitlist padding in the original gossip bytes.
+      // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
       {reuseBytes: false}
     );
     return await runGossipValidation(async () => {
@@ -199,9 +200,9 @@ export function validateApiAggregateAndProof(
       fork,
       signedAggregateAndProof
     );
-    // Insert into the aggregated-attestation pool on Accept (moved from the API handler).
+    // Pool aggregation must not mutate the signed object awaiting publication in the facade.
     const insertOutcome = this.aggregatedAttestationPool.add(
-      signedAggregateAndProof.message.aggregate,
+      sszTypesFor(fork).Attestation.clone(signedAggregateAndProof.message.aggregate),
       result.attDataRootHex,
       result.indexedAttestation.attestingIndices.length,
       result.committeeValidatorIndices

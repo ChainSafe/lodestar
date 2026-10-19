@@ -99,8 +99,8 @@ describe("BeaconEngineCore block execution verification", () => {
       expect(deserialize).not.toHaveBeenCalled();
     } else {
       expect(verifiedBlock).not.toBe(block);
-      expect(verifiedBlock?.signature.buffer).toBe(bytes.buffer);
-      expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: true});
+      expect(verifiedBlock?.signature.buffer).not.toBe(bytes.buffer);
+      expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: false});
     }
     await core.verifyBlocks([{blockRoot, blockBytes: Uint8Array.from(bytes)}], opts);
     expect(deserialize).toHaveBeenCalledTimes(cached ? 0 : 1);

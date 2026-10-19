@@ -68,7 +68,8 @@ export async function collectMaxResponseTypedWithBytes<T, R>(
   const responses: R[] = [];
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    const data = sszDeserializeResponse(type, chunk.data, {reuseBytes: true});
+    // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
+    const data = sszDeserializeResponse(type, chunk.data, {reuseBytes: false});
     responses.push(mapResponse(data, chunk.data));
 
     if (maxResponses !== undefined && responses.length >= maxResponses) {

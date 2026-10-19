@@ -724,7 +724,9 @@ function getSequentialHandlers(
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
 
-        const signedBlock = sszDeserialize(topic, serializedData, {reuseBytes: true});
+        // Core decodes these bytes again; bitlist decoding must not clear their padding bits.
+        // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
+        const signedBlock = sszDeserialize(topic, serializedData, {reuseBytes: false});
         try {
           const blockInput = await validateBeaconBlock(
             signedBlock,
@@ -1030,6 +1032,7 @@ function getSequentialHandlers(
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
         // SSZ byte reuse can clear bitlist padding in the original gossip bytes.
+        // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
         const signedAggregateAndProof = sszDeserialize(topic, serializedData, {reuseBytes: false});
         if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signedAggregateAndProof, serializedData);
         const {fork} = topic.boundary;

@@ -2,7 +2,7 @@ import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {describe, expect, it, vi} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -31,10 +31,13 @@ import {IExecutionBuilder} from "../../../src/execution/builder/interface.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/engine/index.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {initDevState} from "../../../src/node/utils/state.js";
-import {getApiTestModules} from "../../utils/api.js";
+import {SyncState} from "../../../src/sync/interface.js";
+import {getMockedNetwork} from "../../mocks/mockedNetwork.js";
 import {createBeaconChain} from "../../utils/chain.js";
 
 describe("engine block production", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   for (const fork of [ForkName.electra, ForkName.fulu]) {
     it(`produces a ${fork} block with a valid state root and facade DA cache`, async () => {
       const directory = await mkdtemp(path.join(tmpdir(), "beacon-production-"));
@@ -83,6 +86,7 @@ describe("engine block production", () => {
       try {
         chain = await createBeaconChain(
           {
+            beaconEngineWorker: false,
             blsVerifyAllMainThread: true,
             disableArchiveOnCheckpoint: true,
             suggestedFeeRecipient: "0x0000000000000000000000000000000000000001",
@@ -109,8 +113,25 @@ describe("engine block production", () => {
           }
         );
         const attrs = {slot: 1, randaoReveal: Buffer.alloc(96), graffiti: Buffer.alloc(32)};
-        const modules = getApiTestModules({config: beaconConfig});
-        const api = getValidatorApi({...defaultApiOptions, private: true}, {...modules, chain, config: beaconConfig});
+        const api = getValidatorApi(
+          {...defaultApiOptions, private: true},
+          {
+            chain,
+            config: beaconConfig,
+            db,
+            logger,
+            metrics: null,
+            network: getMockedNetwork(),
+            sync: {
+              state: SyncState.Synced,
+              close: vi.fn(),
+              getSyncStatus: vi.fn(),
+              isSynced: vi.fn().mockReturnValue(true),
+              isSyncing: vi.fn().mockReturnValue(false),
+              getSyncChainsDebugState: vi.fn().mockReturnValue([]),
+            },
+          }
+        );
         const full = await api.produceBlockV3({
           ...attrs,
           graffiti: "",

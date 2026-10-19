@@ -18,7 +18,8 @@ export async function collectSequentialBlocksInRange<T>(
 
   for await (const chunk of blockStream) {
     const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, chunk.protocolVersion);
-    const block = sszDeserializeResponse(blockType, chunk.data, {reuseBytes: true});
+    // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
+    const block = sszDeserializeResponse(blockType, chunk.data, {reuseBytes: false});
 
     const blockSlot = block.message.slot;
 

@@ -94,7 +94,9 @@ export class BlockSerializedCache {
     const types = fork === undefined ? this.config.getForkTypes(slot) : sszTypesFor(fork);
     let block: SignedBeaconBlock;
     try {
-      block = types.SignedBeaconBlock.deserialize(bytes, {reuseBytes: true});
+      // Bitlist decoding clears padding bits; preserve the bytes retained for import and persistence.
+      // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
+      block = types.SignedBeaconBlock.deserialize(bytes, {reuseBytes: false});
     } catch (error) {
       throw new LodestarError({code: "INVALID_BLOCK_SSZ"}, (error as Error).message);
     }

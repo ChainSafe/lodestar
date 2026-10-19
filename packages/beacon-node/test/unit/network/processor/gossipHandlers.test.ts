@@ -1,4 +1,5 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -65,13 +66,18 @@ describe("getGossipHandlers", () => {
     vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
   });
 
-  it.each([ForkName.deneb, ForkName.gloas])(
+  it.each([ForkName.deneb, ForkName.electra, ForkName.fulu, ForkName.gloas])(
     "ignores an imported %s block through ChainView before populating caches or calling the engine",
     async (fork) => {
       const config = createBeaconConfig(getConfig(fork), Buffer.alloc(32));
       const forkTypes = config.getForkTypes(1);
       const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
       signedBlock.message.slot = 1;
+      const attestation = forkTypes.Attestation.defaultValue();
+      attestation.aggregationBits = BitArray.fromSingleBit(9, 8);
+      signedBlock.message.body.attestations = [attestation];
+      const bytes = forkTypes.SignedBeaconBlock.serialize(signedBlock);
+      const originalBytes = Uint8Array.from(bytes);
       const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
       const logger = testLogger();
       const hasBlockHex = vi.fn().mockReturnValue(true);
@@ -105,7 +111,7 @@ describe("getGossipHandlers", () => {
       const handler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
 
       const result = await handler({
-        gossipData: {serializedData: forkTypes.SignedBeaconBlock.serialize(signedBlock)},
+        gossipData: {serializedData: bytes},
         peerIdStr: "16Uiu2HAmTestGossipPeer",
         seenTimestampSec: 0,
         topic: {boundary: {fork, epoch: 0}, type: GossipType.beacon_block},
@@ -117,6 +123,7 @@ describe("getGossipHandlers", () => {
       expect(getByBlock).not.toHaveBeenCalled();
       expect(addPayloadInput).not.toHaveBeenCalled();
       expect(validateEngineBlock).not.toHaveBeenCalled();
+      expect(bytes).toEqual(originalBytes);
     }
   );
 
