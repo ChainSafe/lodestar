@@ -422,7 +422,6 @@ describe("ExecutionEngine / rest", () => {
       expect(
         engine.payloadIdCache.get({
           headBlockHash: hashHex,
-          finalizedBlockHash: hashHex,
           timestamp: numToQuantity(attributes.timestamp),
           prevRandao: toHex(hash),
           suggestedFeeRecipient: attributes.suggestedFeeRecipient,

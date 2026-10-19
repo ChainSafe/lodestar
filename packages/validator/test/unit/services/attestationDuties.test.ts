@@ -175,6 +175,58 @@ describe("AttestationDutiesService", () => {
     }
   );
 
+  it("Should keep duties of other validators if a selection proof fails", async () => {
+    const slot = 1;
+    const epoch = computeEpochAtSlot(slot);
+    const duties: routes.validator.AttesterDuty[] = Array.from({length: 2}, (_, validatorIndex) => ({
+      slot,
+      committeeIndex: 0,
+      committeeLength: 120,
+      committeesAtSlot: 1,
+      validatorCommitteeIndex: validatorIndex,
+      validatorIndex,
+      pubkey: SecretKey.fromBytes(toBufferBE(BigInt(validatorIndex + 1), 32))
+        .toPublicKey()
+        .toBytes(),
+    }));
+
+    api.validator.getAttesterDuties.mockResolvedValue(
+      mockApiResponse({data: duties, meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
+    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
+
+    vi.spyOn(validatorStore, "getAllLocalIndices").mockReturnValue([0, 1]);
+    vi.spyOn(validatorStore, "pollValidatorIndices").mockResolvedValue([]);
+    vi.spyOn(validatorStore, "hasVotingPubkey").mockReturnValue(true);
+    vi.spyOn(validatorStore, "isDoppelgangerSafe").mockReturnValue(true);
+    const signSelectionProof = vi
+      .spyOn(validatorStore, "signAttestationSelectionProof")
+      .mockImplementation(async (pubkey) => {
+        if (pubkey === duties[0].pubkey) throw Error("Remote signer error");
+        return new Uint8Array(96);
+      });
+
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
+
+    await clock.tickEpochFns(epoch, controller.signal);
+    expect(dutiesService.getDutiesAtSlot(slot).map(({duty}) => duty)).toEqual([duties[1]]);
+
+    // Retried on the next poll
+    signSelectionProof.mockResolvedValue(new Uint8Array(96));
+    await clock.tickEpochFns(epoch, controller.signal);
+    expect(dutiesService.getDutiesAtSlot(slot).map(({duty}) => duty)).toEqual([duties[1], duties[0]]);
+  });
+
   it("Should remove signer from attestation duties", async () => {
     // Reply with some duties
     const slot = 1;
