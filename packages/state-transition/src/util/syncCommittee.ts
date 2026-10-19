@@ -4,7 +4,6 @@ import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
-  GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
   SYNC_REWARD_WEIGHT,
@@ -73,7 +72,7 @@ export function computeBaseRewardPerIncrement(
   // Divide last so the exact slot duration ratio applies
   const numerator = Math.floor(
     (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR * getSlotDurationMsAtEpoch(config, epoch)) /
-      getSlotDurationMsAtEpoch(config, GENESIS_EPOCH)
+      config.SLOT_DURATION_MS
   );
   return Math.floor(
     numerator / Number(bigIntSqrt(BigInt(totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)))

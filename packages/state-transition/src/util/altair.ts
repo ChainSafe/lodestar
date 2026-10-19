@@ -1,5 +1,5 @@
 import {ChainConfig} from "@lodestar/config";
-import {BASE_REWARD_FACTOR, EFFECTIVE_BALANCE_INCREMENT, GENESIS_EPOCH} from "@lodestar/params";
+import {BASE_REWARD_FACTOR, EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {bigIntSqrt, bnToNum} from "@lodestar/utils";
 import {getSlotDurationMsAtEpoch} from "./slot.js";
@@ -16,7 +16,7 @@ export function computeBaseRewardPerIncrement(
   // Divide last so the exact slot duration ratio applies
   const numerator = Math.floor(
     (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR * getSlotDurationMsAtEpoch(config, epoch)) /
-      getSlotDurationMsAtEpoch(config, GENESIS_EPOCH)
+      config.SLOT_DURATION_MS
   );
   return Math.floor(
     numerator / bnToNum(bigIntSqrt(BigInt(totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)))

@@ -172,11 +172,10 @@ function computeTotalAttestationsRewardsAltair(
       : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
   let inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenaltyQuotient;
   // The penalty pays for the previous epoch and scales with the square of its slot duration
-  const genesisSlotDurationMs = getSlotDurationMsAtEpoch(config, GENESIS_EPOCH);
   const prevEpochSlotDurationMs = getSlotDurationMsAtEpoch(config, Math.max(epochCtx.epoch - 1, GENESIS_EPOCH));
-  if (prevEpochSlotDurationMs !== genesisSlotDurationMs) {
+  if (prevEpochSlotDurationMs !== config.SLOT_DURATION_MS) {
     inactivityPenaltyDenominator = Number(
-      (BigInt(inactivityPenaltyDenominator) * BigInt(genesisSlotDurationMs) ** 2n) /
+      (BigInt(inactivityPenaltyDenominator) * BigInt(config.SLOT_DURATION_MS) ** 2n) /
         BigInt(prevEpochSlotDurationMs) ** 2n
     );
   }
