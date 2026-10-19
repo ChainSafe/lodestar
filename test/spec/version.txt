@@ -2,4 +2,6 @@
 // This file exists as a cache key for the spec tests in CI.
 // Do not commit changes by hand.
 
-v1.7.0-alpha.11
+v1.7.0-beta.4
+ssz_generic v1.7.0-alpha.11
+SSZ v0.0.1.dev2 sha256:d83a63d7dd39a843eeffbe073562d89c4e2448c85e9df0bbcee857bd9ad63d19

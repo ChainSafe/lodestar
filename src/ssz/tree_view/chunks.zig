@@ -9,6 +9,7 @@ const Node = pmt.Node;
 const Gindex = pmt.Gindex;
 
 const isFixedType = @import("../type/type_kind.zig").isFixedType;
+const progressive = @import("../type/progressive.zig");
 
 const tree_view_root = @import("root.zig");
 const TreeViewState = @import("utils/tree_view_state.zig").TreeViewState;
@@ -283,6 +284,13 @@ pub fn CompositeChunks(
 
         const Self = @This();
 
+        pub fn elementGindex(index: usize) Gindex {
+            return if (comptime ST.kind == .progressive_list)
+                Gindex.concat(&.{ @enumFromInt(2), progressive.chunkGindex(index) })
+            else
+                Gindex.fromDepth(chunk_depth, index);
+        }
+
         pub fn init(self: *Self, allocator: Allocator, pool: *Node.Pool, root: Node.Id) !void {
             try self.state.init(allocator, pool, root);
             self.children_data = .empty;
@@ -356,7 +364,7 @@ pub fn CompositeChunks(
         /// Returns a borrowed child view owned by this cache. A later set() on the same index or a
         /// clone(transfer_cache) invalidates it — re-get() after either, and don't deinit it.
         pub fn get(self: *Self, index: usize) !ElementPtr {
-            const gindex = Gindex.fromDepth(chunk_depth, index);
+            const gindex = elementGindex(index);
             // A successful mutable get always marks the child as changed, including a child cached
             // by getReadonly(). Reserve first, then publish only after all fallible work succeeds.
             if (!self.state.changed.contains(gindex)) {
@@ -383,7 +391,7 @@ pub fn CompositeChunks(
         /// get()/getReadonly() pointer for this same index, or the displaced-old deinit would free a
         /// view the cache still holds (double-free).
         pub fn set(self: *Self, index: usize, value: ElementPtr) !void {
-            const gindex = Gindex.fromDepth(chunk_depth, index);
+            const gindex = elementGindex(index);
             // Reserve first so the commit below cannot fail.
             try self.state.changed.ensureUnusedCapacity(self.state.allocator, 1);
             try self.children_data.ensureUnusedCapacity(self.state.allocator, 1);
@@ -400,7 +408,7 @@ pub fn CompositeChunks(
         /// Like get() but doesn't mark the index changed. Same borrow rules: a later set() on this
         /// index or clone(transfer_cache) invalidates the pointer; don't deinit it.
         pub fn getReadonly(self: *Self, index: usize) !ElementPtr {
-            const gindex = Gindex.fromDepth(chunk_depth, index);
+            const gindex = elementGindex(index);
             if (self.children_data.get(gindex)) |child_ptr| {
                 return child_ptr;
             }
@@ -457,7 +465,13 @@ pub fn CompositeChunks(
             const nodes = try allocator.alloc(Node.Id, len);
             defer allocator.free(nodes);
 
-            try self.state.root.getNodesAtDepth(self.state.pool, chunk_depth, 0, nodes);
+            if (comptime ST.kind == .progressive_list) {
+                const contents = try self.state.root.getLeft(self.state.pool);
+                var it = try progressive.NodeIterator.init(self.state.pool, contents, len);
+                for (nodes) |*node| node.* = (try it.next()).?;
+            } else {
+                try self.state.root.getNodesAtDepth(self.state.pool, chunk_depth, 0, nodes);
+            }
 
             for (nodes, 0..) |node, i| {
                 errdefer if (comptime @hasDecl(ST.Element, "deinit")) {

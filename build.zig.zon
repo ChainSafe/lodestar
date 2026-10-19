@@ -126,8 +126,30 @@
             },
             .spec_test_version = .{
                 .type = .string,
-                .default = "v1.7.0-alpha.11",
+                .default = "v1.7.0-beta.4",
                 .description = "Consensus spec tests version tag.",
+            },
+            // Keep the existing YAML corpus for invalid-encoding coverage alongside the JSON fixtures.
+            // Consensus releases dropped ssz_generic in alpha.14 (ethereum/consensus-specs#5524).
+            .ssz_generic_spec_test_version = .{
+                .type = .string,
+                .default = "v1.7.0-alpha.11",
+                .description = "Legacy YAML ssz_generic fixture tag.",
+            },
+            .ssz_spec_test_url = .{
+                .type = .string,
+                .default = "https://github.com/ethereum/ssz-specs",
+                .description = "Git repo URL for the SSZ generic JSON tests.",
+            },
+            .ssz_spec_test_version = .{
+                .type = .string,
+                .default = "v0.0.1.dev2",
+                .description = "SSZ generic JSON fixture tag.",
+            },
+            .ssz_spec_test_sha256 = .{
+                .type = .string,
+                .default = "d83a63d7dd39a843eeffbe073562d89c4e2448c85e9df0bbcee857bd9ad63d19",
+                .description = "SHA-256 of the pinned SSZ fixture archive.",
             },
             .spec_test_out_dir = .{
                 .type = .string,

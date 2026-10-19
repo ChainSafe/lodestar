@@ -91,6 +91,10 @@ pub const ExecutionPayloadHeader = ssz.VariableContainerType(struct {
     transactions_root: p.Root,
 });
 
+pub const NewPayloadRequest = ssz.VariableContainerType(struct {
+    execution_payload: ExecutionPayload,
+});
+
 pub const PowBlock = ssz.FixedContainerType(struct {
     block_hash: p.Bytes32,
     parent_hash: p.Bytes32,

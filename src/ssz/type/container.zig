@@ -136,6 +136,7 @@ pub fn FixedContainerType(comptime ST: type) type {
             }
 
             pub fn hashTreeRoot(data: []const u8, out: *[32]u8) !void {
+                if (data.len != fixed_size) return error.InvalidSize;
                 var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
                 var i: usize = 0;
                 inline for (fields, 0..) |field, field_i| {
@@ -677,6 +678,7 @@ pub fn VariableContainerType(comptime ST: type) type {
         // Returns the bytes ranges of all fields, both variable and fixed size.
         // Fields may not be contiguous in the serialized bytes, so the returned ranges are [start, end].
         pub fn readFieldRanges(data: []const u8) ![fields.len][2]usize {
+            if (data.len < min_size or data.len > max_size or data.len > std.math.maxInt(u32)) return error.InvalidSize;
             var ranges: [fields.len][2]usize = undefined;
             var offsets: [var_count + 1]u32 = undefined;
             try readVariableOffsets(data, &offsets);

@@ -24,6 +24,7 @@ const VariableVector = struct {
 const VariableProgressiveList = struct {
     pub const kind = TypeKind.progressive_list;
     pub const Element = VariableElement;
+    pub const limit = 2;
 };
 
 test "iterates validated variable elements" {
@@ -91,10 +92,12 @@ test "rejects malformed offsets during iteration or initialization" {
         error.invalidOffsetCount,
         VariableElementIterator(VariableVector).init(&.{ 4, 0, 0, 0 }),
     );
-    try std.testing.expectError(
-        error.invalidOffsetCount,
-        VariableElementIterator(VariableList).init(&.{ 12, 0, 0, 0 }),
-    );
+    inline for (.{ VariableList, VariableProgressiveList }) |List| {
+        try std.testing.expectError(
+            error.invalidOffsetCount,
+            VariableElementIterator(List).init(&.{ 12, 0, 0, 0 }),
+        );
+    }
     try std.testing.expectError(
         error.offsetOutOfRange,
         VariableElementIterator(VariableVector).init(&.{}),

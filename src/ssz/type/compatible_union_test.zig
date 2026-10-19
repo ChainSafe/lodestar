@@ -103,7 +103,7 @@ test "memory_safety: compatible union clone preserves out on OOM" {
 }
 
 test "memory_safety: compatible union byte deserialization preserves out on malformed input" {
-    const Items = FixedProgressiveListType(BoolType());
+    const Items = FixedProgressiveListType(BoolType(), .{});
     const Union = CompatibleUnionType(.{
         .{ 1, Items },
         .{ 2, Items },

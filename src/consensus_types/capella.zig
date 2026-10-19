@@ -155,6 +155,10 @@ pub const ExecutionPayloadHeader = ssz.VariableContainerType(struct {
     withdrawals_root: p.Root,
 });
 
+pub const NewPayloadRequest = ssz.VariableContainerType(struct {
+    execution_payload: ExecutionPayload,
+});
+
 pub const BeaconBlockBody = ssz.VariableContainerType(struct {
     randao_reveal: p.BLSSignature,
     eth1_data: Eth1Data,

@@ -105,6 +105,14 @@ pub const ExecutionRequests = ssz.VariableContainerType(struct {
     consolidations: ssz.FixedListType(ConsolidationRequest, preset.MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD, .{}),
 });
 
+pub const VersionedHashes = deneb.VersionedHashes;
+pub const NewPayloadRequest = ssz.VariableContainerType(struct {
+    execution_payload: ExecutionPayload,
+    versioned_hashes: VersionedHashes,
+    parent_beacon_block_root: p.Root,
+    execution_requests: ExecutionRequests,
+});
+
 pub const SingleAttestation = ssz.FixedContainerType(struct {
     committee_index: p.CommitteeIndex,
     attester_index: p.ValidatorIndex,

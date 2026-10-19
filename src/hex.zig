@@ -42,7 +42,7 @@ pub fn rootIntoHex(out: *[66]u8, input: *const [32]u8) !void {
 }
 
 pub fn hasOxPrefix(hex: []const u8) bool {
-    return hex[0] == '0' and hex[1] == 'x';
+    return hex.len >= 2 and hex[0] == '0' and hex[1] == 'x';
 }
 
 pub fn hexByteLen(hex: []const u8) usize {

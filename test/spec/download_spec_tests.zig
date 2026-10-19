@@ -22,6 +22,16 @@ pub fn main(init: std.process.Init) !void {
             spec_test_options.spec_test_out_dir,
         );
     }
+    // Current releases no longer ship the YAML ssz_generic cases.
+    try download_and_extract_spec_test(
+        allocator,
+        io,
+        spec_test_options.spec_test_url,
+        spec_test_options.ssz_generic_spec_test_version,
+        "general",
+        spec_test_options.spec_test_out_dir,
+    );
+    try @import("download_ssz_spec_tests.zig").download(allocator, io);
 }
 
 fn write_version(io: std.Io) !void {
@@ -36,8 +46,15 @@ fn write_version(io: std.Io) !void {
         \\// Do not commit changes by hand.
         \\
         \\{s}
+        \\ssz_generic {s}
+        \\SSZ {s} sha256:{s}
         \\
-    , .{spec_test_options.spec_test_version});
+    , .{
+        spec_test_options.spec_test_version,
+        spec_test_options.ssz_generic_spec_test_version,
+        spec_test_options.ssz_spec_test_version,
+        spec_test_options.ssz_spec_test_sha256,
+    });
     try writer.end();
 }
 

@@ -19,6 +19,36 @@ const FixedContainerType = container.FixedContainerType;
 const StructContainerType = container.StructContainerType;
 const VariableContainerType = container.VariableContainerType;
 
+test "memory_safety: fixed container serialized hashing should reject invalid lengths" {
+    const ST = FixedContainerType(struct { flag: BoolType(), count: UintType(64) });
+    const encoded = [_]u8{ 1, 0, 0, 0, 0, 0, 0, 0, 0 };
+    var root: [32]u8 = undefined;
+
+    for (0..encoded.len) |length| {
+        try std.testing.expectError(error.InvalidSize, ST.serialized.hashTreeRoot(encoded[0..length], &root));
+    }
+    try std.testing.expectError(error.InvalidSize, ST.serialized.hashTreeRoot(&(encoded ++ .{0}), &root));
+    try ST.serialized.hashTreeRoot(&encoded, &root);
+}
+
+test "memory_safety: variable container serialized hashing should reject invalid lengths" {
+    const ST = VariableContainerType(struct {
+        flag: BoolType(),
+        bytes: FixedListType(UintType(8), 32, .{}),
+    });
+    const encoded = [_]u8{ 1, 5, 0, 0, 0 };
+    var root: [32]u8 = undefined;
+
+    for (0..encoded.len) |length| {
+        try std.testing.expectError(error.InvalidSize, ST.readFieldRanges(encoded[0..length]));
+        try std.testing.expectError(error.InvalidSize, ST.serialized.hashTreeRoot(std.testing.allocator, encoded[0..length], &root));
+    }
+    const oversized = encoded ++ [_]u8{0} ** 33;
+    try std.testing.expectError(error.InvalidSize, ST.readFieldRanges(&oversized));
+    try std.testing.expectError(error.InvalidSize, ST.serialized.hashTreeRoot(std.testing.allocator, &oversized, &root));
+    try ST.serialized.hashTreeRoot(std.testing.allocator, &encoded, &root);
+}
+
 test "ContainerType - sanity" {
     // create a fixed container type and instance and round-trip serialize
     const Checkpoint = FixedContainerType(struct {

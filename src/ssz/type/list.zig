@@ -23,8 +23,9 @@ pub const TypeOpts = struct {
     ///
     /// `ListBasicTreeView`'s `iteratorReadonly` and `sliceTo` handle
     /// chunked_leaf types with two-level (chunked_leaf_idx, intra_chunk)
-    /// navigation. Requires `limit >= K * items_per_chunk` so that
-    /// `chunk_depth >= k_log2`.
+    /// navigation. Bounded lists and vectors require
+    /// `limit >= K * items_per_chunk` so that `chunk_depth >= k_log2`.
+    /// Progressive lists apply it per subtree, to those of at least K chunks.
     chunked_leaf: bool = false,
 };
 

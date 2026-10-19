@@ -156,6 +156,13 @@ pub const ExecutionPayloadHeader = ssz.VariableContainerType(struct {
 
 pub const BlobKzgCommitments = ssz.FixedListType(p.KZGCommitment, preset.MAX_BLOB_COMMITMENTS_PER_BLOCK, .{});
 
+pub const VersionedHashes = ssz.FixedListType(p.VersionedHash, preset.MAX_BLOB_COMMITMENTS_PER_BLOCK, .{});
+pub const NewPayloadRequest = ssz.VariableContainerType(struct {
+    execution_payload: ExecutionPayload,
+    versioned_hashes: VersionedHashes,
+    parent_beacon_block_root: p.Root,
+});
+
 pub const BeaconBlockBody = ssz.VariableContainerType(struct {
     randao_reveal: p.BLSSignature,
     eth1_data: Eth1Data,

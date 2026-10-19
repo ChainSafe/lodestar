@@ -19,6 +19,8 @@ pub const isBitVectorType = types.isBitVectorType;
 
 pub const ByteListType = types.ByteListType;
 pub const isByteListType = types.isByteListType;
+pub const ProgressiveByteListType = types.ProgressiveByteListType;
+pub const isProgressiveByteListType = types.isProgressiveByteListType;
 
 pub const ByteVectorType = types.ByteVectorType;
 pub const isByteVectorType = types.isByteVectorType;
@@ -60,7 +62,10 @@ pub const StructContainerTreeView = tree_view.StructContainerTreeView;
 pub const ArrayBasicTreeView = tree_view.ArrayBasicTreeView;
 pub const ArrayCompositeTreeView = tree_view.ArrayCompositeTreeView;
 pub const ListBasicTreeView = tree_view.ListBasicTreeView;
+pub const ProgressiveListBasicTreeView = tree_view.ProgressiveListBasicTreeView;
 pub const ListCompositeTreeView = tree_view.ListCompositeTreeView;
+pub const ProgressiveListCompositeTreeView = tree_view.ProgressiveListCompositeTreeView;
+pub const ProgressiveBitListTreeView = tree_view.ProgressiveBitListTreeView;
 pub const CloneOpts = @import("tree_view/utils/clone_opts.zig").CloneOpts;
 
 test {

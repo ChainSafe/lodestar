@@ -6,6 +6,9 @@ const proof = @import("persistent_merkle_tree").proof;
 const BoolType = @import("bool.zig").BoolType;
 const ByteVectorType = @import("byte_vector.zig").ByteVectorType;
 const FixedProgressiveListType = @import("progressive_list.zig").FixedProgressiveListType;
+const ProgressiveBitListType = @import("progressive_bit_list.zig").ProgressiveBitListType;
+const FixedContainerType = @import("container.zig").FixedContainerType;
+const StructContainerType = @import("container.zig").StructContainerType;
 const UintType = @import("uint.zig").UintType;
 const FixedListType = @import("list.zig").FixedListType;
 const FixedProgressiveContainerType = @import("progressive_container.zig").FixedProgressiveContainerType;
@@ -136,6 +139,32 @@ test "progressive container field gindices should address the field nodes" {
     }
 }
 
+test "variable progressive container tree decoding rejects every truncated fixed prefix" {
+    const allocator = std.testing.allocator;
+    const ST = VariableProgressiveContainerType(struct {
+        flag: BoolType(),
+        bytes: FixedProgressiveListType(UintType(8), .{}),
+        bits: ProgressiveBitListType(.{}),
+    }, &.{ 1, 0, 1, 0, 0, 1 });
+    const encoded = [_]u8{ 1, 9, 0, 0, 0, 9, 0, 0, 0, 1 };
+    var pool = try Node.Pool.init(.{ .allocator = allocator, .page_allocator = allocator, .pool_size = 128 });
+    defer pool.deinit();
+    const baseline = pool.getNodesInUse();
+    for (0..encoded.len) |length| {
+        try std.testing.expectError(error.InvalidSize, ST.readFieldRanges(encoded[0..length]));
+        try std.testing.expectError(error.InvalidSize, ST.tree.deserializeFromBytes(&pool, encoded[0..length]));
+        try std.testing.expectEqual(baseline, pool.getNodesInUse());
+    }
+    const root = try ST.tree.deserializeFromBytes(&pool, &encoded);
+    pool.unref(root);
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+
+    const Bounded = VariableProgressiveContainerType(struct {
+        bytes: FixedListType(UintType(8), 2, .{}),
+    }, &.{1});
+    try std.testing.expectError(error.InvalidSize, Bounded.readFieldRanges(&.{ 4, 0, 0, 0, 1, 2, 3 }));
+}
+
 fn expectProgressiveFromValuePoolExhaustionReclaimsNodes(
     comptime ST: type,
     value: *const ST.Type,
@@ -179,7 +208,7 @@ test "memory_safety: progressive container tree.fromValue reclaims unpublished n
 }
 
 test "memory_safety: nested progressive tree.fromValue reclaims unpublished nodes on pool exhaustion" {
-    const Items = FixedProgressiveListType(UintType(8));
+    const Items = FixedProgressiveListType(UintType(8), .{});
     const Container = VariableProgressiveContainerType(struct {
         a: UintType(64),
         items: Items,
@@ -192,7 +221,63 @@ test "memory_safety: nested progressive tree.fromValue reclaims unpublished node
     try expectProgressiveFromValuePoolExhaustionReclaimsNodes(Container, &value, 32);
 }
 
-test "memory_safety: variable progressive container clone preserves out on OOM" {
+test "progressive container should compose chunked leaf and struct container list fields" {
+    const allocator = std.testing.allocator;
+    const record_fields = struct { a: UintType(64), b: UintType(64) };
+    const Records = FixedProgressiveListType(FixedContainerType(record_fields), .{});
+    const active_fields = [_]u1{ 1, 0, 1, 1 };
+    const Plain = VariableProgressiveContainerType(struct {
+        slot: UintType(64),
+        records: Records,
+        balances: FixedProgressiveListType(UintType(64), .{}),
+    }, &active_fields);
+    const Optimized = VariableProgressiveContainerType(struct {
+        slot: UintType(64),
+        records: FixedProgressiveListType(StructContainerType(record_fields), .{}),
+        balances: FixedProgressiveListType(UintType(64), .{ .chunked_leaf = true }),
+    }, &active_fields);
+
+    var value = Plain.default_value;
+    defer Plain.deinit(allocator, &value);
+    value.slot = 7;
+    try value.records.resize(allocator, 22);
+    for (value.records.items, 0..) |*record, i| record.* = .{ .a = i, .b = i + 100 };
+    // 341 chunks reach the subtrees that hold chunked leaves.
+    try value.balances.resize(allocator, 341 * 4 - 1);
+    for (value.balances.items, 0..) |*balance, i| balance.* = i;
+
+    const bytes = try allocator.alloc(u8, Plain.serializedSize(&value));
+    defer allocator.free(bytes);
+    _ = Plain.serializeIntoBytes(&value, bytes);
+
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 4096,
+    });
+    defer pool.deinit();
+
+    const plain = try Plain.tree.fromValue(&pool, &value);
+    defer pool.unref(plain);
+    const optimized = try Optimized.tree.deserializeFromBytes(&pool, bytes);
+    defer pool.unref(optimized);
+    try std.testing.expectEqualSlices(u8, plain.getRoot(&pool), optimized.getRoot(&pool));
+
+    var out = Optimized.default_value;
+    defer Optimized.deinit(allocator, &out);
+    try Optimized.tree.toValue(allocator, optimized, &pool, &out);
+    try std.testing.expectEqual(7, out.slot);
+    try std.testing.expect(Records.equals(&value.records, &out.records));
+    try std.testing.expectEqualSlices(u64, value.balances.items, out.balances.items);
+
+    const encoded = try allocator.alloc(u8, bytes.len);
+    defer allocator.free(encoded);
+    const size = try Optimized.tree.serializeIntoBytes(optimized, &pool, encoded);
+    try std.testing.expectEqual(bytes.len, size);
+    try std.testing.expectEqualSlices(u8, bytes, encoded);
+}
+
+test "memory_safety: variable progressive container clone should leave a failed clone for the caller to free on OOM" {
     const Items = FixedListType(UintType(8), 8, .{});
     const Container = VariableProgressiveContainerType(struct {
         a: Items,
@@ -208,17 +293,86 @@ test "memory_safety: variable progressive container clone preserves out on OOM" 
         fn run(allocator: std.mem.Allocator, input: *const Container.Type) !void {
             var out: Container.Type = Container.default_value;
             defer Container.deinit(allocator, &out);
-            Container.clone(allocator, input, &out) catch |err| {
-                try std.testing.expectEqual(@as(usize, 0), out.a.items.len);
-                try std.testing.expectEqual(@as(usize, 0), out.b.items.len);
-                return err;
-            };
+            try Container.clone(allocator, input, &out);
             try std.testing.expect(Container.equals(input, &out));
         }
     }.run, .{&value});
 }
 
-test "memory_safety: fixed progressive container byte deserialization preserves out on malformed input" {
+test "variable progressive container cloneInto should fill a container with more fields" {
+    const allocator = std.testing.allocator;
+    const Bits = ProgressiveBitListType(.{});
+    const Balances = FixedProgressiveListType(UintType(64), .{});
+    const Checkpoint = FixedProgressiveContainerType(struct {
+        epoch: UintType(64),
+    }, &.{1});
+    const WideCheckpoint = FixedProgressiveContainerType(struct {
+        epoch: UintType(64),
+        root: ByteVectorType(32),
+    }, &.{ 1, 1 });
+    const Inner = VariableProgressiveContainerType(struct {
+        balances: Balances,
+    }, &.{1});
+    const WideInner = VariableProgressiveContainerType(struct {
+        balances: Balances,
+        extra: Balances,
+    }, &.{ 1, 1 });
+    const Source = VariableProgressiveContainerType(struct {
+        slot: UintType(64),
+        checkpoint: Checkpoint,
+        bits: Bits,
+        inner: Inner,
+    }, &.{ 1, 1, 1, 1 });
+    const Destination = VariableProgressiveContainerType(struct {
+        slot: UintType(64),
+        checkpoint: WideCheckpoint,
+        bits: Bits,
+        inner: WideInner,
+        extra: Balances,
+    }, &.{ 1, 1, 1, 1, 1 });
+
+    var value = Source.default_value;
+    defer Source.deinit(allocator, &value);
+    value.slot = 7;
+    value.checkpoint.epoch = 3;
+    value.bits = try Bits.Type.fromBitLen(allocator, 10);
+    value.bits.setAssumeCapacity(9, true);
+    try value.inner.balances.appendSlice(allocator, &.{ 32, 64 });
+
+    var upgraded = Destination.default_value;
+    defer Destination.deinit(allocator, &upgraded);
+    try Source.cloneInto(Destination, allocator, &value, &upgraded);
+    try std.testing.expectEqual(7, upgraded.slot);
+    try std.testing.expectEqual(3, upgraded.checkpoint.epoch);
+    try std.testing.expectEqual([_]u8{0} ** 32, upgraded.checkpoint.root);
+    try std.testing.expect(Bits.equals(&value.bits, &upgraded.bits));
+    try std.testing.expectEqualSlices(u64, &.{ 32, 64 }, upgraded.inner.balances.items);
+    try std.testing.expectEqual(0, upgraded.inner.extra.items.len);
+    try std.testing.expectEqual(0, upgraded.extra.items.len);
+}
+
+test "progressive containers should report their fields" {
+    const Fields = struct {
+        a: UintType(8),
+        b: UintType(16),
+    };
+    const Variable = VariableProgressiveContainerType(struct {
+        a: UintType(8),
+        items: FixedProgressiveListType(UintType(8), .{}),
+    }, &.{ 1, 1 });
+
+    inline for (.{
+        FixedProgressiveContainerType(Fields, &.{ 1, 0, 1 }),
+        StructProgressiveContainerType(Fields, &.{ 1, 0, 1 }),
+    }) |Container| {
+        try std.testing.expect(Container.hasField("b"));
+        try std.testing.expect(!Container.hasField("c"));
+    }
+    try std.testing.expect(Variable.hasField("items"));
+    try std.testing.expect(!Variable.hasField("b"));
+}
+
+test "fixed progressive container byte deserialization should reject a malformed field" {
     const Container = FixedProgressiveContainerType(struct {
         a: BoolType(),
         b: BoolType(),
@@ -229,12 +383,10 @@ test "memory_safety: fixed progressive container byte deserialization preserves 
         error.invalidBoolean,
         Container.deserializeFromBytes(&.{ 1, 2 }, &out),
     );
-    try std.testing.expect(!out.a);
-    try std.testing.expect(!out.b);
 }
 
-test "memory_safety: variable progressive container byte deserialization leaves default out on error" {
-    const Items = FixedProgressiveListType(BoolType());
+test "memory_safety: variable progressive container byte deserialization should leave a failed decode for the caller to free" {
+    const Items = FixedProgressiveListType(BoolType(), .{});
     const Container = VariableProgressiveContainerType(struct {
         a: UintType(8),
         items: Items,
@@ -250,9 +402,6 @@ test "memory_safety: variable progressive container byte deserialization leaves 
             &out,
         ),
     );
-    try std.testing.expectEqual(@as(u8, 0), out.a);
-    try std.testing.expectEqual(@as(usize, 0), out.items.items.len);
-    try std.testing.expectEqual(@as(usize, 0), out.items.capacity);
 }
 
 test "progressive container hashing streams sparse fields without allocation" {
@@ -409,8 +558,14 @@ test "proofs should materialize a struct progressive container" {
 test "progressive list should round-trip struct progressive container elements" {
     const allocator = std.testing.allocator;
     const fields = struct { a: UintType(64), b: UintType(8) };
-    const Plain = FixedProgressiveListType(FixedProgressiveContainerType(fields, &.{ 1, 0, 1 }));
-    const List = FixedProgressiveListType(StructProgressiveContainerType(fields, &.{ 1, 0, 1 }));
+    const Plain = FixedProgressiveListType(
+        FixedProgressiveContainerType(fields, &.{ 1, 0, 1 }),
+        .{},
+    );
+    const List = FixedProgressiveListType(
+        StructProgressiveContainerType(fields, &.{ 1, 0, 1 }),
+        .{},
+    );
 
     var value: List.Type = .empty;
     defer value.deinit(allocator);
@@ -462,7 +617,7 @@ test "progressive container tree construction streams sparse fields" {
         break :blk flags;
     };
     const Fixed = FixedProgressiveContainerType(struct { a: UintType(64), b: BoolType(), c: UintType(8) }, &active);
-    const Variable = VariableProgressiveContainerType(struct { a: UintType(64), b: FixedProgressiveListType(UintType(8)), c: UintType(8) }, &active);
+    const Variable = VariableProgressiveContainerType(struct { a: UintType(64), b: FixedProgressiveListType(UintType(8), .{}), c: UintType(8) }, &active);
     inline for (.{ Fixed, Variable }) |ST| {
         var value = ST.default_value;
         defer if (ST == Variable) ST.deinit(allocator, &value);
@@ -492,7 +647,7 @@ test "progressive container tree construction streams sparse fields" {
 test "memory_safety: progressive container decoding reclaims partially built fields" {
     const allocator = std.testing.allocator;
     const Container = VariableProgressiveContainerType(struct {
-        a: FixedProgressiveListType(BoolType()),
+        a: FixedProgressiveListType(BoolType(), .{}),
         b: UintType(64),
         c: BoolType(),
     }, &.{ 1, 0, 1, 0, 0, 1 });
@@ -534,7 +689,7 @@ test "progressive container tree reads stream sparse fields" {
         break :blk flags;
     };
     const Fixed = FixedProgressiveContainerType(struct { a: UintType(64), b: BoolType(), c: UintType(8) }, &active);
-    const Variable = VariableProgressiveContainerType(struct { a: UintType(64), b: FixedProgressiveListType(UintType(8)), c: UintType(8) }, &active);
+    const Variable = VariableProgressiveContainerType(struct { a: UintType(64), b: FixedProgressiveListType(UintType(8), .{}), c: UintType(8) }, &active);
     inline for (.{ Fixed, Variable }) |ST| {
         var value = ST.default_value;
         defer if (ST == Variable) ST.deinit(allocator, &value);
@@ -567,10 +722,10 @@ test "progressive container tree reads stream sparse fields" {
     }
 }
 
-test "memory_safety: progressive container tree.toValue cleans partial values on OOM" {
+test "memory_safety: progressive container tree.toValue should leave partial values for the caller to free on OOM" {
     const allocator = std.testing.allocator;
     const Container = VariableProgressiveContainerType(struct {
-        a: FixedProgressiveListType(UintType(8)),
+        a: FixedProgressiveListType(UintType(8), .{}),
         b: FixedListType(UintType(8), 8, .{}),
     }, &.{ 1, 0, 1 });
     var source = Container.default_value;
@@ -588,27 +743,27 @@ test "memory_safety: progressive container tree.toValue cleans partial values on
     for (0..8) |fail_after| {
         var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = fail_after });
         var out = Container.default_value;
-        defer Container.deinit(failing.allocator(), &out);
-        Container.tree.toValue(failing.allocator(), root, &pool, &out) catch |err| {
+        if (Container.tree.toValue(failing.allocator(), root, &pool, &out)) |_| {
+            try std.testing.expect(Container.equals(&source, &out));
+            saw_success = true;
+        } else |err| {
             try std.testing.expectEqual(error.OutOfMemory, err);
-            try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
             saw_failure = true;
-            continue;
-        };
-        try std.testing.expect(Container.equals(&source, &out));
-        saw_success = true;
-        break;
+        }
+        Container.deinit(failing.allocator(), &out);
+        try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
+        if (saw_success) break;
     }
     try std.testing.expect(saw_failure);
     try std.testing.expect(saw_success);
 }
 
-test "memory_safety: progressive container tree reads validate terminators before publishing values" {
+test "memory_safety: progressive container tree reads should reject a nonzero terminator" {
     const allocator = std.testing.allocator;
     const Fixed = FixedProgressiveContainerType(struct { a: UintType(64), b: UintType(8) }, &.{ 1, 0, 1 });
     const Variable = VariableProgressiveContainerType(struct {
         a: UintType(64),
-        b: FixedProgressiveListType(UintType(8)),
+        b: FixedProgressiveListType(UintType(8), .{}),
     }, &.{ 1, 0, 1 });
     inline for (.{ Fixed, Variable }) |ST| {
         var source = ST.default_value;
@@ -623,17 +778,102 @@ test "memory_safety: progressive container tree reads validate terminators befor
         const bad = try good.setNode(&pool, @enumFromInt(11), bad_leaf);
         defer pool.unref(bad);
 
-        var failing = std.testing.FailingAllocator.init(allocator, .{});
         var out = ST.default_value;
-        defer if (ST == Variable) ST.deinit(failing.allocator(), &out);
+        defer if (ST == Variable) ST.deinit(allocator, &out);
         if (ST == Fixed) {
             try std.testing.expectError(error.InvalidTerminatorNode, ST.tree.toValue(bad, &pool, &out));
         } else {
-            try std.testing.expectError(error.InvalidTerminatorNode, ST.tree.toValue(failing.allocator(), bad, &pool, &out));
-            try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
+            try std.testing.expectError(error.InvalidTerminatorNode, ST.tree.toValue(allocator, bad, &pool, &out));
         }
-        try std.testing.expect(ST.equals(&ST.default_value, &out));
         var bytes: [16]u8 = undefined;
         try std.testing.expectError(error.InvalidTerminatorNode, ST.tree.serializeIntoBytes(bad, &pool, &bytes));
     }
+}
+
+test "memory_safety: VariableProgressiveContainerType tree.toValue should not leak a large value on allocation failure" {
+    const allocator = std.testing.allocator;
+    const Items = FixedProgressiveListType(UintType(8), .{});
+    const ST = VariableProgressiveContainerType(struct {
+        large: ByteVectorType(64 * 1024),
+        first: Items,
+        second: Items,
+    }, &.{ 1, 0, 1, 0, 1 });
+    const source = try allocator.create(ST.Type);
+    defer allocator.destroy(source);
+    source.* = ST.default_value;
+    defer ST.deinit(allocator, source);
+    source.large[0] = 77;
+    source.large[source.large.len - 1] = 88;
+    try source.first.appendSlice(allocator, &.{ 1, 2, 3 });
+    try source.second.appendSlice(allocator, &.{ 4, 5, 6 });
+
+    var pool = try Node.Pool.init(.{ .allocator = allocator, .page_allocator = allocator, .pool_size = 8192 });
+    defer pool.deinit();
+    const initial_nodes = pool.getNodesInUse();
+    {
+        const root = try ST.tree.fromValue(&pool, source);
+        defer pool.unref(root);
+        try std.testing.checkAllAllocationFailures(allocator, struct {
+            fn run(checked: std.mem.Allocator, node_pool: *Node.Pool, node: Node.Id, expected: *const ST.Type) !void {
+                const out = try checked.create(ST.Type);
+                defer checked.destroy(out);
+                out.* = ST.default_value;
+                defer ST.deinit(checked, out);
+                const before_nodes = node_pool.getNodesInUse();
+                try ST.tree.toValue(checked, node, node_pool, out);
+                try std.testing.expect(ST.equals(expected, out));
+                try std.testing.expectEqual(before_nodes, node_pool.getNodesInUse());
+            }
+        }.run, .{ &pool, root, source });
+    }
+    try std.testing.expectEqual(initial_nodes, pool.getNodesInUse());
+}
+
+test "memory_safety: VariableProgressiveContainerType JSON decoding should leave failed decodes for the caller to free" {
+    const allocator = std.testing.allocator;
+    const Inner = FixedProgressiveListType(UintType(16), .{});
+    const Point = FixedProgressiveContainerType(struct { x: UintType(8), y: BoolType() }, &.{ 1, 1 });
+    const ST = VariableProgressiveContainerType(struct {
+        a: UintType(8),
+        nested: @import("progressive_list.zig").VariableProgressiveListType(Inner, .{}),
+        bytes: @import("progressive_byte_list.zig").ProgressiveByteListType(.{}),
+        bits: ProgressiveBitListType(.{}),
+        points: FixedProgressiveListType(Point, .{}),
+    }, &.{ 1, 0, 1, 1, 1, 1 });
+
+    var source = ST.default_value;
+    defer ST.deinit(allocator, &source);
+    source.a = 7;
+    try source.nested.appendNTimes(allocator, Inner.default_value, 3);
+    try source.nested.items[0].appendSlice(allocator, &.{ 1, 2, 3 });
+    try source.nested.items[2].appendSlice(allocator, &.{ 9, 8 });
+    try source.bytes.appendSlice(allocator, &.{ 0xaa, 0xbb });
+    try source.bits.resize(allocator, 13);
+    try source.bits.set(allocator, 3, true);
+    try source.points.appendSlice(allocator, &.{ .{ .x = 1, .y = true }, .{ .x = 2, .y = false } });
+
+    var output: std.Io.Writer.Allocating = .init(allocator);
+    defer output.deinit();
+    var writer: std.json.Stringify = .{ .writer = &output.writer };
+    try ST.serializeIntoJson(allocator, &writer, &source);
+    const json = output.written();
+
+    for (0..json.len) |len| {
+        var out = ST.default_value;
+        defer ST.deinit(allocator, &out);
+        var scanner = std.json.Scanner.initCompleteInput(allocator, json[0..len]);
+        defer scanner.deinit();
+        if (ST.deserializeFromJson(allocator, &scanner, &out)) |_| return error.TestUnexpectedResult else |_| {}
+    }
+
+    try std.testing.checkAllAllocationFailures(allocator, struct {
+        fn run(checked: std.mem.Allocator, input: []const u8, expected: *const ST.Type) !void {
+            var out = ST.default_value;
+            defer ST.deinit(checked, &out);
+            var scanner = std.json.Scanner.initCompleteInput(checked, input);
+            defer scanner.deinit();
+            try ST.deserializeFromJson(checked, &scanner, &out);
+            try std.testing.expect(ST.equals(expected, &out));
+        }
+    }.run, .{ json, &source });
 }

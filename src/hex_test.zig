@@ -2,6 +2,8 @@
 
 const std = @import("std");
 const hexToBytes = @import("hex.zig").hexToBytes;
+const hexByteLen = @import("hex.zig").hexByteLen;
+const hasOxPrefix = @import("hex.zig").hasOxPrefix;
 const rootToHex = @import("hex.zig").rootToHex;
 
 test "rootToHex" {
@@ -43,4 +45,16 @@ test "hexToBytes" {
         _ = try hexToBytes(&out, tc.hex);
         try std.testing.expectEqualSlices(u8, tc.expected, &out);
     }
+}
+
+test "hasOxPrefix and hexByteLen should accept strings shorter than the prefix" {
+    try std.testing.expect(!hasOxPrefix(""));
+    try std.testing.expect(!hasOxPrefix("0"));
+    try std.testing.expect(hasOxPrefix("0x"));
+    try std.testing.expectEqual(@as(usize, 0), hexByteLen(""));
+    try std.testing.expectEqual(@as(usize, 0), hexByteLen("0"));
+
+    var out: [1]u8 = undefined;
+    try std.testing.expectEqual(@as(usize, 0), (try hexToBytes(out[0..0], "")).len);
+    try std.testing.expectError(error.InvalidLength, hexToBytes(out[0..0], "0"));
 }

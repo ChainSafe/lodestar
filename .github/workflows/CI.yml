@@ -168,17 +168,10 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
           cache-key: ubuntu-latest-${{ env.ZIG_VERSION }}
-      - name: Read spec test version
+      - name: Read spec test cache key
         id: spec-test-version
         run: |
-          version=$(awk '
-            /\.spec_test_version = \./ {in_block=1}
-            in_block && /\.default = / {
-              match($0, /"[^"]+"/)
-              print substr($0, RSTART + 1, RLENGTH - 2)
-              exit
-            }
-          ' build.zig.zon)
+          version=$(zig build spec-test-version)
           test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Restore spec tests cache

@@ -77,6 +77,8 @@ pub const SignedBeaconBlockHeader = electra.SignedBeaconBlockHeader;
 
 // Execution payload remains the same as Electra
 pub const ExecutionPayload = electra.ExecutionPayload;
+pub const VersionedHashes = electra.VersionedHashes;
+pub const NewPayloadRequest = electra.NewPayloadRequest;
 pub const ExecutionPayloadHeader = electra.ExecutionPayloadHeader;
 
 // DAS-related custom types

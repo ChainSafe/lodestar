@@ -98,7 +98,7 @@ pub fn VariableElementIterator(comptime ST: type) type {
             if (comptime ST.kind == .vector) {
                 if (len != ST.length) return error.invalidOffsetCount;
             }
-            if (comptime ST.kind == .list) {
+            if (comptime ST.kind == .list or ST.kind == .progressive_list) {
                 if (len > ST.limit) return error.invalidOffsetCount;
             }
             if (first_offset > data.len) return error.offsetOutOfRange;

@@ -41,3 +41,34 @@ test "getPathGindex" {
 
     try std.testing.expectEqual(@as(Gindex.Uint, 6), @intFromEnum(getPathGindex(SimpleState, "balances.0")));
 }
+
+test "getPathGindex should address progressive containers, lists and bitlists" {
+    const Checkpoint = types.FixedContainerType(struct {
+        epoch: types.UintType(64),
+        root: types.ByteVectorType(32),
+    });
+    const active_fields = comptime blk: {
+        var bits: [21]u1 = @splat(0);
+        bits[0] = 1;
+        bits[20] = 1;
+        break :blk bits;
+    };
+    const State = types.FixedProgressiveContainerType(struct {
+        slot: types.UintType(64),
+        finalized_checkpoint: Checkpoint,
+    }, &active_fields);
+    // Gloas `FINALIZED_ROOT_GINDEX` puts `finalized_checkpoint` at active position 20.
+    try std.testing.expectEqual(@as(Gindex.Uint, 735), @intFromEnum(getPathGindex(State, "finalized_checkpoint.root")));
+
+    const Numbers = types.FixedProgressiveListType(types.UintType(64), .{});
+    const Bits = types.ProgressiveBitListType(.{});
+    // Element 5 and bit 300 both sit in chunk 1, contents gindex 24, so 40 from the list root.
+    try std.testing.expectEqual(@as(Gindex.Uint, 40), @intFromEnum(getPathGindex(Numbers, "5")));
+    try std.testing.expectEqual(@as(Gindex.Uint, 40), @intFromEnum(getPathGindex(Bits, "300")));
+    try std.testing.expectEqual(@as(Gindex.Uint, 3), @intFromEnum(getPathGindex(Numbers, "length")));
+
+    // Composite element 2 is chunk 2: contents gindex 25, so 41 from the list root.
+    const Checkpoints = types.FixedProgressiveListType(Checkpoint, .{});
+    try std.testing.expectEqual(@as(Gindex.Uint, 41), @intFromEnum(getPathGindex(Checkpoints, "2")));
+    try std.testing.expectEqual(@as(Gindex.Uint, 83), @intFromEnum(getPathGindex(Checkpoints, "2.root")));
+}
