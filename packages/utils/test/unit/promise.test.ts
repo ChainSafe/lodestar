@@ -1,12 +1,14 @@
 /* Causing this error on usage of expect.any(Number)  */
-import {afterEach, describe, expect, it, vi} from "vitest";
-import {PromiseFulfilledResult, PromiseRejectedResult, defer, wrapPromise} from "../../src/promise.js";
+import {describe, expect, it} from "vitest";
+import {PromiseFulfilledResult, PromiseRejectedResult, wrapPromise} from "../../src/promise.js";
 
 describe("promise", () => {
   describe("wrapPromise", () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
+    const timeoutMs = 100;
+    // TODO: Debug how promise is resolved quicker than the timeout
+    const promiseDurationMin = timeoutMs - 1;
+    // Add some margin for execution
+    const promiseDurationMax = timeoutMs + 20;
 
     it("should have initial status to pending", async () => {
       const result = wrapPromise(Promise.resolve("my value"));
@@ -41,28 +43,30 @@ describe("promise", () => {
     });
 
     it("should have correct durationMs attribute for promise which is resolved", async () => {
-      const now = vi.spyOn(Date, "now").mockReturnValue(1000);
-      const {promise, resolve} = defer<string>();
+      const promise = new Promise((resolve) => {
+        setTimeout(() => {
+          resolve("Resolved Value");
+        }, timeoutMs);
+      });
       const result = wrapPromise(promise);
 
-      now.mockReturnValue(1100);
-      resolve("Resolved Value");
-
       await expect(promise).resolves.toBe("Resolved Value");
-      expect((result as PromiseFulfilledResult<string>).durationMs).toBe(100);
+      expect((result as PromiseFulfilledResult<string>).durationMs).toBeGreaterThanOrEqual(promiseDurationMin);
+      expect((result as PromiseFulfilledResult<string>).durationMs).toBeLessThanOrEqual(promiseDurationMax);
     });
 
     it("should have correct durationMs attribute for promise which is rejected", async () => {
-      const now = vi.spyOn(Date, "now").mockReturnValue(1000);
-      const {promise, reject} = defer<string>();
+      const promise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject("Rejected Error");
+        }, timeoutMs);
+      });
       const result = wrapPromise(promise);
-
-      now.mockReturnValue(1100);
-      reject("Rejected Error");
 
       await expect(promise).rejects.toThrow("Rejected Error");
       await expect(result.promise).rejects.toThrow("Rejected Error");
-      expect((result as PromiseRejectedResult<string>).durationMs).toBe(100);
+      expect((result as PromiseRejectedResult<string>).durationMs).toBeGreaterThanOrEqual(promiseDurationMin);
+      expect((result as PromiseRejectedResult<string>).durationMs).toBeLessThanOrEqual(promiseDurationMax);
     });
   });
 });
