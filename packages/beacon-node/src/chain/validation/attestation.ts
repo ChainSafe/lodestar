@@ -309,25 +309,6 @@ async function validateAttestationNoSignatureCheck(
             code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT,
           });
         }
-
-        // [REJECT] If `attestation.data.index == 1` (payload present for a past block),
-        //   the execution payload for `block` passes validation.
-        // [IGNORE] When `attestation.data.index == 1` (payload present for a past block),
-        //   the execution payload for `block` has been fully imported, including its data -- i.e.
-        //   `is_payload_verified(store, attestation.data.beacon_block_root)` returns `True`
-        //   (a client MAY queue attestations for processing until the payload is imported and
-        //   SHOULD request the payload envelope via `ExecutionPayloadEnvelopesByRoot` using
-        //   `attestation.data.beacon_block_root`).
-        if (
-          block !== null &&
-          attData.index === 1 &&
-          !chain.forkChoice.hasPayloadHexUnsafe(toRootHex(attData.beaconBlockRoot))
-        ) {
-          throw new AttestationError(GossipAction.IGNORE, {
-            code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
-            beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
-          });
-        }
       } else {
         // [REJECT] attestation.data.index == 0
         if (attData.index !== 0) {
@@ -346,10 +327,20 @@ async function validateAttestationNoSignatureCheck(
   // The payload status can change after the attestation data was cached, so this runs for cached data too
   if (isForkPostGloas(fork) && attData.index === 1) {
     const beaconBlockRoot = toRootHex(attData.beaconBlockRoot);
-    // [REJECT] The attested execution payload is processed and invalid
-    if (
-      chain.forkChoice.getBlockHex(beaconBlockRoot, PayloadStatus.FULL)?.executionStatus === ExecutionStatus.Invalid
-    ) {
+    const fullBlock = chain.forkChoice.getBlockHex(beaconBlockRoot, PayloadStatus.FULL);
+    // [IGNORE] The corresponding execution payload envelope has been seen and verified
+    //   (a client MAY queue attestations for processing until the payload is imported and
+    //   SHOULD request the payload envelope via `ExecutionPayloadEnvelopesByRoot`).
+    //   An unknown block is handled by `verifyHeadBlockAndTargetRoot`
+    if (fullBlock === null) {
+      if (chain.forkChoice.hasBlockHexUnsafe(beaconBlockRoot)) {
+        throw new AttestationError(GossipAction.IGNORE, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+          beaconBlockRoot,
+        });
+      }
+    } else if (fullBlock.executionStatus === ExecutionStatus.Invalid) {
+      // [REJECT] The attested execution payload is processed and invalid
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.EXECUTION_PAYLOAD_INVALID,
         beaconBlockRoot,

@@ -67,7 +67,8 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
     default: PeerAction.LowToleranceError,
     byCode: {[ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
-  // An invalidated payload is this node's execution engine opinion, peers relaying votes for it are not malicious
+  // An invalidated payload is this node's execution engine opinion. The override only softens the application score,
+  // the message is still rejected and gossipsub applies its own invalid message penalty to the delivering peers
   [GossipType.beacon_aggregate_and_proof]: {
     default: PeerAction.MidToleranceError,
     byCode: {
