@@ -1077,7 +1077,7 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      if (!chain.opts.disableExecutionPayloadBidValidation) {
+      if (!chain.opts.disableBidValidation) {
         const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
         await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
         validationTimer?.();

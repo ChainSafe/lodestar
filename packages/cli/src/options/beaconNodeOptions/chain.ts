@@ -28,7 +28,7 @@ export type ChainArgs = {
   "chain.fastConfirmation"?: boolean;
   "chain.maxSkipSlots"?: number;
   "chain.disableProposerSlashings"?: boolean;
-  "chain.disableExecutionPayloadBidValidation"?: boolean;
+  "chain.disableBidValidation"?: boolean;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
@@ -72,7 +72,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     fastConfirmation: args["chain.fastConfirmation"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     disableProposerSlashings: args["chain.disableProposerSlashings"],
-    disableExecutionPayloadBidValidation: args["chain.disableExecutionPayloadBidValidation"],
+    disableBidValidation: args["chain.disableBidValidation"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
@@ -272,12 +272,12 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.disableExecutionPayloadBidValidation": {
+  "chain.disableBidValidation": {
     hidden: true,
     type: "boolean",
     description:
       "Broadcast execution payload bids submitted via the API without running gossip validation. Only enable if the API is exclusively used by a trusted local builder, forwarding invalid bids gets the node penalized by peers",
-    defaultDescription: String(defaultOptions.chain.disableExecutionPayloadBidValidation),
+    defaultDescription: String(defaultOptions.chain.disableBidValidation),
     group: "chain",
   },
 

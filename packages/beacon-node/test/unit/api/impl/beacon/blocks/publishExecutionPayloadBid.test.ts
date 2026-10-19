@@ -47,7 +47,7 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
   });
 
   it("publishes the bid without validation if disabled", async () => {
-    modules.chain.opts.disableExecutionPayloadBidValidation = true;
+    modules.chain.opts.disableBidValidation = true;
     const api = getBeaconBlockApi(modules);
     await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
 
