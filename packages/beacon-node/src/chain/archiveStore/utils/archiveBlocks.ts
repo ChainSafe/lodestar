@@ -1,10 +1,17 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  ExecutionStatus,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  isGloasBlock,
+} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem, encodeArchivedHeaderEnvelope} from "../../../db/repositories/index.js";
@@ -169,41 +176,32 @@ export async function archiveBlocks(
     }
   }
 
-  // Index canonical fork-choice variants by block root.
-  // Gloas EMPTY and FULL variants share a block root,
-  // and block-level data is stored once per root.
-  const canonicalBlockRootHexes = new Set(finalizedCanonicalBlocks.map((block) => block.blockRoot));
-
-  // Key by root so each orphaned Gloas block is persisted,
-  // deleted and counted only once across FULL and EMPTY variants.
-  const nonCanonicalSlotByRoot = new Map<RootHex, Slot>();
-
-  const orphanedPayloadBlocks: ProtoBlock[] = [];
+  const canonicalRoots = new Set(finalizedCanonicalBlocks.map((block) => block.blockRoot));
+  const orphanedBlocks: ProtoBlock[] = [];
+  const orphanedPayloads: ProtoBlock[] = [];
 
   for (const block of finalizedNonCanonicalBlocks) {
-    // Prepare non-canonical blocks for pruning by root
-    // only when no variant with this root is on the
-    // canonical path.
-    if (!canonicalBlockRootHexes.has(block.blockRoot)) {
-      nonCanonicalSlotByRoot.set(block.blockRoot, block.slot);
-    }
-    // Only an off-path FULL variant has payload data.
-    // Collect those for pruning.
     if (block.payloadStatus === PayloadStatus.FULL) {
-      orphanedPayloadBlocks.push(block);
+      orphanedPayloads.push(block);
+    }
+    // Every Gloas block gets EMPTY before FULL. If only FULL survives pruning, an earlier archive run
+    // already handled the root's block-level data.
+    const isBlockNode = !isGloasBlock(block) || block.payloadStatus === PayloadStatus.EMPTY;
+    if (isBlockNode && !canonicalRoots.has(block.blockRoot)) {
+      orphanedBlocks.push(block);
     }
   }
-  const nonCanonicalBlockRoots = Array.from(nonCanonicalSlotByRoot.keys(), (rootHex) => fromHex(rootHex));
+  const orphanedBlockRoots = orphanedBlocks.map((block) => fromHex(block.blockRoot));
 
-  if (orphanedPayloadBlocks.length > 0) {
-    const orphanedPayloadRoots = orphanedPayloadBlocks.map((block) => fromHex(block.blockRoot));
+  if (orphanedPayloads.length > 0) {
+    const orphanedPayloadRoots = orphanedPayloads.map((block) => fromHex(block.blockRoot));
     const orphanedPayloadLogCtx = {
       ...logCtx,
-      count: orphanedPayloadBlocks.length,
-      slotRange: prettyPrintIndices(orphanedPayloadBlocks.map((block) => block.slot).sort((a, b) => a - b)),
+      count: orphanedPayloads.length,
+      slotRange: prettyPrintIndices(orphanedPayloads.map((block) => block.slot).sort((a, b) => a - b)),
     };
 
-    const columnItems = orphanedPayloadBlocks
+    const columnItems = orphanedPayloads
       .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.fulu)
       .map((block) => ({slot: block.slot, blockRoot: block.blockRoot}));
     if (columnItems.length > 0) {
@@ -227,15 +225,15 @@ export async function archiveBlocks(
     }
   }
 
-  if (nonCanonicalSlotByRoot.size > 0) {
+  if (orphanedBlocks.length > 0) {
     if (persistOrphanedBlocks) {
       // Persist orphaned blocks to disk before deleting them from hot db
       await Promise.all(
-        Array.from(nonCanonicalSlotByRoot, async ([rootHex, slot]) => {
-          const blockBytes = await db.block.getBinary(fromHex(rootHex));
-          const blockLogCtx = {slot, root: rootHex};
+        orphanedBlocks.map(async (block) => {
+          const blockBytes = await db.block.getBinary(fromHex(block.blockRoot));
+          const blockLogCtx = {slot: block.slot, root: block.blockRoot};
           if (blockBytes) {
-            await persistOrphanedBlock(slot, rootHex, blockBytes, {
+            await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
               persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
             });
             logger.verbose("Persisted orphaned block", {...logCtx, ...blockLogCtx});
@@ -246,11 +244,11 @@ export async function archiveBlocks(
       );
     }
 
-    await db.block.batchDelete(nonCanonicalBlockRoots);
+    await db.block.batchDelete(orphanedBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", {
       ...logCtx,
-      count: nonCanonicalSlotByRoot.size,
-      slotRange: prettyPrintIndices(Array.from(nonCanonicalSlotByRoot.values()).sort((a, b) => a - b)),
+      count: orphanedBlocks.length,
+      slotRange: prettyPrintIndices(orphanedBlocks.map((block) => block.slot).sort((a, b) => a - b)),
     });
   }
 
@@ -308,7 +306,7 @@ export async function archiveBlocks(
 
   // Pruning potential checkpoint data
   const finalizedCanonicalNonCheckpointBlocks = getNonCheckpointBlocks(finalizedCanonicalBlockRoots);
-  const nonCheckpointBlockRoots: Uint8Array[] = [...nonCanonicalBlockRoots];
+  const nonCheckpointBlockRoots: Uint8Array[] = [...orphanedBlockRoots];
   for (const block of finalizedCanonicalNonCheckpointBlocks) {
     nonCheckpointBlockRoots.push(block.root);
   }
