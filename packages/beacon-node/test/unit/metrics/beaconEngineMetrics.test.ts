@@ -49,6 +49,11 @@ describe("BeaconEngine metrics registries", () => {
     engine.precomputeNextEpochTransition.count.inc({result: "success"});
     node.builderApi.preferencesForwarded.inc({status: "success"});
     engine.builderApi.preferencesForwarded.inc({status: "success"}, 2);
+    node.db.dbReadReq.inc({bucket: "allForks_block"}, 3);
+    engine.db.dbReadReq.inc({bucket: "allForks_block"}, 5);
+    node.db.dbSizeTotal.set(100);
+    expect(engine.register.getSingleMetric("lodestar_db_size_bytes_total")).toBeUndefined();
+    expect(engine.register.getSingleMetric("lodestar_db_approximate_size_time_seconds")).toBeUndefined();
 
     const collect = async (): Promise<string> =>
       aggregateMetrics([
@@ -64,6 +69,8 @@ describe("BeaconEngine metrics registries", () => {
     expect(text).toContain('lodestar_precompute_next_epoch_transition_result_total{result="error"} 1\n');
     expect(text).toContain('lodestar_precompute_next_epoch_transition_result_total{result="success"} 1\n');
     expect(text).toContain('lodestar_builder_api_preferences_forwarded_total{status="success"} 3\n');
+    expect(text).toContain('lodestar_db_read_req_total{bucket="allForks_block"} 8\n');
+    expect(text).toContain("lodestar_db_size_bytes_total 100\n");
     expect(await collect()).toBe(text);
     expect(await node.register.metrics()).toContain("lodestar_bls_aggregated_pubkeys_total 3\n");
     expect(await engine.register.metrics()).toContain("lodestar_bls_aggregated_pubkeys_total 5\n");

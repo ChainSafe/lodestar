@@ -27,7 +27,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
   let engine: BeaconEngineCore;
   let monitor: ValidatorMonitor;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers();
     const modules = getApiTestModules();
     engine = new BeaconEngineCore({
@@ -40,12 +40,14 @@ describe("BeaconEngineCore gossip monitoring", () => {
       clock: modules.chain.clock,
       db: modules.db,
       dbName: "test",
+      dataDir: "test",
       dataColumnDir: "test",
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),
     });
+    await engine.init();
     engine.forkChoice = modules.chain.forkChoice;
     engine.attestationPool = new AttestationPool(modules.config, engine.clock);
     engine.aggregatedAttestationPool = modules.chain.aggregatedAttestationPool;

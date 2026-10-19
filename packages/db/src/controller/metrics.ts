@@ -5,6 +5,6 @@ export type LevelDbControllerMetrics = {
   dbReadItems: Counter<{bucket: string}>;
   dbWriteReq: Counter<{bucket: string}>;
   dbWriteItems: Counter<{bucket: string}>;
-  dbSizeTotal: Gauge;
-  dbApproximateSizeTime: Histogram;
+  dbSizeTotal?: Gauge;
+  dbApproximateSizeTime?: Histogram;
 };

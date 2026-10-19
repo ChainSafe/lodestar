@@ -16,7 +16,7 @@ import {getApiTestModules} from "../../../utils/api.js";
 describe("BeaconEngineCore gossip attestation aggregation", () => {
   let engine: BeaconEngineCore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     const config = createBeaconConfig({}, Buffer.alloc(32));
     const modules = getApiTestModules({config});
     engine = new BeaconEngineCore({
@@ -28,12 +28,14 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
       clock: modules.chain.clock,
       db: modules.db,
       dbName: "test",
+      dataDir: "test",
       dataColumnDir: "test",
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),
     });
+    await engine.init();
     engine.forkChoice = modules.chain.forkChoice;
     engine.forkChoice.onAttestation = vi.fn();
     engine.attestationPool = new AttestationPool(config, engine.clock);

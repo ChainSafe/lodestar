@@ -102,15 +102,17 @@ export type BeaconEngineCoreModules = {
   opts: IBeaconEngineOptions;
   config: BeaconConfig;
   logging: BeaconEngineLogging;
-  /** Engine-owned DB directory (historical-state worker location). */
+  /** Shared LevelDB location, also used by the historical-state worker. */
   dbName: string;
+  dataDir: string;
   dataColumnDir: string;
   metricsEnabled: boolean;
   genesisTime: number;
   /** Shared in-process clock; omitted when the core needs its own worker-local clock. */
   clock?: IClock;
-  cpStateDatastore: CPStateDatastore;
-  db: IBeaconEngineDb;
+  cpStateDatastore?: CPStateDatastore;
+  /** Borrowed repositories; when omitted, Core opens dbName and owns that connection. */
+  db?: IBeaconEngineDb;
   validatorMonitorOpts: ValidatorMonitorOpts | null;
   isAnchorStateFinalized: boolean;
 };

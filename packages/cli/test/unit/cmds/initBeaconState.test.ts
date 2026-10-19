@@ -13,7 +13,7 @@ import {BeaconStateAllForks, computeAnchorCheckpoint, computeWeakSubjectivityPer
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionEngineDisabled} from "../../../../beacon-node/lib/execution/engine/disabled.js";
-import {executeStateInitialization} from "../../../../beacon-node/lib/node/nodejs.js";
+import {executeStateInitialization} from "../../../../beacon-node/src/node/nodejs.js";
 import {createTestBeaconEngine} from "../../../../beacon-node/test/utils/engine.js";
 import {initBeaconState} from "../../../src/cmds/beacon/initBeaconState.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
@@ -165,6 +165,7 @@ describe("initBeaconState", () => {
         executionEngine: new ExecutionEngineDisabled(),
       }
     );
+    await modules.beaconEngineCore.init();
     await executeStateInitialization(modules.beaconEngine, {
       ...stateInit,
       log(anchor) {

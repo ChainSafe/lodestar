@@ -8,8 +8,6 @@ import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.
 import {BeaconChainModules} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {IChainOptions} from "../../src/chain/options.js";
-import {DbCPStateDatastore} from "../../src/chain/stateCache/datastore/db.js";
-import {FileCPStateDatastore} from "../../src/chain/stateCache/datastore/file.js";
 import {ValidatorMonitorOpts} from "../../src/chain/validatorMonitor.js";
 import {ExecutionBuilderOpts} from "../../src/execution/builder/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/interface.js";
@@ -67,9 +65,6 @@ export function createTestBeaconEngine(
   const signal = abortController.signal;
   const emitter = new ChainEventEmitter();
   const clock = modules.clock ?? new Clock({config, genesisTime: metadata.genesisTime, signal});
-  const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
-  // checkpointState is an engine repo; build the datastore from the bootstrap `db` (union) param.
-  const cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(db);
 
   const nodeId = computeNodeIdFromPrivateKey(privateKey);
   const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
@@ -98,12 +93,12 @@ export function createTestBeaconEngine(
     config,
     logging: {type: "injected", logger},
     dbName,
+    dataDir,
     dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
     metricsEnabled: metrics !== null,
     genesisTime: metadata.genesisTime,
     clock: opts.beaconEngineWorker ? undefined : clock,
-    cpStateDatastore,
-    db,
+    db: opts.beaconEngineWorker ? undefined : db,
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
   });

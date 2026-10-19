@@ -9,6 +9,8 @@ import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
+import {Db} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {
   CheckpointWithHex,
   EpochDifference,
@@ -91,6 +93,7 @@ import {
 } from "@lodestar/utils";
 import {ApiError, NodeIsSyncing} from "../../api/impl/errors.js";
 import {HALF_SLOT_BPS} from "../../constants/index.js";
+import {BeaconEngineDb} from "../../db/beaconEngine.js";
 import {IBeaconEngineDb} from "../../db/index.js";
 import {decodeArchivedEnvelope} from "../../db/repositories/index.js";
 import {BuilderApiClient} from "../../execution/builder/apiClient.js";
@@ -155,6 +158,8 @@ import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js"
 import {SeenAttestationDatas} from "../seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "../seenCache/seenBlockAttesters.js";
 import {ShufflingCache, ShufflingPromiseCancelReason} from "../shufflingCache.js";
+import {DbCPStateDatastore} from "../stateCache/datastore/db.js";
+import {FileCPStateDatastore} from "../stateCache/datastore/file.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "../stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "../stateCache/persistentCheckpointsCache.js";
@@ -300,7 +305,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   shufflingCache!: ShufflingCache;
 
   blockStateCache!: BlockStateCache;
-  readonly cpStateDatastore: CPStateDatastore;
+  cpStateDatastore!: CPStateDatastore;
   checkpointStateCache!: CheckpointStateCache;
   checkpointBalancesCache!: CheckpointBalancesCache;
   readonly emitter = new BeaconEngineEventBus();
@@ -362,7 +367,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.validatorMonitorTimeout = undefined;
   };
   // Engine owns envelope writes; the facade retains direct DB reads for API/reqresp serving.
-  readonly db: IBeaconEngineDb;
+  db!: IBeaconEngineDb;
+  private rawDb?: Db;
   private stateArchiveStrategy!: StateArchiveStrategy;
   // Finalized writes are monotonic; restart from zero to include the newly persisted anchor.
   private statePruneFromSlot: Slot = 0;
@@ -373,7 +379,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private readonly abortController = new AbortController();
   // TODO - beacon engine: internal helper context; keep this off the worker-facing interface.
   readonly signal = this.abortController.signal;
-  readonly lightClientServer: LightClientServer | undefined;
+  lightClientServer?: LightClientServer;
   /**
    * Engine-owned verification results awaiting import, including post-states and execution status.
    * Bundles reference the same block and bytes returned by blockSerializedCache; they do not copy either.
@@ -395,6 +401,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private startupPhase:
     | "created"
+    | "opening"
+    | "initialized"
     | "preparing"
     | "prepared"
     | "persisting"
@@ -408,7 +416,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private anchorStateBytes?: Uint8Array;
 
   constructor(private readonly modules: BeaconEngineCoreModules) {
-    const {opts, config, db} = modules;
+    const {opts, config} = modules;
     let logging = modules.logging;
     if (logging.type === "options") {
       const rootLogger = getNodeLogger(logging.opts);
@@ -431,8 +439,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.opts = opts;
     this.logger = logger;
     this.validatorMonitorLogger = validatorMonitorLogger;
-    this.db = db;
-    this.cpStateDatastore = modules.cpStateDatastore;
     this.dbName = modules.dbName;
     this.dataColumnDir = modules.dataColumnDir;
     // Main-thread BeaconEngine shares this cache with BeaconChain; worker mode deserializes independently.
@@ -460,10 +466,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       // Main-thread BeaconEngine shares the node's clock; worker mode creates its own.
       const clock = modules.clock ?? new Clock({config, genesisTime: modules.genesisTime, signal});
       this.clock = clock;
-      // [beacon-engine] Previously owned by BeaconChain; LightClientServer is now owned by BeaconEngineCore.
-      this.lightClientServer = opts.disableLightClientServer
-        ? undefined
-        : new LightClientServer(opts, {config, clock, db, metrics, emitter: this.emitter, logger, signal});
     } catch (error) {
       this.abortController.abort();
       metrics?.register.clear();
@@ -471,8 +473,35 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
   }
 
-  async prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {
+  async init(): Promise<void> {
     this.assertStartupPhase("created");
+    this.startupPhase = "opening";
+    const {config, opts, logger, metrics, clock, signal} = this;
+    try {
+      let db = this.modules.db;
+      if (db === undefined) {
+        this.rawDb = await LevelDbController.create({name: this.dbName}, {logger, metrics: metrics?.db});
+        db = new BeaconEngineDb(config, this.rawDb);
+      }
+      this.db = db;
+      this.cpStateDatastore =
+        this.modules.cpStateDatastore ??
+        ((opts.nHistoricalStatesFileDataStore ?? true)
+          ? new FileCPStateDatastore(this.modules.dataDir)
+          : new DbCPStateDatastore(db));
+      this.lightClientServer = opts.disableLightClientServer
+        ? undefined
+        : new LightClientServer(opts, {config, clock, db, metrics, emitter: this.emitter, logger, signal});
+      this.startupPhase = "initialized";
+    } catch (error) {
+      this.startupPhase = "failed";
+      await this.close();
+      throw error;
+    }
+  }
+
+  async prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {
+    this.assertStartupPhase("initialized");
     this.startupPhase = "preparing";
     try {
       const state = createBeaconStateView({
@@ -551,7 +580,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
   }
 
-  private assertStartupPhase(expected: "created" | "prepared"): void {
+  private assertStartupPhase(expected: "created" | "initialized" | "prepared"): void {
     if (this.closed || this.startupPhase !== expected) {
       throw new LodestarError({
         code: "BEACON_ENGINE_STARTUP_PHASE",
@@ -567,8 +596,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private initializeRuntime(anchorState: IBeaconStateView): void {
     const modules = this.modules;
-    const {opts, config, db, validatorMonitorOpts, isAnchorStateFinalized} = modules;
-    const {signal, logger} = this;
+    const {opts, config, validatorMonitorOpts, isAnchorStateFinalized} = modules;
+    const {signal, logger, db} = this;
     const clock = this.clock;
     const metrics = this.metrics;
     metrics?.previousJustifiedEpoch.set(anchorState.previousJustifiedCheckpoint.epoch);
@@ -2023,8 +2052,9 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
   }
 
-  /** Tear down engine-owned resources: historical-state worker + BLS pool (graceful shutdown). */
+  /** Tear down engine-owned resources. */
   async close(): Promise<void> {
+    if (this.closed) return;
     this.closed = true;
     this.onValidatorMonitorAbort();
     this.signal.removeEventListener("abort", this.onValidatorMonitorAbort);
@@ -2036,11 +2066,15 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       await this.bls?.close();
     } finally {
       this.abortController.abort();
-      this.metrics?.register.clear();
+      try {
+        await this.rawDb?.close();
+      } finally {
+        this.metrics?.register.clear();
+        this.anchorState = undefined;
+        this.anchorStateBytes = undefined;
+        this.startupPhase = "closed";
+      }
     }
-    this.anchorState = undefined;
-    this.anchorStateBytes = undefined;
-    this.startupPhase = "closed";
   }
 
   /** Serialized historical (below-finalized) state by slot; null if unavailable / not enabled. */

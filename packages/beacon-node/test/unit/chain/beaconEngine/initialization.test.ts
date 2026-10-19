@@ -1,3 +1,5 @@
+import {readFile} from "node:fs/promises";
+import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
@@ -6,6 +8,7 @@ import {getClient} from "@lodestar/api/builder";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {TimestampFormatCode} from "@lodestar/logger";
 import * as nodeLogger from "@lodestar/logger/node";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
@@ -13,7 +16,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
 import {ensureInteropPubkeyCache} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
-import {byteArrayEquals, defer, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, defer, toHex, toRootHex} from "@lodestar/utils";
 import {getLodestarApi} from "../../../../src/api/impl/lodestar/index.js";
 import {ApiModules} from "../../../../src/api/impl/types.js";
 import {HistoricalStateRegen} from "../../../../src/chain/archiveStore/historicalState/historicalStateRegen.js";
@@ -23,6 +26,7 @@ import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine
 import {BeaconEngineCoreModules} from "../../../../src/chain/beaconEngine/interface.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
+import * as lightClient from "../../../../src/chain/lightClient/index.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import {DbCPStateDatastore} from "../../../../src/chain/stateCache/datastore/db.js";
 import * as blockValidation from "../../../../src/chain/validation/block.js";
@@ -77,7 +81,8 @@ describe("bytes-based engine startup", () => {
   let stateRoot: Uint8Array;
 
   beforeEach(async () => {
-    ({db, close: closeDb} = await startIsolatedTmpBeaconDb(config));
+    const tmpDb = await startIsolatedTmpBeaconDb(config);
+    ({db, close: closeDb} = tmpDb);
     const state = initDevState(config, 16, {genesisTime: 0});
     state.commit();
     stateRoot = state.hashTreeRoot();
@@ -87,8 +92,8 @@ describe("bytes-based engine startup", () => {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
       pubkeyCache,
       db,
-      dbName: "test",
-      dataDir: "test",
+      dbName: tmpDb.dbName,
+      dataDir: tmpDb.dataDir,
       logger: testLogger(),
       clock,
       processShutdownCallback: () => {},
@@ -119,6 +124,170 @@ describe("bytes-based engine startup", () => {
     await closeDb();
   });
 
+  describe("database ownership", () => {
+    function coreModules(): BeaconEngineCoreModules {
+      return {
+        opts: {...opts, nHistoricalStatesFileDataStore: false},
+        config: modules.config,
+        logging: {type: "injected", logger: modules.logger},
+        dbName: modules.dbName,
+        dataDir: modules.dataDir,
+        dataColumnDir: path.join(modules.dataDir, "data_columns"),
+        metricsEnabled: true,
+        genesisTime: clock.genesisTime,
+        clock,
+        validatorMonitorOpts: null,
+        isAnchorStateFinalized: true,
+        executionEngine: modules.executionEngine,
+      };
+    }
+
+    it("reuses the injected database and leaves it open after engine shutdown", async () => {
+      const open = vi.spyOn(LevelDbController, "create");
+      const close = vi.spyOn(LevelDbController.prototype, "close");
+      engine = new BeaconEngineCore({...coreModules(), db});
+      await engine.init();
+      expect(engine.db).toBe(db);
+      expect(open).not.toHaveBeenCalled();
+
+      await engine.close();
+      expect(close).not.toHaveBeenCalled();
+      await db.earliestAvailableSlot.set(4);
+      expect(await db.earliestAvailableSlot.get()).toBe(4);
+    });
+
+    it("opens local repositories with shared block indexes and checkpoint storage", async () => {
+      const open = vi.spyOn(LevelDbController, "create");
+      const close = vi.spyOn(LevelDbController.prototype, "close");
+      const mainCheckpointWrite = vi.spyOn(db.checkpointState, "putBinary");
+      engine = new BeaconEngineCore(coreModules());
+      expect(open).not.toHaveBeenCalled();
+      expect(engine.lightClientServer).toBeUndefined();
+      await engine.init();
+      expect(open).toHaveBeenCalledOnce();
+      expect(engine.db).not.toBe(db);
+      expect(engine.db.block).not.toBe(db.block);
+      expect("dataColumns" in engine.db).toBe(false);
+
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      const root = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
+      await db.block.put(root, block);
+      expect((await engine.db.block.get(root))?.message.slot).toBe(block.message.slot);
+      await engine.db.blockArchive.put(block.message.slot, block);
+      expect(await db.blockArchive.getSlotByRoot(root)).toBe(block.message.slot);
+      expect(await db.blockArchive.getBinary(block.message.slot)).toEqual(
+        Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(block))
+      );
+
+      const checkpoint = {epoch: 0, root};
+      const key = await engine.cpStateDatastore.write(checkpoint, modules.anchorStateBytes);
+      expect(mainCheckpointWrite).not.toHaveBeenCalled();
+      expect(await db.checkpointState.getBinary(key)).toEqual(Buffer.from(modules.anchorStateBytes));
+      expect(await engine.cpStateDatastore.read(key)).toEqual(Buffer.from(modules.anchorStateBytes));
+      expect(engine.metrics?.register.getSingleMetric("lodestar_db_size_bytes_total")).toBeUndefined();
+      expect(await engine.metrics?.register.metrics()).toContain("lodestar_db_write_req_total{");
+
+      await engine.close();
+      await engine.close();
+      expect(close).toHaveBeenCalledOnce();
+      await db.earliestAvailableSlot.set(5);
+      expect(await db.earliestAvailableSlot.get()).toBe(5);
+    });
+
+    it("constructs the file checkpoint datastore from dataDir", async () => {
+      engine = new BeaconEngineCore({...coreModules(), opts});
+      await engine.init();
+      await engine.cpStateDatastore.init?.();
+      const checkpoint = {epoch: 0, root: stateRoot};
+      const key = await engine.cpStateDatastore.write(checkpoint, modules.anchorStateBytes);
+      expect(await readFile(path.join(modules.dataDir, "checkpoint_states", toHex(key)))).toEqual(
+        Buffer.from(modules.anchorStateBytes)
+      );
+      expect(await db.checkpointState.getBinary(key)).toBeNull();
+    });
+
+    it("requires initialization before anchor preparation and rejects repeated initialization", async () => {
+      engine = new BeaconEngineCore({...coreModules(), db});
+      await expect(engine.prepareAnchorState(modules.anchorStateBytes)).rejects.toMatchObject({
+        type: {code: "BEACON_ENGINE_STARTUP_PHASE", expected: "initialized", actual: "created"},
+      });
+      await engine.init();
+      await expect(engine.init()).rejects.toMatchObject({
+        type: {code: "BEACON_ENGINE_STARTUP_PHASE", expected: "created", actual: "initialized"},
+      });
+      await engine.prepareAnchorState(modules.anchorStateBytes);
+    });
+
+    it("can close before initialization without opening a connection", async () => {
+      const open = vi.spyOn(LevelDbController, "create");
+      engine = new BeaconEngineCore({...coreModules(), clock: undefined});
+      await engine.close();
+      await expect(engine.init()).rejects.toMatchObject({
+        type: {code: "BEACON_ENGINE_STARTUP_PHASE", actual: "closed"},
+      });
+      expect(open).not.toHaveBeenCalled();
+      expect(engine.signal.aborted).toBe(true);
+    });
+
+    it("waits for anchor persistence before closing its connection", async () => {
+      engine = new BeaconEngineCore(coreModules());
+      await engine.init();
+      await engine.prepareAnchorState(modules.anchorStateBytes);
+      const pending = defer<void>();
+      const put = engine.db.stateArchive.putBinary.bind(engine.db.stateArchive);
+      vi.spyOn(engine.db.stateArchive, "putBinary").mockImplementation(async (...args) => {
+        await pending.promise;
+        await put(...args);
+      });
+      const close = vi.spyOn(LevelDbController.prototype, "close");
+      const persist = engine.persistAnchorState();
+      const closing = engine.close();
+      await Promise.resolve();
+      expect(close).not.toHaveBeenCalled();
+
+      pending.resolve();
+      await Promise.all([persist, closing]);
+      expect(close).toHaveBeenCalledOnce();
+      expect(await db.stateArchive.getBinary(0)).toEqual(Buffer.from(modules.anchorStateBytes));
+    });
+
+    it.each([false, true])("cleans up failed initialization with injected database=%s", async (injected) => {
+      const close = vi.spyOn(LevelDbController.prototype, "close");
+      const error = new Error("light client setup failed");
+      // biome-ignore lint/complexity/useArrowFunction: Constructor mocks must be callable with new.
+      vi.spyOn(lightClient, "LightClientServer").mockImplementation(function () {
+        throw error;
+      });
+      engine = new BeaconEngineCore({
+        ...coreModules(),
+        opts: {...opts, disableLightClientServer: false},
+        db: injected ? db : undefined,
+      });
+      await expect(engine.init()).rejects.toBe(error);
+      expect(close).toHaveBeenCalledTimes(injected ? 0 : 1);
+      expect(engine.signal.aborted).toBe(true);
+      expect(engine.metrics?.register.getSingleMetric("lodestar_db_read_req_total")).toBeUndefined();
+      await db.earliestAvailableSlot.set(6);
+      expect(await db.earliestAvailableSlot.get()).toBe(6);
+    });
+
+    it("closes its local connection when anchor validation fails", async () => {
+      const close = vi.spyOn(LevelDbController.prototype, "close");
+      const error = new Error("invalid checkpoint");
+      modules.stateInitialization = {
+        shouldPersist: true,
+        validate: () => {
+          throw error;
+        },
+        log: () => {},
+      };
+      await expect(createBeaconChain({...opts, beaconEngineWorker: true}, modules)).rejects.toBe(error);
+      expect(close).toHaveBeenCalledOnce();
+      expect(await db.stateArchive.keys()).toEqual([]);
+    });
+  });
+
   describe("logger ownership", () => {
     let coreModules: BeaconEngineCoreModules;
     let loggerOpts: nodeLogger.LoggerNodeOpts;
@@ -138,6 +307,7 @@ describe("bytes-based engine startup", () => {
         config: modules.config,
         db,
         dbName: modules.dbName,
+        dataDir: modules.dataDir,
         dataColumnDir: "test",
         metricsEnabled: false,
         genesisTime: clock.genesisTime,
@@ -151,6 +321,7 @@ describe("bytes-based engine startup", () => {
 
     async function initializeCore(overrides: Partial<BeaconEngineCoreModules> = {}): Promise<BeaconEngineCore> {
       engine = new BeaconEngineCore({...coreModules, ...overrides});
+      await engine.init();
       await engine.prepareAnchorState(modules.anchorStateBytes);
       await engine.initializeFromAnchor();
       return engine;
@@ -378,6 +549,7 @@ describe("bytes-based engine startup", () => {
     vi.setSystemTime(0);
     const dependencies = createTestBeaconEngine({...opts, beaconEngineWorker: true}, modules);
     engine = dependencies.beaconEngineCore;
+    await engine.init();
     expect(vi.getTimerCount()).toBe(1);
     if (shutdown === "failed startup") {
       await expect(engine.prepareAnchorState(new Uint8Array())).rejects.toThrow();

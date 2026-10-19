@@ -66,6 +66,7 @@ describe("BeaconEngineCore light client ownership", () => {
       clock,
       db: db as unknown as IBeaconEngineDb,
       dbName: "test",
+      dataDir: "test",
       dataColumnDir: "test",
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
       validatorMonitorOpts: null,
@@ -74,11 +75,12 @@ describe("BeaconEngineCore light client ownership", () => {
     });
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     clock = new ClockStopped(slot + 1);
     clock.setMsIntoSlot(config.getSyncMessageDueMs(ForkName.capella) + 1000);
     engine = createEngine();
+    await engine.init();
     emitter = new ChainEventEmitter();
     facade = new BeaconEngine({core: engine, emitter, clock});
     if (!engine.lightClientServer) throw Error("Expected an engine-owned light client server");
@@ -187,6 +189,7 @@ describe("BeaconEngineCore light client ownership", () => {
 
   it("disables queries and makes pruning a no-op when the service is disabled", async () => {
     const disabled = createEngine(true);
+    await disabled.init();
     expect(disabled.lightClientServer).toBeUndefined();
     for (const [name, query] of Object.entries({
       bootstrap: () => disabled.getLightClientBootstrap(root),

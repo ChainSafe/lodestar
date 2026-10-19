@@ -66,6 +66,7 @@ export function createLodestarMetrics(
   return {
     ...main,
     ...shared,
+    db: {...main.db, ...shared.db},
     bls: {
       ...main.bls,
       ...shared.bls,
@@ -991,26 +992,6 @@ function createMainLodestarMetrics(register: RegistryMetricCreator, metadata?: L
     },
     // [beacon-engine] executionEnginerHttpClient moved to createSharedLodestarMetrics below; merge unstable changes there.
     db: {
-      dbReadReq: register.gauge<{bucket: string}>({
-        name: "lodestar_db_read_req_total",
-        help: "Total count of db read requests, may read 0 or more items",
-        labelNames: ["bucket"],
-      }),
-      dbReadItems: register.gauge<{bucket: string}>({
-        name: "lodestar_db_read_items_total",
-        help: "Total count of db read items, item = key | value | entry",
-        labelNames: ["bucket"],
-      }),
-      dbWriteReq: register.gauge<{bucket: string}>({
-        name: "lodestar_db_write_req_total",
-        help: "Total count of db write requests, may write 0 or more items",
-        labelNames: ["bucket"],
-      }),
-      dbWriteItems: register.gauge<{bucket: string}>({
-        name: "lodestar_db_write_items_total",
-        help: "Total count of db write items",
-        labelNames: ["bucket"],
-      }),
       dbSizeTotal: register.gauge({
         name: "lodestar_db_size_bytes_total",
         help: "Approximate number of bytes of file system space used by LevelDB",
@@ -2109,6 +2090,28 @@ function createEngineLodestarMetrics(register: RegistryMetricCreator) {
  */
 function createSharedLodestarMetrics(register: RegistryMetricCreator) {
   return {
+    db: {
+      dbReadReq: register.gauge<{bucket: string}>({
+        name: "lodestar_db_read_req_total",
+        help: "Total count of db read requests, may read 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbReadItems: register.gauge<{bucket: string}>({
+        name: "lodestar_db_read_items_total",
+        help: "Total count of db read items, item = key | value | entry",
+        labelNames: ["bucket"],
+      }),
+      dbWriteReq: register.gauge<{bucket: string}>({
+        name: "lodestar_db_write_req_total",
+        help: "Total count of db write requests, may write 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbWriteItems: register.gauge<{bucket: string}>({
+        name: "lodestar_db_write_items_total",
+        help: "Total count of db write items",
+        labelNames: ["bucket"],
+      }),
+    },
     engineHttpProcessorQueue: {
       length: register.gauge({
         name: "lodestar_engine_http_processor_queue_length",

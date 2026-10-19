@@ -54,6 +54,7 @@ describe("BeaconEngineCore checkpoint maintenance", () => {
         executionEngine: new ExecutionEngineDisabled(),
       }
     ));
+    await engine.init();
     await engine.prepareAnchorState(stateBytes);
     await engine.initializeFromAnchor();
     state = engine.getHeadState();

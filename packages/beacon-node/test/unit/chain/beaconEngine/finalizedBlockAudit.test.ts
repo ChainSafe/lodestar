@@ -66,6 +66,7 @@ describe("BeaconEngineCore finalized-block audit", () => {
         executionEngine: new ExecutionEngineDisabled(),
       }
     ));
+    await engine.init();
     await engine.prepareAnchorState(state.serialize());
     await engine.initializeFromAnchor();
     assert(engine.metrics);

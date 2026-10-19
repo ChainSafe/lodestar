@@ -21,7 +21,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
   let block: gloas.SignedBeaconBlock;
   let root: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     const modules = getApiTestModules({config});
     engine = new BeaconEngineCore({
       config,
@@ -32,12 +32,14 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       clock: modules.chain.clock,
       db: modules.db,
       dbName: "test",
+      dataDir: "test",
       dataColumnDir: "test",
       cpStateDatastore: {write: vi.fn(), remove: vi.fn(), read: vi.fn(), readLatestSafe: vi.fn(), readKeys: vi.fn()},
       validatorMonitorOpts: null,
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),
     });
+    await engine.init();
     engine.forkChoice = modules.chain.forkChoice;
     modules.chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
     engine.regen = modules.chain.regen;

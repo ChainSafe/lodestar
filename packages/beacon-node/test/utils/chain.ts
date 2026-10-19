@@ -13,6 +13,7 @@ export async function initializeTestChain(opts: IChainOptions, modules: TestChai
   const dependencies = createTestBeaconEngine(opts, modules);
   const {beaconEngine} = dependencies;
   try {
+    await dependencies.beaconEngineCore.init();
     const {earliestAvailableSlot} = await executeStateInitialization(beaconEngine, {
       stateBytes: modules.anchorStateBytes,
       config: modules.config,

@@ -15,7 +15,7 @@ export type IChainOptions = IBeaconEngineOptions &
   BlockProcessOpts &
   ArchiveStoreOpts &
   ValidatorMonitorOpts & {
-    /** Use separate BeaconEngine caches and message decoding. Worker thread transport is still pending. */
+    /** Use separate BeaconEngine resources and message decoding. Worker thread transport is still pending. */
     beaconEngineWorker?: boolean;
     blacklistedBlocks?: string[];
     persistProducedBlocks?: boolean;
@@ -29,7 +29,6 @@ export type IChainOptions = IBeaconEngineOptions &
     initialCustodyGroupCount?: number;
     broadcastValidationStrictness?: string;
     archiveDateEpochs?: number;
-    nHistoricalStatesFileDataStore?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
     /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */

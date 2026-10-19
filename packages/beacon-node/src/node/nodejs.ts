@@ -19,8 +19,6 @@ import {BlockSerializedCache} from "../chain/blocks/blockSerializedCache.js";
 import {ChainEventEmitter} from "../chain/emitter.js";
 import {BeaconChain, IBeaconChain} from "../chain/index.js";
 import {initBeaconMetrics} from "../chain/initState.js";
-import {DbCPStateDatastore} from "../chain/stateCache/datastore/db.js";
-import {FileCPStateDatastore} from "../chain/stateCache/datastore/file.js";
 import {StateInitialization} from "../chain/stateInitialization.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeExecutionEngine} from "../execution/index.js";
@@ -212,9 +210,6 @@ export class BeaconNode {
     const chainLogger = logger.child({module: LoggerModule.chain});
     const executionEngineLogger = logger.child({module: LoggerModule.execution});
     const emitter = new ChainEventEmitter();
-    const fileDataStore = opts.chain.nHistoricalStatesFileDataStore ?? true;
-    // checkpointState is an engine repo; build the datastore from the bootstrap `db` (union) param.
-    const cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(db);
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount = opts.chain.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
@@ -252,7 +247,8 @@ export class BeaconNode {
       isAnchorStateFinalized: stateInitialization.isFinalized,
       opts: opts.chain,
       config,
-      db,
+      db: opts.chain.beaconEngineWorker ? undefined : db,
+      dataDir,
       dbName: opts.db.name,
       dataColumnDir,
       logging: opts.chain.beaconEngineWorker
@@ -266,13 +262,13 @@ export class BeaconNode {
       metricsEnabled: metrics !== null,
       genesisTime: metadata.genesisTime,
       clock: opts.chain.beaconEngineWorker ? undefined : clock,
-      cpStateDatastore,
       executionEngine: opts.chain.beaconEngineWorker ? undefined : executionEngine,
       executionEngineOpts,
       executionBuilderOpts: opts.executionBuilder,
       builderApiClientOpts,
     });
     const beaconEngine = new BeaconEngine({core: beaconEngineCore, emitter, clock});
+    await beaconEngineCore.init();
     const {earliestAvailableSlot} = await executeStateInitialization(
       beaconEngine,
       stateInitialization,
