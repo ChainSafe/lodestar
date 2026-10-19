@@ -1001,6 +1001,49 @@ describe("Gloas Fork Choice", () => {
       expect(status(protoArray, "0x0c", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
     });
 
+    it("a verdict about a child payload drops an unknown LVH instead of guessing", () => {
+      const protoArray = setup();
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      // C's envelope (built on FULL(B)) is INVALID, the LVH is not on the ancestor chain
+      const unknown = protoArray.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: "0xdead",
+          invalidateFromParentBlockRoot: "0x0b",
+          invalidateFromParentBlockHash: "0xb1",
+        },
+        gloasForkSlot + 2,
+        {strict: false, fromNodeJudged: false}
+      );
+      expect(unknown).toBe(false);
+      expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
+
+      // With the LVH at A's payload, B's payload is invalid
+      const known = protoArray.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: "0xa1",
+          invalidateFromParentBlockRoot: "0x0b",
+          invalidateFromParentBlockHash: "0xb1",
+        },
+        gloasForkSlot + 2,
+        {strict: false, fromNodeJudged: false}
+      );
+      expect(known).toBe(true);
+      expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
+      expect(status(protoArray, "0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
+      expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
+    });
+
     it("never invalidates the EMPTY variant of the justified block but still its own payload", () => {
       const protoArray = setup("0x0b");
       const fromEmpty = protoArray.validateLatestHash(

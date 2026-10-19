@@ -12,11 +12,12 @@ import {
   isStatePostHeze,
 } from "@lodestar/state-transition";
 import {RootHex, bellatrix} from "@lodestar/types";
-import {isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
+import {ExecutionInvalidSource} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
@@ -259,12 +260,27 @@ export async function importExecutionPayload(
     case ExecutionPayloadStatus.VALID:
       break;
 
-    case ExecutionPayloadStatus.INVALID:
+    case ExecutionPayloadStatus.INVALID: {
+      // The parent payload chain between the LVH and this payload's parent is invalid too. The parent pair is the
+      // variant this block builds on, the same pair the pre-gloas segment path invalidates from
+      const parentHashHex = toRootHex(envelope.payload.parentHash);
+      if (execResult.latestValidHash !== null && execResult.latestValidHash !== parentHashHex) {
+        this.invalidateExecutionPayloads(
+          {
+            executionStatus: ExecutionStatus.Invalid,
+            latestValidExecHash: execResult.latestValidHash,
+            invalidateFromParentBlockRoot: protoBlock.parentRoot,
+            invalidateFromParentBlockHash: parentHashHex,
+          },
+          ExecutionInvalidSource.newPayload
+        );
+      }
       throw new PayloadError(payloadInput, {
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",
       });
+    }
 
     case ExecutionPayloadStatus.ACCEPTED:
     case ExecutionPayloadStatus.SYNCING:

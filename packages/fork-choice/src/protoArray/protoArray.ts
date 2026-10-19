@@ -1030,11 +1030,15 @@ export class ProtoArray {
    * or PreMerge node on the invalidated chain poisons the tree. Verdicts from forkchoiceUpdated or about an ancestor
    * chain are applied with `strict: false`: a node the engine already validated is never invalidated and the justified
    * node is never crossed. If the walk to the LVH meets either, the LVH is treated as unknown.
+   *
+   * `fromNodeJudged` says whether the engine judged the from node itself invalid (forkchoiceUpdated) or only a payload
+   * built on it (newPayload, the from node is the parent). An unknown or conflicting LVH falls back to invalidating the
+   * from node only when it was judged, otherwise nothing is known and the verdict is dropped.
    */
   validateLatestHash(
     execResponse: LVHExecResponse,
     currentSlot: Slot,
-    {strict = true}: {strict?: boolean} = {}
+    {strict = true, fromNodeJudged = true}: {strict?: boolean; fromNodeJudged?: boolean} = {}
   ): boolean {
     // Look reverse because its highly likely node with latestValidExecHash is towards the
     // the leaves of the forkchoice
@@ -1123,6 +1127,9 @@ export class ProtoArray {
         // The strict from node is the parent of the rejected payload and may be valid, never guess here
         throw Error(`Unable to find latestValidExecHash=${latestValidExecHash} in the forkchoice`);
       }
+      if (!fromNodeJudged) {
+        return false;
+      }
       latestValidHashIndex = this.getUnknownLVHIndex(invalidateFromParentIndex);
     }
 
@@ -1139,7 +1146,10 @@ export class ProtoArray {
           (node.blockRoot === this.justifiedRoot && node.payloadStatus === PayloadStatus.EMPTY)
         ) {
           // Conflicting LVH: fall back to the unknown LVH bound, but never cross this node
-          latestValidHashIndex = Math.max(nodeIndex, this.getUnknownLVHIndex(invalidateFromParentIndex));
+          latestValidHashIndex = Math.max(
+            nodeIndex,
+            fromNodeJudged ? this.getUnknownLVHIndex(invalidateFromParentIndex) : invalidateFromParentIndex
+          );
           break;
         }
         nodeIndex = node.parent;

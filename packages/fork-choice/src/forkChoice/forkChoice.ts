@@ -1599,7 +1599,7 @@ export class ForkChoice implements IForkChoice {
    * justified's status as well as validate the terminal conditions if terminal block
    * becomes valid
    */
-  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean {
+  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean; fromNodeJudged?: boolean}): boolean {
     try {
       return this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot, opts);
     } catch (e) {

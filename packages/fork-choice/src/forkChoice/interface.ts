@@ -358,7 +358,7 @@ export interface IForkChoice {
    * Apply an execution engine verdict with a latest valid hash, see `ProtoArray.validateLatestHash`.
    * Returns whether any execution status changed. A consensus failure is recorded in `irrecoverableError`.
    */
-  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean;
+  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean; fromNodeJudged?: boolean}): boolean;
 
   /**
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
