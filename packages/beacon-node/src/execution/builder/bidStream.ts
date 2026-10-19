@@ -17,6 +17,17 @@ export type StreamedBuilderBid = {
   receivedMs: number;
 };
 
+export type BidStreamTiming = {
+  event: "headers_queued" | "upgrade" | "frame" | "finished";
+  atMs: number;
+  receivedMs?: number;
+  timeoutMs?: number;
+  dateMilliseconds?: number;
+  blockHash?: string;
+  reason?: BidStreamResult["reason"];
+  statusCode?: number;
+};
+
 type BidStreamRequest = {
   url: string;
   slot: Slot;
@@ -34,6 +45,7 @@ type BidStreamRequest = {
   stopSignal?: AbortSignal;
   msFromSlot: () => number;
   onBid?: (bid: StreamedBuilderBid) => void;
+  onTiming?: (timing: BidStreamTiming) => void;
 };
 
 export type BidStreamResult = {
@@ -53,13 +65,22 @@ export type BidStreamResult = {
 export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise<BidStreamResult> {
   const startedAt = request.startedAt ?? performance.now();
   const deadline = startedAt + request.requestTimeoutMs;
+  const notifyTiming = (timing: BidStreamTiming): void => {
+    try {
+      request.onTiming?.(timing);
+    } catch {
+      // Diagnostics must not change transport or bid selection.
+    }
+  };
   if (request.signal?.aborted || performance.now() >= deadline) {
+    const reason = request.signal?.aborted ? "aborted" : "deadline";
+    notifyTiming({event: "finished", atMs: performance.now(), reason});
     return Promise.resolve({
       upgraded: false,
       opened: false,
       updates: 0,
       discarded: 0,
-      reason: request.signal?.aborted ? "aborted" : "deadline",
+      reason,
     });
   }
   const url = new URL(request.url);
@@ -102,15 +123,18 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
             httpRequest.destroy();
             return;
           }
-          const remaining = Math.floor(request.timeoutMs - (performance.now() - startedAt));
+          const queuedAt = performance.now();
+          const remaining = Math.floor(request.timeoutMs - (queuedAt - startedAt));
           if (remaining <= 0 || performance.now() >= deadline) {
             finish("deadline");
             return;
           }
           // Charge setup once; only the HTTP transit is doubled by the builder's reply reserve.
-          httpRequest.setHeader("Date-Milliseconds", String(Date.now()));
+          const dateMilliseconds = Date.now();
+          httpRequest.setHeader("Date-Milliseconds", String(dateMilliseconds));
           httpRequest.setHeader("X-Timeout-Ms", String(remaining));
           httpRequest.end();
+          notifyTiming({event: "headers_queued", atMs: queuedAt, timeoutMs: remaining, dateMilliseconds});
         };
         const onSocket = (connection: Socket): void => {
           // Direct queue handoff of a connected socket may leave reusedSocket=false.
@@ -142,6 +166,7 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
       pendingPong = undefined;
       socket.terminate();
       resolve({upgraded, opened, bid: latest, updates, discarded, reason, statusCode});
+      notifyTiming({event: "finished", atMs: performance.now(), reason, statusCode});
     };
     const abort = (): void => finish("aborted");
     const stop = (): void => {
@@ -152,6 +177,7 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
     socket.on("error", () => finish("error"));
     socket.once("upgrade", () => {
       upgraded = true;
+      notifyTiming({event: "upgrade", atMs: performance.now()});
     });
     socket.once("open", () => {
       opened = true;
@@ -164,7 +190,8 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
     });
     socket.on("message", (data, isBinary) => {
       if (stopped) return;
-      if (expired()) return finish("deadline");
+      const receivedAt = performance.now();
+      if (receivedAt >= deadline) return finish("deadline");
       if (++messages > MAX_MESSAGES) return finish("limit");
       const receivedMs = request.msFromSlot();
       const frame = Array.isArray(data) ? Buffer.concat(data) : Buffer.isBuffer(data) ? data : Buffer.from(data);
@@ -190,6 +217,7 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
         updates++;
         request.onBid?.(latest);
         if (request.stopSignal?.aborted) stop();
+        notifyTiming({event: "frame", atMs: receivedAt, receivedMs, blockHash: toHex(bid.blockHash)});
       } catch {
         discarded++;
       }

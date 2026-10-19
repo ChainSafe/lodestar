@@ -585,7 +585,15 @@ describe("api/validator - produceBlockV4", () => {
 
     const candidateLogs = modules.chain.logger.debug.mock.calls.filter(([msg]) => msg === "Builder bid candidate");
     expect(candidateLogs.map(([, ctx]) => ctx)).toMatchObject([
-      {source: builderUrl, value: "0.00000 ETH", executionPayment: "5.00000 ETH", total: "3.00000 ETH"},
+      {
+        source: builderUrl,
+        value: "0.00000 ETH",
+        executionPayment: "5.00000 ETH",
+        total: "3.00000 ETH",
+        blockHash: toRootHex(apiBid.message.blockHash),
+        parentBlockHash: toRootHex(apiBid.message.parentBlockHash),
+        parentBlockRoot: toRootHex(apiBid.message.parentBlockRoot),
+      },
       {source: "p2p", value: "1.00000 ETH", executionPayment: "0.00000 ETH", total: "1.00000 ETH"},
     ]);
   });

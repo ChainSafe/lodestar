@@ -8,6 +8,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import type {IBlsVerifier} from "../../../../src/chain/bls/index.js";
 import {
   BUILDER_BID_LAG_BUFFER_MS,
@@ -75,6 +76,60 @@ describe("execution/builder/apiClient stream integration", () => {
     );
   });
 
+  it("records configured HTTP budgets and decoded receipt without exposing URL credentials", async () => {
+    const logger = getMockedLogger();
+    const client = makeClient({bidStream: false, bidDeadline: 123}, {logger});
+    const bids = await collect(client, [
+      entry("https://private-user:private-password@builder.example.test/path?secret=hidden"),
+    ]);
+    const events = timingEvents(logger);
+    const started = events.find((event) => event.event === "started");
+    const dispatched = events.find((event) => event.event === "http_dispatch");
+    const decoded = events.find((event) => event.event === "http_decoded");
+
+    expect(bids).toHaveLength(1);
+    expect(events).toHaveLength(3);
+    expect(new Set(events.map((event) => event.attempt)).size).toBe(1);
+    expect(Number(started?.advertisedBudgetDeadlineAtMs) - Number(started?.startedAtMs)).toBeCloseTo(123, 5);
+    expect(Number(started?.clientBudgetDeadlineAtMs) - Number(started?.startedAtMs)).toBeCloseTo(373, 5);
+    expect(dispatched).toMatchObject({timeoutMs: 123, requestTimeoutMs: 373, builder: "https://builder.example.test"});
+    expect(decoded).toMatchObject({blockHash: toHex(makeBid().message.blockHash), receivedMs: bids[0].receivedMs});
+    expect(Number(decoded?.dispatchBudgetSlackMs)).toBeCloseTo(
+      Number(dispatched?.atMs) + 123 - Number(decoded?.atMs),
+      5
+    );
+    const serialized = JSON.stringify(events);
+    for (const secret of ["private-user", "private-password", "hidden", "requestAuth", "signature"]) {
+      expect(serialized).not.toContain(secret);
+    }
+  });
+
+  it("records negative advertised slack without changing the HTTP lag-buffer acceptance", async () => {
+    const logger = getMockedLogger();
+    getExecutionPayloadBid.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({value: () => makeBid()}), 40))
+    );
+    const bids = await collect(makeClient({bidStream: false, bidDeadline: 10}, {logger}), [
+      entry("https://builder.test"),
+    ]);
+    const decoded = timingEvents(logger).find((event) => event.event === "http_decoded");
+
+    expect(bids).toHaveLength(1);
+    expect(Number(decoded?.advertisedBudgetSlackMs)).toBeLessThan(0);
+    expect(Number(decoded?.clientBudgetSlackMs)).toBeGreaterThan(0);
+  });
+
+  it("ignores timing logger failures while collecting HTTP bids", async () => {
+    const logger = getMockedLogger();
+    logger.debug.mockImplementation((message) => {
+      if (message === "Builder bid request timing") throw Error("diagnostic sink failed");
+    });
+    const bids = await collect(makeClient({bidStream: false}, {logger}), [entry("https://builder.test")]);
+
+    expect(bids).toHaveLength(1);
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
   it.each([ForkName.fulu, ForkName.heze])("uses HTTP on %s even when streaming is enabled", async (fork) => {
     const server = await startServer();
     const connected = vi.fn();
@@ -137,7 +192,8 @@ describe("execution/builder/apiClient stream integration", () => {
       streamRequest = request;
       setTimeout(() => socket.end("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"), 25);
     });
-    const client = makeClient({bidDeadline: 200});
+    const logger = getMockedLogger();
+    const client = makeClient({bidDeadline: 200}, {logger});
 
     const bids = await collect(client, [entry(server.url)]);
 
@@ -152,6 +208,23 @@ describe("execution/builder/apiClient stream integration", () => {
     expect(options.redirect).toBe("manual");
     expect(request.dateMilliseconds).toBeGreaterThan(Number(streamRequest?.headers["date-milliseconds"]));
     expect(request.requestAuth).toEqual(entry(server.url).auth);
+    const events = timingEvents(logger);
+    expect(new Set(events.map((event) => event.attempt)).size).toBe(1);
+    expect(events.find((event) => event.event === "websocket_headers_queued")).toMatchObject({
+      timeoutMs: Number(streamRequest?.headers["x-timeout-ms"]),
+      dateMilliseconds: Number(streamRequest?.headers["date-milliseconds"]),
+    });
+    expect(events.find((event) => event.event === "websocket_finished")).toMatchObject({
+      reason: "http",
+      statusCode: 404,
+    });
+    expect(events.find((event) => event.event === "http_fallback")).toMatchObject({
+      timeoutMs: request.timeoutMs,
+      requestTimeoutMs: options.timeoutMs,
+    });
+    expect(events.find((event) => event.event === "http_decoded")).toMatchObject({
+      blockHash: toHex(bids[0].signedBid.message.blockHash),
+    });
   });
 
   it.each([false, true])("never falls back to HTTP after upgrade, with a bid present: %s", async (hasBid) => {
@@ -499,12 +572,28 @@ function makeClient(
     fork = ForkName.gloas,
     msFromSlot,
     shutdown,
-  }: {fork?: ForkName; msFromSlot?: () => number; shutdown?: AbortSignal} = {}
+    logger = getMockedLogger(),
+  }: {
+    fork?: ForkName;
+    msFromSlot?: () => number;
+    shutdown?: AbortSignal;
+    logger?: ReturnType<typeof getMockedLogger>;
+  } = {}
 ): BuilderApiClient {
   const started = performance.now();
   const clock = {msFromSlot: msFromSlot ?? (() => performance.now() - started)} as unknown as IClock;
   const config: ChainForkConfig = {...defaultConfig, getForkName: () => fork};
-  return new BuilderApiClient({bidStream: true, ...opts}, config, clock, bls, null, getMockedLogger(), shutdown);
+  return new BuilderApiClient({bidStream: true, ...opts}, config, clock, bls, null, logger, shutdown);
+}
+
+function timingEvents(logger: ReturnType<typeof getMockedLogger>) {
+  return logger.debug.mock.calls
+    .filter(([message]) => message === "Builder bid request timing")
+    .map(([, context]) => {
+      if (context === null || typeof context !== "object" || Array.isArray(context))
+        throw Error("Expected timing fields");
+      return context;
+    });
 }
 
 function collect(client: BuilderApiClient, entries: routes.validator.BuilderEntry[], stopSignal?: AbortSignal) {

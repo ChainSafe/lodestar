@@ -132,10 +132,37 @@ describe("execution/builder/bidStream", () => {
       socket.close();
     });
     let time = 0;
-    const result = await getExecutionPayloadBidStream(makeRequest(server.url, {msFromSlot: () => ++time * 100}));
+    const onTiming = vi.fn();
+    const result = await getExecutionPayloadBidStream(
+      makeRequest(server.url, {msFromSlot: () => ++time * 100, onTiming})
+    );
 
     expect(result).toMatchObject({updates: 1, discarded: 1, reason: "closed"});
     expectBid(result.bid, valid, 100);
+    const frames = onTiming.mock.calls.map(([event]) => event).filter((event) => event.event === "frame");
+    expect(frames).toEqual([
+      {event: "frame", atMs: expect.any(Number), receivedMs: 100, blockHash: toHex(valid.message.blockHash)},
+    ]);
+  });
+
+  it("ignores timing callback failures without changing a received revision or stream completion", async () => {
+    const server = await startServer();
+    const valid = makeBid();
+    server.ws.once("connection", (socket) => {
+      socket.send(frame(valid));
+      socket.close();
+    });
+    const onTiming = vi.fn(() => {
+      throw Error("diagnostic sink failed");
+    });
+    const onBid = vi.fn();
+
+    const result = await getExecutionPayloadBidStream(makeRequest(server.url, {onTiming, onBid}));
+
+    expect(result).toMatchObject({upgraded: true, opened: true, reason: "closed", updates: 1, discarded: 0});
+    expectBid(result.bid, valid);
+    expect(onBid).toHaveBeenCalledOnce();
+    expect(onTiming).toHaveBeenCalledTimes(4);
   });
 
   it("ends an idle open stream at its absolute deadline and retains its latest bid", async () => {
@@ -263,24 +290,28 @@ describe("execution/builder/bidStream", () => {
     const controller = new AbortController();
     controller.abort();
     const started = performance.now();
+    const onTiming = vi.fn();
 
-    const result = await getExecutionPayloadBidStream(makeRequest(server.url, {signal: controller.signal}));
+    const result = await getExecutionPayloadBidStream(makeRequest(server.url, {signal: controller.signal, onTiming}));
 
     expect(result).toMatchObject({opened: false, reason: "aborted", updates: 0});
     expect(result.bid).toBeUndefined();
     expect(performance.now() - started).toBeLessThan(500);
+    expect(onTiming).toHaveBeenCalledExactlyOnceWith({event: "finished", atMs: expect.any(Number), reason: "aborted"});
   });
 
   it("does not open a connection when no request budget remains", async () => {
     const server = await startServer();
     const connected = vi.fn();
     server.http.on("connection", connected);
+    const onTiming = vi.fn();
 
-    const result = await getExecutionPayloadBidStream(makeRequest(server.url, {requestTimeoutMs: 0}));
+    const result = await getExecutionPayloadBidStream(makeRequest(server.url, {requestTimeoutMs: 0, onTiming}));
 
     expect(result).toMatchObject({opened: false, reason: "deadline", updates: 0});
     expect(result.bid).toBeUndefined();
     expect(connected).not.toHaveBeenCalled();
+    expect(onTiming).toHaveBeenCalledExactlyOnceWith({event: "finished", atMs: expect.any(Number), reason: "deadline"});
   });
 
   it.each([403, 503])("settles a rejected HTTP upgrade with status %i", async (status) => {
@@ -290,10 +321,19 @@ describe("execution/builder/bidStream", () => {
       socket.end(`HTTP/1.1 ${status} Rejected\r\nContent-Length: 0\r\nConnection: close\r\n\r\n`);
     });
 
-    const result = await getExecutionPayloadBidStream(makeRequest(server.url));
+    const onTiming = vi.fn(() => {
+      throw Error("diagnostic sink failed");
+    });
+    const result = await getExecutionPayloadBidStream(makeRequest(server.url, {onTiming}));
 
     expect(result).toMatchObject({upgraded: false, opened: false, reason: "http", statusCode: status, updates: 0});
     expect(result.bid).toBeUndefined();
+    expect(onTiming).toHaveBeenCalledWith({
+      event: "finished",
+      atMs: expect.any(Number),
+      reason: "http",
+      statusCode: status,
+    });
   });
 
   it.each([
