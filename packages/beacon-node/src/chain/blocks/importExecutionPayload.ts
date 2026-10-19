@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {
   ExecutionStatus,
   PayloadExecutionStatus,
+  PayloadStatus,
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
@@ -12,11 +13,12 @@ import {
   isStatePostHeze,
 } from "@lodestar/state-transition";
 import {RootHex, bellatrix} from "@lodestar/types";
-import {isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
+import {ExecutionInvalidSource} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
@@ -259,12 +261,26 @@ export async function importExecutionPayload(
     case ExecutionPayloadStatus.VALID:
       break;
 
-    case ExecutionPayloadStatus.INVALID:
+    case ExecutionPayloadStatus.INVALID: {
+      // The payload chain between the LVH and this payload's parent is invalid too
+      const parentHashHex = toRootHex(envelope.payload.parentHash);
+      if (execResult.latestValidHash !== null && execResult.latestValidHash !== parentHashHex) {
+        this.invalidateExecutionPayloads(
+          {
+            executionStatus: ExecutionStatus.Invalid,
+            latestValidExecHash: execResult.latestValidHash,
+            invalidateFromParentBlockRoot: protoBlock.parentRoot,
+            invalidateFromParentBlockHash: parentHashHex,
+          },
+          ExecutionInvalidSource.newPayload
+        );
+      }
       throw new PayloadError(payloadInput, {
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",
       });
+    }
 
     case ExecutionPayloadStatus.ACCEPTED:
     case ExecutionPayloadStatus.SYNCING:
@@ -327,7 +343,14 @@ export async function importExecutionPayload(
     }
   }
 
-  // 6. Update fork choice, transitions the block's PENDING variant to FULL
+  // 6. Update fork choice, transitions the block's PENDING variant to FULL. The block may have been invalidated
+  // while the engine was asked, a FULL variant under an invalid PENDING would contradict it
+  if (this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.PENDING)?.executionStatus === ExecutionStatus.Invalid) {
+    throw new PayloadError(payloadInput, {
+      code: PayloadErrorCode.BLOCK_EXECUTION_INVALID,
+      blockRootHex,
+    });
+  }
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
   this.forkChoice.onExecutionPayload(
     blockRootHex,

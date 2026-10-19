@@ -1477,9 +1477,16 @@ export class BeaconChain implements IBeaconChain {
       source,
       blockRoot: lvh.invalidateFromParentBlockRoot,
       blockHash: lvh.invalidateFromParentBlockHash,
+      executionStatus: this.forkChoice.getBlockHexAndBlockHash(
+        lvh.invalidateFromParentBlockRoot,
+        lvh.invalidateFromParentBlockHash
+      )?.executionStatus,
       latestValidHash: lvh.latestValidExecHash ?? "null",
     };
-    const applied = this.forkChoice.validateLatestHash(lvh, {strict: source === ExecutionInvalidSource.blockSegment});
+    const applied = this.forkChoice.validateLatestHash(lvh, {
+      strict: source === ExecutionInvalidSource.blockSegment,
+      fromNodeJudged: source === ExecutionInvalidSource.forkchoiceUpdated,
+    });
     if (!applied) {
       this.logger.warn("Execution engine INVALID verdict not applied to fork choice", logCtx);
       return;
