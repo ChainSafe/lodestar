@@ -90,7 +90,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       withdrawals: [],
       parentBeaconBlockRoot: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
     };
-    const payloadId = await executionEngine.notifyForkchoiceUpdate(
+    const {payloadId} = await executionEngine.notifyForkchoiceUpdate(
       ForkName.electra,
       genesisBlockHash,
       //use finalizedBlockHash as safeBlockHash
@@ -186,7 +186,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       parentBeaconBlockRoot: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
     };
 
-    const payloadId2 = await executionEngine.notifyForkchoiceUpdate(
+    const {payloadId: payloadId2} = await executionEngine.notifyForkchoiceUpdate(
       ForkName.electra,
       newPayloadBlockHash,
       //use finalizedBlockHash as safeBlockHash

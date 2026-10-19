@@ -12,6 +12,7 @@ import {fromHex} from "@lodestar/utils";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
+import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
 import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateCachedBellatrixState, generateState, zeroProtoBlock} from "../../utils/state.js";
@@ -42,6 +43,10 @@ describe("PrepareNextSlot scheduler", () => {
 
     getForkStub = vi.spyOn(config, "getForkName");
     executionEngineStub = chainStub.executionEngine;
+    executionEngineStub.notifyForkchoiceUpdate.mockResolvedValue({
+      payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+      payloadId: "0x1234",
+    });
     vi.spyOn(chainStub, "opts", "get").mockReturnValue({emitPayloadAttributes} as IChainOptions);
 
     scheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);

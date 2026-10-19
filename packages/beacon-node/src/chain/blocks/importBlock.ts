@@ -470,6 +470,7 @@ export async function importBlock(
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
         .notifyForkchoiceUpdate(this.config.getForkName(fcuHead.slot), headBlockHash, safeBlockHash, finalizedBlockHash)
+        .then((result) => this.onForkchoiceUpdated(fcuHead.blockRoot, headBlockHash, result))
         .catch((e) => {
           if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
             this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);

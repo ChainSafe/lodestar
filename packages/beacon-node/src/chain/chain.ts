@@ -5,10 +5,13 @@ import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {
+  AncestorStatus,
   CheckpointWithHex,
   EpochDifference,
+  ExecutionStatus,
   ForkChoiceStateGetter,
   IForkChoice,
+  LVHInvalidResponse,
   PayloadStatus,
   ProtoBlock,
   UpdateHeadOpt,
@@ -64,7 +67,12 @@ import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js
 import {decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {
+  ExecutionPayloadStatus,
+  ForkchoiceUpdatedResult,
+  IExecutionBuilder,
+  IExecutionEngine,
+} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BufferPool} from "../util/bufferPool.js";
@@ -90,8 +98,8 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
-import {ChainEvent, ChainEventEmitter} from "./emitter.js";
-import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
+import {ChainEvent, ChainEventEmitter, ReorgEventData} from "./emitter.js";
+import {ExecutionInvalidSource, ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
@@ -1427,6 +1435,95 @@ export class BeaconChain implements IBeaconChain {
       throw e;
     } finally {
       timer?.();
+    }
+  }
+
+  onForkchoiceUpdated(headBlockRoot: RootHex, headBlockHash: RootHex, result: ForkchoiceUpdatedResult): void {
+    const {status, latestValidHash, validationError} = result.payloadStatus;
+    const executionStatus = this.forkChoice.getBlockHexAndBlockHash(headBlockRoot, headBlockHash)?.executionStatus;
+    try {
+      if (status === ExecutionPayloadStatus.INVALID) {
+        if (executionStatus === ExecutionStatus.Invalid) {
+          return;
+        }
+        this.logger.error("Execution engine reported INVALID forkchoice head", {
+          headBlockRoot,
+          headBlockHash,
+          latestValidHash: latestValidHash ?? "null",
+          validationError: validationError ?? "",
+        });
+        this.invalidateExecutionPayloads(
+          {
+            executionStatus: ExecutionStatus.Invalid,
+            latestValidExecHash: latestValidHash,
+            invalidateFromParentBlockRoot: headBlockRoot,
+            invalidateFromParentBlockHash: headBlockHash,
+          },
+          ExecutionInvalidSource.forkchoiceUpdated
+        );
+      } else if (status === ExecutionPayloadStatus.VALID && executionStatus === ExecutionStatus.Syncing) {
+        this.forkChoice.validateLatestHash(
+          {executionStatus: ExecutionStatus.Valid, latestValidExecHash: headBlockHash, blockRoot: headBlockRoot},
+          {strict: false}
+        );
+      }
+    } catch (e) {
+      this.logger.error("Error applying forkchoice update result", {headBlockRoot, headBlockHash, status}, e as Error);
+    }
+  }
+
+  invalidateExecutionPayloads(lvh: LVHInvalidResponse, source: ExecutionInvalidSource): void {
+    const logCtx = {
+      source,
+      blockRoot: lvh.invalidateFromParentBlockRoot,
+      blockHash: lvh.invalidateFromParentBlockHash,
+      latestValidHash: lvh.latestValidExecHash ?? "null",
+    };
+    const applied = this.forkChoice.validateLatestHash(lvh, {strict: source === ExecutionInvalidSource.blockSegment});
+    if (!applied) {
+      this.logger.warn("Execution engine INVALID verdict not applied to fork choice", logCtx);
+      return;
+    }
+    this.metrics?.forkChoice.executionInvalidations.inc({source});
+    this.logger.warn("Invalidated execution payloads in fork choice", logCtx);
+
+    const oldHead = this.forkChoice.getHead();
+    let newHead: ProtoBlock;
+    try {
+      newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.executionInvalid);
+    } catch (e) {
+      this.logger.error("Error recomputing head after execution payload invalidation", logCtx, e as Error);
+      return;
+    }
+    if (newHead.blockRoot === oldHead.blockRoot && newHead.payloadStatus === oldHead.payloadStatus) {
+      return;
+    }
+
+    this.regen.updateHeadState(newHead);
+    this.logger.verbose("New chain head after execution payload invalidation", {
+      slot: newHead.slot,
+      root: newHead.blockRoot,
+      payloadStatus: newHead.payloadStatus,
+    });
+    this.onNewHead(newHead);
+    this.metrics?.forkChoice.changedHead.inc();
+
+    const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
+    if (ancestorResult.code === AncestorStatus.CommonAncestor) {
+      const reorgEventData: ReorgEventData = {
+        depth: ancestorResult.depth,
+        epoch: computeEpochAtSlot(newHead.slot),
+        slot: newHead.slot,
+        newHeadBlock: newHead.blockRoot,
+        oldHeadBlock: oldHead.blockRoot,
+        newHeadState: newHead.stateRoot,
+        oldHeadState: oldHead.stateRoot,
+        executionOptimistic: isOptimisticBlock(newHead),
+      };
+      this.emitter.emit(routes.events.EventType.chainReorg, reorgEventData);
+      this.logger.verbose("Chain reorg", reorgEventData);
+      this.metrics?.forkChoice.reorg.inc();
+      this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
     }
   }
 

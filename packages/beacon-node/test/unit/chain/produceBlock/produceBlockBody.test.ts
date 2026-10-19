@@ -17,7 +17,7 @@ import {
   produceCommonBlockBody,
 } from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {numToQuantity} from "../../../../src/execution/engine/utils.js";
-import {PayloadIdCache} from "../../../../src/execution/index.js";
+import {ExecutionPayloadStatus, PayloadIdCache} from "../../../../src/execution/index.js";
 import {getApiTestModules} from "../../../utils/api.js";
 import {generateState} from "../../../utils/state.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
@@ -141,7 +141,10 @@ describe("Fulu engine body", () => {
       const cachedRecipient = "0xccccccccccccccccccccccccccccccccccccccbb";
       modules.chain.beaconProposerCache.getOrDefault.mockReturnValue(cachedRecipient);
       modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
-      modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
+      modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue({
+        payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+        payloadId: "0x1234",
+      });
       modules.chain.executionEngine.getPayload.mockResolvedValue({
         executionPayload: ssz.fulu.ExecutionPayload.defaultValue(),
         executionPayloadValue: 456n,
@@ -226,7 +229,10 @@ describe("Gloas engine body", () => {
     preferences.message.targetGasLimit = 30_000_000n;
     vi.mocked(modules.chain.proposerPreferencesPool.get).mockReturnValue(pooled ? preferences : null);
     modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
-    modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
+    modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue({
+      payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+      payloadId: "0x1234",
+    });
     const executionPayload = ssz.fulu.ExecutionPayload.defaultValue();
     executionPayload.blockHash = new Uint8Array(32).fill(9);
     modules.chain.executionEngine.getPayload.mockResolvedValue({
