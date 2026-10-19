@@ -38,7 +38,16 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
     vi.mocked(validateApiExecutionPayloadBid).mockResolvedValue(undefined);
   });
 
-  it("publishes the bid without validation by default", async () => {
+  it("validates the bid before publishing by default", async () => {
+    const api = getBeaconBlockApi(modules);
+    await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
+
+    expect(validateApiExecutionPayloadBid).toHaveBeenCalledWith(modules.chain, signedBid);
+    expect(modules.network.publishSignedExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
+  });
+
+  it("publishes the bid without validation if disabled", async () => {
+    modules.chain.opts.disableExecutionPayloadBidValidation = true;
     const api = getBeaconBlockApi(modules);
     await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
 
@@ -46,15 +55,7 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
     expect(modules.network.publishSignedExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
   });
 
-  it("validates the bid before publishing when requested", async () => {
-    const api = getBeaconBlockApi(modules);
-    await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid, validate: true});
-
-    expect(validateApiExecutionPayloadBid).toHaveBeenCalledWith(modules.chain, signedBid);
-    expect(modules.network.publishSignedExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
-  });
-
-  it("does not publish a bid that fails the reject checks when validation is requested", async () => {
+  it("does not publish a bid that fails the reject checks", async () => {
     vi.mocked(validateApiExecutionPayloadBid).mockRejectedValue(
       new ExecutionPayloadBidError(GossipAction.REJECT, {
         code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
@@ -63,9 +64,9 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
       })
     );
     const api = getBeaconBlockApi(modules);
-    await expect(
-      api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid, validate: true})
-    ).rejects.toThrow(ExecutionPayloadBidError);
+    await expect(api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid})).rejects.toThrow(
+      ExecutionPayloadBidError
+    );
 
     expect(modules.network.publishSignedExecutionPayloadBid).not.toHaveBeenCalled();
   });

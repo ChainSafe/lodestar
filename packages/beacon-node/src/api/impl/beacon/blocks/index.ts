@@ -1067,7 +1067,7 @@ export function getBeaconBlockApi({
       });
     },
 
-    async publishExecutionPayloadBid({signedExecutionPayloadBid, validate}) {
+    async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
       const seenTimestampSec = Date.now() / 1000;
       const bid = signedExecutionPayloadBid.message;
       const slot = bid.slot;
@@ -1077,8 +1077,7 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      // Validation is off by default to publish faster, the builder is trusted not to emit invalid bids.
-      if (validate) {
+      if (!chain.opts.disableExecutionPayloadBidValidation) {
         const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
         await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
         validationTimer?.();
