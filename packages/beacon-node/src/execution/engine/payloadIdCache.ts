@@ -69,5 +69,5 @@ function isSameInclusionList(a?: bellatrix.Transactions, b?: bellatrix.Transacti
   if (a === undefined || b === undefined) {
     return a === b;
   }
-  return a.length === b.length && a.every((transaction, i) => byteArrayEquals(transaction, b[i]));
+  return byteArrayEquals(a.bytes, b.bytes);
 }

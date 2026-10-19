@@ -43,7 +43,6 @@ overrides:
   # Remove together with the patch once sigstore-js#1709 ships and is consumed
   # by libnpmpublish/lerna-lite.
   sigstore: "4.0.0"
-  "@chainsafe/ssz": "file:./vendor/chainsafe-ssz-1.8.1-serializedlist.2.tgz"
 
 patchedDependencies:
   sigstore@4.0.0: patches/sigstore@4.0.0.patch

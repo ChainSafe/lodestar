@@ -1,6 +1,7 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {Mocked, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
+import {SerializedList} from "@chainsafe/ssz";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
@@ -43,7 +44,9 @@ describe("InclusionListService", () => {
         meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
       })
     );
-    api.validator.produceInclusionList.mockResolvedValue(mockApiResponse({data: [], meta: {version: ForkName.heze}}));
+    api.validator.produceInclusionList.mockResolvedValue(
+      mockApiResponse({data: SerializedList.empty(), meta: {version: ForkName.heze}})
+    );
     vi.spyOn(validatorStore, "getAllLocalIndices").mockReturnValue([validatorIndex]);
     vi.spyOn(validatorStore, "pollValidatorIndices").mockResolvedValue([]);
     vi.spyOn(validatorStore, "hasVotingPubkey").mockReturnValue(true);

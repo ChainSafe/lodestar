@@ -474,11 +474,11 @@ export function serializeBeaconBlockRoot(data: Root): DATA {
 }
 
 export function serializeInclusionList(data: bellatrix.Transactions): InclusionListRpc {
-  return data.map((transaction) => bytesToData(transaction));
+  return Array.from(data, (transaction) => bytesToData(transaction));
 }
 
 export function deserializeInclusionList(data: InclusionListRpc): bellatrix.Transactions {
-  return data.map((transaction) => dataToBytes(transaction, null));
+  return SerializedList.fromArray(data.map((transaction) => dataToBytes(transaction, null)));
 }
 
 export function deserializePayloadAttributes(data: PayloadAttributesRpc): PayloadAttributes {

@@ -1,3 +1,4 @@
+import {SerializedList} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
   ExecutionStatus,
@@ -206,7 +207,7 @@ export async function importExecutionPayload(
     }
     inclusionListTransactions =
       dependentRoot === null
-        ? []
+        ? SerializedList.empty()
         : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
   }
 
