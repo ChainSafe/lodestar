@@ -1,11 +1,11 @@
 /* Causing this error on usage of expect.any(Number)  */
 import {afterEach, describe, expect, it, vi} from "vitest";
-import {PromiseFulfilledResult, PromiseRejectedResult, defer, wrapPromise} from "../../src/promise.js";
+import {PromiseFulfilledResult, PromiseRejectedResult, wrapPromise} from "../../src/promise.js";
 
 describe("promise", () => {
   describe("wrapPromise", () => {
     afterEach(() => {
-      vi.restoreAllMocks();
+      vi.useRealTimers();
     });
 
     it("should have initial status to pending", async () => {
@@ -41,27 +41,27 @@ describe("promise", () => {
     });
 
     it("should have correct durationMs attribute for promise which is resolved", async () => {
-      const now = vi.spyOn(Date, "now").mockReturnValue(1000);
-      const {promise, resolve} = defer<string>();
+      vi.useFakeTimers({now: 1000});
+      const promise = new Promise<string>((resolve) => setTimeout(() => resolve("Resolved Value"), 100));
       const result = wrapPromise(promise);
 
-      now.mockReturnValue(1100);
-      resolve("Resolved Value");
+      await vi.advanceTimersByTimeAsync(100);
 
       await expect(promise).resolves.toBe("Resolved Value");
       expect((result as PromiseFulfilledResult<string>).durationMs).toBe(100);
     });
 
     it("should have correct durationMs attribute for promise which is rejected", async () => {
-      const now = vi.spyOn(Date, "now").mockReturnValue(1000);
-      const {promise, reject} = defer<string>();
+      vi.useFakeTimers({now: 1000});
+      const promise = new Promise<string>((_, reject) => setTimeout(() => reject("Rejected Error"), 100));
       const result = wrapPromise(promise);
+      // Attach before advancing, `result.promise` rethrows and would otherwise reject unhandled
+      const rejection = expect(result.promise).rejects.toThrow("Rejected Error");
 
-      now.mockReturnValue(1100);
-      reject("Rejected Error");
+      await vi.advanceTimersByTimeAsync(100);
 
       await expect(promise).rejects.toThrow("Rejected Error");
-      await expect(result.promise).rejects.toThrow("Rejected Error");
+      await rejection;
       expect((result as PromiseRejectedResult<string>).durationMs).toBe(100);
     });
   });
