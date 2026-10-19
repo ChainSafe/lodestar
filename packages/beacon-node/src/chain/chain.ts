@@ -299,6 +299,7 @@ export class BeaconChain implements IBeaconChain {
       executionEngine,
       executionBuilder,
       builderApiClientOpts,
+      builderApiClientLogger,
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
@@ -319,6 +320,7 @@ export class BeaconChain implements IBeaconChain {
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
       builderApiClientOpts?: BuilderApiClientOpts;
+      builderApiClientLogger?: Logger;
     }
   ) {
     this.opts = opts;
@@ -490,7 +492,7 @@ export class BeaconChain implements IBeaconChain {
       clock,
       bls,
       metrics,
-      logger,
+      builderApiClientLogger ?? logger,
       signal
     );
 

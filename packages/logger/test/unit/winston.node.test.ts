@@ -17,6 +17,31 @@ describe("winston logger", () => {
   });
 
   describe("winston dynamic level by module", () => {
+    it("enables builder diagnostics without enabling sibling chain debug logs", () => {
+      const write = vi.spyOn((console as TestConsole)._stdout, "write");
+      const logger = getNodeLogger({
+        level: LogLevel.info,
+        levelModule: {builder: LogLevel.debug},
+        timestampFormat: {format: TimestampFormatCode.Hidden},
+      });
+      const builder = logger.child({module: "builder"});
+      const chain = logger.child({module: "chain"});
+
+      builder.debug("Builder bid request timing", {event: "http_decoded", receivedMs: 1250});
+      chain.debug("Chain diagnostic");
+      chain.info("Chain still visible");
+      logger.debug("Root diagnostic");
+
+      expect(write).toHaveBeenCalledTimes(2);
+      expect(write).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining("Builder bid request timing event=http_decoded, receivedMs=1250")
+      );
+      expect(write.mock.calls[0][0]).toContain("[builder]");
+      expect(write).toHaveBeenNthCalledWith(2, expect.stringContaining("Chain still visible"));
+      expect(write.mock.calls[1][0]).toContain("[chain]");
+    });
+
     it("should log to child at a lower log level", async () => {
       vi.spyOn((console as TestConsole)._stdout, "write");
 
