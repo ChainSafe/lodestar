@@ -14,7 +14,7 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
-  "@chainsafe/lodestar-z": "github:ChainSafe/lodestar-z#7a5772d084e8aa7f414b7370ef98622016fb0f42"
+  "@chainsafe/lodestar-z": "github:ChainSafe/lodestar-z#7e87d1a3c01384ae2a0360c666f039819f8b5130"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
