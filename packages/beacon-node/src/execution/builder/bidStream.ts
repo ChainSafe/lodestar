@@ -216,8 +216,8 @@ export function getExecutionPayloadBidStream(request: BidStreamRequest): Promise
         lastFrame = frame;
         updates++;
         request.onBid?.(latest);
-        if (request.stopSignal?.aborted) stop();
         notifyTiming({event: "frame", atMs: receivedAt, receivedMs, blockHash: toHex(bid.blockHash)});
+        if (request.stopSignal?.aborted) stop();
       } catch {
         discarded++;
       }

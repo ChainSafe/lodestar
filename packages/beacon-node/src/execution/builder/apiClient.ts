@@ -254,6 +254,7 @@ export class BuilderApiClient {
           collection,
           new Promise<void>((resolve) => {
             onAbort = () => {
+              resolve();
               this.logBidTiming({
                 slot,
                 collectionId,
@@ -261,7 +262,6 @@ export class BuilderApiClient {
                 atMs: performance.now(),
                 candidates: candidates.size,
               });
-              resolve();
             };
             if (signal.aborted) onAbort();
             else signal.addEventListener("abort", onAbort, {once: true});
@@ -303,24 +303,27 @@ export class BuilderApiClient {
     const attempt = `${slot}-${++this.bidAttemptSequence}`;
     const advertisedBudgetDeadlineAtMs = started + timeoutMs;
     const clientBudgetDeadlineAtMs = started + requestTimeoutMs;
+    const timingContext = {
+      slot,
+      collectionId,
+      attempt,
+      roundIndex,
+      builder: toPrintableUrl(url),
+      parentHash: toHex(parentHash),
+      parentRoot: toHex(parentRoot),
+      startedAtMs: started,
+      advertisedBudgetDeadlineAtMs,
+      clientBudgetDeadlineAtMs,
+    };
     const logTiming = (
       event: string,
       atMs: number,
       fields: Record<string, string | number | boolean | undefined> = {}
     ): void => {
       this.logBidTiming({
-        slot,
-        collectionId,
-        attempt,
-        roundIndex,
-        builder: toPrintableUrl(url),
-        parentHash: toHex(parentHash),
-        parentRoot: toHex(parentRoot),
+        ...timingContext,
         event,
         atMs,
-        startedAtMs: started,
-        advertisedBudgetDeadlineAtMs,
-        clientBudgetDeadlineAtMs,
         advertisedBudgetSlackMs: advertisedBudgetDeadlineAtMs - atMs,
         clientBudgetSlackMs: clientBudgetDeadlineAtMs - atMs,
         ...fields,
@@ -392,8 +395,10 @@ export class BuilderApiClient {
     );
     const dispatchTiming = {dateMilliseconds, timeoutMs, requestTimeoutMs, dispatchedAtMs: dispatchedAt};
     logTiming("http_dispatch", dispatchedAt, dispatchTiming);
+    let statusCode: number | undefined;
     try {
       const res = await response;
+      statusCode = res.status;
       const signedBid = res.value();
       const bid = signedBid ? {signedBid, receivedMs: this.clock.msFromSlot(slot)} : undefined;
       const decodedAt = performance.now();
@@ -409,7 +414,9 @@ export class BuilderApiClient {
     } catch (e) {
       logTiming("http_failed", performance.now(), {
         ...dispatchTiming,
-        errorName: e instanceof Error ? e.name : "unknown",
+        statusCode,
+        aborted: signal.aborted,
+        errorName: e instanceof Error ? e.constructor.name : "unknown",
       });
       throw e;
     }

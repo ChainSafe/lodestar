@@ -8,7 +8,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, toHex} from "@lodestar/utils";
 import type {IBlsVerifier} from "../../../../src/chain/bls/index.js";
 import {
   BUILDER_BID_LAG_BUFFER_MS,
@@ -128,6 +128,44 @@ describe("execution/builder/apiClient stream integration", () => {
 
     expect(bids).toHaveLength(1);
     expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it.each([ErrorAborted, TimeoutError])(
+    "records %s failures without their message and preserves rejection",
+    async (ErrorType) => {
+      const logger = getMockedLogger();
+      const error = new ErrorType("sensitive request details");
+      getExecutionPayloadBid.mockRejectedValue(error);
+
+      const bids = await collect(makeClient({bidStream: false}, {logger}), [entry("https://builder.test")]);
+      const failed = timingEvents(logger).find((event) => event.event === "http_failed");
+
+      expect(bids).toEqual([]);
+      expect(failed).toMatchObject({errorName: ErrorType.name, aborted: false});
+      expect(JSON.stringify(failed)).not.toContain("sensitive request details");
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Failed to get bid from builder",
+        {slot, builder: "https://builder.test"},
+        error
+      );
+    }
+  );
+
+  it("retains an HTTP error status when decoding its rejected response", async () => {
+    const logger = getMockedLogger();
+    getExecutionPayloadBid.mockResolvedValue({
+      status: 503,
+      value: () => {
+        throw Error("private error body");
+      },
+    });
+
+    const bids = await collect(makeClient({bidStream: false}, {logger}), [entry("https://builder.test")]);
+    const failed = timingEvents(logger).find((event) => event.event === "http_failed");
+
+    expect(bids).toEqual([]);
+    expect(failed).toMatchObject({statusCode: 503, errorName: "Error"});
+    expect(JSON.stringify(failed)).not.toContain("private error body");
   });
 
   it.each([ForkName.fulu, ForkName.heze])("uses HTTP on %s even when streaming is enabled", async (fork) => {
@@ -415,13 +453,32 @@ describe("execution/builder/apiClient stream integration", () => {
       socket.once("pong", () => stop.abort());
       socket.ping(Buffer.from("bid-received"));
     });
-    const client = makeClient({bidDeadline: 200, bidRequests: 3});
+    const logger = getMockedLogger();
+    logger.debug.mockImplementation((message) => {
+      if (message === "Builder bid request timing") throw Error("diagnostic sink failed");
+    });
+    const client = makeClient({bidDeadline: 200, bidRequests: 3}, {logger});
 
     const bids = await collect(client, [entry(server.url)], stop.signal);
 
     expect(bids).toHaveLength(1);
     expect(connections).toBe(1);
     expect(getExecutionPayloadBid).not.toHaveBeenCalled();
+    const stops = timingEvents(logger).filter((event) => event.event === "collection_stopped");
+    expect(stops).toHaveLength(1);
+    expect(stops[0]).toMatchObject({slot, candidates: 1, atMs: expect.any(Number)});
+  });
+
+  it("records an already stopped collection while retaining its existing first-round rescue", async () => {
+    const logger = getMockedLogger();
+    const stop = new AbortController();
+    stop.abort();
+    const bids = await collect(makeClient({bidStream: false}, {logger}), [entry("https://builder.test")], stop.signal);
+
+    expect(bids).toHaveLength(1);
+    expect(timingEvents(logger).filter((event) => event.event === "collection_stopped")).toEqual([
+      expect.objectContaining({slot, candidates: 0, atMs: expect.any(Number)}),
+    ]);
   });
 
   it("soft stop without a bid awaits the first valid in-flight rescue and cancels later rounds", async () => {

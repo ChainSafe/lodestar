@@ -262,10 +262,12 @@ describe("execution/builder/bidStream", () => {
         socket.ping(Buffer.from("rescue-next"));
       });
 
-      const result = await getExecutionPayloadBidStream(makeRequest(server.url, {stopSignal: stop.signal}));
+      const onTiming = vi.fn();
+      const result = await getExecutionPayloadBidStream(makeRequest(server.url, {stopSignal: stop.signal, onTiming}));
 
       expect(result).toMatchObject({opened: true, reason: "aborted", updates: 1, discarded: 1});
       expectBid(result.bid, valid);
+      expect(onTiming.mock.calls.map(([event]) => event.event).slice(-2)).toEqual(["frame", "finished"]);
     }
   );
 
