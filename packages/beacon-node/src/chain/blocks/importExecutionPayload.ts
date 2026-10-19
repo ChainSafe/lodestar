@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {
   ExecutionStatus,
   PayloadExecutionStatus,
+  PayloadStatus,
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
@@ -261,8 +262,7 @@ export async function importExecutionPayload(
       break;
 
     case ExecutionPayloadStatus.INVALID: {
-      // The parent payload chain between the LVH and this payload's parent is invalid too. The parent pair is the
-      // variant this block builds on, the same pair the pre-gloas segment path invalidates from
+      // The payload chain between the LVH and this payload's parent is invalid too
       const parentHashHex = toRootHex(envelope.payload.parentHash);
       if (execResult.latestValidHash !== null && execResult.latestValidHash !== parentHashHex) {
         this.invalidateExecutionPayloads(
@@ -343,7 +343,14 @@ export async function importExecutionPayload(
     }
   }
 
-  // 6. Update fork choice, transitions the block's PENDING variant to FULL
+  // 6. Update fork choice, transitions the block's PENDING variant to FULL. The block may have been invalidated
+  // while the engine was asked, a FULL variant under an invalid PENDING would contradict it
+  if (this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.PENDING)?.executionStatus === ExecutionStatus.Invalid) {
+    throw new PayloadError(payloadInput, {
+      code: PayloadErrorCode.BLOCK_EXECUTION_INVALID,
+      blockRootHex,
+    });
+  }
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
   this.forkChoice.onExecutionPayload(
     blockRootHex,

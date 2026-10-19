@@ -1044,6 +1044,68 @@ describe("Gloas Fork Choice", () => {
       expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
     });
 
+    it("a verdict about a child payload is dropped when the LVH conflicts with a validated ancestor", () => {
+      const protoArray = setup();
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      protoArray.validateLatestHash(
+        {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xa1", blockRoot: "0x0a"},
+        gloasForkSlot + 1,
+        {strict: false}
+      );
+      // LVH at genesis would invalidate the validated A payload, the verdict is dropped whole
+      const applied = protoArray.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: genesisRoot,
+          invalidateFromParentBlockRoot: "0x0b",
+          invalidateFromParentBlockHash: "0xb1",
+        },
+        gloasForkSlot + 2,
+        {strict: false, fromNodeJudged: false}
+      );
+      expect(applied).toBe(false);
+      expect(protoArray.lvhError).toBeUndefined();
+      expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
+      expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
+    });
+
+    it("a verdict about a child payload still invalidates the justified block's own payload", () => {
+      const protoArray = setup("0x0b");
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      const applied = protoArray.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: "0xa1",
+          invalidateFromParentBlockRoot: "0x0b",
+          invalidateFromParentBlockHash: "0xb1",
+        },
+        gloasForkSlot + 2,
+        {strict: false, fromNodeJudged: false}
+      );
+      expect(applied).toBe(true);
+      expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
+      expect(status(protoArray, "0x0b", PayloadStatus.PENDING)).toBe(ExecutionStatus.Syncing);
+      expect(status(protoArray, "0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
+    });
+
     it("never invalidates the EMPTY variant of the justified block but still its own payload", () => {
       const protoArray = setup("0x0b");
       const fromEmpty = protoArray.validateLatestHash(
