@@ -4,7 +4,6 @@ import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
 describe("PayloadIdCache", () => {
   const attributes = {
     headBlockHash: "0x01",
-    finalizedBlockHash: "0x02",
     timestamp: "0x10",
     prevRandao: "0x03",
     suggestedFeeRecipient: "0x04",
