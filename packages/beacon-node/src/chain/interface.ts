@@ -122,9 +122,6 @@ export interface IBeaconChain extends IChainView {
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
 
-  /** Return serialized bytes of a persisted checkpoint state */
-  getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
-
   /**
    * Since we can have multiple parallel chains,
    * this methods returns blocks in current chain head according to

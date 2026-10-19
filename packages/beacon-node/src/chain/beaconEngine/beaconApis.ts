@@ -53,6 +53,7 @@ import {GENESIS_EPOCH} from "../../constants/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {StateGetOpts} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
+import {checkpointToDatastoreKey} from "../stateCache/datastore/db.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import type {ApiStateId} from "./interface.js";
 import {ApiStateResult, ApiStateResultWithFork} from "./interface.js";
@@ -99,6 +100,21 @@ async function resolveStateViewForApi(
   }
   const state = res.state instanceof Uint8Array ? this.getHeadState().loadOtherState(res.state) : res.state;
   return {state, executionOptimistic: res.executionOptimistic, finalized: res.finalized};
+}
+
+export async function getPersistedCheckpointState(
+  this: BeaconEngineCore,
+  checkpoint?: phase0.Checkpoint
+): Promise<Uint8Array | null> {
+  if (checkpoint == null) {
+    // return the last safe checkpoint state by default
+    return this.cpStateDatastore.readLatestSafe();
+  }
+
+  // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint for backwards compatibility.
+  // because pre-gloas we always store FULL checkpoint state.
+  const persistedKey = checkpointToDatastoreKey(checkpoint);
+  return this.cpStateDatastore.read(persistedKey);
 }
 
 /** Serialized state for the debug `getStateV2` endpoint (the only whole-state-bytes crossing). */

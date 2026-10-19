@@ -377,6 +377,8 @@ export interface IBeaconEngineCore {
   getLatestWeakSubjectivityCheckpointEpoch(): Epoch;
   // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
   loadHistoricalStateRegen(): Promise<void>;
+  /** Return serialized bytes of a persisted checkpoint state, or the latest safe checkpoint if omitted. */
+  getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
   // API state queries — the engine resolves the state internally (no IBeaconStateView crosses). `id` is
   // the resolved stateId (root / slot / checkpoint); the API keeps `resolveStateId` (400 on bad input).
   getSerializedState(

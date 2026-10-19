@@ -304,7 +304,6 @@ export class BeaconNode {
       beaconEngine,
       clock,
       emitter,
-      cpStateDatastore,
       custodyConfig,
       anchor,
       earliestAvailableSlot,

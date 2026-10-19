@@ -465,6 +465,10 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.loadHistoricalStateRegen();
   }
 
+  getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
+    return this.core.getPersistedCheckpointState(checkpoint);
+  }
+
   getSerializedState(
     id: ApiStateId
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {

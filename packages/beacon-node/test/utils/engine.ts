@@ -24,7 +24,6 @@ export type TestBeaconEngineModules = Omit<
   | "earliestAvailableSlot"
   | "clock"
   | "emitter"
-  | "cpStateDatastore"
   | "custodyConfig"
   | "builderApiClient"
   | "serializedCache"
@@ -120,7 +119,6 @@ export function createTestBeaconEngine(
     abortController,
     clock,
     emitter,
-    cpStateDatastore,
     custodyConfig,
   };
 }

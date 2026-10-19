@@ -155,6 +155,7 @@ import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js"
 import {SeenAttestationDatas} from "../seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "../seenCache/seenBlockAttesters.js";
 import {ShufflingCache, ShufflingPromiseCancelReason} from "../shufflingCache.js";
+import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "../stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "../stateCache/persistentCheckpointsCache.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
@@ -178,6 +179,7 @@ import {
   getFinalizedEffectiveBalances,
   getHistoricalSummaries,
   getIndexedAttestationsForSlashing,
+  getPersistedCheckpointState,
   getSerializedState,
   getStateBuilders,
   getStateFinalityCheckpoints,
@@ -297,6 +299,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   shufflingCache!: ShufflingCache;
 
   blockStateCache!: BlockStateCache;
+  readonly cpStateDatastore: CPStateDatastore;
   checkpointStateCache!: CheckpointStateCache;
   checkpointBalancesCache!: CheckpointBalancesCache;
   readonly emitter = new BeaconEngineEventBus();
@@ -415,6 +418,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.opts = opts;
     this.logger = logger;
     this.db = db;
+    this.cpStateDatastore = modules.cpStateDatastore;
     this.dbName = modules.dbName;
     this.dataColumnDir = modules.dataColumnDir;
     // Main-thread BeaconEngine shares this cache with BeaconChain; worker mode deserializes independently.
@@ -550,7 +554,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private initializeRuntime(anchorState: IBeaconStateView): void {
     const modules = this.modules;
-    const {opts, config, logger, cpStateDatastore, db, validatorMonitorOpts, isAnchorStateFinalized} = modules;
+    const {opts, config, logger, db, validatorMonitorOpts, isAnchorStateFinalized} = modules;
     const {signal} = this;
     const clock = this.clock;
     const metrics = this.metrics;
@@ -616,7 +620,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         clock,
         blockStateCache: this.blockStateCache,
         bufferPool: this.bufferPool,
-        datastore: cpStateDatastore,
+        datastore: this.cpStateDatastore,
       },
       opts
     );
@@ -2042,6 +2046,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   // --- API state resolution (engine-internal; state never leaves the engine) ---
+
+  async getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
+    return getPersistedCheckpointState.call(this, checkpoint);
+  }
 
   /** Serialized state for the debug `getStateV2` endpoint (the only whole-state-bytes crossing). */
   async getSerializedState(

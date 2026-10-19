@@ -230,7 +230,7 @@ export function getLodestarApi({
     // the optional checkpoint is in root:epoch format
     async getPersistedCheckpointState({checkpointId}) {
       const checkpoint = checkpointId ? getCheckpointFromArg(checkpointId) : undefined;
-      const stateBytes = await chain.getPersistedCheckpointState(checkpoint);
+      const stateBytes = await chain.beaconEngine.getPersistedCheckpointState(checkpoint);
       if (stateBytes === null) {
         throw new ApiError(
           404,

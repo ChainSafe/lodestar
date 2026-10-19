@@ -10,7 +10,9 @@ import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {defer, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, defer, toRootHex} from "@lodestar/utils";
+import {getLodestarApi} from "../../../../src/api/impl/lodestar/index.js";
+import {ApiModules} from "../../../../src/api/impl/types.js";
 import {HistoricalStateRegen} from "../../../../src/chain/archiveStore/historicalState/historicalStateRegen.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
@@ -107,6 +109,45 @@ describe("bytes-based engine startup", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     await closeDb();
+  });
+
+  it("serves persisted checkpoint bytes through the engine with latest-safe selection and API errors", async () => {
+    chain = await createBeaconChain({...opts, nHistoricalStatesFileDataStore: false}, modules);
+    await chain.beaconEngine.initRegen();
+    const api = getLodestarApi({
+      chain,
+      config,
+      db,
+      network: {} as ApiModules["network"],
+      sync: {} as ApiModules["sync"],
+    });
+    const checkpoint = {epoch: 0, root: Buffer.alloc(32, 1)};
+    const checkpointId = `${toRootHex(checkpoint.root)}:${checkpoint.epoch}`;
+    await expect(api.getPersistedCheckpointState({})).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Latest safe checkpoint state not found",
+    });
+    await expect(api.getPersistedCheckpointState({checkpointId})).rejects.toMatchObject({
+      statusCode: 404,
+      message: `Checkpoint state not found for id ${checkpointId}`,
+    });
+
+    const key = ssz.phase0.Checkpoint.serialize(checkpoint);
+    await db.checkpointState.putBinary(key, modules.anchorStateBytes);
+    for (const id of [checkpointId, undefined]) {
+      const response = await api.getPersistedCheckpointState({checkpointId: id}, {returnBytes: true});
+      expect(
+        response.data instanceof Uint8Array && byteArrayEquals(response.data, modules.anchorStateBytes),
+        `state bytes for ${id ?? "latest"}`
+      ).toBe(true);
+      expect(response.meta, `fork metadata for ${id ?? "latest"}`).toEqual({version: ForkName.phase0});
+    }
+
+    const competingKey = ssz.phase0.Checkpoint.serialize({...checkpoint, root: Buffer.alloc(32, 2)});
+    await db.checkpointState.putBinary(competingKey, modules.anchorStateBytes);
+    await expect(api.getPersistedCheckpointState({})).rejects.toMatchObject({statusCode: 404});
+    const response = await api.getPersistedCheckpointState({checkpointId}, {returnBytes: true});
+    expect(response.data instanceof Uint8Array && byteArrayEquals(response.data, modules.anchorStateBytes)).toBe(true);
   });
 
   it("forwards clock maintenance through the chain and stops forwarding before engine teardown", async () => {

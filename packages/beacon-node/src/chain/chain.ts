@@ -21,7 +21,6 @@ import {
   deneb,
   gloas,
   isBlindedBeaconBlock,
-  phase0,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -67,8 +66,6 @@ import {ProduceResult} from "./produceBlock/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/index.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
-import {checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
-import {CPStateDatastore} from "./stateCache/datastore/types.js";
 
 /**
  * The maximum number of cached produced results to keep in memory.
@@ -115,7 +112,6 @@ export type BeaconChainModules = {
   earliestAvailableSlot: Slot;
   clock: IClock;
   emitter: ChainEventEmitter;
-  cpStateDatastore: CPStateDatastore;
   custodyConfig: CustodyConfig;
 };
 
@@ -175,8 +171,6 @@ export class BeaconChain implements IBeaconChain {
   protected readonly payloadEnvelopeProcessor: PayloadEnvelopeProcessor;
   // Facade reads blocks and envelopes and owns DA + light-client + backfill stores.
   protected readonly db: IBeaconChainDb;
-  // this is only available if nHistoricalStates is enabled
-  private readonly cpStateDatastore?: CPStateDatastore;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
   private _earliestAvailableSlot: Slot;
@@ -208,7 +202,6 @@ export class BeaconChain implements IBeaconChain {
       anchor,
       clock,
       emitter,
-      cpStateDatastore,
       custodyConfig,
     } = modules;
     this.opts = opts;
@@ -223,7 +216,6 @@ export class BeaconChain implements IBeaconChain {
     this.genesisValidatorsRoot = anchor.genesisValidatorsRoot;
     this.executionEngine = executionEngine;
     const signal = this.abortController.signal;
-    this.cpStateDatastore = cpStateDatastore;
     this.custodyConfig = custodyConfig;
     this.serializedCache = modules.serializedCache;
     this.blockSerializedCache = modules.blockSerializedCache;
@@ -525,22 +517,6 @@ export class BeaconChain implements IBeaconChain {
   async persistToDisk(): Promise<void> {
     await this.archiveStore.persistToDisk();
     await this.beaconEngine.persistOpPoolToDisk();
-  }
-
-  async getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
-    if (!this.cpStateDatastore) {
-      throw new Error("n-historical-state flag is not enabled");
-    }
-
-    if (checkpoint == null) {
-      // return the last safe checkpoint state by default
-      return this.cpStateDatastore.readLatestSafe();
-    }
-
-    // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint for backwards compatibility.
-    // because pre-gloas we always store FULL checkpoint state.
-    const persistedKey = checkpointToDatastoreKey(checkpoint);
-    return this.cpStateDatastore.read(persistedKey);
   }
 
   async getCanonicalBlockAtSlot(
