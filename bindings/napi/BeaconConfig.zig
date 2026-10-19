@@ -64,8 +64,8 @@ fn create(allocator: std.mem.Allocator, object: js.Value, genesis_root: js.Uint8
             return error.InvalidSlotDuration;
         };
     }
-    if (chain_config.SLOT_DURATION_MS == 0 or chain_config.SLOT_DURATION_MS % 1000 != 0) {
-        return error.InvalidSlotDuration;
+    for ([_]u64{ chain_config.SLOT_DURATION_MS, chain_config.SLOT_DURATION_MS_HEZE }) |duration_ms| {
+        if (duration_ms == 0 or duration_ms % 1000 != 0) return error.InvalidSlotDuration;
     }
     chain_config.SECONDS_PER_SLOT = @divExact(chain_config.SLOT_DURATION_MS, 1000);
     owned.instance.config = NativeBeaconConfig.init(chain_config, root);

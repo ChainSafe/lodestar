@@ -42,10 +42,14 @@ FULU_FORK_EPOCH: u64,
 // GLOAS
 GLOAS_FORK_VERSION: [4]u8,
 GLOAS_FORK_EPOCH: u64,
+// HEZE
+HEZE_FORK_VERSION: [4]u8,
+HEZE_FORK_EPOCH: u64,
 
 // Time parameters
 SECONDS_PER_SLOT: u64,
 SLOT_DURATION_MS: u64,
+SLOT_DURATION_MS_HEZE: u64,
 SECONDS_PER_ETH1_BLOCK: u64,
 MIN_VALIDATOR_WITHDRAWABILITY_DELAY: u64,
 SHARD_COMMITTEE_PERIOD: u64,
@@ -159,11 +163,6 @@ fn Optional(comptime T: type) type {
     return @Struct(.auto, null, &names, &types, &attrs);
 }
 
-test merge {
-    const mainnet_config = @import("./networks/mainnet.zig").chain_config;
-    const old_altair_epoch = mainnet_config.ALTAIR_FORK_EPOCH;
-    const merged_config = mainnet_config.merge(.{
-        .ALTAIR_FORK_EPOCH = old_altair_epoch + 1000,
-    });
-    try std.testing.expect(merged_config.ALTAIR_FORK_EPOCH == old_altair_epoch + 1000);
+test {
+    _ = @import("chain_config_test.zig");
 }

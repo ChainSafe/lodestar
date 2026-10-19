@@ -37,10 +37,13 @@ pub const chain_config = ChainConfig{
     .FULU_FORK_EPOCH = 1714688,
     .GLOAS_FORK_VERSION = b(4, "0x07000064"),
     .GLOAS_FORK_EPOCH = std.math.maxInt(u64),
+    .HEZE_FORK_VERSION = b(4, "0x08000064"),
+    .HEZE_FORK_EPOCH = std.math.maxInt(u64),
 
     // Time parameters
     .SECONDS_PER_SLOT = 5,
     .SLOT_DURATION_MS = 5000,
+    .SLOT_DURATION_MS_HEZE = 5000,
     .SECONDS_PER_ETH1_BLOCK = 6,
     .MIN_VALIDATOR_WITHDRAWABILITY_DELAY = 256,
     .SHARD_COMMITTEE_PERIOD = 256,
