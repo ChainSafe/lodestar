@@ -21,7 +21,7 @@ import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
-  executionEngine: IExecutionEngine;
+  executionEngine: Pick<IExecutionEngine, "notifyNewPayload">;
   clock: IClock;
   logger: Logger;
   metrics: Metrics | null;
