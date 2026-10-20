@@ -1438,7 +1438,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /**
-   * Chain side effects of a fork choice head change, shared by block import and execution payload invalidation
+   * Apply chain side effects of a fork choice head change: head state, head metrics, and reorg detection
    */
   onHeadChanged(oldHead: ProtoBlock, newHead: ProtoBlock, maybeHeadState?: IBeaconStateView): void {
     // Set head state as strong reference

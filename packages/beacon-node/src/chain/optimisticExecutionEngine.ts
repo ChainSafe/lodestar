@@ -30,9 +30,7 @@ export type OptimisticExecutionEngineModules = {
 
 /**
  * The only handle on the execution engine. Payloads are imported optimistically, so every engine verdict that can
- * change fork choice is applied here: forkchoiceUpdated verdicts in `notifyForkchoiceUpdate`, and INVALID verdicts
- * from elsewhere through `invalidateExecutionPayloads`. The raw engine is not reachable from outside, so no caller
- * can drop a verdict.
+ * change fork choice is applied here.
  */
 export class OptimisticExecutionEngine {
   private readonly forkChoice: IForkChoice;
