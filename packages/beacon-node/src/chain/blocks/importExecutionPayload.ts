@@ -344,8 +344,7 @@ export async function importExecutionPayload(
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     this.executionEngine
-      .notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash)
-      .then((result) => this.onForkchoiceUpdated(blockRootHex, blockHashHex, result))
+      .notifyForkchoiceUpdate(fork, blockRootHex, blockHashHex, safeBlockHash, finalizedBlockHash)
       .catch((e) => {
         if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
           this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
