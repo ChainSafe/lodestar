@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
-import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Bucket} from "./buckets.js";
 import {type IDataColumnStore, LegacyDataColumnStore} from "./dataColumnStore.js";
@@ -65,7 +64,6 @@ export class BeaconDb implements IBeaconDb {
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   readonly dataColumns: IDataColumnStore;
-  lastLegacyArchiveSlot: Slot | null = null;
   private readonly flatFileStore: FlatFileStore;
 
   constructor(
@@ -111,8 +109,6 @@ export class BeaconDb implements IBeaconDb {
 
   async init(): Promise<void> {
     await this.flatFileStore.init();
-    const [lastLegacyKey] = await this.dataColumnSidecarArchive.keys({reverse: true, limit: 1});
-    this.lastLegacyArchiveSlot = lastLegacyKey?.prefix ?? null;
   }
 
   async close(): Promise<void> {
@@ -128,13 +124,6 @@ export class BeaconDb implements IBeaconDb {
   async pruneHotDb(): Promise<void> {
     // Prune all hot blobs
     await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
-    // New columns are persisted in flat files, so this bucket only contains legacy hot data.
-    await this.deleteBucketData(Bucket.allForks_dataColumnSidecars);
-    // Compact even if empty to reclaim tombstones left by previous startups.
-    await this.db.compactRange(
-      encodeKey(Bucket.allForks_dataColumnSidecars, Buffer.alloc(0)),
-      encodeKey(Bucket.allForks_dataColumnSidecars + 1, Buffer.alloc(0))
-    );
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());

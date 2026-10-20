@@ -142,7 +142,6 @@ async function* resolveCanonicalDataColumnBlocks(
       const root = await db.blockArchive.getRootBySlot(slot);
       blockRoot = root === null ? null : toRootHex(root);
     }
-    if (blockRoot === null && (db.lastLegacyArchiveSlot === null || slot > db.lastLegacyArchiveSlot)) continue;
     if (
       chain.config.getForkSeq(slot) >= ForkSeq.gloas &&
       !(await hasExecutionPayloadEnvelope(chain, db, slot, blockRoot))
