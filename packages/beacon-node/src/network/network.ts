@@ -86,6 +86,7 @@ type NetworkModules = {
 export type NetworkInitModules = {
   opts: NetworkOptions;
   config: BeaconConfig;
+  activeValidatorCount: number;
   privateKey: PrivateKey;
   peerStoreDir?: string;
   logger: LoggerNode;
@@ -156,6 +157,7 @@ export class Network implements INetwork {
   static async init({
     opts,
     config,
+    activeValidatorCount,
     logger,
     metrics,
     chain,
@@ -167,7 +169,6 @@ export class Network implements INetwork {
   }: NetworkInitModules): Promise<Network> {
     const events = new NetworkEventBus();
 
-    const activeValidatorCount = chain.beaconEngine.getActiveValidatorCount();
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
 

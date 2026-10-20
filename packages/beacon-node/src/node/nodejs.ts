@@ -158,7 +158,7 @@ export class BeaconNode {
     stateInitialization,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
-    const {config} = stateInitialization;
+    const {config, activeValidatorCount} = stateInitialization;
     const metadata = readBeaconStateBytesMetadata(stateInitialization.stateBytes);
     if (!metadata) throw new LodestarError({code: "ANCHOR_STATE_BYTES_INVALID"});
     if (hasher.name !== "hashtree") {
@@ -331,6 +331,7 @@ export class BeaconNode {
     const network = await Network.init({
       opts: opts.network,
       config,
+      activeValidatorCount,
       logger: logger.child({module: LoggerModule.network}),
       metrics,
       chain,

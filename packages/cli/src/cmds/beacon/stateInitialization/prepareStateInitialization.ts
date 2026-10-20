@@ -10,12 +10,13 @@ import {ArchivedStateBytes, StateInitialization, StateInitializationOptions, Sta
 import {assertAnchorStateForkMatchesConfig} from "./validation.js";
 
 export function prepareArchivedStateInitialization(
-  {stateBytes, metadata, isWithinWeakSubjectivityPeriod}: ArchivedStateBytes,
+  {stateBytes, metadata, weakSubjectivity, isWithinWeakSubjectivityPeriod}: ArchivedStateBytes,
   {chainForkConfig, db, logger}: StatePreparationContext
 ): StateInitialization {
   const config = createBeaconConfig(chainForkConfig, metadata.genesisValidatorsRoot);
   return {
     stateBytes,
+    activeValidatorCount: weakSubjectivity.activeValidatorCount,
     config,
     isFinalized: true,
     validate(state) {

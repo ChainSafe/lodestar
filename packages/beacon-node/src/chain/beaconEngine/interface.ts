@@ -360,7 +360,6 @@ export interface IBeaconEngineCore {
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   dropCache(): Promise<void>;
   dumpRegenQueueItems(): {key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[];
-  getActiveValidatorCount(): number;
   registerLocalValidators(indices: ValidatorIndex[]): Promise<void>;
   registerLocalValidatorsInSyncCommittee(
     subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]

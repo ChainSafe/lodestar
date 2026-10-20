@@ -46,6 +46,7 @@ export async function prepareGenesisInitialization(
   const expectedRoot = getGenesisStateRoot(options.network);
   return {
     stateBytes,
+    activeValidatorCount: weakSubjectivity.activeValidatorCount,
     config,
     isFinalized: true,
     validate(state) {

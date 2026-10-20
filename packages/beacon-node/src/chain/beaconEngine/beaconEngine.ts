@@ -400,10 +400,6 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.dumpRegenQueueItems();
   }
 
-  getActiveValidatorCount(): number {
-    return this.core.getActiveValidatorCount();
-  }
-
   registerLocalValidators(indices: ValidatorIndex[]): Promise<void> {
     return this.core.registerLocalValidators(indices);
   }

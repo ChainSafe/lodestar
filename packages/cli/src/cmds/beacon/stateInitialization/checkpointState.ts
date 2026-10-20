@@ -199,6 +199,7 @@ function prepareCheckpointInitialization(
   const shouldPersist = isFinalized && !useArchived;
   return {
     stateBytes,
+    activeValidatorCount: weakSubjectivity.activeValidatorCount,
     config,
     isFinalized,
     validate(state) {

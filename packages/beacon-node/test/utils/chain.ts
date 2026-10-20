@@ -1,3 +1,9 @@
+import assert from "node:assert/strict";
+import {
+  computeEpochAtSlot,
+  readBeaconStateBytesMetadata,
+  scanActiveValidatorsFromStateBytes,
+} from "@lodestar/state-transition";
 import {BeaconChain, BeaconChainModules} from "../../src/chain/chain.js";
 import {IChainOptions} from "../../src/chain/options.js";
 import {StateInitialization} from "../../src/chain/stateInitialization.js";
@@ -10,12 +16,21 @@ export type TestChainModules = TestBeaconEngineModules & {
 };
 
 export async function initializeTestChain(opts: IChainOptions, modules: TestChainModules): Promise<BeaconChainModules> {
+  const metadata = readBeaconStateBytesMetadata(modules.anchorStateBytes);
+  assert(metadata !== null, "Anchor state metadata must be readable");
+  const activeValidators = scanActiveValidatorsFromStateBytes(
+    modules.anchorStateBytes,
+    modules.config.getForkTypes(metadata.slot).BeaconState,
+    computeEpochAtSlot(metadata.slot)
+  );
+  assert(activeValidators !== null, "Anchor state validators must be readable");
   const dependencies = createTestBeaconEngine(opts, modules);
   const {beaconEngine} = dependencies;
   try {
     await dependencies.beaconEngineCore.init();
     const {earliestAvailableSlot} = await executeStateInitialization(beaconEngine, {
       stateBytes: modules.anchorStateBytes,
+      activeValidatorCount: activeValidators.activeValidatorCount,
       config: modules.config,
       isFinalized: modules.isAnchorStateFinalized,
       shouldPersist: false,

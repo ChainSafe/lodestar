@@ -183,6 +183,40 @@ describe("initBeaconState", () => {
     return {slot: fixture.state.slot, stateRoot: toRootHex(fixture.state.hashTreeRoot()), isFinalized};
   }
 
+  it.each(["genesis", "db", "checkpoint", "dbAhead"] as const)(
+    "carries the active validator count from the selected %s bytes",
+    async (source) => {
+      const archivedEpoch = (source === "dbAhead" ? dbStale : dbFresh).state.slot / SLOTS_PER_EPOCH;
+      const archived = stateAtEpoch("countArchived", archivedEpoch, (state) => {
+        state.validators.get(0).exitEpoch = state.slot / SLOTS_PER_EPOCH;
+      });
+      const checkpoint = stateAtEpoch("countCheckpoint", checkpointFresh.state.slot / SLOTS_PER_EPOCH, (state) => {
+        state.validators.get(0).exitEpoch = state.slot / SLOTS_PER_EPOCH;
+        state.validators.get(1).activationEpoch = state.slot / SLOTS_PER_EPOCH + 1;
+      });
+      const db = await createDb(source === "genesis" ? {} : {archived});
+      const args: Partial<BeaconArgs & GlobalArgs> =
+        source === "genesis"
+          ? {genesisStateFile: genesis.file}
+          : {
+              checkpointState: source === "dbAhead" ? checkpointOlder.file : checkpoint.file,
+              forceCheckpointSync: source === "checkpoint",
+              ignoreWeakSubjectivityCheck: source === "dbAhead",
+            };
+      const stateInit = await initBeaconState(
+        {network: "dev", ...args} as BeaconArgs & GlobalArgs,
+        fixturesDir,
+        path.join(fixturesDir, "pubkeys"),
+        config,
+        db,
+        getMockedLogger()
+      );
+      const selected = source === "genesis" ? genesis : source === "checkpoint" ? checkpoint : archived;
+      expect(stateInit.stateBytes).toEqual(selected.bytes);
+      expect(stateInit.activeValidatorCount).toBe(source === "genesis" ? 64 : source === "checkpoint" ? 62 : 63);
+    }
+  );
+
   it("preserves the checkpoint boundary across repeated DB restarts", async () => {
     const db = await createDb({archived: dbStale});
     await db.earliestAvailableSlot.set(dbStale.state.slot);

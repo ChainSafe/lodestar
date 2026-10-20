@@ -202,7 +202,12 @@ export function getLatestBlockRoot(state: BeaconStateAllForks): Root {
   return ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
 }
 
-export type WeakSubjectivitySummary = {checkpointEpoch: Epoch; genesisTime: number; period: number};
+export type WeakSubjectivitySummary = {
+  checkpointEpoch: Epoch;
+  genesisTime: number;
+  period: number;
+  activeValidatorCount: number;
+};
 
 /** The metadata must describe the supplied state bytes. */
 export function computeWeakSubjectivitySummaryFromStateBytes(
@@ -215,7 +220,12 @@ export function computeWeakSubjectivitySummaryFromStateBytes(
   const activeValidators = scanActiveValidatorsFromStateBytes(bytes, stateType, computeEpochAtSlot(slot));
   if (activeValidators === null) return null;
   const period = computeWeakSubjectivityPeriodFromActiveValidators(config, slot, activeValidators);
-  return {checkpointEpoch: computeCheckpointEpochAtStateSlot(slot), genesisTime, period};
+  return {
+    checkpointEpoch: computeCheckpointEpochAtStateSlot(slot),
+    genesisTime,
+    period,
+    activeValidatorCount: activeValidators.activeValidatorCount,
+  };
 }
 
 export function isWithinWeakSubjectivityPeriodFromSummary(

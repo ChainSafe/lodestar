@@ -1924,11 +1924,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }));
   }
 
-  /** Active validator count of the head state (network init). */
-  getActiveValidatorCount(): number {
-    return this.getHeadState().activeValidatorCount;
-  }
-
   async registerLocalValidators(indices: ValidatorIndex[]): Promise<void> {
     for (const index of indices) this.validatorMonitor?.registerLocalValidator(index);
   }

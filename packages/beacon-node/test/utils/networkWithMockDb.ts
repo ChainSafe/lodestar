@@ -95,6 +95,7 @@ export async function getNetworkForTest(
 
   const modules: Omit<NetworkInitModules, "opts" | "logger"> = {
     config: beaconConfig,
+    activeValidatorCount: cachedState.epochCtx.currentShuffling.activeIndices.length,
     chain,
     db,
     getReqRespHandler: opts.getReqRespHandler ?? getReqRespHandlers({db, chain}),

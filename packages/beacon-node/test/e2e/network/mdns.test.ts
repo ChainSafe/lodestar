@@ -6,7 +6,7 @@ import {SignableENR} from "@chainsafe/enr";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getActiveValidatorIndices} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {Network, NetworkInitModules, getReqRespHandlers} from "../../../src/network/index.js";
@@ -71,7 +71,7 @@ describe.skip("mdns", () => {
   });
 
   async function createTestNode(nodeName: string) {
-    const {config} = getStaticData();
+    const {config, state} = getStaticData();
     const chain = getMockedBeaconChain();
 
     vi.spyOn(chain.forkChoice, "getHead").mockReturnValue({
@@ -89,6 +89,7 @@ describe.skip("mdns", () => {
 
     const modules: Omit<NetworkInitModules, "opts" | "privateKey" | "logger"> = {
       config,
+      activeValidatorCount: getActiveValidatorIndices(state, computeEpochAtSlot(state.slot)).length,
       chain,
       db,
       getReqRespHandler: getReqRespHandlers({db, chain}),

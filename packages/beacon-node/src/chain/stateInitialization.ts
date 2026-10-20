@@ -5,6 +5,8 @@ import {AnchorSummary} from "./beaconEngine/initialization.js";
 /** Main-thread startup policy. Only bytes and engine results cross the engine boundary. */
 export type StateInitialization = {
   stateBytes: Uint8Array;
+  /** Count at the selected state's epoch. */
+  activeValidatorCount: number;
   config: BeaconConfig;
   isFinalized: boolean;
   shouldPersist: boolean;

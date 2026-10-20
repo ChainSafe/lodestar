@@ -143,6 +143,7 @@ export async function getDevBeaconNode(
     peerStoreDir,
     stateInitialization: {
       stateBytes: cachedState.serialize(),
+      activeValidatorCount: cachedState.epochCtx.currentShuffling.activeIndices.length,
       config: beaconConfig,
       isFinalized: true,
       shouldPersist: false,
