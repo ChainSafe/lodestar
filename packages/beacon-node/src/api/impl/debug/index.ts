@@ -1,10 +1,10 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {ForkPostDeneb, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {BeaconState, DataColumnSidecar, DataColumnSidecars, type SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
-import {isOptimisticBlock, toForkChoiceValidity} from "../../../util/forkChoice.js";
+import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {resolveStateId} from "../beacon/state/utils.js";
@@ -31,20 +31,7 @@ export function getDebugApi({
 
     async getDebugForkChoice() {
       return {
-        data: {
-          justifiedCheckpoint: chain.getJustifiedCheckpoint(),
-          finalizedCheckpoint: chain.getFinalizedCheckpoint(),
-          forkChoiceNodes: chain.beaconEngine.getAllNodes().map((node) => ({
-            slot: node.slot,
-            blockRoot: node.blockRoot,
-            parentRoot: node.parentRoot,
-            justifiedEpoch: node.justifiedEpoch,
-            finalizedEpoch: node.finalizedEpoch,
-            weight: node.weight,
-            validity: toForkChoiceValidity(node.executionStatus),
-            executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
-          })),
-        },
+        data: await chain.beaconEngine.getDebugForkChoice(),
       };
     },
 
@@ -55,16 +42,7 @@ export function getDebugApi({
     },
 
     async getProtoArrayNodes() {
-      const nodes = chain.beaconEngine.getAllNodes().map((node) => ({
-        // if node has executionPayloadNumber, it will overwrite the below default
-        executionPayloadNumber: 0,
-        ...node,
-        executionPayloadBlockHash: node.executionPayloadBlockHash ?? "",
-        parent: String(node.parent),
-        bestChild: String(node.bestChild),
-        bestDescendant: String(node.bestDescendant),
-      }));
-      return {data: nodes};
+      return {data: await chain.beaconEngine.getProtoArrayNodes()};
     },
 
     async getStateV2({stateId}, context) {

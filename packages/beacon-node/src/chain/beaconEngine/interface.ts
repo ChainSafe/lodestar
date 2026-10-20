@@ -2,7 +2,7 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
 import {BeaconConfig, SpecJson} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
@@ -280,10 +280,10 @@ export interface IBeaconEngineCore {
 
   // Developer API diagnostics only. Operational reads belong to BeaconChain.
   getHeads(): Promise<ProtoBlock[]>;
-  getDebugForkChoiceV2(): Promise<routes.debug.Endpoints["getDebugForkChoiceV2"]["return"]>;
-  getFastConfirmationStore(): ReturnType<IForkChoice["getFastConfirmationStore"]>;
-  getConfirmedBlock(): ProtoBlock | null;
-  getAllNodes(): ProtoNode[];
+  getDebugForkChoice(): Promise<routes.debug.ForkChoiceResponse>;
+  getDebugForkChoiceV2(): Promise<routes.debug.ForkChoiceResponseV2>;
+  getFastConfirmationInfo(): Promise<routes.lodestar.FastConfirmationInfo>;
+  getProtoArrayNodes(): Promise<routes.debug.ProtoNodeList>;
 
   pauseFastConfirmation(): void;
   resumeFastConfirmation(): void;

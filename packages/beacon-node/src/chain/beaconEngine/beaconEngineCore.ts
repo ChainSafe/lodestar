@@ -19,7 +19,6 @@ import {
   IForkChoice,
   PayloadStatus,
   ProtoBlock,
-  ProtoNode,
   UpdateHeadOpt,
 } from "@lodestar/fork-choice";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
@@ -912,7 +911,25 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return this.forkChoice.getHeads();
   }
 
-  async getDebugForkChoiceV2(): Promise<routes.debug.Endpoints["getDebugForkChoiceV2"]["return"]> {
+  async getDebugForkChoice(): Promise<routes.debug.ForkChoiceResponse> {
+    const forkChoice = this.forkChoice;
+    return {
+      justifiedCheckpoint: forkChoice.getJustifiedCheckpoint(),
+      finalizedCheckpoint: forkChoice.getFinalizedCheckpoint(),
+      forkChoiceNodes: forkChoice.getAllNodes().map((node) => ({
+        slot: node.slot,
+        blockRoot: node.blockRoot,
+        parentRoot: node.parentRoot,
+        justifiedEpoch: node.justifiedEpoch,
+        finalizedEpoch: node.finalizedEpoch,
+        weight: node.weight,
+        validity: toForkChoiceValidity(node.executionStatus),
+        executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+      })),
+    };
+  }
+
+  async getDebugForkChoiceV2(): Promise<routes.debug.ForkChoiceResponseV2> {
     const forkChoice = this.forkChoice;
     const nodes = forkChoice.getAllNodes();
     const head = forkChoice.getHead();
@@ -966,16 +983,43 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     };
   }
 
-  getFastConfirmationStore(): ReturnType<IBeaconEngineCore["getFastConfirmationStore"]> {
-    return this.forkChoice.getFastConfirmationStore();
-  }
-  getConfirmedBlock(): ProtoBlock | null {
-    return this.forkChoice.getConfirmedBlock();
+  async getFastConfirmationInfo(): Promise<routes.lodestar.FastConfirmationInfo> {
+    const forkChoice = this.forkChoice;
+    const fcrStore = forkChoice.getFastConfirmationStore();
+    const confirmedBlock = forkChoice.getConfirmedBlock();
+    const justifiedCheckpoint = forkChoice.getJustifiedCheckpoint();
+    const finalizedCheckpoint = forkChoice.getFinalizedCheckpoint();
+    const head = forkChoice.getHead();
+
+    return {
+      confirmed: {
+        root: fromHex(fcrStore.confirmedRoot),
+        slot: confirmedBlock?.slot ?? 0,
+      },
+      head: {
+        root: fromHex(head.blockRoot),
+        slot: head.slot,
+      },
+      justifiedCheckpoint,
+      finalizedCheckpoint,
+      previousEpochObservedJustifiedCheckpoint: fcrStore.previousEpochObservedJustifiedCheckpoint,
+      currentEpochObservedJustifiedCheckpoint: fcrStore.currentEpochObservedJustifiedCheckpoint,
+      previousEpochGreatestUnrealizedCheckpoint: fcrStore.previousEpochGreatestUnrealizedCheckpoint,
+      previousSlotHead: fromHex(fcrStore.previousSlotHead),
+      currentSlotHead: fromHex(fcrStore.currentSlotHead),
+    };
   }
 
-  // this is for debug apis only
-  getAllNodes(): ProtoNode[] {
-    return this.forkChoice.getAllNodes();
+  async getProtoArrayNodes(): Promise<routes.debug.ProtoNodeList> {
+    return this.forkChoice.getAllNodes().map((node) => ({
+      // if node has executionPayloadNumber, it will overwrite the below default
+      executionPayloadNumber: 0,
+      ...node,
+      executionPayloadBlockHash: node.executionPayloadBlockHash ?? "",
+      parent: String(node.parent),
+      bestChild: String(node.bestChild),
+      bestDescendant: String(node.bestDescendant),
+    }));
   }
 
   pauseFastConfirmation(): void {

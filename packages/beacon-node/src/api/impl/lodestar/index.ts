@@ -266,31 +266,8 @@ export function getLodestarApi({
     },
 
     async getFastConfirmationInfo() {
-      const fcrStore = chain.beaconEngine.getFastConfirmationStore();
-      const confirmedBlock = chain.beaconEngine.getConfirmedBlock();
-      const justifiedCheckpoint = chain.getJustifiedCheckpoint();
-      const finalizedCheckpoint = chain.getFinalizedCheckpoint();
-      const headRoot = chain.getHeadRoot();
-      const head = chain.getHead();
-
       return {
-        data: {
-          confirmed: {
-            root: fromHex(fcrStore.confirmedRoot),
-            slot: confirmedBlock?.slot ?? 0,
-          },
-          head: {
-            root: fromHex(headRoot),
-            slot: head.slot,
-          },
-          justifiedCheckpoint,
-          finalizedCheckpoint,
-          previousEpochObservedJustifiedCheckpoint: fcrStore.previousEpochObservedJustifiedCheckpoint,
-          currentEpochObservedJustifiedCheckpoint: fcrStore.currentEpochObservedJustifiedCheckpoint,
-          previousEpochGreatestUnrealizedCheckpoint: fcrStore.previousEpochGreatestUnrealizedCheckpoint,
-          previousSlotHead: fromHex(fcrStore.previousSlotHead),
-          currentSlotHead: fromHex(fcrStore.currentSlotHead),
-        },
+        data: await chain.beaconEngine.getFastConfirmationInfo(),
       };
     },
 

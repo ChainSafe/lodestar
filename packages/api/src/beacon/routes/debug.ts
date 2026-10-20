@@ -142,10 +142,10 @@ const ForkChoiceResponseV2Type = new ContainerType(
 const ProtoNodeListType = ArrayOf(ProtoNodeType);
 const DebugChainHeadListType = ArrayOf(DebugChainHeadType);
 
-type ProtoNodeList = ValueOf<typeof ProtoNodeListType>;
+export type ProtoNodeList = ValueOf<typeof ProtoNodeListType>;
 type DebugChainHeadList = ValueOf<typeof DebugChainHeadListType>;
-type ForkChoiceResponse = ValueOf<typeof ForkChoiceResponseType>;
-type ForkChoiceResponseV2 = ValueOf<typeof ForkChoiceResponseV2Type>;
+export type ForkChoiceResponse = ValueOf<typeof ForkChoiceResponseType>;
+export type ForkChoiceResponseV2 = ValueOf<typeof ForkChoiceResponseV2Type>;
 
 export type Endpoints = {
   /**

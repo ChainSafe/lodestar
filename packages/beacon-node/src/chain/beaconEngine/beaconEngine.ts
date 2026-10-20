@@ -1,7 +1,7 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
+import {CheckpointWithHex, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {
@@ -267,20 +267,20 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getHeads();
   }
 
-  getDebugForkChoiceV2(): Promise<routes.debug.Endpoints["getDebugForkChoiceV2"]["return"]> {
+  getDebugForkChoice(): Promise<routes.debug.ForkChoiceResponse> {
+    return this.core.getDebugForkChoice();
+  }
+
+  getDebugForkChoiceV2(): Promise<routes.debug.ForkChoiceResponseV2> {
     return this.core.getDebugForkChoiceV2();
   }
 
-  getFastConfirmationStore(): ReturnType<IForkChoice["getFastConfirmationStore"]> {
-    return this.core.getFastConfirmationStore();
+  getFastConfirmationInfo(): Promise<routes.lodestar.FastConfirmationInfo> {
+    return this.core.getFastConfirmationInfo();
   }
 
-  getConfirmedBlock(): ProtoBlock | null {
-    return this.core.getConfirmedBlock();
-  }
-
-  getAllNodes(): ProtoNode[] {
-    return this.core.getAllNodes();
+  getProtoArrayNodes(): Promise<routes.debug.ProtoNodeList> {
+    return this.core.getProtoArrayNodes();
   }
 
   pauseFastConfirmation(): void {

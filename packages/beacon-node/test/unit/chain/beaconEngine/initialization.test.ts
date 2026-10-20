@@ -1034,7 +1034,7 @@ describe("bytes-based engine startup", () => {
     engine.resumeFastConfirmation();
     expect(getAllNodes).not.toHaveBeenCalled();
     expect(updated).not.toHaveBeenCalled();
-    expect(engine.getAllNodes()[0].weight).toBe(84n);
+    expect((await engine.getProtoArrayNodes())[0].weight).toBe(84n);
     expect(getAllNodes).toHaveBeenCalledOnce();
   });
 

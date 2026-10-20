@@ -386,10 +386,10 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "updateTime",
     // Developer API diagnostics (forward to the engine-owned fork choice).
     "getHeads",
+    "getDebugForkChoice",
     "getDebugForkChoiceV2",
-    "getAllNodes",
-    "getFastConfirmationStore",
-    "getConfirmedBlock",
+    "getFastConfirmationInfo",
+    "getProtoArrayNodes",
   ] as const) {
     (chain as unknown as Record<string, unknown>)[name] = (
       BeaconEngineCore.prototype as unknown as Record<string, unknown>
