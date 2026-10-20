@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-z",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Lodestar-z NAPI bindings",
   "files": [
     "bindings/src/",

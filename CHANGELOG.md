@@ -1,5 +1,56 @@
 # Changelog
 
+## [2.1.0](https://github.com/ChainSafe/lodestar-z/compare/v2.0.0...v2.1.0) (2026-10-20)
+
+
+### Features
+
+* add `bench_ssz` step ([#318](https://github.com/ChainSafe/lodestar-z/issues/318)) ([874de23](https://github.com/ChainSafe/lodestar-z/commit/874de23c5f0c7937c3b15b09f97be7948922e9f8))
+* add gloas state transition ([#764](https://github.com/ChainSafe/lodestar-z/issues/764)) ([f7493b7](https://github.com/ChainSafe/lodestar-z/commit/f7493b715041b5493ffdfaa8cc168de077b2e20c))
+* add gnosis preset ([#791](https://github.com/ChainSafe/lodestar-z/issues/791)) ([ba4f89e](https://github.com/ChainSafe/lodestar-z/commit/ba4f89e967bdb498f1d856f699f1ba2b863be330))
+* add heze timing configuration ([#794](https://github.com/ChainSafe/lodestar-z/issues/794)) ([906ea62](https://github.com/ChainSafe/lodestar-z/commit/906ea627245c28d4e7e1bbf941a4436945462fd1))
+* add struct progressive container ([#777](https://github.com/ChainSafe/lodestar-z/issues/777)) ([1de4ebd](https://github.com/ChainSafe/lodestar-z/commit/1de4ebd92f9f2a79404be05dae0ca1d09d9d2cee))
+* **metrics:** add sub-second epoch transition histogram buckets ([#759](https://github.com/ChainSafe/lodestar-z/issues/759)) ([bf96e24](https://github.com/ChainSafe/lodestar-z/commit/bf96e24bceccf443f04162873fc4cc88b59fc680))
+* **metrics:** label state transitions by source ([#772](https://github.com/ChainSafe/lodestar-z/issues/772)) ([65dc676](https://github.com/ChainSafe/lodestar-z/commit/65dc6761129bb8d39759ba313ee493158fae63d5))
+* support progressive ssz views ([#793](https://github.com/ChainSafe/lodestar-z/issues/793)) ([91d03b3](https://github.com/ChainSafe/lodestar-z/commit/91d03b3dac363b02a320af19af6938c72ec16a3d))
+* verify EIP-8025 execution proofs through ere's C verifier ([#760](https://github.com/ChainSafe/lodestar-z/issues/760)) ([f069a4d](https://github.com/ChainSafe/lodestar-z/commit/f069a4dd5aaf24e2a10e7760bb95869528648dd2))
+
+
+### Bug Fixes
+
+* include commit in block timing ([#767](https://github.com/ChainSafe/lodestar-z/issues/767)) ([88a968b](https://github.com/ChainSafe/lodestar-z/commit/88a968b0145cfb50e75fb45bbebf4aa4021fd014))
+* include histogram upper bounds ([#766](https://github.com/ChainSafe/lodestar-z/issues/766)) ([f6fbe20](https://github.com/ChainSafe/lodestar-z/commit/f6fbe2069c209643a69bf1893ee399d5f64f22f4))
+* prepare state before rewards ([#755](https://github.com/ChainSafe/lodestar-z/issues/755)) ([a1361f0](https://github.com/ChainSafe/lodestar-z/commit/a1361f038bd1c4101483307f9f70c6e100f31e8d))
+* preserve shuffling input ownership ([#753](https://github.com/ChainSafe/lodestar-z/issues/753)) ([589e23a](https://github.com/ChainSafe/lodestar-z/commit/589e23a2283474b91e58d6687573e7e5733c00b0))
+* release failed batch parents ([#790](https://github.com/ChainSafe/lodestar-z/issues/790)) ([24a8e4a](https://github.com/ChainSafe/lodestar-z/commit/24a8e4ac800bd1b20c6ee229db05dcbf4299d0cd))
+* support serialized transaction lists ([#796](https://github.com/ChainSafe/lodestar-z/issues/796)) ([24c5630](https://github.com/ChainSafe/lodestar-z/commit/24c5630788944b8c2f4a229bbc404375b5b8a54f))
+
+
+### Performance Improvements
+
+* expose sync committee indices ([#768](https://github.com/ChainSafe/lodestar-z/issues/768)) ([79032c5](https://github.com/ChainSafe/lodestar-z/commit/79032c552fe11947876e42ae0a8dc2d315343313))
+* store shuffling indices as u32 ([#797](https://github.com/ChainSafe/lodestar-z/issues/797)) ([c17d132](https://github.com/ChainSafe/lodestar-z/commit/c17d1328587505473d302918e0862616382d75a0))
+* stream progressive tree construction ([#746](https://github.com/ChainSafe/lodestar-z/issues/746)) ([41fa6dd](https://github.com/ChainSafe/lodestar-z/commit/41fa6dde7d560c9c673fcf1621fef4a76ed3c152))
+* stream progressive tree reads ([#745](https://github.com/ChainSafe/lodestar-z/issues/745)) ([5fbb0e2](https://github.com/ChainSafe/lodestar-z/commit/5fbb0e23a64c9a3e3670135787dd750f573630ec))
+* vectorize shuffle swap loop ([#769](https://github.com/ChainSafe/lodestar-z/issues/769)) ([40194cb](https://github.com/ChainSafe/lodestar-z/commit/40194cba93f7a058046da00d7bb49bdb9fa27712))
+
+
+### Code Refactoring
+
+* clarify progressive decode ownership ([#771](https://github.com/ChainSafe/lodestar-z/issues/771)) ([0221893](https://github.com/ChainSafe/lodestar-z/commit/0221893a6189755723787df11124e7a982a34e81))
+* leave decode cleanup to callers ([#761](https://github.com/ChainSafe/lodestar-z/issues/761)) ([9561036](https://github.com/ChainSafe/lodestar-z/commit/95610364dd4cfd481eacc82230f3c39f7f278d4e))
+
+
+### Miscellaneous Chores
+
+* add apache-2.0 license ([#781](https://github.com/ChainSafe/lodestar-z/issues/781)) ([964fefc](https://github.com/ChainSafe/lodestar-z/commit/964fefc332e39e907e35c2acdfbf623e603d2ee0))
+
+
+### Documentation
+
+* bench with the baseline cpu like release bindings ([#786](https://github.com/ChainSafe/lodestar-z/issues/786)) ([0b36087](https://github.com/ChainSafe/lodestar-z/commit/0b36087874cf566b931a101cb692c2cf32206ae9))
+* use ReleaseSafe in bench run instructions ([#785](https://github.com/ChainSafe/lodestar-z/issues/785)) ([b1751bf](https://github.com/ChainSafe/lodestar-z/commit/b1751bf0fb8a9f0f3ac574da68a987acdd335952))
+
 ## [2.0.0](https://github.com/ChainSafe/lodestar-z/compare/v1.1.0...v2.0.0) (2026-10-05)
 
 
