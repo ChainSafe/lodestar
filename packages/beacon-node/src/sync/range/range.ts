@@ -16,6 +16,7 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {
   DownloadByRangeError,
   DownloadByRangeErrorCode,
+  ParentPayload,
   cacheByRangeResponses,
   downloadByRange,
 } from "../utils/downloadByRange.js";
@@ -49,6 +50,7 @@ type RangeSyncState =
 
 export type RangeSyncModules = {
   chain: IBeaconChain;
+  parentPayload: ParentPayload | undefined;
   network: INetwork;
   metrics: Metrics | null;
   config: BeaconConfig;
@@ -89,6 +91,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private readonly metrics: Metrics | null;
   private readonly config: BeaconConfig;
   private readonly logger: Logger;
+  private readonly parentPayload: ParentPayload | undefined;
   /** There is a single chain per type, 1 finalized sync, 1 head sync */
   private readonly chains = new Map<RangeSyncType, SyncChain>();
 
@@ -96,8 +99,9 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   constructor(modules: RangeSyncModules, opts?: RangeSyncOpts) {
     super();
-    const {chain, network, metrics, config, logger} = modules;
+    const {chain, parentPayload, network, metrics, config, logger} = modules;
     this.chain = chain;
+    this.parentPayload = parentPayload;
     this.network = network;
     this.metrics = metrics;
     this.config = config;
@@ -377,11 +381,6 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerIdStr, syncType: RangeSyncType): void {
     let syncChain = this.chains.get(syncType);
     if (!syncChain) {
-      // The first block of the first batch may build on the head's FULL variant before its payload is imported,
-      // the batch then downloads the head's payload as dangling parent and validates it against the bid
-      // [beacon-engine] State/header derivation lives in BeaconEngine.getHeadParentPayload.
-      const parentPayload = this.chain.beaconEngine.getHeadParentPayload();
-
       syncChain = new SyncChain(
         startEpoch,
         target,
@@ -401,7 +400,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           custodyConfig: this.chain.custodyConfig,
           metrics: this.metrics,
         },
-        parentPayload
+        this.parentPayload
       );
       this.chains.set(syncType, syncChain);
 

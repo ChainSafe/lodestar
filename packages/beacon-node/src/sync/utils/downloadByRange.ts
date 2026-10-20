@@ -66,7 +66,7 @@ export type DownloadByRangeRequests = {
 };
 
 /**
- * The head block when the `SyncChain` was created. The first block of the first batch may build on its FULL variant
+ * The head block at node startup. The first block of the first batch may build on its FULL variant
  * while the payload is not imported yet, the batch then downloads the payload by root as its dangling parent.
  */
 export type ParentPayload = {

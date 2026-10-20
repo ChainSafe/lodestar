@@ -72,35 +72,38 @@ describe("BeaconEngineCore API response serialization", () => {
     getCheckpointStateOrBytes.mockReset();
   });
 
-  it.each([false, true])("returns detached parent payload metadata with header state root set=%s", (hasStateRoot) => {
-    view.cachedState.latestBlockHeader.slot = view.slot - 1;
-    view.cachedState.latestBlockHeader.proposerIndex = 1;
-    if (hasStateRoot) view.cachedState.latestBlockHeader.stateRoot = new Uint8Array(32).fill(7);
-    view.cachedState.commit();
-    const header = ssz.phase0.BeaconBlockHeader.clone(view.latestBlockHeader);
-    if (!hasStateRoot) header.stateRoot = view.hashTreeRoot();
-    const root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
+  it.each([false, true])(
+    "returns detached parent payload metadata with header state root set=%s",
+    async (hasStateRoot) => {
+      view.cachedState.latestBlockHeader.slot = view.slot - 1;
+      view.cachedState.latestBlockHeader.proposerIndex = 1;
+      if (hasStateRoot) view.cachedState.latestBlockHeader.stateRoot = new Uint8Array(32).fill(7);
+      view.cachedState.commit();
+      const header = ssz.phase0.BeaconBlockHeader.clone(view.latestBlockHeader);
+      if (!hasStateRoot) header.stateRoot = view.hashTreeRoot();
+      const root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
 
-    const result = engine.getHeadParentPayload();
-    expect(roundTripMessage(result)).toStrictEqual({
-      blockRoot: root,
-      blockRootHex: toRootHex(root),
-      slot: view.slot - 1,
-      proposerIndex: 1,
-      forkName: ForkName.gloas,
-      bid: view.latestExecutionPayloadBid,
-    });
-    if (!result) throw Error("Expected parent payload");
-    result.bid.blockHash.fill(9);
-    result.blockRoot.fill(9);
-    expect(view.latestExecutionPayloadBid.blockHash).toEqual(new Uint8Array(32));
-    expect(view.latestBlockHeader.stateRoot).toEqual(new Uint8Array(32).fill(hasStateRoot ? 7 : 0));
-    expect(engine.getHeadParentPayload()?.blockRoot).toEqual(root);
-  });
+      const result = await engine.getHeadParentPayload();
+      expect(roundTripMessage(result)).toStrictEqual({
+        blockRoot: root,
+        blockRootHex: toRootHex(root),
+        slot: view.slot - 1,
+        proposerIndex: 1,
+        forkName: ForkName.gloas,
+        bid: view.latestExecutionPayloadBid,
+      });
+      if (!result) throw Error("Expected parent payload");
+      result.bid.blockHash.fill(9);
+      result.blockRoot.fill(9);
+      expect(view.latestExecutionPayloadBid.blockHash).toEqual(new Uint8Array(32));
+      expect(view.latestBlockHeader.stateRoot).toEqual(new Uint8Array(32).fill(hasStateRoot ? 7 : 0));
+      expect((await engine.getHeadParentPayload())?.blockRoot).toEqual(root);
+    }
+  );
 
-  it("does not request a dangling payload for the genesis header", () => {
+  it("does not request a dangling payload for the genesis header", async () => {
     expect(view.latestBlockHeader.slot).toBe(0);
-    expect(engine.getHeadParentPayload()).toBeUndefined();
+    expect(await engine.getHeadParentPayload()).toBeUndefined();
   });
 
   it("sends finality checkpoints through a worker message as plain values", async () => {

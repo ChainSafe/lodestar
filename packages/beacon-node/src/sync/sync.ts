@@ -212,14 +212,12 @@ export class BeaconSync implements IBeaconSync {
     this.peerSyncType.set(data.peer, syncType);
 
     if (syncType === PeerSyncType.Advanced) {
-      this.rangeSync
-        .addPeer(data.peer, localStatus, data.status)
-        .then(this.updateSyncState)
-        .catch((e) => this.logger.error("Error adding peer to range sync", {peer: data.peer}, e));
+      this.rangeSync.addPeer(data.peer, localStatus, data.status);
     } else {
       this.rangeSync.removePeer(data.peer);
-      this.updateSyncState();
     }
+
+    this.updateSyncState();
   };
 
   /**

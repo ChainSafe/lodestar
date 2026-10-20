@@ -2,7 +2,6 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {IBeaconStateViewGloas} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
@@ -45,15 +44,16 @@ describe("sync / range / per-block processing", () => {
   ])("hasEnvelope=$hasEnvelope, blobCount=$blobCount", async ({hasEnvelope, blobCount}) => {
     const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     const chain = getMockedBeaconChain({config: gloasConfig});
-    chain.beaconEngine.getHeadParentPayload = vi.fn().mockReturnValue(undefined);
     chain.processExecutionPayload = vi.fn().mockResolvedValue(undefined);
-    chain.getHeadState.mockReturnValue({
-      forkName: ForkName.gloas,
-      latestBlockHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
-      latestExecutionPayloadBid: ssz.gloas.ExecutionPayloadBid.defaultValue(),
-    } as IBeaconStateViewGloas);
     const rangeSync = new RangeSync(
-      {chain, network: getMockedNetwork(), config: chain.config, logger: chain.logger, metrics: null},
+      {
+        chain,
+        parentPayload: undefined,
+        network: getMockedNetwork(),
+        config: chain.config,
+        logger: chain.logger,
+        metrics: null,
+      },
       {disableProcessAsChainSegment: true}
     );
     const localStatus = ssz.fulu.Status.defaultValue();
@@ -141,14 +141,15 @@ describe.each([{disableProcessAsChainSegment: false}, {disableProcessAsChainSegm
     ])("payload error $errorType.code evicts the cached envelope: $evicted", async ({errorType, evicted}) => {
       const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
       const chain = getMockedBeaconChain({config: gloasConfig});
-      chain.beaconEngine.getHeadParentPayload = vi.fn().mockReturnValue(undefined);
-      chain.getHeadState.mockReturnValue({
-        forkName: ForkName.gloas,
-        latestBlockHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
-        latestExecutionPayloadBid: ssz.gloas.ExecutionPayloadBid.defaultValue(),
-      } as IBeaconStateViewGloas);
       const rangeSync = new RangeSync(
-        {chain, network: getMockedNetwork(), config: chain.config, logger: chain.logger, metrics: null},
+        {
+          chain,
+          parentPayload: undefined,
+          network: getMockedNetwork(),
+          config: chain.config,
+          logger: chain.logger,
+          metrics: null,
+        },
         opts
       );
       const localStatus = ssz.fulu.Status.defaultValue();

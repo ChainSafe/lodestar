@@ -297,6 +297,7 @@ export class BeaconNode {
 
     // Capture the snapshot before BeaconChain installs clock listeners and starts engine maintenance.
     const chainViewSnapshot = await beaconEngine.getChainViewSnapshot();
+    const parentPayload = await beaconEngine.getHeadParentPayload();
     const chain = new BeaconChain(opts.chain, {
       serializedCache,
       blockSerializedCache,
@@ -345,6 +346,7 @@ export class BeaconNode {
       config,
       db,
       chain,
+      parentPayload,
       metrics,
       network,
       logger: logger.child({module: LoggerModule.sync}),
