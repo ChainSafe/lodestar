@@ -484,7 +484,16 @@ export class AttestationDutiesService {
 
     this.logger.debug("Submitting partial beacon committee selection proofs", {epoch, count: partialSelections.length});
 
-    const res = await this.api.validator.submitBeaconCommitteeSelections({selections: partialSelections});
+    const currentSlot = this.clock.getCurrentSlot();
+    const res = await this.api.validator.submitBeaconCommitteeSelections(
+      {selections: partialSelections},
+      {
+        // Bound wait even when --http.requestTimeout is raised for DVT middleware.
+        // Unlike sync selections this runs for a whole epoch of duties at once, so use
+        // one slot duration rather than a per-duty deadline.
+        timeoutMs: this.clock.getSlotDurationMs(currentSlot),
+      }
+    );
 
     const combinedSelections = new Map<ValidatorIndex, routes.validator.BeaconCommitteeSelection>();
     for (const selection of res.value()) {
