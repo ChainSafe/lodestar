@@ -254,13 +254,13 @@ export function getValidatorApi(
         genesisBlockRoot = state.computeAnchorCheckpoint().checkpoint.root;
       } else if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
         genesisBlockRoot = state.getBlockRootAtSlot(GENESIS_SLOT);
-      }
-
-      const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
-      if (blockRes) {
-        genesisBlockRoot = config
-          .getForkTypes(blockRes.block.message.slot)
-          .SignedBeaconBlock.hashTreeRoot(blockRes.block);
+      } else {
+        const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+        if (blockRes) {
+          genesisBlockRoot = config
+            .getForkTypes(blockRes.block.message.slot)
+            .BeaconBlock.hashTreeRoot(blockRes.block.message);
+        }
       }
     }
 

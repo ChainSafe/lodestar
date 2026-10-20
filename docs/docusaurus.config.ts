@@ -45,6 +45,7 @@ const config: Config = {
   },
 
   plugins: [
+    "./plugins/version-comparison/index.cjs",
     [
       "@docusaurus/plugin-client-redirects",
       {
@@ -114,6 +115,11 @@ const config: Config = {
         src: "images/logo.png",
       },
       items: [
+        {
+          to: "/compare",
+          label: "Compare versions",
+          position: "right",
+        },
         {
           type: "docsVersionDropdown",
           position: "right",
