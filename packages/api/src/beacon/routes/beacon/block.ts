@@ -223,8 +223,10 @@ export type Endpoints = {
   /**
    * Publish signed execution payload bid.
    * Instructs the beacon node to broadcast a signed execution payload bid to the network,
-   * to be gossiped for potential inclusion in block building. A success response (20x) indicates
-   * that the bid passed gossip validation and was successfully broadcast onto the network.
+   * to be gossiped for potential inclusion in block building. The beacon node SHOULD run gossip
+   * validation on the bid before broadcasting it, but MAY skip validation for bids submitted by a
+   * locally configured builder to reduce publishing latency. A success response (20x) indicates
+   * that the bid was successfully broadcast onto the network.
    */
   publishExecutionPayloadBid: Endpoint<
     "POST",
