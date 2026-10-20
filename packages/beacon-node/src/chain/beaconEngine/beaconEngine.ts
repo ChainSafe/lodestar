@@ -227,7 +227,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.initializeFromAnchor();
   }
 
-  getChainViewSnapshot(): ChainViewSnapshot {
+  getChainViewSnapshot(): Promise<ChainViewSnapshot> {
     return this.core.getChainViewSnapshot();
   }
 

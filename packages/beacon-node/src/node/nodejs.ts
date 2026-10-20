@@ -295,6 +295,8 @@ export class BeaconNode {
         logger.error("Failed to delete deprecated eth1 data", {}, e);
       });
 
+    // Capture the snapshot before BeaconChain installs clock listeners and starts engine maintenance.
+    const chainViewSnapshot = await beaconEngine.getChainViewSnapshot();
     const chain = new BeaconChain(opts.chain, {
       serializedCache,
       blockSerializedCache,
@@ -313,6 +315,7 @@ export class BeaconNode {
       emitter,
       custodyConfig,
       anchor,
+      chainViewSnapshot,
       earliestAvailableSlot,
       // Share the engine client and its metrics in-process. Worker mode needs a facade-local client,
       // with its own HTTP state, BLS verifier and metrics; only authenticated URL registrations cross owners.

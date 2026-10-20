@@ -266,7 +266,7 @@ export interface IBeaconEngineCore {
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
   persistAnchorState(): Promise<void>;
   initializeFromAnchor(): Promise<EngineBootstrap>;
-  getChainViewSnapshot(): ChainViewSnapshot;
+  getChainViewSnapshot(): Promise<ChainViewSnapshot>;
   readonly config: BeaconConfig;
 
   getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData>;

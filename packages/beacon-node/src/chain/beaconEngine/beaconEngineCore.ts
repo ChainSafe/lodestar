@@ -312,7 +312,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   private chainViewPublisher?: ChainViewPublisher;
   private reportedIrrecoverableError?: Error;
 
-  getChainViewSnapshot(): ChainViewSnapshot {
+  async getChainViewSnapshot(): Promise<ChainViewSnapshot> {
     this.chainViewPublisher ??= new ChainViewPublisher(this.forkChoice);
     return this.chainViewPublisher.snapshot();
   }

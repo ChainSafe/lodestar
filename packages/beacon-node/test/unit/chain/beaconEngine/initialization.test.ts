@@ -40,6 +40,7 @@ import * as execution from "../../../../src/execution/index.js";
 import {aggregateMetrics, createMetrics} from "../../../../src/metrics/index.js";
 import {initDevState} from "../../../../src/node/utils/state.js";
 import {Clock, ClockEvent} from "../../../../src/util/clock.js";
+import {wrapError} from "../../../../src/util/wrapError.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {TestChainModules, createBeaconChain, initializeTestChain} from "../../../utils/chain.js";
@@ -924,6 +925,53 @@ describe("bytes-based engine startup", () => {
     expect(chain.earliestAvailableSlot).toBe(20);
   });
 
+  it("waits for the startup snapshot before constructing the chain and forwarding clock ticks", async () => {
+    const snapshotTaken = defer<Awaited<ReturnType<BeaconEngineCore["getChainViewSnapshot"]>>>();
+    const snapshotResponse = defer<void>();
+    const getSnapshot = BeaconEngineCore.prototype.getChainViewSnapshot;
+    const getChainViewSnapshot = vi
+      .spyOn(BeaconEngineCore.prototype, "getChainViewSnapshot")
+      .mockImplementation(async function (this: BeaconEngineCore) {
+        const snapshot = await getSnapshot.call(this);
+        snapshotTaken.resolve(snapshot);
+        await snapshotResponse.promise;
+        return snapshot;
+      });
+    const startup = wrapError(
+      createBeaconChain(opts, modules).then((created) => {
+        chain = created;
+        return created;
+      })
+    );
+    const snapshot = await snapshotTaken.promise;
+    expect(chain).toBeUndefined();
+    expect(clock.listenerCount(ClockEvent.slot)).toBe(0);
+    expect(clock.listenerCount(ClockEvent.epoch)).toBe(0);
+    if (!engine) throw Error("Expected initialized engine");
+    const updateTime = vi.spyOn(engine, "updateTime");
+    clock.setSlot(1);
+    clock.emit(ClockEvent.slot, clock.currentSlot);
+    expect(updateTime).not.toHaveBeenCalled();
+
+    snapshotResponse.resolve();
+    const result = await startup;
+    if (result.err !== null) throw result.err;
+    const beaconChain = result.result;
+    expect(beaconChain.getHead()).toEqual(snapshot.head);
+    expect(getChainViewSnapshot).toHaveBeenCalledOnce();
+
+    const head = {...snapshot.head, blockRoot: toRootHex(Buffer.alloc(32, 1)), slot: 1};
+    engine.emitter.emit(BeaconEngineEvent.chainViewUpdated, {
+      ...snapshot,
+      revision: snapshot.revision + 1,
+      head,
+      blocks: [head],
+    });
+    expect(beaconChain.getHead()).toEqual(head);
+    clock.emit(ClockEvent.slot, clock.currentSlot);
+    expect(updateTime).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
   it("applies a view update once before downstream chain listeners read the head", async () => {
     const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.metrics = metrics;
@@ -931,7 +979,7 @@ describe("bytes-based engine startup", () => {
     const beaconChain = new BeaconChain(opts, dependencies);
     chain = beaconChain;
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
-    const snapshot = core.getChainViewSnapshot();
+    const snapshot = await core.getChainViewSnapshot();
     const head = {
       ...snapshot.head,
       slot: snapshot.head.slot + 1,

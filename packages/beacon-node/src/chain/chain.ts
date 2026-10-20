@@ -56,7 +56,7 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainView} from "./chainView/chainView.js";
-import {ChainViewBlock, ChainViewUpdate, IChainView} from "./chainView/interface.js";
+import {ChainViewBlock, ChainViewSnapshot, ChainViewUpdate, IChainView} from "./chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -109,6 +109,7 @@ export type BeaconChainModules = {
   builderApiClient?: BuilderApiClient;
   builderApiClientOpts?: BuilderApiClientOpts;
   anchor: EngineBootstrap;
+  chainViewSnapshot: ChainViewSnapshot;
   earliestAvailableSlot: Slot;
   clock: IClock;
   emitter: ChainEventEmitter;
@@ -237,7 +238,7 @@ export class BeaconChain implements IBeaconChain {
         // Register preference-authenticated URLs in the engine before its pre-slot connection checks.
         beaconEngine.registerAuthenticatedBuilder(url)
       );
-    this.chainView = new ChainView(beaconEngine.getChainViewSnapshot(), logger);
+    this.chainView = new ChainView(modules.chainViewSnapshot, logger);
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
 
