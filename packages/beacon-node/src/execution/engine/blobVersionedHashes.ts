@@ -7,7 +7,7 @@ import {VersionedHashes} from "./interface.js";
  * Skip unrelated fields without decoding or copying them, including untrusted nested access lists.
  * The EL remains responsible for the other transaction validity checks.
  */
-export function isValidBlobVersionedHashes(transactions: Uint8Array[], expected: VersionedHashes): boolean {
+export function isValidBlobVersionedHashes(transactions: Iterable<Uint8Array>, expected: VersionedHashes): boolean {
   let index = 0;
   for (const transaction of transactions) {
     if (transaction.length === 0) return false;
