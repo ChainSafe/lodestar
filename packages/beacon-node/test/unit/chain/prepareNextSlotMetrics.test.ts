@@ -41,9 +41,18 @@ async function bucketCount(metrics: Metrics, slotPosition: string, le: number): 
   );
 }
 
-async function deadlineMissed(metrics: Metrics): Promise<number | undefined> {
+async function deadlineMissed(
+  metrics: Metrics,
+  deadline = "next_slot_start",
+  task = "prepare_next_slot"
+): Promise<number | undefined> {
   const values = await getValues(metrics, DEADLINE_NAME);
-  return values.find((v) => v.labels.deadline === "next_slot_start" && v.labels.task === "prepare_next_slot")?.value;
+  return values.find((v) => v.labels.deadline === deadline && v.labels.task === task)?.value;
+}
+
+async function ptcEligibleCompletions(metrics: Metrics): Promise<number | undefined> {
+  const values = await getValues(metrics, "lodestar_prepare_next_slot_ptc_eligible_completions_total");
+  return values[0]?.value;
 }
 
 describe("PrepareNextSlot scheduler metrics", () => {
@@ -128,6 +137,55 @@ describe("PrepareNextSlot scheduler metrics", () => {
     expect(await bucketCount(metrics, "epoch_end", -0.167)).toBe(1);
     expect(await bucketCount(metrics, "epoch_end", -0.042)).toBe(2);
     expect(await deadlineMissed(metrics)).toBe(2);
+  });
+
+  describe("PTC due completions", () => {
+    // PAYLOAD_ATTESTATION_DUE_BPS=7500 of the 12s default slot
+    const ptcDueMs = 9000;
+
+    /** Post-fulu flow with no proposer, built on bellatrix fixtures; `currentFork`/`nextFork` drive the fork guards */
+    async function run(clockSlot: number, currentFork: ForkName, nextFork: ForkName, msIntoSlot: number) {
+      const prepareSlot = clockSlot + 1;
+      getForkStub.mockImplementation((slot) => (slot <= clockSlot ? currentFork : nextFork));
+      const headState = generateCachedBellatrixState();
+      vi.spyOn(headState.epochCtx, "getBeaconProposer").mockReturnValue(0);
+      chainStub.getHeadState.mockReturnValue(new BeaconStateView(headState));
+      const headBlock = {...zeroProtoBlock, slot: clockSlot - 1} as ProtoBlock;
+      chainStub.recomputeForkChoiceHead.mockReturnValue(headBlock);
+      chainStub.predictProposerHead.mockReturnValue(headBlock);
+      msFromSlot.mockImplementation((slot: number) => (slot === prepareSlot ? msIntoSlot - 12000 : msIntoSlot));
+
+      await Promise.all([scheduler.prepareForNextSlot(clockSlot), vi.advanceTimersByTimeAsync(12000)]);
+      expect(loggerStub.error).not.toHaveBeenCalled();
+    }
+
+    it("counts an epoch-end gloas completion before the PTC due point as eligible and not missed", async () => {
+      await run(epochEndSlot, ForkName.gloas, ForkName.gloas, ptcDueMs - 1);
+
+      expect(await ptcEligibleCompletions(metrics)).toBe(1);
+      expect(await deadlineMissed(metrics, "payload_attestation_due", "prepare_next_slot_completion")).toBeUndefined();
+    });
+
+    it("counts a completion after the PTC due point of the scheduling slot as missed", async () => {
+      await run(epochEndSlot, ForkName.gloas, ForkName.gloas, ptcDueMs + 1);
+
+      expect(await ptcEligibleCompletions(metrics)).toBe(1);
+      expect(await deadlineMissed(metrics, "payload_attestation_due", "prepare_next_slot_completion")).toBe(1);
+    });
+
+    it("excludes the epoch-end preparation of the last pre-gloas epoch", async () => {
+      await run(epochEndSlot, ForkName.fulu, ForkName.gloas, ptcDueMs + 1);
+
+      expect(await ptcEligibleCompletions(metrics)).toBe(0);
+      expect(await deadlineMissed(metrics, "payload_attestation_due", "prepare_next_slot_completion")).toBeUndefined();
+    });
+
+    it("excludes ordinary gloas slots", async () => {
+      await run(SLOTS_PER_EPOCH - 3, ForkName.gloas, ForkName.gloas, ptcDueMs + 1);
+
+      expect(await ptcEligibleCompletions(metrics)).toBe(0);
+      expect(await deadlineMissed(metrics, "payload_attestation_due", "prepare_next_slot_completion")).toBeUndefined();
+    });
   });
 
   it("labels a non epoch-end scheduling slot as other", async () => {

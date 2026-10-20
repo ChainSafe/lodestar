@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostGloas} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {IClock, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, gloas} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
@@ -150,10 +150,14 @@ export class PtcService {
       })
     );
 
-    this.metrics?.ptcStepCallPublishPayloadAttestation.observe(
+    const publishMarginSec =
       this.clock.secFromSlot(slot) -
-        this.config.getSlotComponentDurationMs(this.config.getForkName(slot), this.config.PAYLOAD_ATTESTATION_DUE_BPS) /
-          1000
+      this.config.getSlotComponentDurationMs(this.config.getForkName(slot), this.config.PAYLOAD_ATTESTATION_DUE_BPS) /
+        1000;
+    this.metrics?.ptcStepCallPublishPayloadAttestation.observe(publishMarginSec);
+    this.metrics?.ptcPublishMarginSlotFraction.observe(
+      {slot_position: (slot + 1) % SLOTS_PER_EPOCH === 0 ? "epoch_end" : "other"},
+      publishMarginSec / (this.clock.getSlotDurationMs(slot) / 1000)
     );
 
     if (payloadAttestationMessages.length > 0) {

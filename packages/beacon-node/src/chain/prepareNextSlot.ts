@@ -332,6 +332,21 @@ export class PrepareNextSlotScheduler {
       if (leadMarginSlotFraction < 0) {
         this.metrics?.slotTiming.deadlineMissed.inc({deadline: "next_slot_start", task: "prepare_next_slot"});
       }
+      // Epoch-end preparation shares the slot with the PTC duty of the scheduling slot. A completion
+      // past that due point only places it after a reference time: an awaited EL call gets here too.
+      if (isEpochTransition && isForkPostGloas(currentFork)) {
+        this.metrics?.slotTiming.prepareNextSlotPtcEligibleCompletions.inc();
+        const payloadAttestationDueMs = this.config.getSlotComponentDurationMs(
+          currentFork,
+          this.config.PAYLOAD_ATTESTATION_DUE_BPS
+        );
+        if (this.chain.clock.msFromSlot(clockSlot) > payloadAttestationDueMs) {
+          this.metrics?.slotTiming.deadlineMissed.inc({
+            deadline: "payload_attestation_due",
+            task: "prepare_next_slot_completion",
+          });
+        }
+      }
 
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
       //  + when gossip block comes, we need to validate and run state transition

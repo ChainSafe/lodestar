@@ -63,7 +63,14 @@ export type SlotPosition = "epoch_end" | "other";
 
 type DeadlineMissedLabels =
   | {deadline: "attestation_due"; task: "block_become_head"}
-  | {deadline: "next_slot_start"; task: "prepare_next_slot"};
+  | {deadline: "next_slot_start"; task: "prepare_next_slot"}
+  | {deadline: "payload_attestation_due"; task: "prepare_next_slot_completion"};
+
+/** Execution statuses a payload envelope can be imported with; INVALID never reaches import */
+export type ImportedPayloadStatus =
+  | ExecutionPayloadStatus.VALID
+  | ExecutionPayloadStatus.SYNCING
+  | ExecutionPayloadStatus.ACCEPTED;
 
 /**
  * Extra Lodestar custom metrics
@@ -1215,6 +1222,21 @@ export function createLodestarMetrics(
         labelNames: ["source"],
         buckets: [1, 2, 3, 6, 9, 12],
       }),
+      elapsedSlotFraction: register.histogram<{status: ImportedPayloadStatus}>({
+        name: "lodestar_import_payload_elapsed_slot_fraction",
+        help: "Time from the payload slot start to envelope import as a fraction of that slot's duration, by execution status. Samples only payloads of the current or previous clock slot",
+        labelNames: ["status"],
+        buckets: ARRIVAL_SLOT_FRACTION_BUCKETS,
+      }),
+      deadlineMissed: register.counter<{status: ImportedPayloadStatus}>({
+        name: "lodestar_import_payload_deadline_missed_total",
+        help: "Payload imports completed after the payload due point, by execution status. Same population as lodestar_import_payload_elapsed_slot_fraction",
+        labelNames: ["status"],
+      }),
+      beyondWindow: register.counter({
+        name: "lodestar_import_payload_beyond_window_total",
+        help: "Payload imports for slots older than the previous clock slot, excluded from the slot fraction samples",
+      }),
       columnsBySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
         name: "lodestar_import_payload_columns_by_source_total",
         help: "Total number of payload-attached columns (sampled columns for Gloas) by source",
@@ -1962,8 +1984,12 @@ export function createLodestarMetrics(
       }),
       deadlineMissed: register.counter<DeadlineMissedLabels>({
         name: "lodestar_deadline_missed_total",
-        help: "Completions after a slot-relative deadline, by deadline and task. Each task's population matches its slot fraction histogram",
+        help: "Completions after a slot-relative deadline, by deadline and task. Each task's population matches its slot fraction histogram or eligible completions counter",
         labelNames: ["deadline", "task"],
+      }),
+      prepareNextSlotPtcEligibleCompletions: register.counter({
+        name: "lodestar_prepare_next_slot_ptc_eligible_completions_total",
+        help: "Successful epoch-end prepareNextSlot completions in a Gloas or later slot, the population of deadline_missed{deadline=payload_attestation_due,task=prepare_next_slot_completion}",
       }),
     },
 
