@@ -401,17 +401,14 @@ describe("AttestationDutiesService", () => {
 
     // Must submit partial beacon committee selection proofs for current and next epoch
     expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledTimes(2);
-    expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledWith(
-      {
-        selections: [
-          expect.objectContaining({
-            validatorIndex: index,
-            slot,
-          }),
-        ],
-      },
-      {timeoutMs: 12000}
-    );
+    expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledWith({
+      selections: [
+        expect.objectContaining({
+          validatorIndex: index,
+          slot,
+        }),
+      ],
+    });
 
     // Duties for current epoch should be persisted with selection proof set for aggregator
     const dutiesAtEpoch = dutiesService["dutiesByIndexByEpoch"].get(epoch);
