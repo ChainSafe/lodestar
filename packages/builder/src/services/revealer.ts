@@ -10,7 +10,10 @@ import {createExecutionPayloadEnvelopeContents} from "./executionPayloadEnvelope
 import {PayloadStore} from "./payloadStore.js";
 
 export type RevealerOptions = {
-  /** Do not reveal after this point within the block's slot, in basis points */
+  /**
+   * Latest point within the block's slot at which a reveal may start, in basis points.
+   * Defaults to the network's PAYLOAD_ATTESTATION_DUE_BPS
+   */
   cutoffBps: number;
 };
 

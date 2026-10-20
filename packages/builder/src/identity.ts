@@ -144,8 +144,9 @@ async function fetchBuilder(
   }
 }
 
+/** Polls at the second slot of the next epoch, the head state has gone through the epoch transition by then */
 function msToNextEpochPoll(clock: IClock): number {
-  return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1));
+  return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1) + 1);
 }
 
 function msToNextSlotPoll(clock: IClock): number {

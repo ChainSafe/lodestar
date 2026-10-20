@@ -68,7 +68,7 @@ jobs:
             --builderPubkey "$PUBKEY" \
             --beaconNodeUrl "$BN_URL" \
             --execution.urls "$EL_URL" \
-            --jwtSecret "$BUILDER_TEMP/jwt/jwtsecret" \
+            --execution.jwtSecret "$BUILDER_TEMP/jwt/jwtsecret" \
             --executionFeeRecipient 0x8943545177806ed17b9f23f0a21ee5948ecaa776 \
             --paramsFile "$BUILDER_TEMP/netcfg/config.yaml" \
             --metrics \
@@ -106,7 +106,7 @@ jobs:
             echo "error-level lines in builder.log"; exit 1
           fi
 
-          # the builder is the only bidder, it must have won bids and revealed their payloads
+          # the builder is the only bidder and the validators use builderalways, so it must have won bids and revealed their payloads
           # a win is counted before its reveal is published, scrape again if one is in flight
           metric() { awk -v name="$1" '$1 == name {print $2}' <<< "$METRICS"; }
           for _ in 1 2 3; do

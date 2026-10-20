@@ -96,8 +96,9 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
       timeout: args["execution.timeout"] ?? defaultExecutionEngineHttpOpts.timeout,
       retries: args["execution.retries"],
       retryDelay: args["execution.retryDelay"],
-      jwtSecretHex: args.jwtSecret ? extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()) : undefined,
-      jwtId: args.jwtId,
+      jwtSecretHex: args["execution.jwtSecret"]
+        ? extractJwtHexSecret(fs.readFileSync(args["execution.jwtSecret"], "utf-8").trim())
+        : undefined,
       version,
       commit,
     },

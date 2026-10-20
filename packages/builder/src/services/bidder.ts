@@ -169,7 +169,7 @@ export class Bidder {
         gasLimit: executionPayload.gasLimit,
         transactions: executionPayload.transactions.length,
         blobs: bid.blobKzgCommitments.length,
-        secFromSlot: clock.secFromSlot(slot - 1),
+        secFromSlot: clock.secFromSlot(slot),
       });
     } catch (e) {
       if (!isErrorAborted(e)) {
