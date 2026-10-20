@@ -60,6 +60,7 @@ import {
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
+import {observeBlockArrival} from "../../chain/slotTimingMetrics.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {
   validateGossipFuluDataColumnSidecar,
@@ -649,11 +650,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
     const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
-    metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
-    metrics?.gossipBlock.arrivalSlotFraction.observe(
-      {source: OpSource.gossip},
-      delaySec / (config.SLOT_DURATION_MS / 1000)
-    );
+    if (metrics) {
+      observeBlockArrival(metrics, config, OpSource.gossip, slot, delaySec);
+    }
     chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, delaySec, signedBlock.message);
     if (!blockInput.hasBlockAndAllData()) {
       chain.logger.debug("Received gossip block, attempting fetch of unavailable data", blockInput.getLogMeta());

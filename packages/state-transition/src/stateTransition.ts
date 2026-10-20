@@ -303,7 +303,10 @@ function processSlotsWithTransientCache(
       // Note: time only on success. Include beforeProcessEpoch, processEpoch, afterProcessEpoch, upgradeState*, finalProcessEpoch, commit
       const epochTransitionTimeSec = epochTransitionTimer?.();
       if (epochTransitionTimeSec !== undefined) {
-        metrics?.epochTransitionSlotFraction.observe(epochTransitionTimeSec / (config.SLOT_DURATION_MS / 1000));
+        // postState.slot is already the first slot of the new epoch, so this picks the fork the
+        // transition entered, including a fork that changes the slot duration
+        const slotDurationSec = config.getSlotDurationMs(config.getForkName(postState.slot)) / 1000;
+        metrics?.epochTransitionSlotFraction.observe(epochTransitionTimeSec / slotDurationSec);
       }
     } else {
       postState.slot++;

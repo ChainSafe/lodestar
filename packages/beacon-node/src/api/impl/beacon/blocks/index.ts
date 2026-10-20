@@ -61,6 +61,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
+import {observeBlockArrival} from "../../../../chain/slotTimingMetrics.js";
 import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
 import {validateGossipExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
@@ -360,11 +361,9 @@ export function getBeaconBlockApi(
 
     // TODO: Validate block
     const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
-    metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
-    metrics?.gossipBlock.arrivalSlotFraction.observe(
-      {source: OpSource.api},
-      delaySec / (config.SLOT_DURATION_MS / 1000)
-    );
+    if (metrics) {
+      observeBlockArrival(metrics, config, OpSource.api, slot, delaySec);
+    }
     chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, signedBlock.message);
 
     chain.logger.info("Publishing block", valLogMeta);

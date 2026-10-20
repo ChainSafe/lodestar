@@ -23,7 +23,7 @@ export function getMetrics(register: MetricsRegister) {
     }),
     epochTransitionSlotFraction: register.histogram({
       name: "lodestar_stfn_epoch_transition_slot_fraction",
-      help: "Epoch transition duration as a fraction of the slot duration",
+      help: "Epoch transition duration (same timer as lodestar_stfn_epoch_transition_seconds) as a fraction of the duration of the slot the transition enters. TypeScript state transition only, the native engine exports no sample",
       buckets: [0.05, 0.1, 0.15, 0.2, 0.25, 0.333, 0.5, 0.75, 1, 1.5],
     }),
     epochTransitionCommitTime: register.histogram({

@@ -15,6 +15,7 @@ import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
 import {loggerVc} from "../../utils/logger.js";
+import {createFakeMetrics} from "../../utils/metrics.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");
@@ -164,4 +165,69 @@ describe("AttestationService", () => {
       });
     });
   }
+
+  describe("slot fraction margins", () => {
+    it.each([
+      // ATTESTATION_DUE_BPS_GLOAS=2500: 3s of a 12s slot, 2.5s of a 10s slot. Produce runs at 1s into the slot
+      {chainConfig: gloasConfig, slotDurationMs: 12000, marginSec: 1 - 3, fraction: (1 - 3) / 12},
+      {
+        chainConfig: {...gloasConfig, HEZE_FORK_EPOCH: 0, SLOT_DURATION_MS_HEZE: 10000},
+        slotDurationMs: 10000,
+        marginSec: 1 - 2.5,
+        fraction: (1 - 2.5) / 10,
+      },
+    ])(
+      "divides the due offset by the duty slot's duration ($slotDurationMs ms)",
+      async ({chainConfig, slotDurationMs, marginSec, fraction}) => {
+        const slot = 0;
+        const clock = new ClockMock();
+        clock.secFromSlot = () => 1;
+        clock.msFromSlot = () => 1000;
+        clock.getSlotDurationMs = () => slotDurationMs;
+        const config = createChainForkConfig({...defaultConfig, ...chainConfig});
+        const metrics = createFakeMetrics();
+        const attestationService = new AttestationService(
+          loggerVc,
+          api,
+          clock,
+          validatorStore,
+          emitter,
+          chainHeadTracker,
+          syncingStatusTracker,
+          metrics,
+          config,
+          {}
+        );
+
+        const singleAttestation = ssz.electra.SingleAttestation.defaultValue();
+        singleAttestation.data.index = 1;
+        const duties: AttDutyAndProof[] = [
+          {
+            duty: {
+              slot,
+              committeeIndex: 6,
+              committeeLength: 120,
+              committeesAtSlot: 120,
+              validatorCommitteeIndex: 1,
+              validatorIndex: 0,
+              pubkey: pubkeys[0],
+            },
+            selectionProof: null,
+          },
+        ];
+        vi.spyOn(attestationService["dutiesService"], "getDutiesAtSlot").mockImplementation(() => duties);
+        api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: singleAttestation.data}));
+        api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
+        validatorStore.signAttestation.mockResolvedValue(singleAttestation);
+
+        await clock.tickSlotFns(slot, controller.signal);
+
+        expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
+        expect(metrics.attesterStepCallProduceAttestation.observe).toHaveBeenCalledWith(marginSec);
+        expect(metrics.attesterProduceMarginSlotFraction.observe).toHaveBeenCalledWith(fraction);
+        expect(metrics.attesterStepCallPublishAttestation.observe).toHaveBeenCalledWith(marginSec);
+        expect(metrics.attesterPublishMarginSlotFraction.observe).toHaveBeenCalledWith(fraction);
+      }
+    );
+  });
 });

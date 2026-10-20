@@ -37,6 +37,7 @@ import {
   prepareExecutionPayload,
 } from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
+import {getSlotPosition} from "./slotTimingMetrics.js";
 
 // TODO GLOAS: re-evaluate this timing
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 - 0.6667 * 12 = 4`). */
@@ -320,12 +321,15 @@ export class PrepareNextSlotScheduler {
         this.computeStateHashTreeRoot(preparedState, isEpochTransition);
       }
 
-      // msFromSlot is negative while prepareSlot is still in the future
-      const leadMarginMs = -this.chain.clock.msFromSlot(prepareSlot);
+      // msFromSlot is negative while prepareSlot is still in the future. The margin is a fraction of
+      // the scheduling slot, which is the one the preparation window was sized from.
+      const leadMarginSlotFraction =
+        -this.chain.clock.msFromSlot(prepareSlot) / this.config.getSlotDurationMs(currentFork);
       this.metrics?.slotTiming.prepareNextSlotLeadMargin.observe(
-        Math.max(0, leadMarginMs) / this.config.SLOT_DURATION_MS
+        {slot_position: getSlotPosition(clockSlot)},
+        leadMarginSlotFraction
       );
-      if (leadMarginMs < 0) {
+      if (leadMarginSlotFraction < 0) {
         this.metrics?.slotTiming.deadlineMissed.inc({deadline: "next_slot_start", task: "prepare_next_slot"});
       }
 

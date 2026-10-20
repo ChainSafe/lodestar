@@ -48,12 +48,22 @@ type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "worker
 type BlsBufferFlushReason = "size" | "timeout";
 type BlsVerificationCallOperation = "batch" | "single" | "fallback" | "same_message";
 
-// Edges align with slot-component deadlines expressed in basis points of the slot,
-// e.g. 0.25 (ATTESTATION_DUE_BPS_GLOAS), 0.333 (ATTESTATION_DUE_BPS), 0.667 (PREPARE_NEXT_SLOT_BPS),
-// so deadline crossings land on bucket boundaries regardless of the configured slot duration.
+// Edges approximate slot-component deadlines expressed in basis points of the slot, e.g. 0.25
+// (ATTESTATION_DUE_BPS_GLOAS), 0.333 (ATTESTATION_DUE_BPS), 0.667 (PREPARE_NEXT_SLOT_BPS). Exact
+// deadline outcomes are counted separately against the configured deadline, not read off buckets.
 const ARRIVAL_SLOT_FRACTION_BUCKETS = [
-  0.083, 0.167, 0.25, 0.333, 0.417, 0.5, 0.583, 0.667, 0.75, 0.833, 1, 1.25, 1.5, 2,
+  0.01, 0.02, 0.042, 0.083, 0.167, 0.25, 0.333, 0.417, 0.5, 0.583, 0.667, 0.75, 0.833, 1, 1.25, 1.5, 2,
 ];
+// Signed: negative means the deadline had already passed when the work completed
+const SIGNED_MARGIN_SLOT_FRACTION_BUCKETS = [
+  -0.5, -0.25, -0.167, -0.083, -0.042, 0, 0.042, 0.083, 0.125, 0.167, 0.25, 0.333, 0.5,
+];
+
+export type SlotPosition = "epoch_end" | "other";
+
+type DeadlineMissedLabels =
+  | {deadline: "attestation_due"; task: "block_become_head"}
+  | {deadline: "next_slot_start"; task: "prepare_next_slot"};
 
 /**
  * Extra Lodestar custom metrics
@@ -944,7 +954,7 @@ export function createLodestarMetrics(
       }),
       arrivalSlotFraction: register.histogram<{source: OpSource}>({
         name: "lodestar_gossip_block_arrival_slot_fraction",
-        help: "Time elapsed between block slot start and block received, as a fraction of the slot duration",
+        help: "Time elapsed between block slot start and block received, as a fraction of the block slot's duration",
         labelNames: ["source"],
         buckets: ARRIVAL_SLOT_FRACTION_BUCKETS,
       }),
@@ -1170,7 +1180,7 @@ export function createLodestarMetrics(
       }),
       becomeHeadSlotFraction: register.histogram({
         name: "lodestar_import_block_become_head_slot_fraction",
-        help: "Time elapsed between block slot start and the block becoming head, as a fraction of the slot duration",
+        help: "Time elapsed between head slot start and the block becoming head, as a fraction of the head slot's duration",
         buckets: ARRIVAL_SLOT_FRACTION_BUCKETS,
       }),
       setHeadAfterCutoff: register.gauge({
@@ -1936,21 +1946,23 @@ export function createLodestarMetrics(
       }),
     },
 
-    // Slot-relative timing: durations normalized by the configured slot duration, so values are
-    // comparable across networks (mainnet/minimal) and across slot-duration changes (EIP-8198).
+    // Slot-relative timing: each observation is divided by the slot duration of the fork that
+    // applies to the measured slot, so values are comparable across networks and across a
+    // slot-duration change (EIP-8198). Fraction buckets stay fixed; seconds metrics are kept.
     slotTiming: {
       slotDurationSeconds: register.gauge({
         name: "lodestar_slot_duration_seconds",
-        help: "Slot duration in seconds currently in effect",
+        help: "Slot duration in seconds of the fork at the current clock slot",
       }),
-      prepareNextSlotLeadMargin: register.histogram({
+      prepareNextSlotLeadMargin: register.histogram<{slot_position: SlotPosition}>({
         name: "lodestar_prepare_next_slot_lead_margin_slot_fraction",
-        help: "Fraction of the slot remaining when prepareNextSlot work completed for the next slot",
-        buckets: [0, 0.042, 0.083, 0.125, 0.167, 0.25, 0.333, 0.5],
+        help: "Signed fraction of the scheduling slot left between prepareNextSlot completion and the next slot start (negative = completed late). Covers state regen, state hashing and awaited payload preparation, not the builder-deposit pre-verify",
+        labelNames: ["slot_position"],
+        buckets: SIGNED_MARGIN_SLOT_FRACTION_BUCKETS,
       }),
-      deadlineMissed: register.counter<{deadline: string; task: string}>({
+      deadlineMissed: register.counter<DeadlineMissedLabels>({
         name: "lodestar_deadline_missed_total",
-        help: "Total slot-relative deadline overruns, by deadline and task",
+        help: "Completions after a slot-relative deadline, by deadline and task. Each task's population matches its slot fraction histogram",
         labelNames: ["deadline", "task"],
       }),
     },

@@ -130,6 +130,7 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache, ShufflingPromiseCancelReason} from "./shufflingCache.js";
+import {initSlotTimingMetrics, setSlotDurationGauge} from "./slotTimingMetrics.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
@@ -551,6 +552,7 @@ export class BeaconChain implements IBeaconChain {
 
     if (metrics) {
       metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
+      initSlotTimingMetrics(metrics, this.config, clock.currentSlot);
     }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
@@ -1826,7 +1828,9 @@ export class BeaconChain implements IBeaconChain {
     this.forkChoice.updateTime(slot);
     this.emitHeadEvents(prevHead, this.forkChoice.getHead());
     this.metrics?.clockSlot.set(slot);
-    this.metrics?.slotTiming.slotDurationSeconds.set(this.config.SLOT_DURATION_MS / 1000);
+    if (this.metrics) {
+      setSlotDurationGauge(this.metrics, this.config, slot);
+    }
 
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
