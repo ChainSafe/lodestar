@@ -126,10 +126,11 @@ import {
  */
 const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
 /**
- * Post-gloas the block propagates much faster as it only commits to a bid, the execution payload
- * and blobs are revealed separately, so the cutoff is later at 1875 BPS (2.25 seconds for 12s slots).
+ * Post-gloas cutoff, kept at 1667 BPS (2 seconds for 12s slots) for now.
+ *
+ * TODO GLOAS: revisit, the block propagates faster as it only commits to a bid and the attestation deadline changed
  */
-export const BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS = 1875;
+export const BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS = 1667;
 /** Rejection message of the bid block branch when there is no viable bid to commit to */
 const NO_BID_AVAILABLE = "No builder bid available";
 
