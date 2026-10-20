@@ -130,6 +130,11 @@ export class BeaconDb implements IBeaconDb {
     await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
     // New columns are persisted in flat files, so this bucket only contains legacy hot data.
     await this.deleteBucketData(Bucket.allForks_dataColumnSidecars);
+    // Compact even if empty to reclaim tombstones left by previous startups.
+    await this.db.compactRange(
+      encodeKey(Bucket.allForks_dataColumnSidecars, Buffer.alloc(0)),
+      encodeKey(Bucket.allForks_dataColumnSidecars + 1, Buffer.alloc(0))
+    );
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());
