@@ -4,7 +4,7 @@ import {SignableENR} from "@chainsafe/enr";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BUILDER_BID_LAG_BUFFER_MS, BeaconDb, BeaconNode} from "@lodestar/beacon-node";
-import {BLOCK_PRODUCTION_RACE_CUTOFF_BPS} from "@lodestar/beacon-node/api";
+import {BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS} from "@lodestar/beacon-node/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
@@ -245,7 +245,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const bidDeadline = args["builder.bidDeadline"];
   if (bidDeadline !== undefined) {
     for (const {name: fork, epoch} of config.forksAscendingEpochOrder) {
-      const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS);
+      const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS);
       if (isForkPostGloas(fork) && epoch !== Infinity && bidDeadline + BUILDER_BID_LAG_BUFFER_MS >= raceCutoffMs) {
         throw Error(
           `--builder.bidDeadline of ${bidDeadline}ms must be below ${raceCutoffMs - BUILDER_BID_LAG_BUFFER_MS}ms for fork ${fork}`

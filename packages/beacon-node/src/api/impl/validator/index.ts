@@ -123,10 +123,14 @@ import {
  * A cutoff of 1667 BPS (2 seconds for 12s slots) gives enough time and if there are unexpected delays
  * it ensures we publish in time as proposals after the attestation deadline will likely be orphaned
  * due to proposer boost reorg.
- *
- * TODO GLOAS: re-evaluate cutoff timing due to attestation deadline changes in gloas
  */
-export const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
+const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
+/**
+ * Post-gloas cutoff, kept at 1667 BPS (2 seconds for 12s slots) for now.
+ *
+ * TODO GLOAS: revisit, the block propagates faster as it only commits to a bid and the attestation deadline changed
+ */
+export const BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS = 1667;
 /** Rejection message of the bid block branch when there is no viable bid to commit to */
 const NO_BID_AVAILABLE = "No builder bid available";
 
@@ -1009,7 +1013,7 @@ export function getValidatorApi(
       // not delay the proposal when a builder bid block is available (and vice versa)
       const cutoffMs = Math.max(
         0,
-        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS) - chain.clock.msFromSlot(slot)
+        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
       );
 
       // Give p2p bids the same time to bid up as granted to builder API bid requests via the advertised
