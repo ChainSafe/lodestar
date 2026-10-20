@@ -1,3 +1,4 @@
+import {BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS} from "../api/impl/validator/index.js";
 import {ApiOptions, defaultApiOptions} from "../api/options.js";
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
 import {ValidatorMonitorOpts, defaultValidatorMonitorOpts} from "../chain/validatorMonitor.js";
@@ -25,6 +26,7 @@ export {allNamespaces} from "../api/rest/index.js";
 export {
   defaultExecutionEngineHttpOpts,
   defaultExecutionBuilderHttpOpts,
+  BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS,
   BUILDER_BID_LAG_BUFFER_MS,
   engineApiModes,
   ArchiveMode,

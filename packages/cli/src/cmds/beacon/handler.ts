@@ -3,8 +3,12 @@ import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BUILDER_BID_LAG_BUFFER_MS, BeaconDb, BeaconNode} from "@lodestar/beacon-node";
-import {BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS} from "@lodestar/beacon-node/api";
+import {
+  BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS,
+  BUILDER_BID_LAG_BUFFER_MS,
+  BeaconDb,
+  BeaconNode,
+} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
