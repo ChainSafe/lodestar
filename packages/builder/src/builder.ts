@@ -53,7 +53,7 @@ export type BuilderOptions = {
   /** Fee recipient of built payloads, receives priority fees and MEV */
   executionFeeRecipient: ExecutionAddress;
   metrics: Metrics | null;
-  /** Payload construction software, an execution client is one implementation */
+  /** Payload construction engine, an execution client is one implementation */
   payloadSource: PayloadSource;
   bidding: BidderOptions &
     ProportionalBidPolicyOpts & {
