@@ -905,7 +905,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   // Developer API diagnostics only. Operational reads belong to BeaconChain.
-  getHeads(): ProtoBlock[] {
+  async getHeads(): Promise<ProtoBlock[]> {
     return this.forkChoice.getHeads();
   }
   getUnrealizedJustifiedCheckpoint(): CheckpointWithHex {
@@ -1233,11 +1233,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return getAttesterDuties.call(this, epoch, indices, currentEpoch, this.getHeadStateAtEpoch.bind(this));
   }
 
-  /** Sync committee duties for `validatorIndices` at `epoch`. Synchronous — served from head state. */
-  getSyncCommitteeDuties(
+  /** Sync committee duties for `validatorIndices` at `epoch`, served from head state. */
+  async getSyncCommitteeDuties(
     epoch: Epoch,
     indices: ValidatorIndex[]
-  ): {data: routes.validator.SyncDuty[]; head: ProtoBlock} {
+  ): Promise<{data: routes.validator.SyncDuty[]; head: ProtoBlock}> {
     return getSyncCommitteeDuties.call(this, epoch, indices);
   }
 
@@ -1501,11 +1501,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateApiVoluntaryExit.call(this, voluntaryExit);
   }
 
-  drainDeferredVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+  async drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
     return this.deferredVoluntaryExitPool.drainProcessableExits(this.getHeadState());
   }
 
-  insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): void {
+  async insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void> {
     this.opPool.insertVoluntaryExit(exit);
   }
 
@@ -1522,37 +1522,37 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateApiBlsToExecutionChange.call(this, blsToExecutionChange, preCapella);
   }
 
-  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): gloas.SignedProposerPreferences[] {
+  async getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): Promise<gloas.SignedProposerPreferences[]> {
     return this.proposerPreferencesPool.getAll(slot, dependentRoot);
   }
 
-  getPoolAttesterSlashings(): AttesterSlashing[] {
+  async getPoolAttesterSlashings(): Promise<AttesterSlashing[]> {
     return this.opPool.getAllAttesterSlashings();
   }
 
-  getPoolProposerSlashings(): phase0.ProposerSlashing[] {
+  async getPoolProposerSlashings(): Promise<phase0.ProposerSlashing[]> {
     return this.opPool.getAllProposerSlashings();
   }
 
-  getPoolVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+  async getPoolVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
     return this.opPool.getAllVoluntaryExits();
   }
 
-  getPoolBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[] {
+  async getPoolBlsToExecutionChanges(): Promise<capella.SignedBLSToExecutionChange[]> {
     return this.opPool.getAllBlsToExecutionChanges().map(({data}) => data);
   }
 
   // --- Op pools (engine-internal): narrow add/read bridges for gossip handlers + REST/validator API ---
   // The pools are engine-owned; the facade reaches them only through these methods (never the objects).
 
-  addAttestationToPool(
+  async addAttestationToPool(
     committeeIndex: CommitteeIndex,
     attestation: SingleAttestation,
     attDataRootHex: RootHex,
     validatorCommitteeIndex: number,
     committeeSize: number,
     priority?: boolean
-  ): InsertOutcome {
+  ): Promise<InsertOutcome> {
     return this.attestationPool.add(
       committeeIndex,
       attestation,
@@ -1563,23 +1563,27 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  getAttestationAggregate(slot: Slot, dataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null {
+  async getAttestationAggregate(
+    slot: Slot,
+    dataRootHex: RootHex,
+    committeeIndex: CommitteeIndex
+  ): Promise<Attestation | null> {
     return this.attestationPool.getAggregate(slot, dataRootHex, committeeIndex);
   }
 
-  getPoolAggregatedAttestations(bySlot?: Slot): Attestation[] {
+  async getPoolAggregatedAttestations(bySlot?: Slot): Promise<Attestation[]> {
     return [...this.aggregatedAttestationPool.getAll(bySlot), ...this.attestationPool.getAll(bySlot)];
   }
 
-  getSyncCommitteeContribution(
+  async getSyncCommitteeContribution(
     subnet: SubcommitteeIndex,
     slot: Slot,
     prevBlockRoot: Root
-  ): altair.SyncCommitteeContribution | null {
+  ): Promise<altair.SyncCommitteeContribution | null> {
     return this.syncCommitteeMessagePool.getContribution(subnet, slot, prevBlockRoot);
   }
 
-  getPoolPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[] {
+  async getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]> {
     return this.payloadAttestationPool.getAll(slot);
   }
 
@@ -1597,12 +1601,12 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   /** Fee recipient registered for a proposer, or undefined if none (block-production default is
    * resolved by the state-based production helper; import uses this for its FCU fee recipient). */
-  getProposerFeeRecipient(proposerIndex: ValidatorIndex): string | undefined {
+  async getProposerFeeRecipient(proposerIndex: ValidatorIndex): Promise<string | undefined> {
     return this.beaconProposerCache.get(proposerIndex);
   }
 
   /** Source: unstable@2593063a82 chain/chain.ts#updateAttachedValidators; custody remains facade-owned. */
-  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): boolean {
+  async trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<boolean> {
     let hasNewValidators = false;
     for (const validatorIndex of validatorIndices) {
       if (this.beaconProposerCache.track(epoch, validatorIndex)) hasNewValidators = true;
@@ -1611,7 +1615,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   /** Register proposer preparation data. Returns true if new validators were discovered. */
-  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): boolean {
+  async updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<boolean> {
     const previousValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
     for (const proposer of proposers) {
       this.beaconProposerCache.add(epoch, proposer);
@@ -1620,12 +1624,12 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   /** Validator indices with proposer preparation registered (attached validators). */
-  getProposerCacheValidatorIndices(): ValidatorIndex[] {
+  async getProposerCacheValidatorIndices(): Promise<ValidatorIndex[]> {
     return this.beaconProposerCache.getValidatorIndices();
   }
 
   /** Cached finalized effective-balance increments for a checkpoint, or undefined if not cached. */
-  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined {
+  async getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): Promise<EffectiveBalanceIncrements | undefined> {
     return this.checkpointBalancesCache.get(checkpoint);
   }
 
@@ -1651,7 +1655,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
-  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
+  async validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean> {
     return (
       // Dedicated liveness cache, registers attesters seen through imported blocks.
       this.seenBlockAttesters.isKnown(epoch, index) ||
@@ -1693,7 +1697,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   isBlockProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean {
     return this.seenBlockProposers.isEquivocating(slot, proposerIndex);
   }
-  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): RootHex[] {
+  async getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {
     return this.seenBlockProposers.getConflictingBlockRoots(slot, proposerIndex, root);
   }
   async verifyAndObserveBlockProposer(_bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void> {
@@ -1906,7 +1910,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   // === BLK-3: state-read engine methods (regen-backed; no IBeaconStateView crosses the seam) ===
 
   /** Dump regen cache summary (lodestar debug endpoint). */
-  dumpCacheSummary(): routes.lodestar.StateCacheItem[] {
+  async dumpCacheSummary(): Promise<routes.lodestar.StateCacheItem[]> {
     return this.regen.dumpCacheSummary();
   }
 
@@ -1916,7 +1920,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   /** Snapshot of the regen job queue (lodestar debug endpoint). */
-  dumpRegenQueueItems(): {key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[] {
+  async dumpRegenQueueItems(): Promise<{key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[]> {
     return this.regen.jobQueue.getItems().map((item) => ({
       key: item.args[0].key,
       args: item.args[0],
@@ -2029,7 +2033,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   /** Head-state execution flags for the notifier (post-bellatrix merge-transition display). */
-  getHeadExecutionStateInfo(): {isExecutionStateType: boolean; isMergeTransitionComplete: boolean} {
+  async getHeadExecutionStateInfo(): Promise<{isExecutionStateType: boolean; isMergeTransitionComplete: boolean}> {
     const state = this.getHeadState();
     if (!isStatePostBellatrix(state) || !state.isExecutionStateType) {
       return {isExecutionStateType: false, isMergeTransitionComplete: false};
@@ -2253,12 +2257,12 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   /** Latest weak-subjectivity checkpoint epoch from the head state (lodestar debug). */
-  getLatestWeakSubjectivityCheckpointEpoch(): Epoch {
+  async getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch> {
     return this.getHeadState().getLatestWeakSubjectivityCheckpointEpoch();
   }
 
   /** Proposer pubkey from the head state for builder preference validation. */
-  getHeadProposerPubkey(slot: Slot): Uint8Array {
+  async getHeadProposerPubkey(slot: Slot): Promise<Uint8Array> {
     return this.pubkeyCache.getPubkeyBytesOrThrow(this.getHeadState().getBeaconProposer(slot));
   }
 
@@ -2281,7 +2285,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   /** Subset of `indices` that are active-or-pending at the current epoch (builder registration filter). */
-  getActiveOrPendingValidators(indices: ValidatorIndex[]): Set<ValidatorIndex> {
+  async getActiveOrPendingValidators(indices: ValidatorIndex[]): Promise<Set<ValidatorIndex>> {
     const state = this.getHeadState();
     const currentEpoch = this.clock.currentEpoch;
     const kept = new Set<ValidatorIndex>();

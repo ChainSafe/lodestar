@@ -48,7 +48,7 @@ describe("node notifier", () => {
         root: Buffer.alloc(32),
         rootHex: `0x${"00".repeat(32)}`,
       });
-      chain.beaconEngine.getHeadExecutionStateInfo = vi.fn().mockReturnValue({
+      chain.beaconEngine.getHeadExecutionStateInfo = vi.fn().mockResolvedValue({
         isExecutionStateType: false,
         isMergeTransitionComplete: false,
       });
@@ -56,6 +56,7 @@ describe("node notifier", () => {
       const notifying = runNodeNotifier({...modules, config, signal: controller.signal});
 
       try {
+        await vi.advanceTimersByTimeAsync(0);
         expect(logger.error).not.toHaveBeenCalled();
         expect(logger.info).toHaveBeenCalledOnce();
         logger.info.mockClear();

@@ -44,7 +44,7 @@ export function getDebugApi({
 }: Pick<ApiModules, "chain" | "config" | "db" | "sync">): ApplicationMethods<routes.debug.Endpoints> {
   return {
     async getDebugChainHeadsV2() {
-      const heads = chain.beaconEngine.getHeads();
+      const heads = await chain.beaconEngine.getHeads();
       return {
         data: heads.map((block) => ({
           slot: block.slot,

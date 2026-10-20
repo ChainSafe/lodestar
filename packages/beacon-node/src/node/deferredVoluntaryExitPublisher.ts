@@ -26,10 +26,10 @@ export function startDeferredVoluntaryExitPublisher({
       // the head forward to the current epoch. At init from a stale db-finalized state that regen can
       // be many epoch transitions. The head state is fine here: this is a best-effort drain that
       // re-runs every epoch, so a just-processable exit is republished next tick.
-      const exits = chain.beaconEngine.drainDeferredVoluntaryExits();
+      const exits = await chain.beaconEngine.drainDeferredVoluntaryExits();
       for (const exit of exits) {
         try {
-          chain.beaconEngine.insertVoluntaryExit(exit);
+          await chain.beaconEngine.insertVoluntaryExit(exit);
           chain.emitter.emit(routes.events.EventType.voluntaryExit, exit);
           await network.publishVoluntaryExit(exit);
           logger.info("Voluntary exit successfully published for validator", {

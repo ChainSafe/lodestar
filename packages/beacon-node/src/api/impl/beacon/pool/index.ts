@@ -21,7 +21,7 @@ export function getBeaconPoolApi({
   return {
     async getPoolAttestationsV2({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = chain.beaconEngine.getPoolAggregatedAttestations(slot);
+      let attestations = await chain.beaconEngine.getPoolAggregatedAttestations(slot);
       const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
       const isPostElectra = isForkPostElectra(fork);
 
@@ -46,24 +46,24 @@ export function getBeaconPoolApi({
         throw new ApiError(400, `Payload attestation pool is not supported before Gloas fork=${fork}`);
       }
 
-      return {data: chain.beaconEngine.getPoolPayloadAttestations(slot), meta: {version: fork}};
+      return {data: await chain.beaconEngine.getPoolPayloadAttestations(slot), meta: {version: fork}};
     },
 
     async getPoolAttesterSlashingsV2() {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
-      return {data: chain.beaconEngine.getPoolAttesterSlashings(), meta: {version: fork}};
+      return {data: await chain.beaconEngine.getPoolAttesterSlashings(), meta: {version: fork}};
     },
 
     async getPoolProposerSlashings() {
-      return {data: chain.beaconEngine.getPoolProposerSlashings()};
+      return {data: await chain.beaconEngine.getPoolProposerSlashings()};
     },
 
     async getPoolVoluntaryExits() {
-      return {data: chain.beaconEngine.getPoolVoluntaryExits()};
+      return {data: await chain.beaconEngine.getPoolVoluntaryExits()};
     },
 
     async getPoolBLSToExecutionChanges() {
-      return {data: chain.beaconEngine.getPoolBlsToExecutionChanges()};
+      return {data: await chain.beaconEngine.getPoolBlsToExecutionChanges()};
     },
 
     async submitPoolAttestationsV2({signedAttestations}) {
@@ -106,7 +106,7 @@ export function getBeaconPoolApi({
             try {
               // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
               // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548
-              const insertOutcome = chain.beaconEngine.addAttestationToPool(
+              const insertOutcome = await chain.beaconEngine.addAttestationToPool(
                 committeeIndex,
                 attestation,
                 attDataRootHex,

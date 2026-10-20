@@ -410,7 +410,7 @@ describe("api - beacon - publishBlockV2", () => {
               throw error;
             });
           } else {
-            modules.chain.beaconEngine.getConflictingBlockRoots = vi.fn(() => {
+            modules.chain.beaconEngine.getConflictingBlockRoots = vi.fn(async () => {
               beforeRejection();
               return [toRootHex(Buffer.alloc(32, 1))];
             });

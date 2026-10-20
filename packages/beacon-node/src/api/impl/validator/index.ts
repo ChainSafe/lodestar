@@ -492,7 +492,11 @@ export function getValidatorApi(
       notOnOptimisticBlockRoot(beaconBlockRoot);
       notOnOutOfRangeData(beaconBlockRoot);
 
-      const contribution = chain.beaconEngine.getSyncCommitteeContribution(subcommitteeIndex, slot, beaconBlockRoot);
+      const contribution = await chain.beaconEngine.getSyncCommitteeContribution(
+        subcommitteeIndex,
+        slot,
+        beaconBlockRoot
+      );
       if (!contribution) {
         throw new ApiError(
           404,
@@ -651,7 +655,7 @@ export function getValidatorApi(
       // sync committee duties have a lookahead of 1 day. Assuming the validator only requests duties for upcoming
       // epochs, the head state will very likely have the duties available for the requested epoch.
       // Note: does not support requesting past duties
-      const {data, head} = chain.beaconEngine.getSyncCommitteeDuties(epoch, indices);
+      const {data, head} = await chain.beaconEngine.getSyncCommitteeDuties(epoch, indices);
 
       return {
         data,
@@ -665,7 +669,7 @@ export function getValidatorApi(
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toRootHex(attestationDataRoot);
-      const aggregate = chain.beaconEngine.getAttestationAggregate(slot, dataRootHex, committeeIndex);
+      const aggregate = await chain.beaconEngine.getAttestationAggregate(slot, dataRootHex, committeeIndex);
 
       if (!aggregate) {
         throw new ApiError(
@@ -910,10 +914,12 @@ export function getValidatorApi(
       }
 
       return {
-        data: indices.map((index) => ({
-          index,
-          isLive: chain.validatorSeenAtEpoch(index, epoch),
-        })),
+        data: await Promise.all(
+          indices.map(async (index) => ({
+            index,
+            isLive: await chain.validatorSeenAtEpoch(index, epoch),
+          }))
+        ),
       };
     },
 
@@ -937,7 +943,7 @@ export function getValidatorApi(
           withIndex.push({registration, index});
         }
       }
-      const activeOrPending = chain.beaconEngine.getActiveOrPendingValidators(withIndex.map((x) => x.index));
+      const activeOrPending = await chain.beaconEngine.getActiveOrPendingValidators(withIndex.map((x) => x.index));
       const filteredRegistrations = withIndex.filter((x) => activeOrPending.has(x.index)).map((x) => x.registration);
 
       const registrationsBytes =
@@ -1022,7 +1028,7 @@ export function getValidatorApi(
           try {
             const url = decodeBuilderUrl(entry.url);
             builder = toPrintableUrl(url);
-            const expectedProposerPubkey = chain.beaconEngine.getHeadProposerPubkey(entry.auth.message.slot);
+            const expectedProposerPubkey = await chain.beaconEngine.getHeadProposerPubkey(entry.auth.message.slot);
             if (!byteArrayEquals(entry.proposerPubkey, expectedProposerPubkey)) {
               throw new ApiError(
                 400,

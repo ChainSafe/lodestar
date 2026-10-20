@@ -120,7 +120,7 @@ export interface IBeaconChain extends IChainView {
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   persistToDisk(): Promise<void>;
 
-  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
 
   /**
    * Since we can have multiple parallel chains,

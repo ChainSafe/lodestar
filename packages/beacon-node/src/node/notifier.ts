@@ -81,7 +81,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const executionInfo = getHeadExecutionInfo(
         config,
         clockEpoch,
-        chain.beaconEngine.getHeadExecutionStateInfo(),
+        await chain.beaconEngine.getHeadExecutionStateInfo(),
         headInfo
       );
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;

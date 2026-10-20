@@ -500,7 +500,7 @@ export class BeaconChain implements IBeaconChain {
     return true;
   }
 
-  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean> {
     // Caller must check that epoch is not older that current epoch - 1
     // else the caches for that epoch may already be pruned.
     // All liveness caches (seenBlockAttesters + gossip caches) are engine-internal.
@@ -1103,7 +1103,7 @@ export class BeaconChain implements IBeaconChain {
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
     // Engine owns the proposer cache; it returns whether new validators were discovered.
-    const discoveredNewValidators = this.beaconEngine.updateProposerPreparation(epoch, proposers);
+    const discoveredNewValidators = await this.beaconEngine.updateProposerPreparation(epoch, proposers);
 
     // Only update validator custody if we discovered new validators
     if (discoveredNewValidators) {
@@ -1113,7 +1113,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void> {
-    const hasNewValidators = this.beaconEngine.trackAttachedValidators(epoch, validatorIndices);
+    const hasNewValidators = await this.beaconEngine.trackAttachedValidators(epoch, validatorIndices);
 
     // Only update validator custody if we discovered new validators
     if (hasNewValidators) {
@@ -1131,11 +1131,11 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // Validators attached to the node
-    const validatorIndices = this.beaconEngine.getProposerCacheValidatorIndices();
+    const validatorIndices = await this.beaconEngine.getProposerCacheValidatorIndices();
 
     // Update custody requirement based on finalized state
     let effectiveBalances: number[];
-    const effectiveBalanceIncrements = this.beaconEngine.getCheckpointEffectiveBalances(finalizedCheckpoint);
+    const effectiveBalanceIncrements = await this.beaconEngine.getCheckpointEffectiveBalances(finalizedCheckpoint);
     if (effectiveBalanceIncrements) {
       effectiveBalances = validatorIndices.map(
         (index) => (effectiveBalanceIncrements[index] ?? 0) * EFFECTIVE_BALANCE_INCREMENT

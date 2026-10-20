@@ -398,7 +398,7 @@ describe("bytes-based engine startup", () => {
     const index = chain.pubkeyCache.getIndex(chain.pubkeyCache.getPubkeyBytesOrThrow(validatorCount));
     expect(index).toBe(validatorCount);
 
-    expect(chain.beaconEngine.getActiveOrPendingValidators([0, validatorCount])).toEqual(new Set([0]));
+    expect(await chain.beaconEngine.getActiveOrPendingValidators([0, validatorCount])).toEqual(new Set([0]));
   });
 
   it("serves persisted checkpoint bytes through the engine with latest-safe selection and API errors", async () => {

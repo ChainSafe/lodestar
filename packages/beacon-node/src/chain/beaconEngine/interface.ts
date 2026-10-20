@@ -279,7 +279,7 @@ export interface IBeaconEngineCore {
   validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
 
   // Developer API diagnostics only. Operational reads belong to BeaconChain.
-  getHeads(): ProtoBlock[];
+  getHeads(): Promise<ProtoBlock[]>;
   getUnrealizedJustifiedCheckpoint(): CheckpointWithHex;
   getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
   getProposerBoostRoot(): RootHex;
@@ -348,7 +348,7 @@ export interface IBeaconEngineCore {
   getSyncCommitteeDuties(
     epoch: Epoch,
     indices: ValidatorIndex[]
-  ): {data: routes.validator.SyncDuty[]; head: ProtoBlock};
+  ): Promise<{data: routes.validator.SyncDuty[]; head: ProtoBlock}>;
   getPtcDuties(
     epoch: Epoch,
     indices: ValidatorIndex[],
@@ -357,9 +357,9 @@ export interface IBeaconEngineCore {
 
   // State reads (regen-backed; no IBeaconStateView crosses — the engine resolves state internally and
   // returns scalars / DTOs). See BLK-3.
-  dumpCacheSummary(): routes.lodestar.StateCacheItem[];
+  dumpCacheSummary(): Promise<routes.lodestar.StateCacheItem[]>;
   dropCache(): Promise<void>;
-  dumpRegenQueueItems(): {key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[];
+  dumpRegenQueueItems(): Promise<{key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[]>;
   registerLocalValidators(indices: ValidatorIndex[]): Promise<void>;
   registerLocalValidatorsInSyncCommittee(
     subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]
@@ -385,8 +385,8 @@ export interface IBeaconEngineCore {
   initRegen(): Promise<void>;
   /** Tear down engine-owned resources (historical-state regen worker, BLS pool, …). */
   close(): Promise<void>;
-  getHeadExecutionStateInfo(): {isExecutionStateType: boolean; isMergeTransitionComplete: boolean};
-  getLatestWeakSubjectivityCheckpointEpoch(): Epoch;
+  getHeadExecutionStateInfo(): Promise<{isExecutionStateType: boolean; isMergeTransitionComplete: boolean}>;
+  getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch>;
   // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
   loadHistoricalStateRegen(): Promise<void>;
   /** Return serialized bytes of a persisted checkpoint state, or the latest safe checkpoint if omitted. */
@@ -471,7 +471,7 @@ export interface IBeaconEngineCore {
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | fulu.ProposerLookahead>>;
-  getHeadProposerPubkey(slot: Slot): Uint8Array;
+  getHeadProposerPubkey(slot: Slot): Promise<Uint8Array>;
   getBuilderPendingPayments(
     id: ApiStateId,
     returnBytes: boolean
@@ -481,7 +481,7 @@ export interface IBeaconEngineCore {
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>>;
   getHeadParentPayload(): HeadParentPayload | undefined;
-  getActiveOrPendingValidators(indices: ValidatorIndex[]): Set<ValidatorIndex>;
+  getActiveOrPendingValidators(indices: ValidatorIndex[]): Promise<Set<ValidatorIndex>>;
   getAttestationSourceCheckpoint(attEpoch: Epoch): Promise<phase0.Checkpoint>;
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
   getAttestationsRewards(
@@ -587,19 +587,19 @@ export interface IBeaconEngineCore {
   validateApiVoluntaryExit(
     voluntaryExit: phase0.SignedVoluntaryExit
   ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}>;
-  drainDeferredVoluntaryExits(): phase0.SignedVoluntaryExit[];
-  insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): void;
+  drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]>;
+  insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>;
   processProposerEquivocation(slot: Slot, proposerIndex: ValidatorIndex): void;
   validateGossipBlsToExecutionChange(blsToExecutionChangeBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateApiBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
     preCapella: boolean
   ): Promise<void>;
-  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): gloas.SignedProposerPreferences[];
-  getPoolAttesterSlashings(): AttesterSlashing[];
-  getPoolProposerSlashings(): phase0.ProposerSlashing[];
-  getPoolVoluntaryExits(): phase0.SignedVoluntaryExit[];
-  getPoolBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[];
+  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): Promise<gloas.SignedProposerPreferences[]>;
+  getPoolAttesterSlashings(): Promise<AttesterSlashing[]>;
+  getPoolProposerSlashings(): Promise<phase0.ProposerSlashing[]>;
+  getPoolVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]>;
+  getPoolBlsToExecutionChanges(): Promise<capella.SignedBLSToExecutionChange[]>;
 
   // Op pools (engine-internal): narrow add/read bridges for gossip handlers + REST/validator API.
   addAttestationToPool(
@@ -609,34 +609,38 @@ export interface IBeaconEngineCore {
     validatorCommitteeIndex: number,
     committeeSize: number,
     priority?: boolean
-  ): InsertOutcome;
-  getAttestationAggregate(slot: Slot, dataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null;
-  getPoolAggregatedAttestations(bySlot?: Slot): Attestation[];
+  ): Promise<InsertOutcome>;
+  getAttestationAggregate(
+    slot: Slot,
+    dataRootHex: RootHex,
+    committeeIndex: CommitteeIndex
+  ): Promise<Attestation | null>;
+  getPoolAggregatedAttestations(bySlot?: Slot): Promise<Attestation[]>;
   getSyncCommitteeContribution(
     subnet: SubcommitteeIndex,
     slot: Slot,
     prevBlockRoot: Root
-  ): altair.SyncCommitteeContribution | null;
-  getPoolPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[];
+  ): Promise<altair.SyncCommitteeContribution | null>;
+  getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]>;
 
   // Proposer cache + finalized balances (engine-internal).
-  getProposerFeeRecipient(proposerIndex: ValidatorIndex): string | undefined;
-  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): boolean;
-  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): boolean;
-  getProposerCacheValidatorIndices(): ValidatorIndex[];
-  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined;
+  getProposerFeeRecipient(proposerIndex: ValidatorIndex): Promise<string | undefined>;
+  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<boolean>;
+  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<boolean>;
+  getProposerCacheValidatorIndices(): Promise<ValidatorIndex[]>;
+  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): Promise<EffectiveBalanceIncrements | undefined>;
 
   /** Prune the (internal) op pool + seen-block-proposers on finalization — driven by the facade's finalized event. */
   pruneOnFinalized(): Promise<void>;
   /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
-  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
   /** Whether a block proposer was already seen for this slot (sync anti-unbundling check). */
   observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): void;
   markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): void;
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
   hasObservedBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): boolean;
   isBlockProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean;
-  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): RootHex[];
+  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]>;
   verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void>;
   verifyEnvelopeForPublish(
     bytes: Uint8Array,

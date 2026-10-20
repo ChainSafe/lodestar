@@ -85,7 +85,7 @@ export function getLodestarApi({
     },
 
     async getLatestWeakSubjectivityCheckpointEpoch() {
-      return {data: chain.beaconEngine.getLatestWeakSubjectivityCheckpointEpoch()};
+      return {data: await chain.beaconEngine.getLatestWeakSubjectivityCheckpointEpoch()};
     },
 
     async getSyncChainsDebugState() {
@@ -100,7 +100,7 @@ export function getLodestarApi({
 
     async getRegenQueueItems() {
       return {
-        data: chain.beaconEngine.dumpRegenQueueItems().map((item) => ({
+        data: (await chain.beaconEngine.dumpRegenQueueItems()).map((item) => ({
           key: item.key,
           args: regenRequestToJson(config, item.args),
           addedTimeMs: item.addedTimeMs,
@@ -123,7 +123,7 @@ export function getLodestarApi({
     },
 
     async getStateCacheItems() {
-      return {data: chain.beaconEngine.dumpCacheSummary()};
+      return {data: await chain.beaconEngine.dumpCacheSummary()};
     },
 
     async getGossipPeerScoreStats() {

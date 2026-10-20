@@ -263,7 +263,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.validateGossipLightClientFinalityUpdate(bytes, fork);
   }
 
-  getHeads(): ProtoBlock[] {
+  getHeads(): Promise<ProtoBlock[]> {
     return this.core.getHeads();
   }
 
@@ -376,7 +376,7 @@ export class BeaconEngine implements IBeaconEngine {
   getSyncCommitteeDuties(
     epoch: Epoch,
     indices: ValidatorIndex[]
-  ): {data: routes.validator.SyncDuty[]; head: ProtoBlock} {
+  ): Promise<{data: routes.validator.SyncDuty[]; head: ProtoBlock}> {
     return this.core.getSyncCommitteeDuties(epoch, indices);
   }
 
@@ -388,7 +388,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getPtcDuties(epoch, indices, currentEpoch);
   }
 
-  dumpCacheSummary(): routes.lodestar.StateCacheItem[] {
+  dumpCacheSummary(): Promise<routes.lodestar.StateCacheItem[]> {
     return this.core.dumpCacheSummary();
   }
 
@@ -396,7 +396,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.dropCache();
   }
 
-  dumpRegenQueueItems(): {key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[] {
+  dumpRegenQueueItems(): Promise<{key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[]> {
     return this.core.dumpRegenQueueItems();
   }
 
@@ -450,11 +450,11 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.initRegen();
   }
 
-  getHeadExecutionStateInfo(): {isExecutionStateType: boolean; isMergeTransitionComplete: boolean} {
+  getHeadExecutionStateInfo(): Promise<{isExecutionStateType: boolean; isMergeTransitionComplete: boolean}> {
     return this.core.getHeadExecutionStateInfo();
   }
 
-  getLatestWeakSubjectivityCheckpointEpoch(): Epoch {
+  getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch> {
     return this.core.getLatestWeakSubjectivityCheckpointEpoch();
   }
 
@@ -606,7 +606,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getStateProposerLookahead(id, returnBytes);
   }
 
-  getHeadProposerPubkey(slot: Slot): Uint8Array {
+  getHeadProposerPubkey(slot: Slot): Promise<Uint8Array> {
     return this.core.getHeadProposerPubkey(slot);
   }
 
@@ -628,7 +628,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getHeadParentPayload();
   }
 
-  getActiveOrPendingValidators(indices: ValidatorIndex[]): Set<ValidatorIndex> {
+  getActiveOrPendingValidators(indices: ValidatorIndex[]): Promise<Set<ValidatorIndex>> {
     return this.core.getActiveOrPendingValidators(indices);
   }
 
@@ -822,12 +822,12 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.validateApiVoluntaryExit(voluntaryExit);
   }
 
-  drainDeferredVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+  drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
     return this.core.drainDeferredVoluntaryExits();
   }
 
-  insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): void {
-    this.core.insertVoluntaryExit(exit);
+  insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void> {
+    return this.core.insertVoluntaryExit(exit);
   }
 
   processProposerEquivocation(slot: Slot, proposerIndex: ValidatorIndex): void {
@@ -845,23 +845,23 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.validateApiBlsToExecutionChange(blsToExecutionChange, preCapella);
   }
 
-  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): gloas.SignedProposerPreferences[] {
+  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): Promise<gloas.SignedProposerPreferences[]> {
     return this.core.getPoolProposerPreferences(slot, dependentRoot);
   }
 
-  getPoolAttesterSlashings(): AttesterSlashing[] {
+  getPoolAttesterSlashings(): Promise<AttesterSlashing[]> {
     return this.core.getPoolAttesterSlashings();
   }
 
-  getPoolProposerSlashings(): phase0.ProposerSlashing[] {
+  getPoolProposerSlashings(): Promise<phase0.ProposerSlashing[]> {
     return this.core.getPoolProposerSlashings();
   }
 
-  getPoolVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+  getPoolVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
     return this.core.getPoolVoluntaryExits();
   }
 
-  getPoolBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[] {
+  getPoolBlsToExecutionChanges(): Promise<capella.SignedBLSToExecutionChange[]> {
     return this.core.getPoolBlsToExecutionChanges();
   }
 
@@ -872,7 +872,7 @@ export class BeaconEngine implements IBeaconEngine {
     validatorCommitteeIndex: number,
     committeeSize: number,
     priority?: boolean
-  ): InsertOutcome {
+  ): Promise<InsertOutcome> {
     return this.core.addAttestationToPool(
       committeeIndex,
       attestation,
@@ -883,11 +883,15 @@ export class BeaconEngine implements IBeaconEngine {
     );
   }
 
-  getAttestationAggregate(slot: Slot, dataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null {
+  getAttestationAggregate(
+    slot: Slot,
+    dataRootHex: RootHex,
+    committeeIndex: CommitteeIndex
+  ): Promise<Attestation | null> {
     return this.core.getAttestationAggregate(slot, dataRootHex, committeeIndex);
   }
 
-  getPoolAggregatedAttestations(bySlot?: Slot): Attestation[] {
+  getPoolAggregatedAttestations(bySlot?: Slot): Promise<Attestation[]> {
     return this.core.getPoolAggregatedAttestations(bySlot);
   }
 
@@ -895,31 +899,31 @@ export class BeaconEngine implements IBeaconEngine {
     subnet: SubcommitteeIndex,
     slot: Slot,
     prevBlockRoot: Root
-  ): altair.SyncCommitteeContribution | null {
+  ): Promise<altair.SyncCommitteeContribution | null> {
     return this.core.getSyncCommitteeContribution(subnet, slot, prevBlockRoot);
   }
 
-  getPoolPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[] {
+  getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]> {
     return this.core.getPoolPayloadAttestations(slot);
   }
 
-  getProposerFeeRecipient(proposerIndex: ValidatorIndex): string | undefined {
+  getProposerFeeRecipient(proposerIndex: ValidatorIndex): Promise<string | undefined> {
     return this.core.getProposerFeeRecipient(proposerIndex);
   }
 
-  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): boolean {
+  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<boolean> {
     return this.core.trackAttachedValidators(epoch, validatorIndices);
   }
 
-  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): boolean {
+  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<boolean> {
     return this.core.updateProposerPreparation(epoch, proposers);
   }
 
-  getProposerCacheValidatorIndices(): ValidatorIndex[] {
+  getProposerCacheValidatorIndices(): Promise<ValidatorIndex[]> {
     return this.core.getProposerCacheValidatorIndices();
   }
 
-  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined {
+  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): Promise<EffectiveBalanceIncrements | undefined> {
     return this.core.getCheckpointEffectiveBalances(checkpoint);
   }
 
@@ -927,7 +931,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.pruneOnFinalized();
   }
 
-  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean> {
     return this.core.validatorSeenAtEpoch(index, epoch);
   }
 
@@ -951,7 +955,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.isBlockProposerEquivocating(slot, proposerIndex);
   }
 
-  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): RootHex[] {
+  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {
     return this.core.getConflictingBlockRoots(slot, proposerIndex, root);
   }
 
