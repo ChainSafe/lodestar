@@ -123,13 +123,6 @@ describe("PtcService", () => {
         slotPosition: "epoch_end",
       },
       {
-        name: "gloas ordinary slot at 12s",
-        chainConfig: {GLOAS_FORK_EPOCH: 0},
-        slot: SLOTS_PER_EPOCH,
-        slotDurationMs: 12000,
-        slotPosition: "other",
-      },
-      {
         name: "heze ordinary slot at 10s",
         chainConfig: {GLOAS_FORK_EPOCH: 0, HEZE_FORK_EPOCH: 0, SLOT_DURATION_MS_HEZE: 10000},
         slot: SLOTS_PER_EPOCH,

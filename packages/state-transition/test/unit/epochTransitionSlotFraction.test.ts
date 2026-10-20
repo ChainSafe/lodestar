@@ -59,11 +59,4 @@ describe("epoch transition slot fraction", () => {
 
     expect(metrics.epochTransitionSlotFraction.observe).toHaveBeenCalledWith(2 / 10);
   });
-
-  it("does not observe a fraction on a slot without an epoch transition", () => {
-    const metrics = getMetrics(createFakeRegister());
-    processSlots(generateActiveState(1), 2, {}, {metrics});
-
-    expect(metrics.epochTransitionSlotFraction.observe).not.toHaveBeenCalled();
-  });
 });

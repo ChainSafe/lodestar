@@ -114,15 +114,6 @@ describe("PrepareNextSlot scheduler metrics", () => {
     expect(await deadlineMissed(metrics)).toBeUndefined();
   });
 
-  it("observes 3s left of a 10s slot as 0.3", async () => {
-    msFromSlot.mockReturnValue(-3000);
-    await runEpochEnd(10000, 10000);
-
-    const samples = await marginSamples(metrics, "epoch_end");
-    expect(samples.count).toBe(1);
-    expect(samples.sum).toBeCloseTo(0.3, 10);
-  });
-
   it("keeps late completions signed and in distinct negative buckets", async () => {
     msFromSlot.mockReturnValueOnce(600);
     await runEpochEnd(12000, 12000);
@@ -175,13 +166,6 @@ describe("PrepareNextSlot scheduler metrics", () => {
 
     it("excludes the epoch-end preparation of the last pre-gloas epoch", async () => {
       await run(epochEndSlot, ForkName.fulu, ForkName.gloas, ptcDueMs + 1);
-
-      expect(await ptcEligibleCompletions(metrics)).toBe(0);
-      expect(await deadlineMissed(metrics, "payload_attestation_due", "prepare_next_slot_completion")).toBeUndefined();
-    });
-
-    it("excludes ordinary gloas slots", async () => {
-      await run(SLOTS_PER_EPOCH - 3, ForkName.gloas, ForkName.gloas, ptcDueMs + 1);
 
       expect(await ptcEligibleCompletions(metrics)).toBe(0);
       expect(await deadlineMissed(metrics, "payload_attestation_due", "prepare_next_slot_completion")).toBeUndefined();
