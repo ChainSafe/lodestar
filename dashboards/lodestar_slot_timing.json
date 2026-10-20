@@ -14,6 +14,13 @@
       "name": "VAR_BEACON_JOB",
       "type": "constant",
       "value": "beacon"
+    },
+    {
+      "description": "",
+      "label": "Validator client job name",
+      "name": "VAR_VALIDATOR_JOB",
+      "type": "constant",
+      "value": "validator"
     }
   ],
   "annotations": {
@@ -38,6 +45,7 @@
       }
     ]
   },
+  "description": "Slot-relative timing: each fraction divides a measurement by the slot duration of the fork that applies to the measured slot, next to the existing seconds metrics. Keep 10s and 12s nodes as separate series; compare matched runs with their chain config and software versions recorded.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -61,38 +69,56 @@
   "liveNow": false,
   "panels": [
     {
+      "collapsed": false,
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Slot duration currently in effect (from config; fork-aware once slot duration becomes fork-dependent)",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
       "gridPos": {
-        "h": 4,
-        "w": 4,
+        "h": 1,
+        "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 1,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "Configuration and deadline overview",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Slot duration of the fork at the current clock slot, per beacon node. Changes at a slot-duration fork activation.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
       "options": {
-        "colorMode": "value",
+        "colorMode": "none",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
@@ -103,22 +129,23 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "value_and_name",
+        "wideLayout": true
       },
-      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "lodestar_slot_duration_seconds",
+          "expr": "lodestar_slot_duration_seconds{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}",
+          "legendFormat": "{{instance}}",
+          "refId": "A",
           "instant": false,
-          "legendFormat": "slot duration",
-          "refId": "A"
+          "range": true
         }
       ],
-      "title": "Slot duration",
+      "title": "Slot duration (current clock slot fork)",
       "type": "stat"
     },
     {
@@ -126,87 +153,54 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Slot-relative deadline overruns by deadline and task",
+      "description": "Shows when each node's slot duration changed. Fraction samples before and after the change are divided by the duration of the measured slot, not this gauge.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
-          "unit": "ops"
+          "mappings": [],
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 4,
-        "y": 0
-      },
-      "id": 2,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "sum(rate(lodestar_deadline_missed_total[$rate_interval])) by (deadline, task)",
-          "instant": false,
-          "interval": "",
-          "legendFormat": "{{task}} missed {{deadline}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Deadline misses (rate)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Time from slot start to block received, normalized by slot duration. Attestation due is 0.333 pre-gloas / 0.25 gloas.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 8,
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": true
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 4
+        "w": 6,
+        "x": 6,
+        "y": 1
       },
       "id": 3,
       "options": {
@@ -227,25 +221,14 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.5, sum(rate(lodestar_gossip_block_arrival_slot_fraction_bucket[$rate_interval])) by (le, source))",
+          "expr": "lodestar_slot_duration_seconds{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}",
+          "legendFormat": "{{instance}}",
+          "refId": "A",
           "instant": false,
-          "interval": "",
-          "legendFormat": "p50 {{source}}",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_gossip_block_arrival_slot_fraction_bucket[$rate_interval])) by (le, source))",
-          "instant": false,
-          "interval": "",
-          "legendFormat": "p95 {{source}}",
-          "refId": "B"
+          "range": true
         }
       ],
-      "title": "Block arrival (fraction of slot)",
+      "title": "Slot duration over time",
       "type": "timeseries"
     },
     {
@@ -253,21 +236,46 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time from slot start to block becoming head, normalized by slot duration",
+      "description": "Completions after a slot-relative deadline. Each task has a matched denominator below: become-head fraction count, preparation margin count, or PTC-eligible completions. A miss places completion after a reference time and does not by itself show CPU interference.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
-          "unit": "percentunit"
+          "mappings": [],
+          "unit": "short"
         },
         "overrides": []
       },
@@ -275,7 +283,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 1
       },
       "id": 4,
       "options": {
@@ -296,46 +304,86 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.5, sum(rate(lodestar_import_block_become_head_slot_fraction_bucket[$rate_interval])) by (le))",
+          "expr": "sum by (instance, deadline, task) (rate(lodestar_deadline_missed_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "{{instance}} {{task}} after {{deadline}}",
+          "refId": "A",
           "instant": false,
-          "interval": "",
-          "legendFormat": "p50",
-          "refId": "A"
-        },
+          "range": true
+        }
+      ],
+      "title": "Deadline misses per hour",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 5,
+      "panels": [],
+      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_import_block_become_head_slot_fraction_bucket[$rate_interval])) by (le))",
-          "instant": false,
-          "interval": "",
-          "legendFormat": "p95",
-          "refId": "B"
+          "refId": "A"
         }
       ],
-      "title": "Block become head (fraction of slot)",
-      "type": "timeseries"
+      "title": "Block arrival and head",
+      "type": "row"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Epoch transition duration as a fraction of the slot duration; 1.0 means the transition takes a whole slot",
+      "description": "Time from block slot start to receipt, divided by the duration of the block's slot. Series are kept per instance so 10s and 12s cohorts stay separate: do not read a pooled percentile across them.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
+          "mappings": [],
           "unit": "percentunit"
         },
         "overrides": []
@@ -344,76 +392,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 12
-      },
-      "id": 5,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "histogram_quantile(0.5, sum(rate(lodestar_stfn_epoch_transition_slot_fraction_bucket[$rate_interval])) by (le))",
-          "instant": false,
-          "interval": "",
-          "legendFormat": "p50",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_stfn_epoch_transition_slot_fraction_bucket[$rate_interval])) by (le))",
-          "instant": false,
-          "interval": "",
-          "legendFormat": "p95",
-          "refId": "B"
-        }
-      ],
-      "title": "Epoch transition (fraction of slot)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Fraction of the slot remaining when prepareNextSlot completed; lower is closer to missing the next slot",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 8,
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": true
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 12
+        "y": 10
       },
       "id": 6,
       "options": {
@@ -434,25 +413,25 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.05, sum(rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_bucket[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.5, sum by (le, instance, source) (rate(lodestar_gossip_block_arrival_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}} {{source}}",
+          "refId": "A",
           "instant": false,
-          "interval": "",
-          "legendFormat": "p05",
-          "refId": "A"
+          "range": true
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.5, sum(rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_bucket[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95, sum by (le, instance, source) (rate(lodestar_gossip_block_arrival_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}} {{source}}",
+          "refId": "B",
           "instant": false,
-          "interval": "",
-          "legendFormat": "p50",
-          "refId": "B"
+          "range": true
         }
       ],
-      "title": "prepareNextSlot lead margin (fraction of slot)",
+      "title": "Block arrival (fraction of block slot)",
       "type": "timeseries"
     },
     {
@@ -460,29 +439,54 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Offset from the attestation due point when produce was called, normalized by slot duration (negative = before due)",
+      "description": "Same measurement in seconds from the existing histogram. Compare with the fraction panel: unchanged seconds with a larger fraction means the same work consumes more of a shorter slot.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
-          "unit": "percentunit"
+          "mappings": [],
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 20
+        "x": 12,
+        "y": 10
       },
       "id": 7,
       "options": {
@@ -503,25 +507,25 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.5, sum(rate(vc_attester_produce_attestation_margin_slot_fraction_bucket[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.5, sum by (le, instance, source) (rate(lodestar_gossip_block_elapsed_time_till_received_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}} {{source}}",
+          "refId": "A",
           "instant": false,
-          "interval": "",
-          "legendFormat": "p50",
-          "refId": "A"
+          "range": true
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(vc_attester_produce_attestation_margin_slot_fraction_bucket[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95, sum by (le, instance, source) (rate(lodestar_gossip_block_elapsed_time_till_received_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}} {{source}}",
+          "refId": "B",
           "instant": false,
-          "interval": "",
-          "legendFormat": "p95",
-          "refId": "B"
+          "range": true
         }
       ],
-      "title": "VC attestation produce margin (fraction of slot)",
+      "title": "Block arrival (seconds)",
       "type": "timeseries"
     },
     {
@@ -529,20 +533,45 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Offset from the attestation due point when publish was called, normalized by slot duration (negative = before due)",
+      "description": "Time from head slot start to the block becoming head, divided by the head slot's duration. Only heads less than an epoch old are sampled. Series are kept per instance so 10s and 12s cohorts stay separate: do not read a pooled percentile across them.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
+          "mappings": [],
           "unit": "percentunit"
         },
         "overrides": []
@@ -550,8 +579,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 20
+        "x": 0,
+        "y": 18
       },
       "id": 8,
       "options": {
@@ -572,25 +601,2055 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.5, sum(rate(vc_attester_publish_attestation_margin_slot_fraction_bucket[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(lodestar_import_block_become_head_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}}",
+          "refId": "A",
           "instant": false,
-          "interval": "",
-          "legendFormat": "p50",
-          "refId": "A"
+          "range": true
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(vc_attester_publish_attestation_margin_slot_fraction_bucket[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(lodestar_import_block_become_head_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}}",
+          "refId": "B",
           "instant": false,
-          "interval": "",
-          "legendFormat": "p95",
-          "refId": "B"
+          "range": true
         }
       ],
-      "title": "VC attestation publish margin (fraction of slot)",
+      "title": "Block become head (fraction of head slot)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Same measurement in seconds from the existing histogram, same recent-head population.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(lodestar_gossip_block_elapsed_time_till_become_head_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(lodestar_gossip_block_elapsed_time_till_become_head_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Block become head (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Share of sampled recent heads that became head after the attestation due point of the head slot's fork. Numerator and denominator share the recent-head population. Empty when no heads were sampled.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{deadline=\"attestation_due\", task=\"block_become_head\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance) (rate(lodestar_import_block_become_head_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Heads set after attestation due (proportion)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Denominator of the proportion panel: recent heads sampled per hour.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance) (rate(lodestar_import_block_become_head_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "{{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Sampled heads per hour",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 12,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "Epoch transition and next-slot preparation",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "TypeScript state transition only: the same timer as the seconds histogram, divided by the duration of the slot the transition enters. A node running the native state transition shows no data here, never zero.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(lodestar_stfn_epoch_transition_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(lodestar_stfn_epoch_transition_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Epoch transition (fraction of entered slot)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Existing TypeScript epoch transition timer in seconds.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 35
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(lodestar_stfn_epoch_transition_seconds_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(lodestar_stfn_epoch_transition_seconds_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Epoch transition (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Signed fraction of the scheduling slot left when prepareNextSlot finished for the first slot of the next epoch. Negative means it finished after that slot began. Covers regen, state hashing and awaited payload preparation. Quantiles come from bucket rates; the signed _sum is never rated.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 43
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.05, sum by (le, instance) (rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\", slot_position=\"epoch_end\"}[$rate_interval])))",
+          "legendFormat": "p05 {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\", slot_position=\"epoch_end\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Preparation margin at epoch end (fraction of scheduling slot)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Same measurement for slots that are not the last of an epoch, where no epoch transition is precomputed.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 43
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.05, sum by (le, instance) (rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\", slot_position=\"other\"}[$rate_interval])))",
+          "legendFormat": "p05 {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\", slot_position=\"other\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Preparation margin on other slots (fraction of scheduling slot)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Existing timer around the epoch-end preparation, in seconds, for both state transition backends.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 51
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(lodestar_precompute_next_epoch_transition_duration_seconds_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(lodestar_precompute_next_epoch_transition_duration_seconds_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Epoch-end preparation duration (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Successful completions reaching the margin observation, by slot position. Errors and skips never reach it: see the result panel.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 51
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance, slot_position) (rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "{{instance}} {{slot_position}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Preparation samples per hour",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Share of successful preparations, across both slot positions, that finished after the prepared slot began. Empty when there were no completions.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 59
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{deadline=\"next_slot_start\", task=\"prepare_next_slot\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance) (rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Preparation finished after next slot start (proportion)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Existing success, skip and error outcomes of the epoch-end preparation. Only successes enter the margin and proportion panels.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 59
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance, result) (rate(lodestar_precompute_next_epoch_transition_result_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "{{instance}} {{result}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Preparation results per hour",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 67
+      },
+      "id": 21,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "Execution payload (Gloas and later)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Time from payload slot start to envelope import, divided by that slot's duration, by execution status. Only payloads of the current or previous clock slot are sampled, so this is lateness among near-current imports, not payload success or network propagation time.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 68
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance, status) (rate(lodestar_import_payload_elapsed_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}} {{status}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance, status) (rate(lodestar_import_payload_elapsed_slot_fraction_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}} {{status}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Payload import (fraction of payload slot)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Existing seconds histogram over every import, including catch-up, by envelope source. Its population is wider than the fraction panel.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 68
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance, source) (rate(lodestar_import_payload_elapsed_time_till_imported_seconds_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}} {{source}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance, source) (rate(lodestar_import_payload_elapsed_time_till_imported_seconds_bucket{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}} {{source}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Payload import (seconds, all imports)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Share of near-current imports completed after the payload due point of the payload slot's fork, by execution status. Same population as the fraction panel. Payloads that never arrive produce no sample.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 76
+      },
+      "id": 24,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance, status) (rate(lodestar_import_payload_deadline_missed_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance, status) (rate(lodestar_import_payload_elapsed_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
+          "legendFormat": "{{instance}} {{status}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Payload imported after payload due (proportion)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Sampled near-current imports against imports for older slots that were excluded. Excluded imports mix catch-up with genuine stalls; a rising excluded rate on a synced node deserves a look.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 76
+      },
+      "id": 25,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance, status) (rate(lodestar_import_payload_elapsed_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "sampled {{instance}} {{status}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance) (rate(lodestar_import_payload_beyond_window_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "excluded old {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Payload imports sampled and excluded per hour",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Share of successful epoch-end preparations in a Gloas or later slot that finished after that slot's payload attestation due point. Async EL waits can cause this without blocking the PTC duty. Empty before Gloas or without completions.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 84
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{deadline=\"payload_attestation_due\", task=\"prepare_next_slot_completion\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance) (rate(lodestar_prepare_next_slot_ptc_eligible_completions_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Epoch-end preparation finished after PTC due (proportion)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Denominator and numerator of the proportion panel, so zero misses with completions and no completions stay distinguishable.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 84
+      },
+      "id": 27,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance) (rate(lodestar_prepare_next_slot_ptc_eligible_completions_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "eligible {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{deadline=\"payload_attestation_due\", task=\"prepare_next_slot_completion\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "after PTC due {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "PTC-eligible preparation completions per hour",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 92
+      },
+      "id": 28,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "Validator client",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Offset from the configured attestation due point when produce and publish were called, divided by the duty slot's duration. Negative means before due: a block arrived early.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 93
+      },
+      "id": 29,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(vc_attester_produce_attestation_margin_slot_fraction_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "produce p50 {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(vc_attester_produce_attestation_margin_slot_fraction_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "produce p95 {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(vc_attester_publish_attestation_margin_slot_fraction_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "publish p50 {{instance}}",
+          "refId": "C",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(vc_attester_publish_attestation_margin_slot_fraction_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "publish p95 {{instance}}",
+          "refId": "D",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Attestation produce and publish offset from due (fraction of duty slot)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Existing seconds histograms of the same offsets.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 93
+      },
+      "id": 30,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(vc_attester_step_call_produce_attestation_seconds_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "produce p50 {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(vc_attester_step_call_produce_attestation_seconds_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "produce p95 {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(vc_attester_step_call_publish_attestation_seconds_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "publish p50 {{instance}}",
+          "refId": "C",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(vc_attester_step_call_publish_attestation_seconds_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "publish p95 {{instance}}",
+          "refId": "D",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Attestation produce and publish offset from due (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Offset from the payload attestation due point when the publish call was made, divided by the duty slot's duration, split by epoch-end and other slots. Measures the call, not delivery. A positive offset is expected: the routine can start at due, then produce and sign before publishing.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 101
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance, slot_position) (rate(vc_ptc_publish_payload_attestation_margin_slot_fraction_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}} {{slot_position}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance, slot_position) (rate(vc_ptc_publish_payload_attestation_margin_slot_fraction_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}} {{slot_position}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "PTC publish offset from due (fraction of duty slot)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Existing seconds histogram of the publish offset, with sign and publish errors per hour on the same axis.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 101
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, instance) (rate(vc_ptc_step_call_publish_payload_attestation_seconds_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p50 {{instance}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, instance) (rate(vc_ptc_step_call_publish_payload_attestation_seconds_bucket{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])))",
+          "legendFormat": "p95 {{instance}}",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (instance, error) (rate(vc_ptc_service_errors{job=~\"$validator_job\", instance=~\"$vc_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "errors/h {{instance}} {{error}}",
+          "refId": "C",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "PTC publish offset from due (seconds) and errors",
       "type": "timeseries"
     }
   ],
@@ -714,6 +2773,11 @@
         "type": "adhoc"
       },
       {
+        "current": {
+          "selected": false,
+          "text": "${VAR_BEACON_JOB}",
+          "value": "${VAR_BEACON_JOB}"
+        },
         "description": "Job name used in Prometheus config to scrape Beacon node",
         "hide": 2,
         "label": "Beacon node job name",
@@ -721,6 +2785,152 @@
         "query": "${VAR_BEACON_JOB}",
         "skipUrlSync": false,
         "type": "constant"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "${VAR_VALIDATOR_JOB}",
+          "value": "${VAR_VALIDATOR_JOB}"
+        },
+        "description": "Job name used in Prometheus config to scrape Validator client",
+        "hide": 2,
+        "label": "Validator client job name",
+        "name": "validator_job",
+        "query": "${VAR_VALIDATOR_JOB}",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(lodestar_slot_duration_seconds{job=~\"$beacon_job\"}, instance)",
+        "description": "Beacon node scrape targets. Keep nodes with different slot durations distinguishable.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Beacon node instance",
+        "multi": true,
+        "name": "bn_instance",
+        "options": [],
+        "query": {
+          "query": "label_values(lodestar_slot_duration_seconds{job=~\"$beacon_job\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(vc_attester_step_call_produce_attestation_seconds_count{job=~\"$validator_job\"}, instance)",
+        "description": "Validator client scrape targets, selected separately from beacon nodes.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Validator client instance",
+        "multi": true,
+        "name": "vc_instance",
+        "options": [],
+        "query": {
+          "query": "label_values(vc_attester_step_call_produce_attestation_seconds_count{job=~\"$validator_job\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(lodestar_slot_duration_seconds{job=~\"$beacon_job\"}, network)",
+        "description": "Optional fleet label. All matches series without the label.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "network (optional)",
+        "multi": true,
+        "name": "network",
+        "options": [],
+        "query": {
+          "query": "label_values(lodestar_slot_duration_seconds{job=~\"$beacon_job\"}, network)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(lodestar_slot_duration_seconds{job=~\"$beacon_job\"}, group)",
+        "description": "Optional fleet label. All matches series without the label.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "group (optional)",
+        "multi": true,
+        "name": "group",
+        "options": [],
+        "query": {
+          "query": "label_values(lodestar_slot_duration_seconds{job=~\"$beacon_job\"}, group)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
       }
     ]
   },
@@ -728,10 +2938,23 @@
     "from": "now-24h",
     "to": "now"
   },
-  "timepicker": {},
-  "timezone": "",
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "utc",
   "title": "Lodestar - slot timing",
   "uid": "lodestar_slot_timing",
   "version": 1,
-  "weekStart": ""
+  "weekStart": "monday"
 }
