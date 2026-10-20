@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {testLogger} from "@lodestar/logger/test-utils";
+import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -2368,6 +2368,36 @@ describe("UnknownBlockSync", () => {
 
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+    });
+
+    it("completes processing when the payload imported event removes the entry first", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+      payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+      // importExecutionPayload emits the executionPayload event before processExecutionPayload resolves
+      const processExecutionPayload = vi.fn().mockImplementation(async () => {
+        emitter.emit(routes.events.EventType.executionPayload, {
+          slot: payloadInput.slot,
+          builderIndex: 0,
+          blockHash: toRootHex(Buffer.alloc(32, 0x44)),
+          blockRoot: blockRootHex,
+          executionOptimistic: false,
+        });
+      });
+      const debug = vi.spyOn(logger, LogLevel.debug);
+      const {chain, emitter} = setupPayloadSyncTest({chainOverrides: {processExecutionPayload}});
+      vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+
+      try {
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+        expect(debug.mock.calls.some(([message]) => message === "Processed payload from unknown sync")).toBe(true);
+      } finally {
+        debug.mockRestore();
+        service.close();
+      }
     });
 
     it("downloads parent payload for unknown parent block when parent block is already known", async () => {

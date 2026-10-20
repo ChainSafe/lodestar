@@ -1438,13 +1438,14 @@ export class BlockInputSync {
     this.logger.debug("Processing downloaded payload", logCtx);
 
     const res = await wrapError(this.chain.processExecutionPayload(pendingPayload.payloadInput));
-    if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
-      return;
-    }
+    // The executionPayload event emitted during import usually removes the entry before this point
     if (!res.err) {
       this.logger.debug("Processed payload from unknown sync", logCtx);
       this.pendingPayloads.delete(rootHex);
       this.triggerUnknownBlockSearch();
+      return;
+    }
+    if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
       return;
     }
 
