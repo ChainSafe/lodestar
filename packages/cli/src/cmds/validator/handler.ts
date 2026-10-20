@@ -77,7 +77,16 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {
-    for (const cb of onGracefulShutdownCbs) await cb();
+    let exitCode = 0;
+    try {
+      for (const cb of onGracefulShutdownCbs) await cb();
+      logger.debug("Validator client closed");
+    } catch (e) {
+      logger.warn("Error closing validator client", {}, e as Error);
+      exitCode = 1;
+    }
+    // Explicitly exit process due to potential active handles (e.g. EventSource / in-flight HTTP via DVT middleware)
+    process.exit(exitCode);
   }, logger.info.bind(logger));
 
   // Callback for validator to request forced exit, in case of doppelganger detection
