@@ -40,9 +40,12 @@ describe("downloaded block cache", () => {
     expect(config.getForkTypes(block.message.slot).SignedBeaconBlock.equals(blocks[0].block, block)).toBe(true);
     expect(blocks[0].block).toBe(deserialize.mock.results[0].value);
     expect(blocks[0].bytes).toBe(bytes);
-    expect(blocks[0].block.signature.buffer).toBe(bytes.buffer);
+    expect(blocks[0].block.signature.buffer).not.toBe(bytes.buffer);
     expect(blockSerializedCache.get(toRootHex(root))).toBeUndefined();
     expect(hashTreeRoot).not.toHaveBeenCalled();
-    expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: true});
+    expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: false});
+    const originalBytes = Uint8Array.from(bytes);
+    blocks[0].block.signature[0] = 1;
+    expect(bytes).toEqual(originalBytes);
   });
 });

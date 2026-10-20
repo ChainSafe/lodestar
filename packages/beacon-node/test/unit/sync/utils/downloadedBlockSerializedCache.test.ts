@@ -64,7 +64,7 @@ describe("downloaded block cache admission", () => {
         }
 
         expect(hashTreeRoot).toHaveBeenCalledExactlyOnceWith(deserialize.mock.results[0].value.message);
-        expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: true});
+        expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: false});
         expect(serialize).not.toHaveBeenCalled();
         const entry = chain.blockSerializedCache.get(rootHex);
         if (status === "new") {

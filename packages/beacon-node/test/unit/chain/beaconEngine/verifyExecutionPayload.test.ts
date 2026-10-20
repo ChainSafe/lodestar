@@ -71,7 +71,7 @@ describe("BeaconEngineCore envelope verification", () => {
   }
 
   it("checks fields before EL/BLS and derives versioned hashes from the committed bid", async () => {
-    expect(await verify()).toEqual({executionOptimistic: false});
+    expect(await verify()).toEqual({err: null, result: {executionOptimistic: false}});
     expect(chain.executionEngine.notifyNewPayload).toHaveBeenCalledExactlyOnceWith(
       ForkName.gloas,
       envelope.message.payload,
@@ -110,20 +110,20 @@ describe("BeaconEngineCore envelope verification", () => {
       latestValidHash: null,
       validationError: "unavailable",
     });
-    await expect(verify()).rejects.toMatchObject({type: {code: PayloadErrorCode.EXECUTION_ENGINE_ERROR}});
+    await expect(verify()).resolves.toMatchObject({err: {type: {code: PayloadErrorCode.EXECUTION_ENGINE_ERROR}}});
     expect(cache.get(root)).toBe(input);
     vi.mocked(chain.executionEngine.notifyNewPayload).mockResolvedValue({
       status: ExecutionPayloadStatus.INVALID,
       latestValidHash: null,
       validationError: "invalid",
     });
-    await expect(verify()).rejects.toMatchObject({type: {code: PayloadErrorCode.EXECUTION_ENGINE_INVALID}});
+    await expect(verify()).resolves.toMatchObject({err: {type: {code: PayloadErrorCode.EXECUTION_ENGINE_INVALID}}});
     expect(cache.get(root)).toBeUndefined();
   });
 
   it("rejects a missing block instead of waiting for sync", async () => {
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
-    await expect(verify()).rejects.toMatchObject({type: {code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE}});
+    await expect(verify()).resolves.toMatchObject({err: {type: {code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE}}});
     expect(chain.regen.getBlockSlotState).not.toHaveBeenCalled();
     expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
     expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
@@ -139,7 +139,7 @@ describe("BeaconEngineCore envelope verification", () => {
           DataAvailabilityStatus.Available,
           {validSignature: false}
         )
-      ).rejects.toMatchObject({type: {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR}});
+      ).resolves.toMatchObject({err: {type: {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR}}});
       expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
       expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
     }
@@ -147,7 +147,7 @@ describe("BeaconEngineCore envelope verification", () => {
 
   it("retains the checkpoint-anchor state fallback", async () => {
     chain.regen.getBlockSlotState.mockRejectedValue(new Error("anchor block state unavailable"));
-    await verify();
+    expect(await verify()).toEqual({err: null, result: {executionOptimistic: false}});
     expect(chain.regen.getClosestHeadState).toHaveBeenCalledWith(zeroProtoBlock);
   });
 
@@ -155,18 +155,18 @@ describe("BeaconEngineCore envelope verification", () => {
     vi.mocked(verification.verifyExecutionPayloadEnvelope).mockImplementation(() => {
       throw Error("bad fields");
     });
-    await expect(verify()).rejects.toMatchObject({type: {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR}});
+    await expect(verify()).resolves.toMatchObject({err: {type: {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR}}});
     expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
     expect(verification.verifyExecutionPayloadEnvelopeSignature).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid signature even if EL accepts the payload", async () => {
     vi.mocked(verification.verifyExecutionPayloadEnvelopeSignature).mockResolvedValue(false);
-    await expect(verify()).rejects.toMatchObject({type: {code: PayloadErrorCode.INVALID_SIGNATURE}});
+    await expect(verify()).resolves.toMatchObject({err: {type: {code: PayloadErrorCode.INVALID_SIGNATURE}}});
   });
 
   it("preserves the already-validated signature option", async () => {
-    await verify(true);
+    expect(await verify(true)).toEqual({err: null, result: {executionOptimistic: false}});
     expect(verification.verifyExecutionPayloadEnvelopeSignature).not.toHaveBeenCalled();
     expect(verification.verifyExecutionPayloadEnvelope).toHaveBeenCalledWith(
       config,
@@ -184,7 +184,7 @@ describe("BeaconEngineCore envelope verification", () => {
         latestValidHash: null,
         validationError: null,
       });
-      expect(await verify()).toMatchObject({executionOptimistic: true});
+      expect(await verify()).toEqual({err: null, result: {executionOptimistic: true}});
     }
   );
 
@@ -199,6 +199,8 @@ describe("BeaconEngineCore envelope verification", () => {
       latestValidHash: null,
       validationError: "EL failure",
     });
-    await expect(verify()).rejects.toMatchObject({type: {code, execStatus: status, errorMessage: "EL failure"}});
+    await expect(verify()).resolves.toMatchObject({
+      err: {type: {code, execStatus: status, errorMessage: "EL failure"}},
+    });
   });
 });

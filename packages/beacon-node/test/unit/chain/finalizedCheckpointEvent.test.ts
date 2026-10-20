@@ -5,7 +5,7 @@ import {defer, fromHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../../src/chain/emitter.js";
 import {getMockedLogger} from "../../mocks/loggerMock.js";
-import {generateProtoBlock, generateSignedBlockAtSlot} from "../../utils/typeGenerator.js";
+import {generateProtoBlock} from "../../utils/typeGenerator.js";
 
 describe("BeaconChain finalized_checkpoint event", () => {
   const rootHex = `0x${"aa".repeat(32)}`;
@@ -30,14 +30,11 @@ describe("BeaconChain finalized_checkpoint event", () => {
       emitter,
       logger: getMockedLogger(),
       metrics: {finalizedEpoch: {set: vi.fn()}},
-      forkChoice: {
-        getBlockHexDefaultStatus: vi.fn().mockReturnValue(finalizedBlock),
-        getHead: vi.fn().mockReturnValue(generateProtoBlock()),
+      getBlockHexDefaultStatus: vi.fn().mockReturnValue(finalizedBlock),
+      beaconEngine: {
+        pruneOnFinalized: vi.fn().mockResolvedValue(undefined),
       },
-      seenBlockProposers: {prune: vi.fn()},
       updateValidatorsCustodyRequirement: vi.fn().mockReturnValue(custodyUpdate),
-      regen: {getStateSync: vi.fn().mockReturnValue(null)},
-      getBlockByRoot: vi.fn().mockResolvedValue({block: generateSignedBlockAtSlot(0)}),
     };
 
     const completed = BeaconChain.prototype["onForkChoiceFinalized"].call(chain as unknown as BeaconChain, cp);
@@ -72,9 +69,8 @@ describe("BeaconChain finalized_checkpoint event", () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(events).toHaveLength(0);
     expect(chain.metrics.finalizedEpoch.set).toHaveBeenCalledWith(cp.epoch);
-    expect(chain.seenBlockProposers.prune).toHaveBeenCalledOnce();
     expect(chain.updateValidatorsCustodyRequirement).toHaveBeenCalledWith(cp);
-    expect(chain.getBlockByRoot).toHaveBeenCalledOnce();
+    expect(chain.beaconEngine.pruneOnFinalized).toHaveBeenCalledOnce();
   });
 
   it("emits without waiting for the custody update", async () => {
@@ -88,10 +84,11 @@ describe("BeaconChain finalized_checkpoint event", () => {
       expect(events).toHaveLength(0);
       await vi.advanceTimersByTimeAsync(1);
       expect(events).toEqual([{block: rootHex, epoch: cp.epoch, state: stateRoot, executionOptimistic: false}]);
-      expect(chain.getBlockByRoot).not.toHaveBeenCalled();
+      expect(chain.beaconEngine.pruneOnFinalized).not.toHaveBeenCalled();
     } finally {
       resolve();
       await completed;
     }
+    expect(chain.beaconEngine.pruneOnFinalized).toHaveBeenCalledOnce();
   });
 });

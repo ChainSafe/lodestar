@@ -58,7 +58,7 @@ describe("BeaconEngineCore V3 production race", () => {
 
     [routes.validator.BuilderSelection.BuilderOnly, 0, 2, 0, false, "builder"],
     [routes.validator.BuilderSelection.ExecutionOnly, 2, 0, 1, false, "engine"],
-    [routes.validator.BuilderSelection.BuilderOnly, 1, 1, 0, true, "builder"],
+    [routes.validator.BuilderSelection.BuilderOnly, 1, 1, 0, true, "engine"],
     [routes.validator.BuilderSelection.ExecutionOnly, 1, 1, 1, true, "engine"],
   ];
 
@@ -140,9 +140,12 @@ describe("BeaconEngineCore V3 production race", () => {
       expect(modules.chain.produceBlockWrapper.mock.calls.filter(([type]) => type === BlockType.Blinded)).toHaveLength(
         builderSelection === routes.validator.BuilderSelection.ExecutionOnly ? 0 : 1
       );
-      expect(modules.chain.produceBlockWrapper.mock.calls.filter(([type]) => type === BlockType.Full)).toHaveLength(
-        builderSelection === routes.validator.BuilderSelection.BuilderOnly ? 0 : 1
-      );
+      expect(modules.chain.produceBlockWrapper.mock.calls.filter(([type]) => type === BlockType.Full)).toHaveLength(1);
+      if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
+        expect(modules.logger.warn).toHaveBeenCalledWith(
+          "Builder selection builderonly is no longer supported, treating as builderalways"
+        );
+      }
     });
   }
   for (const boost of [0n, 100n]) {
