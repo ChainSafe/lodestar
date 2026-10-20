@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {IrrelevantPeerCode, assertPeerRelevance} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
 
@@ -57,12 +57,61 @@ describe("network / peers / utils / assertPeerRelevance", () => {
       id: "Accept finalized epoch greater than ours",
       remote: {
         forkDigest: correctForkDigest,
-        finalizedRoot: ZERO_HASH,
+        finalizedRoot: differedRoot,
         finalizedEpoch: 100, // Greater than ours (= 0)
         headRoot: ZERO_HASH,
-        headSlot: 0,
+        headSlot: 102 * SLOTS_PER_EPOCH,
       },
+      currentSlot: 102 * SLOTS_PER_EPOCH,
       irrelevantType: null,
+    },
+    {
+      id: "Reject finalized epoch at current epoch - 1",
+      remote: {
+        forkDigest: correctForkDigest,
+        finalizedRoot: differedRoot,
+        finalizedEpoch: 101,
+        headRoot: ZERO_HASH,
+        headSlot: 102 * SLOTS_PER_EPOCH,
+      },
+      currentSlot: 102 * SLOTS_PER_EPOCH,
+      irrelevantType: {code: IrrelevantPeerCode.FINALIZED_EPOCH_TOO_HIGH, finalizedEpoch: 101, maxFinalizedEpoch: 100},
+    },
+    {
+      id: "Accept finalized epoch at current epoch - 1 when clock is within tolerance of next epoch",
+      remote: {
+        forkDigest: correctForkDigest,
+        finalizedRoot: differedRoot,
+        finalizedEpoch: 101,
+        headRoot: ZERO_HASH,
+        headSlot: 103 * SLOTS_PER_EPOCH - 1,
+      },
+      currentSlot: 103 * SLOTS_PER_EPOCH - 1,
+      irrelevantType: null,
+    },
+    {
+      id: "Reject finalized epoch after head epoch",
+      remote: {
+        forkDigest: correctForkDigest,
+        finalizedRoot: differedRoot,
+        finalizedEpoch: 100,
+        headRoot: ZERO_HASH,
+        headSlot: 99 * SLOTS_PER_EPOCH,
+      },
+      currentSlot: 102 * SLOTS_PER_EPOCH,
+      irrelevantType: {code: IrrelevantPeerCode.FINALIZED_EPOCH_TOO_HIGH, finalizedEpoch: 100, maxFinalizedEpoch: 100},
+    },
+    {
+      id: "Reject zero finalized root for a non-genesis epoch",
+      remote: {
+        forkDigest: correctForkDigest,
+        finalizedRoot: ZERO_HASH,
+        finalizedEpoch: 100,
+        headRoot: ZERO_HASH,
+        headSlot: 102 * SLOTS_PER_EPOCH,
+      },
+      currentSlot: 102 * SLOTS_PER_EPOCH,
+      irrelevantType: {code: IrrelevantPeerCode.INVALID_FINALIZED_ROOT},
     },
     {
       id: "Accept during pre-genesis clock",

@@ -10,6 +10,7 @@ import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
+import {GoodByeReasonCode} from "../../constants/index.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
@@ -330,6 +331,10 @@ export class NetworkCore implements INetworkCore {
 
   async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     this.peerManager.reStatusPeers(peers);
+  }
+
+  async goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void> {
+    await this.peerManager.goodbyeAndDisconnect(peerIdFromString(peer), reason);
   }
 
   /**

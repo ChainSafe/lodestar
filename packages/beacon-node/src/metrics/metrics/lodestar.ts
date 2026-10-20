@@ -645,6 +645,11 @@ export function createLodestarMetrics(
       help: "Count of peers by sync type [FullySynced, Advanced, Behind]",
       labelNames: ["syncType"],
     }),
+    syncPeerFinalizedCheckpointMismatch: register.counter<{reason: string}>({
+      name: "lodestar_sync_peer_finalized_checkpoint_mismatch_total",
+      help: "Total behind peers whose Status finalized checkpoint is not in our chain, by reason",
+      labelNames: ["reason"],
+    }),
     syncSwitchGossipSubscriptions: register.gauge<{action: string}>({
       name: "lodestar_sync_switch_gossip_subscriptions",
       help: "Sync switched gossip subscriptions on/off",
