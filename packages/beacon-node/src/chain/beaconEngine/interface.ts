@@ -280,15 +280,7 @@ export interface IBeaconEngineCore {
 
   // Developer API diagnostics only. Operational reads belong to BeaconChain.
   getHeads(): Promise<ProtoBlock[]>;
-  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex;
-  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
-  getProposerBoostRoot(): RootHex;
-  getPreviousProposerBoostRoot(): RootHex;
-  getPTCVoteCounts(blockRootHex: RootHex): {
-    attesterCount: number;
-    payloadPresentCount: number;
-    dataAvailableCount: number;
-  } | null;
+  getDebugForkChoiceV2(): Promise<routes.debug.Endpoints["getDebugForkChoiceV2"]["return"]>;
   getFastConfirmationStore(): ReturnType<IForkChoice["getFastConfirmationStore"]>;
   getConfirmedBlock(): ProtoBlock | null;
   getAllNodes(): ProtoNode[];

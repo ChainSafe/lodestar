@@ -386,12 +386,8 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "updateTime",
     // Developer API diagnostics (forward to the engine-owned fork choice).
     "getHeads",
+    "getDebugForkChoiceV2",
     "getAllNodes",
-    "getPTCVoteCounts",
-    "getUnrealizedJustifiedCheckpoint",
-    "getUnrealizedFinalizedCheckpoint",
-    "getProposerBoostRoot",
-    "getPreviousProposerBoostRoot",
     "getFastConfirmationStore",
     "getConfirmedBlock",
   ] as const) {

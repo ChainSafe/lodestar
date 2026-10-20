@@ -14,6 +14,7 @@ import {LevelDbController} from "@lodestar/db/controller/level";
 import {
   CheckpointWithHex,
   EpochDifference,
+  ExecutionStatus,
   ForkChoiceStateGetter,
   IForkChoice,
   PayloadStatus,
@@ -30,6 +31,7 @@ import {
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
+  ZERO_HASH_HEX,
   isForkPostDeneb,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -42,6 +44,7 @@ import {
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   createBeaconStateView,
   isStatePostAltair,
   isStatePostBellatrix,
@@ -109,7 +112,7 @@ import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {BufferPool} from "../../util/bufferPool.js";
 import {Clock, IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {isOptimisticBlock, toForkChoiceValidity, toPayloadStatusName} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {SerializedCache} from "../../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
@@ -908,23 +911,61 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   async getHeads(): Promise<ProtoBlock[]> {
     return this.forkChoice.getHeads();
   }
-  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex {
-    return this.forkChoice.getUnrealizedJustifiedCheckpoint();
+
+  async getDebugForkChoiceV2(): Promise<routes.debug.Endpoints["getDebugForkChoiceV2"]["return"]> {
+    const forkChoice = this.forkChoice;
+    const nodes = forkChoice.getAllNodes();
+    const head = forkChoice.getHead();
+    return {
+      justifiedCheckpoint: forkChoice.getJustifiedCheckpoint(),
+      finalizedCheckpoint: forkChoice.getFinalizedCheckpoint(),
+      forkChoiceNodes: nodes.map((node) => {
+        const parent = node.parent === undefined ? undefined : nodes[node.parent];
+        const ptc = forkChoice.getPTCVoteCounts(node.blockRoot);
+        return {
+          slot: node.slot,
+          blockRoot: node.blockRoot,
+          payloadStatus: toPayloadStatusName(node.payloadStatus),
+          parentRoot:
+            node.parentBlockHash !== null && node.payloadStatus !== PayloadStatus.PENDING
+              ? node.blockRoot
+              : node.parentRoot,
+          parentPayloadStatus: parent === undefined ? null : toPayloadStatusName(parent.payloadStatus),
+          justifiedCheckpoint: {epoch: node.justifiedEpoch, root: fromHex(node.justifiedRoot)},
+          finalizedCheckpoint: {epoch: node.finalizedEpoch, root: fromHex(node.finalizedRoot)},
+          weight: node.weight,
+          validity: toForkChoiceValidity(node.executionStatus),
+          executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+          payloadAttesterCount: ptc?.attesterCount ?? 0,
+          payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? 0,
+          payloadDataAvailabilityYesCount: ptc?.dataAvailableCount ?? 0,
+          extraData: {
+            attestationScore: node.attestationScore,
+            executionOptimistic: isOptimisticBlock(node),
+            gasLimit:
+              node.payloadStatus === PayloadStatus.FULL && node.executionStatus !== ExecutionStatus.PreMerge
+                ? node.executionPayloadGasLimit
+                : null,
+            timestamp: computeTimeAtSlot(this.config, node.slot, this.genesisTime),
+            stateRoot: node.stateRoot,
+            target: node.targetRoot,
+            unrealizedJustifiedEpoch: node.unrealizedJustifiedEpoch,
+            unrealizedJustifiedRoot: node.unrealizedJustifiedRoot,
+            unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
+            unrealizedFinalizedRoot: node.unrealizedFinalizedRoot,
+          },
+        };
+      }),
+      extraData: {
+        head: {blockRoot: head.blockRoot, payloadStatus: toPayloadStatusName(head.payloadStatus)},
+        proposerBoostRoot: forkChoice.getProposerBoostRoot(),
+        previousProposerBoostRoot: forkChoice.getPreviousProposerBoostRoot(),
+        unrealizedJustifiedCheckpoint: forkChoice.getUnrealizedJustifiedCheckpoint(),
+        unrealizedFinalizedCheckpoint: forkChoice.getUnrealizedFinalizedCheckpoint(),
+      },
+    };
   }
-  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex {
-    return this.forkChoice.getUnrealizedFinalizedCheckpoint();
-  }
-  getProposerBoostRoot(): RootHex {
-    return this.forkChoice.getProposerBoostRoot();
-  }
-  getPreviousProposerBoostRoot(): RootHex {
-    return this.forkChoice.getPreviousProposerBoostRoot();
-  }
-  getPTCVoteCounts(
-    blockRootHex: RootHex
-  ): {attesterCount: number; payloadPresentCount: number; dataAvailableCount: number} | null {
-    return this.forkChoice.getPTCVoteCounts(blockRootHex);
-  }
+
   getFastConfirmationStore(): ReturnType<IBeaconEngineCore["getFastConfirmationStore"]> {
     return this.forkChoice.getFastConfirmationStore();
   }

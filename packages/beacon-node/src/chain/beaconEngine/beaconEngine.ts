@@ -267,28 +267,8 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getHeads();
   }
 
-  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex {
-    return this.core.getUnrealizedJustifiedCheckpoint();
-  }
-
-  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex {
-    return this.core.getUnrealizedFinalizedCheckpoint();
-  }
-
-  getProposerBoostRoot(): RootHex {
-    return this.core.getProposerBoostRoot();
-  }
-
-  getPreviousProposerBoostRoot(): RootHex {
-    return this.core.getPreviousProposerBoostRoot();
-  }
-
-  getPTCVoteCounts(blockRootHex: RootHex): {
-    attesterCount: number;
-    payloadPresentCount: number;
-    dataAvailableCount: number;
-  } | null {
-    return this.core.getPTCVoteCounts(blockRootHex);
+  getDebugForkChoiceV2(): Promise<routes.debug.Endpoints["getDebugForkChoiceV2"]["return"]> {
+    return this.core.getDebugForkChoiceV2();
   }
 
   getFastConfirmationStore(): ReturnType<IForkChoice["getFastConfirmationStore"]> {
