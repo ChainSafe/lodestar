@@ -472,7 +472,7 @@ export interface IBeaconEngineCore {
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>>;
-  getHeadParentPayload(): HeadParentPayload | undefined;
+  getHeadParentPayload(): Promise<HeadParentPayload | undefined>;
   getActiveOrPendingValidators(indices: ValidatorIndex[]): Promise<Set<ValidatorIndex>>;
   getAttestationSourceCheckpoint(attEpoch: Epoch): Promise<phase0.Checkpoint>;
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
@@ -627,8 +627,8 @@ export interface IBeaconEngineCore {
   /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
   /** Whether a block proposer was already seen for this slot (sync anti-unbundling check). */
-  observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): void;
-  markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): void;
+  observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): Promise<void>;
+  markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): Promise<void>;
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
   hasObservedBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): boolean;
   isBlockProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean;
@@ -639,7 +639,7 @@ export interface IBeaconEngineCore {
     envelope: gloas.SignedExecutionPayloadEnvelope,
     blockRootHex: RootHex
   ): Promise<void>;
-  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): boolean;
+  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean>;
 
   /**
    * Consensus checks for API broadcast validation, without EL submission or retaining an import bundle.
@@ -660,7 +660,7 @@ export interface IBeaconEngineCore {
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<Result<ImportBlockResult, BlockFailure>>;
-  discardVerifiedBlocks(blockRootHexes: RootHex[]): void;
+  discardVerifiedBlocks(blockRootHexes: RootHex[]): Promise<void>;
 
   onSlot(slot: Slot): void;
   onEpoch(epoch: Epoch): void;

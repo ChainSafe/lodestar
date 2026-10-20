@@ -23,7 +23,7 @@ export async function validateApiBlock(
       this.beaconEngine.validateApiBlock(blockInput, bytes, opts),
     ]);
     // Proposer observation must follow both consensus validation and data availability.
-    this.beaconEngine.observeVerifiedBlocks([{block, root}], true);
+    await this.beaconEngine.observeVerifiedBlocks([{block, root}], true);
   } finally {
     abortController.abort();
   }

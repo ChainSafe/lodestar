@@ -1757,7 +1757,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   /** Whether a block proposer was already seen for this slot (sync anti-unbundling check). */
   /** TODO - beacon engine: preserve post-DA ordering when this command crosses the worker boundary. */
-  observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): void {
+  async observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): Promise<void> {
     for (const {block, root} of blocks) {
       const {slot, proposerIndex} = block.message;
       this.seenBlockProposers.observeBlockRoot(
@@ -1772,7 +1772,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
   }
 
-  markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): void {
+  async markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): Promise<void> {
     for (const {slot, proposerIndex, root} of blocks) this.seenBlockProposers.add(slot, proposerIndex, root);
   }
 
@@ -1849,7 +1849,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     pruneSetToMax(this.verifiedProposerSignatures, MAX_VERIFIED_PROPOSER_SIGNATURES);
   }
 
-  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): boolean {
+  async isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean> {
     return this.seenBlockProposers.isKnown(slot, proposerIndex);
   }
 
@@ -1915,7 +1915,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  discardVerifiedBlocks(blockRootHexes: string[]): void {
+  async discardVerifiedBlocks(blockRootHexes: string[]): Promise<void> {
     for (const r of blockRootHexes) {
       this.verifiedBlocks.delete(r);
     }
@@ -2352,13 +2352,14 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   /** Source: unstable@2593063a82 sync/range/range.ts#addPeerOrCreateChain. */
-  getHeadParentPayload(): HeadParentPayload | undefined {
+  async getHeadParentPayload(): Promise<HeadParentPayload | undefined> {
     const headState = this.getHeadState();
     if (!isStatePostGloas(headState) || headState.latestBlockHeader.slot === 0) return undefined;
     const header = ssz.phase0.BeaconBlockHeader.clone(headState.latestBlockHeader);
     if (byteArrayEquals(header.stateRoot, ssz.Root.defaultValue())) header.stateRoot = headState.hashTreeRoot();
     const headRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
     const headSlot = headState.latestBlockHeader.slot;
+    // TODO - beacon engine: remove all structuredClone
     return structuredClone({
       blockRoot: headRoot,
       blockRootHex: toRootHex(headRoot),

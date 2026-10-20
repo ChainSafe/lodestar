@@ -132,7 +132,8 @@ export async function verifyBlocksInEpoch(
     ]);
 
     // Observation must follow both consensus verification and the facade DA wait.
-    this.beaconEngine.observeVerifiedBlocks(
+    // TODO - beacon engine: do we need to await here?
+    await this.beaconEngine.observeVerifiedBlocks(
       blockInputs.map((input) => ({block: input.getBlock(), root: input.blockRootHex})),
       false
     );
@@ -224,7 +225,7 @@ export async function verifyBlocksInEpoch(
     abortController.abort();
     // Verification may still retain bundles after DA fails; discard only once it has settled.
     await verificationPromise.catch(() => {});
-    this.beaconEngine.discardVerifiedBlocks(blockInputs.map((blockInput) => blockInput.blockRootHex));
+    await this.beaconEngine.discardVerifiedBlocks(blockInputs.map((blockInput) => blockInput.blockRootHex));
     throw error;
   } finally {
     abortController.abort();

@@ -473,7 +473,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         },
         ...forkChoice,
         beaconEngine: {
-          isBlockProposerSeen: (blockSlot: number, index: number) => seenBlockProposers.isKnown(blockSlot, index),
+          isBlockProposerSeen: async (blockSlot: number, index: number) => seenBlockProposers.isKnown(blockSlot, index),
         } as unknown as IBeaconChain["beaconEngine"],
         seenBlockInputCache: {
           getByBlock: ({
@@ -712,7 +712,7 @@ describe("UnknownBlockSync", () => {
           emitter: new ChainEventEmitter(),
           clock: new ClockStopped(0),
           beaconEngine: {
-            isBlockProposerSeen: vi.fn().mockReturnValue(false),
+            isBlockProposerSeen: vi.fn().mockResolvedValue(false),
           } as unknown as IBeaconChain["beaconEngine"],
           genesisTime: 0,
           custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
@@ -1053,7 +1053,7 @@ describe("UnknownBlockSync", () => {
         seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
         beaconEngine: {
           validateGossipExecutionPayloadEnvelope,
-          isBlockProposerSeen: vi.fn().mockReturnValue(false),
+          isBlockProposerSeen: vi.fn().mockResolvedValue(false),
           ...beaconEngineOverride,
         } as unknown as IBeaconChain["beaconEngine"],
 
@@ -2642,7 +2642,7 @@ describe("UnknownBlockSync", () => {
       metrics: null,
       processBlock,
       beaconEngine: {
-        isBlockProposerSeen: vi.fn().mockReturnValue(false),
+        isBlockProposerSeen: vi.fn().mockResolvedValue(false),
       } as unknown as IBeaconChain["beaconEngine"],
       seenPayloadEnvelopeInputCache: {
         add: vi.fn(),

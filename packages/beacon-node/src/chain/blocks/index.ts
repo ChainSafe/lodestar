@@ -63,6 +63,7 @@ export class BlockProcessor {
  * - (state cache update, from state regeneration)
  *
  * All other effects are provided by downstream event handlers
+ * // TODO - beacon engine: audit/reduce number of BeaconEngine calls
  */
 export async function processBlocks(
   this: BeaconChain,
@@ -119,7 +120,7 @@ export async function processBlocks(
     );
     const verifiedBlockRoots = relevantBlocks.map((block) => block.blockRootHex);
     try {
-      this.beaconEngine.markBlockProposersSeen(
+      await this.beaconEngine.markBlockProposersSeen(
         relevantBlocks.map((input) => ({
           slot: input.getBlock().message.slot,
           proposerIndex: input.getBlock().message.proposerIndex,
@@ -165,7 +166,7 @@ export async function processBlocks(
         await nextEventLoop();
       }
     } finally {
-      this.beaconEngine.discardVerifiedBlocks(verifiedBlockRoots);
+      await this.beaconEngine.discardVerifiedBlocks(verifiedBlockRoots);
     }
     return {orphaned: orphanedPayloads ?? [], skipped};
   } catch (e) {

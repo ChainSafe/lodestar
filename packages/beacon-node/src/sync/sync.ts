@@ -28,6 +28,7 @@ export class BeaconSync implements IBeaconSync {
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
   private readonly slotImportTolerance: Slot;
+  private closed = false;
 
   constructor(opts: SyncOptions, modules: SyncModules) {
     const {config, chain, metrics, network, logger} = modules;
@@ -83,6 +84,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   close(): void {
+    this.closed = true;
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
@@ -210,10 +212,14 @@ export class BeaconSync implements IBeaconSync {
     this.peerSyncType.set(data.peer, syncType);
 
     if (syncType === PeerSyncType.Advanced) {
-      this.rangeSync.addPeer(data.peer, localStatus, data.status);
+      this.rangeSync
+        .addPeer(data.peer, localStatus, data.status)
+        .then(this.updateSyncState)
+        .catch((e) => this.logger.error("Error adding peer to range sync", {peer: data.peer}, e));
+    } else {
+      this.rangeSync.removePeer(data.peer);
+      this.updateSyncState();
     }
-
-    this.updateSyncState();
   };
 
   /**
@@ -229,6 +235,8 @@ export class BeaconSync implements IBeaconSync {
    * Run this function when the sync state can potentially change.
    */
   private updateSyncState = (): void => {
+    if (this.closed) return;
+
     const state = this.state; // Don't run the getter twice
 
     // We have become synced, subscribe to all the gossip core topics

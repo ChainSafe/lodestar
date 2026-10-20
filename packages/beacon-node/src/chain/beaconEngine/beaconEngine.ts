@@ -604,7 +604,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getBuilderPendingWithdrawals(id, returnBytes);
   }
 
-  getHeadParentPayload(): HeadParentPayload | undefined {
+  getHeadParentPayload(): Promise<HeadParentPayload | undefined> {
     return this.core.getHeadParentPayload();
   }
 
@@ -915,12 +915,12 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.validatorSeenAtEpoch(index, epoch);
   }
 
-  observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): void {
-    this.core.observeVerifiedBlocks(blocks, verifyOnly);
+  observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): Promise<void> {
+    return this.core.observeVerifiedBlocks(blocks, verifyOnly);
   }
 
-  markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): void {
-    this.core.markBlockProposersSeen(blocks);
+  markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): Promise<void> {
+    return this.core.markBlockProposersSeen(blocks);
   }
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
@@ -951,7 +951,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.verifyEnvelopeForPublish(bytes, envelope, blockRootHex);
   }
 
-  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): boolean {
+  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean> {
     return this.core.isBlockProposerSeen(slot, proposerIndex);
   }
 
@@ -980,8 +980,8 @@ export class BeaconEngine implements IBeaconEngine {
     return res.result;
   }
 
-  discardVerifiedBlocks(blockRootHexes: RootHex[]): void {
-    this.core.discardVerifiedBlocks(blockRootHexes);
+  discardVerifiedBlocks(blockRootHexes: RootHex[]): Promise<void> {
+    return this.core.discardVerifiedBlocks(blockRootHexes);
   }
 
   onSlot(slot: Slot): void {
