@@ -5,7 +5,7 @@ import {CheckpointWithHex, ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlo
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
-import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem, encodeArchivedHeaderEnvelope} from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
@@ -134,23 +134,6 @@ export async function archiveBlocks(
         currentEpoch
       );
       logger.verbose("Migrated blobSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
-    }
-
-    // Keep the normal LevelDB hot-to-cold flow for legacy columns. New columns are written
-    // directly to flat files, so this only moves fallback data left by older versions.
-    if (finalizedPostFulu) {
-      const migratedSlots = await migrateDataColumnSidecarsFromHotToColdDb(
-        config,
-        db,
-        logger,
-        finalizedCanonicalBlocks,
-        currentEpoch
-      );
-      logger.verbose("Migrated legacy dataColumnSidecars from hot DB to cold DB", {
-        ...logCtx,
-        migratedEntries: migratedSlots.length,
-        slotRange: prettyPrintIndices(migratedSlots),
-      });
     }
 
     if (finalizedPostGloas) {
@@ -406,72 +389,6 @@ async function migrateBlobSidecarsFromHotToColdDb(
   }
 
   return migratedWrappedBlobSidecars;
-}
-
-// TODO: This function can be simplified further by reducing layers of promises in a loop
-/**
- * Post-gloas the data columns of a Gloas block are tied to its execution payload envelope.
- * Columns only exist once the FULL variant of the block is in the proto-array. Pre-Gloas
- * blocks only have a FULL variant, so the payload-status filter passes them all.
- */
-async function migrateDataColumnSidecarsFromHotToColdDb(
-  config: ChainForkConfig,
-  db: IBeaconDb,
-  logger: Logger,
-  canonicalBlocks: ProtoBlock[],
-  currentEpoch: Epoch
-): Promise<Slot[]> {
-  const columnBlocks = canonicalBlocks.filter(
-    (block) => config.getForkSeq(block.slot) < ForkSeq.gloas || block.payloadStatus === PayloadStatus.FULL
-  );
-  if (columnBlocks.length === 0) return [];
-  const blocks: BlockRootSlot[] = columnBlocks.map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
-
-  const migratedSlots: Slot[] = [];
-  for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
-    const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
-    const batch = blocks.slice(i, toIdx);
-    if (batch.length === 0) break;
-
-    const promises: Promise<void>[] = [];
-    for (const block of batch) {
-      const blockEpoch = computeEpochAtSlot(block.slot);
-      if (
-        config.getForkSeq(block.slot) < ForkSeq.fulu ||
-        blockEpoch < getBlobDataRetentionStartEpoch(config, currentEpoch)
-      ) {
-        continue;
-      }
-
-      const dataColumnSidecarBytes = await fromAsync(db.dataColumnSidecar.valuesStreamBinary(block.root));
-      if (dataColumnSidecarBytes.length === 0) {
-        logger.debug("DataColumnSidecars in forkchoice but missing in hot db, could be already archived", {
-          slot: block.slot,
-          root: toRootHex(block.root),
-        });
-        continue;
-      }
-      logger.verbose("Migrated legacy dataColumnSidecars for block", {
-        currentEpoch,
-        slot: block.slot,
-        root: toRootHex(block.root),
-        numSidecars: dataColumnSidecarBytes.length,
-      });
-      promises.push(
-        db.dataColumnSidecarArchive.putManyBinary(
-          block.slot,
-          dataColumnSidecarBytes.map((entry) => ({key: entry.id, value: entry.value}))
-        )
-      );
-      migratedSlots.push(block.slot);
-    }
-
-    await Promise.all(promises);
-    await db.dataColumnSidecar.deleteMany(batch.map((block) => block.root));
-  }
-
-  // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
-  return migratedSlots.sort((a, b) => a - b);
 }
 
 /**

@@ -2,6 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import type {Db} from "@lodestar/db";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -10,6 +11,7 @@ import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
 import {LateCanonicalBlockReason, archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
+import {ExecutionPayloadEnvelopeRepository} from "../../../../src/db/repositories/index.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
@@ -104,15 +106,19 @@ describe("block archiver task", () => {
     expect(dbStub.dataColumns.deleteMany).not.toHaveBeenCalled();
   });
 
-  it("should archive legacy data column sidecars for finalized blocks", async () => {
+  it.each(["fulu", "gloas"] as const)("archives %s blocks without legacy columns", async (fork) => {
     const config = createChainForkConfig({
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: fork === "gloas" ? 0 : Infinity,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
       MIN_BLOB_DATA_RETENTION_MS: 2 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
-    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+    const blockType = config.getForkTypes(0).SignedBeaconBlock;
+    const block = blockType.defaultValue();
+    const blockBytes = blockType.serialize(block);
+    dbStub.executionPayloadEnvelope = new ExecutionPayloadEnvelopeRepository(config, {} as Db);
+    vi.spyOn(dbStub.executionPayloadEnvelope, "getBinary").mockResolvedValue(null);
     const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
     const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(dataColumn);
 
@@ -129,10 +135,9 @@ describe("block archiver task", () => {
       })
     );
     const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
-    const nonCanonicalBlocks = [blocks[2]];
     vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
       ancestors: canonicalBlocks,
-      nonAncestors: nonCanonicalBlocks,
+      nonAncestors: [],
     });
 
     await archiveBlocks(
@@ -147,31 +152,28 @@ describe("block archiver task", () => {
       false
     );
 
-    for (const canonicalBlock of canonicalBlocks) {
-      expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(canonicalBlock.slot, [
-        {key: dataColumn.index, value: dataColumnBytes},
-      ]);
-    }
-    expect(dbStub.dataColumnSidecar.deleteMany).toHaveBeenCalledWith(
-      canonicalBlocks.map((canonicalBlock) => fromHexString(canonicalBlock.blockRoot))
+    expect(dbStub.blockArchive.batchPutBinary).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(dbStub.blockArchive.batchPutBinary).mock.calls[0][0].map(({slot}) => slot)).toEqual(
+      canonicalBlocks.map(({slot}) => slot)
     );
-    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith(
-      nonCanonicalBlocks.map((nonCanonicalBlock) => ({
-        slot: nonCanonicalBlock.slot,
-        blockRoot: nonCanonicalBlock.blockRoot,
-      }))
-    );
+    expect(dbStub.dataColumnSidecar.valuesStreamBinary).not.toHaveBeenCalled();
+    expect(dbStub.dataColumnSidecar.deleteMany).not.toHaveBeenCalled();
+    expect(dbStub.dataColumnSidecarArchive.putManyBinary).not.toHaveBeenCalled();
   });
 
-  it("should retry legacy columns for an already archived boundary block", async () => {
+  it.each(["fulu", "gloas"] as const)("skips legacy columns for the archived %s boundary", async (fork) => {
     const config = createChainForkConfig({
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: fork === "gloas" ? 0 : Infinity,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
       MIN_BLOB_DATA_RETENTION_MS: 4 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
-    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+    const blockType = config.getForkTypes(0).SignedBeaconBlock;
+    const block = blockType.defaultValue();
+    const blockBytes = blockType.serialize(block);
+    dbStub.executionPayloadEnvelope = new ExecutionPayloadEnvelopeRepository(config, {} as Db);
+    vi.spyOn(dbStub.executionPayloadEnvelope, "getBinary").mockResolvedValue(null);
     const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
     const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(dataColumn);
     const newAncestor = generateProtoBlock({
@@ -211,16 +213,9 @@ describe("block archiver task", () => {
     expect(dbStub.blockArchive.batchPutBinary).toHaveBeenCalledTimes(1);
     expect(vi.mocked(dbStub.blockArchive.batchPutBinary).mock.calls[0][0]).toHaveLength(1);
     expect(vi.mocked(dbStub.blockArchive.batchPutBinary).mock.calls[0][0][0].slot).toBe(newAncestor.slot);
-    expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(newAncestor.slot, [
-      {key: dataColumn.index, value: dataColumnBytes},
-    ]);
-    expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(boundary.slot, [
-      {key: dataColumn.index, value: dataColumnBytes},
-    ]);
-    expect(dbStub.dataColumnSidecar.deleteMany).toHaveBeenCalledWith([
-      fromHexString(newAncestor.blockRoot),
-      fromHexString(boundary.blockRoot),
-    ]);
+    expect(dbStub.dataColumnSidecar.valuesStreamBinary).not.toHaveBeenCalled();
+    expect(dbStub.dataColumnSidecar.deleteMany).not.toHaveBeenCalled();
+    expect(dbStub.dataColumnSidecarArchive.putManyBinary).not.toHaveBeenCalled();
   });
 
   it("should delete sidecars only for non-canonical FULL payload variants", async () => {
