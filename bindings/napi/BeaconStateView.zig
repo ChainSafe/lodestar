@@ -924,7 +924,6 @@ pub fn isExecutionStateType(self: *BeaconStateView) !js.Boolean {
 pub fn isExecutionEnabled(self: *BeaconStateView, block: js.Value) !js.Boolean {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const allocator = cached_state.allocator;
     const fork_seq = cached_state.state.forkSeq();
     if (fork_seq.lt(.bellatrix)) return js.Boolean.from(false);
 
@@ -936,8 +935,6 @@ pub fn isExecutionEnabled(self: *BeaconStateView, block: js.Value) !js.Boolean {
 
     if (fork_seq != .bellatrix) return js.Boolean.from(false);
 
-    // After the above check, we reach the slow path: pre-merge Bellatrix.
-    // Walk the JS block into a native ExecutionPayload to compare against `default_value`.
     const block_raw = block.toValue();
     if (try block_raw.typeof() != .object) return error.InvalidBlockObject;
 
@@ -948,12 +945,7 @@ pub fn isExecutionEnabled(self: *BeaconStateView, block: js.Value) !js.Boolean {
     if (try body.hasNamedProperty("executionPayloadHeader")) return js.Boolean.from(false);
 
     const payload_js = try (try body.getNamedProperty("executionPayload")).coerceToObject();
-    var payload: ct.bellatrix.ExecutionPayload.Type = ct.bellatrix.ExecutionPayload.default_value;
-    defer ct.bellatrix.ExecutionPayload.deinit(allocator, &payload);
-    try executionPayloadFromJs(allocator, payload_js, &payload);
-
-    const is_default = ct.bellatrix.ExecutionPayload.equals(&payload, &ct.bellatrix.ExecutionPayload.default_value);
-    return js.Boolean.from(!is_default);
+    return js.Boolean.from(!try isDefaultExecutionPayload(payload_js));
 }
 
 /// Check if the merge transition is complete.
@@ -2022,43 +2014,32 @@ fn optionalBool(options: ?js.Value, name: [:0]const u8, default_value: bool) !bo
     return default_value;
 }
 
-/// Populate a native Bellatrix `ExecutionPayload.Type` from a JS object with the Lodestar
-/// shape. Caller must `ct.bellatrix.ExecutionPayload.deinit(allocator, out)` to free
-/// `extra_data` and `transactions`.
-fn executionPayloadFromJs(allocator: std.mem.Allocator, payload: napi.Value, out: *ct.bellatrix.ExecutionPayload.Type) !void {
-    try readByteArrayInto(payload, "parentHash", &out.parent_hash);
-    try readByteArrayInto(payload, "feeRecipient", &out.fee_recipient);
-    try readByteArrayInto(payload, "stateRoot", &out.state_root);
-    try readByteArrayInto(payload, "receiptsRoot", &out.receipts_root);
-    try readByteArrayInto(payload, "logsBloom", &out.logs_bloom);
-    try readByteArrayInto(payload, "prevRandao", &out.prev_randao);
-    try readByteArrayInto(payload, "blockHash", &out.block_hash);
+fn isDefaultExecutionPayload(payload: napi.Value) !bool {
+    var native_payload = ct.bellatrix.ExecutionPayload.default_value;
+    try readByteArrayInto(payload, "parentHash", &native_payload.parent_hash);
+    try readByteArrayInto(payload, "feeRecipient", &native_payload.fee_recipient);
+    try readByteArrayInto(payload, "stateRoot", &native_payload.state_root);
+    try readByteArrayInto(payload, "receiptsRoot", &native_payload.receipts_root);
+    try readByteArrayInto(payload, "logsBloom", &native_payload.logs_bloom);
+    try readByteArrayInto(payload, "prevRandao", &native_payload.prev_randao);
+    try readByteArrayInto(payload, "blockHash", &native_payload.block_hash);
 
-    out.block_number = try js_types.wrap(js.Number, try payload.getNamedProperty("blockNumber")).toU64Exact();
-    out.gas_limit = try js_types.wrap(js.Number, try payload.getNamedProperty("gasLimit")).toU64Exact();
-    out.gas_used = try js_types.wrap(js.Number, try payload.getNamedProperty("gasUsed")).toU64Exact();
-    out.timestamp = try js_types.wrap(js.Number, try payload.getNamedProperty("timestamp")).toU64Exact();
+    native_payload.block_number = try js_types.wrap(js.Number, try payload.getNamedProperty("blockNumber")).toU64Exact();
+    native_payload.gas_limit = try js_types.wrap(js.Number, try payload.getNamedProperty("gasLimit")).toU64Exact();
+    native_payload.gas_used = try js_types.wrap(js.Number, try payload.getNamedProperty("gasUsed")).toU64Exact();
+    native_payload.timestamp = try js_types.wrap(js.Number, try payload.getNamedProperty("timestamp")).toU64Exact();
 
-    out.base_fee_per_gas = try readBigintU256(try payload.getNamedProperty("baseFeePerGas"));
+    native_payload.base_fee_per_gas = try readBigintU256(try payload.getNamedProperty("baseFeePerGas"));
 
     const extra_data = try payload.getNamedProperty("extraData");
     const extra_data_info = try extra_data.getTypedarrayInfo();
     if (extra_data_info.array_type != .uint8) return error.InvalidExtraData;
-    try out.extra_data.appendSlice(allocator, extra_data_info.data);
 
     const transactions = try payload.getNamedProperty("transactions");
-    const tx_count = try transactions.getArrayLength();
-    try out.transactions.ensureTotalCapacity(allocator, tx_count);
-    var i: u32 = 0;
-    while (i < tx_count) : (i += 1) {
-        const tx_value = try transactions.getElement(i);
-        const tx_info = try tx_value.getTypedarrayInfo();
-        if (tx_info.array_type != .uint8) return error.InvalidTransaction;
-        var tx: std.ArrayList(u8) = .empty;
-        errdefer tx.deinit(allocator);
-        try tx.appendSlice(allocator, tx_info.data);
-        out.transactions.appendAssumeCapacity(tx);
-    }
+    const tx_count = try js_types.wrap(js.Number, try transactions.getNamedProperty("length")).toU32Exact();
+    if (extra_data_info.data.len != 0 or tx_count != 0) return false;
+
+    return ct.bellatrix.ExecutionPayload.equals(&native_payload, &ct.bellatrix.ExecutionPayload.default_value);
 }
 
 fn readByteArrayInto(parent: napi.Value, comptime field: [:0]const u8, out: []u8) !void {
