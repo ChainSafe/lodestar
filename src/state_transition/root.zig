@@ -143,3 +143,16 @@ test {
     testing.refAllDecls(weak_subjectivity);
     testing.refAllDecls(@import("ssz_bytes.zig"));
 }
+
+pub const processExecutionPayloadBid = @import("block/process_execution_payload_bid.zig").processExecutionPayloadBid;
+pub const processParentExecutionPayload = @import("block/process_parent_execution_payload.zig").processParentExecutionPayload;
+pub const applyParentExecutionPayload = @import("block/process_parent_execution_payload.zig").applyParentExecutionPayload;
+pub const processBuilderDepositRequest = @import("block/process_builder_deposit_request.zig").processBuilderDepositRequest;
+pub const processBuilderExitRequest = @import("block/process_builder_exit_request.zig").processBuilderExitRequest;
+pub const processPayloadAttestation = @import("block/process_payload_attestation.zig").processPayloadAttestation;
+pub const processBuilderPendingPayments = @import("epoch/process_builder_pending_payments.zig").processBuilderPendingPayments;
+pub const processPtcWindow = @import("epoch/process_ptc_window.zig").processPtcWindow;
+pub const canBuilderCoverBid = @import("utils/gloas.zig").canBuilderCoverBid;
+pub const getPayloadTimelinessCommittee = @import("utils/gloas.zig").getPayloadTimelinessCommittee;
+
+pub const upgradeStateToGloas = @import("slot/upgrade_state_to_gloas.zig").upgradeStateToGloas;

@@ -44,6 +44,8 @@ pub const Attestations = phase0.Attestations;
 pub const Deposits = phase0.Deposits;
 pub const VoluntaryExits = phase0.VoluntaryExits;
 
+pub const EpochParticipation = altair.EpochParticipation;
+pub const InactivityScores = altair.InactivityScores;
 pub const SyncAggregate = altair.SyncAggregate;
 pub const SyncCommittee = altair.SyncCommittee;
 pub const SyncCommitteeMessage = altair.SyncCommitteeMessage;
@@ -56,6 +58,7 @@ pub const PowBlock = bellatrix.PowBlock;
 pub const LogsBloom = bellatrix.LogsBloom;
 pub const ExtraData = bellatrix.ExtraData;
 pub const Transactions = bellatrix.Transactions;
+pub const VersionedHashes = ssz.FixedListType(p.VersionedHash, preset.MAX_BLOB_COMMITMENTS_PER_BLOCK, .{});
 
 pub const Withdrawal = capella.Withdrawal;
 pub const BLSToExecutionChange = capella.BLSToExecutionChange;
@@ -156,7 +159,6 @@ pub const ExecutionPayloadHeader = ssz.VariableContainerType(struct {
 
 pub const BlobKzgCommitments = ssz.FixedListType(p.KZGCommitment, preset.MAX_BLOB_COMMITMENTS_PER_BLOCK, .{});
 
-pub const VersionedHashes = ssz.FixedListType(p.VersionedHash, preset.MAX_BLOB_COMMITMENTS_PER_BLOCK, .{});
 pub const NewPayloadRequest = ssz.VariableContainerType(struct {
     execution_payload: ExecutionPayload,
     versioned_hashes: VersionedHashes,

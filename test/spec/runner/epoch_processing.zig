@@ -26,8 +26,11 @@ pub const EpochProcessingFn = enum {
     sync_committee_updates,
     historical_summaries_update,
     pending_deposits,
+    pending_deposits_churn,
     pending_consolidations,
     proposer_lookahead,
+    builder_pending_payments,
+    ptc_window,
 
     pub fn suiteName(self: EpochProcessingFn) []const u8 {
         return @tagName(self) ++ "/pyspec_tests";
@@ -86,10 +89,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime epoch_process_fn: EpochProcessi
                 try expectEqualBeaconStates(post, self.pre.cached_state.state);
             } else {
                 self.process() catch |err| {
-                    if (err == error.SkipZigTest) {
-                        return err;
-                    }
-                    return;
+                    return test_case.expectConsensusInvalid(err);
                 };
                 return error.ExpectedError;
             }
@@ -127,11 +127,13 @@ pub fn TestCase(comptime fork: ForkSeq, comptime epoch_process_fn: EpochProcessi
                 .slashings_reset => try state_transition.processSlashingsReset(fork, epoch_cache, fork_state, &epoch_transition_cache),
                 .sync_committee_updates => try state_transition.processSyncCommitteeUpdates(fork, allocator, epoch_cache, fork_state),
                 .historical_summaries_update => try state_transition.processHistoricalSummariesUpdate(fork, fork_state, &epoch_transition_cache),
-                .pending_deposits => try state_transition.processPendingDeposits(fork, allocator, std.testing.io, config, epoch_cache, fork_state, &epoch_transition_cache),
+                .pending_deposits, .pending_deposits_churn => try state_transition.processPendingDeposits(fork, allocator, std.testing.io, config, epoch_cache, fork_state, &epoch_transition_cache),
                 .pending_consolidations => try state_transition.processPendingConsolidations(fork, epoch_cache, fork_state, &epoch_transition_cache),
                 .proposer_lookahead => {
                     try state_transition.processProposerLookahead(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache);
                 },
+                .builder_pending_payments => try state_transition.processBuilderPendingPayments(fork, allocator, fork_state, epoch_cache),
+                .ptc_window => try state_transition.processPtcWindow(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache),
             }
         }
     };

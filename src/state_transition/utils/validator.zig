@@ -53,6 +53,19 @@ pub fn getActivationExitChurnLimit(epoch_cache: *const EpochCache) u64 {
     return @min(epoch_cache.config.chain.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimitFromCache(epoch_cache));
 }
 
+pub fn getActivationBalanceChurnLimit(epoch_cache: *const EpochCache) u64 {
+    return @min(epoch_cache.config.chain.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS, getExitChurnLimit(epoch_cache));
+}
+
+pub fn getExitChurnLimit(epoch_cache: *const EpochCache) u64 {
+    return getBalanceChurnLimit(epoch_cache.total_active_balance_increments, epoch_cache.config.chain.CHURN_LIMIT_QUOTIENT_GLOAS, epoch_cache.config.chain.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA);
+}
+
+pub fn getConsolidationChurnLimitForFork(comptime fork: ForkSeq, epoch_cache: *const EpochCache) u64 {
+    if (fork.gte(.gloas)) return getBalanceChurnLimit(epoch_cache.total_active_balance_increments, epoch_cache.config.chain.CONSOLIDATION_CHURN_LIMIT_QUOTIENT, 0);
+    return getConsolidationChurnLimit(epoch_cache);
+}
+
 pub fn getConsolidationChurnLimit(epoch_cache: *const EpochCache) u64 {
     return getBalanceChurnLimitFromCache(epoch_cache) - getActivationExitChurnLimit(epoch_cache);
 }

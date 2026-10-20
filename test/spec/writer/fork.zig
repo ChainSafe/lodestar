@@ -26,7 +26,11 @@ const test_template =
     \\        @tagName(active_preset) ++ "/tests/" ++ @tagName(active_preset) ++ "/{s}/fork/{s}/{s}",
     \\    }});
     \\    defer allocator.free(test_dir_name);
-    \\    const test_dir = std.Io.Dir.openDir(.cwd(), std.testing.io, test_dir_name, .{{}}) catch return error.SkipZigTest;
+    \\    const test_dir = std.Io.Dir.openDir(.cwd(), std.testing.io, test_dir_name, .{{}}) catch |err| switch (err) {{
+    \\        error.FileNotFound => return error.SkipZigTest,
+    \\        else => return err,
+    \\    }};
+    \\    defer test_dir.close(std.testing.io);
     \\
     \\    try ForkRunner.TestCase(.{s}).execute(allocator, test_dir);
     \\}}

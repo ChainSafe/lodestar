@@ -55,7 +55,7 @@ pub fn processConsolidationRequest(
     }
 
     // If there is too little available consolidation churn limit, consolidation requests are ignored
-    if (getConsolidationChurnLimit(epoch_cache) <= preset.MIN_ACTIVATION_BALANCE) {
+    if (validator_utils.getConsolidationChurnLimitForFork(fork, epoch_cache) <= preset.MIN_ACTIVATION_BALANCE) {
         return;
     }
 

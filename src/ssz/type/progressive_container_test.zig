@@ -122,7 +122,7 @@ test "progressive container field gindices should address the field nodes" {
     var pool = try Node.Pool.init(.{
         .page_allocator = allocator,
         .allocator = allocator,
-        .pool_size = 64,
+        .pool_size = 128,
     });
     defer pool.deinit();
 
@@ -137,6 +137,18 @@ test "progressive container field gindices should address the field nodes" {
         expected[0] = field_value;
         try std.testing.expectEqualSlices(u8, &expected, node.getRoot(&pool));
     }
+
+    const baseline = pool.getNodesInUse();
+    var nodes: [Fixed.chunk_count]Node.Id = @splat(@enumFromInt(0));
+    inline for (Fixed.fields, Fixed.field_indices) |field, index| {
+        nodes[index] = try root.getNode(&pool, comptime Fixed.getFieldGindex(field.name));
+    }
+    {
+        const rebuilt = try Fixed.tree.fromFieldNodes(&pool, &nodes);
+        defer pool.unref(rebuilt);
+        try std.testing.expectEqualSlices(u8, root.getRoot(&pool), rebuilt.getRoot(&pool));
+    }
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
 }
 
 test "variable progressive container tree decoding rejects every truncated fixed prefix" {

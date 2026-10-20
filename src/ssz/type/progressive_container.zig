@@ -62,6 +62,7 @@ fn defaultRoot(
 
 /// Returns the merkle tree index (position in active_fields) for the nth field
 fn getActiveFieldIndex(comptime active_fields: []const u1, comptime n: usize) usize {
+    @setEvalBranchQuota(100000);
     var count: usize = 0;
     for (active_fields, 0..) |bit, i| {
         if (bit == 1) {
@@ -267,6 +268,17 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
                 return fromValue(pool, &Self.default_value);
             }
 
+            /// Borrows retained roots indexed by active-field position; the caller keeps its
+            /// references. Inactive positions contain zero nodes. `nodes` is overwritten scratch.
+            pub fn fromFieldNodes(pool: *Node.Pool, nodes: *[chunk_count]Node.Id) !Node.Id {
+                const contents = try progressive.contentsFromNodes(pool, nodes);
+                errdefer pool.unref(contents);
+                const active_fields_packed = comptime packActiveFields(active_fields);
+                const active_fields_node = try pool.createLeaf(&active_fields_packed);
+                errdefer pool.unref(active_fields_node);
+                return pool.createBranch(contents, active_fields_node);
+            }
+
             pub fn toValue(node: Node.Id, pool: *Node.Pool, out: *Type) !void {
                 var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), chunk_count);
                 inline for (fields, 0..) |field, i| {
@@ -400,6 +412,7 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
         }
 
         pub fn getFieldType(comptime name: []const u8) type {
+            @setEvalBranchQuota(100000);
             inline for (fields) |field| {
                 if (std.mem.eql(u8, name, field.name)) {
                     return field.type;
@@ -744,6 +757,7 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
         }
 
         pub fn getFieldType(comptime name: []const u8) type {
+            @setEvalBranchQuota(100000);
             inline for (fields) |field| {
                 if (std.mem.eql(u8, name, field.name)) {
                     return field.type;
@@ -854,6 +868,17 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
                 return fromValue(pool, &Self.default_value);
+            }
+
+            /// Borrows retained roots indexed by active-field position; the caller keeps its
+            /// references. Inactive positions contain zero nodes. `nodes` is overwritten scratch.
+            pub fn fromFieldNodes(pool: *Node.Pool, nodes: *[chunk_count]Node.Id) !Node.Id {
+                const contents = try progressive.contentsFromNodes(pool, nodes);
+                errdefer pool.unref(contents);
+                const active_fields_packed = comptime packActiveFields(active_fields);
+                const active_fields_node = try pool.createLeaf(&active_fields_packed);
+                errdefer pool.unref(active_fields_node);
+                return pool.createBranch(contents, active_fields_node);
             }
 
             /// Initialize `out` with `default_value`; the caller deinitializes it after success or error.

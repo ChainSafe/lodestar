@@ -19,6 +19,7 @@ const pubkey = @import("./pubkeys.zig");
 const js_types = @import("./js_types.zig");
 const sszValueToNapiValue = @import("./to_napi_value.zig").sszValueToNapiValue;
 const numberSliceToNapiValue = @import("./to_napi_value.zig").numberSliceToNapiValue;
+const snakeToCamel = @import("./to_napi_value.zig").snakeToCamel;
 const validator_monitor = @import("./validator_monitor.zig");
 
 pub const js_meta = js.class(.{ .properties = .{
@@ -70,6 +71,8 @@ pub const js_meta = js.class(.{ .properties = .{
     .executionPayloadAvailability = js.prop(.{ .get = true, .set = false }),
     .latestExecutionPayloadBid = js.prop(.{ .get = true, .set = false }),
     .payloadExpectedWithdrawals = js.prop(.{ .get = true, .set = false }),
+    .builderPendingPayments = js.prop(.{ .get = true, .set = false }),
+    .builderPendingWithdrawals = js.prop(.{ .get = true, .set = false }),
 } });
 
 cached_state: ?*CachedBeaconState = null,
@@ -130,7 +133,6 @@ fn initCachedState(
 fn stateBytesFork(beacon_config: *const c.BeaconConfig, bytes: []const u8) !c.ForkSeq {
     if (bytes.len < 48) return error.InvalidStateBytes;
     const fork_seq = beacon_config.forkSeq(fork_types.readSlotFromAnyBeaconStateBytes(bytes));
-    if (fork_seq.gte(.gloas)) return error.UnsupportedFork;
     return fork_seq;
 }
 
@@ -928,7 +930,7 @@ pub fn isExecutionEnabled(self: *BeaconStateView, block: js.Value) !js.Boolean {
     if (fork_seq.lt(.bellatrix)) return js.Boolean.from(false);
 
     const merge_complete: bool = switch (fork_seq) {
-        inline .bellatrix, .capella, .deneb, .electra, .fulu => |f| st.isMergeTransitionComplete(f, cached_state.state.castToFork(f)),
+        inline .bellatrix, .capella, .deneb, .electra, .fulu, .gloas => |f| st.isMergeTransitionComplete(f, cached_state.state.castToFork(f)),
         else => unreachable,
     };
     if (merge_complete) return js.Boolean.from(true);
@@ -1096,6 +1098,18 @@ pub fn getSyncCommitteesWitness(self: *BeaconStateView) !js_types.SyncCommitteeW
         "nextSyncCommitteeRoot",
         js.Uint8Array.from(&witness_data.next_sync_committee_root).toValue(),
     );
+    if (witness_data.gloas_branches) |*branches| {
+        const current_branch = try env.createArrayWithLength(branches.current.len);
+        const next_branch = try env.createArrayWithLength(branches.next.len);
+        for (&branches.current, 0..) |*w, i| {
+            try current_branch.setElement(@intCast(i), js.Uint8Array.from(w).toValue());
+        }
+        for (&branches.next, 0..) |*w, i| {
+            try next_branch.setElement(@intCast(i), js.Uint8Array.from(w).toValue());
+        }
+        try obj.setNamedProperty("currentSyncCommitteeBranch", current_branch);
+        try obj.setNamedProperty("nextSyncCommitteeBranch", next_branch);
+    }
     return js_types.wrap(js_types.SyncCommitteeWitness, obj);
 }
 
@@ -1415,7 +1429,6 @@ pub fn processSlots(self: *BeaconStateView, slot_arg: js.Number, options: ?js.Va
     defer self.finishState();
     const allocator = cached_state.allocator;
     const slot_value = slot_arg.toU64Exact() catch return error.InvalidSlot;
-    if (cached_state.config.forkSeq(slot_value).gte(.gloas)) return error.UnsupportedFork;
 
     var transfer_cache = true;
     if (options) |value| {
@@ -1481,7 +1494,6 @@ pub fn stateTransition(
     const block_epoch = st.computeEpochAtSlot(block_slot);
 
     const fork_seq = cached_state.config.forkSeqAtEpoch(block_epoch);
-    if (fork_seq.gte(.gloas)) return error.UnsupportedFork;
 
     const block_type: BlockType = if (try is_blinded.toBool()) .blinded else .full;
     const signed_block = try AnySignedBeaconBlock.deserialize(allocator, block_type, fork_seq, bytes);
@@ -1601,55 +1613,143 @@ pub fn getShufflingAtEpoch(self: *BeaconStateView, epoch_arg: js.Number) !js.Val
     return js_types.wrap(js.Value, try shufflingToNapi(shuffling));
 }
 
-// -------------------------
-// Throw stubs — IBeaconStateView surface not yet implemented in lodestar-z
-// -------------------------
-
-fn throwNotImpl(comptime T: type, name: [:0]const u8) !T {
-    return throwNullAs(T, "NOT_IMPLEMENTED", name);
+// Gloas fields are copied into JS-owned values while the active-call guard holds.
+fn gloasFieldValue(self: *BeaconStateView, comptime field: []const u8) !napi.Value {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const state = cached_state.state.tryCastToFork(.gloas) catch {
+        return (try throwNull("INVALID_FORK", comptime snakeToCamel(field) ++ " is not available before Gloas")).val;
+    };
+    const ST = ct.gloas.BeaconState.getFieldType(field);
+    var value = ST.default_value;
+    defer if (comptime @hasDecl(ST, "deinit")) ST.deinit(cached_state.allocator, &value);
+    var view = try state.inner.getReadonly(field);
+    try view.toValue(cached_state.allocator, &value);
+    return sszValueToNapiValue(js.env(), ST, &value);
 }
 
-// --- Gloas-only fields/methods (no Gloas state in lodestar-z yet) ---
-
-pub fn latestBlockHash(_: *const BeaconStateView) !js.Uint8Array {
-    return throwNotImpl(js.Uint8Array, "latestBlockHash is not available before Gloas");
+pub fn latestBlockHash(self: *BeaconStateView) !js.Uint8Array {
+    return js_types.wrap(js.Uint8Array, try self.gloasFieldValue("latest_block_hash"));
 }
 
-pub fn executionPayloadAvailability(_: *const BeaconStateView) !js.Value {
-    return throwNotImpl(js.Value, "executionPayloadAvailability is not available before Gloas");
+pub fn executionPayloadAvailability(self: *BeaconStateView) !js.Value {
+    return js_types.wrap(js.Value, try self.gloasFieldValue("execution_payload_availability"));
 }
 
-pub fn latestExecutionPayloadBid(_: *const BeaconStateView) !js.Value {
-    return throwNotImpl(js.Value, "latestExecutionPayloadBid is not available before Gloas");
+pub fn latestExecutionPayloadBid(self: *BeaconStateView) !js.Value {
+    return js_types.wrap(js.Value, try self.gloasFieldValue("latest_execution_payload_bid"));
 }
 
-pub fn payloadExpectedWithdrawals(_: *const BeaconStateView) !js.Array {
-    return throwNotImpl(js.Array, "payloadExpectedWithdrawals is not available before Gloas");
+pub fn payloadExpectedWithdrawals(self: *BeaconStateView) !js.Array {
+    return js_types.wrap(js.Array, try self.gloasFieldValue("payload_expected_withdrawals"));
 }
 
-pub fn getBuilder(_: *const BeaconStateView, _: js.Number) !js.Value {
-    return throwNotImpl(js.Value, "getBuilder is not available before Gloas");
+pub fn builderPendingPayments(self: *BeaconStateView) !js.Array {
+    return js_types.wrap(js.Array, try self.gloasFieldValue("builder_pending_payments"));
 }
 
-pub fn canBuilderCoverBid(_: *const BeaconStateView, _: js.Number, _: js.Number) !js.Boolean {
-    return throwNotImpl(js.Boolean, "canBuilderCoverBid is not available before Gloas");
+pub fn builderPendingWithdrawals(self: *BeaconStateView) !js.Array {
+    return js_types.wrap(js.Array, try self.gloasFieldValue("builder_pending_withdrawals"));
 }
 
-pub fn getEpochPTCs(_: *const BeaconStateView, _: js.Number) !js.Array {
-    return throwNotImpl(js.Array, "getEpochPTCs is not available before Gloas");
+pub fn getBuilder(self: *BeaconStateView, index_arg: js.Number) !js.Value {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const index = index_arg.toU64Exact() catch return error.InvalidBuilderIndex;
+    const state = try cached_state.state.tryCastToFork(.gloas);
+    var builders = try state.inner.getReadonly("builders");
+    var view = try builders.getReadonly(index);
+    var value: ct.gloas.Builder.Type = undefined;
+    try view.toValue(cached_state.allocator, &value);
+    return js_types.wrap(js.Value, try sszValueToNapiValue(js.env(), ct.gloas.Builder, &value));
 }
 
-pub fn getIndexInPayloadTimelinessCommittee(_: *const BeaconStateView, _: js.Number, _: js.Number) !js.Number {
-    return throwNotImpl(js.Number, "getIndexInPayloadTimelinessCommittee is not available before Gloas");
+pub fn canBuilderCoverBid(self: *BeaconStateView, builder_index: js.Number, bid_amount: js.Number) !js.Boolean {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const index = builder_index.toU64Exact() catch return error.InvalidBuilderIndex;
+    const amount = bid_amount.toU64Exact() catch return error.InvalidBidAmount;
+    const state = try cached_state.state.tryCastToFork(.gloas);
+    return js.Boolean.from(try st.canBuilderCoverBid(.gloas, state, index, amount));
 }
 
-pub fn getExpectedWithdrawalsForFullParent(_: *const BeaconStateView, _: js.Value) !js.Array {
-    return throwNotImpl(js.Array, "getExpectedWithdrawalsForFullParent is not available before Gloas");
+fn readPayloadTimelinessCommittee(cached_state: *CachedBeaconState, slot_value: u64, out: *[preset.PTC_SIZE]u64) !void {
+    const state = try cached_state.state.tryCastToFork(.gloas);
+    const epoch_value = st.computeEpochAtSlot(slot_value);
+    const current_epoch = cached_state.epoch_cache.epoch;
+    if (epoch_value < cached_state.config.chain.GLOAS_FORK_EPOCH) return error.EpochBeforeGloas;
+    if (epoch_value + 1 < current_epoch or epoch_value > current_epoch + preset.MIN_SEED_LOOKAHEAD) return error.EpochOutOfRange;
+    const epoch_offset = epoch_value + 1 - current_epoch;
+    var window = try state.inner.getReadonly("ptc_window");
+    var committee = try window.getReadonly(epoch_offset * preset.SLOTS_PER_EPOCH + slot_value % preset.SLOTS_PER_EPOCH);
+    try committee.toValue(cached_state.allocator, out);
 }
 
-pub fn withParentPayloadApplied(_: *const BeaconStateView, _: js.Value) !BeaconStateView {
-    try js.env().throwError("NOT_IMPLEMENTED", "withParentPayloadApplied is not available before Gloas");
-    return error.NotImplemented;
+pub fn getPayloadTimelinessCommittee(self: *BeaconStateView, slot_arg: js.Number) !js.Uint32Array {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const slot_value = slot_arg.toU64Exact() catch return error.InvalidSlot;
+    var committee: [preset.PTC_SIZE]u64 = undefined;
+    try readPayloadTimelinessCommittee(cached_state, slot_value, &committee);
+    return js_types.wrap(js.Uint32Array, try numberSliceToNapiValue(js.env(), u64, &committee, .{ .typed_array = .uint32 }));
+}
+
+pub fn getEpochPTCs(self: *BeaconStateView, epoch_arg: js.Number) !js.Array {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const epoch_value = epoch_arg.toU64Exact() catch return error.InvalidEpoch;
+    const current_epoch = cached_state.epoch_cache.epoch;
+    if (epoch_value != current_epoch and epoch_value != current_epoch + 1) return error.EpochOutOfRange;
+    const start_slot = std.math.mul(u64, epoch_value, preset.SLOTS_PER_EPOCH) catch return error.InvalidEpoch;
+    const result = try js.env().createArrayWithLength(preset.SLOTS_PER_EPOCH);
+    var committee: [preset.PTC_SIZE]u64 = undefined;
+    for (0..preset.SLOTS_PER_EPOCH) |i| {
+        try readPayloadTimelinessCommittee(cached_state, start_slot + i, &committee);
+        const value = try numberSliceToNapiValue(js.env(), u64, &committee, .{ .typed_array = .uint32 });
+        try result.setElement(@intCast(i), value);
+    }
+    return js_types.wrap(js.Array, result);
+}
+
+/// Balance-weighted PTC sampling can place one validator at several positions.
+pub fn getIndicesInPayloadTimelinessCommittee(self: *BeaconStateView, validator_index: js.Number, slot_arg: js.Number) !js.Array {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const index = validator_index.toU64Exact() catch return error.InvalidValidatorIndex;
+    const slot_value = slot_arg.toU64Exact() catch return error.InvalidSlot;
+    var committee: [preset.PTC_SIZE]u64 = undefined;
+    try readPayloadTimelinessCommittee(cached_state, slot_value, &committee);
+    const result = try js.env().createArray();
+    var matches: u32 = 0;
+    for (committee, 0..) |member, position| {
+        if (member != index) continue;
+        try result.setElement(matches, try js.env().createUint32(@intCast(position)));
+        matches += 1;
+    }
+    return js_types.wrap(js.Array, result);
+}
+
+/// Return an owned state for production after applying the full parent's requests.
+pub fn withParentPayloadApplied(self: *BeaconStateView, execution_requests_bytes: js.Uint8Array) !BeaconStateView {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    _ = try cached_state.state.tryCastToFork(.gloas);
+    const allocator = cached_state.allocator;
+    var requests = ct.gloas.ExecutionRequests.default_value;
+    defer ct.gloas.ExecutionRequests.deinit(allocator, &requests);
+    try ct.gloas.ExecutionRequests.deserializeFromBytes(allocator, try execution_requests_bytes.toSlice(), &requests);
+    const post_state = try cached_state.clone(allocator, .{ .transfer_cache = false });
+    errdefer {
+        post_state.deinit();
+        allocator.destroy(post_state);
+    }
+    try st.applyParentExecutionPayload(.gloas, allocator, js.io(), post_state.config, post_state.epoch_cache, post_state.state.castToFork(.gloas), &requests);
+    try post_state.state.commit();
+    return .{
+        .cached_state = post_state,
+        .pool_rc = self.pool_rc.?.ref(),
+        .config_rc = self.config_rc.?.ref(),
+    };
 }
 
 // --- API-only methods (used by beacon-node rewards endpoints) ---
@@ -1914,7 +2014,7 @@ pub fn toValue(self: *BeaconStateView) !js.Value {
 /// Compute expected withdrawals for the next payload (capella+).
 /// Returns: { expectedWithdrawals: Withdrawal[], processedPartialWithdrawalsCount, processedValidatorSweepCount,
 ///           processedBuilderWithdrawalsCount, processedBuildersSweepCount }
-/// The latter two are Gloas-only — always 0 here since Zig STF doesn't process Gloas yet.
+/// The latter two are zero before Gloas.
 pub fn getExpectedWithdrawals(self: *BeaconStateView) !js.Value {
     const env = js.env();
     const cached_state = try self.acquireState();
@@ -1936,7 +2036,7 @@ pub fn getExpectedWithdrawals(self: *BeaconStateView) !js.Value {
     defer withdrawal_balances.deinit();
 
     switch (fork_seq) {
-        inline .capella, .deneb, .electra, .fulu => |f| {
+        inline .capella, .deneb, .electra, .fulu, .gloas => |f| {
             try st.getExpectedWithdrawals(
                 f,
                 cached_state.epoch_cache,
@@ -1958,9 +2058,8 @@ pub fn getExpectedWithdrawals(self: *BeaconStateView) !js.Value {
     try obj.setNamedProperty("expectedWithdrawals", withdrawals_arr);
     try obj.setNamedProperty("processedPartialWithdrawalsCount", try env.createUint32(@intCast(withdrawals_result.processed_partial_withdrawals_count)));
     try obj.setNamedProperty("processedValidatorSweepCount", try env.createUint32(@intCast(withdrawals_result.sampled_validators)));
-    // TODO(bing): Implement when we support Gloas.
-    try obj.setNamedProperty("processedBuilderWithdrawalsCount", try env.createUint32(0));
-    try obj.setNamedProperty("processedBuildersSweepCount", try env.createUint32(0));
+    try obj.setNamedProperty("processedBuilderWithdrawalsCount", try env.createUint32(@intCast(withdrawals_result.processed_builder_withdrawals_count)));
+    try obj.setNamedProperty("processedBuildersSweepCount", try env.createUint32(@intCast(withdrawals_result.processed_builders_sweep_count)));
 
     return js_types.wrap(js.Value, obj);
 }

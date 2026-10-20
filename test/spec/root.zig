@@ -3,7 +3,8 @@
 
 const testing = @import("std").testing;
 
-comptime {
+test {
+    testing.refAllDecls(@import("./test_case.zig"));
     testing.refAllDecls(@import("./test_case/merkle_proof_tests.zig"));
     testing.refAllDecls(@import("./test_case/operations_tests.zig"));
     testing.refAllDecls(@import("./test_case/rewards_tests.zig"));

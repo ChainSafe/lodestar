@@ -115,6 +115,8 @@ test "memory_safety: fixed compounding flag tail does not allocate for sequentia
         allocator.destroy(test_state.pubkey_cache);
         deinitReusedEpochTransitionCache();
         allocator.destroy(test_state.config);
+        allocator.free(test_state.owned_blob_schedule);
+        allocator.free(test_state.owned_config_name);
     }
 
     var second_caller = std.testing.FailingAllocator.init(allocator, .{});
@@ -136,5 +138,51 @@ test "memory_safety: fixed compounding flag tail does not allocate for sequentia
     try std.testing.expectEqual(bytes_before, second_caller.allocated_bytes);
     for (0..preset.MAX_PENDING_DEPOSITS_PER_EPOCH) |i| {
         try std.testing.expectEqual(i % 2 == 0, cache.isCompoundingValidator(initial_validator_count + i));
+    }
+}
+
+test "native progressive balance mismatch negative control reaches scraped counters" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 200_000 });
+    defer pool.deinit();
+    var test_state = try TestCachedBeaconState.init(allocator, &pool, 256);
+    defer test_state.deinit();
+
+    try metrics.init(allocator, std.testing.io, .{});
+    defer metrics.deinit();
+    const name = "lodestar_stfn_progressive_balances_mismatches_total";
+    {
+        var before: std.Io.Writer.Allocating = .init(allocator);
+        defer before.deinit();
+        try metrics.write(&before.writer);
+        try std.testing.expect(std.mem.find(u8, before.written(), "# TYPE " ++ name ++ " counter\n") != null);
+        try std.testing.expect(std.mem.find(u8, before.written(), name ++ "{") == null);
+    }
+
+    // Corrupt the actual cache, not the metric or its output. Epoch processing must
+    // independently recompute both totals, observe the mismatch, and repair the cache.
+    const epoch_cache = test_state.cached_state.epoch_cache;
+    const current = epoch_cache.current_target_unslashed_balance_increments;
+    const previous = epoch_cache.previous_target_unslashed_balance_increments;
+    epoch_cache.current_target_unslashed_balance_increments += 1;
+    epoch_cache.previous_target_unslashed_balance_increments += 2;
+    for (0..2) |_| {
+        var cache = try EpochTransitionCache.init(
+            allocator,
+            test_state.cached_state.config,
+            epoch_cache,
+            test_state.cached_state.state,
+        );
+        defer cache.deinit();
+        try std.testing.expectEqual(current, epoch_cache.current_target_unslashed_balance_increments);
+        try std.testing.expectEqual(previous, epoch_cache.previous_target_unslashed_balance_increments);
+
+        // metrics.write is the same registry scrape used by the NAPI metrics bridge.
+        // The second, uncorrupted pass must leave each counter at exactly one.
+        var after: std.Io.Writer.Allocating = .init(allocator);
+        defer after.deinit();
+        try metrics.write(&after.writer);
+        try std.testing.expect(std.mem.find(u8, after.written(), name ++ "{target=\"current\"} 1\n") != null);
+        try std.testing.expect(std.mem.find(u8, after.written(), name ++ "{target=\"previous\"} 1\n") != null);
     }
 }

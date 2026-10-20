@@ -795,11 +795,6 @@ describe("BeaconStateView", () => {
         "InvalidProcessBlockSource"
       );
     });
-
-    // TODO: remove once Zig models DataAvailabilityStatus.NotRequired
-    it("rejects gloas-only NotRequired", () => {
-      expect(() => state.stateTransition(dummyBlockBytes, false, {dataAvailabilityStatus: "NotRequired"})).toThrow();
-    });
   });
 
   describe("effective balance increments", () => {

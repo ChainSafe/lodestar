@@ -109,4 +109,7 @@ pub const SyncCommitteeWitness = js.Object(struct {
     witness: js.Array,
     currentSyncCommitteeRoot: js.Uint8Array,
     nextSyncCommitteeRoot: js.Uint8Array,
+    // Arrays on Gloas; undefined on earlier forks, whose committees are siblings.
+    currentSyncCommitteeBranch: js.Value,
+    nextSyncCommitteeBranch: js.Value,
 });

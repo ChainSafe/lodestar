@@ -16,11 +16,14 @@ const hasEth1WithdrawalCredential = @import("../utils/capella.zig").hasEth1Withd
 const getMaxEffectiveBalance = @import("../utils/validator.zig").getMaxEffectiveBalance;
 const decreaseBalance = @import("../utils/balance.zig").decreaseBalance;
 const Node = @import("persistent_merkle_tree").Node;
+const gloas_withdrawals = @import("process_withdrawals_gloas.zig");
 
 pub const WithdrawalsResult = struct {
     withdrawals: Withdrawals,
     sampled_validators: usize = 0,
     processed_partial_withdrawals_count: usize = 0,
+    processed_builder_withdrawals_count: usize = 0,
+    processed_builders_sweep_count: usize = 0,
 };
 
 /// right now for the implementation we pass in processBlock()
@@ -35,6 +38,8 @@ pub fn processWithdrawals(
     payload_withdrawals_root: Root,
     diag: ?*diagnostics.Diagnostics,
 ) !void {
+    if (comptime fork.gte(.gloas)) return gloas_withdrawals.processWithdrawals(fork, state, &expected_withdrawals_result);
+
     // processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
     const processed_partial_withdrawals_count = expected_withdrawals_result.processed_partial_withdrawals_count;
     const expected_withdrawals = expected_withdrawals_result.withdrawals.items;
@@ -100,6 +105,8 @@ pub fn getExpectedWithdrawals(
     withdrawals_result: *WithdrawalsResult,
     withdrawal_balances: *std.AutoHashMap(ValidatorIndex, usize),
 ) !void {
+    if (comptime fork.gte(.gloas)) return gloas_withdrawals.getExpectedWithdrawals(fork, epoch_cache, state, withdrawals_result);
+
     std.debug.assert(withdrawals_result.withdrawals.capacity == preset.MAX_WITHDRAWALS_PER_PAYLOAD);
     if (comptime fork.lt(.capella)) return error.InvalidForkSequence;
 

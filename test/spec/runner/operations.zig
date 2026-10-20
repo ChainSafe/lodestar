@@ -25,22 +25,31 @@ pub const Operation = enum {
     attester_slashing,
     block_header,
     bls_to_execution_change,
+    builder_deposit_request,
+    builder_exit_request,
     consolidation_request,
     deposit,
     deposit_request,
     execution_payload,
+    execution_payload_bid,
+    parent_execution_payload,
+    payload_attestation,
     proposer_slashing,
     sync_aggregate,
+    sync_aggregate_random,
     voluntary_exit,
+    voluntary_exit_churn,
     withdrawal_request,
     withdrawals,
 
     pub fn inputName(self: Operation) []const u8 {
         return switch (self) {
-            .block_header => "block",
+            .block_header, .parent_execution_payload => "block",
             .bls_to_execution_change => "address_change",
             .execution_payload => "body",
             .withdrawals => "execution_payload",
+            .sync_aggregate_random => "sync_aggregate",
+            .voluntary_exit_churn => "voluntary_exit",
             else => @tagName(self),
         };
     }
@@ -51,13 +60,18 @@ pub const Operation = enum {
             .attester_slashing => "AttesterSlashing",
             .block_header => "BeaconBlock",
             .bls_to_execution_change => "SignedBLSToExecutionChange",
+            .builder_deposit_request => "BuilderDepositRequest",
+            .builder_exit_request => "BuilderExitRequest",
             .consolidation_request => "ConsolidationRequest",
             .deposit => "Deposit",
             .deposit_request => "DepositRequest",
             .execution_payload => "BeaconBlockBody",
+            .execution_payload_bid => "SignedExecutionPayloadBid",
+            .parent_execution_payload => "BeaconBlock",
+            .payload_attestation => "PayloadAttestation",
             .proposer_slashing => "ProposerSlashing",
-            .sync_aggregate => "SyncAggregate",
-            .voluntary_exit => "SignedVoluntaryExit",
+            .sync_aggregate, .sync_aggregate_random => "SyncAggregate",
+            .voluntary_exit, .voluntary_exit_churn => "SignedVoluntaryExit",
             .withdrawal_request => "WithdrawalRequest",
             .withdrawals => "ExecutionPayload",
         };
@@ -73,7 +87,8 @@ pub const Handler = Operation;
 pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
     const ForkTypes = @field(ssz, fork.name());
     const tc_utils = TestCaseUtils(fork);
-    const OpType = @field(ForkTypes, operation.operationObject());
+    const no_input = fork.gte(.gloas) and operation == .withdrawals;
+    const OpType = if (no_input) ssz.primitive.Root else @field(ForkTypes, operation.operationObject());
 
     return struct {
         pre: TestCachedBeaconState,
@@ -81,6 +96,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
         post: ?*AnyBeaconState,
         op: OpType.Type,
         bls_setting: BlsSetting,
+        execution_payload_status: state_transition.ExecutionPayloadStatus = .valid,
 
         const Self = @This();
 
@@ -103,7 +119,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                 .pre = undefined,
                 .post = undefined,
                 .op = OpType.default_value,
-                .bls_setting = loadBlsSetting(allocator, dir),
+                .bls_setting = try loadBlsSetting(allocator, dir),
             };
 
             // load pre state
@@ -112,14 +128,15 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
 
             // load pre state
             tc.post = try tc_utils.loadPostState(allocator, pool, dir);
+            errdefer if (tc.post) |post| {
+                post.deinit();
+                allocator.destroy(post);
+            };
 
             // load the op
-            try loadSszValue(OpType, allocator, dir, comptime operation.inputName() ++ ".ssz_snappy", &tc.op);
-            errdefer {
-                if (comptime @hasDecl(OpType, "deinit")) {
-                    OpType.deinit(allocator, &tc.op);
-                }
-            }
+            if (!no_input) try loadSszValue(OpType, allocator, dir, comptime operation.inputName() ++ ".ssz_snappy", &tc.op);
+            errdefer if (comptime @hasDecl(OpType, "deinit")) OpType.deinit(allocator, &tc.op);
+            if (operation == .execution_payload) tc.execution_payload_status = try test_case.loadExecutionPayloadStatus(allocator, dir);
 
             return tc;
         }
@@ -157,6 +174,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                         &cached_state.proposer_rewards,
                         &cached_state.slashings_cache,
                         attestations[0..],
+                        if (fork.gte(.gloas)) try state.latestBlockHeaderSlot() else null,
                         verify,
                     );
                 },
@@ -194,6 +212,8 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                     const config = cached_state.config;
                     try state_transition.processBlsToExecutionChange(fork, config, state, &self.op);
                 },
+                .builder_deposit_request => try state_transition.processBuilderDepositRequest(fork, allocator, cached_state.config, state, &self.op),
+                .builder_exit_request => try state_transition.processBuilderExitRequest(fork, allocator, cached_state.config, state, &self.op),
                 .consolidation_request => {
                     const config = cached_state.config;
                     const epoch_cache = cached_state.epoch_cache;
@@ -222,10 +242,18 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                         &fork_body,
                         .{
                             .data_availability_status = .available,
-                            .execution_payload_status = if (self.post != null) .valid else .invalid,
+                            .execution_payload_status = self.execution_payload_status,
                         },
                     );
                 },
+                .execution_payload_bid => try state_transition.processExecutionPayloadBid(fork, allocator, cached_state.config, cached_state.epoch_cache, state, &self.op),
+                .parent_execution_payload => {
+                    const block = BeaconBlock(.full, fork){ .inner = self.op };
+                    try state_transition.processParentExecutionPayload(fork, allocator, io, cached_state.config, cached_state.epoch_cache, state, &block);
+                },
+                // Standalone payload-attestation vectors include invalid signatures
+                // without bls_setting metadata, matching Lodestar's operation runner.
+                .payload_attestation => try state_transition.processPayloadAttestation(fork, io, cached_state.config, cached_state.epoch_cache, state, &self.op, true),
                 .proposer_slashing => {
                     const config = cached_state.config;
                     const epoch_cache = cached_state.epoch_cache;
@@ -242,7 +270,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                         verify,
                     );
                 },
-                .sync_aggregate => {
+                .sync_aggregate, .sync_aggregate_random => {
                     const config = cached_state.config;
                     const epoch_cache = cached_state.epoch_cache;
                     try state_transition.processSyncAggregate(
@@ -256,7 +284,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                         verify,
                     );
                 },
-                .voluntary_exit => {
+                .voluntary_exit, .voluntary_exit_churn => {
                     const config = cached_state.config;
                     const epoch_cache = cached_state.epoch_cache;
                     try state_transition.processVoluntaryExit(
@@ -293,9 +321,10 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                         &withdrawal_balances,
                     );
 
-                    var payload_withdrawals_root: Root = undefined;
-                    // self.op is ExecutionPayload in this case
-                    try ssz.capella.Withdrawals.hashTreeRoot(allocator, &self.op.withdrawals, &payload_withdrawals_root);
+                    var payload_withdrawals_root: Root = @splat(0);
+                    if (comptime fork.lt(.gloas)) {
+                        try ssz.capella.Withdrawals.hashTreeRoot(allocator, &self.op.withdrawals, &payload_withdrawals_root);
+                    }
 
                     try state_transition.processWithdrawals(
                         fork,
@@ -315,10 +344,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                 try expectEqualBeaconStates(post, self.pre.cached_state.state);
             } else {
                 self.process() catch |err| {
-                    if (err == error.SkipZigTest) {
-                        return err;
-                    }
-                    return;
+                    return test_case.expectConsensusInvalid(err);
                 };
                 return error.ExpectedError;
             }

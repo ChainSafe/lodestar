@@ -1,6 +1,10 @@
 const std = @import("std");
 const options = @import("spec_test_options");
 
+pub fn main(init: std.process.Init) !void {
+    try download(std.heap.page_allocator, init.io);
+}
+
 /// Generous bound on the fixture archive download.
 const max_archive_bytes = 1024 * 1024;
 

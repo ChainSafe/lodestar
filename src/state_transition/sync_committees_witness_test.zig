@@ -7,8 +7,8 @@
 //! The witness is a sibling branch from the `sync_committees` subtree up to the
 //! state root, ordered by descending gindex. The path through the BeaconState
 //! tree differs across forks because the container layout changes: pre-electra
-//! the sync committees live at gindices 54/55 (4 siblings), electra and later
-//! at gindices 86/87 (5 siblings).
+//! the sync committees live at gindices 54/55 (4 siblings), electra/fulu
+//! at gindices 86/87 (5 siblings), and Gloas at 2945/2946 (separate branches).
 //!
 //! Tests are ported from lodestar:
 //! packages/beacon-node/test/unit/chain/lightclient/proof.test.ts
@@ -67,6 +67,7 @@ const ProofFixture = struct {
         self.state = switch (fork) {
             .altair => try AnyBeaconState.fromValue(allocator, &self.pool, .altair, &ct.altair.BeaconState.default_value),
             .electra => try AnyBeaconState.fromValue(allocator, &self.pool, .electra, &ct.electra.BeaconState.default_value),
+            .gloas => try AnyBeaconState.fromValue(allocator, &self.pool, .gloas, &ct.gloas.BeaconState.default_value),
             else => return error.UnsupportedFork,
         };
         errdefer self.state.deinit();
@@ -121,6 +122,7 @@ test "getSyncCommitteesWitness: SyncCommittees proof" {
         hashOne(&sync_committees_leaf, &witness_data.current_sync_committee_root, &witness_data.next_sync_committee_root);
 
         try std.testing.expectEqual(@as(u8, tc.num_witness), witness_data.witness_len);
+        try std.testing.expectEqual(null, witness_data.gloas_branches);
 
         const pos = fromGindex(tc.sync_committees_gindex);
         const proof = packProof(witness_data.witness());
@@ -214,4 +216,55 @@ test "getSyncCommitteesWitness: nextSyncCommittee proof" {
         const proof = packProof(&branch_buf);
         try std.testing.expect(verifyMerkleBranch(next_leaf, &proof, pos.depth, pos.index, fixture.state_root));
     }
+}
+
+test "getSyncCommitteesWitness: Gloas separate committee branches" {
+    var fixture: ProofFixture = undefined;
+    try fixture.init(.gloas);
+    defer fixture.deinit();
+    var witness_data: SyncCommitteeWitness = undefined;
+    try getSyncCommitteesWitness(.gloas, fixture.root_node, &fixture.pool, &witness_data);
+    try std.testing.expectEqual(@as(u8, 0), witness_data.witness_len);
+    const branches = witness_data.gloas_branches orelse return error.MissingCommitteeBranches;
+
+    // Independently hash the value rather than using the proof walk's tree nodes
+    // as the only root oracle. Keep the large mainnet value off the test stack.
+    const value = try std.testing.allocator.create(ct.gloas.BeaconState.Type);
+    defer std.testing.allocator.destroy(value);
+    value.* = ct.gloas.BeaconState.default_value;
+    value.current_sync_committee = fixture.current_sync_committee;
+    value.next_sync_committee = fixture.next_sync_committee;
+    var expected_root: [32]u8 = undefined;
+    try ct.gloas.BeaconState.hashTreeRoot(std.testing.allocator, value, &expected_root);
+    try std.testing.expectEqualSlices(u8, &expected_root, &fixture.state_root);
+    var current_root: [32]u8 = undefined;
+    var next_root: [32]u8 = undefined;
+    try ct.altair.SyncCommittee.hashTreeRoot(&fixture.current_sync_committee, &current_root);
+    try ct.altair.SyncCommittee.hashTreeRoot(&fixture.next_sync_committee, &next_root);
+    try std.testing.expectEqualSlices(u8, &current_root, &witness_data.current_sync_committee_root);
+    try std.testing.expectEqualSlices(u8, &next_root, &witness_data.next_sync_committee_root);
+
+    inline for (.{
+        .{ current_root, branches.current, 2945 },
+        .{ next_root, branches.next, 2946 },
+    }) |tc| {
+        const pos = fromGindex(tc[2]);
+        try std.testing.expectEqual(@as(usize, 11), tc[1].len);
+        var proof = packProof(&tc[1]);
+        try std.testing.expect(verifyMerkleBranch(tc[0], &proof, pos.depth, pos.index, expected_root));
+        // Each witness position is necessary; a modified sibling must fail.
+        for (0..pos.depth) |i| {
+            proof[i][0] ^= 1;
+            try std.testing.expect(!verifyMerkleBranch(tc[0], &proof, pos.depth, pos.index, expected_root));
+            proof[i][0] ^= 1;
+        }
+    }
+
+    var old_fixture: ProofFixture = undefined;
+    try old_fixture.init(.electra);
+    defer old_fixture.deinit();
+    // Reusing the output must not leave Gloas branch fields on a legacy result.
+    try getSyncCommitteesWitness(.electra, old_fixture.root_node, &old_fixture.pool, &witness_data);
+    try std.testing.expectEqual(null, witness_data.gloas_branches);
+    try std.testing.expectEqual(@as(u8, 5), witness_data.witness_len);
 }

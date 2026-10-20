@@ -49,6 +49,49 @@ interface ExecutionPayloadHeader {
   excessBlobGas?: bigint; // deneb+
 }
 
+export interface ExecutionPayloadBid {
+  parentBlockHash: Uint8Array;
+  parentBlockRoot: Uint8Array;
+  blockHash: Uint8Array;
+  prevRandao: Uint8Array;
+  feeRecipient: Uint8Array;
+  gasLimit: bigint;
+  builderIndex: number;
+  slot: number;
+  value: number;
+  executionPayment: bigint;
+  blobKzgCommitments: Uint8Array[];
+  executionRequestsRoot: Uint8Array;
+}
+
+export interface Builder {
+  pubkey: Uint8Array;
+  version: number;
+  executionAddress: Uint8Array;
+  balance: number;
+  depositEpoch: number;
+  withdrawableEpoch: number;
+}
+
+export interface BuilderPendingWithdrawal {
+  feeRecipient: Uint8Array;
+  amount: number;
+  builderIndex: number;
+}
+
+export interface BuilderPendingPayment {
+  weight: number;
+  withdrawal: BuilderPendingWithdrawal;
+  proposerIndex: number;
+}
+
+export interface Withdrawal {
+  index: number;
+  validatorIndex: number;
+  address: Uint8Array;
+  amount: bigint;
+}
+
 /*
  * We don't need *all* the fields to check if a block
  * is a pre-merge or a merge transition block, so we just
@@ -125,9 +168,6 @@ interface CompactMultiProof {
 
 /**
  * Options to control how state transition is run.
- *
- * Note: Fields used by TS `StateTransitionOpts` but ignored by the Zig binding (e.g.
- * `executionPayloadStatus`) are silently dropped - they are declared here to pass type checks.
  */
 export interface TransitionOpts {
   /** Verify the post-state root matches the block's state root. Default: true. */
@@ -138,6 +178,10 @@ export interface TransitionOpts {
   verifySignatures?: boolean;
   /** Default: false (cache is transferred). Set to true to opt out of cache transfer. */
   dontTransferCache?: boolean;
+  /** Execution engine result for payload validation. Default: "valid". */
+  executionPayloadStatus?: "valid" | "invalid" | "preMerge";
+  /** Data availability result; Gloas beacon blocks use "NotRequired". Default: "Available". */
+  dataAvailabilityStatus?: "Available" | "PreData" | "OutOfRange" | "NotRequired";
   /** Source of block processing for the process-block timing metric. Default: "block". */
   source?: "block" | "regen" | "get_historical_state";
 }
@@ -247,31 +291,20 @@ export declare class BeaconStateView {
   pendingConsolidations: Uint8Array;
   pendingConsolidationsCount: number;
   proposerLookahead: Uint32Array;
-  // executionPayloadAvailability: boolean[];
-
-  // Gloas-only — throw "not available before Gloas" when called pre-Gloas.
+  // Gloas fields throw when called on an earlier fork.
   latestBlockHash: Uint8Array;
-  // TODO(bing): type this once we support gloas
-  // biome-ignore lint/suspicious/noExplicitAny: gloas stub
-  executionPayloadAvailability: any;
-  // TODO(bing): type this once we support gloas
-  // biome-ignore lint/suspicious/noExplicitAny: gloas stub
-  latestExecutionPayloadBid: any;
-  // TODO(bing): type this once we support gloas
-  // biome-ignore lint/suspicious/noExplicitAny: gloas stub
-  payloadExpectedWithdrawals: any[];
-  // TODO(bing): type this once we support gloas
-  // biome-ignore lint/suspicious/noExplicitAny: gloas stub
-  getBuilder(index: number): any;
+  executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+  latestExecutionPayloadBid: ExecutionPayloadBid;
+  payloadExpectedWithdrawals: Withdrawal[];
+  builderPendingPayments: BuilderPendingPayment[];
+  builderPendingWithdrawals: BuilderPendingWithdrawal[];
+  getBuilder(index: number): Builder;
   canBuilderCoverBid(builderIndex: number, bidAmount: number): boolean;
   getEpochPTCs(epoch: number): Uint32Array[];
-  getIndexInPayloadTimelinessCommittee(validatorIndex: number, slot: number): number;
-  // TODO(bing): type this once we support gloas
-  // biome-ignore lint/suspicious/noExplicitAny: gloas stub
-  getExpectedWithdrawalsForFullParent(executionRequests: any): any[];
-  // TODO(bing): Implement when we support gloas
-  // biome-ignore lint/suspicious/noExplicitAny: gloas stub
-  withParentPayloadApplied(executionRequests: any): BeaconStateView;
+  getPayloadTimelinessCommittee(slot: number): Uint32Array;
+  getIndicesInPayloadTimelinessCommittee(validatorIndex: number, slot: number): number[];
+  /** Clone this view and apply serialized Gloas ExecutionRequests from the full parent. */
+  withParentPayloadApplied(executionRequestsBytes: Uint8Array): BeaconStateView;
 
   getShufflingAtEpoch(epoch: number): EpochShuffling;
   getPreviousShuffling(): EpochShuffling;
@@ -340,24 +373,25 @@ export declare class BeaconStateView {
 
   getFinalizedRootProof(): Uint8Array[];
   getSyncCommitteesWitness(): {
+    /** Shared witness before Gloas; empty when separate committee branches are returned. */
     witness: Uint8Array[];
     currentSyncCommitteeRoot: Uint8Array;
     nextSyncCommitteeRoot: Uint8Array;
+    currentSyncCommitteeBranch?: Uint8Array[];
+    nextSyncCommitteeBranch?: Uint8Array[];
   };
   getSingleProof(gindex: bigint): Uint8Array[];
   /**
    * Compute expected withdrawals for the next payload (capella+).
    *
-   * processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas (EIP-7732)
+   * processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas
    * processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
-   * processedBuildersSweepCount is withdrawals from builder sweep since gloas (EIP-7732)
+   * processedBuildersSweepCount is withdrawals from builder sweep since gloas
    * processedValidatorSweepCount is withdrawals coming from validator sweep
 
-   * TODO(bing): `processedBuilderWithdrawalsCount` and `processedBuildersSweepCount` are Gloas-only
-   * and always 0 here since Zig STF doesn't process Gloas yet.
    */
   getExpectedWithdrawals(): {
-    expectedWithdrawals: {index: number; validatorIndex: number; address: Uint8Array; amount: bigint}[];
+    expectedWithdrawals: Withdrawal[];
     processedBuilderWithdrawalsCount: number;
     processedPartialWithdrawalsCount: number;
     processedBuildersSweepCount: number;

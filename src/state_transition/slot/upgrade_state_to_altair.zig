@@ -109,7 +109,7 @@ fn translateParticipation(
 
     for (pending_attestations) |*attestation| {
         const data = &attestation.data;
-        const attestation_flag = try getAttestationParticipationStatus(.phase0, data, attestation.inclusion_delay, epoch_cache.epoch, root_cache);
+        const attestation_flag = try getAttestationParticipationStatus(.phase0, data, attestation.inclusion_delay, epoch_cache.epoch, root_cache, null);
         const committee_indices = try epoch_cache.getBeaconCommittee(data.slot, data.index);
         var attesting_indices = try attestation.aggregation_bits.intersectValues(ValidatorIndex, allocator, committee_indices);
         defer attesting_indices.deinit(allocator);

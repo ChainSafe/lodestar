@@ -39,6 +39,8 @@ pub const RandaoMixes = phase0.RandaoMixes;
 pub const Deposits = phase0.Deposits;
 pub const VoluntaryExits = phase0.VoluntaryExits;
 
+pub const EpochParticipation = altair.EpochParticipation;
+pub const InactivityScores = altair.InactivityScores;
 pub const SyncAggregate = altair.SyncAggregate;
 pub const SyncCommittee = altair.SyncCommittee;
 pub const SyncCommitteeMessage = altair.SyncCommitteeMessage;
@@ -58,6 +60,7 @@ pub const HistoricalSummary = capella.HistoricalSummary;
 pub const BlobIdentifier = deneb.BlobIdentifier;
 pub const ExecutionPayload = deneb.ExecutionPayload;
 pub const ExecutionPayloadHeader = deneb.ExecutionPayloadHeader;
+pub const VersionedHashes = deneb.VersionedHashes;
 pub const BlobKzgCommitments = deneb.BlobKzgCommitments;
 
 pub const PendingDeposit = ssz.FixedContainerType(struct {
@@ -105,7 +108,6 @@ pub const ExecutionRequests = ssz.VariableContainerType(struct {
     consolidations: ssz.FixedListType(ConsolidationRequest, preset.MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD, .{}),
 });
 
-pub const VersionedHashes = deneb.VersionedHashes;
 pub const NewPayloadRequest = ssz.VariableContainerType(struct {
     execution_payload: ExecutionPayload,
     versioned_hashes: VersionedHashes,

@@ -7,7 +7,8 @@ const Node = @import("persistent_merkle_tree").Node;
 /// fields by name and overriding them with precomputed subtrees.
 ///
 /// `overrides` should be a struct literal where field names match container field names,
-/// e.g. `. { .validators = seed_validators_node }`.
+/// e.g. `. { .validators = seed_validators_node }`. Its roots stay borrowed and must have a
+/// retained owner throughout the call.
 pub fn deserializeContainerOverrideFieldsWithRanges(
     allocator: Allocator,
     pool: *Node.Pool,
@@ -16,22 +17,21 @@ pub fn deserializeContainerOverrideFieldsWithRanges(
     ranges: *const [ContainerST.fields.len][2]usize,
     overrides: anytype,
 ) !*ContainerST.TreeView {
-    var nodes: [ContainerST.chunk_count]Node.Id = undefined;
+    var nodes: [ContainerST.chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
     var owned_nodes: [ContainerST.chunk_count]Node.Id = undefined;
     var owned_len: usize = 0;
 
-    // Important: `deserializeFromBytes` returns nodes with refcount 0. If we error out before
-    // they're anchored under a committed root, they must be `unref`'d to avoid leaking Pool nodes.
-    // Once container root is created, it becomes the sole owner: unref'ing the root is enough
-    // and unref'ing child nodes again would be a double-unref.
-    errdefer {
+    // Both builders borrow their inputs. Retain decoded fields while a partial build may
+    // acquire and release its own references, including if TreeView initialization fails.
+    defer {
         var i: usize = 0;
         while (i < owned_len) : (i += 1) pool.unref(owned_nodes[i]);
     }
 
     inline for (ContainerST.fields, 0..) |field, i| {
+        const position = if (comptime ContainerST.kind == .progressive_container) ContainerST.field_indices[i] else i;
         if (comptime @hasField(@TypeOf(overrides), field.name)) {
-            nodes[i] = @field(overrides, field.name);
+            nodes[position] = @field(overrides, field.name);
             continue;
         }
 
@@ -39,15 +39,22 @@ pub fn deserializeContainerOverrideFieldsWithRanges(
         const end = ranges[i][1];
         const field_bytes = bytes[start..end];
 
-        nodes[i] = try field.type.tree.deserializeFromBytes(pool, field_bytes);
-        owned_nodes[owned_len] = nodes[i];
+        const node = try field.type.tree.deserializeFromBytes(pool, field_bytes);
+        pool.ref(node) catch |err| {
+            pool.unref(node);
+            return err;
+        };
+        nodes[position] = node;
+        owned_nodes[owned_len] = node;
         owned_len += 1;
     }
 
-    const root = try Node.fillWithContents(pool, &nodes, ContainerST.chunk_depth);
-    errdefer pool.unref(root);
-    owned_len = 0;
-
+    const root = if (comptime ContainerST.kind == .progressive_container)
+        try ContainerST.tree.fromFieldNodes(pool, &nodes)
+    else
+        try Node.fillWithContents(pool, &nodes, ContainerST.chunk_depth);
+    errdefer if (comptime ContainerST.kind == .progressive_container or ContainerST.chunk_depth > 0)
+        pool.unref(root);
     return try ContainerST.TreeView.init(allocator, pool, root);
 }
 

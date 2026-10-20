@@ -30,10 +30,15 @@ const processSyncAggregate = @import("./process_sync_committee.zig").processSync
 const processWithdrawals = @import("./process_withdrawals.zig").processWithdrawals;
 const getExpectedWithdrawals = @import("./process_withdrawals.zig").getExpectedWithdrawals;
 const isExecutionEnabled = @import("../utils/execution.zig").isExecutionEnabled;
+const processParentExecutionPayload = @import("process_parent_execution_payload.zig").processParentExecutionPayload;
+const isParentBlockFull = @import("../utils/gloas.zig").isParentBlockFull;
+const gloas_withdrawals = @import("process_withdrawals_gloas.zig");
+const processExecutionPayloadBid = @import("process_execution_payload_bid.zig").processExecutionPayloadBid;
 
 pub const ProcessBlockOpts = struct {
     diagnostics: ?*Diagnostics = null,
     verify_signature: bool = true,
+    parent_slot: ?u64 = null,
 };
 
 /// Process a block and update the state following Ethereum Consensus specifications.
@@ -51,6 +56,12 @@ pub fn processBlock(
     external_data: BlockExternalData,
     opts: ProcessBlockOpts,
 ) !void {
+    var operation_opts = opts;
+    if (comptime fork.gte(.gloas)) {
+        operation_opts.parent_slot = try state.latestBlockHeaderSlot();
+        try processParentExecutionPayload(fork, allocator, io, config, epoch_cache, state, block);
+    }
+
     // Build slashings cache against the *current* latest_block_header slot (pre-header update).
     try buildSlashingsCacheIfNeeded(allocator, state, slashings_cache);
     var timer = time.start(io);
@@ -127,6 +138,16 @@ pub fn processBlock(
         }
     }
 
+    if (comptime fork.gte(.gloas)) {
+        if (try isParentBlockFull(fork, state)) {
+            var withdrawals_buf: [preset.MAX_WITHDRAWALS_PER_PAYLOAD]types.capella.Withdrawal.Type = undefined;
+            var result = WithdrawalsResult{ .withdrawals = Withdrawals.initBuffer(&withdrawals_buf) };
+            try gloas_withdrawals.getExpectedWithdrawals(fork, epoch_cache, state, &result);
+            try gloas_withdrawals.processWithdrawals(fork, state, &result);
+        }
+        try processExecutionPayloadBid(fork, allocator, config, epoch_cache, state, &body.inner.signed_execution_payload_bid);
+    }
+
     timer = time.start(io);
     try processRandao(fork, io, config, epoch_cache, state, block_type, body, block.proposerIndex(), opts.verify_signature);
     try metrics.state_transition.process_block_step.observe(
@@ -140,7 +161,7 @@ pub fn processBlock(
         time.durationSeconds(time.since(io, timer)),
     );
     timer = time.start(io);
-    try processOperations(fork, allocator, io, config, epoch_cache, state, proposer_rewards, slashings_cache, block_type, body, opts);
+    try processOperations(fork, allocator, io, config, epoch_cache, state, proposer_rewards, slashings_cache, block_type, body, operation_opts);
     try metrics.state_transition.process_block_step.observe(
         .{ .step = .processOperations },
         time.durationSeconds(time.since(io, timer)),

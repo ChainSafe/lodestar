@@ -18,6 +18,7 @@ pub const Handler = enum {
     basic,
     leak,
     random,
+    inactivity_scores,
 
     pub inline fn suiteName(comptime self: Handler) []const u8 {
         return @tagName(self) ++ "/pyspec_tests";

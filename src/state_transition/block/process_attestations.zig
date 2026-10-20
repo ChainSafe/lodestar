@@ -11,8 +11,9 @@ const ProposerRewards = @import("../cache/state_cache.zig").ProposerRewards;
 const SlashingsCache = @import("../cache/slashings_cache.zig").SlashingsCache;
 const buildSlashingsCacheIfNeeded = @import("../cache/slashings_cache.zig").buildFromStateIfNeeded;
 const processAttestationPhase0 = @import("./process_attestation_phase0.zig").processAttestationPhase0;
-const processAttestationsAltair = @import("./process_attestation_altair.zig").processAttestationsAltair;
 const Node = @import("persistent_merkle_tree").Node;
+const preset = @import("preset").preset;
+const processAttestationsAltair = @import("./process_attestation_altair.zig").processAttestationsAltair;
 
 pub fn processAttestations(
     comptime fork: ForkSeq,
@@ -24,8 +25,12 @@ pub fn processAttestations(
     proposer_rewards: *ProposerRewards,
     slashings_cache: *SlashingsCache,
     attestations: []const ForkTypes(fork).Attestation.Type,
+    parent_slot: ?u64,
     verify_signatures: bool,
 ) !void {
+    if (comptime fork.gte(.gloas)) {
+        if (attestations.len > preset.MAX_ATTESTATIONS_ELECTRA) return error.TooManyBlockOperations;
+    }
     try buildSlashingsCacheIfNeeded(allocator, state, slashings_cache);
     if (comptime fork == .phase0) {
         for (attestations) |attestation| {
@@ -50,6 +55,7 @@ pub fn processAttestations(
             proposer_rewards,
             slashings_cache,
             attestations,
+            parent_slot,
             verify_signatures,
         );
     }
@@ -79,6 +85,7 @@ test "process attestations - sanity" {
             &test_state.cached_state.proposer_rewards,
             &test_state.cached_state.slashings_cache,
             electra.items,
+            null,
             true,
         ),
     );

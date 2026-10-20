@@ -5,6 +5,10 @@ const std = @import("std");
 const validator = @import("./utils/validator.zig");
 const computeWeakSubjectivityPeriodFromConstituentsElectra = @import("weak_subjectivity.zig").computeWeakSubjectivityPeriodFromConstituentsElectra;
 const computeWeakSubjectivityPeriodFromConstituentsPhase0 = @import("weak_subjectivity.zig").computeWeakSubjectivityPeriodFromConstituentsPhase0;
+const computeWeakSubjectivityPeriodCachedState = @import("weak_subjectivity.zig").computeWeakSubjectivityPeriodCachedState;
+const getLatestWeakSubjectivityCheckpointEpoch = @import("weak_subjectivity.zig").getLatestWeakSubjectivityCheckpointEpoch;
+const BeaconConfig = @import("config").BeaconConfig;
+const EpochCache = @import("cache/epoch_cache.zig").EpochCache;
 
 test "computeWeakSubjectivityPeriodFromConstituentsPhase0 - mainnet table" {
     if (active_preset != .mainnet) return error.SkipZigTest;
@@ -70,5 +74,58 @@ test "computeWeakSubjectivityPeriodFromConstituentsElectra - mainnet table" {
             min_delay,
         );
         try std.testing.expectEqual(c.ws_period, got);
+    }
+}
+
+test "computeWeakSubjectivityPeriodCachedState - Gloas mainnet table" {
+    // v1.7.0-beta.4/specs/gloas/weak-subjectivity.md reference table.
+    var chain_config = @import("config").mainnet.config.chain;
+    chain_config.GLOAS_FORK_EPOCH = 0;
+    const config = BeaconConfig.init(chain_config, @splat(0));
+    // Electra and later formulas only read these aggregate cache fields.
+    var epoch_cache: EpochCache = undefined;
+    epoch_cache.config = &config;
+    epoch_cache.epoch = 0;
+
+    const Case = struct { total_balance_increment: u64, ws_period: u64 };
+    const cases = [_]Case{
+        .{ .total_balance_increment = 1_048_576, .ws_period = 620 },
+        .{ .total_balance_increment = 2_097_152, .ws_period = 911 },
+        .{ .total_balance_increment = 4_194_304, .ws_period = 1348 },
+        .{ .total_balance_increment = 8_388_608, .ws_period = 1348 },
+        .{ .total_balance_increment = 16_777_216, .ws_period = 1484 },
+        .{ .total_balance_increment = 33_554_432, .ws_period = 1566 },
+        .{ .total_balance_increment = 67_108_864, .ws_period = 1611 },
+        .{ .total_balance_increment = 134_217_728, .ws_period = 1635 },
+    };
+
+    for (cases) |c| {
+        epoch_cache.total_active_balance_increments = c.total_balance_increment;
+        try std.testing.expectEqual(c.ws_period, computeWeakSubjectivityPeriodCachedState(&epoch_cache));
+    }
+}
+
+test "getLatestWeakSubjectivityCheckpointEpoch - Gloas fork and clamp" {
+    var chain_config = @import("config").mainnet.config.chain;
+    chain_config.FULU_FORK_EPOCH = 0;
+    chain_config.GLOAS_FORK_EPOCH = 10_000;
+    var config = BeaconConfig.init(chain_config, @splat(0));
+    var epoch_cache: EpochCache = undefined;
+    epoch_cache.config = &config;
+    epoch_cache.total_active_balance_increments = 33_554_432;
+
+    epoch_cache.epoch = 9_999;
+    try std.testing.expectEqual(3532, computeWeakSubjectivityPeriodCachedState(&epoch_cache));
+    try std.testing.expectEqual(6467, getLatestWeakSubjectivityCheckpointEpoch(&epoch_cache));
+
+    epoch_cache.epoch = 10_000;
+    try std.testing.expectEqual(1566, computeWeakSubjectivityPeriodCachedState(&epoch_cache));
+    try std.testing.expectEqual(8434, getLatestWeakSubjectivityCheckpointEpoch(&epoch_cache));
+
+    chain_config.GLOAS_FORK_EPOCH = 0;
+    config = BeaconConfig.init(chain_config, @splat(0));
+    for ([_]u64{ 0, 1565, 1566, 1567 }, [_]u64{ 0, 0, 0, 1 }) |epoch, expected| {
+        epoch_cache.epoch = epoch;
+        try std.testing.expectEqual(expected, getLatestWeakSubjectivityCheckpointEpoch(&epoch_cache));
     }
 }

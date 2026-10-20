@@ -14,8 +14,8 @@ const st = @import("state_transition");
 /// Recognized fields:
 /// - `verifyStateRoot`, `verifyProposer`, `verifySignatures`: bool
 /// - `dontTransferCache`: bool (negated to set `transfer_cache`)
-/// - `executionPayloadStatus`: "valid" | "invalid"
-/// - `dataAvailabilityStatus`: "Available" | "PreData" | "OutOfRange"
+/// - `executionPayloadStatus`: "valid" | "invalid" | "preMerge"
+/// - `dataAvailabilityStatus`: "Available" | "PreData" | "OutOfRange" | "NotRequired"
 /// - `source`: "block" | "regen" | "get_historical_state"
 ///
 /// Throws `error.InvalidExecutionPayloadStatus`, `error.InvalidDataAvailabilityStatus`,
@@ -48,6 +48,8 @@ pub fn parseOptions(options: ?js.Value) !st.TransitionOpts {
                         .valid
                     else if (std.mem.eql(u8, status_str, "invalid"))
                         .invalid
+                    else if (std.mem.eql(u8, status_str, "preMerge"))
+                        .pre_merge
                     else
                         return error.InvalidExecutionPayloadStatus;
             }
@@ -61,8 +63,8 @@ pub fn parseOptions(options: ?js.Value) !st.TransitionOpts {
                         .pre_data
                     else if (std.mem.eql(u8, da_str, "OutOfRange"))
                         .out_of_range
-                        // TODO(bing): uncomment once gloas support is in
-                        // else if (std.mem.eql(u8, da_str, "NotRequired")) .not_required;
+                    else if (std.mem.eql(u8, da_str, "NotRequired"))
+                        .not_required
                     else
                         return error.InvalidDataAvailabilityStatus;
             }

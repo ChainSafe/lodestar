@@ -18,9 +18,6 @@ const hasCompoundingWithdrawalCredential = @import("../utils/electra.zig").hasCo
 
 const Validator = types.phase0.Validator;
 
-/// Levels from a validators list root down to its elements: the chunks tree plus the length mix-in.
-pub const validators_depth: usize = @as(usize, types.phase0.Validators.chunk_depth) + 1;
-
 /// Fields that EpochTransitionCache.init needs to know about one validator.
 pub const ValidatorFields = struct {
     activation_eligibility_epoch: u64,
@@ -51,10 +48,59 @@ pub const ValidatorFields = struct {
     }
 };
 
+const Layout = union(enum) {
+    bounded: usize,
+    progressive,
+};
+
+const ValidatorSubtree = struct {
+    root: Node.Id,
+    depth: usize,
+    base: usize,
+    end: usize,
+};
+
+fn ValidatorSubtrees(comptime Validators: type) type {
+    return struct {
+        pool: *Node.Pool,
+        node: Node.Id,
+        len: usize,
+        base: usize = 0,
+        depth: usize,
+
+        fn init(pool: *Node.Pool, root: Node.Id, len: usize) !@This() {
+            return .{
+                .pool = pool,
+                .node = try root.getLeft(pool),
+                .len = len,
+                .depth = if (Validators.kind == .list) Validators.chunk_depth else 0,
+            };
+        }
+
+        fn next(self: *@This()) !?ValidatorSubtree {
+            if (self.base >= self.len) return null;
+            const capacity = @as(usize, 1) << @intCast(self.depth);
+            const subtree: ValidatorSubtree = .{
+                .root = if (Validators.kind == .list) self.node else try self.node.getLeft(self.pool),
+                .depth = self.depth,
+                .base = self.base,
+                .end = self.base + @min(capacity, self.len - self.base),
+            };
+            self.base = subtree.end;
+            if (Validators.kind == .progressive_list and self.base < self.len) {
+                self.node = try self.node.getRight(self.pool);
+                self.depth += 2;
+            }
+            return subtree;
+        }
+    };
+}
+
 pub const ValidatorFlatCache = struct {
     allocator: Allocator,
     pool: *Node.Pool,
     synced_root: ?Node.Id = null,
+    synced_layout: ?Layout = null,
     fields: std.MultiArrayList(ValidatorFields) = .empty,
     /// Leaves rewritten by the last `sync`.
     last_patched: usize = 0,
@@ -79,33 +125,51 @@ pub const ValidatorFlatCache = struct {
 
     /// Bring the cache in line with the validators list rooted at `root`.
     /// On error the cache is left empty and the next call refills it.
-    pub fn sync(self: *ValidatorFlatCache, root: Node.Id, new_len: usize) !void {
-        self.last_patched = 0;
-        if (self.synced_root) |old| {
-            if (old == root and self.len() == new_len) return;
+    pub fn sync(self: *ValidatorFlatCache, comptime Validators: type, root: Node.Id, new_len: usize) !void {
+        comptime {
+            if (Validators.Element != Validator or (Validators.kind != .list and Validators.kind != .progressive_list)) {
+                @compileError("validator cache requires a list of packed Validators");
+            }
         }
+        const layout: Layout = if (Validators.kind == .progressive_list) .progressive else .{ .bounded = Validators.chunk_depth };
+        self.last_patched = 0;
         errdefer self.invalidate();
+        if (new_len > Validators.limit) return error.LengthOverLimit;
+        const same_layout = if (self.synced_layout) |old| std.meta.eql(old, layout) else false;
+        if (self.synced_root) |old| {
+            if (old == root and self.len() == new_len and same_layout) return;
+        }
 
         const old_len = self.len();
         try self.fields.resize(self.allocator, new_len);
-
         try self.pool.ref(root);
         errdefer self.pool.unref(root);
 
-        if (self.synced_root) |old| {
-            try self.diffAndPatch(old, root, old_len, new_len);
-        } else {
-            var it = Node.DepthIterator.init(self.pool, root, @intCast(validators_depth), 0);
-            for (0..new_len) |i| try self.patch(i, try it.next());
+        const Subtrees = ValidatorSubtrees(Validators);
+        var subtrees = try Subtrees.init(self.pool, root, new_len);
+        var old_subtrees: ?Subtrees = if (same_layout and self.synced_root != null)
+            try Subtrees.init(self.pool, self.synced_root.?, old_len)
+        else
+            null;
+        while (try subtrees.next()) |subtree| {
+            const old_subtree = if (old_subtrees) |*it| try it.next() else null;
+            if (old_subtree) |old| {
+                try self.diffAndPatch(old.root, subtree.root, subtree.depth, subtree.base, old_len, new_len);
+            } else {
+                var it = Node.DepthIterator.init(self.pool, subtree.root, @intCast(subtree.depth), 0);
+                for (subtree.base..subtree.end) |i| try self.patch(i, try it.next());
+            }
         }
 
         if (self.synced_root) |old| self.pool.unref(old);
         self.synced_root = root;
+        self.synced_layout = layout;
     }
 
     pub fn invalidate(self: *ValidatorFlatCache) void {
         if (self.synced_root) |old| self.pool.unref(old);
         self.synced_root = null;
+        self.synced_layout = null;
         self.fields.clearRetainingCapacity();
     }
 
@@ -117,6 +181,8 @@ pub const ValidatorFlatCache = struct {
         self: *ValidatorFlatCache,
         old_root: Node.Id,
         new_root: Node.Id,
+        depth: usize,
+        base: usize,
         old_len: usize,
         new_len: usize,
     ) !void {
@@ -132,7 +198,7 @@ pub const ValidatorFlatCache = struct {
         var stack: BoundedArray(Frame, max_depth + 1) = .{};
 
         // Start: base of the tree
-        stack.push(.{ .old = old_root, .new = new_root, .depth = validators_depth, .base = 0 });
+        stack.push(.{ .old = old_root, .new = new_root, .depth = depth, .base = base });
 
         while (stack.pop()) |f| {
             // Subtrees starting at new_len or later contain no live validators

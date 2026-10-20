@@ -115,9 +115,32 @@ pub fn createSingleProof(
         return error.InvalidGindex;
     }
 
-    const path_len = gindex.pathLen();
-    var witnesses = try allocator.alloc([32]u8, path_len);
+    const witnesses = try allocator.alloc([32]u8, gindex.pathLen());
     errdefer allocator.free(witnesses);
+
+    return .{
+        .leaf = try createSingleProofInto(allocator, pool, root, gindex, witnesses),
+        .witnesses = witnesses,
+    };
+}
+
+/// Writes the leaf-to-root branch into caller-owned storage and returns the leaf root.
+/// Storage must match the path length and may be partially written on error.
+/// Allocates only when traversal materializes opaque nodes.
+pub fn createSingleProofInto(
+    allocator: Allocator,
+    pool: *Node.Pool,
+    root: Node.Id,
+    gindex: Gindex,
+    witnesses: [][32]u8,
+) (Node.Error || Error)![32]u8 {
+    if (@intFromEnum(gindex) < root_gindex_value) {
+        return error.InvalidGindex;
+    }
+    const path_len = gindex.pathLen();
+    if (witnesses.len != path_len) {
+        return error.InvalidWitnessLength;
+    }
 
     // Nested opaque (container_struct → chunked_leaf, or any future combination)
     // is legal: e.g. StructContainerType holding a FixedVectorType with
@@ -132,10 +155,7 @@ pub fn createSingleProof(
     }
 
     if (path_len == 0) {
-        return SingleProof{
-            .leaf = root.getRoot(pool).*,
-            .witnesses = witnesses,
-        };
+        return root.getRoot(pool).*;
     }
 
     var node_id = root;
@@ -159,10 +179,7 @@ pub fn createSingleProof(
         path.next();
     }
 
-    return SingleProof{
-        .leaf = node_id.getRoot(pool).*,
-        .witnesses = witnesses,
-    };
+    return node_id.getRoot(pool).*;
 }
 
 /// Build a fresh node tree from a single Merkle proof.

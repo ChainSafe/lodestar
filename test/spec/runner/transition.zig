@@ -155,12 +155,13 @@ pub fn Transition(comptime fork: ForkSeq) type {
                 }
                 try expectEqualBeaconStates(post, actual.state);
             } else {
-                _ = self.process() catch |err| {
-                    if (err == error.SkipZigTest) {
-                        return err;
-                    }
-                    return;
+                const unexpected = self.process() catch |err| {
+                    return test_case.expectConsensusInvalid(err);
                 };
+                defer {
+                    unexpected.deinit();
+                    self.pre.allocator.destroy(unexpected);
+                }
                 return error.ExpectedError;
             }
         }

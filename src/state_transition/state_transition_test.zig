@@ -307,7 +307,7 @@ test "proposer rewards should report only new attestation participation and rese
     const proposer = try cached.getBeaconProposer(try state.slot());
     var balances = try state.balances();
     const balance_before = try balances.get(proposer);
-    try processAttestations(.electra, allocator, std.testing.io, cached.config, cached.epoch_cache, state, &cached.proposer_rewards, &cached.slashings_cache, block.message.body.attestations.items, false);
+    try processAttestations(.electra, allocator, std.testing.io, cached.config, cached.epoch_cache, state, &cached.proposer_rewards, &cached.slashings_cache, block.message.body.attestations.items, null, false);
     const rewards = cached.getProposerRewards();
     try std.testing.expect(rewards.attestations > 0);
     try std.testing.expectEqual(rewards.attestations, try balances.get(proposer) - balance_before);
@@ -322,7 +322,7 @@ test "proposer rewards should report only new attestation participation and rese
     try std.testing.expectEqualDeep(rewards, cached.getProposerRewards());
     try std.testing.expectEqualDeep(root, (try cloned.state.hashTreeRoot()).*);
 
-    try processAttestations(.electra, allocator, std.testing.io, cached.config, cached.epoch_cache, state, &cached.proposer_rewards, &cached.slashings_cache, block.message.body.attestations.items, false);
+    try processAttestations(.electra, allocator, std.testing.io, cached.config, cached.epoch_cache, state, &cached.proposer_rewards, &cached.slashings_cache, block.message.body.attestations.items, null, false);
     try std.testing.expectEqual(@as(u64, 0), cached.getProposerRewards().attestations);
     try std.testing.expectEqual(balance_before + rewards.attestations, try balances.get(proposer));
 }

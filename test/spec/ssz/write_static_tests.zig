@@ -47,6 +47,8 @@ pub fn main(init: std.process.Init) !void {
         "capella",
         "deneb",
         "electra",
+        "fulu",
+        "gloas",
     };
 
     for (supported_forks) |fork| {
@@ -58,6 +60,7 @@ pub fn main(init: std.process.Init) !void {
         defer allocator.free(static_tests_dir_name);
 
         const static_tests_dir = try std.Io.Dir.openDir(.cwd(), io, static_tests_dir_name, .{ .iterate = true });
+        defer static_tests_dir.close(io);
         var static_tests_dir_it = static_tests_dir.iterate();
         while (try static_tests_dir_it.next(io)) |g_test_entry| {
             switch (g_test_entry.kind) {
@@ -68,6 +71,13 @@ pub fn main(init: std.process.Init) !void {
             }
 
             const type_name = g_test_entry.name;
+            // Partial-column DAS types are not implemented yet. Keep this list
+            // aligned with Lodestar's specTestIterator.ts; state-transition
+            // containers and all other Gloas types remain required.
+            if (unsupportedPartialColumnType(fork, type_name)) {
+                std.log.info("unsupported SSZ static type: {s}/{s}", .{ fork, type_name });
+                continue;
+            }
 
             const type_name_tests_dir_name = try std.fs.path.join(allocator, &[_][]const u8{
                 static_tests_dir_name,
@@ -76,6 +86,7 @@ pub fn main(init: std.process.Init) !void {
             defer allocator.free(type_name_tests_dir_name);
 
             const type_name_tests_dir = try std.Io.Dir.openDir(.cwd(), io, type_name_tests_dir_name, .{ .iterate = true });
+            defer type_name_tests_dir.close(io);
             var type_name_tests_dir_it = type_name_tests_dir.iterate();
             while (try type_name_tests_dir_it.next(io)) |type_name_test_entry| {
                 switch (type_name_test_entry.kind) {
@@ -94,6 +105,7 @@ pub fn main(init: std.process.Init) !void {
                 defer allocator.free(test_suite_dir_name);
 
                 const test_suite_dir = try std.Io.Dir.openDir(.cwd(), io, test_suite_dir_name, .{ .iterate = true });
+                defer test_suite_dir.close(io);
                 var test_suite_dir_it = test_suite_dir.iterate();
                 while (try test_suite_dir_it.next(io)) |test_suite_entry| {
                     switch (test_suite_entry.kind) {
@@ -120,6 +132,20 @@ pub fn main(init: std.process.Init) !void {
     try file_writer.flush();
 }
 
+fn unsupportedPartialColumnType(fork: []const u8, type_name: []const u8) bool {
+    if (!std.mem.eql(u8, fork, "fulu") and !std.mem.eql(u8, fork, "gloas")) return false;
+    if (std.mem.eql(u8, fork, "fulu") and std.mem.eql(u8, type_name, "PartialDataColumnHeader")) return true;
+    const unsupported = [_][]const u8{
+        "PartialDataColumnGroupID",
+        "PartialDataColumnPartsMetadata",
+        "PartialDataColumnSidecar",
+    };
+    for (unsupported) |name| {
+        if (std.mem.eql(u8, name, type_name)) return true;
+    }
+    return false;
+}
+
 /// Assumes the following global decls
 /// - std, allocator, spec_test_options, generic_tests_dir_name, test_case, {tests_dir}, types.{type_name}
 fn writeStaticTest(
@@ -141,7 +167,10 @@ fn writeStaticTest(
         \\    }});
         \\    defer allocator.free(test_dir_name);
         \\
-        \\    var test_dir = std.Io.Dir.openDir(.cwd(), std.testing.io, test_dir_name, .{{}}) catch return error.SkipZigTest;
+        \\    var test_dir = std.Io.Dir.openDir(.cwd(), std.testing.io, test_dir_name, .{{}}) catch |err| switch (err) {{
+        \\        error.FileNotFound => return error.SkipZigTest,
+        \\        else => return err,
+        \\    }};
         \\    defer test_dir.close(std.testing.io);
         \\    try test_case.validTestCase(types.{s}.{s}, allocator, test_dir, "roots.yaml");
         \\}}

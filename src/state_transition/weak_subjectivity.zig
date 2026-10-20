@@ -24,11 +24,20 @@ pub fn getLatestWeakSubjectivityCheckpointEpoch(epoch_cache: *const EpochCache) 
 }
 
 /// Returns the weak subjectivity period for the current state, using cached
-/// values from `EpochCache`. Pre-Electra and Electra+ use different formulas.
+/// values from `EpochCache` and the fork's churn limits.
 pub fn computeWeakSubjectivityPeriodCachedState(epoch_cache: *const EpochCache) u64 {
     const config = epoch_cache.config;
     const fork = config.forkSeq(epoch_cache.epoch * preset.SLOTS_PER_EPOCH);
-    const active_validator_count = epoch_cache.current_shuffling.get().active_indices.len;
+
+    if (fork.gte(.gloas)) {
+        return computeWeakSubjectivityPeriodFromConstituentsGloas(
+            epoch_cache.total_active_balance_increments,
+            validator.getExitChurnLimit(epoch_cache),
+            validator.getActivationBalanceChurnLimit(epoch_cache),
+            validator.getConsolidationChurnLimitForFork(.gloas, epoch_cache),
+            config.chain.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
+        );
+    }
 
     if (fork.gte(.electra)) {
         return computeWeakSubjectivityPeriodFromConstituentsElectra(
@@ -38,6 +47,7 @@ pub fn computeWeakSubjectivityPeriodCachedState(epoch_cache: *const EpochCache) 
         );
     }
 
+    const active_validator_count = epoch_cache.current_shuffling.get().active_indices.len;
     return computeWeakSubjectivityPeriodFromConstituentsPhase0(
         active_validator_count,
         epoch_cache.total_active_balance_increments,
@@ -105,7 +115,7 @@ pub fn computeWeakSubjectivityPeriodFromConstituentsPhase0(
     return ws_period;
 }
 
-/// Electra+ WS period.
+/// Electra and Fulu WS period.
 pub fn computeWeakSubjectivityPeriodFromConstituentsElectra(
     total_balance_by_increment: u64,
     /// Not the same as `churn_limit` above — measured in Gwei, computed via `getBalanceChurnLimitFromCache`.
@@ -116,6 +126,27 @@ pub fn computeWeakSubjectivityPeriodFromConstituentsElectra(
 
     const t: u128 = total_balance_by_increment;
     const delta: u128 = balance_churn_limit;
+    const epochs_for_validator_set_churn: u64 = @intCast(@divFloor(
+        SAFETY_DECAY * t * preset.EFFECTIVE_BALANCE_INCREMENT,
+        2 * delta * 100,
+    ));
+
+    return min_withdrawability_delay + epochs_for_validator_set_churn;
+}
+
+fn computeWeakSubjectivityPeriodFromConstituentsGloas(
+    total_balance_by_increment: u64,
+    exit_churn_limit: u64,
+    activation_churn_limit: u64,
+    consolidation_churn_limit: u64,
+    min_withdrawability_delay: u64,
+) u64 {
+    const t: u128 = total_balance_by_increment;
+    const delta = @divFloor(2 * @as(u128, exit_churn_limit), 3) +
+        @divFloor(@as(u128, activation_churn_limit), 3) +
+        consolidation_churn_limit;
+    std.debug.assert(delta > 0);
+
     const epochs_for_validator_set_churn: u64 = @intCast(@divFloor(
         SAFETY_DECAY * t * preset.EFFECTIVE_BALANCE_INCREMENT,
         2 * delta * 100,

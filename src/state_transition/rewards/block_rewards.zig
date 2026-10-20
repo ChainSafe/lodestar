@@ -16,6 +16,7 @@ const CachedBeaconState = state_cache.CachedBeaconState;
 const ProposerRewards = state_cache.ProposerRewards;
 const processAttestationsAltair = @import("../block/process_attestation_altair.zig").processAttestationsAltair;
 const findAttesterSlashableIndices = @import("../utils/attestation.zig").findAttesterSlashableIndices;
+const findAttesterSlashableIndicesFromSlices = @import("../utils/attestation.zig").findAttesterSlashableIndicesFromSlices;
 
 const ValidatorIndex = types.primitive.ValidatorIndex.Type;
 
@@ -82,7 +83,7 @@ pub fn computeBlockRewards(
     for (body.inner.attester_slashings.items) |*slashing| {
         var indices: std.ArrayList(ValidatorIndex) = .empty;
         defer indices.deinit(allocator);
-        try findAttesterSlashableIndices(allocator, slashing, &indices);
+        try findAttesterSlashableIndicesFromSlices(allocator, slashing.attestation_1.attesting_indices.items, slashing.attestation_2.attesting_indices.items, &indices);
         for (indices.items) |offender| {
             attester_slashings += @divFloor(try effectiveBalance(fork, allocator, fork_state, offender), quotient);
         }
@@ -124,6 +125,7 @@ fn computeAttestationsReward(
         &scratch.proposer_rewards,
         &scratch.slashings_cache,
         body.inner.attestations.items,
+        null,
         false,
     );
 

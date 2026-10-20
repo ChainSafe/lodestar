@@ -10,7 +10,7 @@ const ProposerRewards = @import("../cache/state_cache.zig").ProposerRewards;
 const SlashingsCache = @import("../cache/slashings_cache.zig").SlashingsCache;
 const buildSlashingsCacheIfNeeded = @import("../cache/slashings_cache.zig").buildFromStateIfNeeded;
 const isSlashableAttestationData = @import("../utils/attestation.zig").isSlashableAttestationData;
-const findAttesterSlashableIndices = @import("../utils/attestation.zig").findAttesterSlashableIndices;
+const findAttesterSlashableIndicesFromSlices = @import("../utils/attestation.zig").findAttesterSlashableIndicesFromSlices;
 const isValidIndexedAttestation = @import("./is_valid_indexed_attestation.zig").isValidIndexedAttestation;
 const isSlashableValidator = @import("../utils/validator.zig").isSlashableValidator;
 const slashValidator = @import("./slash_validator.zig").slashValidator;
@@ -50,8 +50,8 @@ pub fn processAttesterSlashing(
             attester_slashing.attestation_2.attesting_indices.items.len,
         ),
     );
-    try findAttesterSlashableIndices(allocator, attester_slashing, &intersecting_indices);
     defer intersecting_indices.deinit(allocator);
+    try findAttesterSlashableIndicesFromSlices(allocator, attester_slashing.attestation_1.attesting_indices.items, attester_slashing.attestation_2.attesting_indices.items, &intersecting_indices);
 
     var slashed_any: bool = false;
     var validators = try state.validators();

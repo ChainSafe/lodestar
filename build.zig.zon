@@ -310,6 +310,12 @@
                 .imports = .{.spec_test_options},
             },
         },
+        .download_ssz_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/download_ssz_spec_tests.zig",
+                .imports = .{.spec_test_options},
+            },
+        },
         .write_spec_tests = .{
             .root_module = .{
                 .root_source_file = "test/spec/write_spec_tests.zig",
@@ -510,6 +516,7 @@
                     .bls,
                     .persistent_merkle_tree,
                     .hex,
+                    .yaml,
                 },
             },
         },

@@ -8,6 +8,7 @@ const types = @import("consensus_types");
 const preset = @import("preset").preset;
 const c = @import("constants");
 const Node = @import("persistent_merkle_tree").Node;
+const ForkTypes = @import("fork_types").ForkTypes;
 
 /// Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag
 const TIMELY_TARGET = 1 << c.TIMELY_TARGET_FLAG_INDEX;
@@ -40,8 +41,8 @@ pub fn processEffectiveBalanceUpdates(
     defer if (cache.balances == null) {
         allocator.free(balances);
     };
-    var previous_epoch_participation: *types.altair.EpochParticipation.TreeView = undefined;
-    var current_epoch_participation: *types.altair.EpochParticipation.TreeView = undefined;
+    var previous_epoch_participation: *ForkTypes(if (fork.gte(.altair)) fork else .altair).BeaconState.getFieldType("previous_epoch_participation").TreeView = undefined;
+    var current_epoch_participation: *ForkTypes(if (fork.gte(.altair)) fork else .altair).BeaconState.getFieldType("current_epoch_participation").TreeView = undefined;
     if (comptime fork.gte(.altair)) {
         previous_epoch_participation = try state.previousEpochParticipation();
         current_epoch_participation = try state.currentEpochParticipation();

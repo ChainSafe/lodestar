@@ -15,7 +15,6 @@ describe("native state transition boundaries", () => {
     ["truncated block", "InvalidSignedBlockBytes"],
     ["invalid signed block offset", "InvalidSignedBlockBytes"],
     ["noncanonical signed block offset", "InvalidSignedBlockBytes"],
-    ["Gloas slots", "UnsupportedFork"],
     ["negative slot", "InvalidSlot"],
     ["fractional slot", "InvalidSlot"],
     ["negative block-root slot", "InvalidSlot"],
@@ -26,9 +25,6 @@ describe("native state transition boundaries", () => {
     ["fractional committee epoch", "InvalidUnsignedInteger"],
     ["zero proof index", "Failed to get single proof"],
     ["truncated loaded state", "InvalidStateBytes"],
-    ["Gloas loaded state", "UnsupportedFork"],
-    ["Gloas block", "UnsupportedFork"],
-    ["Gloas state", "UnsupportedFork"],
   ] satisfies [BoundaryScenario, string][])("rejects %s without aborting", (scenario, error) => {
     const result = spawnSync(
       process.execPath,

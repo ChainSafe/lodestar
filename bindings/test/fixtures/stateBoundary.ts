@@ -12,25 +12,6 @@ pubkeyCache.ensureCapacity(16);
 const state = bindings.BeaconStateView.createFromBytes(ssz.fulu.BeaconState.serialize(createStfState()), config);
 
 const operations = {
-  "Gloas block": () =>
-    state.stateTransition(
-      ssz.fulu.SignedBeaconBlock.serialize({
-        ...ssz.fulu.SignedBeaconBlock.defaultValue(),
-        message: {...ssz.fulu.BeaconBlock.defaultValue(), slot: state.slot + 1},
-      }),
-      false
-    ),
-  "Gloas loaded state": () =>
-    state.loadOtherState(ssz.fulu.BeaconState.serialize({...createStfState(), slot: state.slot + 1})),
-  "Gloas slots": () => state.processSlots(state.slot + 1),
-  "Gloas state": () =>
-    bindings.BeaconStateView.createFromBytes(
-      ssz.fulu.BeaconState.serialize({
-        ...createStfState(),
-        slot: state.slot + 1,
-      }),
-      config
-    ),
   "NaN validator index": () => state.getValidator(NaN),
   "fractional committee epoch": () => state.getBeaconCommitteeCountPerSlot(0.5),
   "fractional slot": () => state.processSlots(1.5),

@@ -5,6 +5,7 @@ const ValidatorIndex = ct.primitive.ValidatorIndex.Type;
 pub const AnyAttesterSlashing = union(enum) {
     phase0: *ct.phase0.AttesterSlashing.Type,
     electra: *ct.electra.AttesterSlashing.Type,
+    gloas: *ct.gloas.AttesterSlashing.Type,
 
     /// Get attesting indices from attestation_1.
     pub fn attestingIndices1(self: *const AnyAttesterSlashing) []const ValidatorIndex {
@@ -24,6 +25,7 @@ pub const AnyAttesterSlashing = union(enum) {
 pub const AnyAttesterSlashings = union(enum) {
     phase0: ct.phase0.AttesterSlashings.Type,
     electra: ct.electra.AttesterSlashings.Type,
+    gloas: ct.gloas.AttesterSlashings.Type,
 
     pub fn length(self: *const AnyAttesterSlashings) usize {
         return switch (self.*) {
@@ -35,6 +37,7 @@ pub const AnyAttesterSlashings = union(enum) {
         return switch (self.*) {
             .phase0 => |attester_slashings| .{ .phase0 = attester_slashings.items },
             .electra => |attester_slashings| .{ .electra = attester_slashings.items },
+            .gloas => |attester_slashings| .{ .gloas = attester_slashings.items },
         };
     }
 };
@@ -42,4 +45,5 @@ pub const AnyAttesterSlashings = union(enum) {
 pub const AnyAttesterSlashingItems = union(enum) {
     phase0: []ct.phase0.AttesterSlashing.Type,
     electra: []ct.electra.AttesterSlashing.Type,
+    gloas: []ct.gloas.AttesterSlashing.Type,
 };

@@ -16,6 +16,7 @@ const seed_utils = @import("../utils/seed.zig");
 const getSeed = seed_utils.getSeed;
 const computeProposers = seed_utils.computeProposers;
 const Node = @import("persistent_merkle_tree").Node;
+const FLAG_UNSLASHED = @import("../utils/attester_status.zig").FLAG_UNSLASHED;
 
 /// Updates `proposer_lookahead` during epoch processing.
 /// Shifts out the oldest epoch and appends the new epoch at the end.
@@ -88,12 +89,21 @@ pub fn processProposerLookahead(
     var seed: [32]u8 = undefined;
     try getSeed(fork, state, new_epoch, c.DOMAIN_BEACON_PROPOSER, &seed);
 
+    var eligible_proposers: std.ArrayList(ValidatorIndex) = .empty;
+    defer eligible_proposers.deinit(allocator);
+    if (comptime fork.gte(.gloas)) {
+        try eligible_proposers.ensureTotalCapacity(allocator, next_shuffling_rc.get().active_indices.len);
+        for (next_shuffling_rc.get().active_indices) |index| {
+            if (epoch_transition_cache.flags[index] & FLAG_UNSLASHED != 0) eligible_proposers.appendAssumeCapacity(index);
+        }
+    }
+
     try computeProposers(
         fork,
         allocator,
         seed,
         new_epoch,
-        next_shuffling_rc.get().active_indices,
+        if (comptime fork.gte(.gloas)) eligible_proposers.items else next_shuffling_rc.get().active_indices,
         effective_balance_increments,
         proposer_lookahead[last_epoch_start..],
     );

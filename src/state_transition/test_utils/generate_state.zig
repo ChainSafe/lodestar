@@ -175,6 +175,8 @@ pub const TestCachedBeaconState = struct {
     pubkey_cache: *PubkeyCache,
     cached_state: *CachedBeaconState,
     epoch_transition_cache: *state_transition.EpochTransitionCache,
+    owned_config_name: []const u8,
+    owned_blob_schedule: []const ChainConfig.BlobScheduleEntry,
 
     pub fn init(allocator: Allocator, pool: *Node.Pool, validator_count: usize) !TestCachedBeaconState {
         var state = try generateElectraState(allocator, pool, active_chain_config, validator_count);
@@ -189,6 +191,28 @@ pub const TestCachedBeaconState = struct {
     }
 
     pub fn initFromState(allocator: Allocator, pool: *Node.Pool, state: *AnyBeaconState, fork: ForkSeq, fork_epoch: Epoch) !TestCachedBeaconState {
+        return initFromStateWithConfig(allocator, pool, state, fork, fork_epoch, .{});
+    }
+
+    /// Apply explicit fixture overrides after scheduling the test fork. Copies all borrowed
+    /// config slices, so the fixture parser may be released immediately after this call.
+    /// Takes ownership of `state` only on success; callers retain it on every error path.
+    pub fn initFromStateWithConfig(
+        allocator: Allocator,
+        pool: *Node.Pool,
+        state: *AnyBeaconState,
+        fork: ForkSeq,
+        fork_epoch: Epoch,
+        overrides: ChainConfig.OptionalChainConfig,
+    ) !TestCachedBeaconState {
+        var chain_config = getConfig(active_chain_config, fork, fork_epoch).merge(overrides);
+        const owned_config_name = try allocator.dupe(u8, chain_config.CONFIG_NAME);
+        errdefer allocator.free(owned_config_name);
+        const owned_blob_schedule = try allocator.dupe(ChainConfig.BlobScheduleEntry, chain_config.BLOB_SCHEDULE);
+        errdefer allocator.free(owned_blob_schedule);
+        chain_config.CONFIG_NAME = owned_config_name;
+        chain_config.BLOB_SCHEDULE = owned_blob_schedule;
+
         const pubkey_cache = try allocator.create(PubkeyCache);
         errdefer allocator.destroy(pubkey_cache);
         pubkey_cache.* = try PubkeyCache.initCapacity(
@@ -201,7 +225,6 @@ pub const TestCachedBeaconState = struct {
             ),
         );
         errdefer pubkey_cache.deinit();
-        const chain_config = getConfig(active_chain_config, fork, fork_epoch);
         const config = try allocator.create(BeaconConfig);
         errdefer allocator.destroy(config);
         config.* = BeaconConfig.init(chain_config, (try state.genesisValidatorsRoot()).*);
@@ -215,6 +238,13 @@ pub const TestCachedBeaconState = struct {
             .skip_sync_committee_cache = state.forkSeq() == .phase0,
             .skip_sync_pubkeys = false,
         });
+        errdefer {
+            // Undo only the cache's ownership until this constructor succeeds. The caller's
+            // error cleanup still owns `state`, so cached_state.deinit() would free it twice.
+            cached_state.epoch_cache.deinit();
+            cached_state.slashings_cache.deinit();
+            allocator.destroy(cached_state);
+        }
 
         const epoch_transition_cache = try allocator.create(state_transition.EpochTransitionCache);
         errdefer allocator.destroy(epoch_transition_cache);
@@ -232,6 +262,8 @@ pub const TestCachedBeaconState = struct {
             .pubkey_cache = pubkey_cache,
             .cached_state = cached_state,
             .epoch_transition_cache = epoch_transition_cache,
+            .owned_config_name = owned_config_name,
+            .owned_blob_schedule = owned_blob_schedule,
         };
     }
 
@@ -244,6 +276,8 @@ pub const TestCachedBeaconState = struct {
         @import("../state_transition.zig").deinitReusedEpochTransitionCache();
         self.allocator.destroy(self.epoch_transition_cache);
         self.allocator.destroy(self.config);
+        self.allocator.free(self.owned_blob_schedule);
+        self.allocator.free(self.owned_config_name);
     }
 };
 
@@ -303,4 +337,29 @@ test TestCachedBeaconState {
 
     var test_state = try TestCachedBeaconState.init(allocator, &pool, 256);
     defer test_state.deinit();
+
+    const source = try allocator.create(AnyBeaconState);
+    var source_owned = true;
+    defer if (source_owned) allocator.destroy(source);
+    source.* = try test_state.cached_state.state.clone(.{ .transfer_cache = false });
+    defer if (source_owned) source.deinit();
+
+    var config_name = [_]u8{ 'o', 'w', 'n', 'e', 'd' };
+    var blob_schedule = [_]ChainConfig.BlobScheduleEntry{.{ .EPOCH = 10, .MAX_BLOBS_PER_BLOCK = 12 }};
+    const fork_epoch = test_state.config.chain.ELECTRA_FORK_EPOCH;
+    var overridden = try TestCachedBeaconState.initFromStateWithConfig(allocator, &pool, source, .electra, fork_epoch, .{
+        .CONFIG_NAME = &config_name,
+        .BLOB_SCHEDULE = &blob_schedule,
+        .MIN_BUILDER_WITHDRAWABILITY_DELAY = 2,
+    });
+    source_owned = false;
+    defer overridden.deinit();
+    @memset(&config_name, 'x');
+    blob_schedule[0].MAX_BLOBS_PER_BLOCK = 99;
+
+    try std.testing.expectEqualStrings("owned", overridden.config.chain.CONFIG_NAME);
+    try std.testing.expectEqual(@as(u64, 12), overridden.config.chain.BLOB_SCHEDULE[0].MAX_BLOBS_PER_BLOCK);
+    try std.testing.expectEqual(@as(u64, 2), overridden.cached_state.epoch_cache.config.chain.MIN_BUILDER_WITHDRAWABILITY_DELAY);
+    try std.testing.expectEqual(@as(u64, 0), overridden.config.chain.ALTAIR_FORK_EPOCH);
+    try std.testing.expectEqual(fork_epoch, overridden.config.chain.ELECTRA_FORK_EPOCH);
 }

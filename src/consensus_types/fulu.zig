@@ -38,6 +38,8 @@ pub const Slashings = phase0.Slashings;
 pub const Balances = phase0.Balances;
 pub const RandaoMixes = phase0.RandaoMixes;
 
+pub const EpochParticipation = altair.EpochParticipation;
+pub const InactivityScores = altair.InactivityScores;
 pub const SyncAggregate = altair.SyncAggregate;
 pub const SyncCommittee = altair.SyncCommittee;
 pub const SyncCommitteeMessage = altair.SyncCommitteeMessage;
@@ -61,6 +63,9 @@ pub const BlobKzgCommitments = deneb.BlobKzgCommitments;
 pub const PendingDeposit = electra.PendingDeposit;
 pub const PendingPartialWithdrawal = electra.PendingPartialWithdrawal;
 pub const PendingConsolidation = electra.PendingConsolidation;
+pub const PendingDeposits = electra.PendingDeposits;
+pub const PendingPartialWithdrawals = electra.PendingPartialWithdrawals;
+pub const PendingConsolidations = electra.PendingConsolidations;
 pub const DepositRequest = electra.DepositRequest;
 pub const WithdrawalRequest = electra.WithdrawalRequest;
 pub const ConsolidationRequest = electra.ConsolidationRequest;
@@ -77,15 +82,21 @@ pub const SignedBeaconBlockHeader = electra.SignedBeaconBlockHeader;
 
 // Execution payload remains the same as Electra
 pub const ExecutionPayload = electra.ExecutionPayload;
+pub const ExecutionPayloadHeader = electra.ExecutionPayloadHeader;
 pub const VersionedHashes = electra.VersionedHashes;
 pub const NewPayloadRequest = electra.NewPayloadRequest;
-pub const ExecutionPayloadHeader = electra.ExecutionPayloadHeader;
 
 // DAS-related custom types
 pub const RowIndex = p.Uint64;
 pub const ColumnIndex = p.Uint64;
 pub const CustodyIndex = p.Uint64;
 pub const Cell = ssz.ByteVectorType(c.BYTES_PER_FIELD_ELEMENT * preset.FIELD_ELEMENTS_PER_CELL);
+pub const DataColumnIndices = ssz.FixedListType(ColumnIndex, @import("preset").NUMBER_OF_COLUMNS, .{});
+
+pub const DataColumnsByRootIdentifier = ssz.VariableContainerType(struct {
+    block_root: p.Root,
+    columns: DataColumnIndices,
+});
 
 // New containers for Data Availability Sampling
 pub const DataColumnSidecar = ssz.VariableContainerType(struct {

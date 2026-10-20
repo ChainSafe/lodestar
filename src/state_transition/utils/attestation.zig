@@ -25,8 +25,10 @@ pub fn isSlashableAttestationData(data1: *const AttestationData, data2: *const A
 /// Pre-requisite: isValidIndexedAttestation already checks for attesting indices to be sorted and unique.
 /// Without that check, this would be incorrect.
 pub fn findAttesterSlashableIndices(allocator: Allocator, attester_slashing: *const AttesterSlashing, indices: *std.ArrayList(ValidatorIndex)) !void {
-    const a = attester_slashing.attestation_1.attesting_indices.items;
-    const b = attester_slashing.attestation_2.attesting_indices.items;
+    return findAttesterSlashableIndicesFromSlices(allocator, attester_slashing.attestation_1.attesting_indices.items, attester_slashing.attestation_2.attesting_indices.items, indices);
+}
+
+pub fn findAttesterSlashableIndicesFromSlices(allocator: Allocator, a: []const ValidatorIndex, b: []const ValidatorIndex, indices: *std.ArrayList(ValidatorIndex)) !void {
     var i: usize = 0;
     var j: usize = 0;
     while (i < a.len and j < b.len) {

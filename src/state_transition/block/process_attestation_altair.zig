@@ -20,6 +20,7 @@ const getBeaconProposer = @import("../cache/get_beacon_proposer.zig").getBeaconP
 const Checkpoint = types.phase0.Checkpoint.Type;
 const isTimelyTarget = @import("./process_attestation_phase0.zig").isTimelyTarget;
 const increaseBalance = @import("../utils/balance.zig").increaseBalance;
+const isAttestationSameSlotRootCache = @import("../utils/gloas.zig").isAttestationSameSlotRootCache;
 
 const PROPOSER_REWARD_DOMINATOR = ((c.WEIGHT_DENOMINATOR - c.PROPOSER_WEIGHT) * c.WEIGHT_DENOMINATOR) / c.PROPOSER_WEIGHT;
 
@@ -42,6 +43,7 @@ pub fn processAttestationsAltair(
     proposer_rewards: *ProposerRewards,
     slashings_cache: *const SlashingsCache,
     attestations: []const ForkTypes(fork).Attestation.Type,
+    parent_slot: ?u64,
     verify_signature: bool,
 ) !void {
     const effective_balance_increments = epoch_cache.effective_balance_increments.get().items;
@@ -56,13 +58,14 @@ pub fn processAttestationsAltair(
     var new_seen_attesters: u64 = 0;
     var new_seen_attesters_effective_balance: u64 = 0;
 
+    var payment_weight: [2 * preset.SLOTS_PER_EPOCH]u64 = @splat(0);
     var proposer_reward: u64 = 0;
     for (attestations) |*attestation| {
         const data = &attestation.data;
         try validateAttestation(fork, epoch_cache, state, attestation);
 
         // Retrieve the validator indices from the attestation participation bitfield
-        var attesting_indices = try if (comptime fork.lt(.electra)) epoch_cache.getAttestingIndicesPhase0(allocator, attestation) else epoch_cache.getAttestingIndicesElectra(allocator, attestation);
+        var attesting_indices = try epoch_cache.getAttestingIndices(fork, allocator, attestation);
         defer attesting_indices.deinit(allocator);
 
         // this check is done last because its the most expensive (if signature verification is toggled on)
@@ -86,7 +89,8 @@ pub fn processAttestationsAltair(
 
         const in_current_epoch = data.target.epoch == current_epoch;
         var epoch_participation = if (in_current_epoch) try state.currentEpochParticipation() else try state.previousEpochParticipation();
-        const flags_attestation = try getAttestationParticipationStatus(fork, data, state_slot - data.slot, current_epoch, root_cache);
+        const flags_attestation = try getAttestationParticipationStatus(fork, data, state_slot - data.slot, current_epoch, root_cache, parent_slot);
+        const same_slot = if (comptime fork.gte(.gloas)) try isAttestationSameSlotRootCache(fork, root_cache, data) else false;
 
         // For each participant, update their participation
         // In epoch processing, this participation info is used to calculate balance updates
@@ -103,6 +107,12 @@ pub fn processAttestationsAltair(
 
             // Returns flags that are NOT set before (~ bitwise NOT) AND are set after
             const flags_new_set = ~flags & flags_attestation;
+            if (comptime fork.gte(.gloas)) {
+                if (same_slot and flags == 0 and flags_new_set != 0) {
+                    const payment_index = (if (in_current_epoch) @as(usize, preset.SLOTS_PER_EPOCH) else 0) + data.slot % preset.SLOTS_PER_EPOCH;
+                    payment_weight[payment_index] += effective_balance_increments[validator_index];
+                }
+            }
             if (flags_new_set != 0) {
                 new_seen_attesters += 1;
                 new_seen_attesters_effective_balance += effective_balance_increments[validator_index];
@@ -138,6 +148,19 @@ pub fn processAttestationsAltair(
         proposer_reward += @divFloor(proposer_reward_numerator, PROPOSER_REWARD_DOMINATOR);
     }
 
+    if (comptime fork.gte(.gloas)) {
+        var payments = try state.inner.get("builder_pending_payments");
+        for (payment_weight, 0..) |weight, i| {
+            if (weight == 0) continue;
+            var payment: ForkTypes(fork).BuilderPendingPayment.Type = undefined;
+            try payments.getValue(undefined, i, &payment);
+            if (payment.withdrawal.amount > 0) {
+                payment.weight += weight * preset.EFFECTIVE_BALANCE_INCREMENT;
+                try payments.setValue(i, &payment);
+            }
+        }
+    }
+
     metrics.state_transition.new_seen_attesters_per_block.set(new_seen_attesters);
     metrics.state_transition.new_seen_attesters_effective_balance_per_block.set(new_seen_attesters_effective_balance);
     metrics.state_transition.attestations_per_block.set(@intCast(attestations.len));
@@ -152,6 +175,7 @@ pub fn getAttestationParticipationStatus(
     inclusion_delay: u64,
     current_epoch: Epoch,
     root_cache: *RootCache(fork),
+    parent_slot: ?u64,
 ) !u8 {
     const justified_checkpoint = if (data.target.epoch == current_epoch)
         &root_cache.current_justified_checkpoint
@@ -163,8 +187,20 @@ pub fn getAttestationParticipationStatus(
     const is_matching_target = std.mem.eql(u8, &data.target.root, try root_cache.getBlockRoot(data.target.epoch));
 
     // a timely head is only be set if the target is _also_ matching
-    const is_matching_head =
+    var is_matching_head =
         is_matching_target and std.mem.eql(u8, &data.beacon_block_root, try root_cache.getBlockRootAtSlot(data.slot));
+
+    if (comptime fork.gte(.gloas)) {
+        const same_slot = try isAttestationSameSlotRootCache(fork, root_cache, data);
+        if (same_slot) {
+            if (data.index != 0) return error.SameSlotAttestationMustIndicateEmptyPayload;
+        } else {
+            if (data.index > 1) return error.InvalidAttestationPayloadIndex;
+            const parent = parent_slot orelse try root_cache.state.latestBlockHeaderSlot();
+            var availability = try root_cache.state.inner.getReadonly("execution_payload_availability");
+            is_matching_head = is_matching_head and ((data.index == 1) == try availability.get(parent % preset.SLOTS_PER_HISTORICAL_ROOT));
+        }
+    }
 
     var flags: u8 = 0;
     if (is_matching_source and inclusion_delay <= SLOTS_PER_EPOCH_SQRT) flags |= TIMELY_SOURCE;

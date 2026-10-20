@@ -95,7 +95,7 @@ fn fillChunks(chunks: *align(64) [ChunkedLeaf.K][32]u8, valid: usize) void {
 }
 
 // Verifies a proof for gindex 6 (depth 2, index 2) reconstructs the original root.
-test "single proof roundtrip" {
+test "single proof into caller storage roundtrip without allocations" {
     var pool = try Node.Pool.init(.{ .page_allocator = testing.allocator, .allocator = testing.allocator, .pool_size = 128 });
     defer pool.deinit();
 
@@ -118,22 +118,31 @@ test "single proof roundtrip" {
 
     const gindex = Gindex.fromDepth(2, 2);
 
-    var single_proof = try proof.createSingleProof(testing.allocator, &pool, root, gindex);
-    defer single_proof.deinit(testing.allocator);
+    var failing = testing.FailingAllocator.init(testing.allocator, .{ .fail_index = 0 });
+    var witnesses: [2][32]u8 = undefined;
+    const leaf = try proof.createSingleProofInto(failing.allocator(), &pool, root, gindex, &witnesses);
 
-    try testing.expectEqualSlices(u8, &leaf_hashes[2], &single_proof.leaf);
-    try testing.expectEqual(@as(usize, 2), single_proof.witnesses.len);
+    try testing.expectEqualSlices(u8, &leaf_hashes[2], &leaf);
 
     const root_hash = root.getRoot(&pool).*;
 
     var pool2 = try Node.Pool.init(.{ .page_allocator = testing.allocator, .allocator = testing.allocator, .pool_size = 128 });
     defer pool2.deinit();
 
-    const reconstructed = try proof.createNodeFromSingleProof(&pool2, gindex, single_proof.leaf, single_proof.witnesses);
+    const reconstructed = try proof.createNodeFromSingleProof(&pool2, gindex, leaf, &witnesses);
     defer pool2.unref(reconstructed);
 
     const reconstructed_hash = reconstructed.getRoot(&pool2).*;
     try testing.expectEqualSlices(u8, &root_hash, &reconstructed_hash);
+
+    var invalid_witnesses: [3][32]u8 = @splat(makeLeaf(0xaa));
+    const unchanged = invalid_witnesses;
+    for ([_]usize{ 0, 1, 3 }) |len| {
+        try testing.expectError(error.InvalidWitnessLength, proof.createSingleProofInto(failing.allocator(), &pool, root, gindex, invalid_witnesses[0..len]));
+        try testing.expectEqualDeep(unchanged, invalid_witnesses);
+    }
+    const root_proof = try proof.createSingleProofInto(failing.allocator(), &pool, root, @enumFromInt(1), witnesses[0..0]);
+    try testing.expectEqualSlices(u8, &root_hash, &root_proof);
 }
 
 // Checks every leaf in a depth-4 tree produces the same root after reconstruction.
@@ -192,6 +201,7 @@ test "single proof invalid gindex" {
 
     const zero_gindex: Gindex = @enumFromInt(0);
     try testing.expectError(error.InvalidGindex, proof.createSingleProof(testing.allocator, &pool, root, zero_gindex));
+    try testing.expectError(error.InvalidGindex, proof.createSingleProofInto(testing.allocator, &pool, root, zero_gindex, &.{}));
 
     const empty_witnesses: []const [32]u8 = &[_][32]u8{};
     try testing.expectError(error.InvalidGindex, proof.createNodeFromSingleProof(&pool, zero_gindex, leaf_hash, empty_witnesses));

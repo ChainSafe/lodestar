@@ -94,8 +94,8 @@ pub fn validateAttestation(
     }
 
     if (fork.gte(.electra)) {
-        if (data.index != 0) {
-            return error.InvalidAttestationNonZeroDataIndex;
+        if (comptime fork.lt(.gloas)) {
+            if (data.index != 0) return error.InvalidAttestationNonZeroDataIndex;
         }
         var committee_indices_buffer: [preset.MAX_COMMITTEES_PER_SLOT]usize = undefined;
         const committee_indices_len = try attestation.committee_bits.getTrueBitIndexes(committee_indices_buffer[0..]);
@@ -111,6 +111,7 @@ pub fn validateAttestation(
         }
 
         var aggregation_bits_buffer: [preset.MAX_VALIDATORS_PER_COMMITTEE * preset.MAX_COMMITTEES_PER_SLOT]bool = undefined;
+        if (attestation.aggregation_bits.bit_len > aggregation_bits_buffer.len) return error.InvalidAttestationAggregationBitsTooLong;
         var aggregation_bits_slice = aggregation_bits_buffer[0..attestation.aggregation_bits.bit_len];
         try attestation.aggregation_bits.toBoolSlice(&aggregation_bits_slice);
         const aggregation_bits_array = aggregation_bits_slice;

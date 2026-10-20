@@ -18,6 +18,8 @@ const computeProposerIndex = ComputeIndexUtils.computeProposerIndex;
 const computeSyncCommitteeIndices = ComputeIndexUtils.computeSyncCommitteeIndices;
 const computeEpochAtSlot = @import("./epoch.zig").computeEpochAtSlot;
 const ByteCount = @import("./committee_indices.zig").ByteCount;
+const EpochShuffling = @import("./epoch_shuffling.zig").EpochShuffling;
+const computePtcIndicesU64Into = @import("swap_or_not_shuffle").computePtcIndicesU64Into;
 
 pub fn computeProposers(
     comptime fork_seq: ForkSeq,
@@ -91,4 +93,36 @@ pub fn getSeed(comptime fork: ForkSeq, state: *BeaconState(fork), epoch: Epoch, 
     std.mem.copyForwards(u8, buffer[domain_type.len..(domain_type.len + 8)], epoch_buf[0..]);
     std.mem.copyForwards(u8, buffer[(domain_type.len + 8)..], mix[0..]);
     Sha256.hash(buffer[0..], out, .{});
+}
+
+pub fn computePayloadTimelinessCommitteesForEpoch(
+    comptime fork: ForkSeq,
+    state: *BeaconState(fork),
+    epoch: Epoch,
+    shuffling: *const EpochShuffling,
+    effective_balance_increments: []const u16,
+) ![preset.SLOTS_PER_EPOCH][preset.PTC_SIZE]ValidatorIndex {
+    var epoch_seed: [32]u8 = undefined;
+    try getSeed(fork, state, epoch, c.DOMAIN_PTC_ATTESTER, &epoch_seed);
+    const start_slot = computeStartSlotAtEpoch(epoch);
+    var seed_input: [40]u8 = undefined;
+    @memcpy(seed_input[0..32], &epoch_seed);
+    var result: [preset.SLOTS_PER_EPOCH][preset.PTC_SIZE]ValidatorIndex = undefined;
+    for (0..preset.SLOTS_PER_EPOCH) |slot_offset| {
+        std.mem.writeInt(u64, seed_input[32..][0..8], start_slot + slot_offset, .little);
+        var seed: [32]u8 = undefined;
+        Sha256.hash(&seed_input, &seed, .{});
+        // EpochShuffling partitions one contiguous array, so the slot slice needs no copy.
+        const start = shuffling.shuffling.len * slot_offset / preset.SLOTS_PER_EPOCH;
+        const end = shuffling.shuffling.len * (slot_offset + 1) / preset.SLOTS_PER_EPOCH;
+        try computePtcIndicesU64Into(
+            &seed,
+            shuffling.shuffling[start..end],
+            effective_balance_increments,
+            preset.MAX_EFFECTIVE_BALANCE_ELECTRA,
+            preset.EFFECTIVE_BALANCE_INCREMENT,
+            &result[slot_offset],
+        );
+    }
+    return result;
 }

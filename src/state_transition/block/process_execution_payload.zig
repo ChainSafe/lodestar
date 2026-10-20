@@ -73,7 +73,7 @@ pub fn processExecutionPayload(
     // the state transition sync
     //
     // Equivalent to `assert executionEngine.notifyNewPayload(payload)
-    if (external_data.execution_payload_status == .invalid) {
+    if (block_type == .full and external_data.execution_payload_status != .valid) {
         return error.InvalidExecutionPayload;
     }
 
