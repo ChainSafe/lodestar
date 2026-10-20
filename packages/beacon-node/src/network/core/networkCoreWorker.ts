@@ -138,6 +138,7 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   prepareSyncCommitteeSubnets: (subscriptions) => core.prepareSyncCommitteeSubnets(subscriptions),
   reportPeer: (peer, action, actionName) => core.reportPeer(peer, action, actionName),
   reStatusPeers: (peers) => core.reStatusPeers(peers),
+  goodbyeAndDisconnect: (peer, reason) => core.goodbyeAndDisconnect(peer, reason),
   subscribeGossipCoreTopics: () => core.subscribeGossipCoreTopics(),
   unsubscribeGossipCoreTopics: () => core.unsubscribeGossipCoreTopics(),
 
