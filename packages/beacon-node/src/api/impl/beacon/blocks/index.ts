@@ -62,7 +62,7 @@ import {
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
 import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
-import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
+import {validateGossipExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
@@ -1072,14 +1072,24 @@ export function getBeaconBlockApi(
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      if (!opts.disableBidValidation) {
-        const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
-        await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
-        validationTimer?.();
-      }
-
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
+
+      if (!opts.disableBidValidation) {
+        const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
+        const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, signedExecutionPayloadBid);
+        validationTimer?.();
+
+        // Gossip does not deliver our own messages back to us, so a validated bid is added to the
+        // pool here to allow a proposer on this node to select it
+        const insertOutcome = chain.executionPayloadBidPool.add(
+          signedExecutionPayloadBid,
+          Math.floor(elapsedSec * 1000)
+        );
+        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
+
+        chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.api, proposerIndex, bid);
+      }
 
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
 
