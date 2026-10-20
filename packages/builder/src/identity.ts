@@ -99,11 +99,10 @@ async function waitForBuilder(
     }
     if (builder?.status === "pending") {
       logger.info("Waiting for builder deposit to be finalized", {id, slot: clock.getCurrentSlot()});
-      await sleep(msToNextEpochPoll(clock), signal);
     } else {
       logger.info("Waiting for builder to be known to the beacon node", {id, slot: clock.getCurrentSlot()});
-      await sleep(msToNextSlotPoll(clock), signal);
     }
+    await sleep(msToNextSlotPoll(clock), signal);
   }
   throw new ErrorAborted("waitForBuilder");
 }

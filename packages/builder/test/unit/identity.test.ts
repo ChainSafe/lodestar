@@ -154,8 +154,8 @@ describe("Identity", () => {
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
 
-    // Does not re-poll before the next epoch boundary
-    await vi.advanceTimersByTimeAsync(epochPollMs - 1);
+    // Does not re-poll before the next slot
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(1) - 1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
     await vi.advanceTimersByTimeAsync(1);
