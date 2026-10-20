@@ -1,7 +1,7 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import type {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostElectra, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconState,
@@ -28,6 +28,7 @@ import {
   phase0,
   rewards,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
@@ -855,7 +856,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingDeposits(): electra.PendingDeposits {
     if (this.cachedPendingDeposits === null) {
-      const type = this.forkSeq >= ForkSeq.gloas ? ssz.gloas.PendingDeposits : ssz.electra.PendingDeposits;
+      const type = sszTypesFor(this.forkName as ForkPostElectra).PendingDeposits;
       this.cachedPendingDeposits = type.deserialize(this.binding.pendingDeposits);
     }
     return this.cachedPendingDeposits;
@@ -870,8 +871,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingPartialWithdrawals(): electra.PendingPartialWithdrawals {
     if (this.cachedPendingPartialWithdrawals === null) {
-      const type =
-        this.forkSeq >= ForkSeq.gloas ? ssz.gloas.PendingPartialWithdrawals : ssz.electra.PendingPartialWithdrawals;
+      const type = sszTypesFor(this.forkName as ForkPostElectra).PendingPartialWithdrawals;
       this.cachedPendingPartialWithdrawals = type.deserialize(this.binding.pendingPartialWithdrawals);
     }
     return this.cachedPendingPartialWithdrawals;
@@ -886,7 +886,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingConsolidations(): electra.PendingConsolidations {
     if (this.cachedPendingConsolidations === null) {
-      const type = this.forkSeq >= ForkSeq.gloas ? ssz.gloas.PendingConsolidations : ssz.electra.PendingConsolidations;
+      const type = sszTypesFor(this.forkName as ForkPostElectra).PendingConsolidations;
       this.cachedPendingConsolidations = type.deserialize(this.binding.pendingConsolidations);
     }
     return this.cachedPendingConsolidations;
