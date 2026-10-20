@@ -1540,18 +1540,18 @@ fn shufflingToNapi(shuffling: anytype) !napi.Value {
     try obj.setNamedProperty("epoch", try env.createInt64(@intCast(shuffling.epoch)));
     try obj.setNamedProperty(
         "activeIndices",
-        try numberSliceToNapiValue(env, u64, shuffling.active_indices, .{ .typed_array = .uint32 }),
+        try numberSliceToNapiValue(env, u32, shuffling.active_indices, .{ .typed_array = .uint32 }),
     );
     try obj.setNamedProperty(
         "shuffling",
-        try numberSliceToNapiValue(env, u64, shuffling.shuffling, .{ .typed_array = .uint32 }),
+        try numberSliceToNapiValue(env, u32, shuffling.shuffling, .{ .typed_array = .uint32 }),
     );
 
     const committees_outer = try env.createArray();
     for (shuffling.committees, 0..) |slot_committees, slot_idx| {
         const slot_arr = try env.createArray();
         for (slot_committees, 0..) |committee, committee_idx| {
-            const committee_arr = try numberSliceToNapiValue(env, u64, committee, .{ .typed_array = .uint32 });
+            const committee_arr = try numberSliceToNapiValue(env, u32, committee, .{ .typed_array = .uint32 });
             try slot_arr.setElement(@intCast(committee_idx), committee_arr);
         }
         try committees_outer.setElement(@intCast(slot_idx), slot_arr);
@@ -1591,7 +1591,7 @@ pub fn getBeaconCommittee(self: *BeaconStateView, slot_arg: js.Number, index: js
     const index_: u64 = try index.toU64Exact();
 
     const committee = try cached_state.epoch_cache.getBeaconCommittee(slot_, index_);
-    return .{ .val = try numberSliceToNapiValue(env, u64, committee, .{ .typed_array = .uint32 }) };
+    return .{ .val = try numberSliceToNapiValue(env, u32, committee, .{ .typed_array = .uint32 }) };
 }
 
 pub fn getBeaconCommitteeCountPerSlot(self: *BeaconStateView, epoch_arg: js.Number) !js.Number {

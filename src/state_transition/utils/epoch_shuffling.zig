@@ -1,7 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const types = @import("consensus_types");
-const ValidatorIndex = types.primitive.ValidatorIndex.Type;
 const preset = @import("preset").preset;
 const AnyBeaconState = @import("fork_types").AnyBeaconState;
 const BeaconState = @import("fork_types").BeaconState;
@@ -17,7 +16,7 @@ const RefCount = @import("./ref_count.zig").RefCount;
 
 pub const EpochShufflingRc = RefCount(*EpochShuffling);
 
-const Committee = []const ValidatorIndex;
+const Committee = []const u32;
 const SlotCommittees = []const Committee;
 const EpochCommittees = [preset.SLOTS_PER_EPOCH]SlotCommittees;
 
@@ -29,9 +28,9 @@ pub const EpochShuffling = struct {
 
     epoch: Epoch,
     // EpochShuffling takes ownership of all properties below
-    active_indices: []const ValidatorIndex,
+    active_indices: []const u32,
 
-    shuffling: []const ValidatorIndex,
+    shuffling: []const u32,
 
     /// the internal last-level committee shared the same data with `shuffling` so don't need to free it
     committees: EpochCommittees,
@@ -39,22 +38,12 @@ pub const EpochShuffling = struct {
     committees_per_slot: usize,
 
     /// Takes ownership of `active_indices` on success; the caller retains ownership on failure.
-    pub fn init(allocator: Allocator, seed: [32]u8, epoch: Epoch, active_indices: []const ValidatorIndex) !*EpochShuffling {
+    pub fn init(allocator: Allocator, seed: [32]u8, epoch: Epoch, active_indices: []const u32) !*EpochShuffling {
         if (active_indices.len > std.math.maxInt(u32)) return error.InvalidActiveIndicesLength;
 
-        const shuffling = try allocator.alloc(ValidatorIndex, active_indices.len);
+        const shuffling = try allocator.dupe(u32, active_indices);
         errdefer allocator.free(shuffling);
-
-        {
-            const positions = try allocator.alloc(u32, active_indices.len);
-            defer allocator.free(positions);
-
-            for (positions, 0..) |*position, i| position.* = @intCast(i);
-            try unshuffleList(positions, seed[0..], preset.SHUFFLE_ROUND_COUNT);
-            for (positions, shuffling) |position, *validator_index| {
-                validator_index.* = active_indices[position];
-            }
-        }
+        try unshuffleList(shuffling, seed[0..], preset.SHUFFLE_ROUND_COUNT);
 
         const committees = try buildCommitteesFromShuffling(allocator, shuffling);
         errdefer for (committees) |slot_committees| {
@@ -85,7 +74,7 @@ pub const EpochShuffling = struct {
         self.allocator.destroy(self);
     }
 
-    fn buildCommitteesFromShuffling(allocator: Allocator, shuffling: []const ValidatorIndex) !EpochCommittees {
+    fn buildCommitteesFromShuffling(allocator: Allocator, shuffling: []const u32) !EpochCommittees {
         const active_validator_count = shuffling.len;
         const committees_per_slot = computeCommitteeCount(active_validator_count);
         const committee_count = committees_per_slot * preset.SLOTS_PER_EPOCH;
@@ -116,7 +105,7 @@ test EpochShuffling {
     inline for (validator_count_arr) |validator_count| {
         const allocator = std.testing.allocator;
         const seed: [32]u8 = [_]u8{0} ** 32;
-        const active_indices = try allocator.alloc(ValidatorIndex, validator_count);
+        const active_indices = try allocator.alloc(u32, validator_count);
         // active_indices is transferred to EpochShuffling so no need to free it here
         for (0..validator_count) |i| {
             active_indices[i] = @intCast(i);
@@ -128,7 +117,7 @@ test EpochShuffling {
 }
 
 /// Takes ownership of `active_indices` on success; the caller retains ownership on failure.
-pub fn computeEpochShuffling(allocator: Allocator, state: *AnyBeaconState, active_indices: []ValidatorIndex, epoch: Epoch) !*EpochShuffling {
+pub fn computeEpochShuffling(allocator: Allocator, state: *AnyBeaconState, active_indices: []u32, epoch: Epoch) !*EpochShuffling {
     return switch (state.forkSeq()) {
         inline else => |f| computeEpochShufflingForFork(f, allocator, state.castToFork(f), active_indices, epoch),
     };
@@ -139,7 +128,7 @@ pub fn computeEpochShufflingForFork(
     comptime fork: ForkSeq,
     allocator: Allocator,
     state: *BeaconState(fork),
-    active_indices: []ValidatorIndex,
+    active_indices: []u32,
     epoch: Epoch,
 ) !*EpochShuffling {
     var seed = [_]u8{0} ** 32;
@@ -147,10 +136,10 @@ pub fn computeEpochShufflingForFork(
     return EpochShuffling.init(allocator, seed, epoch, active_indices);
 }
 
-/// Unshuffle positions in place synchronously.
-fn unshuffleList(positions: []u32, seed: []const u8, rounds: u8) !void {
+/// Unshuffle validator indices in place synchronously.
+fn unshuffleList(indices: []u32, seed: []const u8, rounds: u8) !void {
     const forwards = false;
-    return innerShuffleList(u32, positions, seed, rounds, forwards);
+    return innerShuffleList(u32, indices, seed, rounds, forwards);
 }
 
 test unshuffleList {

@@ -136,7 +136,7 @@ pub const EpochCache = struct {
     fn initEpochShufflingRc(
         allocator: Allocator,
         state: *AnyBeaconState,
-        active_indices: []ValidatorIndex,
+        active_indices: []u32,
         epoch: Epoch,
     ) !*EpochShufflingRc {
         const rc = try allocator.create(EpochShufflingRc);
@@ -185,6 +185,7 @@ pub const EpochCache = struct {
         return try SyncCommitteeCacheRc.create(allocator, sync_committee_cache);
     }
 
+    /// Native index caches support at most maxInt(u32) validators, matching PubkeyCache.
     pub fn createFromState(
         allocator: Allocator,
         io: std.Io,
@@ -204,10 +205,11 @@ pub const EpochCache = struct {
         var exit_queue_epoch = computeActivationExitEpoch(current_epoch);
         var exit_queue_churn: u64 = 0;
 
+        const validator_count = try state.validatorsCount();
+        if (validator_count > std.math.maxInt(u32)) return error.InvalidValidatorCount;
+
         const validators = try state.validatorsPtrSlice(allocator);
         defer allocator.free(validators);
-
-        const validator_count = validators.len;
 
         // Sync before computing the remaining caches: sync committee indexing
         // needs a fully populated pubkey cache.
@@ -224,15 +226,15 @@ pub const EpochCache = struct {
         const total_slashings_by_increment = switch (state_fork_seq) {
             inline else => |f| try getTotalSlashingsByIncrement(f, state.castToFork(f)),
         };
-        var previous_active_indices_array_list: std.ArrayList(ValidatorIndex) = .empty;
+        var previous_active_indices_array_list: std.ArrayList(u32) = .empty;
         errdefer previous_active_indices_array_list.deinit(allocator);
         try previous_active_indices_array_list.ensureTotalCapacity(allocator, validator_count);
 
-        var current_active_indices_array_list: std.ArrayList(ValidatorIndex) = .empty;
+        var current_active_indices_array_list: std.ArrayList(u32) = .empty;
         errdefer current_active_indices_array_list.deinit(allocator);
         try current_active_indices_array_list.ensureTotalCapacity(allocator, validator_count);
 
-        var next_active_indices_array_list: std.ArrayList(ValidatorIndex) = .empty;
+        var next_active_indices_array_list: std.ArrayList(u32) = .empty;
         errdefer next_active_indices_array_list.deinit(allocator);
         try next_active_indices_array_list.ensureTotalCapacity(allocator, validator_count);
 
@@ -242,16 +244,16 @@ pub const EpochCache = struct {
             effective_balance_increments.items[i] = @intCast(@divFloor(validator.effective_balance, preset.EFFECTIVE_BALANCE_INCREMENT));
 
             if (isActiveValidator(validator, previous_epoch)) {
-                try previous_active_indices_array_list.append(allocator, i);
+                try previous_active_indices_array_list.append(allocator, @intCast(i));
             }
 
             if (isActiveValidator(validator, current_epoch)) {
-                try current_active_indices_array_list.append(allocator, i);
+                try current_active_indices_array_list.append(allocator, @intCast(i));
                 total_active_balance_increments += effective_balance_increments.items[i];
             }
 
             if (isActiveValidator(validator, next_epoch)) {
-                try next_active_indices_array_list.append(allocator, i);
+                try next_active_indices_array_list.append(allocator, @intCast(i));
             }
 
             const exit_epoch = validator.exit_epoch;
@@ -562,10 +564,10 @@ pub const EpochCache = struct {
         const next_shuffling_rc = if (epoch_transition_cache.next_shuffling) |next_shuffling| blk: {
             break :blk next_shuffling.ref();
         } else blk: {
-            const next_shuffling_active_indices = try self.allocator.alloc(ValidatorIndex, epoch_transition_cache.next_shuffling_active_indices.len);
+            const next_shuffling_active_indices = try self.allocator.alloc(u32, epoch_transition_cache.next_shuffling_active_indices.len);
             errdefer self.allocator.free(next_shuffling_active_indices);
 
-            std.mem.copyForwards(ValidatorIndex, next_shuffling_active_indices, epoch_transition_cache.next_shuffling_active_indices);
+            std.mem.copyForwards(u32, next_shuffling_active_indices, epoch_transition_cache.next_shuffling_active_indices);
 
             break :blk try initEpochShufflingRc(
                 self.allocator,
@@ -681,7 +683,7 @@ pub const EpochCache = struct {
     }
 
     /// Consumer borrows the returned slice
-    pub fn getBeaconCommittee(self: *const EpochCache, slot: Slot, index: CommitteeIndex) ![]const ValidatorIndex {
+    pub fn getBeaconCommittee(self: *const EpochCache, slot: Slot, index: CommitteeIndex) ![]const u32 {
         const shuffling = self.getShufflingAtSlotOrNull(slot) orelse return error.EpochShufflingNotFound;
         const slot_committees = shuffling.committees[slot % preset.SLOTS_PER_EPOCH];
         if (index >= slot_committees.len) {
@@ -781,7 +783,7 @@ pub const EpochCache = struct {
         const aggregation_bits = attestation.aggregation_bits;
         const data = attestation.data;
         const validator_indices = try self.getBeaconCommittee(data.slot, data.index);
-        return try aggregation_bits.intersectValues(ValidatorIndex, allocator, validator_indices);
+        return try aggregation_bits.intersectValues(ValidatorIndex, u32, allocator, validator_indices);
     }
 
     /// Consumer takes ownership of the returned array and must free it with `allocator`.
@@ -815,11 +817,11 @@ pub const EpochCache = struct {
         var offset: usize = 0;
         for (committee_indices) |committee_index| {
             const committee = try self.getBeaconCommittee(data.slot, committee_index);
-            std.mem.copyForwards(ValidatorIndex, committee_validators[offset..(offset + committee.len)], committee);
+            for (committee, committee_validators[offset..][0..committee.len]) |index, *dest| dest.* = index;
             offset += committee.len;
         }
 
-        return try aggregation_bits.intersectValues(ValidatorIndex, allocator, committee_validators);
+        return try aggregation_bits.intersectValues(ValidatorIndex, ValidatorIndex, allocator, committee_validators);
     }
 
     // TODO: getCommitteeAssignments
@@ -850,7 +852,7 @@ pub const EpochCache = struct {
 
     /// Returns the active validator indices for the given epoch from the cached shuffling.
     /// Returns null if the epoch is not covered by the cached shufflings.
-    pub fn getActiveIndicesAtEpoch(self: *const EpochCache, epoch: Epoch) ?[]const ValidatorIndex {
+    pub fn getActiveIndicesAtEpoch(self: *const EpochCache, epoch: Epoch) ?[]const u32 {
         const shuffling = self.getShufflingAtEpochOrNull(epoch) orelse return null;
         return shuffling.active_indices;
     }

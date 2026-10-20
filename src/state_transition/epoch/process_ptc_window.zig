@@ -21,7 +21,7 @@ pub fn processPtcWindow(
     var owned_shuffling: ?*EpochShuffling = null;
     defer if (owned_shuffling) |shuffling| shuffling.deinit();
     const shuffling = if (cache.next_shuffling) |shared| shared.get() else blk: {
-        const indices = try allocator.dupe(u64, cache.next_shuffling_active_indices);
+        const indices = try allocator.dupe(u32, cache.next_shuffling_active_indices);
         errdefer allocator.free(indices);
         owned_shuffling = try computeEpochShufflingForFork(fork, allocator, state, indices, next_epoch);
         break :blk owned_shuffling.?;

@@ -233,7 +233,7 @@ test "memory_safety: afterProcessEpoch releases copied indices when RC allocatio
             epoch_cache.afterProcessEpoch(test_state.cached_state.state, transition_cache),
         );
         try std.testing.expect(failing.has_induced_failure);
-        const copied_bytes = transition_cache.next_shuffling_active_indices.len * @sizeOf(ct.primitive.ValidatorIndex.Type);
+        const copied_bytes = transition_cache.next_shuffling_active_indices.len * @sizeOf(u32);
         try std.testing.expectEqual(copied_bytes, failing.allocated_bytes - allocated_bytes);
         try std.testing.expectEqual(copied_bytes, failing.freed_bytes - freed_bytes);
         try std.testing.expectEqual(previous_shuffling, epoch_cache.previous_shuffling);

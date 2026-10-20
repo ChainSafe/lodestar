@@ -345,11 +345,6 @@ test "computePtcIndices matches naive reference vector" {
         49, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 78, 81, 83, 84,
     };
     try std.testing.expectEqualSlices(u32, expected[0..], result);
-    var indices_u64: [100]u64 = undefined;
-    for (data.indices, 0..) |index, i| indices_u64[i] = index;
-    var result_u64: [32]u64 = undefined;
-    try shuffle.computePtcIndicesU64Into(&seed, &indices_u64, &data.increments, MAX_EFFECTIVE_BALANCE_ELECTRA, EFFECTIVE_BALANCE_INCREMENT, &result_u64);
-    for (expected, result_u64) |want, actual| try std.testing.expectEqual(@as(u64, want), actual);
 }
 
 test "computePtcIndicesForEpoch matches naive reference vector" {

@@ -50,8 +50,8 @@ pub fn processPendingAttestations(
             const head_root = try getBlockRootAtSlot(fork, state, att_slot);
             break :blk std.mem.eql(u8, att_data.beacon_block_root[0..], head_root[0..]);
         } else false;
-        const committee = @as([]const u64, try epoch_cache.getBeaconCommittee(att_slot, att_data.index));
-        var participants = try att.aggregation_bits.intersectValues(ValidatorIndex, allocator, committee);
+        const committee = try epoch_cache.getBeaconCommittee(att_slot, att_data.index);
+        var participants = try att.aggregation_bits.intersectValues(ValidatorIndex, u32, allocator, committee);
         defer participants.deinit(allocator);
 
         if (epoch == prev_epoch) {

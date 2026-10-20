@@ -500,12 +500,11 @@ pub fn computeSyncCommitteeIndicesElectra(
 /// effective balance; one SHA-256 per 16 candidates.
 /// Port of https://github.com/ChainSafe/swap-or-not-shuffle/pull/24 (453b639b).
 fn computePtcIndicesInner(
-    comptime Index: type,
     seed: *const [SEED_SIZE]u8,
-    indices: []const Index,
+    indices: []const u32,
     effective_balance_increments: []const u16,
     max_ebi: i64,
-    out: []Index,
+    out: []u32,
 ) !void {
     const max_random_value: i64 = 0xffff;
     const indices_len = indices.len;
@@ -573,22 +572,7 @@ pub fn computePtcIndicesInto(
     }
 
     const max_ebi = @divTrunc(max_effective_balance_electra, effective_balance_increment);
-    try computePtcIndicesInner(u32, seed[0..SEED_SIZE], indices, effective_balance_increments, max_ebi, out);
-}
-
-/// Native state transition uses u64 SSZ validator indices, sharing the u32 sampler.
-pub fn computePtcIndicesU64Into(
-    seed: *const [SEED_SIZE]u8,
-    indices: []const u64,
-    effective_balance_increments: []const u16,
-    max_effective_balance: u64,
-    effective_balance_increment: u64,
-    out: []u64,
-) !void {
-    if (indices.len == 0) return error.EmptyActiveIndices;
-    if (effective_balance_increment == 0) return error.InvalidEffectiveBalanceIncrement;
-    const max_ebi = std.math.cast(i64, max_effective_balance / effective_balance_increment) orelse return error.InvalidEffectiveBalanceIncrement;
-    try computePtcIndicesInner(u64, seed, indices, effective_balance_increments, max_ebi, out);
+    try computePtcIndicesInner(seed[0..SEED_SIZE], indices, effective_balance_increments, max_ebi, out);
 }
 
 /// Samples every slot's payload timeliness committee for an epoch into `out`,
@@ -646,7 +630,6 @@ pub fn computePtcIndicesForEpochInto(
 
         if (ptc_size != 0) {
             try computePtcIndicesInner(
-                u32,
                 &slot_seed,
                 slot_indices,
                 effective_balance_increments,

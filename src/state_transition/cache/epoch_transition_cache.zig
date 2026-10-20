@@ -96,7 +96,7 @@ const ShufflingJob = struct {
         duration: std.Io.Duration,
     };
 
-    fn worker(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []ValidatorIndex) Error!Result {
+    fn worker(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []u32) Error!Result {
         errdefer allocator.free(active_indices);
 
         const timer = time.start(io);
@@ -104,7 +104,7 @@ const ShufflingJob = struct {
         return .{ .shuffling = shuffling, .duration = time.since(io, timer) };
     }
 
-    fn start(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []ValidatorIndex) @This() {
+    fn start(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []u32) @This() {
         return .{
             .io = io,
             .future = std.Io.async(io, worker, .{ allocator, io, seed, epoch, active_indices }),
@@ -136,7 +136,7 @@ const ReusedEpochTransitionCache = struct {
 
     flags: U8Array,
 
-    next_epoch_shuffling_active_validator_indices: std.ArrayList(ValidatorIndex),
+    next_epoch_shuffling_active_validator_indices: std.ArrayList(u32),
 
     is_compounding_validator_arr: BoolArray,
 
@@ -162,7 +162,7 @@ const ReusedEpochTransitionCache = struct {
         self.inclusion_delays = .empty;
         self.flags = try U8Array.initCapacity(allocator, validator_count);
         errdefer self.flags.deinit(allocator);
-        self.next_epoch_shuffling_active_validator_indices = try std.ArrayList(ValidatorIndex).initCapacity(allocator, validator_count);
+        self.next_epoch_shuffling_active_validator_indices = try std.ArrayList(u32).initCapacity(allocator, validator_count);
         errdefer self.next_epoch_shuffling_active_validator_indices.deinit(allocator);
         self.is_compounding_validator_arr = .empty;
         self.previous_epoch_participation = .empty;
@@ -267,7 +267,7 @@ pub const EpochTransitionCache = struct {
     penalties: []u64,
     slashing_penalties: []u64,
     balances: ?U64Array,
-    next_shuffling_active_indices: []const ValidatorIndex,
+    next_shuffling_active_indices: []const u32,
     next_shuffling: ?*EpochShufflingRc,
     shuffling_job: ?ShufflingJob,
     next_epoch_total_active_balance_by_increment: u64,
@@ -317,6 +317,7 @@ pub const EpochTransitionCache = struct {
         var validators_view = try state.validators();
         try validators_view.commit();
         const validator_count = try validators_view.length();
+        if (validator_count > std.math.maxInt(u32)) return error.InvalidValidatorCount;
 
         var reused_cache = try getReusedEpochTransitionCache(
             allocator,
@@ -429,7 +430,7 @@ pub const EpochTransitionCache = struct {
             }
 
             if (is_active_next_2) {
-                reused_cache.next_epoch_shuffling_active_validator_indices.items[next_epoch_shuffling_active_indices_length] = i;
+                reused_cache.next_epoch_shuffling_active_validator_indices.items[next_epoch_shuffling_active_indices_length] = @intCast(i);
                 next_epoch_shuffling_active_indices_length += 1;
             }
         } // end validator loop
@@ -636,8 +637,8 @@ pub const EpochTransitionCache = struct {
 
     pub fn startShuffling(self: *EpochTransitionCache, allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch) !void {
         std.debug.assert(self.shuffling_job == null);
-        const active_indices = try allocator.alloc(ValidatorIndex, self.next_shuffling_active_indices.len);
-        std.mem.copyForwards(ValidatorIndex, active_indices, self.next_shuffling_active_indices);
+        const active_indices = try allocator.alloc(u32, self.next_shuffling_active_indices.len);
+        std.mem.copyForwards(u32, active_indices, self.next_shuffling_active_indices);
         self.shuffling_job = ShufflingJob.start(allocator, io, seed, epoch, active_indices);
     }
 

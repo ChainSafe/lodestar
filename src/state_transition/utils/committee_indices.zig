@@ -4,13 +4,12 @@ const Allocator = std.mem.Allocator;
 const swap_or_not_shuffle = @import("swap_or_not_shuffle");
 
 const ACTIVE_INDICES_LENGTH_MAX: usize = std.math.maxInt(u32);
-// The active-index bound keeps shuffled positions in u32; validator indices remain u64.
 const ComputeShuffledIndex = swap_or_not_shuffle.ComputeShuffledIndex;
 
 pub fn computeProposerIndex(
     allocator: Allocator,
     seed: *const [32]u8,
-    active_indices: []const u64,
+    active_indices: []const u32,
     effective_balance_increments: []u16,
     rand_byte_count: ByteCount,
     max_effective_balance: u64,
@@ -35,7 +34,7 @@ pub fn computeProposerIndex(
 pub fn computeSyncCommitteeIndices(
     allocator: Allocator,
     seed: *const [32]u8,
-    active_indices: []const u64,
+    active_indices: []const u32,
     effective_balance_increments: []u16,
     rand_byte_count: ByteCount,
     max_effective_balance_electra: u64,
@@ -62,11 +61,10 @@ pub const ByteCount = enum(u8) {
 };
 
 /// the same to Rust implementation with "out" param to simplify memory allocation
-/// T should be u32 for Bun or ValidatorIndex for zig consumer
 fn getCommitteeIndices(
     allocator: Allocator,
     seed: *const [32]u8,
-    active_indices: []const u64,
+    active_indices: []const u32,
     effective_balance_increments: []const u16,
     rand_byte_count: ByteCount,
     max_effective_balance: u64,
@@ -98,7 +96,7 @@ fn getCommitteeIndices(
     );
     defer compute_shuffled_index.deinit();
 
-    var shuffled_result = std.AutoHashMap(u64, u64).init(allocator);
+    var shuffled_result = std.AutoHashMap(u32, u32).init(allocator);
     defer shuffled_result.deinit();
 
     var i: u32 = 0;
@@ -109,13 +107,13 @@ fn getCommitteeIndices(
     var next_committee_index: usize = 0;
 
     while (next_committee_index < out.len) {
-        const index: u64 = @intCast(i % active_indices.len);
+        const index: u32 = @intCast(i % active_indices.len);
         const shuffled_index = try shuffled_result.getOrPut(index);
         if (!shuffled_index.found_existing) {
-            const _shuffled_index = try compute_shuffled_index.get(@intCast(index));
+            const _shuffled_index = try compute_shuffled_index.get(index);
             shuffled_index.value_ptr.* = _shuffled_index;
         }
-        const candidate_index = active_indices[@intCast(shuffled_index.value_ptr.*)];
+        const candidate_index = active_indices[shuffled_index.value_ptr.*];
 
         const hash_increment: u32 = 32 / @intFromEnum(rand_byte_count);
         if (i % hash_increment == 0) {
@@ -174,7 +172,7 @@ test "compute_proposer_index" {
     const index_count = 1000;
     // SHUFFLE_ROUND_COUNT is 90 in ethereum mainnet
     const rounds = 90;
-    var active_indices = [_]u64{0} ** index_count;
+    var active_indices = [_]u32{0} ** index_count;
     for (0..index_count) |i| {
         active_indices[i] = @intCast(i);
     }
@@ -218,7 +216,7 @@ test "compute_sync_committee_indices" {
     const vc = 1000;
     // SHUFFLE_ROUND_COUNT is 90 in ethereum mainnet
     const rounds = 90;
-    var active_indices = [_]u64{0} ** vc;
+    var active_indices = [_]u32{0} ** vc;
     for (0..vc) |i| {
         active_indices[i] = @intCast(i);
     }

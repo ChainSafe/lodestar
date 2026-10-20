@@ -245,13 +245,14 @@ pub fn initializePtcWindow(
         const shuffling = epoch_cache.getShufflingAtEpochOrNull(epoch) orelse blk: {
             var validators = try state.validators();
             const count = try validators.length();
-            var active: std.ArrayList(ValidatorIndex) = .empty;
+            if (count > std.math.maxInt(u32)) return error.InvalidValidatorCount;
+            var active: std.ArrayList(u32) = .empty;
             defer active.deinit(allocator);
             try active.ensureTotalCapacity(allocator, count);
             var it = validators.iteratorReadonly(0);
             for (0..count) |i| {
                 const validator = try it.nextValuePtr();
-                if (isActiveValidator(validator, epoch)) active.appendAssumeCapacity(i);
+                if (isActiveValidator(validator, epoch)) active.appendAssumeCapacity(@intCast(i));
             }
             const indices = try active.toOwnedSlice(allocator);
             errdefer allocator.free(indices);

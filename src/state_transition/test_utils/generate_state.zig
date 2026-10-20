@@ -95,7 +95,7 @@ pub fn generateElectraState(allocator: Allocator, pool: *Node.Pool, chain_config
     };
 
     // populate sync committee
-    var active_validator_indices = try std.ArrayList(ValidatorIndex).initCapacity(allocator, validator_count);
+    var active_validator_indices = try std.ArrayList(u32).initCapacity(allocator, validator_count);
     defer active_validator_indices.deinit(allocator);
     var effective_balance_increments = try EffectiveBalanceIncrements.initCapacity(allocator, validator_count);
     defer effective_balance_increments.deinit(allocator);
