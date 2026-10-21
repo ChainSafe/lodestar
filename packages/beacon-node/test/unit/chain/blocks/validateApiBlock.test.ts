@@ -35,7 +35,7 @@ describe("API block validation", () => {
         (_blocks, signal) =>
           new Promise((_resolve, reject) => signal.addEventListener("abort", () => reject(new Error("aborted"))))
       );
-    const observe = vi.spyOn(chain.beaconEngine, "observeVerifiedBlocks");
+    const observe = vi.spyOn(chain.beaconEngine.seenBlockProposers, "observeBlockRoot");
     const validation = validateApiBlock.call(withBeaconEngineFacade(chain), blockInput, {});
     await expect(validation).rejects.toBeInstanceOf(BlockError);
     await validation.catch((failure: BlockError) => {
@@ -52,7 +52,7 @@ describe("API block validation", () => {
     expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
   });
 
-  it.each([false, true])("observes the proposer only after successful DA (failure: %s)", async (failure) => {
+  it.each([false, true])("waits for DA without discarding an import bundle (failure: %s)", async (failure) => {
     const chain = getMockedBeaconChain();
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const root = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
@@ -68,21 +68,28 @@ describe("API block validation", () => {
     vi.spyOn(da, "verifyBlocksDataAvailability").mockReturnValue(available.promise);
     const validate = vi.fn().mockResolvedValue({err: null, result: undefined});
     chain.beaconEngine.validateApiBlock = validate;
-    const observe = vi.spyOn(chain.beaconEngine, "observeVerifiedBlocks");
     const discard = vi.spyOn(chain.beaconEngine, "discardVerifiedBlocks");
     const validation = validateApiBlock.call(withBeaconEngineFacade(chain), blockInput, {});
+    let settled = false;
+    void validation.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      }
+    );
     const error = new Error("Data unavailable");
     const result = failure ? expect(validation).rejects.toBe(error) : validation;
     await Promise.resolve();
-    expect(observe).not.toHaveBeenCalled();
+    expect(settled).toBe(false);
     expect(validate).toHaveBeenCalledExactlyOnceWith(root, ssz.phase0.SignedBeaconBlock.serialize(block), {});
 
     if (failure) available.reject(error);
     else available.resolve({dataAvailabilityStatuses: [DataAvailabilityStatus.PreData], availableTime: 0});
     await result;
 
-    expect(observe).toHaveBeenCalledTimes(failure ? 0 : 1);
-    if (!failure) expect(observe).toHaveBeenCalledWith([{block, root: toRootHex(root)}], true);
+    expect(settled).toBe(true);
     expect(discard).not.toHaveBeenCalled();
     expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
   });

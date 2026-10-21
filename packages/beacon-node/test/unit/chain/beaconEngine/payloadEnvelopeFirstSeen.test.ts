@@ -2,6 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
@@ -58,57 +59,75 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
 
   afterEach(() => vi.restoreAllMocks());
 
-  it.each(["accept", "unknown_parent", "observed_sibling", "unobserved_sibling", "reject", "unexpected"])(
-    "retains only signature-verified gossip blocks for %s",
-    async (scenario) => {
-      vi.spyOn(engine, "hasObservedBlockRoot").mockReturnValue(scenario === "observed_sibling");
-      vi.spyOn(blockValidation, "validateGossipBlock").mockImplementation(async () => {
-        expect(engine.seenPayloadEnvelopeInputCache.get(root)).toBeUndefined();
-        switch (scenario) {
-          case "accept":
-            return {skippedSlots: 0};
-          case "unknown_parent":
-            throw new BlockGossipError(GossipAction.IGNORE, {
-              code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
-              parentRoot: toRootHex(block.message.parentRoot),
-            });
-          case "observed_sibling":
-          case "unobserved_sibling":
-            throw new BlockGossipError(GossipAction.IGNORE, {
-              code: BlockErrorCode.REPEAT_PROPOSAL,
-              proposerIndex: 7,
-              root,
-            });
-          case "reject":
-            throw new BlockGossipError(GossipAction.REJECT, {
-              code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
-              slot: 1,
-              root,
-            });
-          default:
-            throw new Error("unexpected validation failure");
-        }
-      });
-      const pending = engine.validateGossipBlock(
-        fromHex(root),
-        ssz.gloas.SignedBeaconBlock.serialize(block),
-        ForkName.gloas,
-        0
-      );
-      if (scenario === "unexpected")
-        await expect(pending).resolves.toMatchObject({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
-      else
-        await expect(pending).resolves.toMatchObject({
-          err: scenario === "accept" ? null : {status: scenario === "reject" ? "reject" : "ignore"},
-        });
-      expect(engine.blockSerializedCache.get(root) !== undefined).toBe(
-        ["accept", "unknown_parent", "observed_sibling"].includes(scenario)
-      );
-      expect(engine.seenPayloadEnvelopeInputCache.get(root) !== undefined).toBe(
-        ["accept", "unknown_parent", "observed_sibling"].includes(scenario)
-      );
+  it.each([
+    "accept",
+    "unknown_parent",
+    "observed_sibling",
+    "unobserved_sibling",
+    "sibling_unknown_parent",
+    "reject",
+    "unexpected",
+  ])("retains only signature-verified gossip blocks for %s", async (scenario) => {
+    if (scenario === "observed_sibling" || scenario === "sibling_unknown_parent") {
+      engine.seenBlockProposers.observeBlockRoot(1, 7, root, signedBlockToSignedHeader(config, block));
     }
-  );
+    if (scenario === "sibling_unknown_parent") {
+      vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
+    }
+    vi.spyOn(blockValidation, "validateGossipBlock").mockImplementation(async () => {
+      expect(engine.seenPayloadEnvelopeInputCache.get(root)).toBeUndefined();
+      switch (scenario) {
+        case "accept":
+          return {skippedSlots: 0};
+        case "unknown_parent":
+          throw new BlockGossipError(GossipAction.IGNORE, {
+            code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
+            parentRoot: toRootHex(block.message.parentRoot),
+          });
+        case "observed_sibling":
+        case "unobserved_sibling":
+        case "sibling_unknown_parent":
+          throw new BlockGossipError(GossipAction.IGNORE, {
+            code: BlockErrorCode.REPEAT_PROPOSAL,
+            proposerIndex: 7,
+            root,
+          });
+        case "reject":
+          throw new BlockGossipError(GossipAction.REJECT, {
+            code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+            slot: 1,
+            root,
+          });
+        default:
+          throw new Error("unexpected validation failure");
+      }
+    });
+    const pending = engine.validateGossipBlock(
+      fromHex(root),
+      ssz.gloas.SignedBeaconBlock.serialize(block),
+      ForkName.gloas,
+      0
+    );
+    await expect(pending).resolves.toHaveProperty("shouldProcessRepeatProposalBlock", scenario === "observed_sibling");
+    if (scenario === "unexpected")
+      await expect(pending).resolves.toMatchObject({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
+    else
+      await expect(pending).resolves.toMatchObject({
+        err: scenario === "accept" ? null : {status: scenario === "reject" ? "reject" : "ignore"},
+      });
+    const result = await pending;
+    if (result.err?.error instanceof BlockGossipError) {
+      expect(structuredClone(result).blockErrorType).toEqual(result.err.error.type);
+    } else {
+      expect(result.blockErrorType).toBeUndefined();
+    }
+    expect(engine.blockSerializedCache.get(root) !== undefined).toBe(
+      ["accept", "unknown_parent", "observed_sibling"].includes(scenario)
+    );
+    expect(engine.seenPayloadEnvelopeInputCache.get(root) !== undefined).toBe(
+      ["accept", "unknown_parent", "observed_sibling"].includes(scenario)
+    );
+  });
 
   it.each([true, false])("authenticates unknown-parent blocks before caching them (valid=%s)", async (valid) => {
     const verified = defer<void>();
@@ -127,7 +146,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
     );
     await vi.waitFor(() => expect(blockValidation.verifyBlockProposerSignature).toHaveBeenCalledOnce());
     expect(engine.seenPayloadEnvelopeInputCache.get(root)).toBeUndefined();
-    expect(engine.hasObservedBlockRoot(1, 7, root)).toBe(false);
+    expect(engine.seenBlockProposers.hasBlockRoot(1, 7, root)).toBe(false);
     if (valid) verified.resolve();
     else
       verified.reject(
@@ -140,9 +159,55 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       },
     });
     expect(engine.seenPayloadEnvelopeInputCache.get(root) !== undefined).toBe(valid);
-    expect(engine.hasObservedBlockRoot(1, 7, root)).toBe(valid);
+    expect(engine.seenBlockProposers.hasBlockRoot(1, 7, root)).toBe(valid);
     expect(engine.blockSerializedCache.get(root) !== undefined).toBe(valid);
   });
+
+  it.each(["accept", "repeat", "reject", "unexpected", "invalid_signature"])(
+    "processes gossip equivocation evidence on completion for %s, without applying gossip side effects to API calls",
+    async (scenario) => {
+      const process = vi.spyOn(engine, "processProposerEquivocation").mockImplementation(() => {});
+      vi.spyOn(blockValidation, "validateGossipBlock").mockImplementation(async () => {
+        if (scenario !== "invalid_signature") {
+          engine.seenBlockProposers.observeBlockRoot(1, 7, root, signedBlockToSignedHeader(config, block));
+        }
+        switch (scenario) {
+          case "accept":
+            return {skippedSlots: 0};
+          case "repeat":
+            throw new BlockGossipError(GossipAction.IGNORE, {
+              code: BlockErrorCode.REPEAT_PROPOSAL,
+              proposerIndex: 7,
+              root,
+            });
+          case "unexpected":
+            throw new Error("unexpected validation failure");
+          default:
+            throw new BlockGossipError(GossipAction.REJECT, {
+              code:
+                scenario === "reject" ? BlockErrorCode.INCORRECT_PROPOSER : BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+              slot: 1,
+              proposerIndex: 7,
+              root,
+            });
+        }
+      });
+      const sibling = ssz.gloas.SignedBeaconBlock.clone(block);
+      sibling.message.stateRoot = Buffer.alloc(32, 1);
+      const siblingRoot = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(sibling.message));
+      engine.seenBlockProposers.observeBlockRoot(1, 7, siblingRoot, signedBlockToSignedHeader(config, sibling));
+      const bytes = ssz.gloas.SignedBeaconBlock.serialize(block);
+
+      await engine.validateGossipBlock(fromHex(root), bytes, ForkName.gloas, 0);
+
+      if (scenario === "invalid_signature") expect(process).not.toHaveBeenCalled();
+      else expect(process).toHaveBeenCalledExactlyOnceWith(1, 7);
+
+      process.mockClear();
+      await engine.validateGossipBlock(fromHex(root), bytes, ForkName.gloas);
+      expect(process).not.toHaveBeenCalled();
+    }
+  );
 
   it.each(["truncated", "invalid_offset", "root_mismatch"])(
     "returns a plain rejection for %s without replacing existing cache entries",

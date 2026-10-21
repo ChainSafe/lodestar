@@ -47,11 +47,11 @@ import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {RegenRequest} from "../regen/index.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
-import {GossipBlockValidationResult} from "../validation/block.js";
 import {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {ValidatorMonitorAttestation, ValidatorMonitorBlock} from "../validatorMonitor.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import {BeaconEngineEvent, ChainReorg, ExecutionPayloadImported, FastConfirmation, HeadUpdate} from "./events.js";
+import {GossipBlockResult} from "./gossipValidation/block.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import {
@@ -639,7 +639,7 @@ export class BeaconEngine implements IBeaconEngine {
     blockBytes: Uint8Array,
     fork: ForkName,
     seenTimestampSec?: number
-  ): Promise<GossipValidationResult<GossipBlockValidationResult>> {
+  ): Promise<GossipBlockResult> {
     return this.core.validateGossipBlock(blockRoot, blockBytes, fork, seenTimestampSec);
   }
 
@@ -810,10 +810,6 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.insertVoluntaryExit(exit);
   }
 
-  processProposerEquivocation(slot: Slot, proposerIndex: ValidatorIndex): void {
-    this.core.processProposerEquivocation(slot, proposerIndex);
-  }
-
   validateGossipBlsToExecutionChange(blsToExecutionChangeBytes: Uint8Array): Promise<GossipValidationResult<void>> {
     return this.core.validateGossipBlsToExecutionChange(blsToExecutionChangeBytes);
   }
@@ -915,24 +911,12 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.validatorSeenAtEpoch(index, epoch);
   }
 
-  observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): Promise<void> {
-    return this.core.observeVerifiedBlocks(blocks, verifyOnly);
-  }
-
   markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): Promise<void> {
     return this.core.markBlockProposersSeen(blocks);
   }
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
     return this.core.recomputeForkChoiceHead(caller);
-  }
-
-  hasObservedBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): boolean {
-    return this.core.hasObservedBlockRoot(slot, proposerIndex, root);
-  }
-
-  isBlockProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean {
-    return this.core.isBlockProposerEquivocating(slot, proposerIndex);
   }
 
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {

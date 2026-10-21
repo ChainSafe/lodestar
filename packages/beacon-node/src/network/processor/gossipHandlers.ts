@@ -214,6 +214,14 @@ function getSequentialHandlers(
           blockRootHex
         );
       }
+      if (result.err !== null && result.blockErrorType !== undefined) {
+        const error = new BlockGossipError(
+          result.err.status === GossipValidationStatus.Reject ? GossipAction.REJECT : GossipAction.IGNORE,
+          result.blockErrorType
+        );
+        error.shouldProcessRepeatProposalBlock = result.shouldProcessRepeatProposalBlock;
+        throw error;
+      }
       const {skippedSlots} = unwrapGossipResult(result);
       const blockInput = cacheSignatureVerifiedBlock(
         signedBlock,
@@ -271,12 +279,6 @@ function getSequentialHandlers(
       throw e;
     } finally {
       chain.seenBlockInputCache.unmarkValidatingBlock(blockRootHex);
-      // The block received from the network may have established an equivocation, either by conflicting
-      // with a previously observed block root (REPEAT_PROPOSAL) or with a root observed during validation
-      const proposerIndex = signedBlock.message.proposerIndex;
-      if (chain.beaconEngine.isBlockProposerEquivocating(slot, proposerIndex)) {
-        chain.beaconEngine.processProposerEquivocation(slot, proposerIndex);
-      }
     }
   }
 
@@ -754,10 +756,7 @@ function getSequentialHandlers(
           if (
             e instanceof BlockGossipError &&
             e.type.code === BlockErrorCode.REPEAT_PROPOSAL &&
-            // Only a signature-verified sibling recorded in the seen cache is imported. The cache holds at most two
-            // roots per proposer and slot, which bounds full imports over gossip to one alternate
-            chain.beaconEngine.hasObservedBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root) &&
-            chain.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) !== null
+            e.shouldProcessRepeatProposalBlock
           ) {
             // Source: unstable@2593063a82 gossipHandlers.ts#GossipType.beacon_block.
             const blockInput = cacheSignatureVerifiedBlock(

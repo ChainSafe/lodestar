@@ -167,7 +167,7 @@ import {FIFOBlockStateCache} from "../stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "../stateCache/persistentCheckpointsCache.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
-import {GossipBlockValidationResult, verifyBlockProposerSignature} from "../validation/block.js";
+import {verifyBlockProposerSignature} from "../validation/block.js";
 import * as proposerSlashingValidation from "../validation/proposerSlashing.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {
@@ -213,7 +213,7 @@ import {
   validateGossipAggregateAndProof,
   validateGossipAttestationsSameAttData,
 } from "./gossipValidation/attestation.js";
-import {validateGossipBlobSidecar, validateGossipBlock} from "./gossipValidation/block.js";
+import {GossipBlockResult, validateGossipBlobSidecar, validateGossipBlock} from "./gossipValidation/block.js";
 import {
   validateGossipFuluDataColumnSidecar,
   validateGossipGloasDataColumnSidecar,
@@ -1409,7 +1409,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     fork: ForkName,
     // API publication also call this with no seenTimestampSec
     seenTimestampSec?: number
-  ): Promise<GossipValidationResult<GossipBlockValidationResult>> {
+  ): Promise<GossipBlockResult> {
     return validateGossipBlock.call(this, () => this.closed, blockRoot, blockBytes, fork, seenTimestampSec);
   }
 
@@ -1755,33 +1755,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  /** Whether a block proposer was already seen for this slot (sync anti-unbundling check). */
-  /** TODO - beacon engine: preserve post-DA ordering when this command crosses the worker boundary. */
-  async observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): Promise<void> {
-    for (const {block, root} of blocks) {
-      const {slot, proposerIndex} = block.message;
-      this.seenBlockProposers.observeBlockRoot(
-        slot,
-        proposerIndex,
-        root,
-        signedBlockToSignedHeader(this.config, block)
-      );
-      if (!verifyOnly && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
-        callInNextEventLoop(() => this.processProposerEquivocation(slot, proposerIndex));
-      }
-    }
-  }
-
   async markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): Promise<void> {
     for (const {slot, proposerIndex, root} of blocks) this.seenBlockProposers.add(slot, proposerIndex, root);
   }
 
-  hasObservedBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): boolean {
-    return this.seenBlockProposers.hasBlockRoot(slot, proposerIndex, root);
-  }
-  isBlockProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean {
-    return this.seenBlockProposers.isEquivocating(slot, proposerIndex);
-  }
   async getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {
     return this.seenBlockProposers.getConflictingBlockRoots(slot, proposerIndex, root);
   }
@@ -1860,7 +1837,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   ): Promise<Result<void, BlockFailure>> {
     return wrapError(
       async () => {
-        await verifyBlocks.call(this, [{blockRoot, blockBytes}], {...opts, skipVerifyExecutionPayload: true}, false);
+        await verifyBlocks.call(this, [{blockRoot, blockBytes}], {...opts, skipVerifyExecutionPayload: true}, true);
       },
       (error) => blockFailureFromError(error, this.config, [blockRoot])
     );

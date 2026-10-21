@@ -36,12 +36,7 @@ describe("api - beacon - publishBlockV2", () => {
     vi.clearAllMocks();
     vi.mocked(validateApiBlock).mockResolvedValue(undefined);
     modules = getApiTestModules({config});
-    for (const name of [
-      "validateGossipBlock",
-      "hasObservedBlockRoot",
-      "getConflictingBlockRoots",
-      "verifyAndObserveBlockProposer",
-    ] as const) {
+    for (const name of ["validateGossipBlock", "getConflictingBlockRoots", "verifyAndObserveBlockProposer"] as const) {
       Object.defineProperty(modules.chain.beaconEngine, name, {
         value: BeaconEngineCore.prototype[name].bind(modules.chain.beaconEngine),
         configurable: true,

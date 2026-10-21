@@ -71,7 +71,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
       const block = ssz.phase0.SignedBeaconBlock.defaultValue();
       block.message.slot = 1;
       const validate = vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
-      vi.spyOn(engine, "hasObservedBlockRoot").mockReturnValue(scenario === "sibling");
+      vi.spyOn(engine.seenBlockProposers, "hasBlockRoot").mockReturnValue(scenario === "sibling");
       const observed = vi.spyOn(monitor, "registerBeaconBlock").mockImplementation(() => {});
       if (scenario === "sibling" || scenario === "unobserved_sibling") {
         validate.mockRejectedValue(

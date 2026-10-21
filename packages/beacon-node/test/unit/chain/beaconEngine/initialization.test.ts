@@ -1292,8 +1292,8 @@ describe("bytes-based engine startup", () => {
     chain.emitter.on(routes.events.EventType.proposerSlashing, publicEvent);
     chain.emitter.on(ChainEvent.publishProposerSlashing, publish);
 
-    chain.processProposerEquivocation(1, 0);
-    chain.processProposerEquivocation(1, 0);
+    core.processProposerEquivocation(1, 0);
+    core.processProposerEquivocation(1, 0);
     expect(validate).toHaveBeenCalledOnce();
     expect(notification).not.toHaveBeenCalled();
     expect(publish).not.toHaveBeenCalled();

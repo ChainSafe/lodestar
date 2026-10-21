@@ -164,7 +164,9 @@ export type BlockErrorType =
   | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex}
   | {code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS; parentBlockHash: RootHex; expectedBlockHash: RootHex};
 
-export class BlockGossipError extends GossipActionError<BlockErrorType> {}
+export class BlockGossipError extends GossipActionError<BlockErrorType> {
+  shouldProcessRepeatProposalBlock = false;
+}
 
 export class BlockError extends LodestarError<BlockErrorType> {
   constructor(

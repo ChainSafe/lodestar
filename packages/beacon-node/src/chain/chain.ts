@@ -921,10 +921,6 @@ export class BeaconChain implements IBeaconChain {
     return this.payloadEnvelopeProcessor.processPayloadEnvelopeJob(payloadInput, opts);
   }
 
-  processProposerEquivocation(slot: Slot, proposerIndex: ValidatorIndex): void {
-    this.beaconEngine.processProposerEquivocation(slot, proposerIndex);
-  }
-
   getStatus(): Status {
     // Read the cached head instead of the engine — its finalized* fields ARE the head state's
     // finalized checkpoint (exactly what Status wants), so no separate getFinalizedCheckpoint() call.

@@ -1,9 +1,14 @@
-// Consensus verification stays engine-owned; the facade observes verified blocks only after its DA join.
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
-import {DataAvailabilityStatus, computeEpochAtSlot, getIndexedAttestation} from "@lodestar/state-transition";
+import {
+  DataAvailabilityStatus,
+  computeEpochAtSlot,
+  getIndexedAttestation,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {BlockBytes} from "../blocks/blockSerializedCache.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
@@ -23,7 +28,7 @@ export async function verifyBlocks(
   // [beacon-engine] deviation: bytes/POJO seam leaves DA verification in the facade.
   blockData: BlockBytes[],
   opts: VerifyBlocksOpts,
-  retainForImport = true
+  isApiValidation = false
 ): Promise<VerifyBlocksSuccess> {
   const entries = blockData.map(({blockRoot, blockBytes}) =>
     this.blockSerializedCache.getOrDeserialize(toRootHex(blockRoot), blockBytes)
@@ -127,6 +132,24 @@ export async function verifyBlocks(
           : Promise.resolve({verifySignaturesTime: Date.now()}),
       ]);
 
+    // Source: unstable@708700cdf6 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch, proposer observation loop.
+    // [beacon-engine] deviation: authenticated headers are retained independently of the facade DA wait.
+    for (const [i, block] of blocks.entries()) {
+      const {slot, proposerIndex} = block.message;
+      const signedBlockHeader = signedBlockToSignedHeader(this.config, block);
+      this.seenBlockProposers.observeBlockRoot(
+        slot,
+        proposerIndex,
+        toRootHex(blockData[i].blockRoot),
+        signedBlockHeader
+      );
+      // Only produce a slashing while importing the block. A block that is verified before it is published
+      // must not be treated as equivocation evidence since it may never be seen by the network
+      if (!isApiValidation && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+        callInNextEventLoop(() => this.processProposerEquivocation(slot, proposerIndex));
+      }
+    }
+
     // [beacon-engine] deviation: keep invalid-ancestor propagation engine-owned after consensus verification.
     if (segmentExecStatus.execAborted !== null) {
       if (segmentExecStatus.invalidSegmentLVH !== undefined) {
@@ -138,7 +161,7 @@ export async function verifyBlocks(
     // [beacon-engine] deviation: retain verification bundles instead of returning FullyVerifiedBlock state objects.
     // API validation may reject publication after consensus succeeds. Its post-states must stay local
     // to this call, and it must not overwrite a bundle belonging to a concurrent import of the same root.
-    if (retainForImport) {
+    if (!isApiValidation) {
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
         const blockRootHex = toRootHex(blockData[i].blockRoot);

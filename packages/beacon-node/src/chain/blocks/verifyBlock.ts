@@ -131,13 +131,6 @@ export async function verifyBlocksInEpoch(
       verificationPromise,
     ]);
 
-    // Observation must follow both consensus verification and the facade DA wait.
-    // TODO - beacon engine: do we need to await here?
-    await this.beaconEngine.observeVerifiedBlocks(
-      blockInputs.map((input) => ({block: input.getBlock(), root: input.blockRootHex})),
-      false
-    );
-
     const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
     const toForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(lastBlock.message.slot));
 

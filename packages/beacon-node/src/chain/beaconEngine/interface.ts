@@ -59,9 +59,9 @@ import {ProduceResult} from "../produceBlock/produceBlockBody.js";
 import {RegenRequest} from "../regen/index.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
-import {GossipBlockValidationResult} from "../validation/block.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {ValidatorMonitorAttestation, ValidatorMonitorBlock, ValidatorMonitorOpts} from "../validatorMonitor.js";
+import {GossipBlockResult} from "./gossipValidation/block.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import {IBeaconEngineOptions} from "./options.js";
@@ -494,7 +494,7 @@ export interface IBeaconEngineCore {
     blockBytes: Uint8Array,
     fork: ForkName,
     seenTimestampSec?: number
-  ): Promise<GossipValidationResult<GossipBlockValidationResult>>;
+  ): Promise<GossipBlockResult>;
   validateGossipSyncCommittee(syncCommitteeBytes: Uint8Array, subnet: SubnetID): Promise<GossipValidationResult<void>>;
   validateApiSyncCommittee(
     syncCommitteeBytes: Uint8Array,
@@ -581,7 +581,6 @@ export interface IBeaconEngineCore {
   ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}>;
   drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]>;
   insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>;
-  processProposerEquivocation(slot: Slot, proposerIndex: ValidatorIndex): void;
   validateGossipBlsToExecutionChange(blsToExecutionChangeBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateApiBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
@@ -626,12 +625,8 @@ export interface IBeaconEngineCore {
   pruneOnFinalized(): Promise<void>;
   /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
-  /** Whether a block proposer was already seen for this slot (sync anti-unbundling check). */
-  observeVerifiedBlocks(blocks: {block: SignedBeaconBlock; root: RootHex}[], verifyOnly: boolean): Promise<void>;
   markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): Promise<void>;
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
-  hasObservedBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): boolean;
-  isBlockProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean;
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]>;
   verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void>;
   verifyEnvelopeForPublish(
@@ -644,7 +639,8 @@ export interface IBeaconEngineCore {
   /**
    * Consensus checks for API broadcast validation, without EL submission or retaining an import bundle.
    * Never changes verifiedBlocks: a concurrent import may already own a bundle for this root.
-   * The facade must still wait for DA before observing the proposer and publishing the block.
+   * Records authenticated proposer headers without triggering slashing production.
+   * The facade must still wait for DA before publishing the block.
    */
   validateApiBlock(
     blockRoot: Root,

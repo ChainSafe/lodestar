@@ -4,7 +4,7 @@ import {Root, SignedBeaconBlock, SubnetID, ssz} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {GossipActionError} from "../../errors/gossipValidation.js";
-import {BlockErrorCode, BlockGossipError, GossipAction} from "../../errors/index.js";
+import {BlockErrorCode, BlockErrorType, BlockGossipError, GossipAction} from "../../errors/index.js";
 import * as blobSidecarValidation from "../../validation/blobSidecar.js";
 import * as blockValidation from "../../validation/block.js";
 import {OpSource} from "../../validatorMonitor.js";
@@ -19,11 +19,18 @@ import {
 } from "../gossipValidationResult.js";
 import {deserializeGossipMessage} from "./deserialize.js";
 
+export type GossipBlockResult = GossipValidationResult<blockValidation.GossipBlockValidationResult> & {
+  blockErrorType?: BlockErrorType;
+  /** Whether to process an eligible repeat proposal while retaining the IGNORE verdict. */
+  shouldProcessRepeatProposalBlock: boolean;
+};
+
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/block.ts#validateGossipBlock.
  * Handler source: unstable@2593063a82 packages/beacon-node/src/network/processor/gossipHandlers.ts#validateBeaconBlock.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#handleValidBeaconBlock.
  * [beacon-engine] deviation: validation/cache updates run in the engine; the facade retains block import.
+ * // TODO - beacon engine: re-review this function
  */
 export async function validateGossipBlock(
   this: BeaconEngineCore,
@@ -33,8 +40,8 @@ export async function validateGossipBlock(
   fork: ForkName,
   // API publication also call this with no seenTimestampSec
   seenTimestampSec?: number
-): Promise<GossipValidationResult<blockValidation.GossipBlockValidationResult>> {
-  if (blockRoot.length !== 32) return reject("BLOCK_ROOT_MISMATCH");
+): Promise<GossipBlockResult> {
+  if (blockRoot.length !== 32) return {...reject("BLOCK_ROOT_MISMATCH"), shouldProcessRepeatProposalBlock: false};
   const blockRootHex = toRootHex(blockRoot);
   const payloadBlockRoot = isForkPostGloas(fork) ? blockRootHex : null;
   let signedBlock: SignedBeaconBlock | undefined;
@@ -75,14 +82,17 @@ export async function validateGossipBlock(
         throw error;
       }
     });
+    const shouldProcessRepeatProposalBlock =
+      result.err?.status === GossipValidationStatus.Ignore &&
+      result.err.code === BlockErrorCode.REPEAT_PROPOSAL &&
+      this.seenBlockProposers.hasBlockRoot(block.message.slot, block.message.proposerIndex, blockRootHex) &&
+      this.forkChoice.getBlockHexDefaultStatus(toRootHex(block.message.parentRoot)) !== null;
     const retained =
       result.err === null ||
+      shouldProcessRepeatProposalBlock ||
       (result.err.status === GossipValidationStatus.Ignore &&
         (result.err.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
-          result.err.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN ||
-          (result.err.code === BlockErrorCode.REPEAT_PROPOSAL &&
-            this.hasObservedBlockRoot(block.message.slot, block.message.proposerIndex, blockRootHex) &&
-            this.forkChoice.getBlockHexDefaultStatus(toRootHex(block.message.parentRoot)) !== null)));
+          result.err.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN));
     if (retained) {
       if (payloadBlockRoot !== null) {
         this.seenPayloadEnvelopeInputCache.add({
@@ -114,16 +124,15 @@ export async function validateGossipBlock(
       // the facade import handler. Observed siblings are still monitored before returning IGNORE.
       if (result.err === null) {
         callInNextEventLoop(registerBlock);
-      } else if (
-        result.err.status === GossipValidationStatus.Ignore &&
-        result.err.code === BlockErrorCode.REPEAT_PROPOSAL &&
-        this.hasObservedBlockRoot(slot, proposerIndex, blockRoot) &&
-        retained
-      ) {
+      } else if (shouldProcessRepeatProposalBlock) {
         registerBlock();
       }
     }
-    return result;
+    return {
+      ...result,
+      blockErrorType: result.err?.error instanceof BlockGossipError ? result.err.error.type : undefined,
+      shouldProcessRepeatProposalBlock,
+    };
   } catch (error) {
     if (signedBlock !== undefined) {
       this.blockSerializedCache.delete(blockRootHex, signedBlock, "rejected");
@@ -132,11 +141,19 @@ export async function validateGossipBlock(
       error instanceof LodestarError &&
       (error.type.code === "INVALID_BLOCK_SSZ" || error.type.code === "BLOCK_ROOT_MISMATCH")
     ) {
-      return reject(error.type.code, {blockRoot: blockRootHex});
+      return {...reject(error.type.code, {blockRoot: blockRootHex}), shouldProcessRepeatProposalBlock: false};
     }
     // [beacon-engine] deviation: internal failures return a verdict without penalizing the peer.
     this.logger.error("Error validating gossip block", {root: blockRootHex, code: "UNEXPECTED_ERROR"}, error as Error);
-    return ignore("UNEXPECTED_ERROR");
+    return {...ignore("UNEXPECTED_ERROR"), shouldProcessRepeatProposalBlock: false};
+  } finally {
+    // API publication shares this validator but does not initiate gossip equivocation processing.
+    if (seenTimestampSec !== undefined && signedBlock !== undefined) {
+      const {slot, proposerIndex} = signedBlock.message;
+      if (this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+        this.processProposerEquivocation(slot, proposerIndex);
+      }
+    }
   }
 }
 
