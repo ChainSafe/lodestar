@@ -251,12 +251,30 @@ describe("BeaconEngineCore light client ownership", () => {
     expect(await validate(new Uint8Array(1))).toMatchObject({
       err: {status: "reject", code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE},
     });
+    const validateObject = () =>
+      kind === "optimistic"
+        ? engine.validateGossipLightClientOptimisticUpdateObject(value)
+        : engine.validateGossipLightClientFinalityUpdateObject(value);
+    const deserialize = vi.spyOn(type, "deserialize");
+    const serialize = vi.spyOn(type, "serialize");
+    expect(await validateObject()).toMatchObject({
+      err: {
+        status: "ignore",
+        code:
+          kind === "optimistic"
+            ? LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED
+            : LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED,
+      },
+    });
+    expect(serialize).not.toHaveBeenCalled();
+    expect(deserialize).not.toHaveBeenCalled();
     getter.mockImplementation(() => {
       throw Error("unexpected");
     });
     expect(await validate(type.serialize(value))).toMatchObject({
       err: {status: "ignore", code: "UNEXPECTED_ERROR"},
     });
+    expect(await validateObject()).toMatchObject({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
     expect(logger.error).toHaveBeenCalledWith(expect.any(String), {code: "UNEXPECTED_ERROR"}, expect.any(Error));
   });
 

@@ -986,6 +986,7 @@ export class BeaconEngine implements IBeaconEngine {
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult> {
+    // TODO - beacon engine: consider passing verified bundles directly for main-thread imports.
     const res = await this.core.importBlock(
       computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()),
       dataAvailabilityStatus,

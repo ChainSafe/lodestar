@@ -61,6 +61,8 @@ import {
   CommitteeIndex,
   Epoch,
   IndexedAttestation,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
   Root,
   RootHex,
   SignedAggregateAndProof,
@@ -72,9 +74,11 @@ import {
   SubcommitteeIndex,
   SubnetID,
   ValidatorIndex,
+  WithBytes,
   altair,
   bellatrix,
   capella,
+  deneb,
   electra,
   fulu,
   getValidatorStatus,
@@ -123,7 +127,12 @@ import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
 import {BlockBytes, BlockSerializedCache} from "../blocks/blockSerializedCache.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
-import {SignedBlockRoot, SignedBlockRootHex, toSignedBlockRootHex} from "../blocks/signedBlockRoot.js";
+import {
+  SignedBlockRoot,
+  SignedBlockRootHex,
+  computeSignedBlockRoot,
+  toSignedBlockRootHex,
+} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
@@ -213,24 +222,38 @@ import {
   validateApiAggregateAndProof,
   validateApiAttestation,
   validateGossipAggregateAndProof,
+  validateGossipAggregateAndProofObject,
   validateGossipAttestationsSameAttData,
 } from "./gossipValidation/attestation.js";
-import {GossipBlockResult, validateGossipBlobSidecar, validateGossipBlock} from "./gossipValidation/block.js";
+import {
+  GossipBlockResult,
+  validateGossipBlobSidecar,
+  validateGossipBlobSidecarObject,
+  validateGossipBlock,
+  validateGossipBlockObject,
+} from "./gossipValidation/block.js";
 import {
   validateGossipFuluDataColumnSidecar,
+  validateGossipFuluDataColumnSidecarObject,
   validateGossipGloasDataColumnSidecar,
+  validateGossipGloasDataColumnSidecarObject,
 } from "./gossipValidation/dataColumnSidecar.js";
 import {
   validateApiExecutionPayloadBid,
   validateApiExecutionPayloadEnvelope,
   validateApiPayloadAttestationMessage,
   validateGossipExecutionPayloadBid,
+  validateGossipExecutionPayloadBidObject,
   validateGossipExecutionPayloadEnvelope,
+  validateGossipExecutionPayloadEnvelopeObject,
   validateGossipPayloadAttestationMessage,
+  validateGossipPayloadAttestationMessageObject,
 } from "./gossipValidation/executionPayload.js";
 import {
   validateGossipLightClientFinalityUpdate,
+  validateGossipLightClientFinalityUpdateObject,
   validateGossipLightClientOptimisticUpdate,
+  validateGossipLightClientOptimisticUpdateObject,
 } from "./gossipValidation/lightClient.js";
 import {
   validateApiAttesterSlashing,
@@ -238,20 +261,27 @@ import {
   validateApiProposerSlashing,
   validateApiVoluntaryExit,
   validateGossipAttesterSlashing,
+  validateGossipAttesterSlashingObject,
   validateGossipBlsToExecutionChange,
+  validateGossipBlsToExecutionChangeObject,
   validateGossipProposerPreferences,
+  validateGossipProposerPreferencesObject,
   validateGossipProposerSlashing,
+  validateGossipProposerSlashingObject,
   validateGossipVoluntaryExit,
+  validateGossipVoluntaryExitObject,
 } from "./gossipValidation/operations.js";
 import {
   validateApiSyncCommittee,
   validateApiSyncCommitteeContributionAndProof,
   validateGossipSyncCommittee,
+  validateGossipSyncCommitteeObject,
   validateSyncCommitteeGossipContributionAndProof,
+  validateSyncCommitteeGossipContributionAndProofObject,
 } from "./gossipValidation/syncCommittee.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
-import {importExecutionPayload} from "./importExecutionPayload.js";
+import {importExecutionPayload, importExecutionPayloadObject} from "./importExecutionPayload.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import type {ApiStateId} from "./interface.js";
 import {
@@ -289,7 +319,7 @@ import {BlockFailure, PayloadFailure, blockFailureFromError, payloadFailureFromE
 import {produceBlockWrapper, produceCommonBlockBody} from "./produceBlock.js";
 import {produceBlockV4, produceEngineOrBuilderBlock} from "./produceEngineOrBuilderBlock.js";
 import {SeenEnginePayloadEnvelopeInput} from "./seenEnginePayloadEnvelopeInput.js";
-import {verifyBlocks} from "./verifyBlock.js";
+import {verifyBlocks, verifyBlocksObject} from "./verifyBlock.js";
 
 const MAX_VERIFIED_PROPOSER_SIGNATURES = 3 * SLOTS_PER_EPOCH;
 
@@ -1153,6 +1183,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     const registrations =
       this.serializedCache?.getDeserialized<bellatrix.SignedValidatorRegistrationV1[]>(registrationsBytes) ??
       routes.validator.SignedValidatorRegistrationV1ListType.deserialize(registrationsBytes);
+    return this.registerValidatorObject(epoch, registrations);
+  }
+
+  async registerValidatorObject(epoch: Epoch, registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
+    if (!this.executionBuilder) {
+      throw Error("External builder not configured");
+    }
     await this.executionBuilder.registerValidator(epoch, registrations);
   }
 
@@ -1166,10 +1203,17 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     const signedBlindedBlock =
       this.serializedCache?.getDeserialized<SignedBlindedBeaconBlock>(signedBlindedBlockBytes) ??
       sszTypesFor(fork).SignedBlindedBeaconBlock.deserialize(signedBlindedBlockBytes);
-    const contents = await this.executionBuilder.submitBlindedBlock({
-      data: signedBlindedBlock,
-      bytes: signedBlindedBlockBytes,
-    });
+    return this.submitBlindedBlockObject({data: signedBlindedBlock, bytes: signedBlindedBlockBytes}, fork);
+  }
+
+  async submitBlindedBlockObject(
+    signedBlindedBlock: WithBytes<SignedBlindedBeaconBlock>,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<Uint8Array> {
+    if (!this.executionBuilder) {
+      throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
+    }
+    const contents = await this.executionBuilder.submitBlindedBlock(signedBlindedBlock);
     if (isForkPostDeneb(fork)) {
       const bytes = sszTypesFor(fork).SignedBlockContents.serialize(contents as SignedBlockContents<typeof fork>);
       this.serializedCache?.set(contents, bytes);
@@ -1190,10 +1234,14 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     const signedBlindedBlock =
       this.serializedCache?.getDeserialized<SignedBlindedBeaconBlock>(signedBlindedBlockBytes) ??
       sszTypesFor(fork).SignedBlindedBeaconBlock.deserialize(signedBlindedBlockBytes);
-    await this.executionBuilder.submitBlindedBlockNoResponse({
-      data: signedBlindedBlock,
-      bytes: signedBlindedBlockBytes,
-    });
+    return this.submitBlindedBlockNoResponseObject({data: signedBlindedBlock, bytes: signedBlindedBlockBytes});
+  }
+
+  async submitBlindedBlockNoResponseObject(signedBlindedBlock: WithBytes<SignedBlindedBeaconBlock>): Promise<void> {
+    if (!this.executionBuilder) {
+      throw Error("executionBuilder required to submit SignedBlindedBeaconBlock to builder");
+    }
+    await this.executionBuilder.submitBlindedBlockNoResponse(signedBlindedBlock);
   }
 
   /** Runs inside BeaconEngineCore. Single Gloas V4 production entry and plain-data error boundary. */
@@ -1403,8 +1451,20 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipLightClientOptimisticUpdate.call(this, bytes, fork);
   }
 
+  validateGossipLightClientOptimisticUpdateObject(
+    update: LightClientOptimisticUpdate
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipLightClientOptimisticUpdateObject.call(this, update);
+  }
+
   validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>> {
     return validateGossipLightClientFinalityUpdate.call(this, bytes, fork);
+  }
+
+  validateGossipLightClientFinalityUpdateObject(
+    update: LightClientFinalityUpdate
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipLightClientFinalityUpdateObject.call(this, update);
   }
 
   // Gossip validation delegates to ./gossipValidation/* with engine-owned state.
@@ -1415,11 +1475,27 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     // API publication also call this with no seenTimestampSec
     seenTimestampSec?: number
   ): Promise<GossipBlockResult> {
-    return validateGossipBlock.call(this, () => this.closed, signedBlockRoot, blockBytes, fork, seenTimestampSec);
+    return validateGossipBlock.call(this, signedBlockRoot, blockBytes, fork, seenTimestampSec);
+  }
+
+  /** The bytes must encode this block; both must remain immutable while retained by the engine. */
+  validateGossipBlockObject(
+    block: WithBytes<SignedBeaconBlock>,
+    fork: ForkName,
+    seenTimestampSec?: number
+  ): Promise<GossipBlockResult> {
+    return validateGossipBlockObject.call(this, block, fork, seenTimestampSec);
   }
 
   validateGossipSyncCommittee(syncCommitteeBytes: Uint8Array, subnet: SubnetID): Promise<GossipValidationResult<void>> {
     return validateGossipSyncCommittee.call(this, syncCommitteeBytes, subnet);
+  }
+
+  validateGossipSyncCommitteeObject(
+    syncCommittee: altair.SyncCommitteeMessage,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipSyncCommitteeObject.call(this, syncCommittee, subnet);
   }
 
   // Returns the subnets to broadcast to (the facade publishes). Resolves committee membership + pool insert
@@ -1428,7 +1504,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     _syncCommitteeBytes: Uint8Array,
     syncCommittee: altair.SyncCommitteeMessage
   ): Promise<GossipValidationResult<{subnets: number[]}>> {
-    return validateApiSyncCommittee.call(this, _syncCommitteeBytes, syncCommittee);
+    return validateApiSyncCommittee.call(this, syncCommittee);
+  }
+
+  validateApiSyncCommitteeObject(
+    syncCommittee: altair.SyncCommitteeMessage
+  ): Promise<GossipValidationResult<{subnets: number[]}>> {
+    return validateApiSyncCommittee.call(this, syncCommittee);
   }
 
   validateSyncCommitteeGossipContributionAndProof(
@@ -1437,8 +1519,18 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
     return validateSyncCommitteeGossipContributionAndProof.call(
       this,
-      () => this.closed,
       contributionBytes,
+      skipValidationKnownParticipants
+    );
+  }
+
+  validateSyncCommitteeGossipContributionAndProofObject(
+    signedContributionAndProof: altair.SignedContributionAndProof,
+    skipValidationKnownParticipants = false
+  ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
+    return validateSyncCommitteeGossipContributionAndProofObject.call(
+      this,
+      signedContributionAndProof,
       skipValidationKnownParticipants
     );
   }
@@ -1447,7 +1539,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     _contributionBytes: Uint8Array,
     signedContributionAndProof: altair.SignedContributionAndProof
   ): Promise<GossipValidationResult<void>> {
-    return validateApiSyncCommitteeContributionAndProof.call(this, _contributionBytes, signedContributionAndProof);
+    return validateApiSyncCommitteeContributionAndProof.call(this, signedContributionAndProof);
+  }
+
+  validateApiSyncCommitteeContributionAndProofObject(
+    signedContributionAndProof: altair.SignedContributionAndProof
+  ): Promise<GossipValidationResult<void>> {
+    return validateApiSyncCommitteeContributionAndProof.call(this, signedContributionAndProof);
   }
 
   validateGossipBlobSidecar(
@@ -1458,11 +1556,26 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipBlobSidecar.call(this, blobBytes, fork, subnet);
   }
 
+  validateGossipBlobSidecarObject(
+    blobSidecar: deneb.BlobSidecar,
+    fork: ForkName,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipBlobSidecarObject.call(this, blobSidecar, fork, subnet);
+  }
+
   validateGossipFuluDataColumnSidecar(
     dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
     return validateGossipFuluDataColumnSidecar.call(this, dataColumnBytes, gossipSubnet);
+  }
+
+  validateGossipFuluDataColumnSidecarObject(
+    dataColumnSidecar: fulu.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipFuluDataColumnSidecarObject.call(this, dataColumnSidecar, gossipSubnet);
   }
 
   validateGossipGloasDataColumnSidecar(
@@ -1472,15 +1585,34 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipGloasDataColumnSidecar.call(this, dataColumnBytes, gossipSubnet);
   }
 
+  validateGossipGloasDataColumnSidecarObject(
+    dataColumnSidecar: gloas.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipGloasDataColumnSidecarObject.call(this, dataColumnSidecar, gossipSubnet);
+  }
+
   validateGossipPayloadAttestationMessage(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>> {
     return validateGossipPayloadAttestationMessage.call(this, payloadAttestationBytes);
+  }
+
+  validateGossipPayloadAttestationMessageObject(
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipPayloadAttestationMessageObject.call(this, payloadAttestationMessage);
   }
 
   validateApiPayloadAttestationMessage(
     _payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<void>> {
-    return validateApiPayloadAttestationMessage.call(this, _payloadAttestationBytes, payloadAttestationMessage);
+    return validateApiPayloadAttestationMessage.call(this, payloadAttestationMessage);
+  }
+
+  validateApiPayloadAttestationMessageObject(
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<GossipValidationResult<void>> {
+    return validateApiPayloadAttestationMessage.call(this, payloadAttestationMessage);
   }
 
   // The batch attestation validator already returns `Result<T>[]` (caught internally, never throws out);
@@ -1493,7 +1625,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}> {
     return validateGossipAttestationsSameAttData.call(
       this,
-      () => this.closed,
       this.aggregatorTracker,
       fork,
       attestations,
@@ -1513,7 +1644,15 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return validateGossipAggregateAndProof.call(this, () => this.closed, aggregateBytes, fork, seenTimestampSec);
+    return validateGossipAggregateAndProof.call(this, aggregateBytes, fork, seenTimestampSec);
+  }
+
+  validateGossipAggregateAndProofObject(
+    signedAggregateAndProof: WithBytes<SignedAggregateAndProof>,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
+    return validateGossipAggregateAndProofObject.call(this, signedAggregateAndProof, fork, seenTimestampSec);
   }
 
   validateApiAggregateAndProof(
@@ -1521,7 +1660,14 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return validateApiAggregateAndProof.call(this, _aggregateBytes, fork, signedAggregateAndProof);
+    return validateApiAggregateAndProof.call(this, fork, signedAggregateAndProof);
+  }
+
+  validateApiAggregateAndProofObject(
+    fork: ForkName,
+    signedAggregateAndProof: SignedAggregateAndProof
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
+    return validateApiAggregateAndProof.call(this, fork, signedAggregateAndProof);
   }
 
   validateGossipExecutionPayloadEnvelope(
@@ -1531,12 +1677,26 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipExecutionPayloadEnvelope.call(this, envelopeBytes, source);
   }
 
+  validateGossipExecutionPayloadEnvelopeObject(
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    source: SourceMeta
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipExecutionPayloadEnvelopeObject.call(this, executionPayloadEnvelope, source);
+  }
+
   validateApiExecutionPayloadEnvelope(
     _envelopeBytes: Uint8Array,
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<void>> {
-    return validateApiExecutionPayloadEnvelope.call(this, _envelopeBytes, executionPayloadEnvelope, seenTimestampSec);
+    return validateApiExecutionPayloadEnvelope.call(this, executionPayloadEnvelope, seenTimestampSec);
+  }
+
+  validateApiExecutionPayloadEnvelopeObject(
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<void>> {
+    return validateApiExecutionPayloadEnvelope.call(this, executionPayloadEnvelope, seenTimestampSec);
   }
 
   validateGossipExecutionPayloadBid(
@@ -1544,18 +1704,37 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
-    return validateGossipExecutionPayloadBid.call(this, () => this.closed, bidBytes, fork, seenTimestampSec);
+    return validateGossipExecutionPayloadBid.call(this, bidBytes, fork, seenTimestampSec);
+  }
+
+  validateGossipExecutionPayloadBidObject(
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
+    return validateGossipExecutionPayloadBidObject.call(this, signedExecutionPayloadBid, seenTimestampSec);
   }
 
   validateApiExecutionPayloadBid(
     _bidBytes: Uint8Array,
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
   ): Promise<GossipValidationResult<void>> {
-    return validateApiExecutionPayloadBid.call(this, _bidBytes, signedExecutionPayloadBid);
+    return validateApiExecutionPayloadBid.call(this, signedExecutionPayloadBid);
+  }
+
+  validateApiExecutionPayloadBidObject(
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
+  ): Promise<GossipValidationResult<void>> {
+    return validateApiExecutionPayloadBid.call(this, signedExecutionPayloadBid);
   }
 
   async validateGossipProposerPreferences(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>> {
     return validateGossipProposerPreferences.call(this, preferencesBytes);
+  }
+
+  async validateGossipProposerPreferencesObject(
+    signedProposerPreferences: gloas.SignedProposerPreferences
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipProposerPreferencesObject.call(this, signedProposerPreferences);
   }
 
   // --- Op pool: gossip validate (+ insert on Accept) / API validate (throws, + insert) / REST reads ---
@@ -1569,6 +1748,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipAttesterSlashing.call(this, attesterSlashingBytes, fork);
   }
 
+  async validateGossipAttesterSlashingObject(
+    attesterSlashing: AttesterSlashing,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipAttesterSlashingObject.call(this, attesterSlashing, fork);
+  }
+
   async validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void> {
     return validateApiAttesterSlashing.call(this, attesterSlashing, fork);
   }
@@ -1577,12 +1763,24 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipProposerSlashing.call(this, proposerSlashingBytes);
   }
 
+  async validateGossipProposerSlashingObject(
+    proposerSlashing: phase0.ProposerSlashing
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipProposerSlashingObject.call(this, proposerSlashing);
+  }
+
   async validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
     return validateApiProposerSlashing.call(this, proposerSlashing);
   }
 
   async validateGossipVoluntaryExit(voluntaryExitBytes: Uint8Array): Promise<GossipValidationResult<void>> {
     return validateGossipVoluntaryExit.call(this, voluntaryExitBytes);
+  }
+
+  async validateGossipVoluntaryExitObject(
+    voluntaryExit: phase0.SignedVoluntaryExit
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipVoluntaryExitObject.call(this, voluntaryExit);
   }
 
   async validateApiVoluntaryExit(
@@ -1603,6 +1801,12 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     blsToExecutionChangeBytes: Uint8Array
   ): Promise<GossipValidationResult<void>> {
     return validateGossipBlsToExecutionChange.call(this, blsToExecutionChangeBytes);
+  }
+
+  async validateGossipBlsToExecutionChangeObject(
+    blsToExecutionChange: capella.SignedBLSToExecutionChange
+  ): Promise<GossipValidationResult<void>> {
+    return validateGossipBlsToExecutionChangeObject.call(this, blsToExecutionChange);
   }
 
   async validateApiBlsToExecutionChange(
@@ -1764,6 +1968,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return this.seenBlockProposers.getConflictingBlockRoots(slot, proposerIndex, root);
   }
   async verifyAndObserveBlockProposer(_bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void> {
+    return this.verifyAndObserveBlockProposerObject(block, root);
+  }
+
+  async verifyAndObserveBlockProposerObject(block: SignedBeaconBlock, root: RootHex): Promise<void> {
     const forkName = this.config.getForkName(block.message.slot);
     if (isForkPostGloas(forkName)) {
       this.seenPayloadEnvelopeInputCache.add({
@@ -1783,6 +1991,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   // TODO - beacon engine: map these API errors to plain result codes when introducing the worker transport.
   async verifyEnvelopeForPublish(
     _bytes: Uint8Array,
+    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    blockRootHex: RootHex
+  ): Promise<void> {
+    return this.verifyEnvelopeForPublishObject(signedEnvelope, blockRootHex);
+  }
+
+  async verifyEnvelopeForPublishObject(
     signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
     blockRootHex: RootHex
   ): Promise<void> {
@@ -1849,6 +2064,22 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
+  /** The bytes must encode this block; neither may be mutated during validation. */
+  async validateApiBlockObject(
+    block: WithBytes<SignedBeaconBlock>,
+    opts: VerifyBlocksOpts
+  ): Promise<Result<void, BlockFailure>> {
+    return wrapError(
+      async () => {
+        await verifyBlocksObject.call(this, [block], {...opts, skipVerifyExecutionPayload: true}, true);
+      },
+      (error) =>
+        blockFailureFromError(error, this.config, [
+          computeSignedBlockRoot(this.config.getForkName(block.data.message.slot), block.data),
+        ])
+    );
+  }
+
   async verifyBlocks(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>> {
     return wrapError(
       () => verifyBlocks.call(this, blocks, opts),
@@ -1858,6 +2089,24 @@ export class BeaconEngineCore implements IBeaconEngineCore {
           error,
           this.config,
           blocks.map(({signedBlockRoot}) => signedBlockRoot)
+        );
+      }
+    );
+  }
+
+  /** Each byte array must encode its paired block; both remain immutable while retained by the engine. */
+  async verifyBlocksObject(
+    blocks: WithBytes<SignedBeaconBlock>[],
+    opts: VerifyBlocksOpts
+  ): Promise<Result<VerifyBlocksSuccess, BlockFailure>> {
+    return wrapError(
+      () => verifyBlocksObject.call(this, blocks, opts),
+      (error) => {
+        this.publishChainView();
+        return blockFailureFromError(
+          error,
+          this.config,
+          blocks.map(({data}) => computeSignedBlockRoot(this.config.getForkName(data.message.slot), data))
         );
       }
     );
@@ -1910,6 +2159,18 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   ): Promise<Result<{executionOptimistic: boolean}, PayloadFailure>> {
     return wrapError(
       () => importExecutionPayload.call(this, envelopeBytes, dataAvailabilityStatus, opts),
+      payloadFailureFromError
+    );
+  }
+
+  /** The bytes must encode this envelope; both must remain immutable while retained by the engine. */
+  async importExecutionPayloadObject(
+    envelope: WithBytes<gloas.SignedExecutionPayloadEnvelope>,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportExecutionPayloadOpts
+  ): Promise<Result<{executionOptimistic: boolean}, PayloadFailure>> {
+    return wrapError(
+      () => importExecutionPayloadObject.call(this, envelope, dataAvailabilityStatus, opts),
       payloadFailureFromError
     );
   }

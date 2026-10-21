@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {IndexedAttestation, SignedAggregateAndProof, sszTypesFor} from "@lodestar/types";
+import {IndexedAttestation, SignedAggregateAndProof, WithBytes, sszTypesFor} from "@lodestar/types";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as aggregateAndProofValidation from "../../validation/aggregateAndProof.js";
@@ -16,7 +16,6 @@ import {deserializeGossipMessage} from "./deserialize.js";
  */
 export async function validateGossipAttestationsSameAttData(
   this: BeaconEngineCore,
-  isClosed: () => boolean,
   aggregatorTracker: AggregatorTracker,
   fork: ForkName,
   attestations: attestationValidation.GossipAttestation[],
@@ -69,7 +68,6 @@ export async function validateGossipAttestationsSameAttData(
     // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#getBatchHandlers.
     if (this.validatorMonitor) {
       callInNextEventLoop(() => {
-        if (isClosed()) return;
         for (const [i, res] of mapped.entries()) {
           if (res.err !== null) continue;
           try {
@@ -114,7 +112,6 @@ export function validateApiAttestation(
  */
 export async function validateGossipAggregateAndProof(
   this: BeaconEngineCore,
-  isClosed: () => boolean,
   aggregateBytes: Uint8Array,
   fork: ForkName,
   seenTimestampSec: number
@@ -128,6 +125,26 @@ export async function validateGossipAggregateAndProof(
       // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
       {reuseBytes: false}
     );
+    return await validateGossipAggregateAndProofObject.call(
+      this,
+      {data: signedAggregateAndProof, bytes: aggregateBytes},
+      fork,
+      seenTimestampSec
+    );
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip aggregate and proof", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipAggregateAndProofObject(
+  this: BeaconEngineCore,
+  {data: signedAggregateAndProof, bytes: aggregateBytes}: WithBytes<SignedAggregateAndProof>,
+  fork: ForkName,
+  seenTimestampSec: number
+): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
+  try {
     return await runGossipValidation(async () => {
       const result = await aggregateAndProofValidation.validateGossipAggregateAndProof.call(
         this,
@@ -158,7 +175,6 @@ export async function validateGossipAggregateAndProof(
       }
       if (this.validatorMonitor) {
         callInNextEventLoop(() => {
-          if (isClosed()) return;
           try {
             this.validatorMonitor?.registerGossipAggregatedAttestation(
               seenTimestampSec,
@@ -190,7 +206,6 @@ export async function validateGossipAggregateAndProof(
  */
 export function validateApiAggregateAndProof(
   this: BeaconEngineCore,
-  _aggregateBytes: Uint8Array,
   fork: ForkName,
   signedAggregateAndProof: SignedAggregateAndProof
 ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {

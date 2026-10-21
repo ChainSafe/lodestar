@@ -1,4 +1,4 @@
-import {SubnetID, ssz} from "@lodestar/types";
+import {SubnetID, fulu, gloas, ssz} from "@lodestar/types";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as dataColumnSidecarValidation from "../../validation/dataColumnSidecar.js";
 import type {BeaconEngineCore} from "../beaconEngineCore.js";
@@ -20,6 +20,20 @@ export async function validateGossipFuluDataColumnSidecar(
       dataColumnBytes,
       this.serializedCache
     );
+    return await validateGossipFuluDataColumnSidecarObject.call(this, dataColumnSidecar, gossipSubnet);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip fulu data column sidecar", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipFuluDataColumnSidecarObject(
+  this: BeaconEngineCore,
+  dataColumnSidecar: fulu.DataColumnSidecar,
+  gossipSubnet: SubnetID
+): Promise<GossipValidationResult<void>> {
+  try {
     return await runGossipValidation(() =>
       dataColumnSidecarValidation.validateGossipFuluDataColumnSidecar.call(
         this,
@@ -50,6 +64,20 @@ export async function validateGossipGloasDataColumnSidecar(
       dataColumnBytes,
       this.serializedCache
     );
+    return await validateGossipGloasDataColumnSidecarObject.call(this, dataColumnSidecar, gossipSubnet);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip gloas data column sidecar", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipGloasDataColumnSidecarObject(
+  this: BeaconEngineCore,
+  dataColumnSidecar: gloas.DataColumnSidecar,
+  gossipSubnet: SubnetID
+): Promise<GossipValidationResult<void>> {
+  try {
     return await runGossipValidation(() =>
       dataColumnSidecarValidation.validateGossipGloasDataColumnSidecar.call(
         this,

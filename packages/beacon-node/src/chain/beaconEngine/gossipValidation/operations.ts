@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {AttesterSlashing, capella, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {AttesterSlashing, capella, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as attesterSlashingValidation from "../../validation/attesterSlashing.js";
 import * as blsToExecutionChangeValidation from "../../validation/blsToExecutionChange.js";
@@ -25,6 +25,19 @@ export async function validateGossipProposerPreferences(
       preferencesBytes,
       this.serializedCache
     );
+    return await validateGossipProposerPreferencesObject.call(this, signedProposerPreferences);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip proposer preferences", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipProposerPreferencesObject(
+  this: BeaconEngineCore,
+  signedProposerPreferences: gloas.SignedProposerPreferences
+): Promise<GossipValidationResult<void>> {
+  try {
     const res = await runGossipValidation(() =>
       proposerPreferencesValidation.validateGossipProposerPreferences.call(this, signedProposerPreferences)
     );
@@ -56,6 +69,20 @@ export async function validateGossipAttesterSlashing(
       attesterSlashingBytes,
       this.serializedCache
     );
+    return await validateGossipAttesterSlashingObject.call(this, attesterSlashing, fork);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip attester slashing", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipAttesterSlashingObject(
+  this: BeaconEngineCore,
+  attesterSlashing: AttesterSlashing,
+  fork: ForkName
+): Promise<GossipValidationResult<void>> {
+  try {
     const res = await runGossipValidation(() =>
       attesterSlashingValidation.validateGossipAttesterSlashing.call(this, attesterSlashing)
     );
@@ -105,6 +132,19 @@ export async function validateGossipProposerSlashing(
       proposerSlashingBytes,
       this.serializedCache
     );
+    return await validateGossipProposerSlashingObject.call(this, proposerSlashing);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip proposer slashing", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipProposerSlashingObject(
+  this: BeaconEngineCore,
+  proposerSlashing: phase0.ProposerSlashing
+): Promise<GossipValidationResult<void>> {
+  try {
     const res = await runGossipValidation(() =>
       proposerSlashingValidation.validateGossipProposerSlashing.call(this, proposerSlashing)
     );
@@ -151,6 +191,19 @@ export async function validateGossipVoluntaryExit(
       voluntaryExitBytes,
       this.serializedCache
     );
+    return await validateGossipVoluntaryExitObject.call(this, voluntaryExit);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip voluntary exit", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipVoluntaryExitObject(
+  this: BeaconEngineCore,
+  voluntaryExit: phase0.SignedVoluntaryExit
+): Promise<GossipValidationResult<void>> {
+  try {
     const res = await runGossipValidation(() =>
       voluntaryExitValidation.validateGossipVoluntaryExit.call(this, voluntaryExit)
     );
@@ -203,6 +256,19 @@ export async function validateGossipBlsToExecutionChange(
       blsToExecutionChangeBytes,
       this.serializedCache
     );
+    return await validateGossipBlsToExecutionChangeObject.call(this, blsToExecutionChange);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip bls to execution change", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipBlsToExecutionChangeObject(
+  this: BeaconEngineCore,
+  blsToExecutionChange: capella.SignedBLSToExecutionChange
+): Promise<GossipValidationResult<void>> {
+  try {
     const res = await runGossipValidation(() =>
       blsToExecutionChangeValidation.validateGossipBlsToExecutionChange.call(this, blsToExecutionChange)
     );

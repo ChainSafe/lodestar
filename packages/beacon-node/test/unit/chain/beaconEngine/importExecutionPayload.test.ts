@@ -188,26 +188,48 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     );
   });
 
-  it("does not expose FULL or send FCU until the envelope is persisted", async () => {
-    let finishWrite: (() => void) | undefined;
-    putEnvelope.mockReturnValue(
-      new Promise<void>((resolve) => {
-        finishWrite = resolve;
-      })
-    );
-    const importing = importPayload();
-    await vi.waitFor(() =>
-      expect(putEnvelope).toHaveBeenCalledExactlyOnceWith(Uint8Array.from(blockRoot), envelopeBytes)
-    );
-    expect(emitImported).not.toHaveBeenCalled();
-    expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
-    expect(chain.publishChainView).not.toHaveBeenCalled();
-    expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
-    finishWrite?.();
-    await importing;
-    expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
-    expect(emitImported).toHaveBeenCalledOnce();
-  });
+  it.each(["bytes", "object"] as const)(
+    "does not expose FULL or send FCU until the %s envelope is persisted",
+    async (inputType) => {
+      let finishWrite: (() => void) | undefined;
+      putEnvelope.mockReturnValue(
+        new Promise<void>((resolve) => {
+          finishWrite = resolve;
+        })
+      );
+      const deserialize = vi.spyOn(ssz.gloas.SignedExecutionPayloadEnvelope, "deserialize");
+      const serialize = vi.spyOn(ssz.gloas.SignedExecutionPayloadEnvelope, "serialize");
+      const importing =
+        inputType === "bytes"
+          ? importPayload()
+          : BeaconEngineCore.prototype.importExecutionPayloadObject.call(
+              chain.beaconEngine,
+              {data: envelope, bytes: envelopeBytes},
+              DataAvailabilityStatus.Available,
+              {validSignature: true}
+            );
+      await vi.waitFor(() =>
+        expect(putEnvelope).toHaveBeenCalledExactlyOnceWith(
+          inputType === "object" ? blockRoot : Uint8Array.from(blockRoot),
+          envelopeBytes
+        )
+      );
+      expect(emitImported).not.toHaveBeenCalled();
+      expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
+      expect(chain.publishChainView).not.toHaveBeenCalled();
+      expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
+      if (inputType === "object") {
+        expect(putEnvelope.mock.calls[0][1]).toBe(envelopeBytes);
+        expect(chain.executionEngine.notifyNewPayload.mock.calls[0][1]).toBe(envelope.message.payload);
+        expect(serialize).not.toHaveBeenCalled();
+        expect(deserialize).not.toHaveBeenCalled();
+      }
+      finishWrite?.();
+      await importing;
+      expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
+      expect(emitImported).toHaveBeenCalledOnce();
+    }
+  );
 
   it("rejects a failed envelope write without exposing FULL or sending FCU", async () => {
     const error = new Error("DB write failed");

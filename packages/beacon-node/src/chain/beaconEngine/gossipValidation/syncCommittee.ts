@@ -25,6 +25,20 @@ export async function validateGossipSyncCommittee(
       syncCommitteeBytes,
       this.serializedCache
     );
+    return await validateGossipSyncCommitteeObject.call(this, syncCommittee, subnet);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip sync committee", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipSyncCommitteeObject(
+  this: BeaconEngineCore,
+  syncCommittee: altair.SyncCommitteeMessage,
+  subnet: SubnetID
+): Promise<GossipValidationResult<void>> {
+  try {
     return await runGossipValidation(async () => {
       const result = await syncCommitteeValidation.validateGossipSyncCommittee.call(this, syncCommittee, subnet);
       // Insert for ALL positions this validator holds in the subcommittee (moved from the gossip handler).
@@ -52,7 +66,6 @@ export async function validateGossipSyncCommittee(
  */
 export function validateApiSyncCommittee(
   this: BeaconEngineCore,
-  _syncCommitteeBytes: Uint8Array,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<GossipValidationResult<{subnets: number[]}>> {
   return runGossipValidation(async () => {
@@ -88,7 +101,6 @@ export function validateApiSyncCommittee(
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
   this: BeaconEngineCore,
-  isClosed: () => boolean,
   contributionBytes: Uint8Array,
   skipValidationKnownParticipants = false
 ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
@@ -98,6 +110,28 @@ export async function validateSyncCommitteeGossipContributionAndProof(
       contributionBytes,
       this.serializedCache
     );
+    return await validateSyncCommitteeGossipContributionAndProofObject.call(
+      this,
+      signedContributionAndProof,
+      skipValidationKnownParticipants
+    );
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error(
+      "Error validating gossip sync committee contribution and proof",
+      {code: "UNEXPECTED_ERROR"},
+      error as Error
+    );
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateSyncCommitteeGossipContributionAndProofObject(
+  this: BeaconEngineCore,
+  signedContributionAndProof: altair.SignedContributionAndProof,
+  skipValidationKnownParticipants = false
+): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
+  try {
     return await runGossipValidation(async () => {
       const result =
         await syncCommitteeContributionAndProofValidation.validateSyncCommitteeGossipContributionAndProof.call(
@@ -114,7 +148,6 @@ export async function validateSyncCommitteeGossipContributionAndProof(
       );
       if (this.validatorMonitor) {
         callInNextEventLoop(() => {
-          if (isClosed()) return;
           try {
             this.validatorMonitor?.registerGossipSyncContributionAndProof(
               signedContributionAndProof.message,
@@ -149,7 +182,6 @@ export async function validateSyncCommitteeGossipContributionAndProof(
  */
 export function validateApiSyncCommitteeContributionAndProof(
   this: BeaconEngineCore,
-  _contributionBytes: Uint8Array,
   signedContributionAndProof: altair.SignedContributionAndProof
 ): Promise<GossipValidationResult<void>> {
   return runGossipValidation(async () => {

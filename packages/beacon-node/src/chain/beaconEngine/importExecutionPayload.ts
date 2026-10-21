@@ -5,7 +5,7 @@ import {
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
-import {gloas, ssz} from "@lodestar/types";
+import {WithBytes, gloas, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -52,6 +52,20 @@ export async function importExecutionPayload(
   } catch (e) {
     throw new PayloadError({code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: (e as Error).message});
   }
+  return importExecutionPayloadObject.call(
+    this,
+    {data: signedEnvelope, bytes: envelopeBytes},
+    dataAvailabilityStatus,
+    opts
+  );
+}
+
+export async function importExecutionPayloadObject(
+  this: BeaconEngineCore,
+  {data: signedEnvelope, bytes: envelopeBytes}: WithBytes<gloas.SignedExecutionPayloadEnvelope>,
+  dataAvailabilityStatus: DataAvailabilityStatus,
+  opts: ImportExecutionPayloadOpts
+): Promise<{executionOptimistic: boolean}> {
   const envelope = signedEnvelope.message;
   const blockRoot = envelope.beaconBlockRoot;
   const blockRootHex = toRootHex(blockRoot);

@@ -811,6 +811,19 @@ describe("bytes-based engine startup", () => {
     }
     expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 4 : 0);
 
+    deserialize.mockClear();
+    await core.submitBlindedBlockObject(request, ForkName.electra);
+    expect(executionBuilderApi.submitBlindedBlock.mock.lastCall?.[0].signedBlindedBlock).toBe(request);
+    await core.submitBlindedBlockNoResponseObject(request);
+    expect(executionBuilderApi.submitBlindedBlockV2.mock.lastCall?.[0].signedBlindedBlock).toBe(request);
+    expect(deserialize).not.toHaveBeenCalled();
+    const registrationDecode = vi.spyOn(routes.validator.SignedValidatorRegistrationV1ListType, "deserialize");
+    const registrations = [registration];
+    await core.registerValidatorObject(3, registrations);
+    expect(executionBuilderApi.registerValidator.mock.lastCall?.[0].registrations).toBe(registrations);
+    expect(builder.getValidatorRegistration(registration.message.pubkey)).toEqual({epoch: 3, gasLimit: 36_000_000});
+    expect(registrationDecode).not.toHaveBeenCalled();
+
     const capellaBlock = ssz.capella.SignedBlindedBeaconBlock.defaultValue();
     capellaBlock.message.slot = config.CAPELLA_FORK_EPOCH * SLOTS_PER_EPOCH;
     const capellaPayload = ssz.capella.ExecutionPayload.defaultValue();

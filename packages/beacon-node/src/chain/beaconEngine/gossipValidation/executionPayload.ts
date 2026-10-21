@@ -27,6 +27,23 @@ export async function validateGossipPayloadAttestationMessage(
       payloadAttestationBytes,
       this.serializedCache
     );
+    return await validateGossipPayloadAttestationMessageObject.call(this, payloadAttestationMessage);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error(
+      "Error validating gossip payload attestation message",
+      {code: "UNEXPECTED_ERROR"},
+      error as Error
+    );
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipPayloadAttestationMessageObject(
+  this: BeaconEngineCore,
+  payloadAttestationMessage: gloas.PayloadAttestationMessage
+): Promise<GossipValidationResult<void>> {
+  try {
     return await runGossipValidation(async () => {
       const result = await payloadAttestationMessageValidation.validateGossipPayloadAttestationMessage.call(
         this,
@@ -63,7 +80,6 @@ export async function validateGossipPayloadAttestationMessage(
  */
 export function validateApiPayloadAttestationMessage(
   this: BeaconEngineCore,
-  _payloadAttestationBytes: Uint8Array,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<GossipValidationResult<void>> {
   return runGossipValidation(async () => {
@@ -128,6 +144,20 @@ export async function validateGossipExecutionPayloadEnvelope(
       envelopeBytes,
       this.serializedCache
     );
+    return await validateGossipExecutionPayloadEnvelopeObject.call(this, executionPayloadEnvelope, source);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip execution payload envelope", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipExecutionPayloadEnvelopeObject(
+  this: BeaconEngineCore,
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  source: SourceMeta
+): Promise<GossipValidationResult<void>> {
+  try {
     return await runGossipValidation(async () => {
       await executionPayloadEnvelopeValidation.validateGossipExecutionPayloadEnvelope.call(
         this,
@@ -167,7 +197,6 @@ export async function validateGossipExecutionPayloadEnvelope(
  */
 export function validateApiExecutionPayloadEnvelope(
   this: BeaconEngineCore,
-  _envelopeBytes: Uint8Array,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
   seenTimestampSec: number
 ): Promise<GossipValidationResult<void>> {
@@ -190,7 +219,6 @@ export function validateApiExecutionPayloadEnvelope(
  */
 export async function validateGossipExecutionPayloadBid(
   this: BeaconEngineCore,
-  isClosed: () => boolean,
   bidBytes: Uint8Array,
   fork: ForkName,
   seenTimestampSec: number
@@ -201,6 +229,20 @@ export async function validateGossipExecutionPayloadBid(
       bidBytes,
       this.serializedCache
     );
+    return await validateGossipExecutionPayloadBidObject.call(this, signedExecutionPayloadBid, seenTimestampSec);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error("Error validating gossip execution payload bid", {code: "UNEXPECTED_ERROR"}, error as Error);
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipExecutionPayloadBidObject(
+  this: BeaconEngineCore,
+  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+  seenTimestampSec: number
+): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
+  try {
     return await runGossipValidation(async () => {
       const result = await executionPayloadBidValidation.validateGossipExecutionPayloadBid.call(
         this,
@@ -217,7 +259,6 @@ export async function validateGossipExecutionPayloadBid(
         // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#execution_payload_bid.
         if (this.validatorMonitor) {
           callInNextEventLoop(() => {
-            if (isClosed()) return;
             try {
               this.validatorMonitor?.registerExecutionPayloadBid(
                 OpSource.gossip,
@@ -252,7 +293,6 @@ export async function validateGossipExecutionPayloadBid(
  */
 export function validateApiExecutionPayloadBid(
   this: BeaconEngineCore,
-  _bidBytes: Uint8Array,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<GossipValidationResult<void>> {
   return runGossipValidation(() =>

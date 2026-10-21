@@ -8,6 +8,7 @@ import {ForkName} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {GossipValidationResult} from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
@@ -36,6 +37,14 @@ function createMessage<T extends object>(type: Type<T>) {
   const value = type.defaultValue();
   const bytes = type.serialize(value);
   return {value, bytes, deserialize: vi.spyOn(type, "deserialize")};
+}
+
+function createObjectMessage<T extends object>(
+  type: Type<T>,
+  invoke: (value: T, bytes: Uint8Array) => Promise<GossipValidationResult<unknown>>
+) {
+  const message = createMessage(type);
+  return {...message, serialize: vi.spyOn(type, "serialize"), invokeObject: () => invoke(message.value, message.bytes)};
 }
 
 describe("BeaconEngineCore gossip bytes", () => {
@@ -183,87 +192,139 @@ describe("BeaconEngineCore gossip bytes", () => {
   const cases = [
     {
       name: "aggregate phase0",
-      createMessage: () => createMessage(ssz.phase0.SignedAggregateAndProof),
+      createMessage: () =>
+        createObjectMessage(ssz.phase0.SignedAggregateAndProof, (value, bytes) =>
+          BeaconEngineCore.prototype.validateGossipAggregateAndProofObject.call(
+            engine,
+            {data: value, bytes},
+            ForkName.phase0,
+            1
+          )
+        ),
       validate: () => vi.spyOn(aggregateValidation, "validateGossipAggregateAndProof"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipAggregateAndProof.call(engine, bytes, ForkName.phase0, 1),
     },
     {
       name: "aggregate electra",
-      createMessage: () => createMessage(ssz.electra.SignedAggregateAndProof),
+      createMessage: () =>
+        createObjectMessage(ssz.electra.SignedAggregateAndProof, (value, bytes) =>
+          BeaconEngineCore.prototype.validateGossipAggregateAndProofObject.call(
+            engine,
+            {data: value, bytes},
+            ForkName.electra,
+            1
+          )
+        ),
       validate: () => vi.spyOn(aggregateValidation, "validateGossipAggregateAndProof"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipAggregateAndProof.call(engine, bytes, ForkName.electra, 1),
     },
     {
       name: "sync committee",
-      createMessage: () => createMessage(ssz.altair.SyncCommitteeMessage),
+      createMessage: () =>
+        createObjectMessage(ssz.altair.SyncCommitteeMessage, (value) =>
+          BeaconEngineCore.prototype.validateGossipSyncCommitteeObject.call(engine, value, 0)
+        ),
       validate: () => vi.spyOn(syncValidation, "validateGossipSyncCommittee"),
       invoke: (bytes: Uint8Array) => BeaconEngineCore.prototype.validateGossipSyncCommittee.call(engine, bytes, 0),
     },
     {
       name: "sync contribution",
-      createMessage: () => createMessage(ssz.altair.SignedContributionAndProof),
+      createMessage: () =>
+        createObjectMessage(ssz.altair.SignedContributionAndProof, (value) =>
+          BeaconEngineCore.prototype.validateSyncCommitteeGossipContributionAndProofObject.call(engine, value)
+        ),
       validate: () => vi.spyOn(contributionValidation, "validateSyncCommitteeGossipContributionAndProof"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateSyncCommitteeGossipContributionAndProof.call(engine, bytes),
     },
     {
       name: "attester slashing phase0",
-      createMessage: () => createMessage(ssz.phase0.AttesterSlashing),
+      createMessage: () =>
+        createObjectMessage(ssz.phase0.AttesterSlashing, (value) =>
+          BeaconEngineCore.prototype.validateGossipAttesterSlashingObject.call(engine, value, ForkName.phase0)
+        ),
       validate: () => vi.spyOn(attesterSlashingValidation, "validateGossipAttesterSlashing"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipAttesterSlashing.call(engine, bytes, ForkName.phase0),
     },
     {
       name: "attester slashing electra",
-      createMessage: () => createMessage(ssz.electra.AttesterSlashing),
+      createMessage: () =>
+        createObjectMessage(ssz.electra.AttesterSlashing, (value) =>
+          BeaconEngineCore.prototype.validateGossipAttesterSlashingObject.call(engine, value, ForkName.electra)
+        ),
       validate: () => vi.spyOn(attesterSlashingValidation, "validateGossipAttesterSlashing"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipAttesterSlashing.call(engine, bytes, ForkName.electra),
     },
     {
       name: "proposer slashing",
-      createMessage: () => createMessage(ssz.phase0.ProposerSlashing),
+      createMessage: () =>
+        createObjectMessage(ssz.phase0.ProposerSlashing, (value) =>
+          BeaconEngineCore.prototype.validateGossipProposerSlashingObject.call(engine, value)
+        ),
       validate: () => vi.spyOn(proposerSlashingValidation, "validateGossipProposerSlashing"),
       invoke: (bytes: Uint8Array) => BeaconEngineCore.prototype.validateGossipProposerSlashing.call(engine, bytes),
     },
     {
       name: "voluntary exit",
-      createMessage: () => createMessage(ssz.phase0.SignedVoluntaryExit),
+      createMessage: () =>
+        createObjectMessage(ssz.phase0.SignedVoluntaryExit, (value) =>
+          BeaconEngineCore.prototype.validateGossipVoluntaryExitObject.call(engine, value)
+        ),
       validate: () => vi.spyOn(exitValidation, "validateGossipVoluntaryExit"),
       invoke: (bytes: Uint8Array) => BeaconEngineCore.prototype.validateGossipVoluntaryExit.call(engine, bytes),
     },
     {
       name: "bls change",
-      createMessage: () => createMessage(ssz.capella.SignedBLSToExecutionChange),
+      createMessage: () =>
+        createObjectMessage(ssz.capella.SignedBLSToExecutionChange, (value) =>
+          BeaconEngineCore.prototype.validateGossipBlsToExecutionChangeObject.call(engine, value)
+        ),
       validate: () => vi.spyOn(blsChangeValidation, "validateGossipBlsToExecutionChange"),
       invoke: (bytes: Uint8Array) => BeaconEngineCore.prototype.validateGossipBlsToExecutionChange.call(engine, bytes),
     },
     {
       name: "blob sidecar",
-      createMessage: () => createMessage(ssz.deneb.BlobSidecar),
+      createMessage: () =>
+        createObjectMessage(ssz.deneb.BlobSidecar, (value) =>
+          BeaconEngineCore.prototype.validateGossipBlobSidecarObject.call(engine, value, ForkName.deneb, 0)
+        ),
       validate: () => vi.spyOn(blobValidation, "validateGossipBlobSidecar"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipBlobSidecar.call(engine, bytes, ForkName.deneb, 0),
     },
     {
       name: "fulu data column",
-      createMessage: () => createMessage(ssz.fulu.DataColumnSidecar),
+      createMessage: () =>
+        createObjectMessage(ssz.fulu.DataColumnSidecar, (value) =>
+          BeaconEngineCore.prototype.validateGossipFuluDataColumnSidecarObject.call(engine, value, 0)
+        ),
       validate: () => vi.spyOn(columnValidation, "validateGossipFuluDataColumnSidecar"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipFuluDataColumnSidecar.call(engine, bytes, 0),
     },
     {
       name: "gloas data column",
-      createMessage: () => createMessage(ssz.gloas.DataColumnSidecar),
+      createMessage: () =>
+        createObjectMessage(ssz.gloas.DataColumnSidecar, (value) =>
+          BeaconEngineCore.prototype.validateGossipGloasDataColumnSidecarObject.call(engine, value, 0)
+        ),
       validate: () => vi.spyOn(columnValidation, "validateGossipGloasDataColumnSidecar"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipGloasDataColumnSidecar.call(engine, bytes, 0),
     },
     {
       name: "execution payload envelope",
-      createMessage: () => createMessage(ssz.gloas.SignedExecutionPayloadEnvelope),
+      createMessage: () =>
+        createObjectMessage(ssz.gloas.SignedExecutionPayloadEnvelope, (value) =>
+          BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelopeObject.call(engine, value, {
+            source: PayloadEnvelopeInputSource.gossip,
+            seenTimestampSec: 1,
+          })
+        ),
       validate: () => vi.spyOn(envelopeValidation, "validateGossipExecutionPayloadEnvelope"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelope.call(engine, bytes, {
@@ -273,27 +334,71 @@ describe("BeaconEngineCore gossip bytes", () => {
     },
     {
       name: "payload attestation",
-      createMessage: () => createMessage(ssz.gloas.PayloadAttestationMessage),
+      createMessage: () =>
+        createObjectMessage(ssz.gloas.PayloadAttestationMessage, (value) =>
+          BeaconEngineCore.prototype.validateGossipPayloadAttestationMessageObject.call(engine, value)
+        ),
       validate: () => vi.spyOn(payloadAttestationValidation, "validateGossipPayloadAttestationMessage"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipPayloadAttestationMessage.call(engine, bytes),
     },
     {
       name: "execution payload bid",
-      createMessage: () => createMessage(ssz.gloas.SignedExecutionPayloadBid),
+      createMessage: () =>
+        createObjectMessage(ssz.gloas.SignedExecutionPayloadBid, (value) =>
+          BeaconEngineCore.prototype.validateGossipExecutionPayloadBidObject.call(engine, value, 1)
+        ),
       validate: () => vi.spyOn(bidValidation, "validateGossipExecutionPayloadBid"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipExecutionPayloadBid.call(engine, bytes, ForkName.gloas, 1),
     },
     {
       name: "proposer preferences",
-      createMessage: () => createMessage(ssz.gloas.SignedProposerPreferences),
+      createMessage: () =>
+        createObjectMessage(ssz.gloas.SignedProposerPreferences, (value) =>
+          BeaconEngineCore.prototype.validateGossipProposerPreferencesObject.call(engine, value)
+        ),
       validate: () => vi.spyOn(preferencesValidation, "validateGossipProposerPreferences"),
       invoke: (bytes: Uint8Array) => BeaconEngineCore.prototype.validateGossipProposerPreferences.call(engine, bytes),
     },
   ];
 
   describe.each(cases)("$name", (testCase) => {
+    it.each([GossipAction.IGNORE, GossipAction.REJECT])(
+      "preserves %s for supplied objects without serialization or cache lookup",
+      async (action) => {
+        const {value, bytes, serialize, deserialize, invokeObject} = testCase.createMessage();
+        const originalBytes = Uint8Array.from(bytes);
+        const cache = new SerializedCache({cacheDeserialized: true});
+        Object.defineProperty(engine, "serializedCache", {value: cache});
+        const lookup = vi.spyOn(cache, "getDeserialized");
+        const error = new GossipActionError(action, {code: "TEST_VERDICT"});
+        const validate = testCase.validate().mockRejectedValue(error);
+
+        expect(await invokeObject()).toMatchObject({
+          err: {status: action === GossipAction.IGNORE ? "ignore" : "reject", code: "TEST_VERDICT", error},
+        });
+        expect(validate.mock.calls.flat()).toContain(value);
+        expect(serialize).not.toHaveBeenCalled();
+        expect(deserialize).not.toHaveBeenCalled();
+        expect(lookup).not.toHaveBeenCalled();
+        expect(bytes).toEqual(originalBytes);
+        expect(engine.logger.error).not.toHaveBeenCalled();
+      }
+    );
+
+    it("logs and ignores unexpected failures for supplied objects", async () => {
+      const {invokeObject} = testCase.createMessage();
+      const error = new Error("validation failed");
+      testCase.validate().mockRejectedValue(error);
+      expect(await invokeObject()).toEqual({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
+      expect(engine.logger.error).toHaveBeenCalledExactlyOnceWith(
+        expect.any(String),
+        {code: "UNEXPECTED_ERROR"},
+        error
+      );
+    });
+
     it.each([false, true])("decodes only in the worker with beaconEngineWorker=%s", async (beaconEngineWorker) => {
       const {value, bytes, deserialize} = testCase.createMessage();
       const cache = new SerializedCache({cacheDeserialized: !beaconEngineWorker});

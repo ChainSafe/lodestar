@@ -1,5 +1,5 @@
 import {ForkName, ForkPostAltair} from "@lodestar/params";
-import {sszTypesFor} from "@lodestar/types";
+import {LightClientFinalityUpdate, LightClientOptimisticUpdate, sszTypesFor} from "@lodestar/types";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import {validateLightClientFinalityUpdate} from "../../validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../validation/lightClientOptimisticUpdate.js";
@@ -18,6 +18,23 @@ export async function validateGossipLightClientOptimisticUpdate(
       bytes,
       this.serializedCache
     );
+    return await validateGossipLightClientOptimisticUpdateObject.call(this, update);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error(
+      "Error validating gossip light client optimistic update",
+      {code: "UNEXPECTED_ERROR"},
+      error as Error
+    );
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipLightClientOptimisticUpdateObject(
+  this: BeaconEngineCore,
+  update: LightClientOptimisticUpdate
+): Promise<GossipValidationResult<void>> {
+  try {
     validateLightClientOptimisticUpdate(
       this.config,
       this.clock,
@@ -47,6 +64,23 @@ export async function validateGossipLightClientFinalityUpdate(
       bytes,
       this.serializedCache
     );
+    return await validateGossipLightClientFinalityUpdateObject.call(this, update);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error(
+      "Error validating gossip light client finality update",
+      {code: "UNEXPECTED_ERROR"},
+      error as Error
+    );
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipLightClientFinalityUpdateObject(
+  this: BeaconEngineCore,
+  update: LightClientFinalityUpdate
+): Promise<GossipValidationResult<void>> {
+  try {
     validateLightClientFinalityUpdate(this.config, this.clock, this.getLightClientServer().getFinalityUpdate(), update);
     return accept(undefined);
   } catch (error) {

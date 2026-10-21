@@ -6,11 +6,11 @@ import {
   getIndexedAttestation,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, SignedBeaconBlock, isGloasBeaconBlock} from "@lodestar/types";
+import {IndexedAttestation, SignedBeaconBlock, WithBytes, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {BlockBytes, deserializeBlock} from "../blocks/blockSerializedCache.js";
-import {toSignedBlockRootHex} from "../blocks/signedBlockRoot.js";
+import {BlockBytes, BlockSerializedCacheEntry, deserializeBlock} from "../blocks/blockSerializedCache.js";
+import {computeSignedBlockRoot, toSignedBlockRootHex} from "../blocks/signedBlockRoot.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
@@ -31,11 +31,37 @@ export async function verifyBlocks(
   opts: VerifyBlocksOpts,
   isApiValidation = false
 ): Promise<VerifyBlocksSuccess> {
-  const entries = blockData.map(({signedBlockRoot, blockBytes}) =>
-    isApiValidation
+  const entries = blockData.map(({signedBlockRoot, blockBytes}) => {
+    const entry = isApiValidation
       ? deserializeBlock(this.config, signedBlockRoot, blockBytes, undefined, this.serializedCache)
-      : this.blockSerializedCache.getOrDeserialize(signedBlockRoot, blockBytes)
-  );
+      : this.blockSerializedCache.getOrDeserialize(signedBlockRoot, blockBytes);
+    return {...entry, signedBlockRoot};
+  });
+  return verifyBlocksImpl.call(this, entries, opts, isApiValidation);
+}
+
+export async function verifyBlocksObject(
+  this: BeaconEngineCore,
+  blockData: WithBytes<SignedBeaconBlock>[],
+  opts: VerifyBlocksOpts,
+  isApiValidation = false
+): Promise<VerifyBlocksSuccess> {
+  const entries = blockData.map(({data: block, bytes}) => {
+    const signedBlockRoot = computeSignedBlockRoot(this.config.getForkName(block.message.slot), block);
+    const entry = isApiValidation
+      ? {block, bytes}
+      : this.blockSerializedCache.set(toSignedBlockRootHex(signedBlockRoot), block, bytes);
+    return {...entry, signedBlockRoot};
+  });
+  return verifyBlocksImpl.call(this, entries, opts, isApiValidation);
+}
+
+async function verifyBlocksImpl(
+  this: BeaconEngineCore,
+  entries: (BlockSerializedCacheEntry & Pick<BlockBytes, "signedBlockRoot">)[],
+  opts: VerifyBlocksOpts,
+  isApiValidation: boolean
+): Promise<VerifyBlocksSuccess> {
   const blocks = entries.map(({block}) => block);
   const blockRoots = blocks.map((block) =>
     toRootHex(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message))
@@ -169,7 +195,7 @@ export async function verifyBlocks(
         // Source: unstable@708700cdf6 packages/beacon-node/src/chain/blocks/index.ts#processBlocks, proposer marking loop.
         // [beacon-engine] deviation: mark after engine verification, without waiting for facade DA.
         this.seenBlockProposers.add(block.message.slot, block.message.proposerIndex, blockRootHex);
-        this.verifiedBlocks.set(toSignedBlockRootHex(blockData[i].signedBlockRoot), {
+        this.verifiedBlocks.set(toSignedBlockRootHex(entries[i].signedBlockRoot), {
           executionStatus: segmentExecStatus.executionStatuses[i],
           postState: postStates[i],
           block,
