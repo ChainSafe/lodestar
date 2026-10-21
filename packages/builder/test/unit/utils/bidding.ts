@@ -1,6 +1,7 @@
 import {vi} from "vitest";
 import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
+import {MIN_DEPOSIT_AMOUNT} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
 import {BuilderIndex, BuilderStatus} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -23,7 +24,7 @@ export const biddingOptions = {
   minValueGwei: 0,
   deadlineBps: 8500,
   getPayloadTimeout: 1000,
-  minOperatingBalanceGwei: 1_100_000_000,
+  minOperatingBalanceGwei: MIN_DEPOSIT_AMOUNT,
 };
 
 export function getPayloadSourceStub() {

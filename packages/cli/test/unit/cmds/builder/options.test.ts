@@ -18,7 +18,7 @@ describe("Builder CLI configuration", () => {
           keystore: "unused.json",
           keystorePassword: "unused.txt",
           executionFeeRecipient: "0x" + "22".repeat(20),
-          execution: {urls: ["http://localhost:8551"], retries: 0},
+          execution: {urls: ["http://localhost:8551"], retries: 0, jwtSecret: "unused.jwt"},
           bidding: {shareBps: 8500, deadlineBps: 6000},
           reveal: {cutoffBps: 5000},
         })
@@ -32,6 +32,7 @@ describe("Builder CLI configuration", () => {
         .parseSync();
       expect(parsed["execution.urls"]).toEqual(["http://localhost:8551"]);
       expect(parsed["execution.retries"]).toBe(0);
+      expect(parsed["execution.jwtSecret"]).toBe("unused.jwt");
       expect(parsed["bidding.shareBps"]).toBe(8500);
       expect(parsed["bidding.deadlineBps"]).toBe(6000);
       expect(parsed["reveal.cutoffBps"]).toBe(5000);

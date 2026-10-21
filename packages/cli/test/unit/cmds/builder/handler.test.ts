@@ -119,7 +119,7 @@ describe("cmds / builder / args handler", () => {
       fs.writeFileSync(jwtSecret, "secret-do-not-log");
       const pending = runBuilderHandler({
         "params.GLOAS_FORK_EPOCH": String(chainConfig.FULU_FORK_EPOCH + 1),
-        jwtSecret,
+        "execution.jwtSecret": jwtSecret,
       });
       await expect(pending).rejects.toThrow("Expected a 256-bit hex JWT secret");
       await expect(pending).rejects.not.toThrow("secret-do-not-log");

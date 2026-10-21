@@ -83,11 +83,11 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     throw new YargsError(`Invalid bidding policy options: ${(error as Error).message}`);
   }
   let jwtSecret: Uint8Array | undefined;
-  if (args.jwtSecret) {
+  if (args["execution.jwtSecret"]) {
     try {
-      jwtSecret = fromHex(extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf8").trim()));
+      jwtSecret = fromHex(extractJwtHexSecret(fs.readFileSync(args["execution.jwtSecret"], "utf8").trim()));
     } catch {
-      throw new YargsError("Unable to read jwtSecret. Expected a 256-bit hex JWT secret");
+      throw new YargsError("Unable to read execution.jwtSecret. Expected a 256-bit hex JWT secret");
     }
   }
 
@@ -162,7 +162,6 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
       retries: args["execution.retries"],
       retryDelay: args["execution.retryDelay"],
       jwtSecret,
-      jwtId: args.jwtId,
       version,
       commit,
       signal: abortController.signal,
