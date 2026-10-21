@@ -1,7 +1,7 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
-import {isErrorAborted} from "@lodestar/utils";
+import {fromHex, isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
@@ -63,7 +63,6 @@ export class BlockProcessor {
  * - (state cache update, from state regeneration)
  *
  * All other effects are provided by downstream event handlers
- * // TODO - beacon engine: audit/reduce number of BeaconEngine calls
  */
 export async function processBlocks(
   this: BeaconChain,
@@ -109,8 +108,6 @@ export async function processBlocks(
       }
     }
 
-    // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
-    // states in the state cache through regen.
     const {blockDAStatuses, payloadDAStatuses} = await verifyBlocksInEpoch.call(
       this,
       parentBlock,
@@ -118,15 +115,7 @@ export async function processBlocks(
       payloadEnvelopesToImport,
       opts
     );
-    const verifiedBlockRoots = relevantBlocks.map((block) => block.blockRootHex);
     try {
-      await this.beaconEngine.markBlockProposersSeen(
-        relevantBlocks.map((input) => ({
-          slot: input.getBlock().message.slot,
-          proposerIndex: input.getBlock().message.proposerIndex,
-          root: input.blockRootHex,
-        }))
-      );
       const verifiedBlocksBySlot = new Map<
         Slot,
         {blockInput: IBlockInput; dataAvailabilityStatus: DataAvailabilityStatus}
@@ -165,8 +154,9 @@ export async function processBlocks(
 
         await nextEventLoop();
       }
-    } finally {
-      await this.beaconEngine.discardVerifiedBlocks(verifiedBlockRoots);
+    } catch (error) {
+      this.beaconEngine.discardVerifiedBlocks(relevantBlocks.map((block) => fromHex(block.blockRootHex)));
+      throw error;
     }
     return {orphaned: orphanedPayloads ?? [], skipped};
   } catch (e) {

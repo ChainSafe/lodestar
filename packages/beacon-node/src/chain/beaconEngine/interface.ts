@@ -625,7 +625,6 @@ export interface IBeaconEngineCore {
   pruneOnFinalized(): Promise<void>;
   /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
-  markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): Promise<void>;
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]>;
   verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void>;
@@ -647,7 +646,10 @@ export interface IBeaconEngineCore {
     blockBytes: Uint8Array,
     opts: VerifyBlocksOpts
   ): Promise<Result<void, BlockFailure>>;
-  /** Retains verified block bundles until importBlock or discardVerifiedBlocks releases them. */
+  /**
+   * Marks verified proposals as known independently of DA and retains bundles until importBlock or
+   * discardVerifiedBlocks releases them.
+   */
   verifyBlocks(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>>;
   // `blockRoot` is the SSZ root as raw bytes (the verify output handle, import input) — bytes-first for
   // the native engine FFI. The JS engine keys its internal cache by hex (converted here).
@@ -656,7 +658,7 @@ export interface IBeaconEngineCore {
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<Result<ImportBlockResult, BlockFailure>>;
-  discardVerifiedBlocks(blockRootHexes: RootHex[]): Promise<void>;
+  discardVerifiedBlocks(blockRoots: Root[]): void;
 
   onSlot(slot: Slot): void;
   onEpoch(epoch: Epoch): void;

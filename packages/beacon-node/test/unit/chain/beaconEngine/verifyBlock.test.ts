@@ -109,7 +109,7 @@ describe("BeaconEngineCore block execution verification", () => {
       expect(core.seenBlockProposers.getEquivocationHeaders(0, 0)).toEqual(
         inputs.map((input) => signedBlockToSignedHeader(core.config, input.getBlock()))
       );
-      expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
+      expect(core.seenBlockProposers.isKnown(0, 0)).toBe(method === "verifyBlocks");
       expect(processEquivocation).not.toHaveBeenCalled();
       await vi.runOnlyPendingTimersAsync();
       expect(processEquivocation).toHaveBeenCalledTimes(method === "verifyBlocks" ? 1 : 0);
@@ -127,10 +127,11 @@ describe("BeaconEngineCore block execution verification", () => {
       err: {type: {code: BlockErrorCode.INVALID_SIGNATURE}},
     });
     expect(core.seenBlockProposers.hasBlockRoot(0, 0, input.blockRootHex)).toBe(false);
+    expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
     expect(core.verifiedBlocks.size).toBe(0);
   });
 
-  it("records every header in a verified batch before import", async () => {
+  it("records every header and marks every proposal in a verified batch before import", async () => {
     const inputs = [bellatrixInput(false, 1), bellatrixInput(false, 2)];
     vi.mocked(stf.verifyBlocksStateTransitionOnly).mockResolvedValue({
       postStates: [state, state],
@@ -146,6 +147,10 @@ describe("BeaconEngineCore block execution verification", () => {
       expect(
         core.seenBlockProposers.hasBlockRoot(input.getBlock().message.slot, 0, input.blockRootHex),
         `missing header for ${input.blockRootHex}`
+      ).toBe(true);
+      expect(
+        core.seenBlockProposers.isKnown(input.getBlock().message.slot, 0),
+        `unknown proposal for ${input.blockRootHex}`
       ).toBe(true);
     }
   });
@@ -199,6 +204,7 @@ describe("BeaconEngineCore block execution verification", () => {
     await core.validateApiBlock(blockRoot, blockBytes, {validSignatures: true});
     expect(stf.verifyBlocksStateTransitionOnly).toHaveBeenCalledOnce();
     expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
+    expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
     expect(core.verifiedBlocks.size).toBe(0);
   });
 
@@ -264,7 +270,7 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(core.verifyBlocks).toHaveBeenCalledExactlyOnceWith(serializeBlocks(...inputs), {validSignatures: true});
     expect(chain.publishChainView).toHaveBeenCalledOnce();
     expect(observe).not.toHaveBeenCalled();
-    expect(discard).toHaveBeenCalledExactlyOnceWith(inputs.map((input) => input.blockRootHex));
+    expect(discard).toHaveBeenCalledExactlyOnceWith(inputs.map((input) => fromHex(input.blockRootHex)));
   });
 
   it.each(["verifyBlocks", "validateApiBlock"] as const)(
@@ -376,6 +382,7 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(result).toMatchObject({err: null, result: {segmentExecStatus: {executionStatuses: [expected]}}});
     expect(core.verifiedBlocks.get(input.blockRootHex)?.executionStatus).toBe(expected);
     expect(core.verifiedBlocks.get(input.blockRootHex)?.blockBytes).toBe(blockBytes);
+    expect(core.seenBlockProposers.isKnown(0, 0)).toBe(true);
   });
 
   it("starts STF and signatures while the EL request is pending", async () => {
@@ -387,6 +394,7 @@ describe("BeaconEngineCore block execution verification", () => {
     const verification = core.verifyBlocks(serializeBlocks(bellatrixInput(true)), {});
     await vi.waitFor(() => expect(signatures).toHaveBeenCalledOnce());
     expect(stf.verifyBlocksStateTransitionOnly).toHaveBeenCalledOnce();
+    expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
     expect(core.verifiedBlocks.size).toBe(0);
     response.resolve({
       status: ExecutionPayloadStatus.VALID,
@@ -394,6 +402,7 @@ describe("BeaconEngineCore block execution verification", () => {
       validationError: null,
     });
     await verification;
+    expect(core.seenBlockProposers.isKnown(0, 0)).toBe(true);
     expect(core.verifiedBlocks.size).toBe(1);
   });
 
@@ -495,6 +504,7 @@ describe("BeaconEngineCore block execution verification", () => {
     });
     await expect(core.verifyBlocks(serializeBlocks(bellatrixInput(true)), {validSignatures: true})).rejects.toBe(error);
     expect(chain.forkChoice.validateLatestHash).not.toHaveBeenCalled();
+    expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
     expect(core.verifiedBlocks.size).toBe(0);
   });
 
@@ -528,6 +538,7 @@ describe("BeaconEngineCore block execution verification", () => {
     }
     expect(waitingForData).toHaveBeenCalledOnce();
     expect(waitingForData.mock.calls[0][1]?.aborted).toBe(true);
+    expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
     expect(core.verifiedBlocks.size).toBe(0);
   });
 
@@ -567,6 +578,7 @@ describe("BeaconEngineCore block execution verification", () => {
         await engineVerification;
         expect(core.verifiedBlocks.size).toBe(1);
         expect(core.seenBlockProposers.hasBlockRoot(0, 0, input.blockRootHex)).toBe(true);
+        expect(core.seenBlockProposers.isKnown(0, 0)).toBe(true);
       }
       data.reject(error);
       await vi.waitFor(() => expect(waitingForData.mock.calls[0][1]?.aborted).toBe(true));
@@ -579,9 +591,9 @@ describe("BeaconEngineCore block execution verification", () => {
         preState.resolve(state);
       }
       await rejected;
-      expect(discard).toHaveBeenCalledExactlyOnceWith([input.blockRootHex]);
+      expect(discard).toHaveBeenCalledExactlyOnceWith([fromHex(input.blockRootHex)]);
       expect(core.seenBlockProposers.hasBlockRoot(0, 0, input.blockRootHex)).toBe(engineStatus !== "rejecting");
-      expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
+      expect(core.seenBlockProposers.isKnown(0, 0)).toBe(engineStatus !== "rejecting");
       expect(core.verifiedBlocks.size).toBe(0);
     }
   );

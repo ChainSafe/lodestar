@@ -911,10 +911,6 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.validatorSeenAtEpoch(index, epoch);
   }
 
-  markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): Promise<void> {
-    return this.core.markBlockProposersSeen(blocks);
-  }
-
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
     return this.core.recomputeForkChoiceHead(caller);
   }
@@ -964,8 +960,8 @@ export class BeaconEngine implements IBeaconEngine {
     return res.result;
   }
 
-  discardVerifiedBlocks(blockRootHexes: RootHex[]): Promise<void> {
-    return this.core.discardVerifiedBlocks(blockRootHexes);
+  discardVerifiedBlocks(blockRoots: Root[]): void {
+    this.core.discardVerifiedBlocks(blockRoots);
   }
 
   onSlot(slot: Slot): void {

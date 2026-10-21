@@ -346,7 +346,6 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "verifyBlocks",
     "validateApiBlock",
     "validateApiExecutionPayloadBid",
-    "markBlockProposersSeen",
     "discardVerifiedBlocks",
     "getProposerDuties",
     "getAttesterDuties",

@@ -165,6 +165,9 @@ export async function verifyBlocks(
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
         const blockRootHex = toRootHex(blockData[i].blockRoot);
+        // Source: unstable@708700cdf6 packages/beacon-node/src/chain/blocks/index.ts#processBlocks, proposer marking loop.
+        // [beacon-engine] deviation: mark after engine verification, without waiting for facade DA.
+        this.seenBlockProposers.add(block.message.slot, block.message.proposerIndex, blockRootHex);
         this.verifiedBlocks.set(blockRootHex, {
           executionStatus: segmentExecStatus.executionStatuses[i],
           postState: postStates[i],

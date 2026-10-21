@@ -5,7 +5,7 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
@@ -22,7 +22,6 @@ import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chain
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import {verifyBlocksSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
-import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/engine/interface.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockBlockInput} from "../../../utils/blockInput.js";
@@ -51,15 +50,12 @@ describe("chain / blocks / processBlocks", () => {
     DENEB_FORK_EPOCH: 0,
   });
   let chain: MockedBeaconChain;
-  let seenBlockProposers: SeenBlockProposers;
   let blockInput: MockBlockInput;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     chain = getMockedBeaconChain({config});
-    seenBlockProposers = new SeenBlockProposers();
-    Object.defineProperty(chain, "seenBlockProposers", {value: seenBlockProposers});
 
     const block = ssz.deneb.SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
@@ -77,53 +73,72 @@ describe("chain / blocks / processBlocks", () => {
     vi.mocked(importBlock).mockResolvedValue(undefined);
   });
 
-  it("does not mark a proposal as known when execution verification aborts", async () => {
+  it("does not import a block when execution verification aborts", async () => {
     const block = blockInput.getBlock();
     const execError = new BlockError(block, {
       code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
       execStatus: ExecutionPayloadStatus.ELERROR,
       errorMessage: "test execution error",
     });
-    vi.mocked(verifyBlocksInEpoch).mockImplementation(async () => {
-      seenBlockProposers.observeBlockRoot(
-        slot,
-        proposerIndex,
-        blockInput.blockRootHex,
-        ssz.phase0.SignedBeaconBlockHeader.defaultValue()
-      );
-      throw execError;
-    });
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(execError);
 
     await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(execError);
 
-    expect(seenBlockProposers.hasBlockRoot(slot, proposerIndex, blockInput.blockRootHex)).toBe(true);
-    expect(seenBlockProposers.isKnown(slot, proposerIndex)).toBe(false);
     expect(importBlock).not.toHaveBeenCalled();
   });
 
-  it("marks a proposal as known after execution verification succeeds", async () => {
-    vi.mocked(verifyBlocksInEpoch).mockImplementation(async () => {
-      seenBlockProposers.observeBlockRoot(
-        slot,
-        proposerIndex,
-        blockInput.blockRootHex,
-        ssz.phase0.SignedBeaconBlockHeader.defaultValue()
-      );
-      return {
-        segmentExecStatus: {
-          execAborted: null,
-          executionStatuses: [ExecutionStatus.Valid],
-          executionTime: 0,
-        },
-        blockDAStatuses: [DataAvailabilityStatus.Available],
-        payloadDAStatuses: new Map(),
-      };
+  it("imports the verified block without discarding its bundle", async () => {
+    const discard = vi.spyOn(chain.beaconEngine, "discardVerifiedBlocks");
+    vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      segmentExecStatus: {
+        execAborted: null,
+        executionStatuses: [ExecutionStatus.Valid],
+        executionTime: 0,
+      },
+      blockDAStatuses: [DataAvailabilityStatus.Available],
+      payloadDAStatuses: new Map(),
     });
 
     await processBlocks.call(chain, [blockInput], null, {});
 
-    expect(seenBlockProposers.isKnown(slot, proposerIndex)).toBe(true);
     expect(importBlock).toHaveBeenCalledOnce();
+    expect(discard).not.toHaveBeenCalled();
+  });
+
+  it.each(["first import", "second import"] as const)("discards the verified batch when %s fails", async (failure) => {
+    const secondBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
+    secondBlock.message.slot = slot + 1;
+    secondBlock.message.proposerIndex = proposerIndex;
+    const secondRoot = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(secondBlock.message));
+    const secondInput = new MockBlockInput({forkName: ForkName.deneb, slot: slot + 1, blockRootHex: secondRoot});
+    secondInput.block = secondBlock;
+    const inputs = [blockInput, secondInput];
+    vi.mocked(verifyBlocksSanityChecks).mockReturnValue({
+      relevantBlocks: inputs,
+      parentSlots: [slot - 1, slot],
+      parentBlock: generateProtoBlock({slot: slot - 1}),
+    });
+    vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      segmentExecStatus: {
+        execAborted: null,
+        executionStatuses: [ExecutionStatus.Valid, ExecutionStatus.Valid],
+        executionTime: 0,
+      },
+      blockDAStatuses: [DataAvailabilityStatus.Available, DataAvailabilityStatus.Available],
+      payloadDAStatuses: new Map(),
+    });
+    const error = new BlockError(blockInput.getBlock(), {
+      code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
+      parentRoot: "0x00",
+    });
+    const discard = vi.spyOn(chain.beaconEngine, "discardVerifiedBlocks");
+    if (failure === "second import") vi.mocked(importBlock).mockResolvedValueOnce(undefined);
+    vi.mocked(importBlock).mockRejectedValueOnce(error);
+
+    await expect(processBlocks.call(chain, inputs, null, {})).rejects.toBe(error);
+
+    expect(discard).toHaveBeenCalledExactlyOnceWith(inputs.map((input) => fromHex(input.blockRootHex)));
+    expect(importBlock).toHaveBeenCalledTimes(failure === "first import" ? 1 : 2);
   });
 
   it.each([
@@ -132,7 +147,6 @@ describe("chain / blocks / processBlocks", () => {
   ])("$name", async ({envelopeBeforeDa}) => {
     const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     chain = getMockedBeaconChain({config: gloasConfig});
-    Object.defineProperty(chain, "seenBlockProposers", {value: seenBlockProposers});
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
     const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
@@ -208,7 +222,6 @@ describe("chain / blocks / processBlocks", () => {
   ])("$name", async ({skipAttestations}) => {
     const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     chain = getMockedBeaconChain({config: gloasConfig});
-    Object.defineProperty(chain, "seenBlockProposers", {value: seenBlockProposers});
     const payloadInputFor = (blockSlot: number): {blockInput: BlockInputNoData; payloadInput: PayloadEnvelopeInput} => {
       const block = ssz.gloas.SignedBeaconBlock.defaultValue();
       block.message.slot = blockSlot;

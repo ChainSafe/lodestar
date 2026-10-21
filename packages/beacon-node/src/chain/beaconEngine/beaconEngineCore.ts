@@ -1755,10 +1755,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  async markBlockProposersSeen(blocks: {slot: Slot; proposerIndex: ValidatorIndex; root: RootHex}[]): Promise<void> {
-    for (const {slot, proposerIndex, root} of blocks) this.seenBlockProposers.add(slot, proposerIndex, root);
-  }
-
   async getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {
     return this.seenBlockProposers.getConflictingBlockRoots(slot, proposerIndex, root);
   }
@@ -1892,9 +1888,9 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  async discardVerifiedBlocks(blockRootHexes: string[]): Promise<void> {
-    for (const r of blockRootHexes) {
-      this.verifiedBlocks.delete(r);
+  discardVerifiedBlocks(blockRoots: Root[]): void {
+    for (const blockRoot of blockRoots) {
+      this.verifiedBlocks.delete(toRootHex(blockRoot));
     }
   }
 
