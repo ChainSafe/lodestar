@@ -107,6 +107,11 @@ jobs:
       - name: Run swap-or-not-shuffle tests
         run: |
           zig build test:swap_or_not_shuffle
+      # This module hashes with std or blst depending on the target CPU. The runners' own CPUs
+      # select std, while most release builds select blst, so also test the baseline CPU.
+      - name: Run swap-or-not-shuffle tests for the release CPU baseline
+        run: |
+          zig build test:swap_or_not_shuffle -Dcpu=baseline
       - name: Run state-transition tests
         run: |
           zig build test:state_transition

@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const Sha256 = std.crypto.hash.sha2.Sha256;
+const sha256 = @import("sha256.zig");
 
 pub const SHUFFLE_ROUNDS_MINIMAL: u32 = 10;
 pub const SHUFFLE_ROUNDS_MAINNET: u32 = 90;
@@ -40,8 +40,8 @@ const ShufflingManager = struct {
     /// Returns the new pivot. It is "raw" because it has not modulo the list
     /// size (this must be done by the caller).
     fn rawPivot(self: *const ShufflingManager) u64 {
-        var digest: [Sha256.digest_length]u8 = undefined;
-        Sha256.hash(self.buf[0..PIVOT_VIEW_SIZE], &digest, .{});
+        var digest: [sha256.digest_length]u8 = undefined;
+        sha256.hash(self.buf[0..PIVOT_VIEW_SIZE], &digest);
         return std.mem.readInt(u64, digest[0..@sizeOf(u64)], .little);
     }
 
@@ -51,9 +51,9 @@ const ShufflingManager = struct {
     }
 
     /// Hash the entire buffer.
-    fn hash(self: *const ShufflingManager) [Sha256.digest_length]u8 {
-        var digest: [Sha256.digest_length]u8 = undefined;
-        Sha256.hash(self.buf[0..TOTAL_SIZE], &digest, .{});
+    fn hash(self: *const ShufflingManager) [sha256.digest_length]u8 {
+        var digest: [sha256.digest_length]u8 = undefined;
+        sha256.hash(self.buf[0..TOTAL_SIZE], &digest);
         return digest;
     }
 };
@@ -283,8 +283,8 @@ pub const ComputeShuffledIndex = struct {
         for (0..self.rounds) |round| {
             const pivot: u32 = self.pivot_by_round[round] orelse blk: {
                 self.pivot_buffer[SEED_SIZE] = @intCast(round % 256);
-                var digest: [Sha256.digest_length]u8 = undefined;
-                Sha256.hash(&self.pivot_buffer, &digest, .{});
+                var digest: [sha256.digest_length]u8 = undefined;
+                sha256.hash(&self.pivot_buffer, &digest);
                 const pivot: u32 = @intCast(std.mem.readInt(u64, digest[0..8], .little) % index_count);
                 self.pivot_by_round[round] = pivot;
                 break :blk pivot;
@@ -298,7 +298,7 @@ pub const ComputeShuffledIndex = struct {
             if (!source.found_existing) {
                 self.source_buffer[SEED_SIZE] = @intCast(round % 256);
                 std.mem.writeInt(u32, self.source_buffer[PIVOT_VIEW_SIZE..][0..POSITION_WINDOW_SIZE], position_div, .little);
-                Sha256.hash(&self.source_buffer, source.value_ptr, .{});
+                sha256.hash(&self.source_buffer, source.value_ptr);
             }
 
             const byte = source.value_ptr[@intCast(position % 256 / 8)];
@@ -362,7 +362,7 @@ pub fn getCommitteeIndices(
     var cached_hash_input = [_]u8{0} ** (SEED_SIZE + 8);
     // seed length was validated by ComputeShuffledIndex.init
     @memcpy(cached_hash_input[0..SEED_SIZE], seed);
-    var cached_hash: [Sha256.digest_length]u8 = undefined;
+    var cached_hash: [sha256.digest_length]u8 = undefined;
 
     while (committee_indices.items.len < committee_size) {
         const index: u32 = @intCast(i % active_indices.len);
@@ -375,7 +375,7 @@ pub fn getCommitteeIndices(
 
         if (i % hash_increment == 0) {
             std.mem.writeInt(u32, cached_hash_input[SEED_SIZE..][0..4], i / hash_increment, .little);
-            Sha256.hash(&cached_hash_input, &cached_hash, .{});
+            sha256.hash(&cached_hash_input, &cached_hash);
         }
 
         const random_value: i64 = switch (rand_byte_count) {
@@ -512,7 +512,7 @@ fn computePtcIndicesInner(
     var hash_input = [_]u8{0} ** (SEED_SIZE + 8);
     @memcpy(hash_input[0..SEED_SIZE], seed);
 
-    var digest: [Sha256.digest_length]u8 = undefined;
+    var digest: [sha256.digest_length]u8 = undefined;
     var count: usize = 0;
 
     var i: usize = 0;
@@ -521,7 +521,7 @@ fn computePtcIndicesInner(
     outer: while (count < out.len) : (i += 16) {
         // one SHA-256 per 16 candidates; encode block index in bytes 32..40
         std.mem.writeInt(u64, hash_input[SEED_SIZE..][0..8], i / 16, .little);
-        Sha256.hash(&hash_input, &digest, .{});
+        sha256.hash(&hash_input, &digest);
 
         // consume all 16 u16 random values from this hash block
         for (0..16) |j| {
@@ -616,7 +616,7 @@ pub fn computePtcIndicesForEpochInto(
         // per-slot seed: sha256(epoch_seed ++ u64le(start_slot + i))
         std.mem.writeInt(u64, slot_seed_input[SEED_SIZE..][0..8], @as(u64, start_slot) + i, .little);
         var slot_seed: [SEED_SIZE]u8 = undefined;
-        Sha256.hash(&slot_seed_input, &slot_seed, .{});
+        sha256.hash(&slot_seed_input, &slot_seed);
 
         const start = slot_offsets[i];
         const end = slot_offsets[i + 1];

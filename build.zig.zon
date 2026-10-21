@@ -235,6 +235,7 @@
         },
         .swap_or_not_shuffle = .{
             .root_source_file = "src/swap_or_not_shuffle/root.zig",
+            .imports = .{.blst},
         },
         .state_transition = .{
             .root_source_file = "src/state_transition/root.zig",
