@@ -330,7 +330,7 @@ export class PrepareNextSlotScheduler {
         leadMarginSlotFraction
       );
       if (leadMarginSlotFraction < 0) {
-        this.metrics?.slotTiming.deadlineMissed.inc({deadline: "next_slot_start", task: "prepare_next_slot"});
+        this.metrics?.slotTiming.deadlineMissed.inc({task: "prepare_next_slot"});
       }
       // Epoch-end preparation shares the slot with the PTC duty of the scheduling slot. A completion
       // past that due point only places it after a reference time: an awaited EL call gets here too.
@@ -341,10 +341,7 @@ export class PrepareNextSlotScheduler {
           this.config.PAYLOAD_ATTESTATION_DUE_BPS
         );
         if (this.chain.clock.msFromSlot(clockSlot) > payloadAttestationDueMs) {
-          this.metrics?.slotTiming.deadlineMissed.inc({
-            deadline: "payload_attestation_due",
-            task: "prepare_next_slot_completion",
-          });
+          this.metrics?.slotTiming.deadlineMissed.inc({task: "prepare_next_slot_completion"});
         }
       }
 

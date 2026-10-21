@@ -41,13 +41,9 @@ async function bucketCount(metrics: Metrics, slotPosition: string, le: number): 
   );
 }
 
-async function deadlineMissed(
-  metrics: Metrics,
-  deadline = "next_slot_start",
-  task = "prepare_next_slot"
-): Promise<number | undefined> {
+async function deadlineMissed(metrics: Metrics, task = "prepare_next_slot"): Promise<number | undefined> {
   const values = await getValues(metrics, DEADLINE_NAME);
-  return values.find((v) => v.labels.deadline === deadline && v.labels.task === task)?.value;
+  return values.find((v) => v.labels.task === task)?.value;
 }
 
 async function ptcEligibleCompletions(metrics: Metrics): Promise<number | undefined> {
@@ -154,21 +150,21 @@ describe("PrepareNextSlot scheduler metrics", () => {
       await run(epochEndSlot, ForkName.gloas, ForkName.gloas, ptcDueMs - 1);
 
       expect(await ptcEligibleCompletions(metrics)).toBe(1);
-      expect(await deadlineMissed(metrics, "payload_attestation_due", "prepare_next_slot_completion")).toBeUndefined();
+      expect(await deadlineMissed(metrics, "prepare_next_slot_completion")).toBeUndefined();
     });
 
     it("counts a completion after the PTC due point of the scheduling slot as missed", async () => {
       await run(epochEndSlot, ForkName.gloas, ForkName.gloas, ptcDueMs + 1);
 
       expect(await ptcEligibleCompletions(metrics)).toBe(1);
-      expect(await deadlineMissed(metrics, "payload_attestation_due", "prepare_next_slot_completion")).toBe(1);
+      expect(await deadlineMissed(metrics, "prepare_next_slot_completion")).toBe(1);
     });
 
     it("excludes the epoch-end preparation of the last pre-gloas epoch", async () => {
       await run(epochEndSlot, ForkName.fulu, ForkName.gloas, ptcDueMs + 1);
 
       expect(await ptcEligibleCompletions(metrics)).toBe(0);
-      expect(await deadlineMissed(metrics, "payload_attestation_due", "prepare_next_slot_completion")).toBeUndefined();
+      expect(await deadlineMissed(metrics, "prepare_next_slot_completion")).toBeUndefined();
     });
   });
 

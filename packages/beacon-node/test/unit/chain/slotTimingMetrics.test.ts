@@ -118,13 +118,9 @@ describe("chain / slotTimingMetrics", () => {
         expect(seconds).toEqual({count: 1, sum: 2.6});
         expect(fractions.count).toBe(1);
         expect(fractions.sum).toBeCloseTo(2.6 / slotDurationSec, 10);
-        expect(await sampleValue(metrics, "lodestar_import_block_set_head_after_cutoff_total")).toBe(missed);
-        expect(
-          await sampleValue(metrics, "lodestar_deadline_missed_total", {
-            deadline: "attestation_due",
-            task: "block_become_head",
-          })
-        ).toBe(missed || undefined);
+        expect(await sampleValue(metrics, "lodestar_deadline_missed_total", {task: "block_become_head"})).toBe(
+          missed || undefined
+        );
       }
     );
   });
@@ -214,24 +210,11 @@ describe("chain / slotTimingMetrics", () => {
       initSlotTimingMetrics(metrics, config, hezeSlot);
 
       expect(await sampleValue(metrics, "lodestar_slot_duration_seconds")).toBe(10);
-      expect(
-        await sampleValue(metrics, "lodestar_deadline_missed_total", {
-          deadline: "attestation_due",
-          task: "block_become_head",
-        })
-      ).toBe(0);
-      expect(
-        await sampleValue(metrics, "lodestar_deadline_missed_total", {
-          deadline: "next_slot_start",
-          task: "prepare_next_slot",
-        })
-      ).toBe(0);
-      expect(
-        await sampleValue(metrics, "lodestar_deadline_missed_total", {
-          deadline: "payload_attestation_due",
-          task: "prepare_next_slot_completion",
-        })
-      ).toBe(0);
+      for (const task of ["block_become_head", "prepare_next_slot", "prepare_next_slot_completion"]) {
+        expect(await sampleValue(metrics, "lodestar_deadline_missed_total", {task}), `missing zero for ${task}`).toBe(
+          0
+        );
+      }
       expect(await sampleValue(metrics, "lodestar_prepare_next_slot_ptc_eligible_completions_total")).toBe(0);
       for (const status of [
         ExecutionPayloadStatus.VALID,

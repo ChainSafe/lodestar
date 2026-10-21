@@ -21,9 +21,9 @@ export function getSlotPosition(slot: Slot): SlotPosition {
  */
 export function initSlotTimingMetrics(metrics: Metrics, config: ChainForkConfig, currentSlot: Slot): void {
   setSlotDurationGauge(metrics, config, currentSlot);
-  metrics.slotTiming.deadlineMissed.inc({deadline: "attestation_due", task: "block_become_head"}, 0);
-  metrics.slotTiming.deadlineMissed.inc({deadline: "next_slot_start", task: "prepare_next_slot"}, 0);
-  metrics.slotTiming.deadlineMissed.inc({deadline: "payload_attestation_due", task: "prepare_next_slot_completion"}, 0);
+  metrics.slotTiming.deadlineMissed.inc({task: "block_become_head"}, 0);
+  metrics.slotTiming.deadlineMissed.inc({task: "prepare_next_slot"}, 0);
+  metrics.slotTiming.deadlineMissed.inc({task: "prepare_next_slot_completion"}, 0);
   metrics.slotTiming.prepareNextSlotPtcEligibleCompletions.inc(0);
   for (const status of [
     ExecutionPayloadStatus.VALID,
@@ -50,10 +50,6 @@ export function observeBlockArrival(
   metrics.gossipBlock.arrivalSlotFraction.observe({source}, delaySec / getSlotDurationSec(config, slot));
 }
 
-/**
- * `delaySec` is measured from the start of `headSlot`. Only recent heads are sampled, otherwise
- * sync distorts the distribution. The cutoff counter shares that population.
- */
 /**
  * `delaySec` is measured from the start of the payload slot. Only payloads of the current or
  * previous clock slot enter the slot fraction and deadline samples: older imports mix catch-up
@@ -92,6 +88,10 @@ export function observePayloadImport(
   }
 }
 
+/**
+ * `delaySec` is measured from the start of `headSlot`. Only recent heads are sampled, otherwise
+ * sync distorts the distribution. The deadline counter shares that population.
+ */
 export function observeBlockBecomeHead(
   metrics: Metrics,
   config: ChainForkConfig,
@@ -105,7 +105,6 @@ export function observeBlockBecomeHead(
   metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
   metrics.importBlock.becomeHeadSlotFraction.observe(delaySec / slotDurationSec);
   if (delaySec > config.getAttestationDueMs(config.getForkName(headSlot)) / 1000) {
-    metrics.importBlock.setHeadAfterCutoff.inc();
-    metrics.slotTiming.deadlineMissed.inc({deadline: "attestation_due", task: "block_become_head"});
+    metrics.slotTiming.deadlineMissed.inc({task: "block_become_head"});
   }
 }

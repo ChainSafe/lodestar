@@ -61,10 +61,7 @@ const SIGNED_MARGIN_SLOT_FRACTION_BUCKETS = [
 
 export type SlotPosition = "epoch_end" | "other";
 
-type DeadlineMissedLabels =
-  | {deadline: "attestation_due"; task: "block_become_head"}
-  | {deadline: "next_slot_start"; task: "prepare_next_slot"}
-  | {deadline: "payload_attestation_due"; task: "prepare_next_slot_completion"};
+type DeadlineMissedTask = "block_become_head" | "prepare_next_slot" | "prepare_next_slot_completion";
 
 /** Execution statuses a payload envelope can be imported with; INVALID never reaches import */
 export type ImportedPayloadStatus =
@@ -1190,10 +1187,6 @@ export function createLodestarMetrics(
         help: "Time elapsed between head slot start and the block becoming head, as a fraction of the head slot's duration",
         buckets: ARRIVAL_SLOT_FRACTION_BUCKETS,
       }),
-      setHeadAfterCutoff: register.gauge({
-        name: "lodestar_import_block_set_head_after_cutoff_total",
-        help: "Total times an imported block is set as head after ATTESTATION_DUE_BPS of the slot",
-      }),
       lateCanonicalBlock: register.counter<{reason: LateCanonicalBlockReason}>({
         name: "lodestar_import_block_late_canonical_total",
         help: "Total finalized-canonical blocks this node imported after the attestation cutoff; reason distinguishes this node's processing lag (slow_import) from late reception (late_receive)",
@@ -1982,10 +1975,10 @@ export function createLodestarMetrics(
         labelNames: ["slot_position"],
         buckets: SIGNED_MARGIN_SLOT_FRACTION_BUCKETS,
       }),
-      deadlineMissed: register.counter<DeadlineMissedLabels>({
+      deadlineMissed: register.counter<{task: DeadlineMissedTask}>({
         name: "lodestar_deadline_missed_total",
-        help: "Completions after a slot-relative deadline, by deadline and task. Each task's population matches its slot fraction histogram or eligible completions counter",
-        labelNames: ["deadline", "task"],
+        help: "Completions after the slot-relative deadline of a task: block_become_head after attestation due, prepare_next_slot after the next slot start, prepare_next_slot_completion after payload attestation due. Each task's population matches its slot fraction histogram or eligible completions counter",
+        labelNames: ["task"],
       }),
       prepareNextSlotPtcEligibleCompletions: register.counter({
         name: "lodestar_prepare_next_slot_ptc_eligible_completions_total",

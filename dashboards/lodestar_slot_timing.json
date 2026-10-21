@@ -304,8 +304,8 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance, deadline, task) (rate(lodestar_deadline_missed_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
-          "legendFormat": "{{instance}} {{task}} after {{deadline}}",
+          "expr": "sum by (instance, task) (rate(lodestar_deadline_missed_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "legendFormat": "{{instance}} {{task}}",
           "refId": "A",
           "instant": false,
           "range": true
@@ -789,7 +789,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{deadline=\"attestation_due\", task=\"block_become_head\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance) (rate(lodestar_import_block_become_head_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{task=\"block_become_head\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance) (rate(lodestar_import_block_become_head_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
           "legendFormat": "{{instance}}",
           "refId": "A",
           "instant": false,
@@ -1534,7 +1534,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{deadline=\"next_slot_start\", task=\"prepare_next_slot\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance) (rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{task=\"prepare_next_slot\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance) (rate(lodestar_prepare_next_slot_lead_margin_slot_fraction_count{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
           "legendFormat": "{{instance}}",
           "refId": "A",
           "instant": false,
@@ -2091,7 +2091,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{deadline=\"payload_attestation_due\", task=\"prepare_next_slot_completion\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance) (rate(lodestar_prepare_next_slot_ptc_eligible_completions_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{task=\"prepare_next_slot_completion\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))\n/\nsum by (instance) (rate(lodestar_prepare_next_slot_ptc_eligible_completions_total{job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval]))",
           "legendFormat": "{{instance}}",
           "refId": "A",
           "instant": false,
@@ -2185,7 +2185,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{deadline=\"payload_attestation_due\", task=\"prepare_next_slot_completion\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
+          "expr": "sum by (instance) (rate(lodestar_deadline_missed_total{task=\"prepare_next_slot_completion\", job=~\"$beacon_job\", instance=~\"$bn_instance\", network=~\"$network\", group=~\"$group\"}[$rate_interval])) * 3600",
           "legendFormat": "after PTC due {{instance}}",
           "refId": "B",
           "instant": false,
