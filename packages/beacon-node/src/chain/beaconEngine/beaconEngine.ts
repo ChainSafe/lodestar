@@ -295,12 +295,12 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getProtoArrayNodes();
   }
 
-  pauseFastConfirmation(): void {
-    this.core.pauseFastConfirmation();
+  async pauseFastConfirmation(): Promise<void> {
+    return this.core.pauseFastConfirmation();
   }
 
-  resumeFastConfirmation(): void {
-    this.core.resumeFastConfirmation();
+  async resumeFastConfirmation(): Promise<void> {
+    return this.core.resumeFastConfirmation();
   }
 
   persistArchiveBlock(
@@ -1022,7 +1022,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.validatorSeenAtEpoch(index, epoch);
   }
 
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
+  async recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<ProtoBlock> {
     return this.core.recomputeForkChoiceHead(caller);
   }
 
@@ -1124,20 +1124,16 @@ export class BeaconEngine implements IBeaconEngine {
     return res.result;
   }
 
-  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): void {
-    this.core.discardVerifiedBlocks(signedBlockRoots);
+  async discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void> {
+    return this.core.discardVerifiedBlocks(signedBlockRoots);
   }
 
-  onSlot(slot: Slot): void {
-    this.core.onSlot(slot);
+  async onSlot(slot: Slot): Promise<void> {
+    return this.core.onSlot(slot);
   }
 
-  onEpoch(epoch: Epoch): void {
-    this.core.onEpoch(epoch);
-  }
-
-  updateTime(currentSlot: Slot): void {
-    this.core.updateTime(currentSlot);
+  async onEpoch(epoch: Epoch): Promise<void> {
+    return this.core.onEpoch(epoch);
   }
 
   async importExecutionPayload(

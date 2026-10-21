@@ -213,7 +213,7 @@ export async function verifyBlocksInEpoch(
     abortController.abort();
     // Verification may still retain bundles after DA fails; discard only once it has settled.
     await verificationPromise.catch(() => {});
-    this.beaconEngine.discardVerifiedBlocks(
+    await this.beaconEngine.discardVerifiedBlocks(
       blockInputs.map((blockInput) => computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()))
     );
     throw error;

@@ -347,10 +347,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   bls!: IBlsVerifier;
   shufflingCache!: ShufflingCache;
 
-  blockStateCache!: BlockStateCache;
+  blockStateCache: BlockStateCache;
   cpStateDatastore!: CPStateDatastore;
   checkpointStateCache!: CheckpointStateCache;
-  checkpointBalancesCache!: CheckpointBalancesCache;
+  readonly checkpointBalancesCache = new CheckpointBalancesCache();
   readonly emitter = new BeaconEngineEventBus();
   private chainViewPublisher?: ChainViewPublisher;
   private reportedIrrecoverableError?: Error;
@@ -377,15 +377,15 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   regen!: QueuedStateRegenerator;
 
   // Op pools
-  attestationPool!: AttestationPool;
-  aggregatedAttestationPool!: AggregatedAttestationPool;
-  syncCommitteeMessagePool!: SyncCommitteeMessagePool;
-  syncContributionAndProofPool!: SyncContributionAndProofPool;
-  payloadAttestationPool!: PayloadAttestationPool;
+  attestationPool: AttestationPool;
+  aggregatedAttestationPool: AggregatedAttestationPool;
+  syncCommitteeMessagePool: SyncCommitteeMessagePool;
+  syncContributionAndProofPool: SyncContributionAndProofPool;
+  payloadAttestationPool: PayloadAttestationPool;
   readonly executionPayloadBidPool = new ExecutionPayloadBidPool();
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
-  opPool!: OpPool;
-  beaconProposerCache!: BeaconProposerCache;
+  opPool: OpPool;
+  beaconProposerCache: BeaconProposerCache;
 
   // Consensus gossip seen-caches
   seenPayloadEnvelopeInputCache!: SeenEnginePayloadEnvelopeInput;
@@ -393,12 +393,12 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   readonly seenAggregators = new SeenAggregators();
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-  seenContributionAndProof!: SeenContributionAndProof;
-  seenAttestationDatas!: SeenAttestationDatas;
+  seenContributionAndProof: SeenContributionAndProof;
+  seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockProposers = new SeenBlockProposers();
   // Liveness cache: attesters seen through imported blocks (populated during block import).
   readonly seenBlockAttesters = new SeenBlockAttesters();
-  seenAggregatedAttestations!: SeenAggregatedAttestations;
+  seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
 
   private readonly verifiedProposerSignatures = new Map<RootHex, BLSSignature>();
@@ -515,6 +515,20 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       // Main-thread BeaconEngine shares the node's clock; worker mode creates its own.
       const clock = modules.clock ?? new Clock({config, genesisTime: modules.genesisTime, signal});
       this.clock = clock;
+
+      this.attestationPool = new AttestationPool(config, clock, opts.preaggregateSlotDistance, metrics);
+      this.aggregatedAttestationPool = new AggregatedAttestationPool(config, metrics, logger);
+      this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, opts.preaggregateSlotDistance);
+      this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
+      this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
+      this.opPool = new OpPool(config);
+      this.beaconProposerCache = new BeaconProposerCache(opts);
+
+      this.seenContributionAndProof = new SeenContributionAndProof(metrics);
+      this.seenAttestationDatas = new SeenAttestationDatas(metrics, opts.attDataCacheSlotDistance);
+      this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
+
+      this.blockStateCache = new FIFOBlockStateCache(opts, {metrics});
     } catch (error) {
       this.abortController.abort();
       metrics?.register.clear();
@@ -639,8 +653,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
   }
 
-  onSlot!: (slot: Slot) => void;
-  onEpoch!: (epoch: Epoch) => void;
   private readonly checkpointListener = this.onCheckpoint.bind(this);
 
   private initializeRuntime(anchorState: IBeaconStateView): void {
@@ -690,19 +702,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       },
     ]);
 
-    this.attestationPool = new AttestationPool(config, clock, opts?.preaggregateSlotDistance, metrics);
-    this.aggregatedAttestationPool = new AggregatedAttestationPool(config, metrics, logger);
-    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, opts?.preaggregateSlotDistance);
-    this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
-    this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
-    this.opPool = new OpPool(config);
-    this.beaconProposerCache = new BeaconProposerCache(opts);
-
-    this.seenContributionAndProof = new SeenContributionAndProof(metrics);
-    this.seenAttestationDatas = new SeenAttestationDatas(metrics, opts?.attDataCacheSlotDistance);
-    this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
-
-    this.blockStateCache = new FIFOBlockStateCache(opts, {metrics});
     this.checkpointStateCache = new PersistentCheckpointStateCache(
       {
         config,
@@ -720,8 +719,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.blockStateCache.add(anchorState);
     this.blockStateCache.setHeadState(anchorState);
     this.checkpointStateCache.add(checkpoint, anchorState);
-
-    this.checkpointBalancesCache = new CheckpointBalancesCache();
 
     const forkChoiceStateGetter: ForkChoiceStateGetter = ({stateRoot, checkpoint}) => {
       if (stateRoot) return this.blockStateCache.get(stateRoot);
@@ -775,44 +772,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
     }
 
-    // Source: unstable@75239241d4 chain/chain.ts#onClockSlot and #onClockEpoch.
-    // [beacon-engine] BeaconChain forwards clock events; engine-owned maintenance stays here.
-    this.onSlot = (slot: Slot) => {
-      this.attestationPool.prune(slot);
-      this.aggregatedAttestationPool.prune(slot);
-      this.syncCommitteeMessagePool.prune(slot);
-      this.seenSyncCommitteeMessages.prune(slot);
-      this.payloadAttestationPool.prune(slot);
-      this.executionPayloadBidPool.prune(slot);
-      this.seenExecutionPayloadBids.prune(slot);
-      this.proposerPreferencesPool.prune(slot);
-      this.seenAttestationDatas.onSlot(slot);
-
-      // Source: unstable@2593063a82 chain/chain.ts#onClockSlot.
-      if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0 && !this.closed && !this.signal.aborted) {
-        clearTimeout(this.validatorMonitorTimeout);
-        this.validatorMonitorTimeout = setTimeout(
-          () => {
-            this.validatorMonitorTimeout = undefined;
-            try {
-              this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
-            } catch (e) {
-              if (!isErrorAborted(e))
-                this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e as Error);
-            }
-          },
-          this.config.getSlotComponentDurationMs(this.config.getForkName(slot), HALF_SLOT_BPS)
-        );
-      }
-    };
-    this.onEpoch = (epoch: Epoch) => {
-      this.seenAttesters.prune(epoch);
-      this.seenAggregators.prune(epoch);
-      this.seenPayloadAttesters.prune(epoch);
-      this.seenAggregatedAttestations.prune(epoch);
-      this.seenBlockAttesters.prune(epoch);
-      this.beaconProposerCache.prune(epoch);
-    };
     this.signal.addEventListener("abort", this.onValidatorMonitorAbort, {once: true});
     this.emitter.on(BeaconEngineEvent.checkpoint, this.checkpointListener);
 
@@ -832,6 +791,47 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         this.emitter.emit(BeaconEngineEvent.builderRegistered, url);
       }
     );
+  }
+
+  // Source: unstable@75239241d4 chain/chain.ts#onClockSlot and #onClockEpoch.
+  // [beacon-engine] BeaconChain forwards clock events; engine-owned maintenance stays here.
+  onSlot(slot: Slot): void {
+    this.updateTime(slot);
+    this.attestationPool.prune(slot);
+    this.aggregatedAttestationPool.prune(slot);
+    this.syncCommitteeMessagePool.prune(slot);
+    this.seenSyncCommitteeMessages.prune(slot);
+    this.payloadAttestationPool.prune(slot);
+    this.executionPayloadBidPool.prune(slot);
+    this.seenExecutionPayloadBids.prune(slot);
+    this.proposerPreferencesPool.prune(slot);
+    this.seenAttestationDatas.onSlot(slot);
+
+    // Source: unstable@2593063a82 chain/chain.ts#onClockSlot.
+    if (this.metrics && (slot + 1) % SLOTS_PER_EPOCH === 0 && !this.closed && !this.signal.aborted) {
+      clearTimeout(this.validatorMonitorTimeout);
+      this.validatorMonitorTimeout = setTimeout(
+        () => {
+          this.validatorMonitorTimeout = undefined;
+          try {
+            this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
+          } catch (e) {
+            if (!isErrorAborted(e))
+              this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e as Error);
+          }
+        },
+        this.config.getSlotComponentDurationMs(this.config.getForkName(slot), HALF_SLOT_BPS)
+      );
+    }
+  }
+
+  onEpoch(epoch: Epoch): void {
+    this.seenAttesters.prune(epoch);
+    this.seenAggregators.prune(epoch);
+    this.seenPayloadAttesters.prune(epoch);
+    this.seenAggregatedAttestations.prune(epoch);
+    this.seenBlockAttesters.prune(epoch);
+    this.beaconProposerCache.prune(epoch);
   }
 
   getHeadState(): IBeaconStateView {

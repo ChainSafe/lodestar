@@ -290,7 +290,20 @@ export interface IBeaconEngine
     | "validateApiExecutionPayloadBid"
     | "verifyAndObserveBlockProposer"
     | "verifyEnvelopeForPublish"
+    | "pauseFastConfirmation"
+    | "resumeFastConfirmation"
+    | "recomputeForkChoiceHead"
+    | "discardVerifiedBlocks"
+    | "onSlot"
+    | "onEpoch"
   > {
+  pauseFastConfirmation(): Promise<void>;
+  resumeFastConfirmation(): Promise<void>;
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<ProtoBlock>;
+  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void>;
+  onSlot(slot: Slot): Promise<void>;
+  onEpoch(epoch: Epoch): Promise<void>;
+
   registerValidator(
     epoch: Epoch,
     registrationsBytes: Uint8Array,
@@ -817,9 +830,6 @@ export interface IBeaconEngineCore {
 
   onSlot(slot: Slot): void;
   onEpoch(epoch: Epoch): void;
-
-  // Fork-choice writes routed through the engine (so the facade never writes fork choice directly).
-  updateTime(currentSlot: Slot): void;
 
   // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts.
   // The facade supplies DA; the engine verifies, persists and imports the envelope in one call.

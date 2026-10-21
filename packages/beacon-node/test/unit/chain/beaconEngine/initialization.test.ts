@@ -493,8 +493,8 @@ describe("bytes-based engine startup", () => {
       chain = await createBeaconChain(opts, modules);
       const core = getBeaconEngineCore(chain.beaconEngine);
       const forwarded: string[] = [];
-      const onSlot = core.onSlot;
-      const onEpoch = core.onEpoch;
+      const onSlot = core.onSlot.bind(core);
+      const onEpoch = core.onEpoch.bind(core);
       vi.spyOn(core, "onSlot").mockImplementation((slot) => {
         forwarded.push(`slot:${slot}`);
         onSlot(slot);
@@ -1256,13 +1256,13 @@ describe("bytes-based engine startup", () => {
     vi.useFakeTimers();
     const halfSlot = config.SLOT_DURATION_MS / 2;
 
-    dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
+    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
     await vi.advanceTimersByTimeAsync(halfSlot - 1);
     expect(monitorEpoch).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(monitorEpoch).toHaveBeenCalledExactlyOnceWith(beaconEngine.getHeadState());
 
-    dependencies.beaconEngine.onSlot(2 * SLOTS_PER_EPOCH - 1);
+    await dependencies.beaconEngine.onSlot(2 * SLOTS_PER_EPOCH - 1);
     expect(vi.getTimerCount()).toBe(1);
     await dependencies.beaconEngine.close();
     expect(vi.getTimerCount()).toBe(0);
@@ -1280,7 +1280,7 @@ describe("bytes-based engine startup", () => {
     expect(await beaconEngine.getMonitoredValidatorIndices()).toEqual([1]);
     expect(await beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
     vi.useFakeTimers();
-    dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
+    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
     expect(vi.getTimerCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
     expect(monitorEpoch).not.toHaveBeenCalled();
@@ -1338,7 +1338,7 @@ describe("bytes-based engine startup", () => {
       core.emitter.on(BeaconEngineEvent.fastConfirmation, notification);
       chain.emitter.on(routes.events.EventType.fastConfirmation, publicEvent);
 
-      chain.beaconEngine.pauseFastConfirmation();
+      await chain.beaconEngine.pauseFastConfirmation();
 
       const finalized = core.forkChoice.getFinalizedBlock();
       const expected = {block: finalized.blockRoot, slot: finalized.slot, currentSlot: 1};

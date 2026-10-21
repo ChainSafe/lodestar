@@ -107,9 +107,9 @@ describe("BeaconEngine head notifications", () => {
     });
   });
 
-  it.each(["recompute", "clock"])("publishes head events after ChainView on %s updates", (trigger) => {
-    if (trigger === "recompute") engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
-    else engine.updateTime(next.slot);
+  it.each(["recompute", "clock"])("publishes head events after ChainView on %s updates", async (trigger) => {
+    if (trigger === "recompute") await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+    else core.updateTime(next.slot);
 
     expect(order).toEqual(["view", "head", "head_v2"]);
     expect(onHeadUpdated).toHaveBeenCalledOnce();
@@ -141,10 +141,10 @@ describe("BeaconEngine head notifications", () => {
     [PayloadStatus.PENDING, PayloadStatus.FULL, "full"],
     [PayloadStatus.FULL, PayloadStatus.EMPTY, "empty"],
     [PayloadStatus.EMPTY, PayloadStatus.PENDING, "empty"],
-  ] as const)("publishes only head_v2 when payload status changes from %s to %s", (before, after, expected) => {
+  ] as const)("publishes only head_v2 when payload status changes from %s to %s", async (before, after, expected) => {
     previous.payloadStatus = before;
     next = {...previous, payloadStatus: after};
-    engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+    await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
     expect(order).toEqual(["view", "head_v2"]);
     expect(onHead).not.toHaveBeenCalled();
@@ -152,20 +152,20 @@ describe("BeaconEngine head notifications", () => {
     expect(onHeadV2.mock.calls[0][0].data).toMatchObject({payloadStatus: expected, epochTransition: false});
   });
 
-  it("does not notify head consumers when the root and payload status are unchanged", () => {
+  it("does not notify head consumers when the root and payload status are unchanged", async () => {
     next = {...previous};
-    engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+    await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
     expect(order).toEqual(["view"]);
     expect(onHeadUpdated).not.toHaveBeenCalled();
     expect(getDependentRoot).not.toHaveBeenCalled();
   });
 
-  it("keeps the ChainView update when dependent-root lookup fails", () => {
+  it("keeps the ChainView update when dependent-root lookup fails", async () => {
     getDependentRoot.mockImplementation(() => {
       throw Error("No block for root");
     });
-    expect(() => engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock)).not.toThrow();
+    await expect(engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock)).resolves.toBe(next);
     expect(order).toEqual(["view"]);
     expect(onHeadUpdated).not.toHaveBeenCalled();
     expect(core.logger.debug).toHaveBeenCalled();

@@ -156,7 +156,7 @@ export async function processBlocks(
         await nextEventLoop();
       }
     } catch (error) {
-      this.beaconEngine.discardVerifiedBlocks(
+      await this.beaconEngine.discardVerifiedBlocks(
         relevantBlocks.map((block) => computeSignedBlockRoot(block.forkName, block.getBlock()))
       );
       throw error;
@@ -247,7 +247,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
     await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validSignature: false});
   }
   // the new FULL variants are not seen by the head cached from the last block import
-  this.beaconEngine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+  await this.beaconEngine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
   return result;
 }

@@ -1040,10 +1040,10 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Clock slot", {slot});
 
     // CRITICAL UPDATE
-    this.beaconEngine.updateTime(slot);
+    this.beaconEngine.onSlot(slot).catch((e) => {
+      this.logger.error("Error processing beacon engine slot", {slot}, e);
+    });
     this.metrics?.clockSlot.set(slot);
-
-    this.beaconEngine.onSlot(slot);
     this.reprocessController.onSlot(slot);
 
     // Prune old cached block production artifacts, those are only useful on their slot
@@ -1053,7 +1053,9 @@ export class BeaconChain implements IBeaconChain {
 
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
-    this.beaconEngine.onEpoch(epoch);
+    this.beaconEngine.onEpoch(epoch).catch((e) => {
+      this.logger.error("Error running beacon engine epoch maintenance", {epoch}, e);
+    });
   }
 
   private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
