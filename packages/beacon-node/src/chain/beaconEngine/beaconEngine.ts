@@ -1018,6 +1018,26 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.pruneOnFinalized();
   }
 
+  regenCanAcceptWork(): boolean {
+    if (this.beaconEngineWorker) {
+      // TODO - beacon engine: temporarily disable regen gossip backpressure to avoid synchronous
+      // engine calls across the worker boundary.
+      // for a worker BeaconEngine, can do a shared Uint8Array for this
+      return true;
+    }
+    return this.core.regen.canAcceptWork();
+  }
+
+  blsThreadPoolCanAcceptWork(): boolean {
+    if (this.beaconEngineWorker) {
+      // TODO - beacon engine: temporarily disable BLS gossip backpressure to avoid synchronous
+      // engine calls across the worker boundary.
+      // for a worker BeaconEngine, can do a shared Uint8Array for this
+      return true;
+    }
+    return this.core.bls.canAcceptWork();
+  }
+
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean> {
     return this.core.validatorSeenAtEpoch(index, epoch);
   }

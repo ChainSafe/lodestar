@@ -297,6 +297,8 @@ export interface IBeaconEngine
     | "onSlot"
     | "onEpoch"
   > {
+  regenCanAcceptWork(): boolean;
+  blsThreadPoolCanAcceptWork(): boolean;
   pauseFastConfirmation(): Promise<void>;
   resumeFastConfirmation(): Promise<void>;
   recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<ProtoBlock>;

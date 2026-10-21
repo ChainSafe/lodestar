@@ -481,18 +481,12 @@ export class BeaconChain implements IBeaconChain {
     return this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) || this.hasPayloadHexUnsafe(blockRoot);
   }
 
-  // TODO - beacon engine: temporarily disable regen gossip backpressure to avoid synchronous
-  // engine calls across the worker boundary.
-  // for a worker BeaconEngine, can do a shared Uint8Array for this
   beaconEngineRegenCanAcceptWork(): boolean {
-    return true;
+    return this.beaconEngine.regenCanAcceptWork();
   }
 
-  // TODO - beacon engine: temporarily disable BLS gossip backpressure to avoid synchronous
-  // engine calls across the worker boundary.
-  // for a worker BeaconEngine, can do a shared Uint8Array for this
   beaconEngineBlsThreadPoolCanAcceptWork(): boolean {
-    return true;
+    return this.beaconEngine.blsThreadPoolCanAcceptWork();
   }
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean> {
