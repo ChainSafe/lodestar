@@ -549,8 +549,7 @@ export class Network implements INetwork {
   // ReqResp
 
   /**
-   * Return decoded blocks and original bytes so the caller can populate BlockSerializedCache after response
-   * validation, using the roots it already computes instead of hashing blocks here just for caching.
+   * Return decoded blocks and original bytes so the caller can retain them in SerializedCache after response validation.
    */
   async sendBeaconBlocksByRange(
     peerId: PeerIdStr,

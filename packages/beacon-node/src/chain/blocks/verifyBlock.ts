@@ -61,10 +61,15 @@ export async function verifyBlocksInEpoch(
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
 
-  const blockBytes = blockInputs.map((blockInput) => ({
-    blockRoot: fromHex(blockInput.blockRootHex),
-    blockBytes: this.blockSerializedCache.getOrSerialize(blockInput.blockRootHex, blockInput.getBlock()).bytes,
-  }));
+  const blockBytes = blockInputs.map((blockInput) => {
+    const block = blockInput.getBlock();
+    let bytes = this.serializedCache.get(block);
+    if (bytes === undefined) {
+      bytes = this.config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(block);
+      this.serializedCache.set(block, bytes);
+    }
+    return {blockRoot: fromHex(blockInput.blockRootHex), blockBytes: bytes};
+  });
 
   const abortController = new AbortController();
   const verificationPromise = this.beaconEngine.verifyBlocks(blockInputs, blockBytes, opts);

@@ -120,7 +120,7 @@ describe("BlockSerializedCache", () => {
     const register = new RegistryMetricCreator();
     const metrics = createLodestarMetrics(register).blockSerializedCache;
     const logger = getMockedLogger();
-    const cache = new BlockSerializedCache(config, {owner: "chain", maxItems: 2, metrics, logger});
+    const cache = new BlockSerializedCache(config, {maxItems: 2, metrics, logger});
     const original = candidate(1);
     const replacement = candidate(1, 1);
     const second = candidate(2);
@@ -140,14 +140,14 @@ describe("BlockSerializedCache", () => {
       if (!metric) throw Error(`Missing block cache metric ${name}`);
       return (await metric.get()).values.map(({labels, value}) => ({labels, value}));
     }
-    expect(await values("entries")).toEqual([{labels: {owner: "chain"}, value: 2}]);
+    expect(await values("entries")).toEqual([{labels: {owner: "engine"}, value: 2}]);
     expect(await values("bytes")).toEqual([
-      {labels: {owner: "chain"}, value: replacement.bytes.length + third.bytes.length},
+      {labels: {owner: "engine"}, value: replacement.bytes.length + third.bytes.length},
     ]);
     for (const operation of ["get", "serialize", "deserialize"]) {
       for (const result of ["hit", "miss"]) {
         expect(await values("lookups_total"), `${operation} ${result}`).toContainEqual({
-          labels: {owner: "chain", operation, result},
+          labels: {owner: "engine", operation, result},
           value: 1,
         });
       }
@@ -155,43 +155,28 @@ describe("BlockSerializedCache", () => {
     cache.prune(2);
     cache.delete(third.root, undefined, "persisted");
     cache.delete(third.root, undefined, "persisted");
-    expect(await values("entries")).toEqual([{labels: {owner: "chain"}, value: 0}]);
-    expect(await values("bytes")).toEqual([{labels: {owner: "chain"}, value: 0}]);
-    expect(await values("insertions_total")).toEqual([{labels: {owner: "chain"}, value: 4}]);
+    expect(await values("entries")).toEqual([{labels: {owner: "engine"}, value: 0}]);
+    expect(await values("bytes")).toEqual([{labels: {owner: "engine"}, value: 0}]);
+    expect(await values("insertions_total")).toEqual([{labels: {owner: "engine"}, value: 4}]);
     for (const reason of ["replaced", "capacity", "finalized", "persisted"]) {
-      expect(await values("removals_total"), reason).toContainEqual({labels: {owner: "chain", reason}, value: 1});
+      expect(await values("removals_total"), reason).toContainEqual({labels: {owner: "engine", reason}, value: 1});
     }
     expect(await values("delete_misses_total")).toEqual([
-      {labels: {owner: "chain", reason: "rejected", result: "object_mismatch"}, value: 1},
-      {labels: {owner: "chain", reason: "persisted", result: "missing"}, value: 1},
+      {labels: {owner: "engine", reason: "rejected", result: "object_mismatch"}, value: 1},
+      {labels: {owner: "engine", reason: "persisted", result: "missing"}, value: 1},
     ]);
     expect(logger.debug).toHaveBeenCalledWith("Pruned block cache", {
-      owner: "chain",
+      owner: "engine",
       reason: "capacity",
       removed: 1,
       size: 2,
       maxItems: 2,
     });
     expect(logger.debug).toHaveBeenCalledWith("Skipped block cache deletion for a different block object", {
-      owner: "chain",
+      owner: "engine",
       reason: "rejected",
       root: original.root,
       slot: 1,
     });
-  });
-
-  it("keeps shared, main-thread and engine metric series separate", async () => {
-    const register = new RegistryMetricCreator();
-    const metrics = createLodestarMetrics(register).blockSerializedCache;
-    const {root, block, bytes} = candidate();
-    for (const owner of ["shared", "chain", "engine"] as const) {
-      new BlockSerializedCache(config, {owner, metrics}).set(root, block, bytes);
-    }
-    const metric = register.getSingleMetric("lodestar_block_cache_entries");
-    expect((await metric?.get())?.values).toEqual([
-      {labels: {owner: "shared"}, value: 1},
-      {labels: {owner: "chain"}, value: 1},
-      {labels: {owner: "engine"}, value: 1},
-    ]);
   });
 });

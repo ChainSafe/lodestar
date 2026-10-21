@@ -58,7 +58,7 @@ describe("BeaconEngine block persistence", () => {
       parentBlockSlot: 0,
       seenTimestampSec: 0,
     };
-    chain.blockSerializedCache.set(blockInput.blockRootHex, block, blockBytes);
+    chain.beaconEngine.blockSerializedCache.set(blockInput.blockRootHex, block, blockBytes);
   });
 
   afterEach(() => vi.restoreAllMocks());
@@ -133,13 +133,13 @@ describe("BeaconEngine block persistence", () => {
     const result = expect(importing).rejects.toBe(reachedForkChoice);
     expect(putBinary).toHaveBeenCalledExactlyOnceWith(root, blockBytes);
     expect(chain.forkChoice.onBlock).not.toHaveBeenCalled();
-    expect(chain.blockSerializedCache.get(blockInput.blockRootHex)?.bytes).toBe(blockBytes);
-    expect(chain.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBe(block);
+    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.bytes).toBe(blockBytes);
+    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBe(block);
     write.resolve();
     await result;
     expect(chain.forkChoice.onBlock).toHaveBeenCalledOnce();
-    expect(chain.blockSerializedCache.get(blockInput.blockRootHex)?.bytes).toBeUndefined();
-    expect(chain.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBeUndefined();
+    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.bytes).toBeUndefined();
+    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBeUndefined();
   });
 
   it("does not import into fork choice when the block write fails", async () => {
@@ -148,8 +148,8 @@ describe("BeaconEngine block persistence", () => {
     await expect(importBlock.call(chain.beaconEngine, bundle, DataAvailabilityStatus.PreData, {})).rejects.toBe(error);
     expect(chain.forkChoice.onBlock).not.toHaveBeenCalled();
     expect(chain.regen.processState).not.toHaveBeenCalled();
-    expect(chain.blockSerializedCache.get(blockInput.blockRootHex)?.bytes).toBe(blockBytes);
-    expect(chain.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBe(block);
+    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.bytes).toBe(blockBytes);
+    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBe(block);
   });
 
   it("removes a replacement candidate for the persisted root after the block write", async () => {
@@ -159,18 +159,18 @@ describe("BeaconEngine block persistence", () => {
     const result = expect(importing).rejects.toBe(reachedForkChoice);
     const replacement = ssz.phase0.SignedBeaconBlock.clone(block);
     replacement.signature[0] = 1;
-    chain.blockSerializedCache.set(
+    chain.beaconEngine.blockSerializedCache.set(
       blockInput.blockRootHex,
       replacement,
       ssz.phase0.SignedBeaconBlock.serialize(replacement)
     );
-    expect(chain.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBe(replacement);
+    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBe(replacement);
 
     write.resolve();
     await result;
 
     expect(putBinary).toHaveBeenCalledExactlyOnceWith(root, blockBytes);
-    expect(chain.blockSerializedCache.get(blockInput.blockRootHex)).toBeUndefined();
+    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)).toBeUndefined();
   });
 
   it("persists blob data without writing a beacon block", async () => {

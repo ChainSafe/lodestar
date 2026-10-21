@@ -24,7 +24,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, byteArrayEquals, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
@@ -45,7 +45,6 @@ import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
 import {EngineBootstrap} from "./beaconEngine/initialization.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
-import {BlockSerializedCache} from "./blocks/blockSerializedCache.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
@@ -93,7 +92,6 @@ const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
 
 export type BeaconChainModules = {
   serializedCache: SerializedCache;
-  blockSerializedCache: BlockSerializedCache;
   config: BeaconConfig;
   pubkeyCache: PubkeyCache;
   db: IBeaconDb;
@@ -161,7 +159,6 @@ export class BeaconChain implements IBeaconChain {
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
   readonly serializedCache: SerializedCache;
-  readonly blockSerializedCache: BlockSerializedCache;
 
   readonly getBlobsTracker: GetBlobsTracker;
   readonly columnReconstructionTracker: ColumnReconstructionTracker;
@@ -219,9 +216,7 @@ export class BeaconChain implements IBeaconChain {
     const signal = this.abortController.signal;
     this.custodyConfig = custodyConfig;
     this.serializedCache = modules.serializedCache;
-    this.blockSerializedCache = modules.blockSerializedCache;
     this.seenBlockInputCache = new SeenBlockInput({
-      blockSerializedCache: this.blockSerializedCache,
       config,
       custodyConfig: this.custodyConfig,
       clock,
@@ -594,12 +589,10 @@ export class BeaconChain implements IBeaconChain {
       const blockInput = this.seenBlockInputCache.get(protoBlock.blockRoot);
       if (blockInput?.hasBlock()) {
         const signedBlock = blockInput.getBlock();
-        const cached = this.blockSerializedCache.get(blockInput.blockRootHex);
         return {
           block:
-            cached && (cached.block === signedBlock || byteArrayEquals(cached.block.signature, signedBlock.signature))
-              ? cached.bytes
-              : this.config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(signedBlock),
+            this.serializedCache.get(signedBlock) ??
+            this.config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(signedBlock),
           executionOptimistic: isOptimisticBlock(protoBlock),
           finalized: false,
           slot: blockInput.slot,

@@ -13,7 +13,6 @@ import {notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {accept} from "../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
-import {BlockSerializedCache} from "../../../src/chain/blocks/blockSerializedCache.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/chain/blocks/payloadError.js";
@@ -38,6 +37,7 @@ import {BlockInputSync, PAYLOAD_POLL_INTERVAL_MS, UnknownBlockPeerBalancer} from
 import {ClockEvent} from "../../../src/util/clock.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
+import {SerializedCache} from "../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
@@ -437,7 +437,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
 
       const emitter = new ChainEventEmitter();
       const chain: Partial<IBeaconChain> = {
-        blockSerializedCache: new BlockSerializedCache(config),
+        serializedCache: new SerializedCache(),
         getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
         emitter,
         clock: new ClockStopped(0),
@@ -707,8 +707,8 @@ describe("UnknownBlockSync", () => {
 
         const processBlock = vi.fn().mockRejectedValue(error(block));
         const chainForTest = {
-          blockSerializedCache: new BlockSerializedCache(chain.config),
           getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
+          serializedCache: new SerializedCache(),
           emitter: new ChainEventEmitter(),
           clock: new ClockStopped(0),
           beaconEngine: {
@@ -1029,7 +1029,7 @@ describe("UnknownBlockSync", () => {
 
       const chain = {
         opts: {},
-        blockSerializedCache: new BlockSerializedCache(gloasConfig),
+
         getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
         emitter,
         clock,
@@ -2632,7 +2632,7 @@ describe("UnknownBlockSync", () => {
     } as Partial<INetwork> as INetwork;
 
     const chainForTest: Partial<IBeaconChain> = {
-      blockSerializedCache: new BlockSerializedCache(gloasConfig),
+      serializedCache: new SerializedCache(),
       getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
       emitter: new ChainEventEmitter(),
       config: gloasConfig,

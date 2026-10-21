@@ -387,10 +387,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
    * Bundles reference the same block and bytes returned by blockSerializedCache; they do not copy either.
    * API broadcast validation uses validateApiBlock and never creates or discards these bundles.
    * Retain them until import settles or discardVerifiedBlocks is called, independently of BlockSerializedCache
-   * eviction/replacement and BeaconChain's persistence cleanup. Combining these stores would require
+   * eviction/replacement. Combining these stores would require
    * pinning the exact signed candidate while keeping verification results engine-owned.
    */
   readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
+  // Shared with BeaconChain only in main-thread BeaconEngine mode; worker BeaconEngine deserializes independently.
   readonly serializedCache?: SerializedCache;
   readonly blockSerializedCache: BlockSerializedCache;
 
@@ -449,10 +450,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.dataColumnDir = modules.dataColumnDir;
     // Main-thread BeaconEngine shares this cache with BeaconChain; worker mode deserializes independently.
     this.serializedCache = modules.serializedCache;
-    // Main-thread BeaconEngine shares this cache with BeaconChain; worker mode owns a separate instance.
-    this.blockSerializedCache =
-      modules.blockSerializedCache ??
-      new BlockSerializedCache(config, {owner: "engine", metrics: metrics?.blockSerializedCache, logger});
+    this.blockSerializedCache = new BlockSerializedCache(config, {
+      metrics: metrics?.blockSerializedCache,
+      logger,
+      serializedCache: this.serializedCache,
+    });
     this.metrics = metrics;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     try {

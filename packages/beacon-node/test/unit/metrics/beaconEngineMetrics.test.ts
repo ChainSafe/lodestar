@@ -43,7 +43,6 @@ describe("BeaconEngine metrics registries", () => {
     engine.bls.aggregatedPubkeys.inc(5);
     node.blsThreadPool.mainThreadDurationInThreadPool.observe(0.01);
     engine.blsThreadPool.mainThreadDurationInThreadPool.observe(0.02);
-    node.blockSerializedCache.size.set({owner: "chain"}, 2);
     engine.blockSerializedCache.size.set({owner: "engine"}, 4);
     node.precomputeNextEpochTransition.count.inc({result: "error"});
     engine.precomputeNextEpochTransition.count.inc({result: "success"});
@@ -64,7 +63,6 @@ describe("BeaconEngine metrics registries", () => {
     expect(text).toContain("lodestar_bls_aggregated_pubkeys_total 8\n");
     expect(text).toContain("lodestar_bls_thread_pool_main_thread_time_seconds_count 2\n");
     expect(text).toContain("lodestar_bls_thread_pool_main_thread_time_seconds_sum 0.03\n");
-    expect(text).toContain('lodestar_block_cache_entries{owner="chain"} 2\n');
     expect(text).toContain('lodestar_block_cache_entries{owner="engine"} 4\n');
     expect(text).toContain('lodestar_precompute_next_epoch_transition_result_total{result="error"} 1\n');
     expect(text).toContain('lodestar_precompute_next_epoch_transition_result_total{result="success"} 1\n');

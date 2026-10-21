@@ -87,7 +87,7 @@ export type DownloadByRangeResponses = {
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   config: ChainForkConfig;
-  chain: Pick<IBeaconChain, "blockSerializedCache" | "getFinalizedCheckpoint" | "hasBlockHex">;
+  chain: Pick<IBeaconChain, "serializedCache" | "getFinalizedCheckpoint" | "hasBlockHex">;
   network: INetwork;
   logger: Logger;
   peerIdStr: string;
@@ -404,7 +404,9 @@ export async function downloadByRange({
   for (const {block, blockRoot, bytes} of result.result.responses.validatedBlocks ?? []) {
     const rootHex = toRootHex(blockRoot);
     if (block.message.slot > finalizedSlot && !chain.hasBlockHex(rootHex)) {
-      chain.blockSerializedCache.set(rootHex, block, bytes);
+      // Source: unstable@708700cdf6 network/reqresp/utils/collectSequentialBlocksInRange.ts.
+      // [beacon-engine] Retain original response bytes after validation for engine verification and persistence.
+      chain.serializedCache.set(block, bytes);
     }
   }
   return result;

@@ -14,8 +14,11 @@ export async function validateApiBlock(
   opts: VerifyBlocksOpts
 ): Promise<void> {
   const block = blockInput.getBlock();
-  const root = blockInput.blockRootHex;
-  const {bytes} = this.blockSerializedCache.getOrSerialize(root, block);
+  let bytes = this.serializedCache.get(block);
+  if (bytes === undefined) {
+    bytes = this.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
+    this.serializedCache.set(block, bytes);
+  }
   const abortController = new AbortController();
   try {
     await Promise.all([

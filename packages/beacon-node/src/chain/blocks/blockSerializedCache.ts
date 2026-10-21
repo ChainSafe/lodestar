@@ -4,22 +4,23 @@ import {Root, RootHex, SignedBeaconBlock, Slot, sszTypesFor} from "@lodestar/typ
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import type {Metrics} from "../../metrics/index.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 
 export type BlockBytes = {blockRoot: Root; blockBytes: Uint8Array};
 export type BlockSerializedCacheEntry = {block: SignedBeaconBlock; bytes: Uint8Array};
-export type BlockSerializedCacheOwner = "shared" | "chain" | "engine";
+export type BlockSerializedCacheOwner = "engine";
 export type BlockSerializedCacheDeleteReason = "explicit" | "persisted" | "rejected" | "block_input";
 type BlockSerializedCacheOpts = {
   maxItems?: number;
-  owner?: BlockSerializedCacheOwner;
   metrics?: Metrics["blockSerializedCache"] | null;
   logger?: Logger;
+  serializedCache?: SerializedCache;
 };
 
 /**
  * Bounded reuse of decoded blocks and bytes by message root, without implying validation.
- * BeaconChain and BeaconEngine share an instance when beaconEngineWorker=false; otherwise each owns one.
+ * Owned by BeaconEngineCore for gossip validation and block processing only.
  * Entries may be removed on rejection, persistence, finalization or capacity eviction, or replaced by
  * another signature for the same root. BeaconEngine.verifiedBlocks independently retains the exact
  * block/bytes references needed for pending imports, so removal here cannot invalidate an import.
@@ -28,14 +29,13 @@ type BlockSerializedCacheOpts = {
 export class BlockSerializedCache {
   private readonly entries = new Map<RootHex, BlockSerializedCacheEntry>();
   private readonly maxItems: number;
-  private readonly owner: BlockSerializedCacheOwner;
+  private readonly owner: BlockSerializedCacheOwner = "engine";
 
   constructor(
     private readonly config: ChainForkConfig,
     private readonly opts: BlockSerializedCacheOpts = {}
   ) {
     this.maxItems = opts.maxItems ?? (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
-    this.owner = opts.owner ?? "shared";
     const {metrics} = opts;
     if (metrics) {
       metrics.size.addCollect(() => {
@@ -89,21 +89,7 @@ export class BlockSerializedCache {
     const hit = cached && (cached.bytes === bytes || byteArrayEquals(cached.bytes, bytes));
     this.opts.metrics?.lookups.inc({owner: this.owner, operation: "deserialize", result: hit ? "hit" : "miss"});
     if (hit) return cached;
-    const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
-    if (slot === null) throw new LodestarError({code: "INVALID_BLOCK_SSZ"});
-    const types = fork === undefined ? this.config.getForkTypes(slot) : sszTypesFor(fork);
-    let block: SignedBeaconBlock;
-    try {
-      // Bitlist decoding clears padding bits; preserve the bytes retained for import and persistence.
-      // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
-      block = types.SignedBeaconBlock.deserialize(bytes, {reuseBytes: false});
-    } catch (error) {
-      throw new LodestarError({code: "INVALID_BLOCK_SSZ"}, (error as Error).message);
-    }
-    const actualRoot = toRootHex(types.BeaconBlock.hashTreeRoot(block.message));
-    if (actualRoot !== blockRoot) {
-      throw new LodestarError({code: "BLOCK_ROOT_MISMATCH", blockRoot, actualRoot});
-    }
+    const {block} = deserializeBlock(this.config, blockRoot, bytes, fork, this.opts.serializedCache);
     return this.set(blockRoot, block, bytes);
   }
 
@@ -145,4 +131,31 @@ export class BlockSerializedCache {
       });
     }
   }
+}
+
+export function deserializeBlock(
+  config: ChainForkConfig,
+  blockRoot: RootHex,
+  bytes: Uint8Array,
+  fork?: ForkName,
+  serializedCache?: SerializedCache
+): BlockSerializedCacheEntry {
+  const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
+  if (slot === null) throw new LodestarError({code: "INVALID_BLOCK_SSZ"});
+  const types = fork === undefined ? config.getForkTypes(slot) : sszTypesFor(fork);
+  let block: SignedBeaconBlock;
+  try {
+    // Bitlist decoding clears padding bits; preserve the bytes retained for import and persistence.
+    // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
+    block =
+      serializedCache?.getDeserialized<SignedBeaconBlock>(bytes) ??
+      types.SignedBeaconBlock.deserialize(bytes, {reuseBytes: false});
+  } catch (error) {
+    throw new LodestarError({code: "INVALID_BLOCK_SSZ"}, (error as Error).message);
+  }
+  const actualRoot = toRootHex(types.BeaconBlock.hashTreeRoot(block.message));
+  if (actualRoot !== blockRoot) {
+    throw new LodestarError({code: "BLOCK_ROOT_MISMATCH", blockRoot, actualRoot});
+  }
+  return {block, bytes};
 }

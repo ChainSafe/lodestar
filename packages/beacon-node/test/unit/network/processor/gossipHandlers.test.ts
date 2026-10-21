@@ -15,7 +15,6 @@ import {
 } from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
-import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerializedCache.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../../src/chain/blocks/payloadError.js";
@@ -90,10 +89,11 @@ describe("getGossipHandlers", () => {
           error: new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex}),
         },
       });
-      const blockSerializedCache = new BlockSerializedCache(config);
+      const serializedCache = new SerializedCache({cacheDeserialized: true});
       const chain = {
         hasBlockHex,
-        blockSerializedCache,
+        serializedCache,
+        opts: {},
         clock: new ClockStopped(1),
         custodyConfig: {sampledColumns: [], custodyColumns: []},
         seenBlockInputCache: {getByBlock},
@@ -119,7 +119,7 @@ describe("getGossipHandlers", () => {
 
       expect(result).toMatchObject({err: {status: GossipValidationStatus.Ignore, code: BlockErrorCode.ALREADY_KNOWN}});
       expect(hasBlockHex).toHaveBeenCalledExactlyOnceWith(blockRootHex);
-      expect(blockSerializedCache.get(blockRootHex)).toBeUndefined();
+      expect(serializedCache.get(signedBlock)).toBeUndefined();
       expect(getByBlock).not.toHaveBeenCalled();
       expect(addPayloadInput).not.toHaveBeenCalled();
       expect(validateEngineBlock).not.toHaveBeenCalled();
@@ -142,10 +142,11 @@ describe("getGossipHandlers", () => {
       const status = code === "UNEXPECTED_ERROR" ? GossipValidationStatus.Ignore : GossipValidationStatus.Reject;
       const persistInvalidSszValue = vi.fn();
       const remove = vi.fn();
-      const blockSerializedCache = new BlockSerializedCache(config);
+      const serializedCache = new SerializedCache({cacheDeserialized: true});
       const chain = {
         hasBlockHex: () => false,
-        blockSerializedCache,
+        serializedCache,
+        opts: {},
         clock: new ClockStopped(0),
         seenBlockInputCache: {
           getByBlock: vi.fn(),
@@ -190,7 +191,7 @@ describe("getGossipHandlers", () => {
         expect(persistInvalidSszValue).not.toHaveBeenCalled();
       }
       expect(remove).not.toHaveBeenCalled();
-      expect(blockSerializedCache.get(root)).toBeUndefined();
+      expect(serializedCache.get(signedBlock)).toBeUndefined();
     }
   );
 
@@ -205,8 +206,7 @@ describe("getGossipHandlers", () => {
     signedBlock.message.slot = 1;
     const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
     const bytes = forkTypes.SignedBeaconBlock.serialize(signedBlock);
-    const blockSerializedCache = new BlockSerializedCache(config);
-    blockSerializedCache.set(blockRootHex, signedBlock, bytes);
+    const serializedCache = new SerializedCache({cacheDeserialized: true});
     const clock = new ClockStopped(0);
     const emitter = new ChainEventEmitter();
     const unknownParent = vi.fn();
@@ -219,8 +219,7 @@ describe("getGossipHandlers", () => {
       chainEvents: emitter,
       signal: controller.signal,
       custodyConfig,
-      serializedCache: new SerializedCache(),
-      blockSerializedCache,
+      serializedCache,
       metrics: null,
     });
     const addPayloadInput = vi.fn();
@@ -230,8 +229,9 @@ describe("getGossipHandlers", () => {
         ? {code, parentRoot, parentBlockHash: toRootHex(Buffer.alloc(32))}
         : {code, parentRoot};
     const chain = {
+      opts: {},
       hasBlockHex: () => false,
-      blockSerializedCache,
+      serializedCache,
       clock,
       emitter,
       custodyConfig,
@@ -281,12 +281,14 @@ describe("getGossipHandlers", () => {
         peer: "16Uiu2HAmTestGossipPeer",
         source: BlockInputSource.gossip,
       });
+      if (!blockInput) throw new Error("Missing retained block input");
+      expect(serializedCache.get(blockInput.getBlock())).toEqual(bytes);
       seenBlockInputCache.remove(blockRootHex);
-      expect(blockSerializedCache.get(blockRootHex)).toBeUndefined();
-      expect(blockInput?.getBlock()).toBe(signedBlock);
+      expect(serializedCache.get(blockInput.getBlock())).toBeUndefined();
+      expect(blockInput?.getBlock()).toEqual(signedBlock);
       if (fork === ForkName.gloas) {
         expect(addPayloadInput).toHaveBeenCalledOnce();
-        expect(addPayloadInput.mock.calls[0][0].block).toBe(signedBlock);
+        expect(addPayloadInput.mock.calls[0][0].block).toBe(blockInput?.getBlock());
       }
     } finally {
       controller.abort();
@@ -418,7 +420,6 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
       removeInvalid,
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
-    blockSerializedCache: new BlockSerializedCache(config),
   } as unknown as IBeaconChain;
 
   const handlers = getGossipHandlers(
@@ -476,6 +477,7 @@ async function runBeaconBlockProcessingError(
   const error = getExecutionBlockError(signedBlock, code);
   const core = {reportPeer: vi.fn()} as Pick<INetworkCore, "reportPeer">;
   const chain = {
+    opts: {},
     hasBlockHex: vi.fn().mockReturnValue(false),
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
@@ -503,7 +505,6 @@ async function runBeaconBlockProcessingError(
       remove: vi.fn(),
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
-    blockSerializedCache: new BlockSerializedCache(config),
   } as unknown as IBeaconChain;
 
   const handlers = getGossipHandlers(
@@ -572,6 +573,7 @@ async function runBeaconBlockRepeatProposal(
     root: blockRootHex,
   };
   const chain = {
+    opts: {},
     hasBlockHex: vi.fn().mockReturnValue(false),
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
@@ -602,7 +604,6 @@ async function runBeaconBlockRepeatProposal(
       remove: vi.fn(),
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
-    blockSerializedCache: new BlockSerializedCache(config),
   } as unknown as IBeaconChain;
 
   const handlers = getGossipHandlers(

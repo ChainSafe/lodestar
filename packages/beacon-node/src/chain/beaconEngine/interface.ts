@@ -46,7 +46,7 @@ import {SerializedCache} from "../../util/serializedCache.js";
 import {Result} from "../../util/wrapError.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
-import {BlockBytes, BlockSerializedCache} from "../blocks/blockSerializedCache.js";
+import {BlockBytes} from "../blocks/blockSerializedCache.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {ImportBlockOpts} from "../blocks/types.js";
@@ -94,7 +94,6 @@ export type BeaconEngineLogging =
 
 export type BeaconEngineCoreModules = {
   serializedCache?: SerializedCache;
-  blockSerializedCache?: BlockSerializedCache;
   builderApiClientOpts?: BuilderApiClientOpts;
   executionEngine?: IExecutionEngine;
   executionEngineOpts?: ExecutionEngineOpts & {config?: never};

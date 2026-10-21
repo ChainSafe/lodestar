@@ -216,8 +216,8 @@ export function getBeaconBlockApi({
       ? isForkPostDeneb(fork) && !isForkPostGloas(fork)
         ? getSignedBlockBytesFromSignedBlockContentsSerialized(context.sszBytes)
         : context.sszBytes
-      : chain.blockSerializedCache.getOrSerialize(blockRoot, signedBlock).bytes;
-    const cachedBlock = chain.blockSerializedCache.set(blockRoot, signedBlock, blockBytes);
+      : config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock);
+    chain.serializedCache.set(signedBlock, blockBytes);
 
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
@@ -240,7 +240,7 @@ export function getBeaconBlockApi({
               }
             }
 
-            chain.blockSerializedCache.delete(blockRoot, cachedBlock.block, "rejected");
+            chain.serializedCache.delete([signedBlock]);
             chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
@@ -284,7 +284,7 @@ export function getBeaconBlockApi({
               seenTimestampSec,
             });
           } catch (error) {
-            chain.blockSerializedCache.delete(blockRoot, cachedBlock.block, "rejected");
+            chain.serializedCache.delete([signedBlock]);
             chain.logger.error("Consensus checks failed while publishing the block", valLogMeta, error as Error);
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
@@ -305,7 +305,7 @@ export function getBeaconBlockApi({
           try {
             await chain.beaconEngine.verifyAndObserveBlockProposer(blockBytes, signedBlock, blockRoot);
           } catch (e) {
-            chain.blockSerializedCache.delete(blockRoot, cachedBlock.block, "rejected");
+            chain.serializedCache.delete([signedBlock]);
             chain.logger.error(
               "Proposer signature validation failed while publishing the block",
               valLogMeta,
@@ -353,7 +353,7 @@ export function getBeaconBlockApi({
         blockRoot
       );
       if (conflictingRoots.length > 0) {
-        chain.blockSerializedCache.delete(blockRoot, cachedBlock.block, "rejected");
+        chain.serializedCache.delete([signedBlock]);
         chain.logger.warn("Not publishing block due to proposer equivocation", {
           ...valLogMeta,
           conflictingRoots: conflictingRoots.join(", "),

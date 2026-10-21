@@ -15,7 +15,6 @@ import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconEngine, BeaconEngineCore} from "../chain/beaconEngine/index.js";
 import {AnchorSummary} from "../chain/beaconEngine/initialization.js";
 import {IBeaconEngine} from "../chain/beaconEngine/interface.js";
-import {BlockSerializedCache} from "../chain/blocks/blockSerializedCache.js";
 import {ChainEventEmitter} from "../chain/emitter.js";
 import {BeaconChain, IBeaconChain} from "../chain/index.js";
 import {initBeaconMetrics} from "../chain/initState.js";
@@ -234,14 +233,8 @@ export class BeaconNode {
       userAgent: opts.executionBuilder.userAgent,
     };
     const serializedCache = new SerializedCache({cacheDeserialized: !opts.chain.beaconEngineWorker});
-    const blockSerializedCache = new BlockSerializedCache(config, {
-      owner: opts.chain.beaconEngineWorker ? "chain" : "shared",
-      metrics: metrics?.blockSerializedCache,
-      logger: chainLogger,
-    });
     const beaconEngineCore = new BeaconEngineCore({
       serializedCache: opts.chain.beaconEngineWorker ? undefined : serializedCache,
-      blockSerializedCache: opts.chain.beaconEngineWorker ? undefined : blockSerializedCache,
       validatorMonitorOpts:
         opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
       isAnchorStateFinalized: stateInitialization.isFinalized,
@@ -300,7 +293,6 @@ export class BeaconNode {
     const parentPayload = await beaconEngine.getHeadParentPayload();
     const chain = new BeaconChain(opts.chain, {
       serializedCache,
-      blockSerializedCache,
       config,
       pubkeyCache,
       db,

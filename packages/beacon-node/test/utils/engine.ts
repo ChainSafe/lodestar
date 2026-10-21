@@ -5,7 +5,6 @@ import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {BeaconEngine, BeaconEngineCore, IBeaconEngine} from "../../src/chain/beaconEngine/index.js";
-import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BeaconChainModules} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {IChainOptions} from "../../src/chain/options.js";
@@ -27,7 +26,6 @@ export type TestBeaconEngineModules = Omit<
   | "custodyConfig"
   | "builderApiClient"
   | "serializedCache"
-  | "blockSerializedCache"
 > & {
   executionBuilderOpts?: ExecutionBuilderOpts;
   earliestAvailableSlot?: Slot;
@@ -83,14 +81,8 @@ export function createTestBeaconEngine(
   });
 
   const serializedCache = new SerializedCache({cacheDeserialized: !opts.beaconEngineWorker});
-  const blockSerializedCache = new BlockSerializedCache(config, {
-    owner: opts.beaconEngineWorker ? "chain" : "shared",
-    metrics: metrics?.blockSerializedCache,
-    logger,
-  });
   const beaconEngineCore = new BeaconEngineCore({
     serializedCache: opts.beaconEngineWorker ? undefined : serializedCache,
-    blockSerializedCache: opts.beaconEngineWorker ? undefined : blockSerializedCache,
     executionEngine,
     executionBuilderOpts,
     builderApiClientOpts,
@@ -116,7 +108,6 @@ export function createTestBeaconEngine(
   return {
     ...chainModules,
     serializedCache,
-    blockSerializedCache,
     beaconEngine,
     beaconEngineCore,
     abortController,

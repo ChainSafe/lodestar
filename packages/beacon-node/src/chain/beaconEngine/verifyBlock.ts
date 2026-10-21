@@ -9,7 +9,7 @@ import {
 import {IndexedAttestation, SignedBeaconBlock, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {BlockBytes} from "../blocks/blockSerializedCache.js";
+import {BlockBytes, deserializeBlock} from "../blocks/blockSerializedCache.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
@@ -31,7 +31,9 @@ export async function verifyBlocks(
   isApiValidation = false
 ): Promise<VerifyBlocksSuccess> {
   const entries = blockData.map(({blockRoot, blockBytes}) =>
-    this.blockSerializedCache.getOrDeserialize(toRootHex(blockRoot), blockBytes)
+    isApiValidation
+      ? deserializeBlock(this.config, toRootHex(blockRoot), blockBytes, undefined, this.serializedCache)
+      : this.blockSerializedCache.getOrDeserialize(toRootHex(blockRoot), blockBytes)
   );
   const blocks = entries.map(({block}) => block);
   const blockBytes = entries.map(({bytes}) => bytes);

@@ -143,7 +143,7 @@ function getSequentialHandlers(
     peerIdStr: string,
     seenTimestampSec: number
   ): BlockInput {
-    signedBlock = chain.blockSerializedCache.set(blockRootHex, signedBlock, serializedData).block;
+    chain.serializedCache.set(signedBlock, serializedData);
     const blockInput = chain.seenBlockInputCache.getByBlock({
       block: signedBlock,
       blockRootHex,
@@ -183,6 +183,7 @@ function getSequentialHandlers(
     if (chain.hasBlockHex(blockRootHex)) {
       throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex});
     }
+    if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signedBlock, serializedData);
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 

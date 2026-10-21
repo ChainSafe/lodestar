@@ -66,14 +66,13 @@ describe("downloaded block cache admission", () => {
         expect(hashTreeRoot).toHaveBeenCalledExactlyOnceWith(deserialize.mock.results[0].value.message);
         expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: false});
         expect(serialize).not.toHaveBeenCalled();
-        const entry = chain.blockSerializedCache.get(rootHex);
+        const decodedBlock = deserialize.mock.results[0].value;
+        const cachedBytes = chain.serializedCache.get(decodedBlock);
         if (status === "new") {
-          expect(entry?.block).toBe(deserialize.mock.results[0].value);
-          expect(entry?.bytes).toBe(bytes);
-          expect(chain.blockSerializedCache.getOrDeserialize(rootHex, structuredClone(bytes))).toBe(entry);
+          expect(cachedBytes).toBe(bytes);
           expect(deserialize).toHaveBeenCalledOnce();
         } else {
-          expect(entry).toBeUndefined();
+          expect(cachedBytes).toBeUndefined();
         }
       }
     );
@@ -84,12 +83,11 @@ describe("downloaded block cache admission", () => {
     const chain = getMockedBeaconChain({config});
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
-    const root = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
     const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
     const nextBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     nextBlock.message.slot = 2;
     const nextBytes = ssz.phase0.SignedBeaconBlock.serialize(nextBlock);
-    const set = vi.spyOn(chain.blockSerializedCache, "set");
+    const set = vi.spyOn(chain.serializedCache, "set");
     const network = {
       config,
       chain,
@@ -127,6 +125,6 @@ describe("downloaded block cache admission", () => {
       });
     }
     expect(set).not.toHaveBeenCalled();
-    expect(chain.blockSerializedCache.get(toRootHex(root))).toBeUndefined();
+    expect(chain.serializedCache.get(block)).toBeUndefined();
   });
 });

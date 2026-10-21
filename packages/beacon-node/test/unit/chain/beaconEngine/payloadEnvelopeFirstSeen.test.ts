@@ -59,6 +59,42 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
 
   afterEach(() => vi.restoreAllMocks());
 
+  it.each(["accept", "reject", "unexpected"])(
+    "keeps the processing cache unchanged during API gossip validation: %s",
+    async (scenario) => {
+      const candidate = ssz.gloas.SignedBeaconBlock.clone(block);
+      candidate.signature = Uint8Array.from(candidate.signature);
+      candidate.signature[0] = 1;
+      const entry = engine.blockSerializedCache.set(root, candidate, ssz.gloas.SignedBeaconBlock.serialize(candidate));
+      const getOrDeserialize = vi.spyOn(engine.blockSerializedCache, "getOrDeserialize");
+      const set = vi.spyOn(engine.blockSerializedCache, "set");
+      const remove = vi.spyOn(engine.blockSerializedCache, "delete");
+      vi.spyOn(blockValidation, "validateGossipBlock").mockImplementation(async () => {
+        if (scenario === "reject") {
+          throw new BlockGossipError(GossipAction.REJECT, {
+            code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+            slot: 1,
+            root,
+          });
+        }
+        if (scenario === "unexpected") throw new Error("API validation failed");
+        return {skippedSlots: 0};
+      });
+
+      const result = await engine.validateGossipBlock(
+        fromHex(root),
+        ssz.gloas.SignedBeaconBlock.serialize(block),
+        ForkName.gloas
+      );
+
+      expect(result.err === null).toBe(scenario === "accept");
+      expect(engine.blockSerializedCache.get(root)).toBe(entry);
+      expect(getOrDeserialize).not.toHaveBeenCalled();
+      expect(set).not.toHaveBeenCalled();
+      expect(remove).not.toHaveBeenCalled();
+    }
+  );
+
   it.each([
     "accept",
     "unknown_parent",

@@ -3,6 +3,7 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, SubnetID, ssz} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
+import {deserializeBlock} from "../../blocks/blockSerializedCache.js";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import {BlockErrorCode, BlockErrorType, BlockGossipError, GossipAction} from "../../errors/index.js";
 import * as blobSidecarValidation from "../../validation/blobSidecar.js";
@@ -46,7 +47,10 @@ export async function validateGossipBlock(
   const payloadBlockRoot = isForkPostGloas(fork) ? blockRootHex : null;
   let signedBlock: SignedBeaconBlock | undefined;
   try {
-    const {block} = this.blockSerializedCache.getOrDeserialize(blockRootHex, blockBytes, fork);
+    const {block} =
+      seenTimestampSec === undefined
+        ? deserializeBlock(this.config, blockRootHex, blockBytes, fork, this.serializedCache)
+        : this.blockSerializedCache.getOrDeserialize(blockRootHex, blockBytes, fork);
     signedBlock = block;
     // Source: unstable@2593063a82 network/processor/gossipHandlers.ts#validateBeaconBlock.
     // [beacon-engine] Authenticate unknown-parent blocks before either owner's seen cache retains them.
@@ -101,7 +105,7 @@ export async function validateGossipBlock(
           forkName: fork,
         });
       }
-    } else {
+    } else if (seenTimestampSec !== undefined) {
       this.blockSerializedCache.delete(blockRootHex, block, "rejected");
     }
     if (this.validatorMonitor && seenTimestampSec !== undefined) {
@@ -134,7 +138,7 @@ export async function validateGossipBlock(
       shouldProcessRepeatProposalBlock,
     };
   } catch (error) {
-    if (signedBlock !== undefined) {
+    if (signedBlock !== undefined && seenTimestampSec !== undefined) {
       this.blockSerializedCache.delete(blockRootHex, signedBlock, "rejected");
     }
     if (

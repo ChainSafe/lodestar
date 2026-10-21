@@ -13,7 +13,10 @@ export class SerializedCache {
     return this.map.get(obj);
   }
 
-  /** The caller must use the SSZ type associated with these exact, immutable bytes. */
+  /**
+   * Only useful for main-thread BeaconEngine reuse, which preserves byte-array identity.
+   * The caller must use the associated SSZ type and keep both the object and bytes immutable.
+   */
   getDeserialized<T extends object>(serialized: Uint8Array): T | undefined {
     return this.deserialized?.get(serialized) as T | undefined;
   }

@@ -200,6 +200,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
     const clock =
       clockParam === "real" ? new Clock({config, genesisTime, signal: new AbortController().signal}) : getMockedClock();
 
+    const serializedCache = new SerializedCache({cacheDeserialized: true});
     return {
       config,
       opts: {},
@@ -208,8 +209,8 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       genesisTime,
       clock,
       forkChoice: getMockedForkChoice(),
-      serializedCache: new SerializedCache({cacheDeserialized: true}),
-      blockSerializedCache: new BlockSerializedCache(config),
+      serializedCache,
+      blockSerializedCache: new BlockSerializedCache(config, {serializedCache}),
       verifiedBlocks: new Map(),
       publishChainView: vi.fn(),
       executionEngine: {

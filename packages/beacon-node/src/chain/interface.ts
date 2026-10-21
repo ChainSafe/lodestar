@@ -33,7 +33,6 @@ import {IArchiveStore} from "./archiveStore/interface.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
 import {ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
-import {BlockSerializedCache} from "./blocks/blockSerializedCache.js";
 import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
@@ -100,7 +99,6 @@ export interface IBeaconChain extends IChainView {
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
   // Cache for serialized objects
   readonly serializedCache: SerializedCache;
-  readonly blockSerializedCache: BlockSerializedCache;
 
   readonly getBlobsTracker: GetBlobsTracker;
   readonly columnReconstructionTracker: ColumnReconstructionTracker;

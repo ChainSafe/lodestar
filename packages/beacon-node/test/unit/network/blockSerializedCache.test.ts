@@ -4,8 +4,6 @@ import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {BlockSerializedCache} from "../../../src/chain/blocks/blockSerializedCache.js";
 import {Network} from "../../../src/network/network.js";
 import {ClockStopped} from "../../mocks/clock.js";
 
@@ -14,7 +12,6 @@ describe("downloaded block cache", () => {
 
   it.each(["range", "root", "head"])("preserves original bytes and decoded blocks for %s requests", async (method) => {
     const config = createChainForkConfig(chainConfig);
-    const blockSerializedCache = new BlockSerializedCache(config);
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
     const root = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
@@ -24,7 +21,6 @@ describe("downloaded block cache", () => {
     const network = {
       config,
       clock: new ClockStopped(0),
-      chain: {blockSerializedCache},
       async *sendReqRespRequest(): AsyncGenerator<ResponseIncoming> {
         yield {data: bytes, fork: ForkName.phase0, protocolVersion: 2};
       },
@@ -41,7 +37,6 @@ describe("downloaded block cache", () => {
     expect(blocks[0].block).toBe(deserialize.mock.results[0].value);
     expect(blocks[0].bytes).toBe(bytes);
     expect(blocks[0].block.signature.buffer).not.toBe(bytes.buffer);
-    expect(blockSerializedCache.get(toRootHex(root))).toBeUndefined();
     expect(hashTreeRoot).not.toHaveBeenCalled();
     expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: false});
     const originalBytes = Uint8Array.from(bytes);

@@ -104,6 +104,9 @@ describe("BeaconEngineCore block execution verification", () => {
             : await core.validateApiBlock(data.blockRoot, data.blockBytes, {});
         expect(result.err, `verification failed for ${input.blockRootHex}`).toBeNull();
         expect(core.seenBlockProposers.hasBlockRoot(0, 0, input.blockRootHex), input.blockRootHex).toBe(true);
+        expect(core.blockSerializedCache.get(input.blockRootHex) !== undefined, input.blockRootHex).toBe(
+          method === "verifyBlocks"
+        );
       }
 
       expect(core.seenBlockProposers.getEquivocationHeaders(0, 0)).toEqual(
@@ -159,7 +162,7 @@ describe("BeaconEngineCore block execution verification", () => {
     const input = bellatrixInput();
     const block = input.getBlock();
     const [{blockRoot, blockBytes: bytes}] = serializeBlocks(input);
-    if (cached) chain.blockSerializedCache.set(input.blockRootHex, block, bytes);
+    if (cached) chain.beaconEngine.blockSerializedCache.set(input.blockRootHex, block, bytes);
     const deserialize = vi.spyOn(ssz.bellatrix.SignedBeaconBlock, "deserialize");
     const opts = structuredClone({validSignatures: true});
     await core.verifyBlocks([{blockRoot, blockBytes: bytes}], opts);
@@ -212,6 +215,8 @@ describe("BeaconEngineCore block execution verification", () => {
     const [data] = serializeBlocks(bellatrixInput());
     await core.verifyBlocks([data], {validSignatures: true});
     const pending = core.verifiedBlocks.get(toRootHex(data.blockRoot));
+    const cached = core.blockSerializedCache.get(toRootHex(data.blockRoot));
+    const getOrDeserialize = vi.spyOn(core.blockSerializedCache, "getOrDeserialize");
     const error = new Error("API state transition failed");
     if (failure) vi.mocked(stf.verifyBlocksStateTransitionOnly).mockRejectedValueOnce(error);
 
@@ -220,6 +225,8 @@ describe("BeaconEngineCore block execution verification", () => {
     else await validating;
 
     expect(core.verifiedBlocks.get(toRootHex(data.blockRoot))).toBe(pending);
+    expect(core.blockSerializedCache.get(toRootHex(data.blockRoot))).toBe(cached);
+    expect(getOrDeserialize).not.toHaveBeenCalled();
   });
 
   it("rejects malformed block bytes before regenerating state", async () => {
@@ -239,7 +246,7 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(deserialize).not.toHaveBeenCalled();
     expect(core.verifiedBlocks.get(input.blockRootHex)?.block).toBe(block);
     expect(core.verifiedBlocks.get(input.blockRootHex)?.blockBytes).toBe(
-      chain.blockSerializedCache.get(input.blockRootHex)?.bytes
+      chain.beaconEngine.blockSerializedCache.get(input.blockRootHex)?.bytes
     );
   });
 

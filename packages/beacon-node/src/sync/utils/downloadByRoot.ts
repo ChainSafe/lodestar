@@ -362,7 +362,9 @@ export async function fetchAndValidateBlock({
     block.message.slot > computeStartSlotAtEpoch(chain.getFinalizedCheckpoint().epoch) &&
     !chain.hasBlockHex(rootHex)
   ) {
-    chain.blockSerializedCache.set(rootHex, block, bytes);
+    // Source: unstable@708700cdf6 network/reqresp/utils/collect.ts#collectMaxResponseTypedWithBytes.
+    // [beacon-engine] Retain original response bytes after validation for engine verification and persistence.
+    chain.serializedCache.set(block, bytes);
   }
   return block;
 }

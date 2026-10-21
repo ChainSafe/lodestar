@@ -100,7 +100,8 @@ describe("api - beacon - publishBlindedBlockV2", () => {
         kzgProof: contents.kzgProofs[0],
       })
     );
-    const blockBytes = modules.chain.blockSerializedCache.get(blockRoot)?.bytes;
+    const publishedBlock = vi.mocked(modules.network.publishBeaconBlock).mock.calls[0][0];
+    const blockBytes = modules.chain.serializedCache.get(publishedBlock);
     expect(blockBytes).toEqual(ssz.deneb.SignedBeaconBlock.serialize(contents.signedBlock));
     expect(blockBytes?.buffer).toBe(contentsBytes.buffer);
   });

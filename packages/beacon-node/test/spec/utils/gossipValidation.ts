@@ -630,7 +630,7 @@ async function validateMessageForTopic(
 
       // validateGossipBlock registers the proposer in the (engine-internal) seenBlockProposers on Accept.
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(signedBlock.message);
-      chain.blockSerializedCache.set(toRootHex(blockRoot), signedBlock, bytes);
+      chain.serializedCache.set(signedBlock, bytes);
       assertAccepted(await chain.beaconEngine.validateGossipBlock(blockRoot, bytes, fork));
       break;
     }

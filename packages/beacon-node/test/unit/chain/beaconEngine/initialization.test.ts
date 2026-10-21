@@ -654,41 +654,51 @@ describe("bytes-based engine startup", () => {
     }
   });
 
-  it.each([false, true])("selects cache sharing with beaconEngineWorker=%s", async (beaconEngineWorker) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
-    const options = {...opts, beaconEngineWorker};
-    const dependencies = await initializeTestChain(options, modules);
-    chain = new BeaconChain(options, dependencies);
-    if (!engine) throw Error("Expected initialized engine");
-    expect(chain.blockSerializedCache === engine.blockSerializedCache).toBe(!beaconEngineWorker);
-    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
-    const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
-    chain.blockSerializedCache.set(toRootHex(blockRoot), block, bytes);
-    const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
-    vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
-    await engine.validateGossipBlock(blockRoot, structuredClone(bytes), ForkName.phase0);
-    const cached = engine.blockSerializedCache.get(toRootHex(blockRoot));
-    vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
-    await expect(engine.verifyBlocks([{blockRoot, blockBytes: structuredClone(bytes)}], {})).resolves.toMatchObject({
-      err: {type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"}},
-    });
-    expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-    expect(engine.blockSerializedCache.get(toRootHex(blockRoot))).toBe(cached);
-    expect(cached?.block === block).toBe(!beaconEngineWorker);
+  it.each([false, true])(
+    "owns the block cache and shares only SerializedCache with beaconEngineWorker=%s",
+    async (beaconEngineWorker) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(0);
+      const options = {...opts, beaconEngineWorker};
+      const dependencies = await initializeTestChain(options, modules);
+      chain = new BeaconChain(options, dependencies);
+      if (!engine) throw Error("Expected initialized engine");
+      expect("blockSerializedCache" in chain).toBe(false);
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
+      const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
+      chain.serializedCache.set(block, bytes);
+      const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
+      vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
+      await engine.validateGossipBlock(
+        blockRoot,
+        beaconEngineWorker ? structuredClone(bytes) : bytes,
+        ForkName.phase0,
+        0
+      );
+      const cached = engine.blockSerializedCache.get(toRootHex(blockRoot));
+      vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
+      await expect(engine.verifyBlocks([{blockRoot, blockBytes: structuredClone(bytes)}], {})).resolves.toMatchObject({
+        err: {type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"}},
+      });
+      expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
+      expect(engine.blockSerializedCache.get(toRootHex(blockRoot))).toBe(cached);
+      expect(cached?.block === block).toBe(!beaconEngineWorker);
 
-    expect(engine.serializedCache).toBe(beaconEngineWorker ? undefined : chain.serializedCache);
-    const exit = ssz.phase0.SignedVoluntaryExit.defaultValue();
-    const exitBytes = ssz.phase0.SignedVoluntaryExit.serialize(exit);
-    chain.serializedCache.set(exit, exitBytes);
-    const deserializeExit = vi.spyOn(ssz.phase0.SignedVoluntaryExit, "deserialize");
-    const validateExit = vi.spyOn(voluntaryExitValidation, "validateGossipVoluntaryExit").mockResolvedValue(undefined);
-    expect((await engine.validateGossipVoluntaryExit(exitBytes)).err).toBeNull();
-    expect(deserializeExit).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-    expect(validateExit.mock.calls[0][0] === exit).toBe(!beaconEngineWorker);
-    expect(chain.serializedCache.getDeserialized(exitBytes)).toBe(beaconEngineWorker ? undefined : exit);
-  });
+      expect(engine.serializedCache).toBe(beaconEngineWorker ? undefined : chain.serializedCache);
+      const exit = ssz.phase0.SignedVoluntaryExit.defaultValue();
+      const exitBytes = ssz.phase0.SignedVoluntaryExit.serialize(exit);
+      chain.serializedCache.set(exit, exitBytes);
+      const deserializeExit = vi.spyOn(ssz.phase0.SignedVoluntaryExit, "deserialize");
+      const validateExit = vi
+        .spyOn(voluntaryExitValidation, "validateGossipVoluntaryExit")
+        .mockResolvedValue(undefined);
+      expect((await engine.validateGossipVoluntaryExit(exitBytes)).err).toBeNull();
+      expect(deserializeExit).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
+      expect(validateExit.mock.calls[0][0] === exit).toBe(!beaconEngineWorker);
+      expect(chain.serializedCache.getDeserialized(exitBytes)).toBe(beaconEngineWorker ? undefined : exit);
+    }
+  );
 
   it.each([false, true])("owns the execution builder with beaconEngineWorker=%s", async (beaconEngineWorker) => {
     vi.useFakeTimers();
@@ -1085,13 +1095,12 @@ describe("bytes-based engine startup", () => {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const root = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
     const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
-    chain.blockSerializedCache.set(root, block, bytes);
     core.blockSerializedCache.getOrDeserialize(root, bytes);
     const shared = await aggregateMetrics([
       (await chain.beaconEngine.scrapeMetrics()).metrics,
       await metrics.register.getMetricsAsJSON(),
     ]);
-    const owners = beaconEngineWorker ? ["chain", "engine"] : ["shared"];
+    const owners = ["engine"];
     for (const owner of owners) {
       expect(shared, `cache size for ${owner}`).toContain(`lodestar_block_cache_entries{owner="${owner}"} 1\n`);
       expect(shared, `insertions for ${owner}`).toContain(

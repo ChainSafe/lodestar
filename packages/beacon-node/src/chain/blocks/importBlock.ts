@@ -48,10 +48,6 @@ export async function importBlock(
   // and import FCU now live in packages/beacon-node/src/chain/beaconEngine/importBlock.ts.
   // On unstable merges, sync that logic there; retain facade side effects here.
   const r = await this.beaconEngine.importBlock(blockInput, dataAvailabilityStatus, opts);
-  // The engine already removes persisted roots from the shared cache.
-  if (this.opts.beaconEngineWorker) {
-    this.blockSerializedCache.delete(blockInput.blockRootHex, undefined, "persisted");
-  }
 
   this.metrics?.importBlock.bySource.inc({source: blockInput.getBlockSource().source});
   if (isBlockInputColumns(blockInput)) {
