@@ -21,8 +21,7 @@ export type IBuilderCliArgs = LogArgs & {
   "execution.timeout"?: number;
   "execution.retries": number;
   "execution.retryDelay": number;
-  jwtSecret?: string;
-  jwtId?: string;
+  "execution.jwtSecret"?: string;
 
   "bidding.shareBps": number;
   "bidding.fixedCostGwei": number;
@@ -43,7 +42,7 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
 
   beaconNodeUrl: {
     description:
-      "Url to a trusted beacon node. The beacon node must run with `--emitPayloadAttributes` to emit the payload attributes of every slot, otherwise the builder only bids on slots the beacon node itself proposes",
+      "URL of the beacon node. It must run with `--emitPayloadAttributes` to emit payload attributes for every slot",
     type: "string",
     default: defaultOptions.beaconNodeUrl,
   },
@@ -112,16 +111,9 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
     group: "execution",
   },
 
-  jwtSecret: {
+  "execution.jwtSecret": {
     description:
       "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
-    type: "string",
-    group: "execution",
-  },
-
-  jwtId: {
-    description:
-      "An optional identifier to be set in the id field of the claims included in jwt tokens used for authentication with EL client's rpc server hosting engine apis",
     type: "string",
     group: "execution",
   },

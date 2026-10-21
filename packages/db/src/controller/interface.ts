@@ -53,6 +53,8 @@ export interface DatabaseController<K, V> {
   batchDelete(keys: K[], opts?: DbReqOpts): Promise<void>;
   batch(batch: DbBatch<K, V>, opts?: DbReqOpts): Promise<void>;
 
+  compactRange(start: K, end: K): Promise<void>;
+
   // Iterate over entries
 
   keysStream(opts?: FilterOptions<K>): AsyncIterable<K>;

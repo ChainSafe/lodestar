@@ -2,7 +2,7 @@ import {ApiClient, ApiError, HttpStatusCode, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {IClock, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {BuilderStatus} from "@lodestar/types";
+import {BuilderIndex, BuilderStatus} from "@lodestar/types";
 import {ErrorAborted, Logger, TimeoutError, isFetchError, sleep, toHex} from "@lodestar/utils";
 
 export async function resolveBuilderIdentity(
@@ -12,7 +12,7 @@ export async function resolveBuilderIdentity(
   signal: AbortSignal,
   clock: IClock,
   config: ChainForkConfig
-): Promise<routes.beacon.BuilderResponse> {
+): Promise<BuilderIndex> {
   const builderEntry = await waitForBuilder(api, logger, id, signal, clock, config);
 
   if (builderEntry.builder.version !== PAYLOAD_BUILDER_VERSION) {
@@ -27,7 +27,7 @@ export async function resolveBuilderIdentity(
     slot: clock.getCurrentSlot(),
   });
 
-  return builderEntry;
+  return builderEntry.index;
 }
 
 export async function getBuilderStatus(
@@ -99,11 +99,10 @@ async function waitForBuilder(
     }
     if (builder?.status === "pending") {
       logger.info("Waiting for builder deposit to be finalized", {id, slot: clock.getCurrentSlot()});
-      await sleep(msToNextEpochPoll(clock), signal);
     } else {
       logger.info("Waiting for builder to be known to the beacon node", {id, slot: clock.getCurrentSlot()});
-      await sleep(msToNextSlotPoll(clock), signal);
     }
+    await sleep(msToNextSlotPoll(clock), signal);
   }
   throw new ErrorAborted("waitForBuilder");
 }
@@ -145,8 +144,9 @@ async function fetchBuilder(
   }
 }
 
+/** Polls at the second slot of the next epoch, the head state has gone through the epoch transition by then */
 function msToNextEpochPoll(clock: IClock): number {
-  return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1));
+  return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1) + 1);
 }
 
 function msToNextSlotPoll(clock: IClock): number {

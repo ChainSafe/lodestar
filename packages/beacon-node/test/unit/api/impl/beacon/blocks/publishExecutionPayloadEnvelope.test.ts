@@ -7,6 +7,7 @@ import {IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {PayloadEnvelopeInput} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
@@ -79,7 +80,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
         ssz.phase0.SignedBeaconBlockHeader.defaultValue()
       );
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishExecutionPayloadEnvelope({
           signedEnvelopeOrContents: signedEnvelope,

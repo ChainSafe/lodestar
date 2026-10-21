@@ -46,7 +46,7 @@ export type BuilderOptions = {
   /** Fee recipient of built payloads, receives priority fees and MEV */
   executionFeeRecipient: ExecutionAddress;
   metrics: Metrics | null;
-  /** Execution client that builds the payloads */
+  /** Payload construction engine, an execution client is one implementation */
   payloadSource: PayloadSource;
   bidding: BidderOptions &
     ProportionalBidPolicyOpts & {
@@ -148,7 +148,7 @@ export class Builder {
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
 
-    const identity = await resolveBuilderIdentity(
+    const index = await resolveBuilderIdentity(
       api,
       logger,
       builderSigner.getPubkeyHex(),
@@ -158,11 +158,9 @@ export class Builder {
     );
 
     opts.abortController.signal.throwIfAborted();
-    const {index, status, builder} = identity;
-    const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics, {
-      status,
-      balance: builder.balance,
-    });
+    const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
+    await builderStatusTracker.poll(clock.getCurrentEpoch());
+    opts.abortController.signal.throwIfAborted();
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
 
     const payloadStore = new PayloadStore();

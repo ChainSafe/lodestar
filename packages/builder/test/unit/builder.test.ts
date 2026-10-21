@@ -82,7 +82,7 @@ describe("Builder", () => {
     vi.restoreAllMocks();
   });
 
-  it.each(["slow", "failed"])("seeds startup status before a %s first poll", async (mode) => {
+  it.each(["slow", "failed"])("waits for the %s initial status poll before subscribing", async (mode) => {
     vi.useFakeTimers({now: 12_000});
     api.beacon.getGenesis.mockResolvedValue(
       mockApiResponse({data: ssz.phase0.Genesis.defaultValue(), meta: undefined})
@@ -107,17 +107,21 @@ describe("Builder", () => {
       })
     );
     const laterPoll = defer<Awaited<ReturnType<typeof api.beacon.getStateBuilders>>>();
-    if (mode === "slow") api.beacon.getStateBuilders.mockReturnValue(laterPoll.promise);
-    else api.beacon.getStateBuilders.mockRejectedValue(Error("poll failed"));
+    api.beacon.getStateBuilders.mockReturnValue(laterPoll.promise);
     const poll = vi.spyOn(BuilderStatusTracker.prototype, "poll");
-    const initialized = await Builder.init(modules.opts);
-    expect(poll).toHaveBeenCalledOnce();
+    const initializing = Builder.init(modules.opts);
+    await vi.waitFor(() => expect(poll).toHaveBeenCalledOnce());
+    expect(api.events.eventstream).not.toHaveBeenCalled();
+    if (mode === "slow") laterPoll.resolve(mockGetStateBuildersResponse(1, {balance: 10_000_000_000}));
+    else laterPoll.reject(Error("poll failed"));
+    const initialized = await initializing;
     const tracker = poll.mock.contexts[0];
     if (!(tracker instanceof BuilderStatusTracker)) throw Error("Missing startup tracker");
-    expect(tracker.getStatus()).toEqual({status: "active", balance: 10_000_000_000});
+    expect(tracker.getStatus()).toEqual(
+      mode === "slow" ? {status: "active", balance: 10_000_000_000} : {status: undefined, balance: undefined}
+    );
     expect(api.events.eventstream).toHaveBeenCalledOnce();
     await initialized.close();
-    laterPoll.resolve(mockGetStateBuildersResponse(1, {balance: 10_000_000_000}));
   });
 
   it.each([0, 10_000, NaN, 1.5])("rejects invalid reveal timing %s before startup", async (cutoffBps) => {

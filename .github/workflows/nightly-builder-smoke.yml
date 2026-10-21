@@ -68,7 +68,7 @@ jobs:
             --builderPubkey "$PUBKEY" \
             --beaconNodeUrl "$BN_URL" \
             --execution.urls "$EL_URL" \
-            --jwtSecret "$BUILDER_TEMP/jwt/jwtsecret" \
+            --execution.jwtSecret "$BUILDER_TEMP/jwt/jwtsecret" \
             --executionFeeRecipient 0x8943545177806ed17b9f23f0a21ee5948ecaa776 \
             --paramsFile "$BUILDER_TEMP/netcfg/config.yaml" \
             --metrics \
@@ -106,11 +106,17 @@ jobs:
             echo "error-level lines in builder.log"; exit 1
           fi
 
-          # the builder is the only bidder, it must have won bids and revealed their payloads
-          metric() { curl -sf "localhost:$METRICS_PORT/metrics" | awk -v name="$1" '$1 == name {print $2}'; }
-          BIDS="$(metric 'bc_builder_bids_total{result="published"}')"
-          WINS="$(metric 'bc_builder_bids_won_total')"
-          REVEALS="$(metric 'bc_builder_reveals_total{result="published"}')"
+          # the builder is the only bidder and the validators use builderalways, so it must have won bids and revealed their payloads
+          # a win is counted before its reveal is published, scrape again if one is in flight
+          metric() { awk -v name="$1" '$1 == name {print $2}' <<< "$METRICS"; }
+          for _ in 1 2 3; do
+            METRICS="$(curl -sf "localhost:$METRICS_PORT/metrics")"
+            BIDS="$(metric 'bc_builder_bids_total{result="published"}')"
+            WINS="$(metric 'bc_builder_bids_won_total')"
+            REVEALS="$(metric 'bc_builder_reveals_total{result="published"}')"
+            [ "${REVEALS:-0}" -eq "${WINS:-0}" ] && break
+            sleep 1
+          done
           echo "bids=${BIDS:-0} wins=${WINS:-0} reveals=${REVEALS:-0}"
           if [ "${BIDS:-0}" -lt 1 ] || [ "${WINS:-0}" -lt 1 ]; then
             echo "builder did not win any bids"; exit 1

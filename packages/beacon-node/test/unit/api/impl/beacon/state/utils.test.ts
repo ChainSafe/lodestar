@@ -2,8 +2,14 @@ import {Mock, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView} from "@lodestar/state-transition";
-import {getStateResponseWithRegen, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {BeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {
+  getBuilderIndexByPubkey,
+  getStateBuilderIndex,
+  getStateResponseWithRegen,
+  getStateValidatorIndex,
+} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {NodeIsSyncing} from "../../../../../../src/api/impl/errors.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {IBeaconSync, SyncState} from "../../../../../../src/sync/index.js";
@@ -64,6 +70,47 @@ describe("beacon state api utils", () => {
       } else {
         expect.fail("validator index should be found - Uint8Array input");
       }
+    });
+  });
+
+  describe("getStateBuilderIndex", () => {
+    const builders = Array.from({length: 4}, (_, i) => ({
+      ...ssz.gloas.Builder.defaultValue(),
+      pubkey: new Uint8Array(48).fill(i + 1),
+    }));
+    const getBuilder = vi.fn((index: number) => builders[index]);
+    const state = {getBuilder, getBuildersLength: () => builders.length} as unknown as IBeaconStateViewGloas;
+
+    it("should resolve builder indices and pubkeys", () => {
+      const getBuilderIndexByPubkeyMap = () => getBuilderIndexByPubkey(state);
+      expect(getStateBuilderIndex("2", state, getBuilderIndexByPubkeyMap)).toEqual({valid: true, builderIndex: 2});
+      expect(getStateBuilderIndex(toHexString(builders[3].pubkey), state, getBuilderIndexByPubkeyMap)).toEqual({
+        valid: true,
+        builderIndex: 3,
+      });
+      expect(getStateBuilderIndex(builders[0].pubkey, state, getBuilderIndexByPubkeyMap)).toEqual({
+        valid: true,
+        builderIndex: 0,
+      });
+    });
+
+    it("should return valid: false on builder indices / pubkeys not in the state", () => {
+      const getBuilderIndexByPubkeyMap = () => getBuilderIndexByPubkey(state);
+      expect(getStateBuilderIndex(String(builders.length), state, getBuilderIndexByPubkeyMap).valid).toBe(false);
+      expect(getStateBuilderIndex(new Uint8Array(48).fill(9), state, getBuilderIndexByPubkeyMap).valid).toBe(false);
+      expect(getStateBuilderIndex("0xfoo", state, getBuilderIndexByPubkeyMap).valid).toBe(false);
+    });
+
+    it("should read each builder once to resolve many pubkeys", () => {
+      getBuilder.mockClear();
+      const builderIndexByPubkey = getBuilderIndexByPubkey(state);
+      for (const [i, builder] of builders.entries()) {
+        expect(
+          getStateBuilderIndex(builder.pubkey, state, () => builderIndexByPubkey),
+          `builder ${i}`
+        ).toEqual({valid: true, builderIndex: i});
+      }
+      expect(getBuilder).toHaveBeenCalledTimes(builders.length);
     });
   });
 

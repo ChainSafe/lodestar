@@ -101,7 +101,7 @@ export function stateTransition(
   let postState = state.clone(options.dontTransferCache);
 
   if (metrics) {
-    onStateCloneMetrics(postState, metrics, StateCloneSource.stateTransition);
+    onStateCloneMetrics(postState, state.clonedCount, metrics, StateCloneSource.stateTransition);
   }
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
@@ -168,7 +168,7 @@ export function processSlots(
   let postState = state.clone(opts?.dontTransferCache);
 
   if (metrics) {
-    onStateCloneMetrics(postState, metrics, StateCloneSource.processSlots);
+    onStateCloneMetrics(postState, state.clonedCount, metrics, StateCloneSource.processSlots);
   }
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()

@@ -59,7 +59,7 @@ echo '  --keystorePassword ./temp/builder-dev/password.txt \'
 echo '  --builderPubkey 0x8ec9cc826ea7735329831dbe89c28ae700e39b51c817f1086483621a2104145343f912b3bf167027256780a62a1995bd \'
 echo "  --beaconNodeUrl $BN_URL \\"
 echo "  --execution.urls $EL_URL \\"
-echo '  --jwtSecret ./temp/builder-dev/jwt/jwtsecret \'
+echo '  --execution.jwtSecret ./temp/builder-dev/jwt/jwtsecret \'
 echo '  --executionFeeRecipient 0x8943545177806ed17b9f23f0a21ee5948ecaa776 \'
 echo '  --paramsFile ./temp/builder-dev/netcfg/config.yaml'
 echo
