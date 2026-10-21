@@ -2,13 +2,14 @@ import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, MIN_DEPOSIT_AMOUNT, isForkPostGloas} from "@lodestar/params";
 import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
-import {BuilderIndex, BuilderStatus, Epoch, ExecutionAddress, RootHex, gloas} from "@lodestar/types";
-import {GWEI_TO_WEI, Logger, isErrorAborted, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
+import {BuilderIndex, BuilderStatus, ExecutionAddress, RootHex, Slot, gloas} from "@lodestar/types";
+import {GWEI_TO_WEI, LogData, Logger, isErrorAborted, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
 import {BidResult, Metrics} from "../metrics.js";
 import {BidLedger} from "./bidLedger.js";
 import {BidPolicy} from "./bidPolicy.js";
 import {BidPublisher} from "./bidPublisher.js";
 import {createExecutionPayloadBid} from "./executionPayloadBid.js";
+import {Head, HeadTracker} from "./headTracker.js";
 import {PayloadOrchestrator} from "./payloadOrchestrator.js";
 import {PayloadStore} from "./payloadStore.js";
 import {ProposerPreferencesTracker} from "./proposerPreferencesTracker.js";
@@ -33,6 +34,7 @@ export type BidderModules = {
   policy: BidPolicy;
   bidPublisher: BidPublisher;
   proposerPreferencesTracker: ProposerPreferencesTracker;
+  headTracker: HeadTracker;
   getBuilderStatus: () => {status: BuilderStatus | undefined; balance: number | undefined};
   builderIndex: BuilderIndex;
   executionFeeRecipient: ExecutionAddress;
@@ -45,7 +47,7 @@ export type BidderModules = {
  * retrieves the payload at the deadline, prices it and publishes the signed bid.
  */
 export class Bidder {
-  private readonly activeBuilds = new Set<string>();
+  private readonly activeBuilds = new Map<string, {slot: Slot; parentBlockRoot: RootHex}>();
 
   constructor(
     private readonly modules: BidderModules,
@@ -74,7 +76,7 @@ export class Bidder {
     if (this.activeBuilds.has(buildId) || ledger.hasSubmitted(slot, parentBlockHash, parentBlockRoot)) {
       return;
     }
-    this.activeBuilds.add(buildId);
+    this.activeBuilds.set(buildId, {slot, parentBlockRoot});
 
     try {
       // Heze bids require inclusion list bits which are not tracked yet
@@ -83,7 +85,7 @@ export class Bidder {
         return;
       }
 
-      const dependentRoot = await this.getDependentRoot(computeEpochAtSlot(slot), this.modules.signal);
+      const dependentRoot = await this.getDependentRoot(parentBlockRoot, slot, logCtx);
       const proposerPreferences = proposerPreferencesTracker.get(slot, dependentRoot);
       if (proposerPreferences === null) {
         logger.debug("No proposer preferences known for slot, not bidding", {...logCtx, dependentRoot});
@@ -182,10 +184,39 @@ export class Bidder {
   }
 
   /**
-   * Dependent root of the proposer duties in the given epoch, identifies the proposer preferences to bid against.
-   * Not cached, a reorg can change the dependent root within an epoch. Active builds already coalesce repeated attributes.
+   * Stops the builds on parents the beacon node no longer considers its head, the proposer would not select
+   * their bids. The beacon node emits new payload attributes for the new head, which starts a new build.
    */
-  private async getDependentRoot(epoch: Epoch, signal: AbortSignal): Promise<RootHex> {
-    return (await this.modules.api.validator.getProposerDutiesV2({epoch}, {signal})).meta().dependentRoot;
+  onHead(head: Head): void {
+    const {logger, metrics, orchestrator} = this.modules;
+    for (const [buildId, {slot, parentBlockRoot}] of this.activeBuilds) {
+      if (parentBlockRoot === head.blockRoot || !orchestrator.cancel(buildId)) {
+        continue;
+      }
+      logger.info("Cancelled payload build, parent is no longer head", {
+        slot,
+        parentBlockRoot,
+        head: head.blockRoot,
+        headSlot: head.slot,
+      });
+      metrics?.bids.total.inc({result: BidResult.cancelled});
+    }
+  }
+
+  /**
+   * Dependent root of the proposer duties for the proposal slot on the branch of the parent block, identifies
+   * the proposer preferences to bid against. Taken from the head events, the proposer duties are only fetched
+   * for a parent that was not announced as head, e.g. before the first head event after connecting.
+   */
+  private async getDependentRoot(parentBlockRoot: RootHex, slot: Slot, logCtx: LogData): Promise<RootHex> {
+    const {api, headTracker, logger, signal} = this.modules;
+    const dependentRoot = headTracker.getDependentRoot(parentBlockRoot, slot);
+    if (dependentRoot !== null) {
+      return dependentRoot;
+    }
+
+    logger.debug("Parent block is not a tracked head, fetching proposer duties for dependent root", logCtx);
+    const duties = await api.validator.getProposerDutiesV2({epoch: computeEpochAtSlot(slot)}, {signal});
+    return duties.meta().dependentRoot;
   }
 }

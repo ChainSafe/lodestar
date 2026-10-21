@@ -256,6 +256,44 @@ describe("PayloadOrchestrator", () => {
     expect(source.getPayloadSignals[0]?.aborted).toBe(true);
   });
 
+  it("cancels one build without affecting another", async () => {
+    const source = new StubPayloadSource();
+    const orchestrator = createOrchestrator(source);
+
+    const cancelled = orchestrator.run(buildJob("cancelled"));
+    const kept = orchestrator.run(buildJob("kept"));
+    const cancelledExpectation = expect(cancelled).rejects.toBeInstanceOf(ErrorAborted);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(source.prepareCalls).toHaveLength(2);
+
+    expect(orchestrator.cancel("cancelled")).toBe(true);
+    await cancelledExpectation;
+    expect(orchestrator.cancel("cancelled")).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(100);
+    await expect(kept).resolves.toEqual(builtPayload());
+    expect(source.getPayloadCalls).toHaveLength(1);
+  });
+
+  it("cancels a build during preparation and permits a new build for its ID", async () => {
+    const source = new StubPayloadSource();
+    const pendingPrepare = defer<BuildHandle>();
+    source.prepareImpl = () => pendingPrepare.promise;
+    const orchestrator = createOrchestrator(source);
+
+    const cancelled = orchestrator.run(buildJob());
+    expect(orchestrator.cancel("slot-1-full")).toBe(true);
+    await expect(cancelled).rejects.toBeInstanceOf(ErrorAborted);
+    expect(source.prepareSignals[0]?.aborted).toBe(true);
+
+    source.prepareImpl = async (request) => ({sourceId: source.id, fork: request.fork, payloadId: "0x02"});
+    const rebuilt = orchestrator.run(buildJob());
+    await vi.advanceTimersByTimeAsync(100);
+    await expect(rebuilt).resolves.toMatchObject({sourceId: source.id});
+    expect(source.prepareCalls).toHaveLength(2);
+    expect(source.getPayloadCalls).toHaveLength(1);
+  });
+
   it("propagates a source preparation failure", async () => {
     const source = new StubPayloadSource();
     const sourceError = new Error("source unavailable");

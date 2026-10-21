@@ -8,6 +8,7 @@ import {toHex, toRootHex} from "@lodestar/utils";
 import {Bidder, PayloadAttributesEvent} from "../../../src/services/bidder.js";
 import {BidLedger} from "../../../src/services/bidLedger.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
+import {HeadTracker} from "../../../src/services/headTracker.js";
 import {PayloadStore} from "../../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
@@ -32,6 +33,7 @@ describe("Bidder", () => {
   let payloadSource: ReturnType<typeof getPayloadSourceStub>;
   let payloadStore: PayloadStore;
   let proposerPreferencesTracker: ProposerPreferencesTracker;
+  let headTracker: HeadTracker;
   let controller: AbortController;
 
   beforeEach(() => {
@@ -50,6 +52,7 @@ describe("Bidder", () => {
     });
     payloadStore = new PayloadStore();
     proposerPreferencesTracker = new ProposerPreferencesTracker();
+    headTracker = new HeadTracker();
     controller = new AbortController();
   });
 
@@ -74,6 +77,7 @@ describe("Bidder", () => {
         publicKey: secretKey.toPublicKey(),
       }),
       proposerPreferencesTracker,
+      headTracker,
       payloadStore,
       payloadSource,
       signal: controller.signal,
@@ -146,6 +150,57 @@ describe("Bidder", () => {
     expect(payloadStore.has(blockHash)).toBe(true);
     expect(ledger.hasSubmitted(slot, toRootHex(parentBlockHash), toRootHex(parentBlockRoot))).toBe(true);
     expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("takes the dependent root from the tracked parent head instead of fetching proposer duties", async () => {
+    addProposerPreferences();
+    headTracker.onHead({
+      slot: 0,
+      block: toRootHex(parentBlockRoot),
+      state: toRootHex(Buffer.alloc(32, 1)),
+      payloadStatus: "full",
+      epochTransition: false,
+      currentEpochDependentRoot: dependentRoot,
+      nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 8)),
+      executionOptimistic: false,
+    });
+    const {bidder} = createBidder();
+
+    const bidding = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await bidding;
+
+    expect(api.validator.getProposerDutiesV2).not.toHaveBeenCalled();
+    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+  });
+
+  it("cancels the build when the parent is no longer head and builds again on the new attributes", async () => {
+    addProposerPreferences();
+    const {bidder} = createBidder();
+
+    const cancelled = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(payloadSource.prepare).toHaveBeenCalledOnce();
+
+    bidder.onHead({slot: 0, blockRoot: toRootHex(Buffer.alloc(32, 10))});
+    await cancelled;
+    expect(payloadSource.getPayload).not.toHaveBeenCalled();
+    expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith("Cancelled payload build, parent is no longer head", {
+      slot,
+      parentBlockRoot: toRootHex(parentBlockRoot),
+      head: toRootHex(Buffer.alloc(32, 10)),
+      headSlot: 0,
+    });
+
+    // Same parent announced as head again, nothing to cancel
+    bidder.onHead({slot: 0, blockRoot: toRootHex(parentBlockRoot)});
+    const rebuilt = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await rebuilt;
+    expect(payloadSource.prepare).toHaveBeenCalledTimes(2);
+    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
   });
 
   it("bids once for repeated payload attributes of the same parent", async () => {

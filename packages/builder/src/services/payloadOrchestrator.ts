@@ -46,12 +46,18 @@ export type PayloadOrchestratorErrorType =
 
 export class PayloadOrchestratorError extends LodestarError<PayloadOrchestratorErrorType> {}
 
+type ActiveJob = {
+  promise: Promise<BuiltPayload>;
+  controller: AbortController;
+};
+
 /**
  * Prepares a payload and retrieves it at the requested time. A missing payload ID is retried until the
  * retrieval time, the execution client may not have imported the parent payload yet. Other errors fail the build.
+ * A build can be cancelled by ID, e.g. when its parent is no longer the head.
  */
 export class PayloadOrchestrator {
-  private readonly jobs = new Map<string, Promise<BuiltPayload>>();
+  private readonly jobs = new Map<string, ActiveJob>();
 
   constructor(
     private readonly source: PayloadSource,
@@ -61,15 +67,44 @@ export class PayloadOrchestrator {
 
   run(job: PayloadBuildJob): Promise<BuiltPayload> {
     const {id} = job;
-    let promise = this.jobs.get(id);
-    if (promise === undefined) {
-      promise = this.runJob(job).finally(() => this.jobs.delete(id));
-      this.jobs.set(id, promise);
+    const active = this.jobs.get(id);
+    if (active !== undefined) {
+      return active.promise;
     }
+
+    const controller = new AbortController();
+    const promise = this.runJob(job, controller).finally(() => this.jobs.delete(id));
+    this.jobs.set(id, {promise, controller});
     return promise;
   }
 
-  private async runJob({id, request, getPayloadAt}: PayloadBuildJob): Promise<BuiltPayload> {
+  /** Stops the build with the given ID, its `run()` promise rejects with `ErrorAborted`. False if there is no such build */
+  cancel(id: string): boolean {
+    const active = this.jobs.get(id);
+    if (active === undefined) {
+      return false;
+    }
+    active.controller.abort();
+    return true;
+  }
+
+  private async runJob(job: PayloadBuildJob, controller: AbortController): Promise<BuiltPayload> {
+    // The build stops when it is cancelled or the orchestrator is stopped
+    const onStop = () => controller.abort();
+    if (this.signal.aborted) {
+      onStop();
+    } else {
+      this.signal.addEventListener("abort", onStop, {once: true});
+    }
+
+    try {
+      return await this.build(job, controller.signal);
+    } finally {
+      this.signal.removeEventListener("abort", onStop);
+    }
+  }
+
+  private async build({id, request, getPayloadAt}: PayloadBuildJob, jobSignal: AbortSignal): Promise<BuiltPayload> {
     const prepareTimeout = getPayloadAt - Date.now();
     if (!(prepareTimeout > 0)) {
       throw new PayloadOrchestratorError(
@@ -80,7 +115,7 @@ export class PayloadOrchestrator {
 
     let lastError: Error | null = null;
     const handle = await withTimeout(
-      (signal = this.signal) =>
+      (signal = jobSignal) =>
         retry(() => this.source.prepare(request, signal), {
           retries: Infinity,
           retryDelay: PREPARE_RETRY_DELAY,
@@ -92,7 +127,7 @@ export class PayloadOrchestrator {
           signal,
         }),
       prepareTimeout,
-      this.signal
+      jobSignal
     ).catch((error: unknown) => {
       if (error instanceof TimeoutError) {
         throw new PayloadOrchestratorError(
@@ -103,12 +138,12 @@ export class PayloadOrchestrator {
       throw error;
     });
 
-    await sleep(getPayloadAt - Date.now(), this.signal);
+    await sleep(getPayloadAt - Date.now(), jobSignal);
 
     return withTimeout(
-      (signal = this.signal) => this.source.getPayload(handle, signal),
+      (signal = jobSignal) => this.source.getPayload(handle, signal),
       this.options.getPayloadTimeout,
-      this.signal
+      jobSignal
     ).catch((error: unknown) => {
       if (error instanceof TimeoutError) {
         throw new PayloadOrchestratorError({code: PayloadOrchestratorErrorCode.GET_PAYLOAD_TIMEOUT, jobId: id});

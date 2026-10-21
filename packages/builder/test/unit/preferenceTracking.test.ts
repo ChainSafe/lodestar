@@ -10,6 +10,7 @@ import {Builder, BuilderOptions} from "../../src/builder.js";
 import {BlockObserver} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
+import {HeadTracker} from "../../src/services/headTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
@@ -52,6 +53,7 @@ describe("Builder preference tracking", () => {
       blockObserver,
       builderStatusTracker,
       proposerPreferencesTracker,
+      headTracker: new HeadTracker(),
       clock,
       index: 1,
       payloadStore,

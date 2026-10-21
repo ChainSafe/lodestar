@@ -17,6 +17,7 @@ import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
 import {EnvelopePublisher} from "./services/envelopePublisher.js";
+import {HeadTracker} from "./services/headTracker.js";
 import {PayloadOrchestrator} from "./services/payloadOrchestrator.js";
 import {PayloadSource} from "./services/payloadSource.js";
 import {PayloadStore} from "./services/payloadStore.js";
@@ -35,6 +36,7 @@ export type BuilderModules = {
   blockObserver: BlockObserver;
   builderStatusTracker: BuilderStatusTracker;
   proposerPreferencesTracker: ProposerPreferencesTracker;
+  headTracker: HeadTracker;
   clock: IClock;
   index: BuilderIndex;
   payloadStore: PayloadStore;
@@ -72,6 +74,7 @@ export type BuilderOptions = {
 export class Builder {
   readonly builderSigner: BuilderSigner;
   readonly proposerPreferencesTracker: ProposerPreferencesTracker;
+  readonly headTracker: HeadTracker;
   private readonly blockObserver: BlockObserver;
   private readonly builderStatusTracker: BuilderStatusTracker;
   private readonly controller: AbortController;
@@ -90,6 +93,7 @@ export class Builder {
     blockObserver,
     builderStatusTracker,
     proposerPreferencesTracker,
+    headTracker,
     clock,
     index,
     payloadStore,
@@ -101,6 +105,7 @@ export class Builder {
     this.blockObserver = blockObserver;
     this.builderStatusTracker = builderStatusTracker;
     this.proposerPreferencesTracker = proposerPreferencesTracker;
+    this.headTracker = headTracker;
     this.clock = clock;
     this.controller = opts.abortController;
     this.logger = opts.logger;
@@ -159,6 +164,7 @@ export class Builder {
     await builderStatusTracker.poll(clock.getCurrentEpoch());
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    const headTracker = new HeadTracker();
 
     const payloadStore = new PayloadStore();
     const ledger = new BidLedger();
@@ -187,6 +193,7 @@ export class Builder {
           hasPayload: ({blockHash}) => payloadStore.has(blockHash),
         }),
         proposerPreferencesTracker,
+        headTracker,
         getBuilderStatus: () => builderStatusTracker.getStatus(),
         builderIndex: index,
         executionFeeRecipient: opts.executionFeeRecipient,
@@ -217,6 +224,7 @@ export class Builder {
       blockObserver,
       builderStatusTracker,
       proposerPreferencesTracker,
+      headTracker,
       clock,
       index,
       payloadStore,
@@ -229,6 +237,7 @@ export class Builder {
   private async onSlot(slot: number): Promise<void> {
     this.payloadStore.prune(slot);
     this.proposerPreferencesTracker.prune(slot);
+    this.headTracker.prune(slot);
     this.ledger.settlePaymentsBefore(slot - PAYMENT_SETTLEMENT_SLOTS);
     this.ledger.prune(slot);
   }
@@ -238,6 +247,7 @@ export class Builder {
     if (signal.aborted) return;
 
     const topics = [
+      routes.events.EventType.headV2,
       routes.events.EventType.block,
       routes.events.EventType.proposerPreferences,
       routes.events.EventType.payloadAttributes,
@@ -306,6 +316,11 @@ export class Builder {
 
     try {
       switch (event.type) {
+        case routes.events.EventType.headV2:
+          if (this.headTracker.onHead(event.message.data)) {
+            this.bidder.onHead({slot: event.message.data.slot, blockRoot: event.message.data.block});
+          }
+          break;
         case routes.events.EventType.block:
           await this.blockObserver.processBlockEvent(event.message, signal);
           break;

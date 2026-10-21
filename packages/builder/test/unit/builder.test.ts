@@ -10,6 +10,7 @@ import {Builder, BuilderModules} from "../../src/builder.js";
 import {BlockObserver, ObservedBlock} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
+import {HeadTracker} from "../../src/services/headTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
@@ -19,7 +20,7 @@ import {getMockedLogger} from "./utils/logger.js";
 import {mockBuiltPayload} from "./utils/payload.js";
 
 const {EventType} = routes.events;
-const topics = [EventType.block, EventType.proposerPreferences, EventType.payloadAttributes];
+const topics = [EventType.headV2, EventType.block, EventType.proposerPreferences, EventType.payloadAttributes];
 
 describe("Builder", () => {
   let api: ReturnType<typeof getApiClientStub>;
@@ -39,6 +40,7 @@ describe("Builder", () => {
     const keypair = {secretKey, publicKey: secretKey.toPublicKey()};
     const builderSigner = new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    const headTracker = new HeadTracker();
     const payloadStore = new PayloadStore();
     const payloadSource = getPayloadSourceStub();
     modules = {
@@ -58,6 +60,7 @@ describe("Builder", () => {
       builderStatusTracker: new BuilderStatusTracker(api, logger, 1, null),
       blockObserver: new BlockObserver(config, logger, api),
       proposerPreferencesTracker,
+      headTracker,
       clock,
       index: 1,
       payloadStore,
@@ -68,6 +71,7 @@ describe("Builder", () => {
         clock,
         builderSigner,
         proposerPreferencesTracker,
+        headTracker,
         payloadStore,
         payloadSource,
         signal: controller.signal,
@@ -202,6 +206,35 @@ describe("Builder", () => {
       slot: 0,
       signedBid: block.message.body.signedExecutionPayloadBid,
     });
+  });
+
+  it("tracks heads and notifies the bidder only when the head block changes", () => {
+    const onHead = vi.spyOn(modules.bidder, "onHead");
+    new Builder(modules);
+    const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+    const head = {
+      slot: 1,
+      block: toRootHex(Buffer.alloc(32, 1)),
+      state: toRootHex(Buffer.alloc(32, 2)),
+      payloadStatus: "empty" as const,
+      epochTransition: false,
+      currentEpochDependentRoot: toRootHex(Buffer.alloc(32, 3)),
+      nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 4)),
+      executionOptimistic: false,
+    };
+    onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: head}});
+    expect(onHead).toHaveBeenCalledExactlyOnceWith({slot: head.slot, blockRoot: head.block});
+    expect(modules.headTracker.getDependentRoot(head.block, 1)).toBe(head.currentEpochDependentRoot);
+
+    // The payload status of the same head changing is not a head change
+    onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: {...head, payloadStatus: "full"}}});
+    expect(onHead).toHaveBeenCalledOnce();
+
+    const reorged = {...head, block: toRootHex(Buffer.alloc(32, 5))};
+    onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: reorged}});
+    expect(onHead).toHaveBeenCalledTimes(2);
+    expect(onHead).toHaveBeenLastCalledWith({slot: reorged.slot, blockRoot: reorged.block});
   });
 
   it("settles and prunes won bids on slot ticks", async () => {
