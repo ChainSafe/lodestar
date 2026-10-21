@@ -1144,7 +1144,8 @@ export class BlockInputSync {
       this.chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)
     ) {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
-      // eligible for proposer boost to prevent unbundling attack
+      // eligible for proposer boost to prevent unbundling attack. This relies on processBlocks()
+      // stamping the block with the import time, which fork choice then reads as a late arrival.
       this.logger.verbose("Avoid proposer boost for this block of known proposer", {
         slot: blockSlot,
         root: blockRootHex,

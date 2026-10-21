@@ -146,8 +146,9 @@ export async function processBlocks(
         dataAvailabilityStatus: blockDAStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         indexedAttestations: indexedAttestationsByBlock[i],
-        // TODO: Make this param mandatory and capture in gossip
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+        // Blocks that could not be imported on arrival (unknown parent, range sync) are stamped at import
+        // time, which is when the spec would run on_block and record their timeliness
+        seenTimestampSec: opts.seenTimestampSec ?? Date.now() / 1000,
       });
     }
 
