@@ -686,6 +686,7 @@ function getSequentialHandlers(
             case BlockErrorCode.ALREADY_KNOWN:
             case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:
+            case BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED:
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
               // Errors might indicate an issue with our node or the connected EL client.
               logLevel = LogLevel.error;

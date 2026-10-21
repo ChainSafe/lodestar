@@ -351,6 +351,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "validateGossipLightClientOptimisticUpdate",
     "validateGossipLightClientFinalityUpdate",
     "verifyBlocks",
+    "verifyGossipBlock",
     "validateApiBlock",
     "validateApiExecutionPayloadBid",
     "discardVerifiedBlocks",

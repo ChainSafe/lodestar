@@ -53,6 +53,7 @@ import {SignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
+import {BlockErrorCode} from "../errors/blockError.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {BlockProcessOpts} from "../options.js";
@@ -126,6 +127,11 @@ export type VerifyBlocksSuccess = {
   verifyStateTime: number;
   verifySignaturesTime: number;
 };
+
+export type VerifyGossipBlockResult = Result<
+  VerifyBlocksSuccess,
+  BlockFailure | {code: BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED}
+>;
 
 export type ImportBlockResult = {
   headChanged: boolean;
@@ -244,7 +250,12 @@ export type ImportExecutionPayloadOpts = {
 export interface IBeaconEngine
   extends Omit<
     IBeaconEngineCore,
-    "validateGossipBlock" | "validateApiBlock" | "verifyBlocks" | "importBlock" | "importExecutionPayload"
+    | "validateGossipBlock"
+    | "validateApiBlock"
+    | "verifyBlocks"
+    | "verifyGossipBlock"
+    | "importBlock"
+    | "importExecutionPayload"
   > {
   validateGossipBlock(
     signedBlock: SignedBeaconBlock,
@@ -659,6 +670,12 @@ export interface IBeaconEngineCore {
    * importBlock or discardVerifiedBlocks releases them.
    */
   verifyBlocks(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>>;
+  /**
+   * Uses the same verification pipeline as verifyBlocks, for one cached gossip candidate.
+   * validateGossipBlock must run first and retain its block/bytes. An absent or evicted candidate
+   * returns GOSSIP_BLOCK_NOT_CACHED; its bytes are never requested again through this method.
+   */
+  verifyGossipBlock(signedBlockRoot: SignedBlockRoot, opts: VerifyBlocksOpts): Promise<VerifyGossipBlockResult>;
   /** Import and release the verification bundle for this exact signed candidate. */
   importBlock(
     signedBlockRoot: SignedBlockRoot,

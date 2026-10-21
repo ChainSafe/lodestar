@@ -34,7 +34,7 @@ import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
 import {SerializedCache} from "../../util/serializedCache.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
-import {IBlockInput} from "../blocks/blockInput/index.js";
+import {BlockInputSource, IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadImportError} from "../blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
@@ -43,6 +43,7 @@ import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {ChainViewSnapshot, ChainViewUpdate, FinalizedProtoSummary} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {BlockError} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {RegenRequest} from "../regen/index.js";
@@ -953,6 +954,19 @@ export class BeaconEngine implements IBeaconEngine {
     blockInputs: IBlockInput[],
     opts: VerifyBlocksOpts
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
+    if (blockInputs.length === 1 && blockInputs[0].getBlockSource().source === BlockInputSource.gossip) {
+      const blockInput = blockInputs[0];
+      const result = await this.core.verifyGossipBlock(
+        computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()),
+        opts
+      );
+      if (result.err !== null) {
+        if ("code" in result.err) throw new BlockError(blockInput.getBlock(), result.err);
+        throw blockErrorFromFailure(result.err, [blockInput]);
+      }
+      return result.result;
+    }
+
     const blocks = blockInputs.map((blockInput) => {
       const block = blockInput.getBlock();
       let bytes = this.serializedCache.get(block);

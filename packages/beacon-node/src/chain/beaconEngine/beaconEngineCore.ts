@@ -129,6 +129,7 @@ import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
 import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
+import {BlockErrorCode} from "../errors/blockError.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
 import {persistAnchorState} from "../initState.js";
@@ -271,6 +272,7 @@ import {
   SerializedLightClientData,
   VerifyBlocksOpts,
   VerifyBlocksSuccess,
+  VerifyGossipBlockResult,
 } from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
 import {prepareForNextSlot} from "./prepareNextSlot.js";
@@ -1857,6 +1859,22 @@ export class BeaconEngineCore implements IBeaconEngineCore {
           this.config,
           blocks.map(({signedBlockRoot}) => signedBlockRoot)
         );
+      }
+    );
+  }
+
+  /**
+   * Same verification as verifyBlocks for one gossip candidate. validateGossipBlock must have
+   * retained its block/bytes first; a missing candidate is a local error.
+   */
+  async verifyGossipBlock(signedBlockRoot: SignedBlockRoot, opts: VerifyBlocksOpts): Promise<VerifyGossipBlockResult> {
+    const cached = this.blockSerializedCache.get(toSignedBlockRootHex(signedBlockRoot));
+    if (cached === undefined) return {err: {code: BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED}};
+    return wrapError(
+      () => verifyBlocks.call(this, [{signedBlockRoot, blockBytes: cached.bytes}], opts),
+      (error) => {
+        this.publishChainView();
+        return blockFailureFromError(error, this.config, [signedBlockRoot]);
       }
     );
   }

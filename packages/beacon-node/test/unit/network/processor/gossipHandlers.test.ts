@@ -133,6 +133,12 @@ describe("getGossipHandlers", () => {
     expect(core.reportPeer).not.toHaveBeenCalled();
   });
 
+  it("does not report the gossip peer when the local signed candidate was evicted", async () => {
+    const {core} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED);
+
+    expect(core.reportPeer).not.toHaveBeenCalled();
+  });
+
   it.each(["INVALID_BLOCK_SSZ", "SIGNED_BLOCK_ROOT_MISMATCH", "UNEXPECTED_ERROR"])(
     "handles the plain engine verdict %s without an error instance",
     async (code) => {
@@ -462,7 +468,10 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
 
 async function runBeaconBlockProcessingError(
   config: BeaconConfig,
-  code: BlockErrorCode.EXECUTION_ENGINE_ERROR | BlockErrorCode.EXECUTION_ENGINE_INVALID
+  code:
+    | BlockErrorCode.EXECUTION_ENGINE_ERROR
+    | BlockErrorCode.EXECUTION_ENGINE_INVALID
+    | BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED
 ): Promise<{
   core: Pick<INetworkCore, "reportPeer">;
   peerIdStr: PeerIdStr;
@@ -659,8 +668,12 @@ async function runBeaconBlockRepeatProposal(
 
 function getExecutionBlockError(
   signedBlock: SignedBeaconBlock<typeof ForkName.deneb>,
-  code: BlockErrorCode.EXECUTION_ENGINE_ERROR | BlockErrorCode.EXECUTION_ENGINE_INVALID
+  code:
+    | BlockErrorCode.EXECUTION_ENGINE_ERROR
+    | BlockErrorCode.EXECUTION_ENGINE_INVALID
+    | BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED
 ): BlockError {
+  if (code === BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED) return new BlockError(signedBlock, {code});
   if (code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
     return new BlockError(signedBlock, {
       code,

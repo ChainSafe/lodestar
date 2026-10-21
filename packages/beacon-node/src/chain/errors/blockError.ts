@@ -7,6 +7,8 @@ import {GossipActionError} from "./gossipValidation.js";
 export enum BlockErrorCode {
   /** The prestate cannot be fetched */
   PRESTATE_MISSING = "BLOCK_ERROR_PRESTATE_MISSING",
+  /** A gossip candidate was evicted before root-only verification; this is a local cache failure. */
+  GOSSIP_BLOCK_NOT_CACHED = "BLOCK_ERROR_GOSSIP_BLOCK_NOT_CACHED",
   /**
    * The first block of a chain segment references a parentRoot unknown to fork-choice.
    */
@@ -109,6 +111,7 @@ type ExecutionEngineErrorStatus = Exclude<ExecutionErrorStatus, ExecutionPayload
 
 export type BlockErrorType =
   | {code: BlockErrorCode.PRESTATE_MISSING; error: Error}
+  | {code: BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED}
   | {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN; parentRoot: RootHex}
   | {code: BlockErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlockErrorCode.STATE_ROOT_MISMATCH}
