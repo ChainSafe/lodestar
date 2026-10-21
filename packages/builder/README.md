@@ -17,7 +17,11 @@ Typescript implementation of the Ethereum Consensus builder client.
 ## Requirements
 
 - A beacon node started with `--emitPayloadAttributes`, the builder bids on the `payload_attributes` events it emits for every slot. Without the flag a beacon node only emits them for slots it proposes itself.
-- An execution client the builder can send `engine_forkchoiceUpdated` and `engine_getPayload` to, configured with `--execution.urls` and `--jwtSecret`.
+- An execution client the builder can send `engine_forkchoiceUpdated` and `engine_getPayload` to, configured with `--execution.urls` and `--execution.jwtSecret`.
+
+## Limitations
+
+- The balance of a won bid is reserved for three epochs after its slot and released afterwards. The payment is only debited from the builder balance once its withdrawal is processed, so during a backlog of builder withdrawals the builder may bid more than it can pay. Reconciling against the pending payments and withdrawals of the state is a follow-up.
 
 ## License
 

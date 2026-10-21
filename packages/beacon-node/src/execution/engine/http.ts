@@ -361,7 +361,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           this.payloadIdCache.add(
             {
               headBlockHash,
-              finalizedBlockHash,
               ...payloadAttributesRpc,
               inclusionListTransactions: payloadAttributes.inclusionListTransactions,
             },
