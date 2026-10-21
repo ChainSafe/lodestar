@@ -1,7 +1,14 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  ExecutionStatus,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  isGloasBlock,
+} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
@@ -152,44 +159,34 @@ export async function archiveBlocks(
     }
   }
 
-  // deleteNonCanonicalBlocks
-  // loop through forkchoice single time
+  const canonicalRoots = new Set(finalizedCanonicalBlocks.map((block) => block.blockRoot));
+  const orphanedBlocks: ProtoBlock[] = [];
+  const orphanedPayloads: ProtoBlock[] = [];
 
-  const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
-  if (nonCanonicalBlockRoots.length > 0) {
-    if (persistOrphanedBlocks) {
-      // Persist orphaned blocks to disk before deleting them from hot db
-      await Promise.all(
-        nonCanonicalBlockRoots.map(async (root, index) => {
-          const block = finalizedNonCanonicalBlocks[index];
-          const blockBytes = await db.block.getBinary(root);
-          const blockLogCtx = {slot: block.slot, root: block.blockRoot};
-          if (blockBytes) {
-            await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
-              persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
-            });
-            logger.verbose("Persisted orphaned block", {...logCtx, ...blockLogCtx});
-          } else {
-            logger.warn("Tried to persist orphaned block but no block found", {...logCtx, ...blockLogCtx});
-          }
-        })
-      );
+  for (const block of finalizedNonCanonicalBlocks) {
+    if (block.payloadStatus === PayloadStatus.FULL) {
+      orphanedPayloads.push(block);
     }
+    // Every Gloas block gets EMPTY before FULL. If only FULL survives pruning, an earlier archive run
+    // already handled the root's block-level data.
+    const isBlockNode = !isGloasBlock(block) || block.payloadStatus === PayloadStatus.EMPTY;
+    if (isBlockNode && !canonicalRoots.has(block.blockRoot)) {
+      orphanedBlocks.push(block);
+    }
+  }
+  const orphanedBlockRoots = orphanedBlocks.map((block) => fromHex(block.blockRoot));
 
-    const nonCanonicalSlots = finalizedNonCanonicalBlocks.map((summary) => summary.slot).sort((a, b) => a - b);
-    const nonCanonicalLogCtx = {
+  if (orphanedPayloads.length > 0) {
+    const orphanedPayloadRoots = orphanedPayloads.map((block) => fromHex(block.blockRoot));
+    const orphanedPayloadLogCtx = {
       ...logCtx,
-      count: nonCanonicalBlockRoots.length,
-      slotRange: prettyPrintIndices(nonCanonicalSlots),
+      count: orphanedPayloads.length,
+      slotRange: prettyPrintIndices(orphanedPayloads.map((block) => block.slot).sort((a, b) => a - b)),
     };
 
-    const columnItems = finalizedNonCanonicalBlocks
-      // Gloas EMPTY and FULL variants share a block root. EMPTY has no sidecars, so deleting by its root could
-      // remove the canonical FULL variant's columns. Pre-Gloas blocks are always FULL.
-      .filter(
-        (summary) => config.getForkSeq(summary.slot) >= ForkSeq.fulu && summary.payloadStatus === PayloadStatus.FULL
-      )
-      .map((summary) => ({slot: summary.slot, blockRoot: summary.blockRoot}));
+    const columnItems = orphanedPayloads
+      .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.fulu)
+      .map((block) => ({slot: block.slot, blockRoot: block.blockRoot}));
     if (columnItems.length > 0) {
       // Delete sidecars first so their block roots remain available to retry cleanup after a failure or crash.
       await db.dataColumns.deleteMany(columnItems);
@@ -200,18 +197,42 @@ export async function archiveBlocks(
       });
     }
 
-    await db.block.batchDelete(nonCanonicalBlockRoots);
-    logger.verbose("Deleted non canonical blocks from hot DB", nonCanonicalLogCtx);
-
     if (finalizedPostDeneb) {
-      await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical blobSidecars from hot DB", nonCanonicalLogCtx);
+      await db.blobSidecars.batchDelete(orphanedPayloadRoots);
+      logger.verbose("Deleted non canonical blobSidecars from hot DB", orphanedPayloadLogCtx);
     }
 
     if (finalizedPostGloas) {
-      await db.executionPayloadEnvelope.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", nonCanonicalLogCtx);
+      await db.executionPayloadEnvelope.batchDelete(orphanedPayloadRoots);
+      logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", orphanedPayloadLogCtx);
     }
+  }
+
+  if (orphanedBlocks.length > 0) {
+    if (persistOrphanedBlocks) {
+      // Persist orphaned blocks to disk before deleting them from hot db
+      await Promise.all(
+        orphanedBlocks.map(async (block) => {
+          const blockBytes = await db.block.getBinary(fromHex(block.blockRoot));
+          const blockLogCtx = {slot: block.slot, root: block.blockRoot};
+          if (blockBytes) {
+            await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
+              persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
+            });
+            logger.verbose("Persisted orphaned block", {...logCtx, ...blockLogCtx});
+          } else {
+            logger.debug("Tried to persist orphaned block but no block found", {...logCtx, ...blockLogCtx});
+          }
+        })
+      );
+    }
+
+    await db.block.batchDelete(orphanedBlockRoots);
+    logger.verbose("Deleted non canonical blocks from hot DB", {
+      ...logCtx,
+      count: orphanedBlocks.length,
+      slotRange: prettyPrintIndices(orphanedBlocks.map((block) => block.slot).sort((a, b) => a - b)),
+    });
   }
 
   // Delete expired blobs
@@ -266,9 +287,9 @@ export async function archiveBlocks(
     }
   }
 
-  // Prunning potential checkpoint data
+  // Pruning potential checkpoint data
   const finalizedCanonicalNonCheckpointBlocks = getNonCheckpointBlocks(finalizedCanonicalBlockRoots);
-  const nonCheckpointBlockRoots: Uint8Array[] = [...nonCanonicalBlockRoots];
+  const nonCheckpointBlockRoots: Uint8Array[] = [...orphanedBlockRoots];
   for (const block of finalizedCanonicalNonCheckpointBlocks) {
     nonCheckpointBlockRoots.push(block.root);
   }
