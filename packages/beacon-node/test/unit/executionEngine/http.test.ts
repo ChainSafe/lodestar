@@ -190,7 +190,7 @@ describe("ExecutionEngine / http", () => {
     const hash = toHex(new Uint8Array(32));
     const attributes = {
       ...ssz.gloas.PayloadAttributes.defaultValue(),
-      inclusionListTransactions: [Uint8Array.of(1, 2)],
+      inclusionListTransactions: ssz.bellatrix.Transactions.fromJson(["0x0102"]),
     };
     returnValue = {
       jsonrpc: "2.0",
@@ -209,7 +209,7 @@ describe("ExecutionEngine / http", () => {
   it("fetches inclusion lists through the shared request queue", async () => {
     returnValue = {jsonrpc: "2.0", id: 67, result: ["0x0102", "0x03"]};
 
-    expect(await executionEngine.getInclusionList()).toEqual([Uint8Array.of(1, 2), Uint8Array.of(3)]);
+    expect(ssz.bellatrix.Transactions.toJson(await executionEngine.getInclusionList())).toEqual(["0x0102", "0x03"]);
     expect(reqJsonRpcPayload).toEqual({jsonrpc: "2.0", method: "engine_getInclusionListV1", params: []});
   });
 
