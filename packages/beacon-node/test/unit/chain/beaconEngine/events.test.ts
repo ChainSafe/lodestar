@@ -9,6 +9,7 @@ import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent, BeaconEngineEventBus, ChainReorg} from "../../../../src/chain/beaconEngine/events.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
@@ -46,7 +47,7 @@ describe("BeaconEngine event forwarding", () => {
       emitter: events,
       close,
     });
-    engine = new BeaconEngine({core, config, emitter, clock});
+    engine = new BeaconEngine({core, config, emitter, clock, serializedCache: new SerializedCache()});
   });
 
   it("publishes a produced slashing to SSE and gossip in order", () => {

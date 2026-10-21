@@ -98,7 +98,13 @@ export function withBeaconEngineFacade(chain: MockedBeaconChain): BeaconChain {
   const emitter = new ChainEventEmitter();
   return Object.assign(Object.create(chain) as BeaconChain, {
     emitter,
-    beaconEngine: new BeaconEngine({core: chain.beaconEngine, config: chain.config, emitter, clock: chain.clock}),
+    beaconEngine: new BeaconEngine({
+      core: chain.beaconEngine,
+      config: chain.config,
+      emitter,
+      clock: chain.clock,
+      serializedCache: chain.serializedCache,
+    }),
   });
 }
 

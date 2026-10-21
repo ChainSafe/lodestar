@@ -222,7 +222,7 @@ export const SignedBeaconBlock = new ContainerType(
     message: BeaconBlock, // Modified in ELECTRA
     signature: BLSSignature,
   },
-  {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+  {typeName: "SignedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const BlindedBeaconBlockBody = new ContainerType(

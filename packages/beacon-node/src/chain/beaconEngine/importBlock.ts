@@ -47,6 +47,7 @@ import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {computeSignedBlockRoot, toSignedBlockRootHex} from "../blocks/signedBlockRoot.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../blocks/types.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
@@ -92,8 +93,12 @@ export async function importBlock(
   // Regen must be able to read the block from DB as soon as fork choice exposes it.
   this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
   await this.db.block.putBinary(blockRoot, v.blockBytes);
-  // Persistence releases any cached candidate for this root, including replacements during the write.
-  this.blockSerializedCache.delete(blockRootHex, undefined, "persisted");
+  // Release only the persisted signed candidate; another signature has its own cache lifecycle.
+  this.blockSerializedCache.delete(
+    toSignedBlockRootHex(computeSignedBlockRoot(this.config.getForkName(blockSlot), block)),
+    undefined,
+    "persisted"
+  );
 
   const currentSlot = this.forkChoice.getTime();
 

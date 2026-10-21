@@ -26,6 +26,7 @@ import {onLightClientBootstrap} from "../../../../src/network/reqresp/handlers/l
 import {onLightClientFinalityUpdate} from "../../../../src/network/reqresp/handlers/lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "../../../../src/network/reqresp/handlers/lightClientOptimisticUpdate.js";
 import {onLightClientUpdatesByRange} from "../../../../src/network/reqresp/handlers/lightClientUpdatesByRange.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
@@ -82,7 +83,7 @@ describe("BeaconEngineCore light client ownership", () => {
     engine = createEngine();
     await engine.init();
     emitter = new ChainEventEmitter();
-    facade = new BeaconEngine({core: engine, config, emitter, clock});
+    facade = new BeaconEngine({core: engine, config, emitter, clock, serializedCache: new SerializedCache()});
     if (!engine.lightClientServer) throw Error("Expected an engine-owned light client server");
     server = engine.lightClientServer;
     chain = {beaconEngine: facade, opts: {}, config} as unknown as IBeaconChain;

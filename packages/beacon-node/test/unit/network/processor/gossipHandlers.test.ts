@@ -133,7 +133,7 @@ describe("getGossipHandlers", () => {
     expect(core.reportPeer).not.toHaveBeenCalled();
   });
 
-  it.each(["INVALID_BLOCK_SSZ", "BLOCK_ROOT_MISMATCH", "UNEXPECTED_ERROR"])(
+  it.each(["INVALID_BLOCK_SSZ", "SIGNED_BLOCK_ROOT_MISMATCH", "UNEXPECTED_ERROR"])(
     "handles the plain engine verdict %s without an error instance",
     async (code) => {
       const config = denebConfig;
@@ -179,6 +179,12 @@ describe("getGossipHandlers", () => {
           topic: {boundary: {fork: ForkName.deneb, epoch: 0}, type: GossipType.beacon_block},
         })
       ).resolves.toMatchObject({err: {status, code}});
+      expect(chain.beaconEngine.validateGossipBlock).toHaveBeenCalledExactlyOnceWith(
+        signedBlock,
+        ssz.deneb.SignedBeaconBlock.serialize(signedBlock),
+        ForkName.deneb,
+        0
+      );
 
       if (status === GossipValidationStatus.Reject) {
         expect(persistInvalidSszValue).toHaveBeenCalledExactlyOnceWith(
@@ -285,7 +291,8 @@ describe("getGossipHandlers", () => {
       expect(serializedCache.get(blockInput.getBlock())).toEqual(bytes);
       seenBlockInputCache.remove(blockRootHex);
       expect(serializedCache.get(blockInput.getBlock())).toBeUndefined();
-      expect(blockInput?.getBlock()).toEqual(signedBlock);
+      expect(forkTypes.SignedBeaconBlock.equals(blockInput.getBlock(), signedBlock)).toBe(true);
+      expect(chain.beaconEngine.validateGossipBlock).toHaveBeenCalledExactlyOnceWith(signedBlock, bytes, fork, 0);
       if (fork === ForkName.gloas) {
         expect(addPayloadInput).toHaveBeenCalledOnce();
         expect(addPayloadInput.mock.calls[0][0].block).toBe(blockInput?.getBlock());

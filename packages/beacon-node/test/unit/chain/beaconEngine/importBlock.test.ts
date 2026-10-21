@@ -11,6 +11,7 @@ import {VerifiedBlockBundle, importBlock} from "../../../../src/chain/beaconEngi
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {BlockInputBlobs, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
+import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {writeBlockInputToDb} from "../../../../src/chain/blocks/writeBlockInputToDb.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
@@ -20,6 +21,8 @@ describe("BeaconEngine block persistence", () => {
   const block = ssz.phase0.SignedBeaconBlock.defaultValue();
   const root = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
   const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(block);
+  const signedBlockRoot = computeSignedBlockRoot(ForkName.phase0, block);
+  const signedRoot = toSignedBlockRootHex(signedBlockRoot);
   const blockInput = BlockInputPreData.createFromBlock({
     block,
     blockRootHex: toRootHex(root),
@@ -58,39 +61,55 @@ describe("BeaconEngine block persistence", () => {
       parentBlockSlot: 0,
       seenTimestampSec: 0,
     };
-    chain.beaconEngine.blockSerializedCache.set(blockInput.blockRootHex, block, blockBytes);
+    chain.beaconEngine.blockSerializedCache.set(signedRoot, block, blockBytes);
   });
 
   afterEach(() => vi.restoreAllMocks());
 
-  it.each([false, true])("releases the verification bundle after an import failure (typed: %s)", async (typed) => {
-    const error = typed
-      ? new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockInput.blockRootHex})
-      : reachedForkChoice;
-    chain.forkChoice.onBlock.mockImplementation(() => {
-      throw error;
-    });
-    chain.beaconEngine.verifiedBlocks.set(blockInput.blockRootHex, bundle);
-    const importing = BeaconEngineCore.prototype.importBlock.call(
-      chain.beaconEngine,
-      root,
-      DataAvailabilityStatus.PreData,
-      {}
-    );
-    if (typed) {
-      await expect(importing).resolves.toMatchObject({
-        err: {
-          blockIndex: 0,
-          blockRoot: blockInput.blockRootHex,
-          type: {code: BlockErrorCode.ALREADY_KNOWN, root: blockInput.blockRootHex},
-        },
+  it.each([false, true])(
+    "releases only the requested signed bundle after an import failure (typed: %s)",
+    async (typed) => {
+      const error = typed
+        ? new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockInput.blockRootHex})
+        : reachedForkChoice;
+      chain.forkChoice.onBlock.mockImplementation(() => {
+        throw error;
       });
-    } else {
-      await expect(importing).rejects.toBe(error);
+      chain.beaconEngine.verifiedBlocks.set(signedRoot, bundle);
+      const otherBlock = ssz.phase0.SignedBeaconBlock.clone(block);
+      otherBlock.signature = Uint8Array.from(otherBlock.signature);
+      otherBlock.signature[0] = 1;
+      const otherRoot = toSignedBlockRootHex(computeSignedBlockRoot(ForkName.phase0, otherBlock));
+      const otherBundle = {
+        ...bundle,
+        block: otherBlock,
+        blockBytes: ssz.phase0.SignedBeaconBlock.serialize(otherBlock),
+      };
+      chain.beaconEngine.verifiedBlocks.set(otherRoot, otherBundle);
+      const importing = BeaconEngineCore.prototype.importBlock.call(
+        chain.beaconEngine,
+        signedBlockRoot,
+        DataAvailabilityStatus.PreData,
+        {}
+      );
+      if (typed) {
+        await expect(importing).resolves.toMatchObject({
+          err: {
+            blockIndex: 0,
+            blockRoot: blockInput.blockRootHex,
+            type: {code: BlockErrorCode.ALREADY_KNOWN, root: blockInput.blockRootHex},
+          },
+        });
+      } else {
+        await expect(importing).rejects.toBe(error);
+      }
+      expect(chain.publishChainView).toHaveBeenCalledOnce();
+      expect(putBinary).toHaveBeenCalledExactlyOnceWith(root, blockBytes);
+      expect(chain.beaconEngine.verifiedBlocks.get(signedRoot)).toBeUndefined();
+      expect(chain.beaconEngine.verifiedBlocks.get(otherRoot)).toBe(otherBundle);
+      expect(chain.beaconEngine.verifiedBlocks.size).toBe(1);
     }
-    expect(chain.publishChainView).toHaveBeenCalledOnce();
-    expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
-  });
+  );
 
   it("seeds Gloas bid metadata before notifying block consumers", async () => {
     const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
@@ -133,13 +152,13 @@ describe("BeaconEngine block persistence", () => {
     const result = expect(importing).rejects.toBe(reachedForkChoice);
     expect(putBinary).toHaveBeenCalledExactlyOnceWith(root, blockBytes);
     expect(chain.forkChoice.onBlock).not.toHaveBeenCalled();
-    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.bytes).toBe(blockBytes);
-    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBe(block);
+    expect(chain.beaconEngine.blockSerializedCache.get(signedRoot)?.bytes).toBe(blockBytes);
+    expect(chain.beaconEngine.blockSerializedCache.get(signedRoot)?.block).toBe(block);
     write.resolve();
     await result;
     expect(chain.forkChoice.onBlock).toHaveBeenCalledOnce();
-    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.bytes).toBeUndefined();
-    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBeUndefined();
+    expect(chain.beaconEngine.blockSerializedCache.get(signedRoot)?.bytes).toBeUndefined();
+    expect(chain.beaconEngine.blockSerializedCache.get(signedRoot)?.block).toBeUndefined();
   });
 
   it("does not import into fork choice when the block write fails", async () => {
@@ -148,29 +167,32 @@ describe("BeaconEngine block persistence", () => {
     await expect(importBlock.call(chain.beaconEngine, bundle, DataAvailabilityStatus.PreData, {})).rejects.toBe(error);
     expect(chain.forkChoice.onBlock).not.toHaveBeenCalled();
     expect(chain.regen.processState).not.toHaveBeenCalled();
-    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.bytes).toBe(blockBytes);
-    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBe(block);
+    expect(chain.beaconEngine.blockSerializedCache.get(signedRoot)?.bytes).toBe(blockBytes);
+    expect(chain.beaconEngine.blockSerializedCache.get(signedRoot)?.block).toBe(block);
   });
 
-  it("removes a replacement candidate for the persisted root after the block write", async () => {
+  it("retains another signed candidate when the imported candidate is persisted", async () => {
     const write = defer<void>();
     putBinary.mockReturnValue(write.promise);
     const importing = importBlock.call(chain.beaconEngine, bundle, DataAvailabilityStatus.PreData, {});
     const result = expect(importing).rejects.toBe(reachedForkChoice);
     const replacement = ssz.phase0.SignedBeaconBlock.clone(block);
+    replacement.signature = Uint8Array.from(replacement.signature);
     replacement.signature[0] = 1;
+    const replacementRoot = toSignedBlockRootHex(computeSignedBlockRoot(ForkName.phase0, replacement));
     chain.beaconEngine.blockSerializedCache.set(
-      blockInput.blockRootHex,
+      replacementRoot,
       replacement,
       ssz.phase0.SignedBeaconBlock.serialize(replacement)
     );
-    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)?.block).toBe(replacement);
+    expect(chain.beaconEngine.blockSerializedCache.get(replacementRoot)?.block).toBe(replacement);
 
     write.resolve();
     await result;
 
     expect(putBinary).toHaveBeenCalledExactlyOnceWith(root, blockBytes);
-    expect(chain.beaconEngine.blockSerializedCache.get(blockInput.blockRootHex)).toBeUndefined();
+    expect(chain.beaconEngine.blockSerializedCache.get(signedRoot)).toBeUndefined();
+    expect(chain.beaconEngine.blockSerializedCache.get(replacementRoot)?.block).toBe(replacement);
   });
 
   it("persists blob data without writing a beacon block", async () => {

@@ -3,6 +3,7 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {computeSignedBlockRoot} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -107,7 +108,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
       }
 
       const result = await engine.validateGossipBlock(
-        ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
+        computeSignedBlockRoot(ForkName.phase0, block),
         ssz.phase0.SignedBeaconBlock.serialize(block),
         ForkName.phase0,
         12.5
@@ -132,7 +133,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
     const observed = vi.spyOn(monitor, "registerBeaconBlock");
     const result = await engine.validateGossipBlock(
-      ssz.phase0.BeaconBlock.hashTreeRoot(ssz.phase0.BeaconBlock.defaultValue()),
+      computeSignedBlockRoot(ForkName.phase0, ssz.phase0.SignedBeaconBlock.defaultValue()),
       ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
       ForkName.phase0
     );
@@ -145,7 +146,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
     const observed = vi.spyOn(monitor, "registerBeaconBlock");
     const result = await engine.validateGossipBlock(
-      ssz.phase0.BeaconBlock.hashTreeRoot(ssz.phase0.BeaconBlock.defaultValue()),
+      computeSignedBlockRoot(ForkName.phase0, ssz.phase0.SignedBeaconBlock.defaultValue()),
       ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
       ForkName.phase0,
       1
@@ -164,7 +165,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
       throw new Error("monitor failed");
     });
     const result = await engine.validateGossipBlock(
-      ssz.phase0.BeaconBlock.hashTreeRoot(ssz.phase0.BeaconBlock.defaultValue()),
+      computeSignedBlockRoot(ForkName.phase0, ssz.phase0.SignedBeaconBlock.defaultValue()),
       ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
       ForkName.phase0,
       1

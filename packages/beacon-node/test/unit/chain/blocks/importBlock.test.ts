@@ -8,6 +8,7 @@ import {blockFailureFromError} from "../../../../src/chain/beaconEngine/processi
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerializedCache.js";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
+import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
 import * as eventLoop from "../../../../src/util/eventLoop.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -16,7 +17,9 @@ import {zeroProtoBlock} from "../../../utils/state.js";
 
 describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngineWorker=%s)", (beaconEngineWorker) => {
   const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-  const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+  const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
+  const blockRootHex = toRootHex(blockRoot);
+  const signedRoot = toSignedBlockRootHex(computeSignedBlockRoot(ForkName.phase0, block));
   const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(block);
   const blockInput = BlockInputPreData.createFromBlock({
     block,
@@ -52,7 +55,7 @@ describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngi
     sidecarWrite = defer<void>();
     chain.beaconEngine.importBlock = vi.fn().mockImplementation(async () => {
       const result = await engineImport.promise;
-      engineCache.delete(blockRootHex, undefined, "persisted");
+      engineCache.delete(signedRoot, undefined, "persisted");
       return {err: null, result};
     });
     Object.defineProperty(chain, "clock", {value: new ClockStopped(0)});
@@ -64,7 +67,7 @@ describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngi
     });
     vi.spyOn(eventLoop, "callInNextEventLoop").mockImplementation(() => {});
     chain.serializedCache.set(block, blockBytes);
-    engineCache.set(blockRootHex, block, blockBytes);
+    engineCache.set(signedRoot, block, blockBytes);
   });
 
   afterEach(() => {
@@ -81,7 +84,7 @@ describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngi
     await importing;
 
     expect(chain.serializedCache.get(block)).toBe(blockBytes);
-    expect(engineCache.get(blockRootHex)).toBeUndefined();
+    expect(engineCache.get(signedRoot)).toBeUndefined();
     expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
   });
 
@@ -96,13 +99,13 @@ describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngi
     await rejected;
 
     expect(chain.serializedCache.get(block)).toBe(cached);
-    expect(engineCache.get(blockRootHex)).toBeDefined();
+    expect(engineCache.get(signedRoot)).toBeDefined();
     expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
   });
 
   it("rehydrates a cloned typed failure without applying successful-import cleanup", async () => {
     const error = new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex});
-    const roots = [ssz.phase0.BeaconBlock.hashTreeRoot(block.message)];
+    const roots = [computeSignedBlockRoot(ForkName.phase0, block)];
     chain.beaconEngine.importBlock = vi
       .fn()
       .mockResolvedValue(structuredClone({err: blockFailureFromError(error, chain.config, roots)}));

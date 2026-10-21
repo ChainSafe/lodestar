@@ -5,6 +5,7 @@ import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {blockFailureFromError} from "../../../../src/chain/beaconEngine/processingResult.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
+import {computeSignedBlockRoot} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {validateApiBlock} from "../../../../src/chain/blocks/validateApiBlock.js";
 import * as da from "../../../../src/chain/blocks/verifyBlocksDataAvailability.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
@@ -26,9 +27,11 @@ describe("API block validation", () => {
       daOutOfRange: false,
     });
     const error = new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, stateSlot: 0});
-    chain.beaconEngine.validateApiBlock = vi
-      .fn()
-      .mockResolvedValue(structuredClone({err: blockFailureFromError(error, chain.config, [root])}));
+    chain.beaconEngine.validateApiBlock = vi.fn().mockResolvedValue(
+      structuredClone({
+        err: blockFailureFromError(error, chain.config, [computeSignedBlockRoot(ForkName.phase0, block)]),
+      })
+    );
     const available = vi
       .spyOn(da, "verifyBlocksDataAvailability")
       .mockImplementation(
@@ -43,7 +46,7 @@ describe("API block validation", () => {
       expect(failure.type).toEqual(error.type);
     });
     expect(chain.beaconEngine.validateApiBlock).toHaveBeenCalledExactlyOnceWith(
-      root,
+      computeSignedBlockRoot(ForkName.phase0, block),
       ssz.phase0.SignedBeaconBlock.serialize(block),
       {}
     );
@@ -83,7 +86,11 @@ describe("API block validation", () => {
     const result = failure ? expect(validation).rejects.toBe(error) : validation;
     await Promise.resolve();
     expect(settled).toBe(false);
-    expect(validate).toHaveBeenCalledExactlyOnceWith(root, ssz.phase0.SignedBeaconBlock.serialize(block), {});
+    expect(validate).toHaveBeenCalledExactlyOnceWith(
+      computeSignedBlockRoot(ForkName.phase0, block),
+      ssz.phase0.SignedBeaconBlock.serialize(block),
+      {}
+    );
 
     if (failure) available.reject(error);
     else available.resolve({dataAvailabilityStatuses: [DataAvailabilityStatus.PreData], availableTime: 0});

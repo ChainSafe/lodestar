@@ -5,7 +5,7 @@ import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {bellatrix, ssz, sszTypesFor} from "@lodestar/types";
-import {ErrorAborted, defer, fromHex, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {verifyBlocks as verifyEngineBlocks} from "../../../../src/chain/beaconEngine/verifyBlock.js";
 import {
@@ -15,6 +15,7 @@ import {
 } from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
 import {BlockBytes} from "../../../../src/chain/blocks/blockSerializedCache.js";
+import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import * as executionVerification from "../../../../src/chain/blocks/verifyBlocksExecutionPayloads.js";
 import {
@@ -44,9 +45,13 @@ function bellatrixInput(enabled = false, slot = 0) {
   });
 }
 
+function signedRoot(input: IBlockInput) {
+  return toSignedBlockRootHex(computeSignedBlockRoot(input.forkName, input.getBlock()));
+}
+
 function serializeBlocks(...inputs: IBlockInput[]): BlockBytes[] {
   return inputs.map((input) => ({
-    blockRoot: fromHex(input.blockRootHex),
+    signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock()),
     blockBytes: sszTypesFor(input.forkName).SignedBeaconBlock.serialize(input.getBlock()),
   }));
 }
@@ -101,10 +106,10 @@ describe("BeaconEngineCore block execution verification", () => {
         const result =
           method === "verifyBlocks"
             ? await core.verifyBlocks([data], {})
-            : await core.validateApiBlock(data.blockRoot, data.blockBytes, {});
+            : await core.validateApiBlock(data.signedBlockRoot, data.blockBytes, {});
         expect(result.err, `verification failed for ${input.blockRootHex}`).toBeNull();
         expect(core.seenBlockProposers.hasBlockRoot(0, 0, input.blockRootHex), input.blockRootHex).toBe(true);
-        expect(core.blockSerializedCache.get(input.blockRootHex) !== undefined, input.blockRootHex).toBe(
+        expect(core.blockSerializedCache.get(signedRoot(input)) !== undefined, input.blockRootHex).toBe(
           method === "verifyBlocks"
         );
       }
@@ -161,25 +166,50 @@ describe("BeaconEngineCore block execution verification", () => {
   it.each([false, true])("resolves block bytes with an existing decoded entry: %s", async (cached) => {
     const input = bellatrixInput();
     const block = input.getBlock();
-    const [{blockRoot, blockBytes: bytes}] = serializeBlocks(input);
-    if (cached) chain.beaconEngine.blockSerializedCache.set(input.blockRootHex, block, bytes);
+    const [{signedBlockRoot, blockBytes: bytes}] = serializeBlocks(input);
+    if (cached) chain.beaconEngine.blockSerializedCache.set(signedRoot(input), block, bytes);
     const deserialize = vi.spyOn(ssz.bellatrix.SignedBeaconBlock, "deserialize");
     const opts = structuredClone({validSignatures: true});
-    await core.verifyBlocks([{blockRoot, blockBytes: bytes}], opts);
-    const verifiedBlock = core.verifiedBlocks.get(input.blockRootHex)?.block;
-    expect(verifiedBlock).toEqual(block);
+    await core.verifyBlocks([{signedBlockRoot, blockBytes: bytes}], opts);
+    const verifiedBlock = core.verifiedBlocks.get(signedRoot(input))?.block;
+    if (verifiedBlock === undefined) throw Error("Expected a retained verification block");
+    expect(core.config.getForkTypes(block.message.slot).SignedBeaconBlock.equals(verifiedBlock, block)).toBe(true);
     if (cached) {
       expect(verifiedBlock).toBe(block);
-      expect(deserialize).not.toHaveBeenCalled();
     } else {
       expect(verifiedBlock).not.toBe(block);
       expect(verifiedBlock?.signature.buffer).not.toBe(bytes.buffer);
-      expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: false});
     }
-    await core.verifyBlocks([{blockRoot, blockBytes: Uint8Array.from(bytes)}], opts);
+    if (cached) expect(deserialize).not.toHaveBeenCalled();
+    else expect(deserialize).toHaveBeenCalledExactlyOnceWith(bytes, {reuseBytes: false});
+    await core.verifyBlocks([{signedBlockRoot, blockBytes: Uint8Array.from(bytes)}], opts);
     expect(deserialize).toHaveBeenCalledTimes(cached ? 0 : 1);
-    expect(core.verifiedBlocks.get(input.blockRootHex)?.block).toBe(verifiedBlock);
-    expect(core.verifiedBlocks.get(input.blockRootHex)?.blockBytes).toBe(bytes);
+    expect(core.verifiedBlocks.get(signedRoot(input))?.block).toBe(verifiedBlock);
+    expect(core.verifiedBlocks.get(signedRoot(input))?.blockBytes).toBe(bytes);
+  });
+
+  it("retains and discards verification bundles by signed candidate for the same message root", async () => {
+    const first = bellatrixInput();
+    const other = bellatrixInput();
+    const otherBlock = other.getBlock();
+    otherBlock.signature = Uint8Array.from(otherBlock.signature);
+    otherBlock.signature[0] = 1;
+    expect(other.blockRootHex).toBe(first.blockRootHex);
+    await expect(core.verifyBlocks(serializeBlocks(first), {validSignatures: true})).resolves.toMatchObject({
+      err: null,
+    });
+    const firstBundle = core.verifiedBlocks.get(signedRoot(first));
+    expect(firstBundle).toBeDefined();
+    await expect(core.verifyBlocks(serializeBlocks(other), {validSignatures: true})).resolves.toMatchObject({
+      err: null,
+    });
+
+    expect(core.verifiedBlocks.size).toBe(2);
+    expect(core.verifiedBlocks.get(signedRoot(first))).toBe(firstBundle);
+    expect(core.verifiedBlocks.get(signedRoot(other))?.block.signature).toEqual(otherBlock.signature);
+    core.discardVerifiedBlocks([computeSignedBlockRoot(other.forkName, other.getBlock())]);
+    expect(core.verifiedBlocks.get(signedRoot(other))).toBeUndefined();
+    expect(core.verifiedBlocks.get(signedRoot(first))).toBe(firstBundle);
   });
 
   it("stops further EL submissions when engine state transition fails", async () => {
@@ -202,53 +232,95 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(core.verifiedBlocks.size).toBe(0);
   });
 
-  it("validates an API block without retaining an import bundle or submitting its payload to the EL", async () => {
-    const [{blockRoot, blockBytes}] = serializeBlocks(bellatrixInput(true));
-    await core.validateApiBlock(blockRoot, blockBytes, {validSignatures: true});
-    expect(stf.verifyBlocksStateTransitionOnly).toHaveBeenCalledOnce();
-    expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
-    expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
-    expect(core.verifiedBlocks.size).toBe(0);
-  });
+  it.each([false, true])(
+    "prepares API validation bytes without retaining an import bundle or submitting to the EL (cached: %s)",
+    async (cached) => {
+      const input = bellatrixInput(true);
+      const block = input.getBlock();
+      const bytes = sszTypesFor(input.forkName).SignedBeaconBlock.serialize(block);
+      if (cached) chain.serializedCache.set(block, bytes);
+      const serialize = vi.spyOn(ssz.bellatrix.SignedBeaconBlock, "serialize");
+      const deserialize = vi.spyOn(ssz.bellatrix.SignedBeaconBlock, "deserialize");
+      const validate = vi.spyOn(core, "validateApiBlock");
+
+      await facade.beaconEngine.validateApiBlock(input, {validSignatures: true});
+
+      expect(serialize).toHaveBeenCalledTimes(cached ? 0 : 1);
+      expect(deserialize).not.toHaveBeenCalled();
+      const cachedBytes = chain.serializedCache.get(block);
+      expect(cachedBytes).toEqual(bytes);
+      if (cached) expect(cachedBytes).toBe(bytes);
+      expect(validate).toHaveBeenCalledExactlyOnceWith(computeSignedBlockRoot(input.forkName, block), cachedBytes, {
+        validSignatures: true,
+      });
+      expect(stf.verifyBlocksStateTransitionOnly).toHaveBeenCalledOnce();
+      expect(vi.mocked(stf.verifyBlocksStateTransitionOnly).mock.calls[0][2][0]).toBe(block);
+      expect(chain.executionEngine.notifyNewPayload).not.toHaveBeenCalled();
+      expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
+      expect(core.verifiedBlocks.size).toBe(0);
+      expect(core.blockSerializedCache.get(signedRoot(input))).toBeUndefined();
+    }
+  );
 
   it.each([false, true])("preserves a pending import bundle during API validation (failure: %s)", async (failure) => {
-    const [data] = serializeBlocks(bellatrixInput());
+    const input = bellatrixInput();
+    const [data] = serializeBlocks(input);
     await core.verifyBlocks([data], {validSignatures: true});
-    const pending = core.verifiedBlocks.get(toRootHex(data.blockRoot));
-    const cached = core.blockSerializedCache.get(toRootHex(data.blockRoot));
+    const pending = core.verifiedBlocks.get(signedRoot(input));
+    const cached = core.blockSerializedCache.get(signedRoot(input));
     const getOrDeserialize = vi.spyOn(core.blockSerializedCache, "getOrDeserialize");
     const error = new Error("API state transition failed");
     if (failure) vi.mocked(stf.verifyBlocksStateTransitionOnly).mockRejectedValueOnce(error);
 
-    const validating = core.validateApiBlock(data.blockRoot, data.blockBytes, {validSignatures: true});
+    const validating = core.validateApiBlock(data.signedBlockRoot, data.blockBytes, {validSignatures: true});
     if (failure) await expect(validating).rejects.toBe(error);
     else await validating;
 
-    expect(core.verifiedBlocks.get(toRootHex(data.blockRoot))).toBe(pending);
-    expect(core.blockSerializedCache.get(toRootHex(data.blockRoot))).toBe(cached);
+    expect(core.verifiedBlocks.get(signedRoot(input))).toBe(pending);
+    expect(core.blockSerializedCache.get(signedRoot(input))).toBe(cached);
     expect(getOrDeserialize).not.toHaveBeenCalled();
   });
 
   it("rejects malformed block bytes before regenerating state", async () => {
     await expect(
-      core.verifyBlocks([{blockRoot: new Uint8Array(32), blockBytes: new Uint8Array()}], {})
+      core.verifyBlocks(
+        [
+          {
+            signedBlockRoot: computeSignedBlockRoot(ForkName.bellatrix, ssz.bellatrix.SignedBeaconBlock.defaultValue()),
+            blockBytes: new Uint8Array(),
+          },
+        ],
+        {}
+      )
     ).rejects.toMatchObject({
       type: {code: "INVALID_BLOCK_SSZ"},
     });
     expect(chain.regen.getPreState).not.toHaveBeenCalled();
   });
 
-  it("registers serialization fallback bytes so facade verification reuses the original block", async () => {
-    const input = bellatrixInput();
-    const block = input.getBlock();
-    const deserialize = vi.spyOn(ssz.bellatrix.SignedBeaconBlock, "deserialize");
-    await verifyBlocksInEpoch.call(facade, zeroProtoBlock, [input], null, {validSignatures: true});
-    expect(deserialize).not.toHaveBeenCalled();
-    expect(core.verifiedBlocks.get(input.blockRootHex)?.block).toBe(block);
-    expect(core.verifiedBlocks.get(input.blockRootHex)?.blockBytes).toBe(
-      chain.beaconEngine.blockSerializedCache.get(input.blockRootHex)?.bytes
-    );
-  });
+  it.each([false, true])(
+    "prepares facade verification bytes and reuses the original block (cached: %s)",
+    async (cached) => {
+      const input = bellatrixInput();
+      const block = input.getBlock();
+      const bytes = sszTypesFor(input.forkName).SignedBeaconBlock.serialize(block);
+      if (cached) chain.serializedCache.set(block, bytes);
+      const serialize = vi.spyOn(ssz.bellatrix.SignedBeaconBlock, "serialize");
+      const deserialize = vi.spyOn(ssz.bellatrix.SignedBeaconBlock, "deserialize");
+      await facade.beaconEngine.verifyBlocks([input], {validSignatures: true});
+      expect(serialize).toHaveBeenCalledTimes(cached ? 0 : 1);
+      expect(deserialize).not.toHaveBeenCalled();
+      const cachedBytes = chain.serializedCache.get(block);
+      expect(cachedBytes).toEqual(bytes);
+      if (cached) expect(cachedBytes).toBe(bytes);
+      expect(core.verifyBlocks).toHaveBeenCalledExactlyOnceWith(
+        [{signedBlockRoot: computeSignedBlockRoot(input.forkName, block), blockBytes: cachedBytes}],
+        {validSignatures: true}
+      );
+      expect(core.verifiedBlocks.get(signedRoot(input))?.block).toBe(block);
+      expect(core.verifiedBlocks.get(signedRoot(input))?.blockBytes).toBe(cachedBytes);
+    }
+  );
 
   it("rehydrates a cloned engine failure with the second local block", async () => {
     const inputs = [bellatrixInput(false, 1), bellatrixInput(false, 2)];
@@ -277,20 +349,23 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(core.verifyBlocks).toHaveBeenCalledExactlyOnceWith(serializeBlocks(...inputs), {validSignatures: true});
     expect(chain.publishChainView).toHaveBeenCalledOnce();
     expect(observe).not.toHaveBeenCalled();
-    expect(discard).toHaveBeenCalledExactlyOnceWith(inputs.map((input) => fromHex(input.blockRootHex)));
+    expect(discard).toHaveBeenCalledExactlyOnceWith(
+      inputs.map((input) => computeSignedBlockRoot(input.forkName, input.getBlock()))
+    );
   });
 
   it.each(["verifyBlocks", "validateApiBlock"] as const)(
     "%s returns a missing parent failure before regenerating state",
     async (method) => {
       chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
-      const [data] = serializeBlocks(bellatrixInput());
+      const input = bellatrixInput();
+      const [data] = serializeBlocks(input);
       const result =
         method === "verifyBlocks"
           ? core.verifyBlocks([data], {})
-          : core.validateApiBlock(data.blockRoot, data.blockBytes, {});
+          : core.validateApiBlock(data.signedBlockRoot, data.blockBytes, {});
       await expect(result).resolves.toMatchObject({
-        err: {blockIndex: 0, blockRoot: toRootHex(data.blockRoot), type: {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN}},
+        err: {blockIndex: 0, blockRoot: input.blockRootHex, type: {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN}},
       });
       expect(chain.regen.getPreState).not.toHaveBeenCalled();
     }
@@ -299,6 +374,7 @@ describe("BeaconEngineCore block execution verification", () => {
   it.each([PayloadStatus.EMPTY, PayloadStatus.FULL, null])(
     "resolves the Gloas parent in the engine (available variant: %s)",
     async (status) => {
+      vi.spyOn(chain.config, "getForkName").mockReturnValue(ForkName.gloas);
       vi.spyOn(chain.config, "getForkTypes").mockReturnValue(
         createBeaconConfig(getConfig(ForkName.gloas), Buffer.alloc(32)).getForkTypes(0)
       );
@@ -383,12 +459,15 @@ describe("BeaconEngineCore block execution verification", () => {
         : {status, latestValidHash: null, validationError: null}
     );
     const blockBytes = ssz.bellatrix.SignedBeaconBlock.serialize(input.getBlock() as bellatrix.SignedBeaconBlock);
-    const result = await core.verifyBlocks([{blockRoot: fromHex(input.blockRootHex), blockBytes}], {
-      validSignatures: true,
-    });
+    const result = await core.verifyBlocks(
+      [{signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock()), blockBytes}],
+      {
+        validSignatures: true,
+      }
+    );
     expect(result).toMatchObject({err: null, result: {segmentExecStatus: {executionStatuses: [expected]}}});
-    expect(core.verifiedBlocks.get(input.blockRootHex)?.executionStatus).toBe(expected);
-    expect(core.verifiedBlocks.get(input.blockRootHex)?.blockBytes).toBe(blockBytes);
+    expect(core.verifiedBlocks.get(signedRoot(input))?.executionStatus).toBe(expected);
+    expect(core.verifiedBlocks.get(signedRoot(input))?.blockBytes).toBe(blockBytes);
     expect(core.seenBlockProposers.isKnown(0, 0)).toBe(true);
   });
 
@@ -598,7 +677,7 @@ describe("BeaconEngineCore block execution verification", () => {
         preState.resolve(state);
       }
       await rejected;
-      expect(discard).toHaveBeenCalledExactlyOnceWith([fromHex(input.blockRootHex)]);
+      expect(discard).toHaveBeenCalledExactlyOnceWith([computeSignedBlockRoot(input.forkName, input.getBlock())]);
       expect(core.seenBlockProposers.hasBlockRoot(0, 0, input.blockRootHex)).toBe(engineStatus !== "rejecting");
       expect(core.seenBlockProposers.isKnown(0, 0)).toBe(engineStatus !== "rejecting");
       expect(core.verifiedBlocks.size).toBe(0);

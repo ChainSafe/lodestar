@@ -30,15 +30,15 @@ import {
   phase0,
   rewards,
 } from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
-import {BlockBytes} from "../blocks/blockSerializedCache.js";
 import {PayloadImportError} from "../blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
+import {SignedBlockRoot, computeSignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {ChainViewSnapshot, ChainViewUpdate, FinalizedProtoSummary} from "../chainView/interface.js";
@@ -80,6 +80,7 @@ export type BeaconEngineModules = {
   config: BeaconConfig;
   emitter: ChainEventEmitter;
   clock: IClock;
+  serializedCache: SerializedCache;
 };
 
 export class BeaconEngine implements IBeaconEngine {
@@ -87,12 +88,14 @@ export class BeaconEngine implements IBeaconEngine {
   private readonly core: BeaconEngineCore;
   private readonly emitter: ChainEventEmitter;
   private readonly clock: IClock;
+  private readonly serializedCache: SerializedCache;
 
-  constructor({core, config, emitter, clock}: BeaconEngineModules) {
+  constructor({core, config, emitter, clock, serializedCache}: BeaconEngineModules) {
     this.core = core;
     this.config = config;
     this.emitter = emitter;
     this.clock = clock;
+    this.serializedCache = serializedCache;
     // TODO - beacon engine: in worker mode, post core notifications to a main-thread event bus,
     // preserving their order so ChainView is updated before head/head_v2 consumers run.
     this.core.emitter.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
@@ -635,12 +638,12 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateGossipBlock(
-    blockRoot: Root,
+    signedBlock: SignedBeaconBlock,
     blockBytes: Uint8Array,
     fork: ForkName,
     seenTimestampSec?: number
   ): Promise<GossipBlockResult> {
-    return this.core.validateGossipBlock(blockRoot, blockBytes, fork, seenTimestampSec);
+    return this.core.validateGossipBlock(computeSignedBlockRoot(fork, signedBlock), blockBytes, fork, seenTimestampSec);
   }
 
   validateGossipSyncCommittee(syncCommitteeBytes: Uint8Array, subnet: SubnetID): Promise<GossipValidationResult<void>> {
@@ -935,16 +938,30 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.isBlockProposerSeen(slot, proposerIndex);
   }
 
-  async validateApiBlock(blockInput: IBlockInput, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void> {
-    const res = await this.core.validateApiBlock(fromHex(blockInput.blockRootHex), blockBytes, opts);
+  async validateApiBlock(blockInput: IBlockInput, opts: VerifyBlocksOpts): Promise<void> {
+    const block = blockInput.getBlock();
+    let bytes = this.serializedCache.get(block);
+    if (bytes === undefined) {
+      bytes = this.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
+      this.serializedCache.set(block, bytes);
+    }
+    const res = await this.core.validateApiBlock(computeSignedBlockRoot(blockInput.forkName, block), bytes, opts);
     if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
   }
 
   async verifyBlocks(
     blockInputs: IBlockInput[],
-    blocks: BlockBytes[],
     opts: VerifyBlocksOpts
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
+    const blocks = blockInputs.map((blockInput) => {
+      const block = blockInput.getBlock();
+      let bytes = this.serializedCache.get(block);
+      if (bytes === undefined) {
+        bytes = this.config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(block);
+        this.serializedCache.set(block, bytes);
+      }
+      return {signedBlockRoot: computeSignedBlockRoot(blockInput.forkName, block), blockBytes: bytes};
+    });
     const res = await this.core.verifyBlocks(blocks, opts);
     if (res.err !== null) throw blockErrorFromFailure(res.err, blockInputs);
     return res.result;
@@ -955,13 +972,17 @@ export class BeaconEngine implements IBeaconEngine {
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult> {
-    const res = await this.core.importBlock(fromHex(blockInput.blockRootHex), dataAvailabilityStatus, opts);
+    const res = await this.core.importBlock(
+      computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()),
+      dataAvailabilityStatus,
+      opts
+    );
     if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
     return res.result;
   }
 
-  discardVerifiedBlocks(blockRoots: Root[]): void {
-    this.core.discardVerifiedBlocks(blockRoots);
+  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): void {
+    this.core.discardVerifiedBlocks(signedBlockRoots);
   }
 
   onSlot(slot: Slot): void {

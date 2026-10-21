@@ -1,7 +1,7 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
-import {fromHex, isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
@@ -13,6 +13,7 @@ import {IBlockInput} from "./blockInput/types.js";
 import {importBlock, importsBlockAttestations} from "./importBlock.js";
 import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {computeSignedBlockRoot} from "./signedBlockRoot.js";
 import {ImportBlockOpts, ProcessBlocksResult} from "./types.js";
 import {OrphanedPayloadEnvelope, assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
@@ -155,7 +156,9 @@ export async function processBlocks(
         await nextEventLoop();
       }
     } catch (error) {
-      this.beaconEngine.discardVerifiedBlocks(relevantBlocks.map((block) => fromHex(block.blockRootHex)));
+      this.beaconEngine.discardVerifiedBlocks(
+        relevantBlocks.map((block) => computeSignedBlockRoot(block.forkName, block.getBlock()))
+      );
       throw error;
     }
     return {orphaned: orphanedPayloads ?? [], skipped};

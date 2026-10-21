@@ -9,6 +9,7 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
@@ -87,7 +88,13 @@ describe("BeaconEngine head notifications", () => {
         });
       },
     });
-    engine = new BeaconEngine({core, config, emitter, clock: new ClockStopped(0)});
+    engine = new BeaconEngine({
+      core,
+      config,
+      emitter,
+      clock: new ClockStopped(0),
+      serializedCache: new SerializedCache(),
+    });
     emitter.on(ChainEvent.chainViewUpdated, () => order.push("view"));
     events.on(BeaconEngineEvent.headUpdated, onHeadUpdated);
     emitter.on(routes.events.EventType.head, (event) => {

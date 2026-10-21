@@ -11,6 +11,7 @@ import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInp
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import {verifyBlocksExecutionPayload} from "../../../../src/chain/blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../../../../src/chain/blocks/verifyBlocksSignatures.js";
@@ -135,9 +136,10 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
       {}
     );
 
-    expect(chain.beaconEngine.verifiedBlocks.get(blockRootHex)?.indexedAttestations).toEqual([
-      {data: attestation.data, signature: attestation.signature, attestingIndices: [10, 30]},
-    ]);
+    expect(
+      chain.beaconEngine.verifiedBlocks.get(toSignedBlockRootHex(computeSignedBlockRoot(ForkName.gloas, block)))
+        ?.indexedAttestations
+    ).toEqual([{data: attestation.data, signature: attestation.signature, attestingIndices: [10, 30]}]);
     expect(chain.shufflingCache.processState).not.toHaveBeenCalled();
     expect(chain.shufflingCache.getIndexedAttestation).not.toHaveBeenCalled();
     expect(result.blockDAStatuses).toEqual([DataAvailabilityStatus.NotRequired]);

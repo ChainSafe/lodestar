@@ -24,6 +24,7 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconEngineCoreModules} from "../../../../src/chain/beaconEngine/interface.js";
+import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import * as lightClient from "../../../../src/chain/lightClient/index.js";
@@ -666,23 +667,29 @@ describe("bytes-based engine startup", () => {
       expect("blockSerializedCache" in chain).toBe(false);
       const block = ssz.phase0.SignedBeaconBlock.defaultValue();
       const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
-      const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
       chain.serializedCache.set(block, bytes);
       const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
       vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
+      const signedBlockRoot = computeSignedBlockRoot(ForkName.phase0, block);
       await engine.validateGossipBlock(
-        blockRoot,
+        signedBlockRoot,
         beaconEngineWorker ? structuredClone(bytes) : bytes,
         ForkName.phase0,
         0
       );
-      const cached = engine.blockSerializedCache.get(toRootHex(blockRoot));
+      const cached = engine.blockSerializedCache.get(
+        toSignedBlockRootHex(computeSignedBlockRoot(ForkName.phase0, block))
+      );
       vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
-      await expect(engine.verifyBlocks([{blockRoot, blockBytes: structuredClone(bytes)}], {})).resolves.toMatchObject({
+      await expect(
+        engine.verifyBlocks([{signedBlockRoot, blockBytes: beaconEngineWorker ? structuredClone(bytes) : bytes}], {})
+      ).resolves.toMatchObject({
         err: {type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"}},
       });
       expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-      expect(engine.blockSerializedCache.get(toRootHex(blockRoot))).toBe(cached);
+      expect(
+        engine.blockSerializedCache.get(toSignedBlockRootHex(computeSignedBlockRoot(ForkName.phase0, block)))
+      ).toBe(cached);
       expect(cached?.block === block).toBe(!beaconEngineWorker);
 
       expect(engine.serializedCache).toBe(beaconEngineWorker ? undefined : chain.serializedCache);
@@ -1093,9 +1100,8 @@ describe("bytes-based engine startup", () => {
     );
 
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    const root = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
     const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
-    core.blockSerializedCache.getOrDeserialize(root, bytes);
+    core.blockSerializedCache.getOrDeserialize(computeSignedBlockRoot(ForkName.phase0, block), bytes);
     const shared = await aggregateMetrics([
       (await chain.beaconEngine.scrapeMetrics()).metrics,
       await metrics.register.getMetricsAsJSON(),

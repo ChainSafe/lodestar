@@ -2,13 +2,13 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, deneb} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainViewBlock} from "../chainView/interface.js";
 import {BlockProcessOpts} from "../options.js";
 import {DAType, IBlockInput} from "./blockInput/index.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {computeSignedBlockRoot} from "./signedBlockRoot.js";
 import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
@@ -61,18 +61,8 @@ export async function verifyBlocksInEpoch(
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
 
-  const blockBytes = blockInputs.map((blockInput) => {
-    const block = blockInput.getBlock();
-    let bytes = this.serializedCache.get(block);
-    if (bytes === undefined) {
-      bytes = this.config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(block);
-      this.serializedCache.set(block, bytes);
-    }
-    return {blockRoot: fromHex(blockInput.blockRootHex), blockBytes: bytes};
-  });
-
   const abortController = new AbortController();
-  const verificationPromise = this.beaconEngine.verifyBlocks(blockInputs, blockBytes, opts);
+  const verificationPromise = this.beaconEngine.verifyBlocks(blockInputs, opts);
 
   try {
     // Pick the data-availability source by fork:
@@ -223,7 +213,9 @@ export async function verifyBlocksInEpoch(
     abortController.abort();
     // Verification may still retain bundles after DA fails; discard only once it has settled.
     await verificationPromise.catch(() => {});
-    this.beaconEngine.discardVerifiedBlocks(blockBytes.map(({blockRoot}) => blockRoot));
+    this.beaconEngine.discardVerifiedBlocks(
+      blockInputs.map((blockInput) => computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()))
+    );
     throw error;
   } finally {
     abortController.abort();

@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, LodestarError, toRootHex} from "@lodestar/utils";
 import {
@@ -8,6 +9,7 @@ import {
   payloadFailureFromError,
 } from "../../../../src/chain/beaconEngine/processingResult.js";
 import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
+import {computeSignedBlockRoot} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {BlockError, BlockErrorCode, BlockErrorType} from "../../../../src/chain/errors/blockError.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 
@@ -18,6 +20,7 @@ describe("processing failure transport", () => {
     return block;
   });
   const roots = blocks.map((block) => ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+  const signedRoots = blocks.map((block) => computeSignedBlockRoot(ForkName.phase0, block));
   const inputs = blocks.map((block, i) => ({blockRootHex: toRootHex(roots[i]), getBlock: () => block}));
   const cause = new Error("database read failed");
   const nested = new LodestarError({code: "REGEN_FAILED", slot: 2, root: roots[1], count: 4n});
@@ -41,7 +44,7 @@ describe("processing failure transport", () => {
     const original = new BlockError(remoteBlock, type);
     original.message = "verification failed";
     original.stack = "engine stack";
-    const failure = structuredClone(blockFailureFromError(original, config, roots));
+    const failure = structuredClone(blockFailureFromError(original, config, signedRoots));
     expect(failure).toMatchObject({blockIndex: 1, blockRoot: inputs[1].blockRootHex, message: original.message});
     expect(failure).not.toHaveProperty("signedBlock");
     const error = blockErrorFromFailure(failure, inputs);
@@ -68,14 +71,34 @@ describe("processing failure transport", () => {
     const failure = blockFailureFromError(
       new BlockError(blocks[1], {code: BlockErrorCode.DATA_UNAVAILABLE}),
       config,
-      roots
+      signedRoots
     );
     expect(() => blockErrorFromFailure({...failure, blockIndex: 0}, inputs)).toThrow("INVALID_BLOCK_FAILURE_CONTEXT");
     expect(() => blockErrorFromFailure({...failure, blockIndex: 2}, inputs)).toThrow("INVALID_BLOCK_FAILURE_CONTEXT");
   });
 
+  it("matches failures by signed candidate while preserving unsigned consensus error roots", () => {
+    const first = ssz.phase0.SignedBeaconBlock.clone(blocks[0]);
+    const second = ssz.phase0.SignedBeaconBlock.clone(first);
+    second.signature = Uint8Array.from(second.signature);
+    second.signature[0] = 1;
+    const failure = blockFailureFromError(
+      new BlockError(second, {code: BlockErrorCode.INVALID_SIGNATURE, stateSlot: 1}),
+      config,
+      [computeSignedBlockRoot(ForkName.phase0, first), computeSignedBlockRoot(ForkName.phase0, second)]
+    );
+
+    expect(failure).toMatchObject({blockIndex: 1, blockRoot: toRootHex(roots[0])});
+    expect(
+      blockErrorFromFailure(structuredClone(failure), [
+        {blockRootHex: toRootHex(roots[0]), getBlock: () => first},
+        {blockRootHex: toRootHex(roots[0]), getBlock: () => second},
+      ]).signedBlock
+    ).toBe(second);
+  });
+
   it.each([new Error("unexpected"), new ErrorAborted("shutdown")])("preserves unexpected exceptions: %s", (error) => {
-    expect(() => blockFailureFromError(error, config, roots)).toThrow(error);
+    expect(() => blockFailureFromError(error, config, signedRoots)).toThrow(error);
     expect(() => payloadFailureFromError(error)).toThrow(error);
   });
 

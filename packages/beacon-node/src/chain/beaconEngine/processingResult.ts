@@ -1,8 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Root, RootHex, SignedBeaconBlock} from "@lodestar/types";
-import {LodestarError, toRootHex} from "@lodestar/utils";
+import {RootHex, SignedBeaconBlock} from "@lodestar/types";
+import {LodestarError, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {SerializedError, deserializeError, serializeError} from "../../util/serializedError.js";
 import {PayloadError, PayloadErrorType} from "../blocks/payloadError.js";
+import {SignedBlockRoot, computeSignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {BlockError, BlockErrorCode, BlockErrorType} from "../errors/blockError.js";
 
 type WithSerializedError<T> = T extends {error: Error} ? Omit<T, "error"> & {error: SerializedError} : T;
@@ -23,12 +24,17 @@ export type PayloadFailure = {
   stack?: string;
 };
 
-/** Roots must retain the order of the linear segment submitted for verification. */
-export function blockFailureFromError(error: unknown, config: ChainForkConfig, roots: Root[]): BlockFailure {
+/** Signed roots must retain the order of the linear segment submitted for verification. */
+export function blockFailureFromError(
+  error: unknown,
+  config: ChainForkConfig,
+  signedBlockRoots: SignedBlockRoot[]
+): BlockFailure {
   if (!(error instanceof BlockError)) throw error;
   const block = error.signedBlock.message;
   const blockRoot = toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block));
-  const blockIndex = roots.findIndex((root) => toRootHex(root) === blockRoot);
+  const expectedRoot = computeSignedBlockRoot(config.getForkName(block.slot), error.signedBlock);
+  const blockIndex = signedBlockRoots.findIndex((root) => byteArrayEquals(root, expectedRoot));
   if (blockIndex === -1) throw error;
   const type = error.type;
   return {

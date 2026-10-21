@@ -104,7 +104,7 @@ export function createTestBeaconEngine(
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
   });
-  const beaconEngine = new BeaconEngine({core: beaconEngineCore, config, emitter, clock});
+  const beaconEngine = new BeaconEngine({core: beaconEngineCore, config, emitter, clock, serializedCache});
   return {
     ...chainModules,
     serializedCache,

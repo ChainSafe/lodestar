@@ -223,7 +223,7 @@ export function getBeaconBlockApi({
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
           try {
-            const result = await chain.beaconEngine.validateGossipBlock(fromHex(blockRoot), blockBytes, fork);
+            const result = await chain.beaconEngine.validateGossipBlock(signedBlock, blockBytes, fork);
             if (result.err !== null) {
               if (result.err.code === "UNEXPECTED_ERROR") {
                 throw new ApiError(500, "Internal error validating block");

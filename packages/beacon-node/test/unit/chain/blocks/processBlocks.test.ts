@@ -5,7 +5,7 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
@@ -17,6 +17,7 @@ import {
 import {processBlocks} from "../../../../src/chain/blocks/index.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {computeSignedBlockRoot} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {AttestationImportOpt} from "../../../../src/chain/blocks/types.js";
 import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
@@ -137,7 +138,9 @@ describe("chain / blocks / processBlocks", () => {
 
     await expect(processBlocks.call(chain, inputs, null, {})).rejects.toBe(error);
 
-    expect(discard).toHaveBeenCalledExactlyOnceWith(inputs.map((input) => fromHex(input.blockRootHex)));
+    expect(discard).toHaveBeenCalledExactlyOnceWith(
+      inputs.map((input) => computeSignedBlockRoot(input.forkName, input.getBlock()))
+    );
     expect(importBlock).toHaveBeenCalledTimes(failure === "first import" ? 1 : 2);
   });
 

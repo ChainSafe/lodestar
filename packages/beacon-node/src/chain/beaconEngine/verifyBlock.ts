@@ -10,6 +10,7 @@ import {IndexedAttestation, SignedBeaconBlock, isGloasBeaconBlock} from "@lodest
 import {toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {BlockBytes, deserializeBlock} from "../blocks/blockSerializedCache.js";
+import {toSignedBlockRootHex} from "../blocks/signedBlockRoot.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
@@ -30,12 +31,15 @@ export async function verifyBlocks(
   opts: VerifyBlocksOpts,
   isApiValidation = false
 ): Promise<VerifyBlocksSuccess> {
-  const entries = blockData.map(({blockRoot, blockBytes}) =>
+  const entries = blockData.map(({signedBlockRoot, blockBytes}) =>
     isApiValidation
-      ? deserializeBlock(this.config, toRootHex(blockRoot), blockBytes, undefined, this.serializedCache)
-      : this.blockSerializedCache.getOrDeserialize(toRootHex(blockRoot), blockBytes)
+      ? deserializeBlock(this.config, signedBlockRoot, blockBytes, undefined, this.serializedCache)
+      : this.blockSerializedCache.getOrDeserialize(signedBlockRoot, blockBytes)
   );
   const blocks = entries.map(({block}) => block);
+  const blockRoots = blocks.map((block) =>
+    toRootHex(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message))
+  );
   const blockBytes = entries.map(({bytes}) => bytes);
   for (const block of blocks) {
     const forkName = this.config.getForkName(block.message.slot);
@@ -139,12 +143,7 @@ export async function verifyBlocks(
     for (const [i, block] of blocks.entries()) {
       const {slot, proposerIndex} = block.message;
       const signedBlockHeader = signedBlockToSignedHeader(this.config, block);
-      this.seenBlockProposers.observeBlockRoot(
-        slot,
-        proposerIndex,
-        toRootHex(blockData[i].blockRoot),
-        signedBlockHeader
-      );
+      this.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockRoots[i], signedBlockHeader);
       // Only produce a slashing while importing the block. A block that is verified before it is published
       // must not be treated as equivocation evidence since it may never be seen by the network
       if (!isApiValidation && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
@@ -166,11 +165,11 @@ export async function verifyBlocks(
     if (!isApiValidation) {
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
-        const blockRootHex = toRootHex(blockData[i].blockRoot);
+        const blockRootHex = blockRoots[i];
         // Source: unstable@708700cdf6 packages/beacon-node/src/chain/blocks/index.ts#processBlocks, proposer marking loop.
         // [beacon-engine] deviation: mark after engine verification, without waiting for facade DA.
         this.seenBlockProposers.add(block.message.slot, block.message.proposerIndex, blockRootHex);
-        this.verifiedBlocks.set(blockRootHex, {
+        this.verifiedBlocks.set(toSignedBlockRootHex(blockData[i].signedBlockRoot), {
           executionStatus: segmentExecStatus.executionStatuses[i],
           postState: postStates[i],
           block,

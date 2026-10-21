@@ -123,6 +123,7 @@ import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
 import {BlockBytes, BlockSerializedCache} from "../blocks/blockSerializedCache.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
+import {SignedBlockRoot, SignedBlockRootHex, toSignedBlockRootHex} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
@@ -383,14 +384,14 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   readonly signal = this.abortController.signal;
   lightClientServer?: LightClientServer;
   /**
-   * Engine-owned verification results awaiting import, including post-states and execution status.
+   * Engine-owned verification results awaiting import, keyed by the exact signed block root.
    * Bundles reference the same block and bytes returned by blockSerializedCache; they do not copy either.
    * API broadcast validation uses validateApiBlock and never creates or discards these bundles.
    * Retain them until import settles or discardVerifiedBlocks is called, independently of BlockSerializedCache
    * eviction/replacement. Combining these stores would require
    * pinning the exact signed candidate while keeping verification results engine-owned.
    */
-  readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
+  readonly verifiedBlocks = new Map<SignedBlockRootHex, VerifiedBlockBundle>();
   // Shared with BeaconChain only in main-thread BeaconEngine mode; worker BeaconEngine deserializes independently.
   readonly serializedCache?: SerializedCache;
   readonly blockSerializedCache: BlockSerializedCache;
@@ -1406,13 +1407,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   // Gossip validation delegates to ./gossipValidation/* with engine-owned state.
   async validateGossipBlock(
-    blockRoot: Root,
+    signedBlockRoot: SignedBlockRoot,
     blockBytes: Uint8Array,
     fork: ForkName,
     // API publication also call this with no seenTimestampSec
     seenTimestampSec?: number
   ): Promise<GossipBlockResult> {
-    return validateGossipBlock.call(this, () => this.closed, blockRoot, blockBytes, fork, seenTimestampSec);
+    return validateGossipBlock.call(this, () => this.closed, signedBlockRoot, blockBytes, fork, seenTimestampSec);
   }
 
   validateGossipSyncCommittee(syncCommitteeBytes: Uint8Array, subnet: SubnetID): Promise<GossipValidationResult<void>> {
@@ -1829,15 +1830,20 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   async validateApiBlock(
-    blockRoot: Root,
+    signedBlockRoot: SignedBlockRoot,
     blockBytes: Uint8Array,
     opts: VerifyBlocksOpts
   ): Promise<Result<void, BlockFailure>> {
     return wrapError(
       async () => {
-        await verifyBlocks.call(this, [{blockRoot, blockBytes}], {...opts, skipVerifyExecutionPayload: true}, true);
+        await verifyBlocks.call(
+          this,
+          [{signedBlockRoot, blockBytes}],
+          {...opts, skipVerifyExecutionPayload: true},
+          true
+        );
       },
-      (error) => blockFailureFromError(error, this.config, [blockRoot])
+      (error) => blockFailureFromError(error, this.config, [signedBlockRoot])
     );
   }
 
@@ -1849,32 +1855,32 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         return blockFailureFromError(
           error,
           this.config,
-          blocks.map(({blockRoot}) => blockRoot)
+          blocks.map(({signedBlockRoot}) => signedBlockRoot)
         );
       }
     );
   }
 
   async importBlock(
-    blockRoot: Root,
+    signedBlockRoot: SignedBlockRoot,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<Result<ImportBlockResult, BlockFailure>> {
     // bytes-first input (native engine FFI); the JS cache is keyed by hex.
-    const blockRootHex = toRootHex(blockRoot);
-    const v = this.verifiedBlocks.get(blockRootHex);
-    if (!v) throw Error(`No verified block found for root ${blockRootHex}`);
+    const signedBlockRootHex = toSignedBlockRootHex(signedBlockRoot);
+    const v = this.verifiedBlocks.get(signedBlockRootHex);
+    if (!v) throw Error(`No verified block found for signed root ${signedBlockRootHex}`);
 
     try {
       return await wrapError(
         () => importBlock.call(this, v, dataAvailabilityStatus, opts),
         (error) => {
           this.publishChainView();
-          return blockFailureFromError(error, this.config, [blockRoot]);
+          return blockFailureFromError(error, this.config, [signedBlockRoot]);
         }
       );
     } finally {
-      this.verifiedBlocks.delete(blockRootHex);
+      this.verifiedBlocks.delete(signedBlockRootHex);
     }
   }
 
@@ -1890,9 +1896,9 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  discardVerifiedBlocks(blockRoots: Root[]): void {
-    for (const blockRoot of blockRoots) {
-      this.verifiedBlocks.delete(toRootHex(blockRoot));
+  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): void {
+    for (const signedBlockRoot of signedBlockRoots) {
+      this.verifiedBlocks.delete(toSignedBlockRootHex(signedBlockRoot));
     }
   }
 

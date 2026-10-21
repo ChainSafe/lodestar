@@ -28,7 +28,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, toHex, toRootHex} from "@lodestar/utils";
 import {
   GossipValidationResult,
   GossipValidationStatus,
@@ -201,12 +201,7 @@ function getSequentialHandlers(
     chain.seenBlockInputCache.markValidatingBlock(blockRootHex);
 
     try {
-      const result = await chain.beaconEngine.validateGossipBlock(
-        fromHex(blockRootHex),
-        serializedData,
-        fork,
-        seenTimestampSec
-      );
+      const result = await chain.beaconEngine.validateGossipBlock(signedBlock, serializedData, fork, seenTimestampSec);
       if (result.err?.status === GossipValidationStatus.Reject) {
         chain.persistInvalidSszValue(
           forkTypes.SignedBeaconBlock,

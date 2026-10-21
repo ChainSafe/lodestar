@@ -49,6 +49,7 @@ import {IBlockInput} from "../blocks/blockInput/index.js";
 import {BlockBytes} from "../blocks/blockSerializedCache.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
+import {SignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
@@ -241,11 +242,19 @@ export type ImportExecutionPayloadOpts = {
 
 /** Main-thread facade; processing methods reconstruct errors with their local inputs. */
 export interface IBeaconEngine
-  extends Omit<IBeaconEngineCore, "validateApiBlock" | "verifyBlocks" | "importBlock" | "importExecutionPayload"> {
-  validateApiBlock(blockInput: IBlockInput, blockBytes: Uint8Array, opts: VerifyBlocksOpts): Promise<void>;
+  extends Omit<
+    IBeaconEngineCore,
+    "validateGossipBlock" | "validateApiBlock" | "verifyBlocks" | "importBlock" | "importExecutionPayload"
+  > {
+  validateGossipBlock(
+    signedBlock: SignedBeaconBlock,
+    blockBytes: Uint8Array,
+    fork: ForkName,
+    seenTimestampSec?: number
+  ): Promise<GossipBlockResult>;
+  validateApiBlock(blockInput: IBlockInput, opts: VerifyBlocksOpts): Promise<void>;
   verifyBlocks(
     blockInputs: IBlockInput[],
-    blocks: BlockBytes[],
     opts: VerifyBlocksOpts
   ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}>;
   importBlock(
@@ -489,7 +498,7 @@ export interface IBeaconEngineCore {
    * root returns Reject; unexpected internal failures are logged and return Ignore/UNEXPECTED_ERROR.
    */
   validateGossipBlock(
-    blockRoot: Root,
+    signedBlockRoot: SignedBlockRoot,
     blockBytes: Uint8Array,
     fork: ForkName,
     seenTimestampSec?: number
@@ -636,28 +645,27 @@ export interface IBeaconEngineCore {
 
   /**
    * Consensus checks for API broadcast validation, without EL submission or retaining an import bundle.
-   * Never changes verifiedBlocks: a concurrent import may already own a bundle for this root.
+   * Never changes verifiedBlocks: a concurrent import may already own a bundle for this signed candidate.
    * Records authenticated proposer headers without triggering slashing production.
    * The facade must still wait for DA before publishing the block.
    */
   validateApiBlock(
-    blockRoot: Root,
+    signedBlockRoot: SignedBlockRoot,
     blockBytes: Uint8Array,
     opts: VerifyBlocksOpts
   ): Promise<Result<void, BlockFailure>>;
   /**
-   * Marks verified proposals as known independently of DA and retains bundles until importBlock or
-   * discardVerifiedBlocks releases them.
+   * Marks verified proposals as known independently of DA and retains bundles by signed root until
+   * importBlock or discardVerifiedBlocks releases them.
    */
   verifyBlocks(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>>;
-  // `blockRoot` is the SSZ root as raw bytes (the verify output handle, import input) — bytes-first for
-  // the native engine FFI. The JS engine keys its internal cache by hex (converted here).
+  /** Import and release the verification bundle for this exact signed candidate. */
   importBlock(
-    blockRoot: Root,
+    signedBlockRoot: SignedBlockRoot,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<Result<ImportBlockResult, BlockFailure>>;
-  discardVerifiedBlocks(blockRoots: Root[]): void;
+  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): void;
 
   onSlot(slot: Slot): void;
   onEpoch(epoch: Epoch): void;

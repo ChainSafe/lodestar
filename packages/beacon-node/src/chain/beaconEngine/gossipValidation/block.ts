@@ -1,9 +1,10 @@
 import {ForkName, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {Root, SignedBeaconBlock, SubnetID, ssz} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, SubnetID, ssz} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {deserializeBlock} from "../../blocks/blockSerializedCache.js";
+import {SignedBlockRoot, toSignedBlockRootHex} from "../../blocks/signedBlockRoot.js";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import {BlockErrorCode, BlockErrorType, BlockGossipError, GossipAction} from "../../errors/index.js";
 import * as blobSidecarValidation from "../../validation/blobSidecar.js";
@@ -36,22 +37,28 @@ export type GossipBlockResult = GossipValidationResult<blockValidation.GossipBlo
 export async function validateGossipBlock(
   this: BeaconEngineCore,
   isClosed: () => boolean,
-  blockRoot: Root,
+  signedBlockRoot: SignedBlockRoot,
   blockBytes: Uint8Array,
   fork: ForkName,
   // API publication also call this with no seenTimestampSec
   seenTimestampSec?: number
 ): Promise<GossipBlockResult> {
-  if (blockRoot.length !== 32) return {...reject("BLOCK_ROOT_MISMATCH"), shouldProcessRepeatProposalBlock: false};
-  const blockRootHex = toRootHex(blockRoot);
-  const payloadBlockRoot = isForkPostGloas(fork) ? blockRootHex : null;
+  if (signedBlockRoot.length !== 32)
+    return {...reject("SIGNED_BLOCK_ROOT_MISMATCH"), shouldProcessRepeatProposalBlock: false};
+  const signedBlockRootHex = toSignedBlockRootHex(signedBlockRoot);
   let signedBlock: SignedBeaconBlock | undefined;
+  let blockRootForLog: RootHex | undefined;
   try {
     const {block} =
       seenTimestampSec === undefined
-        ? deserializeBlock(this.config, blockRootHex, blockBytes, fork, this.serializedCache)
-        : this.blockSerializedCache.getOrDeserialize(blockRootHex, blockBytes, fork);
+        ? deserializeBlock(this.config, signedBlockRoot, blockBytes, fork, this.serializedCache)
+        : this.blockSerializedCache.getOrDeserialize(signedBlockRoot, blockBytes, fork);
     signedBlock = block;
+    const blockRootHex = toRootHex(
+      this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+    );
+    blockRootForLog = blockRootHex;
+    const payloadBlockRoot = isForkPostGloas(fork) ? blockRootHex : null;
     // Source: unstable@2593063a82 network/processor/gossipHandlers.ts#validateBeaconBlock.
     // [beacon-engine] Authenticate unknown-parent blocks before either owner's seen cache retains them.
     const result = await runGossipValidation(async () => {
@@ -106,7 +113,7 @@ export async function validateGossipBlock(
         });
       }
     } else if (seenTimestampSec !== undefined) {
-      this.blockSerializedCache.delete(blockRootHex, block, "rejected");
+      this.blockSerializedCache.delete(signedBlockRootHex, block, "rejected");
     }
     if (this.validatorMonitor && seenTimestampSec !== undefined) {
       const {slot, proposerIndex} = block.message;
@@ -139,16 +146,23 @@ export async function validateGossipBlock(
     };
   } catch (error) {
     if (signedBlock !== undefined && seenTimestampSec !== undefined) {
-      this.blockSerializedCache.delete(blockRootHex, signedBlock, "rejected");
+      this.blockSerializedCache.delete(signedBlockRootHex, signedBlock, "rejected");
     }
     if (
       error instanceof LodestarError &&
-      (error.type.code === "INVALID_BLOCK_SSZ" || error.type.code === "BLOCK_ROOT_MISMATCH")
+      (error.type.code === "INVALID_BLOCK_SSZ" || error.type.code === "SIGNED_BLOCK_ROOT_MISMATCH")
     ) {
-      return {...reject(error.type.code, {blockRoot: blockRootHex}), shouldProcessRepeatProposalBlock: false};
+      return {
+        ...reject(error.type.code, {signedBlockRoot: signedBlockRootHex}),
+        shouldProcessRepeatProposalBlock: false,
+      };
     }
     // [beacon-engine] deviation: internal failures return a verdict without penalizing the peer.
-    this.logger.error("Error validating gossip block", {root: blockRootHex, code: "UNEXPECTED_ERROR"}, error as Error);
+    this.logger.error(
+      "Error validating gossip block",
+      {root: blockRootForLog, code: "UNEXPECTED_ERROR"},
+      error as Error
+    );
     return {...ignore("UNEXPECTED_ERROR"), shouldProcessRepeatProposalBlock: false};
   } finally {
     // API publication shares this validator but does not initiate gossip equivocation processing.

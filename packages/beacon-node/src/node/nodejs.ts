@@ -266,7 +266,7 @@ export class BeaconNode {
       executionBuilderOpts: opts.executionBuilder,
       builderApiClientOpts,
     });
-    const beaconEngine = new BeaconEngine({core: beaconEngineCore, config, emitter, clock});
+    const beaconEngine = new BeaconEngine({core: beaconEngineCore, config, emitter, clock, serializedCache});
     await beaconEngineCore.init();
     const {earliestAvailableSlot} = await executeStateInitialization(
       beaconEngine,
