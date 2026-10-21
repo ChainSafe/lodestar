@@ -24,8 +24,7 @@ export async function validateGossipPayloadAttestationMessage(
   try {
     const payloadAttestationMessage = deserializeGossipMessage(
       ssz.gloas.PayloadAttestationMessage,
-      payloadAttestationBytes,
-      this.serializedCache
+      payloadAttestationBytes
     );
     return await validateGossipPayloadAttestationMessageObject.call(this, payloadAttestationMessage);
   } catch (error) {
@@ -139,11 +138,7 @@ export async function validateGossipExecutionPayloadEnvelope(
   source: SourceMeta
 ): Promise<GossipValidationResult<void>> {
   try {
-    const executionPayloadEnvelope = deserializeGossipMessage(
-      ssz.gloas.SignedExecutionPayloadEnvelope,
-      envelopeBytes,
-      this.serializedCache
-    );
+    const executionPayloadEnvelope = deserializeGossipMessage(ssz.gloas.SignedExecutionPayloadEnvelope, envelopeBytes);
     return await validateGossipExecutionPayloadEnvelopeObject.call(this, executionPayloadEnvelope, source);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -226,8 +221,7 @@ export async function validateGossipExecutionPayloadBid(
   try {
     const signedExecutionPayloadBid = deserializeGossipMessage(
       isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid,
-      bidBytes,
-      this.serializedCache
+      bidBytes
     );
     return await validateGossipExecutionPayloadBidObject.call(this, signedExecutionPayloadBid, seenTimestampSec);
   } catch (error) {

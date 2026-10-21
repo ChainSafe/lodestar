@@ -8,7 +8,6 @@ import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerialized
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {createLodestarMetrics} from "../../../../src/metrics/metrics/lodestar.js";
 import {RegistryMetricCreator} from "../../../../src/metrics/utils/registryMetricCreator.js";
-import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
 describe("BlockSerializedCache", () => {
@@ -29,11 +28,9 @@ describe("BlockSerializedCache", () => {
     };
   }
 
-  it("reuses the shared main-thread block and original bytes without decoding", () => {
-    const serializedCache = new SerializedCache({cacheDeserialized: true});
-    const cache = new BlockSerializedCache(config, {serializedCache});
+  it("reuses an existing signed candidate and original bytes without decoding", () => {
+    const cache = new BlockSerializedCache(config);
     const {block, bytes, root, signedBlockRoot} = candidate();
-    serializedCache.set(block, bytes);
     const entry = cache.set(root, block, bytes);
     const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
     expect(cache.getOrDeserialize(signedBlockRoot, bytes)).toBe(entry);

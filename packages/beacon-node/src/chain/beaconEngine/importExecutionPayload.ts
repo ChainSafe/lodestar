@@ -46,9 +46,7 @@ export async function importExecutionPayload(
 ): Promise<{executionOptimistic: boolean}> {
   let signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
   try {
-    signedEnvelope =
-      this.serializedCache?.getDeserialized<gloas.SignedExecutionPayloadEnvelope>(envelopeBytes) ??
-      ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes, {reuseBytes: true});
+    signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes, {reuseBytes: true});
   } catch (e) {
     throw new PayloadError({code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: (e as Error).message});
   }

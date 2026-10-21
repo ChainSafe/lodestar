@@ -89,7 +89,7 @@ describe("getGossipHandlers", () => {
           error: new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex}),
         },
       });
-      const serializedCache = new SerializedCache({cacheDeserialized: true});
+      const serializedCache = new SerializedCache();
       const chain = {
         hasBlockHex,
         serializedCache,
@@ -148,7 +148,7 @@ describe("getGossipHandlers", () => {
       const status = code === "UNEXPECTED_ERROR" ? GossipValidationStatus.Ignore : GossipValidationStatus.Reject;
       const persistInvalidSszValue = vi.fn();
       const remove = vi.fn();
-      const serializedCache = new SerializedCache({cacheDeserialized: true});
+      const serializedCache = new SerializedCache();
       const chain = {
         hasBlockHex: () => false,
         serializedCache,
@@ -218,7 +218,7 @@ describe("getGossipHandlers", () => {
     signedBlock.message.slot = 1;
     const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
     const bytes = forkTypes.SignedBeaconBlock.serialize(signedBlock);
-    const serializedCache = new SerializedCache({cacheDeserialized: true});
+    const serializedCache = new SerializedCache();
     const clock = new ClockStopped(0);
     const emitter = new ChainEventEmitter();
     const unknownParent = vi.fn();

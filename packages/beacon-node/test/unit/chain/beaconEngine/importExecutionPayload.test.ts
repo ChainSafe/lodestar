@@ -9,7 +9,10 @@ import {ErrorAborted, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
-import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {
+  PayloadEnvelopeInput,
+  PayloadEnvelopeInputSource,
+} from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import * as payloadVerification from "../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import * as envelopeValidation from "../../../../src/chain/validation/executionPayloadEnvelope.js";
@@ -17,7 +20,7 @@ import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {QueueError, QueueErrorCode} from "../../../../src/util/queue/index.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {MockedBeaconChain, getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 import {generateState, zeroProtoBlock} from "../../../utils/state.js";
 
 describe("BeaconEngineCore importExecutionPayload FCU", () => {
@@ -117,31 +120,41 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
   it.each([false, true])(
     "reuses gossip envelope decoding through import with beaconEngineWorker=%s",
     async (beaconEngineWorker) => {
-      const cache = new SerializedCache({cacheDeserialized: !beaconEngineWorker});
-      cache.set(envelope, envelopeBytes);
-      Object.defineProperty(chain.beaconEngine, "serializedCache", {value: beaconEngineWorker ? undefined : cache});
+      const cache = new SerializedCache();
+      chain.opts.beaconEngineWorker = beaconEngineWorker;
+      Object.defineProperty(chain, "serializedCache", {value: cache});
+      const core: BeaconEngineCore = chain.beaconEngine;
+      core.validateGossipExecutionPayloadEnvelope = BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelope;
+      core.importExecutionPayload = BeaconEngineCore.prototype.importExecutionPayload;
+      const facade = withBeaconEngineFacade(chain).beaconEngine;
+      const input = PayloadEnvelopeInput.createFromBlock({
+        block: ssz.gloas.SignedBeaconBlock.defaultValue(),
+        blockRootHex,
+        forkName: ForkName.gloas,
+        sampledColumns: [],
+        custodyColumns: [],
+        daOutOfRange: true,
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec: 1,
+      });
+      input.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 1});
       const deserialize = vi.spyOn(ssz.gloas.SignedExecutionPayloadEnvelope, "deserialize");
+      const serialize = vi.spyOn(ssz.gloas.SignedExecutionPayloadEnvelope, "serialize");
+      const lookup = vi.spyOn(cache, "get");
       vi.spyOn(envelopeValidation, "validateGossipExecutionPayloadEnvelope").mockResolvedValue(undefined);
       expect(
-        await BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelope.call(
-          chain.beaconEngine,
-          envelopeBytes,
-          {
-            source: PayloadEnvelopeInputSource.gossip,
-            seenTimestampSec: 1,
-          }
-        )
+        await facade.validateGossipExecutionPayloadEnvelope(envelopeBytes, envelope, {
+          source: PayloadEnvelopeInputSource.gossip,
+          seenTimestampSec: 1,
+        })
       ).toMatchObject({err: null});
       expect(
-        await BeaconEngineCore.prototype.importExecutionPayload.call(
-          chain.beaconEngine,
-          envelopeBytes,
-          DataAvailabilityStatus.Available,
-          {
-            validSignature: true,
-          }
-        )
-      ).toEqual({err: null, result: {executionOptimistic: false}});
+        await facade.importExecutionPayload(input, envelopeBytes, DataAvailabilityStatus.Available, {
+          validSignature: true,
+        })
+      ).toEqual({executionOptimistic: false});
+      expect(serialize).not.toHaveBeenCalled();
+      expect(lookup).not.toHaveBeenCalled();
       expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 2 : 0);
       expect(putEnvelope.mock.calls[0][1]).toBe(envelopeBytes);
     }
@@ -199,6 +212,10 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       );
       const deserialize = vi.spyOn(ssz.gloas.SignedExecutionPayloadEnvelope, "deserialize");
       const serialize = vi.spyOn(ssz.gloas.SignedExecutionPayloadEnvelope, "serialize");
+      const candidateCacheAccess = vi.fn(() => {
+        throw Error("Payload import must not access BlockSerializedCache");
+      });
+      Object.defineProperty(chain.beaconEngine, "blockSerializedCache", {get: candidateCacheAccess});
       const importing =
         inputType === "bytes"
           ? importPayload()
@@ -228,6 +245,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       await importing;
       expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
       expect(emitImported).toHaveBeenCalledOnce();
+      expect(candidateCacheAccess).not.toHaveBeenCalled();
     }
   );
 

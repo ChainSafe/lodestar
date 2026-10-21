@@ -13,6 +13,7 @@ import {PayloadEnvelopeInput} from "../../../../../../src/chain/blocks/payloadEn
 import {PayloadEnvelopeInputSource} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
 import {OpSource, createValidatorMonitor} from "../../../../../../src/chain/validatorMonitor.js";
+import {withBeaconEngineFacade} from "../../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
@@ -39,12 +40,9 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.network.publishSignedExecutionPayloadEnvelope = vi.fn();
     modules.chain.processExecutionPayload = vi.fn();
-    modules.chain.beaconEngine.validateApiExecutionPayloadEnvelope = vi
-      .fn<BeaconEngineCore["validateApiExecutionPayloadEnvelope"]>()
+    modules.chain.beaconEngine.validateApiExecutionPayloadEnvelopeObject = vi
+      .fn<BeaconEngineCore["validateApiExecutionPayloadEnvelopeObject"]>()
       .mockResolvedValue(accept(undefined));
-    modules.chain.beaconEngine.verifyEnvelopeForPublish = BeaconEngineCore.prototype.verifyEnvelopeForPublish.bind(
-      modules.chain.beaconEngine
-    );
     modules.chain.beaconEngine.getConflictingBlockRoots = BeaconEngineCore.prototype.getConflictingBlockRoots.bind(
       modules.chain.beaconEngine
     );
@@ -81,7 +79,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       signedEnvelope.message.payload.slotNumber = 1;
       const seenTimestampSec = computeTimeAtSlot(config, 1, modules.chain.genesisTime) + 1.25;
       vi.spyOn(Date, "now").mockReturnValue(seenTimestampSec * 1000);
-      vi.mocked(modules.chain.beaconEngine.validateApiExecutionPayloadEnvelope).mockImplementation(async () => {
+      vi.mocked(modules.chain.beaconEngine.validateApiExecutionPayloadEnvelopeObject).mockImplementation(async () => {
         vi.mocked(Date.now).mockReturnValue((seenTimestampSec + 1) * 1000);
         return accept(undefined);
       });
@@ -97,7 +95,10 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
         return 1;
       });
 
-      const pending = getBeaconBlockApi(modules).publishExecutionPayloadEnvelope({
+      const pending = getBeaconBlockApi({
+        ...modules,
+        chain: withBeaconEngineFacade(modules.chain),
+      }).publishExecutionPayloadEnvelope({
         signedEnvelopeOrContents: signedEnvelope,
         broadcastValidation,
       });
@@ -149,7 +150,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       const monitor = modules.chain.beaconEngine.validatorMonitor;
       if (!monitor) throw new Error("Missing monitor");
       const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope");
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi({...modules, chain: withBeaconEngineFacade(modules.chain)});
       await expect(
         api.publishExecutionPayloadEnvelope({
           signedEnvelopeOrContents: signedEnvelope,

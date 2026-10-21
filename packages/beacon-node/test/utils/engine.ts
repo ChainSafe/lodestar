@@ -80,9 +80,8 @@ export function createTestBeaconEngine(
     initialCustodyGroupCount,
   });
 
-  const serializedCache = new SerializedCache({cacheDeserialized: !opts.beaconEngineWorker});
+  const serializedCache = new SerializedCache();
   const beaconEngineCore = new BeaconEngineCore({
-    serializedCache: opts.beaconEngineWorker ? undefined : serializedCache,
     executionEngine,
     executionBuilderOpts,
     builderApiClientOpts,
@@ -104,7 +103,14 @@ export function createTestBeaconEngine(
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
   });
-  const beaconEngine = new BeaconEngine({core: beaconEngineCore, config, emitter, clock, serializedCache});
+  const beaconEngine = new BeaconEngine({
+    core: beaconEngineCore,
+    config,
+    emitter,
+    clock,
+    serializedCache,
+    beaconEngineWorker: opts.beaconEngineWorker,
+  });
   return {
     ...chainModules,
     serializedCache,

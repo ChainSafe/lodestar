@@ -22,13 +22,17 @@ import {
   SSEPayloadAttributes,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
+  SignedBlockContents,
   SingleAttestation,
   Slot,
   SubcommitteeIndex,
   SubnetID,
   ValidatorIndex,
   altair,
+  bellatrix,
   capella,
+  deneb,
   electra,
   fulu,
   gloas,
@@ -42,7 +46,6 @@ import {ExecutionBuilderOpts, ExecutionEngineOpts, IExecutionEngine} from "../..
 import {ScrapedMetrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
-import {SerializedCache} from "../../util/serializedCache.js";
 import {Result} from "../../util/wrapError.js";
 import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
@@ -95,7 +98,6 @@ export type BeaconEngineLogging =
     };
 
 export type BeaconEngineCoreModules = {
-  serializedCache?: SerializedCache;
   builderApiClientOpts?: BuilderApiClientOpts;
   executionEngine?: IExecutionEngine;
   executionEngineOpts?: ExecutionEngineOpts & {config?: never};
@@ -122,6 +124,7 @@ export type BeaconEngineCoreModules = {
 
 export type VerifyBlocksOpts = BlockProcessOpts & ImportBlockOpts;
 
+/** Verification metadata only; live post-states and import bundles remain inside Core in both modes. */
 export type VerifyBlocksSuccess = {
   segmentExecStatus: Extract<SegmentExecStatus, {execAborted: null}>;
   verifyStateTime: number;
@@ -194,6 +197,12 @@ export type ProductionResponse<T> = {ok: true; data: T} | ProductionError;
 export type ProduceBlockResponse = ProductionResponse<ProduceBlindedBlockOrBlockContentsRes>;
 export type ProduceBlockV4Response = ProductionResponse<ProduceBlockV4Result>;
 
+export type SubmitBlindedBlockResponse = {
+  signedBlockContents: SignedBlockContents;
+  /** Existing worker response bytes: SignedBeaconBlock before Deneb, SignedBlockContents from Deneb. */
+  contentsBytes?: Uint8Array;
+};
+
 export type PrepareNextSlotOpts = {produceSSEPayloadAttributes: boolean};
 
 export type PrepareNextSlotResult = {
@@ -256,13 +265,153 @@ export interface IBeaconEngine
     | "verifyGossipBlock"
     | "importBlock"
     | "importExecutionPayload"
+    | "registerValidator"
+    | "submitBlindedBlock"
+    | "submitBlindedBlockNoResponse"
+    | "validateGossipSyncCommittee"
+    | "validateSyncCommitteeGossipContributionAndProof"
+    | "validateGossipBlobSidecar"
+    | "validateGossipFuluDataColumnSidecar"
+    | "validateGossipGloasDataColumnSidecar"
+    | "validateGossipPayloadAttestationMessage"
+    | "validateGossipAggregateAndProof"
+    | "validateGossipExecutionPayloadEnvelope"
+    | "validateGossipExecutionPayloadBid"
+    | "validateGossipProposerPreferences"
+    | "validateGossipAttesterSlashing"
+    | "validateGossipProposerSlashing"
+    | "validateGossipVoluntaryExit"
+    | "validateGossipBlsToExecutionChange"
+    | "validateApiSyncCommittee"
+    | "validateApiSyncCommitteeContributionAndProof"
+    | "validateApiPayloadAttestationMessage"
+    | "validateApiAggregateAndProof"
+    | "validateApiExecutionPayloadEnvelope"
+    | "validateApiExecutionPayloadBid"
+    | "verifyAndObserveBlockProposer"
+    | "verifyEnvelopeForPublish"
   > {
+  registerValidator(
+    epoch: Epoch,
+    registrationsBytes: Uint8Array,
+    registrations: bellatrix.SignedValidatorRegistrationV1[]
+  ): Promise<void>;
+  submitBlindedBlock(
+    signedBlindedBlockBytes: Uint8Array,
+    signedBlindedBlock: SignedBlindedBeaconBlock,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<SubmitBlindedBlockResponse>;
+  submitBlindedBlockNoResponse(
+    signedBlindedBlockBytes: Uint8Array,
+    signedBlindedBlock: SignedBlindedBeaconBlock,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<void>;
+  validateGossipSyncCommittee(
+    syncCommitteeBytes: Uint8Array,
+    syncCommittee: altair.SyncCommitteeMessage,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateSyncCommitteeGossipContributionAndProof(
+    contributionBytes: Uint8Array,
+    signedContributionAndProof: altair.SignedContributionAndProof,
+    skipValidationKnownParticipants?: boolean
+  ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>>;
+  validateGossipBlobSidecar(
+    blobBytes: Uint8Array,
+    blobSidecar: deneb.BlobSidecar,
+    fork: ForkName,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipFuluDataColumnSidecar(
+    dataColumnBytes: Uint8Array,
+    dataColumnSidecar: fulu.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipGloasDataColumnSidecar(
+    dataColumnBytes: Uint8Array,
+    dataColumnSidecar: gloas.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipPayloadAttestationMessage(
+    payloadAttestationBytes: Uint8Array,
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipAggregateAndProof(
+    aggregateBytes: Uint8Array,
+    signedAggregateAndProof: SignedAggregateAndProof,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
+  validateGossipExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    source: SourceMeta
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipExecutionPayloadBid(
+    bidBytes: Uint8Array,
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
+  validateGossipProposerPreferences(
+    preferencesBytes: Uint8Array,
+    signedProposerPreferences: gloas.SignedProposerPreferences
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipAttesterSlashing(
+    attesterSlashingBytes: Uint8Array,
+    attesterSlashing: AttesterSlashing,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipProposerSlashing(
+    proposerSlashingBytes: Uint8Array,
+    proposerSlashing: phase0.ProposerSlashing
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipVoluntaryExit(
+    voluntaryExitBytes: Uint8Array,
+    voluntaryExit: phase0.SignedVoluntaryExit
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipBlsToExecutionChange(
+    blsToExecutionChangeBytes: Uint8Array,
+    blsToExecutionChange: capella.SignedBLSToExecutionChange
+  ): Promise<GossipValidationResult<void>>;
   validateGossipBlock(
     signedBlock: SignedBeaconBlock,
     blockBytes: Uint8Array,
     fork: ForkName,
     seenTimestampSec?: number
   ): Promise<GossipBlockResult>;
+  validateApiSyncCommittee(
+    syncCommitteeBytes: Uint8Array,
+    syncCommittee: altair.SyncCommitteeMessage
+  ): Promise<GossipValidationResult<{subnets: number[]}>>;
+  validateApiSyncCommitteeContributionAndProof(
+    contributionBytes: Uint8Array,
+    signedContributionAndProof: altair.SignedContributionAndProof
+  ): Promise<GossipValidationResult<void>>;
+  validateApiPayloadAttestationMessage(
+    payloadAttestationBytes: Uint8Array,
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<GossipValidationResult<void>>;
+  validateApiAggregateAndProof(
+    aggregateBytes: Uint8Array,
+    fork: ForkName,
+    signedAggregateAndProof: SignedAggregateAndProof
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
+  validateApiExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<void>>;
+  validateApiExecutionPayloadBid(
+    bidBytes: Uint8Array,
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
+  ): Promise<GossipValidationResult<void>>;
+  verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void>;
+  verifyEnvelopeForPublish(
+    bytes: Uint8Array,
+    envelope: gloas.SignedExecutionPayloadEnvelope,
+    blockRootHex: RootHex
+  ): Promise<void>;
   validateApiBlock(blockInput: IBlockInput, opts: VerifyBlocksOpts): Promise<void>;
   verifyBlocks(
     blockInputs: IBlockInput[],
@@ -515,18 +664,12 @@ export interface IBeaconEngineCore {
     seenTimestampSec?: number
   ): Promise<GossipBlockResult>;
   validateGossipSyncCommittee(syncCommitteeBytes: Uint8Array, subnet: SubnetID): Promise<GossipValidationResult<void>>;
-  validateApiSyncCommittee(
-    syncCommitteeBytes: Uint8Array,
-    syncCommittee: altair.SyncCommitteeMessage
-  ): Promise<GossipValidationResult<{subnets: number[]}>>;
+  validateApiSyncCommittee(syncCommitteeBytes: Uint8Array): Promise<GossipValidationResult<{subnets: number[]}>>;
   validateSyncCommitteeGossipContributionAndProof(
     contributionBytes: Uint8Array,
     skipValidationKnownParticipants?: boolean
   ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>>;
-  validateApiSyncCommitteeContributionAndProof(
-    contributionBytes: Uint8Array,
-    signedContributionAndProof: altair.SignedContributionAndProof
-  ): Promise<GossipValidationResult<void>>;
+  validateApiSyncCommitteeContributionAndProof(contributionBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateGossipBlobSidecar(
     blobBytes: Uint8Array,
     fork: ForkName,
@@ -541,10 +684,7 @@ export interface IBeaconEngineCore {
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>>;
   validateGossipPayloadAttestationMessage(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-  validateApiPayloadAttestationMessage(
-    payloadAttestationBytes: Uint8Array,
-    payloadAttestationMessage: gloas.PayloadAttestationMessage
-  ): Promise<GossipValidationResult<void>>;
+  validateApiPayloadAttestationMessage(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateGossipAttestationsSameAttData(
     fork: ForkName,
     attestations: GossipAttestation[],
@@ -562,8 +702,7 @@ export interface IBeaconEngineCore {
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
   validateApiAggregateAndProof(
     aggregateBytes: Uint8Array,
-    fork: ForkName,
-    signedAggregateAndProof: SignedAggregateAndProof
+    fork: ForkName
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
   validateGossipExecutionPayloadEnvelope(
     envelopeBytes: Uint8Array,
@@ -571,7 +710,6 @@ export interface IBeaconEngineCore {
   ): Promise<GossipValidationResult<void>>;
   validateApiExecutionPayloadEnvelope(
     envelopeBytes: Uint8Array,
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<void>>;
   validateGossipExecutionPayloadBid(
@@ -579,10 +717,7 @@ export interface IBeaconEngineCore {
     fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
-  validateApiExecutionPayloadBid(
-    bidBytes: Uint8Array,
-    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-  ): Promise<GossipValidationResult<void>>;
+  validateApiExecutionPayloadBid(bidBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateGossipProposerPreferences(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>>;
 
   // Op pool: gossip validate (+ insert on Accept) / API validate (throws, + insert) / REST reads. The
@@ -646,12 +781,8 @@ export interface IBeaconEngineCore {
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]>;
-  verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void>;
-  verifyEnvelopeForPublish(
-    bytes: Uint8Array,
-    envelope: gloas.SignedExecutionPayloadEnvelope,
-    blockRootHex: RootHex
-  ): Promise<void>;
+  verifyAndObserveBlockProposer(bytes: Uint8Array, root: RootHex): Promise<void>;
+  verifyEnvelopeForPublish(bytes: Uint8Array, blockRootHex: RootHex): Promise<void>;
   isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean>;
 
   /**

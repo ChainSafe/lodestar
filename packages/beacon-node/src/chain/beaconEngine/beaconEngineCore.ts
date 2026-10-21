@@ -117,7 +117,6 @@ import {Clock, IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock, toForkChoiceValidity, toPayloadStatusName} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {SerializedCache} from "../../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {Result, wrapError} from "../../util/wrapError.js";
 import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
@@ -139,6 +138,7 @@ import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from ".
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
 import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
 import {BlockErrorCode} from "../errors/blockError.js";
+import {GossipActionError} from "../errors/gossipValidation.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
 import {persistAnchorState} from "../initState.js";
@@ -238,6 +238,7 @@ import {
   validateGossipGloasDataColumnSidecar,
   validateGossipGloasDataColumnSidecarObject,
 } from "./gossipValidation/dataColumnSidecar.js";
+import {deserializeGossipMessage} from "./gossipValidation/deserialize.js";
 import {
   validateApiExecutionPayloadBid,
   validateApiExecutionPayloadEnvelope,
@@ -279,7 +280,7 @@ import {
   validateSyncCommitteeGossipContributionAndProof,
   validateSyncCommitteeGossipContributionAndProofObject,
 } from "./gossipValidation/syncCommittee.js";
-import {GossipValidationResult} from "./gossipValidationResult.js";
+import {GossipValidationResult, fromResult} from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
 import {importExecutionPayload, importExecutionPayloadObject} from "./importExecutionPayload.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
@@ -323,7 +324,14 @@ import {verifyBlocks, verifyBlocksObject} from "./verifyBlock.js";
 
 const MAX_VERIFIED_PROPOSER_SIGNATURES = 3 * SLOTS_PER_EPOCH;
 
-/** Owns consensus state. Anchor preparation precedes validation and runtime initialization. */
+/**
+ * Owns consensus state. Anchor preparation precedes validation and runtime initialization.
+ * SerializedCache stays on the main-thread facade/BeaconChain; bytes entrypoints decode locally.
+ *
+ * All *Object methods use the caller's objects without accessing blockSerializedCache, including through
+ * shared helpers or error paths. Both verification entrypoints retain live post-states in verifiedBlocks
+ * until import/discard. Verification results expose only metadata; bundles never leave Core.
+ */
 export class BeaconEngineCore implements IBeaconEngineCore {
   private readonly aggregatorTracker = new AggregatorTracker();
   readonly config: BeaconConfig;
@@ -416,16 +424,15 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   readonly signal = this.abortController.signal;
   lightClientServer?: LightClientServer;
   /**
-   * Engine-owned verification results awaiting import, keyed by the exact signed block root.
-   * Bundles reference the same block and bytes returned by blockSerializedCache; they do not copy either.
+   * Verification results awaiting import in either mode, keyed by the exact signed block root.
+   * Contains live post-states that must remain inside Core; both verification APIs return only metadata.
    * API broadcast validation uses validateApiBlock and never creates or discards these bundles.
    * Retain them until import settles or discardVerifiedBlocks is called, independently of BlockSerializedCache
    * eviction/replacement. Combining these stores would require
    * pinning the exact signed candidate while keeping verification results engine-owned.
    */
   readonly verifiedBlocks = new Map<SignedBlockRootHex, VerifiedBlockBundle>();
-  // Shared with BeaconChain only in main-thread BeaconEngine mode; worker BeaconEngine deserializes independently.
-  readonly serializedCache?: SerializedCache;
+  /** Bytes/root API candidates; never accessed by *Object entrypoints. Slot maintenance prunes expired entries. */
   readonly blockSerializedCache: BlockSerializedCache;
 
   readonly executionEngine: IExecutionEngine;
@@ -481,12 +488,9 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.validatorMonitorLogger = validatorMonitorLogger;
     this.dbName = modules.dbName;
     this.dataColumnDir = modules.dataColumnDir;
-    // Main-thread BeaconEngine shares this cache with BeaconChain; worker mode deserializes independently.
-    this.serializedCache = modules.serializedCache;
     this.blockSerializedCache = new BlockSerializedCache(config, {
       metrics: metrics?.blockSerializedCache,
       logger,
-      serializedCache: this.serializedCache,
     });
     this.metrics = metrics;
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
@@ -1180,9 +1184,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     if (!this.executionBuilder) {
       throw Error("External builder not configured");
     }
-    const registrations =
-      this.serializedCache?.getDeserialized<bellatrix.SignedValidatorRegistrationV1[]>(registrationsBytes) ??
-      routes.validator.SignedValidatorRegistrationV1ListType.deserialize(registrationsBytes);
+    const registrations = routes.validator.SignedValidatorRegistrationV1ListType.deserialize(registrationsBytes);
     return this.registerValidatorObject(epoch, registrations);
   }
 
@@ -1193,6 +1195,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     await this.executionBuilder.registerValidator(epoch, registrations);
   }
 
+  /** Pre-Fulu builder publication; Fulu uses submitBlindedBlockNoResponse(). */
   async submitBlindedBlock(
     signedBlindedBlockBytes: Uint8Array,
     fork: ForkPostBellatrix & ForkPreGloas
@@ -1200,28 +1203,26 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     if (!this.executionBuilder) {
       throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
     }
-    const signedBlindedBlock =
-      this.serializedCache?.getDeserialized<SignedBlindedBeaconBlock>(signedBlindedBlockBytes) ??
-      sszTypesFor(fork).SignedBlindedBeaconBlock.deserialize(signedBlindedBlockBytes);
-    return this.submitBlindedBlockObject({data: signedBlindedBlock, bytes: signedBlindedBlockBytes}, fork);
+    const signedBlindedBlock = sszTypesFor(fork).SignedBlindedBeaconBlock.deserialize(signedBlindedBlockBytes);
+    const contents = await this.submitBlindedBlockObject({data: signedBlindedBlock, bytes: signedBlindedBlockBytes});
+    if (isForkPostDeneb(fork)) {
+      return sszTypesFor(fork).SignedBlockContents.serialize(contents as SignedBlockContents<typeof fork>);
+    }
+    return sszTypesFor(fork).SignedBeaconBlock.serialize(contents.signedBlock as SignedBeaconBlock<typeof fork>);
   }
 
+  /**
+   * Main-thread object entrypoint; preserves builder objects without serialization.
+   * The object result is retained for this legacy pre-Fulu path; Fulu submissions are acknowledgement-only.
+   * Never accesses SerializedCache or BlockSerializedCache.
+   */
   async submitBlindedBlockObject(
-    signedBlindedBlock: WithBytes<SignedBlindedBeaconBlock>,
-    fork: ForkPostBellatrix & ForkPreGloas
-  ): Promise<Uint8Array> {
+    signedBlindedBlock: WithBytes<SignedBlindedBeaconBlock>
+  ): Promise<SignedBlockContents> {
     if (!this.executionBuilder) {
       throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
     }
-    const contents = await this.executionBuilder.submitBlindedBlock(signedBlindedBlock);
-    if (isForkPostDeneb(fork)) {
-      const bytes = sszTypesFor(fork).SignedBlockContents.serialize(contents as SignedBlockContents<typeof fork>);
-      this.serializedCache?.set(contents, bytes);
-      return bytes;
-    }
-    const bytes = sszTypesFor(fork).SignedBeaconBlock.serialize(contents.signedBlock as SignedBeaconBlock<typeof fork>);
-    this.serializedCache?.set(contents.signedBlock, bytes);
-    return bytes;
+    return this.executionBuilder.submitBlindedBlock(signedBlindedBlock);
   }
 
   async submitBlindedBlockNoResponse(
@@ -1231,9 +1232,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     if (!this.executionBuilder) {
       throw Error("executionBuilder required to submit SignedBlindedBeaconBlock to builder");
     }
-    const signedBlindedBlock =
-      this.serializedCache?.getDeserialized<SignedBlindedBeaconBlock>(signedBlindedBlockBytes) ??
-      sszTypesFor(fork).SignedBlindedBeaconBlock.deserialize(signedBlindedBlockBytes);
+    const signedBlindedBlock = sszTypesFor(fork).SignedBlindedBeaconBlock.deserialize(signedBlindedBlockBytes);
     return this.submitBlindedBlockNoResponseObject({data: signedBlindedBlock, bytes: signedBlindedBlockBytes});
   }
 
@@ -1478,7 +1477,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipBlock.call(this, signedBlockRoot, blockBytes, fork, seenTimestampSec);
   }
 
-  /** The bytes must encode this block; both must remain immutable while retained by the engine. */
+  /**
+   * Main-thread object entrypoint; does not read or update blockSerializedCache.
+   * The bytes must encode this block; both must remain immutable while retained by the engine.
+   */
   validateGossipBlockObject(
     block: WithBytes<SignedBeaconBlock>,
     fork: ForkName,
@@ -1500,11 +1502,14 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   // Returns the subnets to broadcast to (the facade publishes). Resolves committee membership + pool insert
   // internally so the facade never touches state or the pool for API sync-committee submission.
-  validateApiSyncCommittee(
-    _syncCommitteeBytes: Uint8Array,
-    syncCommittee: altair.SyncCommitteeMessage
-  ): Promise<GossipValidationResult<{subnets: number[]}>> {
-    return validateApiSyncCommittee.call(this, syncCommittee);
+  async validateApiSyncCommittee(syncCommitteeBytes: Uint8Array): Promise<GossipValidationResult<{subnets: number[]}>> {
+    try {
+      const syncCommittee = deserializeGossipMessage(ssz.altair.SyncCommitteeMessage, syncCommitteeBytes);
+      return this.validateApiSyncCommitteeObject(syncCommittee);
+    } catch (error) {
+      if (error instanceof GossipActionError) return fromResult({err: error});
+      throw error;
+    }
   }
 
   validateApiSyncCommitteeObject(
@@ -1535,11 +1540,21 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  validateApiSyncCommitteeContributionAndProof(
-    _contributionBytes: Uint8Array,
-    signedContributionAndProof: altair.SignedContributionAndProof
+  async validateApiSyncCommitteeContributionAndProof(
+    contributionBytes: Uint8Array
   ): Promise<GossipValidationResult<void>> {
-    return validateApiSyncCommitteeContributionAndProof.call(this, signedContributionAndProof);
+    try {
+      // Pool mutation must not change the bytes retained for API publication.
+      const signedContributionAndProof = deserializeGossipMessage(
+        ssz.altair.SignedContributionAndProof,
+        contributionBytes,
+        {reuseBytes: false}
+      );
+      return this.validateApiSyncCommitteeContributionAndProofObject(signedContributionAndProof);
+    } catch (error) {
+      if (error instanceof GossipActionError) return fromResult({err: error});
+      throw error;
+    }
   }
 
   validateApiSyncCommitteeContributionAndProofObject(
@@ -1602,11 +1617,19 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipPayloadAttestationMessageObject.call(this, payloadAttestationMessage);
   }
 
-  validateApiPayloadAttestationMessage(
-    _payloadAttestationBytes: Uint8Array,
-    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  async validateApiPayloadAttestationMessage(
+    payloadAttestationBytes: Uint8Array
   ): Promise<GossipValidationResult<void>> {
-    return validateApiPayloadAttestationMessage.call(this, payloadAttestationMessage);
+    try {
+      const payloadAttestationMessage = deserializeGossipMessage(
+        ssz.gloas.PayloadAttestationMessage,
+        payloadAttestationBytes
+      );
+      return this.validateApiPayloadAttestationMessageObject(payloadAttestationMessage);
+    } catch (error) {
+      if (error instanceof GossipActionError) return fromResult({err: error});
+      throw error;
+    }
   }
 
   validateApiPayloadAttestationMessageObject(
@@ -1655,12 +1678,22 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipAggregateAndProofObject.call(this, signedAggregateAndProof, fork, seenTimestampSec);
   }
 
-  validateApiAggregateAndProof(
-    _aggregateBytes: Uint8Array,
-    fork: ForkName,
-    signedAggregateAndProof: SignedAggregateAndProof
+  async validateApiAggregateAndProof(
+    aggregateBytes: Uint8Array,
+    fork: ForkName
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return validateApiAggregateAndProof.call(this, fork, signedAggregateAndProof);
+    try {
+      // Bitlist decoding must preserve the bytes retained for API publication.
+      const signedAggregateAndProof = deserializeGossipMessage(
+        sszTypesFor(fork).SignedAggregateAndProof,
+        aggregateBytes,
+        {reuseBytes: false}
+      );
+      return this.validateApiAggregateAndProofObject(fork, signedAggregateAndProof);
+    } catch (error) {
+      if (error instanceof GossipActionError) return fromResult({err: error});
+      throw error;
+    }
   }
 
   validateApiAggregateAndProofObject(
@@ -1684,12 +1717,20 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipExecutionPayloadEnvelopeObject.call(this, executionPayloadEnvelope, source);
   }
 
-  validateApiExecutionPayloadEnvelope(
-    _envelopeBytes: Uint8Array,
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  async validateApiExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<void>> {
-    return validateApiExecutionPayloadEnvelope.call(this, executionPayloadEnvelope, seenTimestampSec);
+    try {
+      const executionPayloadEnvelope = deserializeGossipMessage(
+        ssz.gloas.SignedExecutionPayloadEnvelope,
+        envelopeBytes
+      );
+      return this.validateApiExecutionPayloadEnvelopeObject(executionPayloadEnvelope, seenTimestampSec);
+    } catch (error) {
+      if (error instanceof GossipActionError) return fromResult({err: error});
+      throw error;
+    }
   }
 
   validateApiExecutionPayloadEnvelopeObject(
@@ -1714,11 +1755,14 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return validateGossipExecutionPayloadBidObject.call(this, signedExecutionPayloadBid, seenTimestampSec);
   }
 
-  validateApiExecutionPayloadBid(
-    _bidBytes: Uint8Array,
-    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-  ): Promise<GossipValidationResult<void>> {
-    return validateApiExecutionPayloadBid.call(this, signedExecutionPayloadBid);
+  async validateApiExecutionPayloadBid(bidBytes: Uint8Array): Promise<GossipValidationResult<void>> {
+    try {
+      const signedExecutionPayloadBid = deserializeGossipMessage(ssz.gloas.SignedExecutionPayloadBid, bidBytes);
+      return this.validateApiExecutionPayloadBidObject(signedExecutionPayloadBid);
+    } catch (error) {
+      if (error instanceof GossipActionError) return fromResult({err: error});
+      throw error;
+    }
   }
 
   validateApiExecutionPayloadBidObject(
@@ -1967,7 +2011,16 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   async getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {
     return this.seenBlockProposers.getConflictingBlockRoots(slot, proposerIndex, root);
   }
-  async verifyAndObserveBlockProposer(_bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void> {
+  async verifyAndObserveBlockProposer(bytes: Uint8Array, root: RootHex): Promise<void> {
+    const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
+    if (slot === null) throw new LodestarError({code: "INVALID_BLOCK_SSZ"});
+    let block: SignedBeaconBlock;
+    try {
+      // Preserve bitlist padding in the bytes retained for publication and import.
+      block = this.config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes, {reuseBytes: false});
+    } catch (error) {
+      throw new LodestarError({code: "INVALID_BLOCK_SSZ"}, (error as Error).message);
+    }
     return this.verifyAndObserveBlockProposerObject(block, root);
   }
 
@@ -1989,11 +2042,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
   // TODO - beacon engine: map these API errors to plain result codes when introducing the worker transport.
-  async verifyEnvelopeForPublish(
-    _bytes: Uint8Array,
-    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    blockRootHex: RootHex
-  ): Promise<void> {
+  async verifyEnvelopeForPublish(bytes: Uint8Array, blockRootHex: RootHex): Promise<void> {
+    let signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
+    try {
+      signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(bytes);
+    } catch {
+      throw new ApiError(400, "Invalid serialized execution payload envelope");
+    }
     return this.verifyEnvelopeForPublishObject(signedEnvelope, blockRootHex);
   }
 
@@ -2064,7 +2119,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  /** The bytes must encode this block; neither may be mutated during validation. */
+  /**
+   * Main-thread object entrypoint; never accesses blockSerializedCache or verifiedBlocks.
+   * The bytes must encode this block; neither may be mutated during validation.
+   */
   async validateApiBlockObject(
     block: WithBytes<SignedBeaconBlock>,
     opts: VerifyBlocksOpts
@@ -2094,7 +2152,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  /** Each byte array must encode its paired block; both remain immutable while retained by the engine. */
+  /**
+   * Main-thread object entrypoint; bypasses blockSerializedCache and retains verification bundles in Core.
+   * Each byte array must encode its paired block; both remain immutable while retained by the engine.
+   */
   async verifyBlocksObject(
     blocks: WithBytes<SignedBeaconBlock>[],
     opts: VerifyBlocksOpts
@@ -2128,12 +2189,23 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
+  /**
+   * Main-thread object entrypoint; bypasses blockSerializedCache and retains verification bundles in Core.
+   * The bytes must encode the block; both remain immutable while retained by the engine.
+   */
+  async verifyGossipBlockObject(
+    block: WithBytes<SignedBeaconBlock>,
+    opts: VerifyBlocksOpts
+  ): Promise<Result<VerifyBlocksSuccess, BlockFailure>> {
+    return this.verifyBlocksObject([block], opts);
+  }
+
   async importBlock(
     signedBlockRoot: SignedBlockRoot,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<Result<ImportBlockResult, BlockFailure>> {
-    // bytes-first input (native engine FFI); the JS cache is keyed by hex.
+    // Both modes import the engine-owned bundle for this exact signed candidate.
     const signedBlockRootHex = toSignedBlockRootHex(signedBlockRoot);
     const v = this.verifiedBlocks.get(signedBlockRootHex);
     if (!v) throw Error(`No verified block found for signed root ${signedBlockRootHex}`);
@@ -2163,7 +2235,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  /** The bytes must encode this envelope; both must remain immutable while retained by the engine. */
+  /**
+   * Main-thread object entrypoint; never accesses blockSerializedCache or verifiedBlocks.
+   * The bytes must encode this envelope; both must remain immutable while retained by the engine.
+   */
   async importExecutionPayloadObject(
     envelope: WithBytes<gloas.SignedExecutionPayloadEnvelope>,
     dataAvailabilityStatus: DataAvailabilityStatus,

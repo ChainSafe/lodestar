@@ -20,11 +20,7 @@ export async function validateGossipProposerPreferences(
   preferencesBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
-    const signedProposerPreferences = deserializeGossipMessage(
-      ssz.gloas.SignedProposerPreferences,
-      preferencesBytes,
-      this.serializedCache
-    );
+    const signedProposerPreferences = deserializeGossipMessage(ssz.gloas.SignedProposerPreferences, preferencesBytes);
     return await validateGossipProposerPreferencesObject.call(this, signedProposerPreferences);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -64,11 +60,7 @@ export async function validateGossipAttesterSlashing(
   fork: ForkName
 ): Promise<GossipValidationResult<void>> {
   try {
-    const attesterSlashing = deserializeGossipMessage(
-      sszTypesFor(fork).AttesterSlashing,
-      attesterSlashingBytes,
-      this.serializedCache
-    );
+    const attesterSlashing = deserializeGossipMessage(sszTypesFor(fork).AttesterSlashing, attesterSlashingBytes);
     return await validateGossipAttesterSlashingObject.call(this, attesterSlashing, fork);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -127,11 +119,7 @@ export async function validateGossipProposerSlashing(
   proposerSlashingBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
-    const proposerSlashing = deserializeGossipMessage(
-      ssz.phase0.ProposerSlashing,
-      proposerSlashingBytes,
-      this.serializedCache
-    );
+    const proposerSlashing = deserializeGossipMessage(ssz.phase0.ProposerSlashing, proposerSlashingBytes);
     return await validateGossipProposerSlashingObject.call(this, proposerSlashing);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -186,11 +174,7 @@ export async function validateGossipVoluntaryExit(
   voluntaryExitBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
-    const voluntaryExit = deserializeGossipMessage(
-      ssz.phase0.SignedVoluntaryExit,
-      voluntaryExitBytes,
-      this.serializedCache
-    );
+    const voluntaryExit = deserializeGossipMessage(ssz.phase0.SignedVoluntaryExit, voluntaryExitBytes);
     return await validateGossipVoluntaryExitObject.call(this, voluntaryExit);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -253,8 +237,7 @@ export async function validateGossipBlsToExecutionChange(
   try {
     const blsToExecutionChange = deserializeGossipMessage(
       ssz.capella.SignedBLSToExecutionChange,
-      blsToExecutionChangeBytes,
-      this.serializedCache
+      blsToExecutionChangeBytes
     );
     return await validateGossipBlsToExecutionChangeObject.call(this, blsToExecutionChange);
   } catch (error) {

@@ -120,7 +120,6 @@ export async function validateGossipAggregateAndProof(
     const signedAggregateAndProof = deserializeGossipMessage(
       sszTypesFor(fork).SignedAggregateAndProof,
       aggregateBytes,
-      this.serializedCache,
       // SSZ byte reuse can clear bitlist padding in the original gossip bytes.
       // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
       {reuseBytes: false}

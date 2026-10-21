@@ -255,6 +255,10 @@ describe("BeaconEngineCore light client ownership", () => {
       kind === "optimistic"
         ? engine.validateGossipLightClientOptimisticUpdateObject(value)
         : engine.validateGossipLightClientFinalityUpdateObject(value);
+    const candidateCacheAccess = vi.fn(() => {
+      throw Error("Light-client object validation must not access BlockSerializedCache");
+    });
+    Object.defineProperty(engine, "blockSerializedCache", {get: candidateCacheAccess});
     const deserialize = vi.spyOn(type, "deserialize");
     const serialize = vi.spyOn(type, "serialize");
     expect(await validateObject()).toMatchObject({
@@ -276,6 +280,7 @@ describe("BeaconEngineCore light client ownership", () => {
     });
     expect(await validateObject()).toMatchObject({err: {status: "ignore", code: "UNEXPECTED_ERROR"}});
     expect(logger.error).toHaveBeenCalledWith(expect.any(String), {code: "UNEXPECTED_ERROR"}, expect.any(Error));
+    expect(candidateCacheAccess).not.toHaveBeenCalled();
   });
 
   it("forwards serialized optimistic and finality updates through the facade", async () => {

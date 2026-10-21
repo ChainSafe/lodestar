@@ -424,9 +424,9 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       );
       throw new Error("invalid proposer signature");
     });
-    await expect(engine.verifyAndObserveBlockProposer(new Uint8Array(), block, root)).rejects.toThrow(
-      "invalid proposer signature"
-    );
+    await expect(
+      engine.verifyAndObserveBlockProposer(ssz.gloas.SignedBeaconBlock.serialize(block), root)
+    ).rejects.toThrow("invalid proposer signature");
     expect(engine.seenPayloadEnvelopeInputCache.get(root)?.proposerIndex).toBe(7);
   });
 

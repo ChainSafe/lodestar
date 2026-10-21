@@ -14,8 +14,9 @@ import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 
 describe("payload import error context", () => {
-  it("attaches the facade input to a payload error returned by the engine", async () => {
+  it.each([false, true])("attaches the facade input to a payload error (worker: %s)", async (beaconEngineWorker) => {
     const chain = getMockedBeaconChain();
+    chain.opts.beaconEngineWorker = beaconEngineWorker;
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
     const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
@@ -37,9 +38,9 @@ describe("payload import error context", () => {
       value: {waitForSpace: vi.fn().mockResolvedValue(undefined), push: vi.fn()},
     });
     const error = new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
-    chain.beaconEngine.importExecutionPayload = vi
-      .fn()
-      .mockResolvedValue(structuredClone({err: payloadFailureFromError(error)}));
+    const importPayload = vi.fn().mockResolvedValue(structuredClone({err: payloadFailureFromError(error)}));
+    chain.beaconEngine.importExecutionPayload = importPayload;
+    chain.beaconEngine.importExecutionPayloadObject = importPayload;
     chain.executionEngine.notifyNewPayload = vi.fn<typeof chain.executionEngine.notifyNewPayload>().mockResolvedValue({
       status: ExecutionPayloadStatus.VALID,
       latestValidHash: toRootHex(new Uint8Array(32)),
@@ -61,8 +62,9 @@ describe("payload import error context", () => {
       stack: error.stack,
     });
     expect("payloadInput" in error).toBe(false);
-    expect(chain.beaconEngine.importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
-      ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+    const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+    expect(importPayload).toHaveBeenCalledExactlyOnceWith(
+      beaconEngineWorker ? bytes : {data: envelope, bytes},
       DataAvailabilityStatus.Available,
       {validSignature: false, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 0}
     );

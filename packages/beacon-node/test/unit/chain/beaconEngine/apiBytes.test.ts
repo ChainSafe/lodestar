@@ -1,0 +1,283 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {BitArray, Type} from "@chainsafe/ssz";
+import {ApiError} from "@lodestar/api/server";
+import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
+import {ForkName} from "@lodestar/params";
+import {ssz, sszTypesFor} from "@lodestar/types";
+import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {GossipValidationResult, accept, fromResult} from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
+import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {GossipAction, GossipActionError, GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
+import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+
+function validationCase<T extends object, R>(
+  type: Type<T>,
+  result: R,
+  invokeCore: (core: BeaconEngineCore, bytes: Uint8Array) => Promise<GossipValidationResult<R>>,
+  invokeFacade: (facade: BeaconEngine, bytes: Uint8Array, value: T) => Promise<GossipValidationResult<R>>,
+  stubObject: (core: BeaconEngineCore, validate: (value: T) => Promise<GossipValidationResult<R>>) => void
+) {
+  return (core: BeaconEngineCore) => {
+    const value = type.defaultValue();
+    const bytes = type.serialize(value);
+    const response = accept(result);
+    const validate = vi.fn<(value: T) => Promise<GossipValidationResult<R>>>().mockResolvedValue(response);
+    stubObject(core, validate);
+    return {
+      value,
+      bytes,
+      response,
+      validate,
+      serialize: vi.spyOn(type, "serialize"),
+      deserialize: vi.spyOn(type, "deserialize"),
+      invokeCore: (input = bytes) => invokeCore(core, input),
+      invokeFacade: (facade: BeaconEngine, input = bytes) => invokeFacade(facade, input, value),
+    };
+  };
+}
+
+describe("BeaconEngineCore API bytes", () => {
+  let core: BeaconEngineCore;
+  let cache: SerializedCache;
+
+  beforeEach(() => {
+    core = getMockedBeaconChain().beaconEngine;
+    cache = new SerializedCache();
+    for (const method of [
+      "validateApiSyncCommittee",
+      "validateApiSyncCommitteeContributionAndProof",
+      "validateApiPayloadAttestationMessage",
+      "validateApiAggregateAndProof",
+      "validateApiExecutionPayloadEnvelope",
+      "validateApiExecutionPayloadBid",
+      "verifyAndObserveBlockProposer",
+      "verifyEnvelopeForPublish",
+    ] as const) {
+      Object.defineProperty(core, method, {value: BeaconEngineCore.prototype[method], configurable: true});
+    }
+    for (const name of ["blockSerializedCache", "serializedCache"]) {
+      Object.defineProperty(core, name, {
+        get: () => {
+          throw Error(`API validation must not access ${name}`);
+        },
+      });
+    }
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  function facade(beaconEngineWorker: boolean): BeaconEngine {
+    return new BeaconEngine({
+      core,
+      config: core.config,
+      clock: core.clock,
+      emitter: new ChainEventEmitter(),
+      serializedCache: cache,
+      beaconEngineWorker,
+    });
+  }
+
+  const cases = [
+    {
+      name: "sync committee message",
+      create: validationCase(
+        ssz.altair.SyncCommitteeMessage,
+        {subnets: [0]},
+        (core, bytes) => core.validateApiSyncCommittee(bytes),
+        (facade, bytes, value) => facade.validateApiSyncCommittee(bytes, value),
+        (core, validate) => vi.spyOn(core, "validateApiSyncCommitteeObject").mockImplementation(validate)
+      ),
+    },
+    {
+      name: "sync committee contribution",
+      create: validationCase(
+        ssz.altair.SignedContributionAndProof,
+        undefined,
+        (core, bytes) => core.validateApiSyncCommitteeContributionAndProof(bytes),
+        (facade, bytes, value) => facade.validateApiSyncCommitteeContributionAndProof(bytes, value),
+        (core, validate) =>
+          vi.spyOn(core, "validateApiSyncCommitteeContributionAndProofObject").mockImplementation(validate)
+      ),
+    },
+    {
+      name: "payload attestation message",
+      create: validationCase(
+        ssz.gloas.PayloadAttestationMessage,
+        undefined,
+        (core, bytes) => core.validateApiPayloadAttestationMessage(bytes),
+        (facade, bytes, value) => facade.validateApiPayloadAttestationMessage(bytes, value),
+        (core, validate) => vi.spyOn(core, "validateApiPayloadAttestationMessageObject").mockImplementation(validate)
+      ),
+    },
+    ...[ForkName.phase0, ForkName.electra].map((fork) => ({
+      name: `${fork} aggregate`,
+      create: validationCase(
+        sszTypesFor(fork).SignedAggregateAndProof,
+        {indexedAttestation: sszTypesFor(fork).IndexedAttestation.defaultValue()},
+        (core, bytes) => core.validateApiAggregateAndProof(bytes, fork),
+        (facade, bytes, value) => facade.validateApiAggregateAndProof(bytes, fork, value),
+        (core, validate) =>
+          vi.spyOn(core, "validateApiAggregateAndProofObject").mockImplementation((receivedFork, value) => {
+            expect(receivedFork).toBe(fork);
+            return validate(value);
+          })
+      ),
+    })),
+    {
+      name: "execution payload envelope",
+      create: validationCase(
+        ssz.gloas.SignedExecutionPayloadEnvelope,
+        undefined,
+        (core, bytes) => core.validateApiExecutionPayloadEnvelope(bytes, 12),
+        (facade, bytes, value) => facade.validateApiExecutionPayloadEnvelope(bytes, value, 12),
+        (core, validate) =>
+          vi.spyOn(core, "validateApiExecutionPayloadEnvelopeObject").mockImplementation((value, seenTimestampSec) => {
+            expect(seenTimestampSec).toBe(12);
+            return validate(value);
+          })
+      ),
+    },
+    {
+      name: "execution payload bid",
+      create: validationCase(
+        ssz.gloas.SignedExecutionPayloadBid,
+        undefined,
+        (core, bytes) => core.validateApiExecutionPayloadBid(bytes),
+        (facade, bytes, value) => facade.validateApiExecutionPayloadBid(bytes, value),
+        (core, validate) => vi.spyOn(core, "validateApiExecutionPayloadBidObject").mockImplementation(validate)
+      ),
+    },
+  ];
+
+  describe.each(cases)("$name", ({create}) => {
+    it.each([false, true])("uses objects or bytes with beaconEngineWorker=%s", async (worker) => {
+      const test = create(core);
+      const originalBytes = Uint8Array.from(test.bytes);
+      expect(await test.invokeFacade(facade(worker))).toBe(test.response);
+      expect(test.validate).toHaveBeenCalledOnce();
+      expect(test.validate.mock.calls[0][0]).toEqual(test.value);
+      expect(test.validate.mock.calls[0][0] === test.value).toBe(!worker);
+      expect(test.deserialize).toHaveBeenCalledTimes(worker ? 1 : 0);
+      expect(test.serialize).not.toHaveBeenCalled();
+      expect(test.bytes).toEqual(originalBytes);
+    });
+
+    it("rejects malformed SSZ before validation", async () => {
+      const test = create(core);
+      expect(await test.invokeCore(new Uint8Array())).toMatchObject({
+        err: {status: "reject", code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE},
+      });
+      expect(test.validate).not.toHaveBeenCalled();
+    });
+
+    it.each([GossipAction.IGNORE, GossipAction.REJECT])("preserves %s results", async (action) => {
+      const test = create(core);
+      const error = new GossipActionError(action, {code: "TEST_VERDICT"});
+      const response = fromResult<never>({err: error});
+      test.validate.mockResolvedValue(response);
+      expect(await test.invokeCore()).toBe(response);
+    });
+
+    it("preserves unexpected API failures", async () => {
+      const test = create(core);
+      const error = new Error("API validation failed");
+      test.validate.mockRejectedValue(error);
+      await expect(test.invokeCore()).rejects.toBe(error);
+    });
+  });
+
+  describe.each([ForkName.phase0, ForkName.electra, ForkName.gloas])("%s proposer verification", (fork) => {
+    it.each([false, true])("uses objects or bytes with beaconEngineWorker=%s", async (worker) => {
+      Object.defineProperty(core, "config", {value: createBeaconConfig(getConfig(fork), Buffer.alloc(32))});
+      const type = sszTypesFor(fork).SignedBeaconBlock;
+      const block = type.defaultValue();
+      if (fork === ForkName.electra) {
+        const attestation = ssz.electra.Attestation.defaultValue();
+        attestation.aggregationBits = BitArray.fromSingleBit(9, 8);
+        block.message.body.attestations.push(attestation);
+      }
+      const bytes = type.serialize(block);
+      const originalBytes = Uint8Array.from(bytes);
+      const deserialize = vi.spyOn(type, "deserialize");
+      const validate = vi.spyOn(core, "verifyAndObserveBlockProposerObject").mockResolvedValue(undefined);
+      await facade(worker).verifyAndObserveBlockProposer(bytes, block, "0x01");
+      expect(validate).toHaveBeenCalledExactlyOnceWith(block, "0x01");
+      expect(validate.mock.calls[0][0] === block).toBe(!worker);
+      expect(deserialize).toHaveBeenCalledTimes(worker ? 1 : 0);
+      expect(bytes).toEqual(originalBytes);
+    });
+  });
+
+  it("rejects truncated block SSZ before proposer verification", async () => {
+    const validate = vi.spyOn(core, "verifyAndObserveBlockProposerObject");
+    await expect(core.verifyAndObserveBlockProposer(new Uint8Array(), "0x01")).rejects.toMatchObject({
+      type: {code: "INVALID_BLOCK_SSZ"},
+    });
+    expect(validate).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed block bodies after reading the slot", async () => {
+    const type = core.config.getForkTypes(0).SignedBeaconBlock;
+    const bytes = type.serialize(type.defaultValue()).slice(0, -1);
+    const validate = vi.spyOn(core, "verifyAndObserveBlockProposerObject");
+    await expect(core.verifyAndObserveBlockProposer(bytes, "0x01")).rejects.toMatchObject({
+      type: {code: "INVALID_BLOCK_SSZ"},
+    });
+    expect(validate).not.toHaveBeenCalled();
+  });
+
+  it("keeps contribution bytes unchanged when the decoded bitvector is mutated", async () => {
+    const type = ssz.altair.SignedContributionAndProof;
+    const value = type.defaultValue();
+    const bytes = type.serialize(value);
+    const originalBytes = Uint8Array.from(bytes);
+    vi.spyOn(core, "validateApiSyncCommitteeContributionAndProofObject").mockImplementation(async (decoded) => {
+      decoded.message.contribution.aggregationBits.set(0, true);
+      expect(decoded.message.contribution.aggregationBits.getTrueBitIndexes()).toEqual([0]);
+      return accept(undefined);
+    });
+    expect(await core.validateApiSyncCommitteeContributionAndProof(bytes)).toEqual(accept(undefined));
+    expect(bytes).toEqual(originalBytes);
+  });
+
+  it.each([false, true])("preserves proposer signature errors with beaconEngineWorker=%s", async (worker) => {
+    const type = core.config.getForkTypes(0).SignedBeaconBlock;
+    const block = type.defaultValue();
+    const error = new GossipActionError(GossipAction.REJECT, {code: "INVALID_SIGNATURE"});
+    vi.spyOn(core, "verifyAndObserveBlockProposerObject").mockRejectedValue(error);
+    await expect(facade(worker).verifyAndObserveBlockProposer(type.serialize(block), block, "0x01")).rejects.toBe(
+      error
+    );
+  });
+
+  it.each([false, true])("verifies envelope publication with beaconEngineWorker=%s", async (worker) => {
+    const type = ssz.gloas.SignedExecutionPayloadEnvelope;
+    const envelope = type.defaultValue();
+    const bytes = type.serialize(envelope);
+    const deserialize = vi.spyOn(type, "deserialize");
+    const validate = vi.spyOn(core, "verifyEnvelopeForPublishObject").mockResolvedValue(undefined);
+    await facade(worker).verifyEnvelopeForPublish(bytes, envelope, "0x01");
+    expect(validate).toHaveBeenCalledExactlyOnceWith(envelope, "0x01");
+    expect(validate.mock.calls[0][0] === envelope).toBe(!worker);
+    expect(deserialize).toHaveBeenCalledTimes(worker ? 1 : 0);
+  });
+
+  it("rejects malformed envelopes before publication checks", async () => {
+    const validate = vi.spyOn(core, "verifyEnvelopeForPublishObject");
+    await expect(core.verifyEnvelopeForPublish(new Uint8Array(), "0x01")).rejects.toMatchObject({statusCode: 400});
+    expect(validate).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("preserves publication API errors with beaconEngineWorker=%s", async (worker) => {
+    const type = ssz.gloas.SignedExecutionPayloadEnvelope;
+    const envelope = type.defaultValue();
+    const error = new ApiError(404, "Block not found");
+    vi.spyOn(core, "verifyEnvelopeForPublishObject").mockRejectedValue(error);
+    await expect(facade(worker).verifyEnvelopeForPublish(type.serialize(envelope), envelope, "0x01")).rejects.toBe(
+      error
+    );
+  });
+});

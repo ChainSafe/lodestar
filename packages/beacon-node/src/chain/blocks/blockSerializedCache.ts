@@ -4,7 +4,6 @@ import {SignedBeaconBlock, Slot, sszTypesFor} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import type {Metrics} from "../../metrics/index.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
-import {SerializedCache} from "../../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {SignedBlockRoot, SignedBlockRootHex, computeSignedBlockRoot, toSignedBlockRootHex} from "./signedBlockRoot.js";
 
@@ -17,7 +16,6 @@ type BlockSerializedCacheOpts = {
   maxItems?: number;
   metrics?: Metrics["blockSerializedCache"] | null;
   logger?: Logger;
-  serializedCache?: SerializedCache;
 };
 
 /**
@@ -103,7 +101,7 @@ export class BlockSerializedCache {
     const hit = cached && (cached.bytes === bytes || byteArrayEquals(cached.bytes, bytes));
     this.opts.metrics?.lookups.inc({owner: this.owner, operation: "deserialize", result: hit ? "hit" : "miss"});
     if (hit) return cached;
-    const {block} = deserializeBlock(this.config, signedBlockRoot, bytes, fork, this.opts.serializedCache);
+    const {block} = deserializeBlock(this.config, signedBlockRoot, bytes, fork);
     return this.set(signedBlockRootHex, block, bytes);
   }
 
@@ -155,8 +153,7 @@ export function deserializeBlock(
   config: ChainForkConfig,
   signedBlockRoot: SignedBlockRoot,
   bytes: Uint8Array,
-  fork?: ForkName,
-  serializedCache?: SerializedCache
+  fork?: ForkName
 ): BlockSerializedCacheEntry {
   if (signedBlockRoot.length !== 32) throw new LodestarError({code: "SIGNED_BLOCK_ROOT_MISMATCH"});
   const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
@@ -166,9 +163,7 @@ export function deserializeBlock(
   try {
     // Bitlist decoding clears padding bits; preserve the bytes retained for import and persistence.
     // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
-    block =
-      serializedCache?.getDeserialized<SignedBeaconBlock>(bytes) ??
-      types.SignedBeaconBlock.deserialize(bytes, {reuseBytes: false});
+    block = types.SignedBeaconBlock.deserialize(bytes, {reuseBytes: false});
   } catch (error) {
     throw new LodestarError({code: "INVALID_BLOCK_SSZ"}, (error as Error).message);
   }

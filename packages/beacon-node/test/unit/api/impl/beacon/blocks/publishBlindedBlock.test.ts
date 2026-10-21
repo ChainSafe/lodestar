@@ -1,4 +1,4 @@
-import {describe, expect, it, vi} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
@@ -7,6 +7,7 @@ import {signedBeaconBlockToBlinded} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {SubmitBlindedBlockResponse} from "../../../../../../src/chain/beaconEngine/interface.js";
 import {
   BlockInputBlobs,
   BlockInputPreData,
@@ -14,9 +15,11 @@ import {
 } from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {getApiTestModules} from "../../../../../utils/api.js";
 
-describe("api - beacon - publishBlindedBlockV2", () => {
+describe.each([false, true])("api - beacon - publishBlindedBlockV2 (response bytes: %s)", (withResponseBytes) => {
+  afterEach(() => vi.restoreAllMocks());
+
   it.each([false, true])(
-    "publishes full block bytes returned by the engine before Fulu (SSZ request: %s)",
+    "publishes the full block returned by the engine before Deneb (SSZ request: %s)",
     async (sszRequest) => {
       const config = createBeaconConfig(
         {...configDef, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0},
@@ -27,7 +30,10 @@ describe("api - beacon - publishBlindedBlockV2", () => {
       const signedBlindedBlock = ssz.capella.SignedBlindedBeaconBlock.defaultValue();
       const bytes = ssz.capella.SignedBlindedBeaconBlock.serialize(signedBlindedBlock);
       const signedBlock = ssz.capella.SignedBeaconBlock.defaultValue();
-      const response = defer<Uint8Array>();
+      const contentsBytes = ssz.capella.SignedBeaconBlock.serialize(signedBlock);
+      const serialize = vi.spyOn(ssz.capella.SignedBeaconBlock, "serialize");
+      const deserialize = vi.spyOn(ssz.capella.SignedBeaconBlock, "deserialize");
+      const response = defer<SubmitBlindedBlockResponse>();
       const submit = vi.fn().mockReturnValue(response.promise);
       modules.chain.beaconEngine.submitBlindedBlock = submit;
       modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
@@ -46,17 +52,25 @@ describe("api - beacon - publishBlindedBlockV2", () => {
         {signedBlindedBlock, broadcastValidation: routes.beacon.BroadcastValidation.none},
         {sszBytes: sszRequest ? bytes : null}
       );
-      expect(submit).toHaveBeenCalledExactlyOnceWith(bytes, ForkName.capella);
+      expect(submit).toHaveBeenCalledExactlyOnceWith(bytes, signedBlindedBlock, ForkName.capella);
       if (sszRequest) expect(submit.mock.calls[0][0]).toBe(bytes);
       expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
-      response.resolve(ssz.capella.SignedBeaconBlock.serialize(signedBlock));
+      response.resolve({
+        signedBlockContents: {signedBlock},
+        contentsBytes: withResponseBytes ? contentsBytes : undefined,
+      });
       await publishing;
       expect(modules.network.publishBeaconBlock).toHaveBeenCalledExactlyOnceWith(signedBlock);
+      expect(vi.mocked(modules.network.publishBeaconBlock).mock.calls[0][0]).toBe(signedBlock);
+      expect(serialize).toHaveBeenCalledTimes(withResponseBytes ? 0 : 1);
+      expect(deserialize).not.toHaveBeenCalled();
+      expect(modules.chain.serializedCache.get(signedBlock)).toEqual(contentsBytes);
+      if (withResponseBytes) expect(modules.chain.serializedCache.get(signedBlock)).toBe(contentsBytes);
       expect(modules.chain.processBlock).toHaveBeenCalledWith(expect.anything(), {ignoreIfKnown: true});
     }
   );
 
-  it.each([false, true])("publishes serialized Deneb contents (cached response: %s)", async (cachedResponse) => {
+  it("publishes Deneb contents and reuses available block bytes", async () => {
     const config = createBeaconConfig(
       {...configDef, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0, DENEB_FORK_EPOCH: 0},
       new Uint8Array(32)
@@ -81,18 +95,20 @@ describe("api - beacon - publishBlindedBlockV2", () => {
         daOutOfRange: false,
       })
     );
-    modules.chain.beaconEngine.submitBlindedBlock = vi.fn().mockResolvedValue(contentsBytes);
-    if (cachedResponse) modules.chain.serializedCache.set(contents, contentsBytes);
+    modules.chain.beaconEngine.submitBlindedBlock = vi.fn().mockResolvedValue({
+      signedBlockContents: contents,
+      contentsBytes: withResponseBytes ? contentsBytes : undefined,
+    });
     const deserialize = vi.spyOn(ssz.deneb.SignedBlockContents, "deserialize");
-    try {
-      await getBeaconBlockApi(modules).publishBlindedBlockV2({
-        signedBlindedBlock: signedBeaconBlockToBlinded(config, contents.signedBlock),
-        broadcastValidation: routes.beacon.BroadcastValidation.none,
-      });
-      expect(deserialize).toHaveBeenCalledTimes(cachedResponse ? 0 : 1);
-    } finally {
-      deserialize.mockRestore();
-    }
+    const serialize = vi.spyOn(ssz.deneb.SignedBlockContents, "serialize");
+    const serializeBlock = vi.spyOn(ssz.deneb.SignedBeaconBlock, "serialize");
+    await getBeaconBlockApi(modules).publishBlindedBlockV2({
+      signedBlindedBlock: signedBeaconBlockToBlinded(config, contents.signedBlock),
+      broadcastValidation: routes.beacon.BroadcastValidation.none,
+    });
+    expect(deserialize).not.toHaveBeenCalled();
+    expect(serialize).not.toHaveBeenCalled();
+    expect(serializeBlock).toHaveBeenCalledTimes(withResponseBytes ? 0 : 1);
     expect(modules.network.publishBeaconBlock).toHaveBeenCalledExactlyOnceWith(contents.signedBlock);
     expect(modules.network.publishBlobSidecar).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
@@ -101,9 +117,10 @@ describe("api - beacon - publishBlindedBlockV2", () => {
       })
     );
     const publishedBlock = vi.mocked(modules.network.publishBeaconBlock).mock.calls[0][0];
+    expect(publishedBlock).toBe(contents.signedBlock);
     const blockBytes = modules.chain.serializedCache.get(publishedBlock);
     expect(blockBytes).toEqual(ssz.deneb.SignedBeaconBlock.serialize(contents.signedBlock));
-    expect(blockBytes?.buffer).toBe(contentsBytes.buffer);
+    if (withResponseBytes) expect(blockBytes?.buffer).toBe(contentsBytes.buffer);
   });
 
   it.each([false, true])(
@@ -132,7 +149,7 @@ describe("api - beacon - publishBlindedBlockV2", () => {
         {signedBlindedBlock},
         {sszBytes: sszRequest ? bytes : null}
       );
-      expect(submit).toHaveBeenCalledExactlyOnceWith(bytes, ForkName.fulu);
+      expect(submit).toHaveBeenCalledExactlyOnceWith(bytes, signedBlindedBlock, ForkName.fulu);
       if (sszRequest) expect(submit.mock.calls[0][0]).toBe(bytes);
       const error = new Error("Builder submission failed");
       response.reject(error);

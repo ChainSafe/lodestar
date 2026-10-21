@@ -9,7 +9,7 @@ import {
 import {IndexedAttestation, SignedBeaconBlock, WithBytes, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {BlockBytes, BlockSerializedCacheEntry, deserializeBlock} from "../blocks/blockSerializedCache.js";
+import {BlockBytes, deserializeBlock} from "../blocks/blockSerializedCache.js";
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../blocks/signedBlockRoot.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
@@ -17,6 +17,7 @@ import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransi
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
+import {VerifiedBlockBundle} from "./importBlock.js";
 import {VerifyBlocksOpts, VerifyBlocksSuccess} from "./interface.js";
 
 /**
@@ -33,11 +34,11 @@ export async function verifyBlocks(
 ): Promise<VerifyBlocksSuccess> {
   const entries = blockData.map(({signedBlockRoot, blockBytes}) => {
     const entry = isApiValidation
-      ? deserializeBlock(this.config, signedBlockRoot, blockBytes, undefined, this.serializedCache)
+      ? deserializeBlock(this.config, signedBlockRoot, blockBytes)
       : this.blockSerializedCache.getOrDeserialize(signedBlockRoot, blockBytes);
-    return {...entry, signedBlockRoot};
+    return {data: entry.block, bytes: entry.bytes};
   });
-  return verifyBlocksImpl.call(this, entries, opts, isApiValidation);
+  return verifyBlocksObject.call(this, entries, opts, isApiValidation);
 }
 
 export async function verifyBlocksObject(
@@ -46,23 +47,25 @@ export async function verifyBlocksObject(
   opts: VerifyBlocksOpts,
   isApiValidation = false
 ): Promise<VerifyBlocksSuccess> {
-  const entries = blockData.map(({data: block, bytes}) => {
-    const signedBlockRoot = computeSignedBlockRoot(this.config.getForkName(block.message.slot), block);
-    const entry = isApiValidation
-      ? {block, bytes}
-      : this.blockSerializedCache.set(toSignedBlockRootHex(signedBlockRoot), block, bytes);
-    return {...entry, signedBlockRoot};
-  });
-  return verifyBlocksImpl.call(this, entries, opts, isApiValidation);
+  const {verifiedBlocks, ...result} = await verifyBlocksImpl.call(this, blockData, opts, isApiValidation);
+  // Both entrypoints retain live post-states in Core until import/discard; only metadata leaves verification.
+  // API broadcast validation must not overwrite bundles awaiting import for the same signed root.
+  if (!isApiValidation) {
+    for (const bundle of verifiedBlocks) {
+      const fork = this.config.getForkName(bundle.block.message.slot);
+      this.verifiedBlocks.set(toSignedBlockRootHex(computeSignedBlockRoot(fork, bundle.block)), bundle);
+    }
+  }
+  return result;
 }
 
 async function verifyBlocksImpl(
   this: BeaconEngineCore,
-  entries: (BlockSerializedCacheEntry & Pick<BlockBytes, "signedBlockRoot">)[],
+  entries: WithBytes<SignedBeaconBlock>[],
   opts: VerifyBlocksOpts,
   isApiValidation: boolean
-): Promise<VerifyBlocksSuccess> {
-  const blocks = entries.map(({block}) => block);
+): Promise<VerifyBlocksSuccess & {verifiedBlocks: VerifiedBlockBundle[]}> {
+  const blocks = entries.map(({data}) => data);
   const blockRoots = blocks.map((block) =>
     toRootHex(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message))
   );
@@ -78,7 +81,7 @@ async function verifyBlocksImpl(
     }
   }
 
-  // [beacon-engine] deviation: verify consensus and EL internally and retain post-states in the engine-owned bundle cache.
+  // [beacon-engine] deviation: verify consensus and EL internally; DA remains in the facade.
   const block0 = blocks[0];
   if (!block0) throw Error("Empty blocks");
   const parentRoot = toRootHex(block0.message.parentRoot);
@@ -142,7 +145,7 @@ async function verifyBlocksImpl(
           blocks,
           // [beacon-engine] deviation: DA gates import facade-side, outside consensus verification.
           blocks.map(() => DataAvailabilityStatus.Available),
-          // [beacon-engine] deviation: retain the bytes paired with the cached block across worker calls.
+          // [beacon-engine] deviation: reuse the bytes paired with each block.
           blockBytes,
           this.logger,
           this.metrics,
@@ -185,30 +188,25 @@ async function verifyBlocksImpl(
       throw segmentExecStatus.execAborted.execError;
     }
 
-    // [beacon-engine] deviation: retain verification bundles instead of returning FullyVerifiedBlock state objects.
-    // API validation may reject publication after consensus succeeds. Its post-states must stay local
-    // to this call, and it must not overwrite a bundle belonging to a concurrent import of the same root.
-    if (!isApiValidation) {
-      for (let i = 0; i < blocks.length; i++) {
-        const block = blocks[i];
-        const blockRootHex = blockRoots[i];
+    const verifiedBlocks = blocks.map((block, i) => {
+      if (!isApiValidation) {
         // Source: unstable@708700cdf6 packages/beacon-node/src/chain/blocks/index.ts#processBlocks, proposer marking loop.
         // [beacon-engine] deviation: mark after engine verification, without waiting for facade DA.
-        this.seenBlockProposers.add(block.message.slot, block.message.proposerIndex, blockRootHex);
-        this.verifiedBlocks.set(toSignedBlockRootHex(entries[i].signedBlockRoot), {
-          executionStatus: segmentExecStatus.executionStatuses[i],
-          postState: postStates[i],
-          block,
-          blockBytes: blockBytes[i],
-          indexedAttestations: indexedAttestationsByBlock[i],
-          proposerBalanceDelta: proposerBalanceDeltas[i],
-          parentBlockSlot: i === 0 ? parentBlock.slot : blocks[i - 1].message.slot,
-          seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-        });
+        this.seenBlockProposers.add(block.message.slot, block.message.proposerIndex, blockRoots[i]);
       }
-    }
+      return {
+        executionStatus: segmentExecStatus.executionStatuses[i],
+        postState: postStates[i],
+        block,
+        blockBytes: blockBytes[i],
+        indexedAttestations: indexedAttestationsByBlock[i],
+        proposerBalanceDelta: proposerBalanceDeltas[i],
+        parentBlockSlot: i === 0 ? parentBlock.slot : blocks[i - 1].message.slot,
+        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+      };
+    });
 
-    return {segmentExecStatus, verifyStateTime, verifySignaturesTime};
+    return {segmentExecStatus, verifyStateTime, verifySignaturesTime, verifiedBlocks};
   } finally {
     abortController.abort();
   }

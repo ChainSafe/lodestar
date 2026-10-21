@@ -102,7 +102,7 @@ describe("chain / blocks / processBlocks", () => {
 
     await processBlocks.call(chain, [blockInput], null, {});
 
-    expect(importBlock).toHaveBeenCalledOnce();
+    expect(importBlock).toHaveBeenCalledExactlyOnceWith(blockInput, DataAvailabilityStatus.Available, {});
     expect(discard).not.toHaveBeenCalled();
   });
 

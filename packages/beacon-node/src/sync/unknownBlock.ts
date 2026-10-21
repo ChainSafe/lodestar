@@ -1278,10 +1278,14 @@ export class BlockInputSync {
         this.chain.serializedCache.get(pendingPayload.envelope) ??
         ssz.gloas.SignedExecutionPayloadEnvelope.serialize(pendingPayload.envelope);
       if (!this.chain.opts.beaconEngineWorker) this.chain.serializedCache.set(pendingPayload.envelope, envelopeBytes);
-      const validationResult = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(envelopeBytes, {
-        source: PayloadEnvelopeInputSource.byRoot,
-        seenTimestampSec: pendingPayload.timeAddedSec,
-      });
+      const validationResult = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(
+        envelopeBytes,
+        pendingPayload.envelope,
+        {
+          source: PayloadEnvelopeInputSource.byRoot,
+          seenTimestampSec: pendingPayload.timeAddedSec,
+        }
+      );
       if (validationResult.err !== null) {
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
@@ -1585,7 +1589,7 @@ export class BlockInputSync {
           const envelopeBytes =
             this.chain.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
           if (!this.chain.opts.beaconEngineWorker) this.chain.serializedCache.set(envelope, envelopeBytes);
-          const res = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(envelopeBytes, {
+          const res = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(envelopeBytes, envelope, {
             source: PayloadEnvelopeInputSource.byRoot,
             seenTimestampSec: Date.now() / 1000,
             peerIdStr: peerId,

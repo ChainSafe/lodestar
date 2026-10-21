@@ -9,6 +9,7 @@ import {
   ProposerPreferencesErrorCode,
 } from "../../../../../src/chain/errors/index.js";
 import {validateGossipProposerPreferences} from "../../../../../src/chain/validation/proposerPreferences.js";
+import {withBeaconEngineFacade} from "../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 
 vi.mock("../../../../../src/chain/validation/proposerPreferences.js", async (importActual) => ({
@@ -31,7 +32,9 @@ describe("api/validator - submitProposerPreferences", () => {
     modules = getApiTestModules();
     modules.chain.beaconEngine.validateGossipProposerPreferences =
       BeaconEngineCore.prototype.validateGossipProposerPreferences.bind(modules.chain.beaconEngine);
-    api = getValidatorApi(defaultApiOptions, modules);
+    modules.chain.beaconEngine.validateGossipProposerPreferencesObject =
+      BeaconEngineCore.prototype.validateGossipProposerPreferencesObject.bind(modules.chain.beaconEngine);
+    api = getValidatorApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
     vi.spyOn(modules.chain.clock, "currentEpoch", "get").mockReturnValue(5);
     modules.network.publishProposerPreferences = vi.fn().mockResolvedValue(1);
   });

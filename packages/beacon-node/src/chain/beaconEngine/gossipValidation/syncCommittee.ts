@@ -20,11 +20,7 @@ export async function validateGossipSyncCommittee(
   subnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
   try {
-    const syncCommittee = deserializeGossipMessage(
-      ssz.altair.SyncCommitteeMessage,
-      syncCommitteeBytes,
-      this.serializedCache
-    );
+    const syncCommittee = deserializeGossipMessage(ssz.altair.SyncCommitteeMessage, syncCommitteeBytes);
     return await validateGossipSyncCommitteeObject.call(this, syncCommittee, subnet);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -107,8 +103,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   try {
     const signedContributionAndProof = deserializeGossipMessage(
       ssz.altair.SignedContributionAndProof,
-      contributionBytes,
-      this.serializedCache
+      contributionBytes
     );
     return await validateSyncCommitteeGossipContributionAndProofObject.call(
       this,

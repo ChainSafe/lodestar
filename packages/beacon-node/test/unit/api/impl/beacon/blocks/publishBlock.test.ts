@@ -14,7 +14,6 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../../../../src/chain/blocks/blockInput/index.js";
-import {computeSignedBlockRoot} from "../../../../../../src/chain/blocks/signedBlockRoot.js";
 import {validateApiBlock} from "../../../../../../src/chain/blocks/validateApiBlock.js";
 import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../../../../../src/chain/errors/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
@@ -42,7 +41,11 @@ describe("api - beacon - publishBlockV2", () => {
     vi.clearAllMocks();
     vi.mocked(validateApiBlock).mockResolvedValue(undefined);
     modules = getApiTestModules({config});
-    for (const name of ["validateGossipBlock", "getConflictingBlockRoots", "verifyAndObserveBlockProposer"] as const) {
+    for (const name of [
+      "validateGossipBlockObject",
+      "getConflictingBlockRoots",
+      "verifyAndObserveBlockProposerObject",
+    ] as const) {
       Object.defineProperty(modules.chain.beaconEngine, name, {
         value: BeaconEngineCore.prototype[name].bind(modules.chain.beaconEngine),
         configurable: true,
@@ -60,7 +63,7 @@ describe("api - beacon - publishBlockV2", () => {
     const root = ssz.phase0.BeaconBlock.hashTreeRoot(signedBlock.message);
     const rootHex = toRootHex(root);
     const bytes = ssz.phase0.SignedBeaconBlock.serialize(signedBlock);
-    const validate = vi.spyOn(modules.chain.beaconEngine, "validateGossipBlock");
+    const validate = vi.spyOn(modules.chain.beaconEngine, "validateGossipBlockObject");
     modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
       BlockInputPreData.createFromBlock({
         block: signedBlock,
@@ -82,13 +85,8 @@ describe("api - beacon - publishBlockV2", () => {
       sszRequest ? {sszBytes: bytes} : undefined
     );
     expect(deserialize).not.toHaveBeenCalled();
-    expect(validate).toHaveBeenCalledExactlyOnceWith(
-      computeSignedBlockRoot(ForkName.phase0, signedBlock),
-      bytes,
-      ForkName.phase0,
-      undefined
-    );
-    expect(validate.mock.calls[0][1]).toBe(modules.chain.serializedCache.get(signedBlock));
+    expect(validate).toHaveBeenCalledExactlyOnceWith({data: signedBlock, bytes}, ForkName.phase0, undefined);
+    expect(validate.mock.calls[0][0].bytes).toBe(modules.chain.serializedCache.get(signedBlock));
     expect(modules.chain.serializedCache.get(signedBlock)).toEqual(bytes);
     if (sszRequest) expect(modules.chain.serializedCache.get(signedBlock)).toBe(bytes);
     deserialize.mockRestore();
@@ -112,7 +110,7 @@ describe("api - beacon - publishBlockV2", () => {
             daOutOfRange: false,
           })
         );
-        Object.defineProperty(modules.chain.beaconEngine, "validateGossipBlock", {
+        Object.defineProperty(modules.chain.beaconEngine, "validateGossipBlockObject", {
           value: vi.fn().mockResolvedValue({err: {status, code}}),
           configurable: true,
         });
@@ -416,7 +414,7 @@ describe("api - beacon - publishBlockV2", () => {
               throw error;
             });
           } else if (failure === "proposer signature") {
-            modules.chain.beaconEngine.verifyAndObserveBlockProposer = vi.fn(async () => {
+            modules.chain.beaconEngine.verifyAndObserveBlockProposerObject = vi.fn(async () => {
               beforeRejection();
               throw error;
             });

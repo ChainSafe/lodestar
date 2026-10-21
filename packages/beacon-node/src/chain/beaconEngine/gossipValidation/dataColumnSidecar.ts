@@ -15,11 +15,7 @@ export async function validateGossipFuluDataColumnSidecar(
   gossipSubnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
   try {
-    const dataColumnSidecar = deserializeGossipMessage(
-      ssz.fulu.DataColumnSidecar,
-      dataColumnBytes,
-      this.serializedCache
-    );
+    const dataColumnSidecar = deserializeGossipMessage(ssz.fulu.DataColumnSidecar, dataColumnBytes);
     return await validateGossipFuluDataColumnSidecarObject.call(this, dataColumnSidecar, gossipSubnet);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -59,11 +55,7 @@ export async function validateGossipGloasDataColumnSidecar(
   gossipSubnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
   try {
-    const dataColumnSidecar = deserializeGossipMessage(
-      ssz.gloas.DataColumnSidecar,
-      dataColumnBytes,
-      this.serializedCache
-    );
+    const dataColumnSidecar = deserializeGossipMessage(ssz.gloas.DataColumnSidecar, dataColumnBytes);
     return await validateGossipGloasDataColumnSidecarObject.call(this, dataColumnSidecar, gossipSubnet);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});

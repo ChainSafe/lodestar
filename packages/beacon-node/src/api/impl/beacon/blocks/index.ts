@@ -25,7 +25,6 @@ import {
 import {
   ProducedBlockSource,
   SignedBeaconBlock,
-  SignedBlockContents,
   deneb,
   fulu,
   gloas,
@@ -533,28 +532,20 @@ export function getBeaconBlockApi({
     const signedBlindedBlockBytes =
       context?.sszBytes ??
       config.getPostBellatrixForkTypes(slot).SignedBlindedBeaconBlock.serialize(signedBlindedBlock);
-    if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signedBlindedBlock, signedBlindedBlockBytes);
 
     if (isForkPostFulu(fork)) {
-      await chain.beaconEngine.submitBlindedBlockNoResponse(signedBlindedBlockBytes, fork);
+      await chain.beaconEngine.submitBlindedBlockNoResponse(signedBlindedBlockBytes, signedBlindedBlock, fork);
       chain.logger.info("Submitted blinded block to builder for publishing", {slot, blockRoot});
     } else {
       // TODO: After fulu is live and all builders support submitBlindedBlockV2, we can safely remove
       // this code block and related functions
       chain.logger.debug("Reconstructing full signed block contents", {slot, blockRoot, source});
 
-      const contentsBytes = await chain.beaconEngine.submitBlindedBlock(
+      const {signedBlockContents, contentsBytes} = await chain.beaconEngine.submitBlindedBlock(
         signedBlindedBlockBytes,
+        signedBlindedBlock,
         fork as ForkPostBellatrix & ForkPreGloas
       );
-      const signedBlockContents = isForkPostDeneb(fork)
-        ? (chain.serializedCache.getDeserialized<SignedBlockContents<typeof fork>>(contentsBytes) ??
-          sszTypesFor(fork).SignedBlockContents.deserialize(contentsBytes))
-        : {
-            signedBlock:
-              chain.serializedCache.getDeserialized<SignedBeaconBlock<typeof fork>>(contentsBytes) ??
-              sszTypesFor(fork).SignedBeaconBlock.deserialize(contentsBytes),
-          };
 
       // the full block is published by relay and it's possible that the block is already known to us
       // by gossip
@@ -563,7 +554,7 @@ export function getBeaconBlockApi({
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       return publishBlockV2(
         {signedBlockContents, broadcastValidation},
-        {...context, sszBytes: contentsBytes},
+        {...context, sszBytes: contentsBytes ?? null},
         {...opts, ignoreIfKnown: true}
       );
     }

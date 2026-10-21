@@ -104,6 +104,7 @@ export function withBeaconEngineFacade(chain: MockedBeaconChain): BeaconChain {
       emitter,
       clock: chain.clock,
       serializedCache: chain.serializedCache,
+      beaconEngineWorker: chain.opts.beaconEngineWorker,
     }),
   });
 }
@@ -206,7 +207,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
     const clock =
       clockParam === "real" ? new Clock({config, genesisTime, signal: new AbortController().signal}) : getMockedClock();
 
-    const serializedCache = new SerializedCache({cacheDeserialized: true});
+    const serializedCache = new SerializedCache();
     return {
       config,
       opts: {},
@@ -216,7 +217,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       clock,
       forkChoice: getMockedForkChoice(),
       serializedCache,
-      blockSerializedCache: new BlockSerializedCache(config, {serializedCache}),
+      blockSerializedCache: new BlockSerializedCache(config),
       verifiedBlocks: new Map(),
       publishChainView: vi.fn(),
       executionEngine: {
@@ -351,8 +352,35 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "validateGossipLightClientOptimisticUpdate",
     "validateGossipLightClientFinalityUpdate",
     "verifyBlocks",
+    "verifyBlocksObject",
     "verifyGossipBlock",
+    "verifyGossipBlockObject",
     "validateApiBlock",
+    "validateGossipLightClientOptimisticUpdateObject",
+    "validateGossipLightClientFinalityUpdateObject",
+    "validateGossipBlockObject",
+    "validateGossipSyncCommitteeObject",
+    "validateApiSyncCommitteeObject",
+    "validateSyncCommitteeGossipContributionAndProofObject",
+    "validateApiSyncCommitteeContributionAndProofObject",
+    "validateGossipBlobSidecarObject",
+    "validateGossipFuluDataColumnSidecarObject",
+    "validateGossipGloasDataColumnSidecarObject",
+    "validateGossipPayloadAttestationMessageObject",
+    "validateApiPayloadAttestationMessageObject",
+    "validateGossipAggregateAndProofObject",
+    "validateApiAggregateAndProofObject",
+    "validateGossipExecutionPayloadEnvelopeObject",
+    "validateApiExecutionPayloadEnvelopeObject",
+    "validateGossipExecutionPayloadBidObject",
+    "validateApiExecutionPayloadBidObject",
+    "validateGossipProposerPreferencesObject",
+    "validateGossipAttesterSlashingObject",
+    "validateGossipProposerSlashingObject",
+    "validateGossipVoluntaryExitObject",
+    "validateGossipBlsToExecutionChangeObject",
+    "validateApiBlockObject",
+    "importExecutionPayloadObject",
     "verifyAndObserveBlockProposerObject",
     "verifyEnvelopeForPublishObject",
     "validateApiExecutionPayloadBid",

@@ -14,46 +14,53 @@ import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mocke
 describe("API block validation", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("rehydrates a cloned failure and aborts pending DA without observing the proposer", async () => {
-    const chain = getMockedBeaconChain();
-    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    const root = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
-    const blockInput = BlockInputPreData.createFromBlock({
-      block,
-      blockRootHex: toRootHex(root),
-      forkName: ForkName.phase0,
-      source: BlockInputSource.api,
-      seenTimestampSec: 0,
-      daOutOfRange: false,
-    });
-    const error = new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, stateSlot: 0});
-    chain.beaconEngine.validateApiBlock = vi.fn().mockResolvedValue(
-      structuredClone({
-        err: blockFailureFromError(error, chain.config, [computeSignedBlockRoot(ForkName.phase0, block)]),
-      })
-    );
-    const available = vi
-      .spyOn(da, "verifyBlocksDataAvailability")
-      .mockImplementation(
-        (_blocks, signal) =>
-          new Promise((_resolve, reject) => signal.addEventListener("abort", () => reject(new Error("aborted"))))
+  it.each([false, true])(
+    "rehydrates a cloned failure and aborts pending DA (worker: %s)",
+    async (beaconEngineWorker) => {
+      const chain = getMockedBeaconChain();
+      chain.opts.beaconEngineWorker = beaconEngineWorker;
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const root = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
+      const blockInput = BlockInputPreData.createFromBlock({
+        block,
+        blockRootHex: toRootHex(root),
+        forkName: ForkName.phase0,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+      });
+      const error = new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, stateSlot: 0});
+      const validate = vi.fn().mockResolvedValue(
+        structuredClone({
+          err: blockFailureFromError(error, chain.config, [computeSignedBlockRoot(ForkName.phase0, block)]),
+        })
       );
-    const observe = vi.spyOn(chain.beaconEngine.seenBlockProposers, "observeBlockRoot");
-    const validation = validateApiBlock.call(withBeaconEngineFacade(chain), blockInput, {});
-    await expect(validation).rejects.toBeInstanceOf(BlockError);
-    await validation.catch((failure: BlockError) => {
-      expect(failure.signedBlock).toBe(block);
-      expect(failure.type).toEqual(error.type);
-    });
-    expect(chain.beaconEngine.validateApiBlock).toHaveBeenCalledExactlyOnceWith(
-      computeSignedBlockRoot(ForkName.phase0, block),
-      ssz.phase0.SignedBeaconBlock.serialize(block),
-      {}
-    );
-    expect(available.mock.calls[0][1].aborted).toBe(true);
-    expect(observe).not.toHaveBeenCalled();
-    expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
-  });
+      chain.beaconEngine.validateApiBlock = validate;
+      chain.beaconEngine.validateApiBlockObject = validate;
+      const available = vi
+        .spyOn(da, "verifyBlocksDataAvailability")
+        .mockImplementation(
+          (_blocks, signal) =>
+            new Promise((_resolve, reject) => signal.addEventListener("abort", () => reject(new Error("aborted"))))
+        );
+      const observe = vi.spyOn(chain.beaconEngine.seenBlockProposers, "observeBlockRoot");
+      const validation = validateApiBlock.call(withBeaconEngineFacade(chain), blockInput, {});
+      await expect(validation).rejects.toBeInstanceOf(BlockError);
+      await validation.catch((failure: BlockError) => {
+        expect(failure.signedBlock).toBe(block);
+        expect(failure.type).toEqual(error.type);
+      });
+      const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
+      expect(validate).toHaveBeenCalledExactlyOnceWith(
+        ...(beaconEngineWorker
+          ? [computeSignedBlockRoot(ForkName.phase0, block), bytes, {}]
+          : [{data: block, bytes}, {}])
+      );
+      expect(available.mock.calls[0][1].aborted).toBe(true);
+      expect(observe).not.toHaveBeenCalled();
+      expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
+    }
+  );
 
   it.each([false, true])("waits for DA without discarding an import bundle (failure: %s)", async (failure) => {
     const chain = getMockedBeaconChain();
@@ -70,7 +77,7 @@ describe("API block validation", () => {
     const available = defer<Awaited<ReturnType<typeof da.verifyBlocksDataAvailability>>>();
     vi.spyOn(da, "verifyBlocksDataAvailability").mockReturnValue(available.promise);
     const validate = vi.fn().mockResolvedValue({err: null, result: undefined});
-    chain.beaconEngine.validateApiBlock = validate;
+    chain.beaconEngine.validateApiBlockObject = validate;
     const discard = vi.spyOn(chain.beaconEngine, "discardVerifiedBlocks");
     const validation = validateApiBlock.call(withBeaconEngineFacade(chain), blockInput, {});
     let settled = false;
@@ -87,8 +94,7 @@ describe("API block validation", () => {
     await Promise.resolve();
     expect(settled).toBe(false);
     expect(validate).toHaveBeenCalledExactlyOnceWith(
-      computeSignedBlockRoot(ForkName.phase0, block),
-      ssz.phase0.SignedBeaconBlock.serialize(block),
+      {data: block, bytes: ssz.phase0.SignedBeaconBlock.serialize(block)},
       {}
     );
 

@@ -232,9 +232,8 @@ export class BeaconNode {
       timeout: opts.executionBuilder.timeout,
       userAgent: opts.executionBuilder.userAgent,
     };
-    const serializedCache = new SerializedCache({cacheDeserialized: !opts.chain.beaconEngineWorker});
+    const serializedCache = new SerializedCache();
     const beaconEngineCore = new BeaconEngineCore({
-      serializedCache: opts.chain.beaconEngineWorker ? undefined : serializedCache,
       validatorMonitorOpts:
         opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
       isAnchorStateFinalized: stateInitialization.isFinalized,
@@ -266,7 +265,14 @@ export class BeaconNode {
       executionBuilderOpts: opts.executionBuilder,
       builderApiClientOpts,
     });
-    const beaconEngine = new BeaconEngine({core: beaconEngineCore, config, emitter, clock, serializedCache});
+    const beaconEngine = new BeaconEngine({
+      core: beaconEngineCore,
+      config,
+      emitter,
+      clock,
+      serializedCache,
+      beaconEngineWorker: opts.chain.beaconEngineWorker,
+    });
     await beaconEngineCore.init();
     const {earliestAvailableSlot} = await executeStateInitialization(
       beaconEngine,

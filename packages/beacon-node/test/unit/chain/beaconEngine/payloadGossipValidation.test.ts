@@ -70,7 +70,6 @@ describe("BeaconEngineCore payload gossip validation", () => {
 
   function validateEnvelope() {
     const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
-    chain.serializedCache.set(envelope, bytes);
     return engine.validateGossipExecutionPayloadEnvelope(bytes, {
       source: PayloadEnvelopeInputSource.gossip,
       seenTimestampSec: 1,
@@ -83,10 +82,11 @@ describe("BeaconEngineCore payload gossip validation", () => {
     const elapsed = vi.spyOn(engine.clock, "secFromSlot").mockReturnValue(1.25);
     const outcome = await validateEnvelope();
     expect(outcome).toEqual({err: null, result: undefined});
-    expect(observed).toHaveBeenCalledExactlyOnceWith(OpSource.gossip, 1.25, envelope);
     expect(elapsed).toHaveBeenCalledWith(1, 1);
     const input = engine.seenPayloadEnvelopeInputCache.get(root);
     if (!input) throw new Error("Engine payload input missing after validation");
+    expect(observed).toHaveBeenCalledExactlyOnceWith(OpSource.gossip, 1.25, input.getPayloadEnvelope());
+    expect(input.getPayloadEnvelope()).not.toBe(envelope);
     expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(input.getPayloadEnvelope(), envelope)).toBe(true);
     expect(input?.getPayloadEnvelopeSource()).toEqual({
       source: PayloadEnvelopeInputSource.gossip,
@@ -140,7 +140,6 @@ describe("BeaconEngineCore payload gossip validation", () => {
     const result = await BeaconEngineCore.prototype.validateApiExecutionPayloadEnvelope.call(
       engine,
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
-      envelope,
       1
     );
     expect(result.err).toBeNull();
@@ -194,7 +193,11 @@ describe("BeaconEngineCore payload gossip validation", () => {
     chain.forkChoice.getBlockHex.mockReturnValue({...zeroProtoBlock, slot: 1, blockRoot: root});
     chain.regen.getBlockSlotState.mockRejectedValueOnce(new Error("state unavailable"));
     const verify = () =>
-      BeaconEngineCore.prototype.verifyEnvelopeForPublish.call(engine, new Uint8Array(), envelope, root);
+      BeaconEngineCore.prototype.verifyEnvelopeForPublish.call(
+        engine,
+        ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+        root
+      );
     await expect(verify()).rejects.toThrow("Unable to regenerate");
     expect(engine.seenPayloadEnvelopeInputCache.get(root)?.hasPayloadEnvelope()).toBe(true);
     vi.spyOn(envelopeVerification, "verifyExecutionPayloadEnvelope").mockImplementation(() => {

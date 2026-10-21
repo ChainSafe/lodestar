@@ -140,6 +140,9 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
       chain.beaconEngine.verifiedBlocks.get(toSignedBlockRootHex(computeSignedBlockRoot(ForkName.gloas, block)))
         ?.indexedAttestations
     ).toEqual([{data: attestation.data, signature: attestation.signature, attestingIndices: [10, 30]}]);
+    expect(result).not.toHaveProperty("verifiedBlocks");
+    expect(result).not.toHaveProperty("postStates");
+    expect(structuredClone(result)).toEqual(result);
     expect(chain.shufflingCache.processState).not.toHaveBeenCalled();
     expect(chain.shufflingCache.getIndexedAttestation).not.toHaveBeenCalled();
     expect(result.blockDAStatuses).toEqual([DataAvailabilityStatus.NotRequired]);

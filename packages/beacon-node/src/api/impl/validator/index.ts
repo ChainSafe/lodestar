@@ -948,8 +948,7 @@ export function getValidatorApi(
 
       const registrationsBytes =
         routes.validator.SignedValidatorRegistrationV1ListType.serialize(filteredRegistrations);
-      if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(filteredRegistrations, registrationsBytes);
-      await chain.beaconEngine.registerValidator(currentEpoch, registrationsBytes);
+      await chain.beaconEngine.registerValidator(currentEpoch, registrationsBytes, filteredRegistrations);
 
       logger.debug("Forwarded validator registrations to connected builder", {
         epoch: currentEpoch,
@@ -976,8 +975,7 @@ export function getValidatorApi(
             dependentRoot: toRootHex(signed.message.dependentRoot),
           };
           try {
-            if (!chain.opts.beaconEngineWorker) chain.serializedCache.set(signed, preferencesBytes[i]);
-            const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes[i]);
+            const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes[i], signed);
             if (res.err !== null) {
               if (res.err.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
                 attachedValidatorIndices.push(signed.message.validatorIndex);

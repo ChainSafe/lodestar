@@ -43,7 +43,7 @@ export async function importBlock(
   });
 
   // 2-5. Delegate to engine: state transition, fork choice, head computation.
-  // The main-thread engine retains the input; its core takes only the root as bytes.
+  // Both modes resolve the verification bundle inside Core by signed root; live post-state stays engine-owned.
   // [beacon-engine] moved: consensus import, addAttestationPreElectra/addAttestationPostElectra,
   // and import FCU now live in packages/beacon-node/src/chain/beaconEngine/importBlock.ts.
   // On unstable merges, sync that logic there; retain facade side effects here.

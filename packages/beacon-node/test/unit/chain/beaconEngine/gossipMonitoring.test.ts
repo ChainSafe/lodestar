@@ -21,7 +21,6 @@ import * as bidValidation from "../../../../src/chain/validation/executionPayloa
 import * as contributionValidation from "../../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {OpSource, ValidatorMonitor, createValidatorMonitor} from "../../../../src/chain/validatorMonitor.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
-import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getApiTestModules} from "../../../utils/api.js";
 
 describe("BeaconEngineCore gossip monitoring", () => {
@@ -32,7 +31,6 @@ describe("BeaconEngineCore gossip monitoring", () => {
     vi.useFakeTimers();
     const modules = getApiTestModules();
     engine = new BeaconEngineCore({
-      serializedCache: new SerializedCache({cacheDeserialized: true}),
       config: modules.chain.config,
       opts: {...defaultChainOptions},
       logging: {type: "injected", logger: modules.logger},
@@ -219,11 +217,16 @@ describe("BeaconEngineCore gossip monitoring", () => {
     const observedAggregate = vi.spyOn(monitor, "registerGossipAggregatedAttestation");
     const observedContribution = vi.spyOn(monitor, "registerGossipSyncContributionAndProof");
     const aggregateBytes = ssz.electra.SignedAggregateAndProof.serialize(aggregate);
-    const contributionBytes = ssz.altair.SignedContributionAndProof.serialize(contribution);
-    engine.serializedCache?.set(aggregate, aggregateBytes);
-    engine.serializedCache?.set(contribution, contributionBytes);
-    expect((await engine.validateGossipAggregateAndProof(aggregateBytes, ForkName.electra, 12.5)).err).toBeNull();
-    expect((await engine.validateSyncCommitteeGossipContributionAndProof(contributionBytes)).err).toBeNull();
+    expect(
+      (
+        await engine.validateGossipAggregateAndProofObject(
+          {data: aggregate, bytes: aggregateBytes},
+          ForkName.electra,
+          12.5
+        )
+      ).err
+    ).toBeNull();
+    expect((await engine.validateSyncCommitteeGossipContributionAndProofObject(contribution)).err).toBeNull();
     expect(observedAggregate).not.toHaveBeenCalled();
     expect(observedContribution).not.toHaveBeenCalled();
     await vi.runAllTimersAsync();

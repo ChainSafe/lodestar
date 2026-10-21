@@ -13,11 +13,7 @@ export async function validateGossipLightClientOptimisticUpdate(
   fork: ForkName
 ): Promise<GossipValidationResult<void>> {
   try {
-    const update = deserializeGossipMessage(
-      sszTypesFor(fork as ForkPostAltair, "LightClientOptimisticUpdate"),
-      bytes,
-      this.serializedCache
-    );
+    const update = deserializeGossipMessage(sszTypesFor(fork as ForkPostAltair, "LightClientOptimisticUpdate"), bytes);
     return await validateGossipLightClientOptimisticUpdateObject.call(this, update);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -59,11 +55,7 @@ export async function validateGossipLightClientFinalityUpdate(
   fork: ForkName
 ): Promise<GossipValidationResult<void>> {
   try {
-    const update = deserializeGossipMessage(
-      sszTypesFor(fork as ForkPostAltair, "LightClientFinalityUpdate"),
-      bytes,
-      this.serializedCache
-    );
+    const update = deserializeGossipMessage(sszTypesFor(fork as ForkPostAltair, "LightClientFinalityUpdate"), bytes);
     return await validateGossipLightClientFinalityUpdateObject.call(this, update);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
