@@ -9,6 +9,9 @@
   },
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "type": "module",
+  "engines": {
+    "node": "^24.22.1"
+  },
   "exports": {
     ".": {
       "typescript": "./src/index.ts",
