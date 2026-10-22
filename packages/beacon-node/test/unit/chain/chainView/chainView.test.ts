@@ -27,6 +27,40 @@ function update(initial: ChainViewSnapshot, changes: Partial<ChainViewUpdate>): 
 }
 
 describe("ChainView", () => {
+  it("adds returned FULL metadata without changing head, checkpoints, or the publisher revision", () => {
+    const a = block(1, 0, 0);
+    const pending = block(2, 1, 1, {payloadStatus: PayloadStatus.PENDING});
+    const empty = {...pending, payloadStatus: PayloadStatus.EMPTY};
+    const full = {...pending, payloadStatus: PayloadStatus.FULL, executionPayloadBlockHash: root(3)};
+    const initial = snapshot([a, pending, empty], empty);
+    const view = new ChainView(initial);
+    const finalized = view.getFinalizedCheckpoint();
+    const justified = view.getJustifiedCheckpoint();
+    view.addBlocks([full]);
+    view.addBlocks([full]);
+    expect(view.getBlockHex(full.blockRoot, PayloadStatus.FULL)).toEqual(full);
+    expect(view.getHead()).toEqual(empty);
+    expect(view.getFinalizedCheckpoint()).toEqual(finalized);
+    expect(view.getJustifiedCheckpoint()).toEqual(justified);
+    view.applyUpdate(update(initial, {head: full, blocks: [full]}));
+    expect(view.getHead()).toEqual(full);
+    full.executionPayloadBlockHash = root(4);
+    expect(view.getBlockHex(root(2), PayloadStatus.FULL)?.executionPayloadBlockHash).toBe(root(3));
+  });
+
+  it("does not restore pruned blocks when a payload result arrives late", () => {
+    const a = block(1, 0, 0);
+    const b = block(2, 2, 1);
+    const c = block(3, SLOTS_PER_EPOCH - 1, 2);
+    const initial = snapshot([a, b, c], c);
+    const view = new ChainView(initial);
+    view.applyUpdate(update(initial, {finalized: checkpoint(3, 1)}));
+    view.prune(checkpoint(3, 1));
+    view.addBlocks([b]);
+    expect(view.hasBlockHexUnsafe(b.blockRoot)).toBe(false);
+    expect(view.getFinalizedBlock()).toEqual(c);
+  });
+
   it("walks skipped slots and switches branches without a canonical slot index", () => {
     const a = block(1, 0, 0);
     const b = block(2, 2, 1);

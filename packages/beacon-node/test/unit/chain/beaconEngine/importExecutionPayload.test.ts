@@ -1,13 +1,12 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
-import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {ErrorAborted, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {
   PayloadEnvelopeInput,
@@ -35,7 +34,6 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
   envelope.message.payload.blockNumber = 123;
   envelope.message.payload.gasLimit = 30_000_000;
   const envelopeBytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
-  const emitImported = vi.fn();
   const putEnvelope = vi.fn<BeaconEngineCore["db"]["executionPayloadEnvelope"]["putBinary"]>();
 
   beforeEach(() => {
@@ -61,19 +59,20 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     Object.defineProperty(chain.beaconEngine, "seenPayloadEnvelopeInputCache", {
       value: new SeenEnginePayloadEnvelopeInput({config, forkChoice: chain.forkChoice, db: {block: {get: vi.fn()}}}),
     });
-    emitImported.mockReset();
-    chain.beaconEngine.emitter.on(BeaconEngineEvent.executionPayloadImported, emitImported);
     chain.forkChoice.getBlockHex.mockReturnValue(null);
     chain.forkChoice.onExecutionPayload = vi.fn().mockImplementation(() => {
-      chain.forkChoice.getBlockHex.mockReturnValue({
+      const full: ProtoBlock = {
         ...zeroProtoBlock,
+        blockRoot: blockRootHex,
         payloadStatus: PayloadStatus.FULL,
         executionStatus: ExecutionStatus.Valid,
         executionPayloadBlockHash: blockHashHex,
         executionPayloadNumber: 123,
         executionPayloadGasLimit: 30_000_000,
         dataAvailabilityStatus: DataAvailabilityStatus.Available,
-      });
+      };
+      chain.forkChoice.getBlockHex.mockReturnValue(full);
+      chain.forkChoice.getBlockHexAndBlockHash.mockReturnValue(full);
     });
     vi.spyOn(payloadVerification, "verifyExecutionPayloadEnvelope").mockReturnValue(undefined);
     chain.forkChoice.getConfirmedBlock.mockReturnValue(zeroProtoBlock);
@@ -114,7 +113,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     expect(result.err).not.toBeInstanceOf(Error);
     expect(putEnvelope).not.toHaveBeenCalled();
     expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
-    expect(emitImported).not.toHaveBeenCalled();
+    expect(chain.publishChainView).not.toHaveBeenCalled();
   });
 
   it.each([false, true])(
@@ -179,7 +178,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
   }
 
   it("imports the payload before sending FCU with the head, safe, and finalized hashes", async () => {
-    expect(await importPayload()).toEqual({err: null, result: {executionOptimistic: false}});
+    expect(await importPayload()).toMatchObject({err: null, result: {executionOptimistic: false}});
     expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledWith(
       blockRootHex,
       blockHashHex,
@@ -195,11 +194,9 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       finalizedBlockHash
     );
     expect(chain.forkChoice.onExecutionPayload.mock.invocationCallOrder[0]).toBeLessThan(
-      chain.publishChainView.mock.invocationCallOrder[0]
-    );
-    expect(chain.publishChainView.mock.invocationCallOrder[0]).toBeLessThan(
       chain.executionEngine.notifyForkchoiceUpdate.mock.invocationCallOrder[0]
     );
+    expect(chain.publishChainView).not.toHaveBeenCalled();
   });
 
   it.each(["bytes", "object"] as const)(
@@ -232,7 +229,6 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
           envelopeBytes
         )
       );
-      expect(emitImported).not.toHaveBeenCalled();
       expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
       expect(chain.publishChainView).not.toHaveBeenCalled();
       expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
@@ -243,9 +239,12 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
         expect(deserialize).not.toHaveBeenCalled();
       }
       finishWrite?.();
-      await importing;
+      expect(await importing).toMatchObject({
+        err: null,
+        result: {block: {blockRoot: Uint8Array.from(blockRoot), payloadStatus: PayloadStatus.FULL}},
+      });
       expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
-      expect(emitImported).toHaveBeenCalledOnce();
+      expect(chain.publishChainView).not.toHaveBeenCalled();
       expect(candidateCacheAccess).not.toHaveBeenCalled();
     }
   );
@@ -261,7 +260,10 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
 
   it("imports without FCU when import updates are disabled", async () => {
     chain.opts.disableImportExecutionFcU = true;
-    expect(await importPayload(ExecutionStatus.Syncing)).toEqual({err: null, result: {executionOptimistic: true}});
+    expect(await importPayload(ExecutionStatus.Syncing)).toMatchObject({
+      err: null,
+      result: {executionOptimistic: true},
+    });
     expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
     expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
   });
@@ -274,13 +276,13 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
 
   it("does not wait for the EL response", async () => {
     chain.executionEngine.notifyForkchoiceUpdate.mockReturnValue(new Promise(() => {}));
-    expect(await importPayload()).toEqual({err: null, result: {executionOptimistic: false}});
+    expect(await importPayload()).toMatchObject({err: null, result: {executionOptimistic: false}});
   });
 
   it("logs an EL failure without rejecting import", async () => {
     const error = new Error("EL unavailable");
     chain.executionEngine.notifyForkchoiceUpdate.mockRejectedValue(error);
-    expect(await importPayload()).toEqual({err: null, result: {executionOptimistic: false}});
+    expect(await importPayload()).toMatchObject({err: null, result: {executionOptimistic: false}});
     await Promise.resolve();
     expect(chain.logger.error).toHaveBeenCalledWith(
       "Error pushing notifyForkchoiceUpdate()",
@@ -298,15 +300,32 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       expect(chain.logger.error).not.toHaveBeenCalled();
     }
   );
-  it("emits detached import metadata after verification and persistence", async () => {
-    await importPayload();
-    expect(emitImported).toHaveBeenCalledExactlyOnceWith({
-      slot: envelope.message.payload.slotNumber,
-      builderIndex: envelope.message.builderIndex,
-      blockRoot: blockRootHex,
-      blockHash: blockHashHex,
-      executionOptimistic: false,
+  it("returns detached byte metadata without publishing a Core event", async () => {
+    const emit = vi.spyOn(chain.beaconEngine.emitter, "emit");
+    const response = await importPayload();
+    expect(response).toEqual({
+      err: null,
+      result: {
+        executionOptimistic: false,
+        block: {
+          slot: zeroProtoBlock.slot,
+          blockRoot: Uint8Array.from(blockRoot),
+          parentRoot: fromHex(zeroProtoBlock.parentRoot),
+          stateRoot: fromHex(zeroProtoBlock.stateRoot),
+          parentBlockHash: null,
+          payloadStatus: PayloadStatus.FULL,
+          executionPayloadBlockHash: fromHex(blockHashHex),
+          executionPayloadNumber: 123,
+        },
+      },
     });
+    expect(structuredClone(response)).toEqual(response);
+    expect(emit).not.toHaveBeenCalled();
+    expect(chain.publishChainView).not.toHaveBeenCalled();
+    if (response.err !== null) throw Error("Expected import success");
+    response.result.block.blockRoot.fill(9);
+    expect(envelope.message.beaconBlockRoot).toEqual(blockRoot);
+    expect(chain.forkChoice.getBlockHexAndBlockHash(blockRootHex, blockHashHex)?.blockRoot).toBe(blockRootHex);
     expect(vi.mocked(chain.executionEngine.notifyNewPayload).mock.invocationCallOrder[0]).toBeLessThan(
       putEnvelope.mock.invocationCallOrder[0]
     );

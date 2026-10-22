@@ -310,6 +310,7 @@ import {
   IBeaconEngineCore,
   ImportBlockResult,
   ImportExecutionPayloadOpts,
+  ImportExecutionPayloadResult,
   PayloadAttestationBlock,
   PrepareNextSlotOpts,
   PrepareNextSlotResponse,
@@ -2472,7 +2473,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     envelopeBytes: Uint8Array,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts
-  ): Promise<Result<{executionOptimistic: boolean}, PayloadFailure>> {
+  ): Promise<Result<ImportExecutionPayloadResult, PayloadFailure>> {
     return wrapError(
       () => importExecutionPayloadBytes.call(this, envelopeBytes, dataAvailabilityStatus, opts),
       payloadFailureFromError
@@ -2487,7 +2488,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     envelope: WithBytes<gloas.SignedExecutionPayloadEnvelope>,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts
-  ): Promise<Result<{executionOptimistic: boolean}, PayloadFailure>> {
+  ): Promise<Result<ImportExecutionPayloadResult, PayloadFailure>> {
     return wrapError(
       () => importExecutionPayload.call(this, envelope, dataAvailabilityStatus, opts),
       payloadFailureFromError

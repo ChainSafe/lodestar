@@ -280,6 +280,7 @@ export class BeaconChain implements IBeaconChain {
     this.clock = clock;
     this.emitter = emitter;
     this.emitter.on(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
+    this.emitter.on(ChainEvent.chainViewBlocksAdded, this.onChainViewBlocksAdded);
     this.emitter.on(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.on(ChainEvent.fatalError, this.onEngineFatalError);
     if (!modules.builderApiClient) this.emitter.on(ChainEvent.builderRegistered, this.onBuilderRegistered);
@@ -358,6 +359,7 @@ export class BeaconChain implements IBeaconChain {
     await this.beaconEngine.close();
     await this.bls.close();
     this.emitter.off(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
+    this.emitter.off(ChainEvent.chainViewBlocksAdded, this.onChainViewBlocksAdded);
     this.emitter.off(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.off(ChainEvent.fatalError, this.onEngineFatalError);
     this.emitter.off(ChainEvent.builderRegistered, this.onBuilderRegistered);
@@ -855,6 +857,10 @@ export class BeaconChain implements IBeaconChain {
 
   private onEngineFatalError = (error: Error): void => {
     this.processShutdownCallback(error);
+  };
+
+  private onChainViewBlocksAdded = (blocks: ChainViewBlock[]): void => {
+    this.chainView.addBlocks(blocks);
   };
 
   // TODO - beacon engine: may remove this

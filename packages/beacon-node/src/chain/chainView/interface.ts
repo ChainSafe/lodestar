@@ -2,10 +2,14 @@ import {CheckpointWithHex, PayloadStatus, ProtoBlock} from "@lodestar/fork-choic
 import {Root, RootHex, Slot} from "@lodestar/types";
 import {BlockRootSlot} from "../../util/sszBytes.js";
 
-export type ChainViewBlock = Pick<
-  ProtoBlock,
-  "blockRoot" | "slot" | "parentRoot" | "stateRoot" | "parentBlockHash" | "payloadStatus" | "executionPayloadBlockHash"
-> & {executionPayloadNumber?: number};
+export type ChainViewBlock<TRoot = RootHex> = Pick<ProtoBlock, "slot" | "payloadStatus"> & {
+  blockRoot: TRoot;
+  parentRoot: TRoot;
+  stateRoot: TRoot;
+  parentBlockHash: TRoot | null;
+  executionPayloadBlockHash: TRoot | null;
+  executionPayloadNumber?: number;
+};
 
 export type ChainViewState = {
   head: ChainViewBlock;

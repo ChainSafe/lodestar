@@ -78,6 +78,7 @@ describe("BeaconEngineCore execution requests persistence", () => {
     core.importExecutionPayloadBytes = vi.fn(BeaconEngineCore.prototype.importExecutionPayloadBytes.bind(core));
     core.importExecutionPayload = vi.fn(BeaconEngineCore.prototype.importExecutionPayload.bind(core));
     chain.forkChoice.onExecutionPayload = vi.fn();
+    chain.forkChoice.getBlockHexAndBlockHash.mockReturnValue(parent);
     chain.forkChoice.getBlockHex.mockReturnValue(null);
     const state = new BeaconStateView(createCachedBeaconState(generateState({slot: 1}, config), {config, pubkeyCache}));
     chain.regen.getBlockSlotState.mockResolvedValue(state);
@@ -146,7 +147,7 @@ describe("BeaconEngineCore execution requests persistence", () => {
         DataAvailabilityStatus.Available,
         {validSignature: true}
       )
-    ).resolves.toEqual({err: null, result: {executionOptimistic: false}});
+    ).resolves.toMatchObject({err: null, result: {executionOptimistic: false}});
   }
 
   it("produces on a FULL parent while the facade column write queue is blocked", async () => {

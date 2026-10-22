@@ -55,7 +55,7 @@ import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeI
 import {SignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {ChainViewSnapshot} from "../chainView/interface.js";
+import {ChainViewBlock, ChainViewSnapshot} from "../chainView/interface.js";
 import {BlockErrorCode} from "../errors/blockError.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {InsertOutcome} from "../opPools/types.js";
@@ -286,6 +286,11 @@ export type ImportExecutionPayloadOpts = {
   validSignature: boolean;
   source?: PayloadEnvelopeInputSource;
   seenTimestampSec?: number;
+};
+
+export type ImportExecutionPayloadResult = {
+  executionOptimistic: boolean;
+  block: ChainViewBlock<Root>;
 };
 
 /** Main-thread facade; processing methods reconstruct errors with their local inputs. */
@@ -935,7 +940,7 @@ export interface IBeaconEngineCore {
     envelopeBytes: Uint8Array,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts
-  ): Promise<Result<{executionOptimistic: boolean}, PayloadFailure>>;
+  ): Promise<Result<ImportExecutionPayloadResult, PayloadFailure>>;
 
   // --- DB ownership (blocks + states + payload envelopes) ---
 

@@ -31,7 +31,6 @@ describe("BeaconEngine event forwarding", () => {
     newHeadState: root,
     executionOptimistic: true,
   };
-  const payload = {slot, builderIndex: 1, blockRoot: root, blockHash: root, executionOptimistic: false};
   let engine: BeaconEngine;
   let events: BeaconEngineEventBus;
   let emitter: ChainEventEmitter;
@@ -77,17 +76,6 @@ describe("BeaconEngine event forwarding", () => {
     events.emit(BeaconEngineEvent.fastConfirmation, {...confirmation, currentSlot: slot + 2});
     expect(onReorg).toHaveBeenCalledExactlyOnceWith(reorg);
     expect(onConfirmation.mock.calls).toEqual([[confirmation], [{...confirmation, currentSlot: slot + 2}]]);
-  });
-
-  it("uses the main-thread clock to filter payload imports at the 64-slot boundary", () => {
-    const onPayload = vi.fn();
-    emitter.on(routes.events.EventType.executionPayload, onPayload);
-    clock.setSlot(slot + 63);
-    events.emit(BeaconEngineEvent.executionPayloadImported, structuredClone(payload));
-    expect(onPayload).toHaveBeenCalledExactlyOnceWith(payload);
-    clock.setSlot(slot + 64);
-    events.emit(BeaconEngineEvent.executionPayloadImported, structuredClone(payload));
-    expect(onPayload).toHaveBeenCalledOnce();
   });
 
   it.each(["optimistic", "finality"] as const)(
@@ -159,7 +147,6 @@ describe("BeaconEngine event forwarding", () => {
     events.emit(BeaconEngineEvent.chainReorg, reorg);
     events.emit(BeaconEngineEvent.proposerSlashingProduced, ssz.phase0.ProposerSlashing.defaultValue());
     events.emit(BeaconEngineEvent.fastConfirmation, {block: root, slot, currentSlot: slot});
-    events.emit(BeaconEngineEvent.executionPayloadImported, payload);
     events.emit(BeaconEngineEvent.lightClientOptimisticUpdate, {
       slot,
       data: ssz.capella.LightClientOptimisticUpdate.serialize(ssz.capella.LightClientOptimisticUpdate.defaultValue()),

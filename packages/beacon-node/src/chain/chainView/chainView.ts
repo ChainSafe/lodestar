@@ -58,6 +58,12 @@ export class ChainView implements IChainView {
     this.revision = update.revision;
   }
 
+  addBlocks(blocks: ChainViewBlock[]): void {
+    // Block-only results do not advance the revision of the remaining Core publisher.
+    // TODO - beacon engine: recover missing ancestry when block import also moves to result-based updates.
+    this.mergeBlocks(blocks);
+  }
+
   prune(finalized: CheckpointWithHex): void {
     if (this.prunedCheckpoint && finalized.epoch <= this.prunedCheckpoint.epoch) return;
     const boundary = this.blocks.get(finalized.rootHex);

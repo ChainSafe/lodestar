@@ -9,6 +9,7 @@ import {chainConfigToJson, createBeaconConfig, createChainForkConfig} from "@lod
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
 import {LevelDbController} from "@lodestar/db/controller/level";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {TimestampFormatCode} from "@lodestar/logger";
 import * as nodeLogger from "@lodestar/logger/node";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
@@ -16,7 +17,7 @@ import {DOMAIN_BEACON_PROPOSER, ForkName, SLOTS_PER_EPOCH} from "@lodestar/param
 import * as stateTransition from "@lodestar/state-transition";
 import {ensureInteropPubkeyCache} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
-import {byteArrayEquals, defer, toHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, defer, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {getLodestarApi} from "../../../../src/api/impl/lodestar/index.js";
 import {ApiModules} from "../../../../src/api/impl/types.js";
 import {HistoricalStateRegen} from "../../../../src/chain/archiveStore/historicalState/historicalStateRegen.js";
@@ -26,6 +27,11 @@ import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine
 import {BeaconEngineCoreModules} from "../../../../src/chain/beaconEngine/interface.js";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
+import {
+  PayloadEnvelopeInput,
+  PayloadEnvelopeInputSource,
+} from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
+import {PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
@@ -1296,26 +1302,134 @@ describe("bytes-based engine startup", () => {
     expect(await dependencies.beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
   });
 
-  it("forwards engine payload imports to SSE only for recent payloads", async () => {
-    const dependencies = await initializeTestChain(opts, modules);
-    chain = new BeaconChain(opts, dependencies);
-    const imported = vi.fn();
-    chain.emitter.on(routes.events.EventType.executionPayload, imported);
-    const event = {
-      slot: 0,
-      blockRoot: toRootHex(Buffer.alloc(32)),
-      blockHash: toRootHex(Buffer.alloc(32)),
-      builderIndex: 0,
-      executionOptimistic: false,
-    };
-    getBeaconEngineCore(chain.beaconEngine).emitter.emit(BeaconEngineEvent.executionPayloadImported, event);
-    expect(imported).toHaveBeenCalledExactlyOnceWith(event);
-    getBeaconEngineCore(chain.beaconEngine).emitter.emit(BeaconEngineEvent.executionPayloadImported, {
-      ...event,
-      slot: -64,
-    });
-    expect(imported).toHaveBeenCalledOnce();
-  });
+  it.each([false, true])(
+    "applies payload import results before SSE with beaconEngineWorker=%s",
+    async (beaconEngineWorker) => {
+      const options = {...opts, beaconEngineWorker};
+      const dependencies = await initializeTestChain(options, modules);
+      const root = Buffer.alloc(32, 1);
+      const rootHex = toRootHex(root);
+      const hash = Buffer.alloc(32, 2);
+      const pendingBlock = {
+        ...dependencies.chainViewSnapshot.head,
+        slot: 1,
+        blockRoot: rootHex,
+        parentRoot: dependencies.chainViewSnapshot.head.blockRoot,
+        payloadStatus: PayloadStatus.PENDING,
+      };
+      dependencies.chainViewSnapshot.blocks.push(pendingBlock, {...pendingBlock, payloadStatus: PayloadStatus.EMPTY});
+      chain = new BeaconChain(options, dependencies);
+      const activeChain = chain;
+      const core = getBeaconEngineCore(activeChain.beaconEngine);
+      const response: Awaited<ReturnType<BeaconEngineCore["importExecutionPayloadBytes"]>> = {
+        err: null,
+        result: {
+          executionOptimistic: true,
+          block: {
+            ...pendingBlock,
+            blockRoot: Uint8Array.from(root),
+            parentRoot: fromHex(pendingBlock.parentRoot),
+            stateRoot: fromHex(pendingBlock.stateRoot),
+            parentBlockHash: null,
+            payloadStatus: PayloadStatus.FULL,
+            executionPayloadBlockHash: Uint8Array.from(hash),
+            executionPayloadNumber: 123,
+          },
+        },
+      };
+      const pending = defer<typeof response>();
+      const coreImport = vi
+        .spyOn(core, beaconEngineWorker ? "importExecutionPayloadBytes" : "importExecutionPayload")
+        .mockReturnValueOnce(pending.promise);
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      const input = PayloadEnvelopeInput.createFromBlock({
+        block,
+        blockRootHex: rootHex,
+        forkName: ForkName.gloas,
+        sampledColumns: [],
+        custodyColumns: [],
+        daOutOfRange: true,
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec: 1,
+      });
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.beaconBlockRoot = root;
+      envelope.message.payload.blockHash = hash;
+      envelope.message.payload.slotNumber = 1;
+      input.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 1});
+      const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+      const order: string[] = [];
+      const onBlocks = vi.fn(() => order.push("view"));
+      const imported = vi.fn(() => {
+        expect(activeChain.getBlockHex(rootHex, PayloadStatus.FULL)?.executionPayloadBlockHash).toBe(toRootHex(hash));
+        order.push("event");
+      });
+      activeChain.emitter.on(ChainEvent.chainViewBlocksAdded, onBlocks);
+      activeChain.emitter.on(routes.events.EventType.executionPayload, imported);
+      clock.setSlot(64);
+      const importing = activeChain.beaconEngine.importExecutionPayload(
+        input,
+        bytes,
+        stateTransition.DataAvailabilityStatus.Available,
+        {validSignature: true}
+      );
+      expect(activeChain.hasPayloadHexUnsafe(rootHex)).toBe(false);
+      expect(imported).not.toHaveBeenCalled();
+      pending.resolve(structuredClone(response));
+      expect(await importing).toEqual({executionOptimistic: true});
+      order.push("resolved");
+      expect(order).toEqual(["view", "event", "resolved"]);
+      expect(imported).toHaveBeenCalledExactlyOnceWith({
+        slot: 1,
+        blockRoot: rootHex,
+        blockHash: toRootHex(hash),
+        builderIndex: envelope.message.builderIndex,
+        executionOptimistic: true,
+      });
+
+      clock.setSlot(65);
+      coreImport.mockResolvedValueOnce(response);
+      await activeChain.beaconEngine.importExecutionPayload(
+        input,
+        bytes,
+        stateTransition.DataAvailabilityStatus.Available,
+        {validSignature: true}
+      );
+      expect(onBlocks).toHaveBeenCalledTimes(2);
+      expect(imported).toHaveBeenCalledOnce();
+
+      coreImport.mockResolvedValueOnce({err: {type: {code: PayloadErrorCode.INVALID_SIGNATURE}, message: "invalid"}});
+      await expect(
+        activeChain.beaconEngine.importExecutionPayload(
+          input,
+          bytes,
+          stateTransition.DataAvailabilityStatus.Available,
+          {
+            validSignature: true,
+          }
+        )
+      ).rejects.toMatchObject({type: {code: PayloadErrorCode.INVALID_SIGNATURE}});
+      expect(onBlocks).toHaveBeenCalledTimes(2);
+      expect(imported).toHaveBeenCalledOnce();
+
+      clock.setSlot(64);
+      const afterClose = defer<typeof response>();
+      coreImport.mockReturnValueOnce(afterClose.promise);
+      const importingAtClose = activeChain.beaconEngine.importExecutionPayload(
+        input,
+        bytes,
+        stateTransition.DataAvailabilityStatus.Available,
+        {validSignature: true}
+      );
+      await activeChain.close();
+      chain = undefined;
+      afterClose.resolve(response);
+      expect(await importingAtClose).toEqual({executionOptimistic: true});
+      expect(onBlocks).toHaveBeenCalledTimes(2);
+      expect(imported).toHaveBeenCalledOnce();
+    }
+  );
 
   it.each([true, false])(
     "forwards fast confirmation from fork choice with finalized anchor=%s",

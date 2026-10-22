@@ -1,14 +1,13 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {BuilderIndex, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
+import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {ChainViewUpdate} from "../chainView/interface.js";
 import type {SerializedLightClientData} from "./interface.js";
 
 export enum BeaconEngineEvent {
   fatalError = "fatalError",
   builderRegistered = "builderRegistered",
-  executionPayloadImported = "executionPayloadImported",
   // TODO - beacon engine: may remove this
   chainViewUpdated = "chainViewUpdated",
   newFinalizedCheckpoint = "newFinalizedCheckpoint",
@@ -47,20 +46,11 @@ export type ChainReorg = {
 
 export type FastConfirmation = {block: RootHex; slot: Slot; currentSlot: Slot};
 
-export type ExecutionPayloadImported = {
-  slot: Slot;
-  builderIndex: BuilderIndex;
-  blockHash: RootHex;
-  blockRoot: RootHex;
-  executionOptimistic: boolean;
-};
-
 export type BeaconEngineEventData = {
   [BeaconEngineEvent.headUpdated]: HeadUpdate;
   [BeaconEngineEvent.earliestAvailableSlotUpdated]: Slot;
   [BeaconEngineEvent.fatalError]: Error;
   [BeaconEngineEvent.builderRegistered]: string;
-  [BeaconEngineEvent.executionPayloadImported]: ExecutionPayloadImported;
   [BeaconEngineEvent.chainViewUpdated]: ChainViewUpdate;
   [BeaconEngineEvent.newFinalizedCheckpoint]: void;
   [BeaconEngineEvent.chainReorg]: ChainReorg;

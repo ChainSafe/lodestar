@@ -59,7 +59,7 @@ import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "..
 import {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {ValidatorMonitorAttestation, ValidatorMonitorBlock} from "../validatorMonitor.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
-import {BeaconEngineEvent, ChainReorg, ExecutionPayloadImported, FastConfirmation, HeadUpdate} from "./events.js";
+import {BeaconEngineEvent, ChainReorg, FastConfirmation, HeadUpdate} from "./events.js";
 import {GossipBlockResult} from "./gossipValidation/block.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
@@ -140,7 +140,6 @@ export class BeaconEngine implements IBeaconEngine {
     this.core.emitter.on(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
     this.core.emitter.on(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.core.emitter.on(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
-    this.core.emitter.on(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
   }
 
   async close(): Promise<void> {
@@ -159,7 +158,6 @@ export class BeaconEngine implements IBeaconEngine {
       this.core.emitter.off(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
       this.core.emitter.off(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
       this.core.emitter.off(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
-      this.core.emitter.off(BeaconEngineEvent.executionPayloadImported, this.onExecutionPayloadImported);
     }
   }
 
@@ -267,13 +265,6 @@ export class BeaconEngine implements IBeaconEngine {
       version: this.config.getForkName(slot),
       data: this.config.getPostAltairForkTypes(slot).LightClientFinalityUpdate.deserialize(data),
     });
-  };
-
-  // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.
-  private readonly onExecutionPayloadImported = (event: ExecutionPayloadImported): void => {
-    if (this.clock.currentSlot - event.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
-      this.emitter.emit(routes.events.EventType.executionPayload, event);
-    }
   };
 
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {
@@ -1304,7 +1295,32 @@ export class BeaconEngine implements IBeaconEngine {
       error.stack = res.err.stack;
       throw error;
     }
-    return res.result;
+    const {block, executionOptimistic} = res.result;
+    if (this.closed) return {executionOptimistic};
+    this.emitter.emit(ChainEvent.chainViewBlocksAdded, [
+      {
+        ...block,
+        blockRoot: toRootHex(block.blockRoot),
+        parentRoot: toRootHex(block.parentRoot),
+        stateRoot: toRootHex(block.stateRoot),
+        parentBlockHash: block.parentBlockHash === null ? null : toRootHex(block.parentBlockHash),
+        executionPayloadBlockHash:
+          block.executionPayloadBlockHash === null ? null : toRootHex(block.executionPayloadBlockHash),
+      },
+    ]);
+
+    // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.
+    const envelope = payloadInput.getPayloadEnvelope().message;
+    if (this.clock.currentSlot - envelope.payload.slotNumber < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+      this.emitter.emit(routes.events.EventType.executionPayload, {
+        slot: envelope.payload.slotNumber,
+        builderIndex: envelope.builderIndex,
+        blockHash: toRootHex(envelope.payload.blockHash),
+        blockRoot: toRootHex(envelope.beaconBlockRoot),
+        executionOptimistic,
+      });
+    }
+    return {executionOptimistic};
   }
 
   migrateCanonicalBlocks(): Promise<Slot[]> {

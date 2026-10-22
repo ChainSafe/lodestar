@@ -1,6 +1,7 @@
 import {
   ExecutionStatus,
   PayloadExecutionStatus,
+  PayloadStatus,
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
@@ -18,8 +19,8 @@ import {
 } from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {RegenCaller} from "../regen/index.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
-import {BeaconEngineEvent} from "./events.js";
-import {ImportExecutionPayloadOpts} from "./interface.js";
+import {toChainViewBlockBytes} from "./chainView.js";
+import {ImportExecutionPayloadOpts, ImportExecutionPayloadResult} from "./interface.js";
 
 function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExecutionStatus {
   switch (status) {
@@ -43,7 +44,7 @@ export async function importExecutionPayloadBytes(
   envelopeBytes: Uint8Array,
   dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportExecutionPayloadOpts
-): Promise<{executionOptimistic: boolean}> {
+): Promise<ImportExecutionPayloadResult> {
   let signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
   try {
     signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes, {reuseBytes: true});
@@ -58,7 +59,7 @@ export async function importExecutionPayload(
   {data: signedEnvelope, bytes: envelopeBytes}: WithBytes<gloas.SignedExecutionPayloadEnvelope>,
   dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportExecutionPayloadOpts
-): Promise<{executionOptimistic: boolean}> {
+): Promise<ImportExecutionPayloadResult> {
   const envelope = signedEnvelope.message;
   const blockRoot = envelope.beaconBlockRoot;
   const blockRootHex = toRootHex(blockRoot);
@@ -201,7 +202,15 @@ export async function importExecutionPayload(
     dataAvailabilityStatus
   );
 
-  this.publishChainView();
+  // Read retained metadata even if finalization advanced during asynchronous verification.
+  const importedBlock = this.forkChoice.getBlockHexAndBlockHash(blockRootHex, blockHashHex);
+  if (importedBlock === null || importedBlock.payloadStatus !== PayloadStatus.FULL) {
+    throw new PayloadError({code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE, blockRootHex});
+  }
+  const result: ImportExecutionPayloadResult = {
+    executionOptimistic: execStatus === ExecutionStatus.Syncing,
+    block: toChainViewBlockBytes(importedBlock),
+  };
 
   // Fire the FCU only when this payload's block is the canonical head.
   const head = this.forkChoice.getHead();
@@ -215,13 +224,5 @@ export async function importExecutionPayload(
     });
   }
 
-  const executionOptimistic = execStatus === ExecutionStatus.Syncing;
-  this.emitter.emit(BeaconEngineEvent.executionPayloadImported, {
-    slot: envelope.payload.slotNumber,
-    builderIndex: envelope.builderIndex,
-    blockHash: blockHashHex,
-    blockRoot: blockRootHex,
-    executionOptimistic,
-  });
-  return {executionOptimistic};
+  return result;
 }
