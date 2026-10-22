@@ -317,9 +317,7 @@ export class Builder {
     try {
       switch (event.type) {
         case routes.events.EventType.headV2:
-          if (this.headTracker.onHead(event.message.data)) {
-            this.bidder.onHead({slot: event.message.data.slot, blockRoot: event.message.data.block});
-          }
+          this.headTracker.onHead(event.message.data);
           break;
         case routes.events.EventType.block:
           await this.blockObserver.processBlockEvent(event.message, signal);

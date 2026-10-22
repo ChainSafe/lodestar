@@ -4,12 +4,8 @@ import type {RootHex, Slot} from "@lodestar/types";
 
 export type HeadEvent = routes.events.EventData[routes.events.EventType.headV2];
 
-export type Head = {
+type TrackedHead = {
   slot: Slot;
-  blockRoot: RootHex;
-};
-
-type TrackedHead = Head & {
   /** Dependent root of the proposer duties in the epoch of the head block */
   currentEpochDependentRoot: RootHex;
   /** Dependent root of the proposer duties in the epoch after the head block */
@@ -23,20 +19,10 @@ type TrackedHead = Head & {
  */
 export class HeadTracker {
   private readonly heads = new Map<RootHex, TrackedHead>();
-  private head: Head | null = null;
 
-  /** Records the announced head, returns true if the head block changed */
-  onHead(data: HeadEvent["data"]): boolean {
-    const {slot, block: blockRoot, currentEpochDependentRoot, nextEpochDependentRoot} = data;
-    this.heads.set(blockRoot, {slot, blockRoot, currentEpochDependentRoot, nextEpochDependentRoot});
-
-    const changed = this.head?.blockRoot !== blockRoot;
-    this.head = {slot, blockRoot};
-    return changed;
-  }
-
-  getHead(): Head | null {
-    return this.head;
+  onHead(data: HeadEvent["data"]): void {
+    const {slot, block, currentEpochDependentRoot, nextEpochDependentRoot} = data;
+    this.heads.set(block, {slot, currentEpochDependentRoot, nextEpochDependentRoot});
   }
 
   /**

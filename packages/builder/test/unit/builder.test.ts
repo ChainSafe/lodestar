@@ -208,8 +208,7 @@ describe("Builder", () => {
     });
   });
 
-  it("tracks heads and notifies the bidder only when the head block changes", () => {
-    const onHead = vi.spyOn(modules.bidder, "onHead");
+  it("tracks announced heads", () => {
     new Builder(modules);
     const {onEvent} = api.events.eventstream.mock.calls[0][0];
 
@@ -224,17 +223,8 @@ describe("Builder", () => {
       executionOptimistic: false,
     };
     onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: head}});
-    expect(onHead).toHaveBeenCalledExactlyOnceWith({slot: head.slot, blockRoot: head.block});
     expect(modules.headTracker.getDependentRoot(head.block, 1)).toBe(head.currentEpochDependentRoot);
-
-    // The payload status of the same head changing is not a head change
-    onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: {...head, payloadStatus: "full"}}});
-    expect(onHead).toHaveBeenCalledOnce();
-
-    const reorged = {...head, block: toRootHex(Buffer.alloc(32, 5))};
-    onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: reorged}});
-    expect(onHead).toHaveBeenCalledTimes(2);
-    expect(onHead).toHaveBeenLastCalledWith({slot: reorged.slot, blockRoot: reorged.block});
+    expect(modules.headTracker.getDependentRoot(head.block, SLOTS_PER_EPOCH)).toBe(head.nextEpochDependentRoot);
   });
 
   it("settles and prunes won bids on slot ticks", async () => {

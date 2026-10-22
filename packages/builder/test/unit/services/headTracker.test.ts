@@ -22,18 +22,6 @@ function head(slot: Slot, block: number, currentEpochDependentRoot: number, next
 }
 
 describe("HeadTracker", () => {
-  it("reports a head change only when the head block changes", () => {
-    const tracker = new HeadTracker();
-    expect(tracker.getHead()).toBeNull();
-
-    expect(tracker.onHead(head(3, 1, 10, 11))).toBe(true);
-    expect(tracker.getHead()).toEqual({slot: 3, blockRoot: root(1)});
-
-    expect(tracker.onHead({...head(3, 1, 10, 11), payloadStatus: "empty"})).toBe(false);
-    expect(tracker.onHead(head(3, 2, 10, 11))).toBe(true);
-    expect(tracker.getHead()).toEqual({slot: 3, blockRoot: root(2)});
-  });
-
   it("returns the dependent root for proposals in the epoch of the head and the one after", () => {
     const tracker = new HeadTracker();
     tracker.onHead(head(SLOTS_PER_EPOCH + 3, 1, 10, 11));

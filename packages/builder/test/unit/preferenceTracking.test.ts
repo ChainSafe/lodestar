@@ -32,6 +32,7 @@ describe("Builder preference tracking", () => {
     const builderStatusTracker = new BuilderStatusTracker(api, logger, 1, null);
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    const headTracker = new HeadTracker();
     const payloadStore = new PayloadStore();
     const payloadSource = getPayloadSourceStub();
     const opts: BuilderOptions = {
@@ -53,7 +54,7 @@ describe("Builder preference tracking", () => {
       blockObserver,
       builderStatusTracker,
       proposerPreferencesTracker,
-      headTracker: new HeadTracker(),
+      headTracker,
       clock,
       index: 1,
       payloadStore,
@@ -64,6 +65,7 @@ describe("Builder preference tracking", () => {
         clock,
         builderSigner,
         proposerPreferencesTracker,
+        headTracker,
         payloadStore,
         payloadSource,
         signal: controller.signal,
@@ -74,6 +76,7 @@ describe("Builder preference tracking", () => {
     expect(api.events.eventstream).toHaveBeenCalledOnce();
     const [{onEvent, signal, topics}] = api.events.eventstream.mock.calls[0];
     expect(topics).toEqual([
+      routes.events.EventType.headV2,
       routes.events.EventType.block,
       routes.events.EventType.proposerPreferences,
       routes.events.EventType.payloadAttributes,

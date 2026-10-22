@@ -20,7 +20,6 @@ export enum BidResult {
   inactive = "inactive",
   lowBalance = "low_balance",
   policyDeclined = "policy_declined",
-  cancelled = "cancelled",
   error = "error",
 }
 

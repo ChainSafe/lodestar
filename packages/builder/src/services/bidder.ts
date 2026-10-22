@@ -9,7 +9,7 @@ import {BidLedger} from "./bidLedger.js";
 import {BidPolicy} from "./bidPolicy.js";
 import {BidPublisher} from "./bidPublisher.js";
 import {createExecutionPayloadBid} from "./executionPayloadBid.js";
-import {Head, HeadTracker} from "./headTracker.js";
+import {HeadTracker} from "./headTracker.js";
 import {PayloadOrchestrator} from "./payloadOrchestrator.js";
 import {PayloadStore} from "./payloadStore.js";
 import {ProposerPreferencesTracker} from "./proposerPreferencesTracker.js";
@@ -47,7 +47,7 @@ export type BidderModules = {
  * retrieves the payload at the deadline, prices it and publishes the signed bid.
  */
 export class Bidder {
-  private readonly activeBuilds = new Map<string, {slot: Slot; parentBlockRoot: RootHex}>();
+  private readonly activeBuilds = new Set<string>();
 
   constructor(
     private readonly modules: BidderModules,
@@ -76,7 +76,7 @@ export class Bidder {
     if (this.activeBuilds.has(buildId) || ledger.hasSubmitted(slot, parentBlockHash, parentBlockRoot)) {
       return;
     }
-    this.activeBuilds.set(buildId, {slot, parentBlockRoot});
+    this.activeBuilds.add(buildId);
 
     try {
       // Heze bids require inclusion list bits which are not tracked yet
@@ -180,26 +180,6 @@ export class Bidder {
       }
     } finally {
       this.activeBuilds.delete(buildId);
-    }
-  }
-
-  /**
-   * Stops the builds on parents the beacon node no longer considers its head, the proposer would not select
-   * their bids. The beacon node emits new payload attributes for the new head, which starts a new build.
-   */
-  onHead(head: Head): void {
-    const {logger, metrics, orchestrator} = this.modules;
-    for (const [buildId, {slot, parentBlockRoot}] of this.activeBuilds) {
-      if (parentBlockRoot === head.blockRoot || !orchestrator.cancel(buildId)) {
-        continue;
-      }
-      logger.info("Cancelled payload build, parent is no longer head", {
-        slot,
-        parentBlockRoot,
-        head: head.blockRoot,
-        headSlot: head.slot,
-      });
-      metrics?.bids.total.inc({result: BidResult.cancelled});
     }
   }
 

@@ -174,35 +174,6 @@ describe("Bidder", () => {
     expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
   });
 
-  it("cancels the build when the parent is no longer head and builds again on the new attributes", async () => {
-    addProposerPreferences();
-    const {bidder} = createBidder();
-
-    const cancelled = bidder.onPayloadAttributes(payloadAttributesEvent());
-    await vi.advanceTimersByTimeAsync(0);
-    expect(payloadSource.prepare).toHaveBeenCalledOnce();
-
-    bidder.onHead({slot: 0, blockRoot: toRootHex(Buffer.alloc(32, 10))});
-    await cancelled;
-    expect(payloadSource.getPayload).not.toHaveBeenCalled();
-    expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
-    expect(logger.error).not.toHaveBeenCalled();
-    expect(logger.info).toHaveBeenCalledWith("Cancelled payload build, parent is no longer head", {
-      slot,
-      parentBlockRoot: toRootHex(parentBlockRoot),
-      head: toRootHex(Buffer.alloc(32, 10)),
-      headSlot: 0,
-    });
-
-    // Same parent announced as head again, nothing to cancel
-    bidder.onHead({slot: 0, blockRoot: toRootHex(parentBlockRoot)});
-    const rebuilt = bidder.onPayloadAttributes(payloadAttributesEvent());
-    await vi.advanceTimersByTimeAsync(msToDeadline);
-    await rebuilt;
-    expect(payloadSource.prepare).toHaveBeenCalledTimes(2);
-    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
-  });
-
   it("bids once for repeated payload attributes of the same parent", async () => {
     addProposerPreferences();
     const {bidder} = createBidder();
