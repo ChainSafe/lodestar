@@ -91,7 +91,11 @@ describe("BeaconEngine block persistence", () => {
       chain.opts.disableImportExecutionFcU = true;
       chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
       chain.forkChoice.onBlock.mockReturnValue(summary);
-      chain.forkChoice.updateAndGetHead = vi.fn().mockReturnValue({head: headChanged ? summary : zeroProtoBlock});
+      chain.forkChoice.updateAndGetHead = vi.fn().mockImplementation(() => {
+        const head = headChanged ? summary : zeroProtoBlock;
+        chain.forkChoice.getHead.mockReturnValue(head);
+        return {head};
+      });
       chain.forkChoice.getCommonAncestorDepth = vi
         .fn()
         .mockReturnValue({code: AncestorStatus.CommonAncestor, depth: 1});

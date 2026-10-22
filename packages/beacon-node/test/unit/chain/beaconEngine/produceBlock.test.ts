@@ -84,7 +84,7 @@ describe("BeaconEngineCore V3 production race", () => {
 
       vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(currentSlot);
       vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
-      modules.chain.recomputeForkChoiceHead.mockReturnValue({
+      modules.chain.forkChoice.getHead.mockReturnValue({
         blockRoot: toRootHex(fullBlock.parentRoot),
       } as ProtoBlock);
       modules.chain.getProposerHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);

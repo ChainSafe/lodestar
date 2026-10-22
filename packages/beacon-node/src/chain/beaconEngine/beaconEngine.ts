@@ -1186,8 +1186,12 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.validatorSeenAtEpoch(index, epoch);
   }
 
-  async recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<ProtoBlock> {
-    return this.core.recomputeForkChoiceHead(caller);
+  async recomputeForkChoiceHead(
+    caller: ForkchoiceCaller,
+    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
+  ): Promise<void> {
+    const {headUpdate} = await this.core.recomputeForkChoiceHead(caller);
+    if (headUpdate) await this.onHeadUpdated(previousHead);
   }
 
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {

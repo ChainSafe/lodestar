@@ -362,7 +362,10 @@ export interface IBeaconEngine
   blsThreadPoolCanAcceptWork(): boolean;
   pauseFastConfirmation(): Promise<void>;
   resumeFastConfirmation(): Promise<void>;
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<ProtoBlock>;
+  recomputeForkChoiceHead(
+    caller: ForkchoiceCaller,
+    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
+  ): Promise<void>;
   discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void>;
   onSlot(slot: Slot, previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">): Promise<void>;
   onEpoch(epoch: Epoch): Promise<void>;
@@ -913,7 +916,7 @@ export interface IBeaconEngineCore {
   pruneOnFinalized(): Promise<void>;
   /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): {headUpdate: boolean};
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]>;
   verifyAndObserveBlockProposerBytes(bytes: Uint8Array, root: RootHex): Promise<void>;
   verifyEnvelopeForPublishBytes(bytes: Uint8Array, blockRootHex: RootHex): Promise<void>;

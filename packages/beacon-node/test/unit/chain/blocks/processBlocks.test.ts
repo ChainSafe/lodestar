@@ -23,6 +23,7 @@ import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chain
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import {verifyBlocksSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
+import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/engine/interface.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockBlockInput} from "../../../utils/blockInput.js";
@@ -384,7 +385,10 @@ describe("chain / blocks / processBlocks", () => {
         validSignature: false,
       });
       expect(chain.seenPayloadEnvelopeInputCache.remove).not.toHaveBeenCalled();
-      expect(chain.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+      expect(chain.recomputeForkChoiceHead).toHaveBeenCalledExactlyOnceWith(
+        ForkchoiceCaller.importBlock,
+        chain.getHead()
+      );
       expect(result).toEqual({orphaned: [], skipped: false});
     }
   });

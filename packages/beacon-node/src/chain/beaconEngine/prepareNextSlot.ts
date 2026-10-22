@@ -53,7 +53,8 @@ export async function prepareForNextSlot(
   if (prepareSlot <= GENESIS_SLOT || (ForkSeq[fork] < ForkSeq.bellatrix && !isEpochTransition)) {
     return null;
   }
-  const headBlock = this.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot, false);
+  this.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
+  const headBlock = this.forkChoice.getHead();
   const {slot: headSlot, blockRoot: headRoot} = headBlock;
   let updatedHead = headBlock;
   if (prepareSlot - headSlot > PREPARE_EPOCH_LIMIT * SLOTS_PER_EPOCH) {

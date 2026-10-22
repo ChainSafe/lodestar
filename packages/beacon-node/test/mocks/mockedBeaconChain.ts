@@ -14,7 +14,6 @@ import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
-import {ForkchoiceCaller} from "../../src/chain/forkChoice/index.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
 import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
@@ -53,7 +52,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
   // real `prepareForNextSlot` bound onto it call `this.recomputeForkChoiceHead`
   // etc.). No longer on the facade — stubbed here so tests can control head selection.
-  recomputeForkChoiceHead: Mock<(caller: ForkchoiceCaller) => ProtoBlock>;
+  recomputeForkChoiceHead: Mock<BeaconEngineCore["recomputeForkChoiceHead"]>;
   updateBuilderStatus: Mock<(slot: Slot) => void>;
   predictProposerHead: Mock<() => ProtoBlock>;
   getProposerHead: Mock<() => ProtoBlock>;

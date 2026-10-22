@@ -247,7 +247,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
     await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validSignature: false});
   }
   // the new FULL variants are not seen by the head cached from the last block import
-  await this.beaconEngine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+  await this.beaconEngine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, this.getHead());
 
   return result;
 }

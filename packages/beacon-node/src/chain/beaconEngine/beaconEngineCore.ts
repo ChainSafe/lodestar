@@ -1581,16 +1581,24 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   /**
    * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#recomputeForkChoiceHead.
    * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
+   * [beacon-engine] deviation: returns a refresh flag; public head events follow the facade's snapshot pull.
    */
-  recomputeForkChoiceHead(caller: ForkchoiceCaller, emitEvents = true): ProtoBlock {
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): {headUpdate: boolean} {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
       const prevHead = this.forkChoice.getHead();
+      const previousJustified = this.forkChoice.getJustifiedCheckpoint();
       const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
-      if (emitEvents) this.emitHeadEvents(prevHead, head);
-      return head;
+      const justified = this.forkChoice.getJustifiedCheckpoint();
+      return {
+        headUpdate:
+          head.blockRoot !== prevHead.blockRoot ||
+          head.payloadStatus !== prevHead.payloadStatus ||
+          justified.epoch !== previousJustified.epoch ||
+          justified.rootHex !== previousJustified.rootHex,
+      };
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;

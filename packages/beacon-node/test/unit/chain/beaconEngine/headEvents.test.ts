@@ -3,10 +3,12 @@ import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {EpochDifference, ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
+import {ChainView} from "../../../../src/chain/chainView/chainView.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
@@ -36,6 +38,7 @@ describe("BeaconEngine head notifications", () => {
   let engine: BeaconEngine;
   let emitter: ChainEventEmitter;
   let events: BeaconEngineEventBus;
+  let view: ChainView;
   let order: string[];
   const onHead = vi.fn();
   const onHeadV2 = vi.fn();
@@ -43,7 +46,7 @@ describe("BeaconEngine head notifications", () => {
   const close = vi.fn<() => Promise<void>>();
   const getDependentRoot = vi.fn<(head: ProtoBlock, difference: EpochDifference) => string>();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.resetAllMocks();
     close.mockResolvedValue(undefined);
     getDependentRoot.mockImplementation((_, difference) =>
@@ -58,6 +61,7 @@ describe("BeaconEngine head notifications", () => {
       executionStatus: ExecutionStatus.Syncing,
     });
     let head = previous;
+    const checkpoint = {epoch: 0, root: new Uint8Array(32), rootHex: root(0)};
     order = [];
     emitter = new ChainEventEmitter();
     events = new BeaconEngineEventBus();
@@ -68,6 +72,9 @@ describe("BeaconEngine head notifications", () => {
       close,
       forkChoice: {
         getHead: () => head,
+        getAllNodes: () => [previous, next],
+        getJustifiedCheckpoint: () => checkpoint,
+        getFinalizedCheckpoint: () => checkpoint,
         getDependentRoot,
         updateAndGetHead: () => {
           head = next;
@@ -76,16 +83,6 @@ describe("BeaconEngine head notifications", () => {
         updateTime: () => {
           head = next;
         },
-      },
-      publishChainView: () => {
-        const checkpoint = {epoch: 0, root: Buffer.alloc(32), rootHex: root(0)};
-        events.emit(BeaconEngineEvent.chainViewUpdated, {
-          revision: 1,
-          head,
-          justified: checkpoint,
-          finalized: checkpoint,
-          blocks: [head],
-        });
       },
     });
     engine = new BeaconEngine({
@@ -96,24 +93,45 @@ describe("BeaconEngine head notifications", () => {
       serializedCache: new SerializedCache(),
       logger: core.logger,
     });
-    emitter.on(ChainEvent.chainViewUpdated, () => order.push("view"));
+    view = new ChainView(await engine.getChainViewSnapshot());
+    emitter.on(ChainEvent.chainViewUpdated, (update) => {
+      view.applyUpdate(update);
+      order.push("view");
+    });
+    emitter.on(ChainEvent.chainViewBlocksAdded, (blocks, state) => {
+      view.addBlocks(blocks, state);
+      order.push("view");
+    });
     events.on(BeaconEngineEvent.headUpdated, onHeadUpdated);
     emitter.on(routes.events.EventType.head, (event) => {
+      expect(view.getHead()).toEqual(toChainViewBlock(next));
       order.push("head");
       onHead(event);
     });
     emitter.on(routes.events.EventType.headV2, (event) => {
+      expect(view.getHead()).toEqual(toChainViewBlock(next));
       order.push("head_v2");
       onHeadV2(event);
     });
   });
 
   it.each(["recompute", "clock"])("publishes head events after ChainView on %s updates", async (trigger) => {
-    if (trigger === "recompute") await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+    const headPull = vi.spyOn(core, "getHeadSnapshot");
+    const coreEmit = vi.spyOn(events, "emit");
+    if (trigger === "recompute") await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead());
     else core.updateTime(next.slot);
 
     expect(order).toEqual(["view", "head", "head_v2"]);
-    expect(onHeadUpdated).toHaveBeenCalledOnce();
+    if (trigger === "recompute") {
+      expect(coreEmit).not.toHaveBeenCalled();
+      expect(headPull).toHaveBeenCalledExactlyOnceWith({
+        blockRoot: fromHex(previous.blockRoot),
+        payloadStatus: previous.payloadStatus,
+      });
+    } else {
+      expect(onHeadUpdated).toHaveBeenCalledOnce();
+      expect(headPull).not.toHaveBeenCalled();
+    }
     expect(onHead).toHaveBeenCalledExactlyOnceWith({
       slot: next.slot,
       block: next.blockRoot,
@@ -145,29 +163,67 @@ describe("BeaconEngine head notifications", () => {
   ] as const)("publishes only head_v2 when payload status changes from %s to %s", async (before, after, expected) => {
     previous.payloadStatus = before;
     next = {...previous, payloadStatus: after};
-    await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+    await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, previous);
 
     expect(order).toEqual(["view", "head_v2"]);
     expect(onHead).not.toHaveBeenCalled();
+    expect(onHeadUpdated).not.toHaveBeenCalled();
     expect(onHeadV2).toHaveBeenCalledOnce();
     expect(onHeadV2.mock.calls[0][0].data).toMatchObject({payloadStatus: expected, epochTransition: false});
   });
 
-  it("does not notify head consumers when the root and payload status are unchanged", async () => {
+  it("does not pull or notify when the head and justified checkpoint are unchanged", async () => {
     next = {...previous};
-    await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+    const headPull = vi.spyOn(core, "getHeadSnapshot");
+    await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead());
 
-    expect(order).toEqual(["view"]);
+    expect(order).toEqual([]);
+    expect(headPull).not.toHaveBeenCalled();
     expect(onHeadUpdated).not.toHaveBeenCalled();
     expect(getDependentRoot).not.toHaveBeenCalled();
+  });
+
+  it.each(["epoch", "root"])("refreshes a justified checkpoint %s change without head events", async (change) => {
+    next = {...previous};
+    const checkpoint = core.forkChoice.getJustifiedCheckpoint();
+    const justified =
+      change === "epoch" ? {...checkpoint, epoch: 1} : {...checkpoint, root: fromHex(root(6)), rootHex: root(6)};
+    vi.spyOn(core.forkChoice, "getJustifiedCheckpoint").mockReturnValueOnce(checkpoint).mockReturnValue(justified);
+    const coreEmit = vi.spyOn(events, "emit");
+    await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead());
+
+    expect(view.getJustifiedCheckpoint()).toEqual(justified);
+    expect(view.getHead()).toEqual(toChainViewBlock(previous));
+    expect(order).toEqual(["view"]);
+    expect(coreEmit).not.toHaveBeenCalled();
+    expect(getDependentRoot).not.toHaveBeenCalled();
+  });
+
+  it("returns a synchronous change flag without publishing from Core", () => {
+    const coreEmit = vi.spyOn(events, "emit");
+    expect(core.recomputeForkChoiceHead(ForkchoiceCaller.importBlock)).toEqual({headUpdate: true});
+    expect(coreEmit).not.toHaveBeenCalled();
+    expect(view.getHead()).toEqual(toChainViewBlock(previous));
+  });
+
+  it("propagates recomputation failures without pulling a head snapshot", async () => {
+    const error = new Error("head computation failed");
+    vi.spyOn(core.forkChoice, "updateAndGetHead").mockImplementation(() => {
+      throw error;
+    });
+    const headPull = vi.spyOn(core, "getHeadSnapshot");
+    await expect(engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead())).rejects.toBe(error);
+    expect(headPull).not.toHaveBeenCalled();
+    expect(order).toEqual([]);
   });
 
   it("keeps the ChainView update when dependent-root lookup fails", async () => {
     getDependentRoot.mockImplementation(() => {
       throw Error("No block for root");
     });
-    await expect(engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock)).resolves.toBe(next);
+    await expect(engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead())).resolves.toBeUndefined();
     expect(order).toEqual(["view"]);
+    expect(view.getHead()).toEqual(toChainViewBlock(next));
     expect(onHeadUpdated).not.toHaveBeenCalled();
     expect(core.logger.debug).toHaveBeenCalled();
   });
@@ -177,7 +233,7 @@ describe("BeaconEngine head notifications", () => {
     emitter.on(routes.events.EventType.head, () => {
       throw error;
     });
-    await expect(engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock)).resolves.toBe(next);
+    await expect(engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead())).resolves.toBeUndefined();
     expect(core.logger.debug).toHaveBeenCalledWith(
       "Error emitting head update",
       {slot: next.slot, root: next.blockRoot, headRootChanged: true},
@@ -191,7 +247,12 @@ describe("BeaconEngine head notifications", () => {
     else await engine.close();
     expect(close).toHaveBeenCalledOnce();
 
-    core.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+    const headPull = vi.spyOn(core, "getHeadSnapshot");
+    await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead());
+    expect(headPull).not.toHaveBeenCalled();
+    expect(order).toEqual([]);
+    next = {...next, blockRoot: root(7)};
+    core.updateTime(next.slot);
     expect(onHeadUpdated).toHaveBeenCalledOnce();
     expect(onHead).not.toHaveBeenCalled();
     expect(onHeadV2).not.toHaveBeenCalled();

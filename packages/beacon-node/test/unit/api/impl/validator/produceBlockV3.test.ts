@@ -132,7 +132,7 @@ describe("api/validator - produceBlockV3", () => {
 
       vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(currentSlot);
       vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
-      modules.chain.recomputeForkChoiceHead.mockReturnValue({
+      modules.chain.forkChoice.getHead.mockReturnValue({
         blockRoot: toRootHex(fullBlock.parentRoot),
       } as ProtoBlock);
       modules.chain.getProposerHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
@@ -211,7 +211,7 @@ describe("api/validator - produceBlockV3", () => {
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
-    modules.chain.recomputeForkChoiceHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
+    modules.chain.forkChoice.getHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
     modules.chain.getProposerHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
     modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
     produceCommon.mockResolvedValue({
@@ -299,7 +299,7 @@ describe("api/validator - produceBlockV3", () => {
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
     modules.chain.getProposerHead.mockReturnValue(parentBlock);
-    modules.chain.recomputeForkChoiceHead.mockReturnValue(parentBlock);
+    modules.chain.forkChoice.getHead.mockReturnValue(parentBlock);
     modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(parentBlock);
     modules.chain.produceBlockWrapper.mockResolvedValue({
       block: fullBlock,
@@ -361,7 +361,7 @@ describe("api/validator - produceBlockV3", () => {
     const headSlot = 0;
     modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
 
-    modules.chain.recomputeForkChoiceHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
+    modules.chain.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
     modules.chain["opPool"].getSlashingsAndExits.mockReturnValue([[], [], [], []]);
     modules.chain["aggregatedAttestationPool"].getAttestationsForBlock.mockReturnValue([]);
     modules.chain["syncContributionAndProofPool"].getAggregate.mockReturnValue({

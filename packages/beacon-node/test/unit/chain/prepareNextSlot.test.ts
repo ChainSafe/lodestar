@@ -70,7 +70,7 @@ describe("PrepareNextSlot scheduler", () => {
       vi.spyOn(config, "getSlotDurationMs").mockImplementation((fork) =>
         fork === ForkName.phase0 ? 12000 : nextDuration
       );
-      chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: 0});
+      forkChoiceStub.getHead.mockReturnValue({...zeroProtoBlock, slot: 0});
       const prepare = vi.spyOn(chainStub.beaconEngine, "prepareForNextSlot");
 
       const preparing = scheduler.prepareForNextSlot(clockSlot);
@@ -93,7 +93,7 @@ describe("PrepareNextSlot scheduler", () => {
 
   it("pre bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
     getForkStub.mockReturnValue(ForkName.phase0);
-    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
+    forkChoiceStub.getHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
@@ -104,7 +104,7 @@ describe("PrepareNextSlot scheduler", () => {
 
   it("pre bellatrix - should run regen.getBlockSlotState", async () => {
     getForkStub.mockReturnValue(ForkName.phase0);
-    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
+    forkChoiceStub.getHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
     (regenStub.getBlockSlotState as Mock).mockResolvedValue(undefined);
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
@@ -116,7 +116,7 @@ describe("PrepareNextSlot scheduler", () => {
 
   it("pre bellatrix - should handle regen.getBlockSlotState error", async () => {
     getForkStub.mockReturnValue(ForkName.phase0);
-    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
+    forkChoiceStub.getHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
     regenStub.getBlockSlotState.mockRejectedValue("Unit test error");
     expect(loggerStub.error).not.toHaveBeenCalled();
     await Promise.all([
@@ -130,7 +130,7 @@ describe("PrepareNextSlot scheduler", () => {
 
   it("bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
     getForkStub.mockReturnValue(ForkName.bellatrix);
-    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
+    forkChoiceStub.getHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
@@ -141,7 +141,7 @@ describe("PrepareNextSlot scheduler", () => {
 
   it("bellatrix - should skip, no block proposer", async () => {
     getForkStub.mockReturnValue(ForkName.bellatrix);
-    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    forkChoiceStub.getHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     const state = new BeaconStateView(generateCachedBellatrixState());
     regenStub.getBlockSlotState.mockResolvedValue(state);
     await Promise.all([
@@ -171,7 +171,7 @@ describe("PrepareNextSlot scheduler", () => {
       const prepare = vi.spyOn(chainStub.beaconEngine, "prepareForNextSlot");
       vi.spyOn(chainStub, "opts", "get").mockReturnValue({emitPayloadAttributes} as IChainOptions);
       getForkStub.mockReturnValue(ForkName.fulu);
-      chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+      forkChoiceStub.getHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
       chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
       forkChoiceStub.getConfirmedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
       forkChoiceStub.getFinalizedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
@@ -272,7 +272,7 @@ describe("PrepareNextSlot scheduler", () => {
     const spy = vi.fn();
     chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
     getForkStub.mockReturnValue(ForkName.gloas);
-    chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    forkChoiceStub.getHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getConfirmedBlock.mockReturnValue({
       ...zeroProtoBlock,
@@ -338,7 +338,7 @@ describe("PrepareNextSlot scheduler", () => {
       slot: SLOTS_PER_EPOCH - 3,
       parentBlockHash: zeroProtoBlock.blockRoot,
     } as ProtoBlock;
-    chainStub.recomputeForkChoiceHead.mockReturnValue(head);
+    forkChoiceStub.getHead.mockReturnValue(head);
     chainStub.predictProposerHead.mockReturnValue(head);
     forkChoiceStub.getConfirmedBlock.mockReturnValue(head);
     forkChoiceStub.getFinalizedBlock.mockReturnValue(head);
@@ -392,7 +392,7 @@ describe("PrepareNextSlot scheduler", () => {
     const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
     // predicted proposer-boost-reorg: build on the parent block instead of the canonical head
     const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
-    chainStub.recomputeForkChoiceHead.mockReturnValue(headBlock);
+    forkChoiceStub.getHead.mockReturnValue(headBlock);
     chainStub.predictProposerHead.mockReturnValue(proposerHead);
     forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
     updateBuilderStatus.mockReturnValue(void 0);
@@ -429,7 +429,7 @@ describe("PrepareNextSlot scheduler", () => {
     getForkStub.mockReturnValue(ForkName.gloas);
     const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
     const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
-    chainStub.recomputeForkChoiceHead.mockReturnValue(headBlock);
+    forkChoiceStub.getHead.mockReturnValue(headBlock);
     chainStub.predictProposerHead.mockReturnValue(proposerHead);
     forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
     const state = generateCachedBellatrixState();
