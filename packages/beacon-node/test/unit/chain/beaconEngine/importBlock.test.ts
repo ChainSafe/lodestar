@@ -143,7 +143,6 @@ describe("BeaconEngine block persistence", () => {
       expect(structuredClone(response)).toEqual(response);
       expect(response.block).not.toHaveProperty("executionStatus");
       expect(response.block).not.toHaveProperty("dataAvailabilityStatus");
-      expect(chain.publishChainView).not.toHaveBeenCalled();
       expect(emit).not.toHaveBeenCalled();
       expect(chain.beaconEngine.verifiedBlocks.has(importedSignedRootHex)).toBe(false);
       response.block.blockRoot.fill(9);
@@ -188,7 +187,6 @@ describe("BeaconEngine block persistence", () => {
       } else {
         await expect(importing).rejects.toBe(error);
       }
-      expect(chain.publishChainView).not.toHaveBeenCalled();
       expect(putBinary).toHaveBeenCalledExactlyOnceWith(root, blockBytes);
       expect(chain.beaconEngine.verifiedBlocks.get(signedRoot)).toBeUndefined();
       expect(chain.beaconEngine.verifiedBlocks.get(otherRoot)).toBe(otherBundle);

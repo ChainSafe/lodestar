@@ -2,23 +2,18 @@ import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Root, RootHex, Slot} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, toRootHex} from "@lodestar/utils";
-import {ChainViewBlock, ChainViewSnapshot, ChainViewState, ChainViewUpdate, IChainView} from "./interface.js";
+import {ChainViewBlock, ChainViewSnapshot, ChainViewState, IChainView} from "./interface.js";
 
 export enum ChainViewErrorCode {
-  INVALID_REVISION = "CHAIN_VIEW_INVALID_REVISION",
   UNKNOWN_BLOCK = "CHAIN_VIEW_UNKNOWN_BLOCK",
 }
 
-export class ChainViewError extends LodestarError<
-  | {code: ChainViewErrorCode.INVALID_REVISION; expected: number; actual: number}
-  | {code: ChainViewErrorCode.UNKNOWN_BLOCK; root: RootHex}
-> {}
+export class ChainViewError extends LodestarError<{code: ChainViewErrorCode.UNKNOWN_BLOCK; root: RootHex}> {}
 
 /** Replicated imported-block metadata. Canonical ancestry is derived from the shared head. */
 export class ChainView implements IChainView {
   private readonly blocks = new Map<RootHex, Partial<Record<PayloadStatus, ChainViewBlock>>>();
   private state: ChainViewState;
-  private revision: number;
   private prunedCheckpoint?: CheckpointWithHex;
   private readonly finalizedDescendants = new Map<RootHex, boolean>();
 
@@ -31,24 +26,10 @@ export class ChainView implements IChainView {
       justified: snapshot.justified,
       finalized: snapshot.finalized,
     });
-    this.revision = snapshot.revision;
     this.mergeBlocks(snapshot.blocks);
   }
 
-  applyUpdate(update: ChainViewUpdate): void {
-    if (update.revision !== undefined && update.revision !== this.revision + 1) {
-      throw new ChainViewError({
-        code: ChainViewErrorCode.INVALID_REVISION,
-        expected: this.revision + 1,
-        actual: update.revision,
-      });
-    }
-    this.addBlocks(update.blocks, update);
-    if (update.revision !== undefined) this.revision = update.revision;
-  }
-
   addBlocks(blocks: ChainViewBlock[], state?: ChainViewState): void {
-    // Operation results do not advance the revision of the remaining Core publisher.
     if (
       state &&
       (state.finalized.epoch !== this.state.finalized.epoch || state.finalized.rootHex !== this.state.finalized.rootHex)

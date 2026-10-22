@@ -18,15 +18,7 @@ export type ChainViewState = {
 };
 
 export type ChainViewSnapshot = ChainViewState & {
-  revision: number;
   blocks: ChainViewBlock[];
-};
-
-/** Same payload shape as a snapshot, but blocks contains only changed metadata. */
-export type ChainViewUpdate = ChainViewState & {
-  blocks: ChainViewBlock[];
-  // TODO - beacon engine: remove revisions after the remaining publisher flows use responses.
-  revision?: number;
 };
 
 export interface IChainView {

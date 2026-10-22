@@ -1,7 +1,6 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
-import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -11,7 +10,6 @@ import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/bea
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
-import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 describe("BeaconEngine event forwarding", () => {
   const config = createBeaconConfig(
@@ -20,7 +18,6 @@ describe("BeaconEngine event forwarding", () => {
   );
   const slot = 2 * SLOTS_PER_EPOCH - 1;
   const root = toRootHex(Buffer.alloc(32, 1));
-  const previousRoot = toRootHex(Buffer.alloc(32, 2));
   let engine: BeaconEngine;
   let events: BeaconEngineEventBus;
   let emitter: ChainEventEmitter;
@@ -107,28 +104,9 @@ describe("BeaconEngine event forwarding", () => {
     const coreListener = vi.fn();
     events.on(BeaconEngineEvent.fastConfirmation, coreListener);
 
-    const checkpoint = {epoch: 0, root: Buffer.alloc(32, 1), rootHex: root};
-    events.emit(BeaconEngineEvent.chainViewUpdated, {
-      revision: 1,
-      head: generateProtoBlock({slot, blockRoot: root}),
-      justified: checkpoint,
-      finalized: checkpoint,
-      blocks: [],
-    });
     events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, slot);
     events.emit(BeaconEngineEvent.fatalError, Error("core failed"));
     events.emit(BeaconEngineEvent.builderRegistered, "https://builder.example.com");
-    events.emit(BeaconEngineEvent.headUpdated, {
-      slot,
-      blockRoot: root,
-      stateRoot: root,
-      payloadStatus: PayloadStatus.FULL,
-      headRootChanged: true,
-      epochTransition: false,
-      previousDutyDependentRoot: previousRoot,
-      currentDutyDependentRoot: root,
-      executionOptimistic: false,
-    });
     events.emit(BeaconEngineEvent.proposerSlashingProduced, ssz.phase0.ProposerSlashing.defaultValue());
     events.emit(BeaconEngineEvent.fastConfirmation, {block: root, slot, currentSlot: slot});
     events.emit(BeaconEngineEvent.lightClientOptimisticUpdate, {

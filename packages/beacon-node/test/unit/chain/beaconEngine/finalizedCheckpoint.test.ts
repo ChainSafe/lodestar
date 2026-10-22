@@ -66,7 +66,6 @@ async function setup() {
     logger,
   });
   const view = new ChainView(await engine.getChainViewSnapshot());
-  emitter.on(ChainEvent.chainViewUpdated, (update) => view.applyUpdate(update));
   emitter.on(ChainEvent.chainViewBlocksAdded, (blocks, state) => view.addBlocks(blocks, state));
   emitter.prependListener(ChainEvent.forkChoiceFinalized, (checkpoint) => view.applyFinalizedCheckpoint(checkpoint));
   const onFinalized = vi.fn();
@@ -103,7 +102,7 @@ async function setup() {
 }
 
 describe("finalized checkpoint pull", () => {
-  it("applies an import response before events and pulls finalization once across a later publisher update", async () => {
+  it("applies an import response before events and pulls finalization once across a later slot update", async () => {
     const {core, engine, emitter, forkChoice, view, onFinalized, finalize, logger} = await setup();
     const previousHead = view.getHead();
     const block = finalize(1);
@@ -154,8 +153,6 @@ describe("finalized checkpoint pull", () => {
     });
     const pull = vi.spyOn(core, "getFinalizedCheckpointSnapshot");
     const observed: string[] = [];
-    const onLegacyUpdate = vi.fn();
-    emitter.on(ChainEvent.chainViewUpdated, onLegacyUpdate);
     emitter.on(ChainEvent.chainViewBlocksAdded, () => observed.push("view"));
     for (const event of [
       routes.events.EventType.head,
@@ -180,7 +177,6 @@ describe("finalized checkpoint pull", () => {
       executionOptimistic: true,
     });
     expect(observed).toEqual(["view", "head", "head_v2", "chain_reorg"]);
-    expect(onLegacyUpdate).not.toHaveBeenCalled();
     expect(reorg).toHaveBeenCalledExactlyOnceWith({
       ...response.reorg,
       oldHeadBlock: previousHead.blockRoot,
@@ -191,7 +187,6 @@ describe("finalized checkpoint pull", () => {
     expect(onFinalized).toHaveBeenCalledOnce();
     expect(pull).toHaveBeenCalledOnce();
 
-    core.publishChainView();
     await engine.onSlot(SLOTS_PER_EPOCH + 1, view.getHead());
     expect(pull).toHaveBeenCalledOnce();
     expect(view.getHead()).toEqual(toChainViewBlock(forkChoice.getHead()));
@@ -302,8 +297,6 @@ describe("finalized checkpoint pull", () => {
     const finalizedPull = vi.spyOn(core, "getFinalizedCheckpointSnapshot");
     const coreEmit = vi.spyOn(events, "emit");
     const observed: string[] = [];
-    const onLegacyUpdate = vi.fn();
-    emitter.on(ChainEvent.chainViewUpdated, onLegacyUpdate);
     emitter.on(ChainEvent.chainViewBlocksAdded, () => observed.push("view"));
     for (const event of [routes.events.EventType.head, routes.events.EventType.headV2]) {
       emitter.on(event, () => {
@@ -319,7 +312,6 @@ describe("finalized checkpoint pull", () => {
     });
     expect(finalizedPull).not.toHaveBeenCalled();
     expect(coreEmit).not.toHaveBeenCalled();
-    expect(onLegacyUpdate).not.toHaveBeenCalled();
     expect(view.getJustifiedCheckpoint()).toEqual(structuredClone(forkChoice.getJustifiedCheckpoint()));
     expect(observed).toEqual(
       change === "root" ? ["view", "head", "head_v2"] : change === "payload" ? ["view", "head_v2"] : ["view"]
@@ -368,9 +360,8 @@ describe("finalized checkpoint pull", () => {
       },
     });
     await engine.onSlot(SLOTS_PER_EPOCH + 1, view.getHead());
-    core.publishChainView();
     block.executionStatus = ExecutionStatus.Valid;
-    core.publishChainView();
+    await engine.onSlot(SLOTS_PER_EPOCH + 2, view.getHead());
     expect(pull).toHaveBeenCalledOnce();
   });
 

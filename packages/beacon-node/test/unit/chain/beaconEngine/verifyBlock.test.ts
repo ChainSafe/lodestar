@@ -1,11 +1,11 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {bellatrix, ssz, sszTypesFor} from "@lodestar/types";
-import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {verifyBlocksBytes as verifyEngineBlocks} from "../../../../src/chain/beaconEngine/verifyBlock.js";
 import {
@@ -25,6 +25,7 @@ import {
 import * as signatureVerification from "../../../../src/chain/blocks/verifyBlocksSignatures.js";
 import * as stf from "../../../../src/chain/blocks/verifyBlocksStateTransitionOnly.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
+import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../../../src/chain/errors/index.js";
 import * as blockValidation from "../../../../src/chain/validation/block.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/engine/interface.js";
@@ -742,7 +743,6 @@ describe("BeaconEngineCore block execution verification", () => {
       expect(cacheSet).not.toHaveBeenCalled();
       expect(cacheGet).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
       expect(serialize).not.toHaveBeenCalled();
-      expect(chain.publishChainView).not.toHaveBeenCalled();
       expect(chain.regen.getPreState).toHaveBeenCalledTimes(beaconEngineWorker ? 0 : 1);
       expect(stf.verifyBlocksStateTransitionOnly).toHaveBeenCalledTimes(beaconEngineWorker ? 0 : 1);
       expect(core.verifiedBlocks.size).toBe(beaconEngineWorker ? 0 : 1);
@@ -777,7 +777,6 @@ describe("BeaconEngineCore block execution verification", () => {
         expect(error.type.code).toBe(BlockErrorCode.INVALID_SIGNATURE);
       });
       expect(core.verifyBlocksBytes).not.toHaveBeenCalled();
-      expect(chain.publishChainView).toHaveBeenCalledOnce();
       expect(core.verifiedBlocks.size).toBe(0);
     }
   );
@@ -813,7 +812,6 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(core.verifyBlocksBytes).toHaveBeenCalledExactlyOnceWith(serializeBlocks(...inputs), {validSignatures: true});
     expect(core.verifyGossipBlockBytes).not.toHaveBeenCalled();
     expect(core.verifyGossipBlock).not.toHaveBeenCalled();
-    expect(chain.publishChainView).toHaveBeenCalledOnce();
     expect(observe).not.toHaveBeenCalled();
     expect(discard).toHaveBeenCalledExactlyOnceWith(
       inputs.map((input) => computeSignedBlockRoot(input.forkName, input.getBlock()))
@@ -1061,6 +1059,116 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
     expect(core.verifiedBlocks.size).toBe(0);
   });
+
+  it.each(
+    (["verifyBlocksBytes", "verifyBlocks", "verifyGossipBlockBytes"] as const).flatMap((method) =>
+      ([ExecutionStatus.Syncing, ExecutionStatus.Valid] as const).map((parentStatus) => ({method, parentStatus}))
+    )
+  )(
+    "handles $method invalidation of a $parentStatus parent without publishing structural metadata",
+    async ({method, parentStatus}) => {
+      const {ForkChoice, ForkChoiceStore, ProtoArray} =
+        await vi.importActual<typeof import("@lodestar/fork-choice")>("@lodestar/fork-choice");
+      const root = (n: number) => toRootHex(Buffer.alloc(32, n));
+      const anchor: ProtoBlock = {
+        ...zeroProtoBlock,
+        blockRoot: root(2),
+        justifiedRoot: root(2),
+        finalizedRoot: root(2),
+        executionStatus: ExecutionStatus.Valid,
+        executionPayloadBlockHash: root(100),
+        executionPayloadNumber: 0,
+        executionPayloadGasLimit: 30_000_000,
+        dataAvailabilityStatus: DataAvailabilityStatus.Available,
+      };
+      const parent: ProtoBlock = {
+        ...anchor,
+        slot: 1,
+        blockRoot: root(3),
+        parentRoot: anchor.blockRoot,
+        executionPayloadBlockHash: root(101),
+        executionStatus: parentStatus,
+      };
+      const descendant: ProtoBlock = {
+        ...parent,
+        slot: 2,
+        blockRoot: root(4),
+        parentRoot: parent.blockRoot,
+        executionPayloadBlockHash: root(102),
+        executionStatus: ExecutionStatus.Syncing,
+      };
+      const protoArray = ProtoArray.initialize(anchor, 0);
+      protoArray.onBlock(parent, parent.slot, null);
+      protoArray.onBlock(descendant, descendant.slot, null);
+      const checkpoint = {epoch: 0, root: fromHex(anchor.blockRoot)};
+      const balances = new Uint16Array(0);
+      const store = new ForkChoiceStore(
+        3,
+        checkpoint,
+        checkpoint,
+        balances,
+        () => balances,
+        () => null
+      );
+      const forkChoice = new ForkChoice(core.config, store, protoArray, 0, null);
+      core.forkChoice = forkChoice;
+      chain.opts.beaconEngineWorker = method !== "verifyBlocks";
+      facade = withBeaconEngineFacade(chain);
+      const onFatal = vi.fn();
+      facade.emitter.on(ChainEvent.fatalError, onFatal);
+      const snapshot = await BeaconEngineCore.prototype.getChainViewSnapshot.call(core);
+      const getAllNodes = vi.spyOn(forkChoice, "getAllNodes");
+      const block = ssz.bellatrix.SignedBeaconBlock.defaultValue();
+      block.message.slot = 3;
+      block.message.parentRoot = fromHex(parent.blockRoot);
+      block.message.body.executionPayload.blockHash = Buffer.alloc(32, 1);
+      const input = BlockInputPreData.createFromBlock({
+        block,
+        blockRootHex: toRootHex(ssz.bellatrix.BeaconBlock.hashTreeRoot(block.message)),
+        forkName: ForkName.bellatrix,
+        daOutOfRange: false,
+        source: method === "verifyGossipBlockBytes" ? BlockInputSource.gossip : BlockInputSource.byRange,
+        seenTimestampSec: 0,
+      });
+      if (method === "verifyGossipBlockBytes") {
+        const [data] = serializeBlocks(input);
+        core.blockSerializedCache.set(signedRoot(input), block, data.blockBytes);
+      }
+      chain.executionEngine.notifyNewPayload.mockResolvedValue({
+        status: ExecutionPayloadStatus.INVALID,
+        latestValidHash: anchor.executionPayloadBlockHash,
+        validationError: "invalid ancestry",
+      });
+
+      const verification = facade.beaconEngine.verifyBlocks([input], {validSignatures: true});
+      await expect(verification).rejects.toBeInstanceOf(BlockError);
+      await expect(verification).rejects.toMatchObject({type: {code: BlockErrorCode.EXECUTION_ENGINE_INVALID}});
+      expect(core[method]).toHaveBeenCalledOnce();
+      expect(getAllNodes).not.toHaveBeenCalled();
+      expect(core.verifiedBlocks.size).toBe(0);
+      expect(forkChoice.getHead().blockRoot).toBe(descendant.blockRoot);
+      expect(await BeaconEngineCore.prototype.getChainViewSnapshot.call(core)).toEqual(snapshot);
+
+      if (parentStatus === ExecutionStatus.Syncing) {
+        expect(protoArray.nodes.map((node) => node.executionStatus)).toEqual([
+          ExecutionStatus.Valid,
+          ExecutionStatus.Invalid,
+          ExecutionStatus.Invalid,
+        ]);
+        expect(protoArray.findHead(anchor.blockRoot, 3).blockRoot).toBe(anchor.blockRoot);
+        expect(onFatal).not.toHaveBeenCalled();
+      } else {
+        const error = forkChoice.irrecoverableError;
+        expect(error).toBeInstanceOf(Error);
+        expect(onFatal).toHaveBeenCalledExactlyOnceWith(error);
+        vi.spyOn(forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
+        await expect(facade.beaconEngine.verifyBlocks([input], {})).rejects.toMatchObject({
+          type: {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN},
+        });
+        expect(onFatal).toHaveBeenCalledOnce();
+      }
+    }
+  );
 
   it.each([false, true])("aborts the facade DA wait on an EL failure (typed: %s)", async (typed) => {
     const block = ssz.deneb.SignedBeaconBlock.defaultValue();

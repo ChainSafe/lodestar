@@ -7,7 +7,7 @@ import {PeerIdStr} from "../util/peerId.js";
 import type {FinalizedCheckpointSnapshot} from "./beaconEngine/interface.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {ChainViewBlock, ChainViewState, ChainViewUpdate} from "./chainView/interface.js";
+import {ChainViewBlock, ChainViewState} from "./chainView/interface.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -18,7 +18,6 @@ import {ChainViewBlock, ChainViewState, ChainViewUpdate} from "./chainView/inter
  * - Checkpointing: the chain processes epoch boundaries
  */
 export enum ChainEvent {
-  chainViewUpdated = "chainViewUpdated",
   chainViewBlocksAdded = "chainViewBlocksAdded",
   earliestAvailableSlotUpdated = "earliestAvailableSlotUpdated",
   fatalError = "fatalError",
@@ -107,7 +106,6 @@ export type ChainEventData = {
 };
 
 export type IChainEvents = ApiEvents & {
-  [ChainEvent.chainViewUpdated]: (update: ChainViewUpdate) => void;
   [ChainEvent.chainViewBlocksAdded]: (blocks: ChainViewBlock[], state?: ChainViewState) => void;
   [ChainEvent.earliestAvailableSlotUpdated]: (slot: Slot) => void;
   [ChainEvent.fatalError]: (error: Error) => void;

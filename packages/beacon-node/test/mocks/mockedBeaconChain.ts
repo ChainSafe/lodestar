@@ -41,7 +41,6 @@ import {getMockedClock} from "./clock.js";
 import {getMockedLogger} from "./loggerMock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
-  publishChainView: Mock<BeaconEngineCore["publishChainView"]>;
   logger: Mocked<Logger>;
   // The facade narrows `beaconEngine` to `IBeaconEngine`, but the flat mock doubles as the concrete
   // engine (`chain.beaconEngine = chain`), so tests invoke the `this: BeaconEngineCore` phantom validators
@@ -222,7 +221,6 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       serializedCache,
       blockSerializedCache: new BlockSerializedCache(config),
       verifiedBlocks: new Map(),
-      publishChainView: vi.fn(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
         getPayload: vi.fn(),
@@ -345,6 +343,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   // `prepareForNextSlot` is a real BeaconEngineCore method too; `recomputeForkChoiceHead` / `predictProposerHead`
   // stay as mock fns above so tests can control head selection.
   for (const name of [
+    "reportIrrecoverableError",
     "getLightClientServer",
     "getLightClientBootstrap",
     "getLightClientUpdate",

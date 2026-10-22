@@ -217,7 +217,7 @@ import {
   getStateValidatorIdentities,
   getStateValidators,
 } from "./beaconApis.js";
-import {ChainViewPublisher, toChainViewBlockBytes} from "./chainView.js";
+import {toChainViewBlock, toChainViewBlockBytes} from "./chainView.js";
 import {
   getAttesterDuties,
   getProposerDuties,
@@ -373,12 +373,15 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   checkpointStateCache!: CheckpointStateCache;
   readonly checkpointBalancesCache = new CheckpointBalancesCache();
   readonly emitter = new BeaconEngineEventBus();
-  private chainViewPublisher?: ChainViewPublisher;
   private reportedIrrecoverableError?: Error;
 
   async getChainViewSnapshot(): Promise<ChainViewSnapshot> {
-    this.chainViewPublisher ??= new ChainViewPublisher(this.forkChoice);
-    return this.chainViewPublisher.snapshot();
+    return {
+      blocks: this.forkChoice.getAllNodes().map(toChainViewBlock),
+      head: toChainViewBlock(this.forkChoice.getHead()),
+      justified: this.forkChoice.getJustifiedCheckpoint(),
+      finalized: this.forkChoice.getFinalizedCheckpoint(),
+    };
   }
 
   getHeadSnapshot(previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot {
@@ -404,18 +407,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     };
   }
 
-  // TODO - beacon engine: may remove this
-  // the update could be too much
-  // we can just update on import block/payload
-  publishChainView(blocksChanged = true): void {
+  private reportIrrecoverableError(): void {
     const error = this.forkChoice.irrecoverableError;
     if (error && error !== this.reportedIrrecoverableError) {
       this.reportedIrrecoverableError = error;
       this.emitter.emit(BeaconEngineEvent.fatalError, error);
-    }
-    const update = this.chainViewPublisher?.update(blocksChanged);
-    if (update) {
-      this.emitter.emit(BeaconEngineEvent.chainViewUpdated, update);
     }
   }
 
@@ -845,7 +841,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     const previousHead = this.forkChoice.getHead();
     const previousJustified = this.forkChoice.getJustifiedCheckpoint();
     const previousFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-    this.updateTime(slot, false);
+    this.updateTime(slot);
     // TODO - beacon engine: return or pull fork-choice changes if slot maintenance fails after updating time.
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
@@ -2477,7 +2473,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return wrapError(
       () => verifyBlocksBytes.call(this, blocks, opts),
       (error) => {
-        this.publishChainView();
+        this.reportIrrecoverableError();
         return blockFailureFromError(
           error,
           this.config,
@@ -2498,7 +2494,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return wrapError(
       () => verifyBlocks.call(this, blocks, opts),
       (error) => {
-        this.publishChainView();
+        this.reportIrrecoverableError();
         return blockFailureFromError(
           error,
           this.config,
@@ -2521,7 +2517,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return wrapError(
       () => verifyBlocksBytes.call(this, [{signedBlockRoot, blockBytes: cached.bytes}], opts),
       (error) => {
-        this.publishChainView();
+        this.reportIrrecoverableError();
         return blockFailureFromError(error, this.config, [signedBlockRoot]);
       }
     );
@@ -2594,10 +2590,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   // --- Fork-choice writes (routed here so the facade never writes fork choice directly) ---
 
-  updateTime(currentSlot: Slot, emitEvents = true): void {
-    const previous = this.forkChoice.getHead();
+  updateTime(currentSlot: Slot): void {
     this.forkChoice.updateTime(currentSlot);
-    if (emitEvents) this.emitHeadEvents(previous, this.forkChoice.getHead(), false);
   }
 
   // --- DB ownership (blocks + states + payload envelopes) ---
@@ -3342,22 +3336,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>> {
     return getBuilderPendingWithdrawals.call(this, id, returnBytes);
-  }
-
-  private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock, blocksChanged = true): void {
-    this.publishChainView(blocksChanged);
-    const update = this.getHeadUpdate(prevHead, head);
-    if (update) {
-      try {
-        this.emitter.emit(BeaconEngineEvent.headUpdated, update);
-      } catch (e) {
-        this.logger.debug(
-          "Error emitting head update",
-          {slot: head.slot, root: head.blockRoot, headRootChanged: update.headRootChanged},
-          e as Error
-        );
-      }
-    }
   }
 
   getHeadUpdate(prevHead: Pick<ProtoBlock, "blockRoot" | "payloadStatus">, head: ProtoBlock): HeadUpdate | null {

@@ -36,6 +36,7 @@ import {PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
+import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import * as lightClient from "../../../../src/chain/lightClient/index.js";
 import {defaultChainOptions} from "../../../../src/chain/options.js";
 import {DbCPStateDatastore} from "../../../../src/chain/stateCache/datastore/db.js";
@@ -1054,16 +1055,8 @@ describe("bytes-based engine startup", () => {
     expect(beaconChain.getHead()).toEqual(snapshot.head);
     expect(getChainViewSnapshot).toHaveBeenCalledOnce();
 
-    const head = {...snapshot.head, blockRoot: toRootHex(Buffer.alloc(32, 1)), slot: 1};
-    engine.emitter.emit(BeaconEngineEvent.chainViewUpdated, {
-      ...snapshot,
-      revision: snapshot.revision + 1,
-      head,
-      blocks: [head],
-    });
-    expect(beaconChain.getHead()).toEqual(head);
     clock.emit(ClockEvent.slot, clock.currentSlot);
-    expect(updateTime).toHaveBeenCalledExactlyOnceWith(1, false);
+    expect(updateTime).toHaveBeenCalledExactlyOnceWith(1);
   });
 
   it("applies a view update once before downstream chain listeners read the head", async () => {
@@ -1073,32 +1066,33 @@ describe("bytes-based engine startup", () => {
     const beaconChain = new BeaconChain(opts, dependencies);
     chain = beaconChain;
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
-    const snapshot = await core.getChainViewSnapshot();
+    const snapshot = core.getHeadSnapshot();
     const head = {
-      ...snapshot.head,
+      ...core.forkChoice.getHead(),
       slot: snapshot.head.slot + 1,
-      parentRoot: snapshot.head.blockRoot,
+      parentRoot: toRootHex(snapshot.head.blockRoot),
       blockRoot: toRootHex(Buffer.alloc(32, 1)),
     };
-    const update = {...snapshot, revision: snapshot.revision + 1, head, blocks: [head]};
+    vi.spyOn(core, "onSlot").mockReturnValue({headUpdate: true, finalizedCheckpointChanged: false});
+    vi.spyOn(core, "getHeadSnapshot").mockReturnValue({...snapshot, head: toChainViewBlockBytes(head)});
     const onUpdate = vi.fn(() => {
-      expect(beaconChain.getHead()).toEqual(head);
+      expect(beaconChain.getHead()).toEqual(toChainViewBlock(head));
       expect(toRootHex(beaconChain.getStatus().headRoot)).toBe(head.blockRoot);
     });
-    beaconChain.emitter.on(ChainEvent.chainViewUpdated, onUpdate);
+    beaconChain.emitter.on(ChainEvent.chainViewBlocksAdded, onUpdate);
 
-    core.emitter.emit(BeaconEngineEvent.chainViewUpdated, structuredClone(update));
+    await beaconChain.beaconEngine.onSlot(head.slot, beaconChain.getHead());
 
-    expect(onUpdate).toHaveBeenCalledExactlyOnceWith(update);
+    expect(onUpdate).toHaveBeenCalledOnce();
     expect(await metrics.register.getSingleMetricAsString("beacon_head_slot")).toContain(
       `beacon_head_slot ${head.slot}`
     );
     await beaconChain.close();
-    core.emitter.emit(BeaconEngineEvent.chainViewUpdated, update);
+    await beaconChain.beaconEngine.onSlot(head.slot + 1, beaconChain.getHead());
     expect(onUpdate).toHaveBeenCalledOnce();
   });
 
-  it("merges imported blocks and checkpoints before head events without the legacy view event", async () => {
+  it("merges imported blocks and checkpoints before head events", async () => {
     const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.metrics = metrics;
     chain = await createBeaconChain(opts, modules);
@@ -1146,7 +1140,6 @@ describe("bytes-based engine startup", () => {
       source: BlockInputSource.gossip,
       seenTimestampSec: 0,
     });
-    const onLegacyUpdate = vi.fn();
     const onJustified = vi.fn();
     const onStatus = vi.fn(() => beaconChain.getStatus());
     const onHead = vi.fn(() => ({
@@ -1154,12 +1147,10 @@ describe("bytes-based engine startup", () => {
       justified: beaconChain.getJustifiedCheckpoint(),
       block: beaconChain.getBlockHexDefaultStatus(block.blockRoot),
     }));
-    beaconChain.emitter.on(ChainEvent.chainViewUpdated, onLegacyUpdate);
     beaconChain.emitter.on(ChainEvent.forkChoiceJustified, onJustified);
     beaconChain.emitter.on(ChainEvent.updateStatus, onStatus);
     beaconChain.emitter.on(routes.events.EventType.head, onHead);
     await beaconChain.beaconEngine.importBlock(input, stateTransition.DataAvailabilityStatus.PreData, {});
-    expect(onLegacyUpdate).not.toHaveBeenCalled();
     expect(onJustified).toHaveBeenCalledExactlyOnceWith(justified);
     expect(onStatus).toHaveBeenCalledOnce();
     expect(onStatus.mock.results[0].value).toMatchObject({headRoot: summary.blockRoot, headSlot: block.slot});
@@ -1218,8 +1209,14 @@ describe("bytes-based engine startup", () => {
     if (!engine) throw Error("Expected initialized engine");
     const error = new Error("irrecoverable fork-choice response");
     engine.forkChoice.irrecoverableError = error;
-    engine.publishChainView(false);
-    engine.publishChainView(false);
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    block.message.parentRoot.fill(0xff);
+    const entry = {data: block, bytes: ssz.phase0.SignedBeaconBlock.serialize(block)};
+    for (const attempt of [1, 2]) {
+      await expect(engine.verifyBlocks([entry], {}), `verification attempt ${attempt}`).resolves.toMatchObject({
+        err: {type: {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN}},
+      });
+    }
     expect(shutdown).toHaveBeenCalledExactlyOnceWith(error);
   });
 
@@ -1229,8 +1226,7 @@ describe("bytes-based engine startup", () => {
     if (!engine) throw Error("Expected initialized engine");
     const nodes = engine.forkChoice.getAllNodes();
     const getAllNodes = vi.spyOn(engine.forkChoice, "getAllNodes");
-    const updated = vi.fn();
-    engine.emitter.on(BeaconEngineEvent.chainViewUpdated, updated);
+    const emit = vi.spyOn(engine.emitter, "emit");
     nodes[0].weight = 42n;
     vi.spyOn(engine.forkChoice, "updateAndGetHead").mockReturnValue({head: nodes[0]});
     engine.getProposerHead(0);
@@ -1239,7 +1235,7 @@ describe("bytes-based engine startup", () => {
     engine.pauseFastConfirmation();
     engine.resumeFastConfirmation();
     expect(getAllNodes).not.toHaveBeenCalled();
-    expect(updated).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalled();
     expect((await engine.getProtoArrayNodes())[0].weight).toBe(84n);
     expect(getAllNodes).toHaveBeenCalledOnce();
   });

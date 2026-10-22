@@ -54,7 +54,7 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainView} from "./chainView/chainView.js";
-import {ChainViewBlock, ChainViewSnapshot, ChainViewState, ChainViewUpdate} from "./chainView/interface.js";
+import {ChainViewBlock, ChainViewSnapshot, ChainViewState} from "./chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -279,7 +279,6 @@ export class BeaconChain implements IBeaconChain {
 
     this.clock = clock;
     this.emitter = emitter;
-    this.emitter.on(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
     this.emitter.on(ChainEvent.chainViewBlocksAdded, this.onChainViewBlocksAdded);
     // Finalization consumers read ChainView even when no head update preceded the checkpoint pull.
     this.emitter.prependListener(ChainEvent.forkChoiceFinalized, this.onChainViewFinalized);
@@ -360,7 +359,6 @@ export class BeaconChain implements IBeaconChain {
     // Engine owns teardown of its resources (historical-state regen + BLS pool).
     await this.beaconEngine.close();
     await this.bls.close();
-    this.emitter.off(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
     this.emitter.off(ChainEvent.chainViewBlocksAdded, this.onChainViewBlocksAdded);
     this.emitter.off(ChainEvent.forkChoiceFinalized, this.onChainViewFinalized);
     this.emitter.off(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
@@ -872,13 +870,6 @@ export class BeaconChain implements IBeaconChain {
     const previousFinalized = this.getFinalizedCheckpoint();
     this.chainView.applyFinalizedCheckpoint(checkpoint);
     if (checkpoint.epoch > previousFinalized.epoch) this.emitter.emit(ChainEvent.updateStatus);
-  };
-
-  // TODO - beacon engine: may remove this
-  private onChainViewUpdated = (update: ChainViewUpdate): void => {
-    const previousJustified = this.getJustifiedCheckpoint();
-    this.chainView.applyUpdate(update);
-    this.onChainViewStateUpdated(previousJustified);
   };
 
   private onChainViewStateUpdated(previousJustified: CheckpointWithHex): void {

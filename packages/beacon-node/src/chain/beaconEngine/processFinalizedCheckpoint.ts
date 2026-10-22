@@ -206,7 +206,6 @@ export async function deleteNonCanonicalBlocks(this: BeaconEngineCore, roots: Ui
  * [beacon-engine] ArchiveStore must await archival and cleanup on both owners before calling this.
  * State archival below is the last dependency on the unpruned fork choice. The facade prunes ChainView only
  * after this resolves; do not move fork-choice pruning into the earlier block or envelope migration steps.
- * ChainView publication is engine-specific.
  */
 export async function completeFinalization(
   this: BeaconEngineCore,
@@ -216,8 +215,6 @@ export async function completeFinalization(
   await stateArchiveStrategy.onFinalizedCheckpoint(finalized, this.metrics);
   await stateArchiveStrategy.maybeArchiveState(finalized, this.metrics);
   const count = this.forkChoice.prune(finalized.rootHex).length;
-  // TODO - beacon engine: re-review this
-  this.publishChainView();
   return count;
 }
 

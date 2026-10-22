@@ -7,7 +7,7 @@ import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
-import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
+import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {ChainView} from "../../../../src/chain/chainView/chainView.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
@@ -42,7 +42,6 @@ describe("BeaconEngine head notifications", () => {
   let order: string[];
   const onHead = vi.fn();
   const onHeadV2 = vi.fn();
-  const onHeadUpdated = vi.fn();
   const close = vi.fn<() => Promise<void>>();
   const getDependentRoot = vi.fn<(head: ProtoBlock, difference: EpochDifference) => string>();
 
@@ -70,6 +69,15 @@ describe("BeaconEngine head notifications", () => {
       emitter: events,
       logger: getMockedLogger(),
       close,
+      attestationPool: {prune: vi.fn()},
+      aggregatedAttestationPool: {prune: vi.fn()},
+      syncCommitteeMessagePool: {prune: vi.fn()},
+      seenSyncCommitteeMessages: {prune: vi.fn()},
+      payloadAttestationPool: {prune: vi.fn()},
+      executionPayloadBidPool: {prune: vi.fn()},
+      seenExecutionPayloadBids: {prune: vi.fn()},
+      proposerPreferencesPool: {prune: vi.fn()},
+      seenAttestationDatas: {onSlot: vi.fn()},
       forkChoice: {
         getHead: () => head,
         getAllNodes: () => [previous, next],
@@ -94,15 +102,10 @@ describe("BeaconEngine head notifications", () => {
       logger: core.logger,
     });
     view = new ChainView(await engine.getChainViewSnapshot());
-    emitter.on(ChainEvent.chainViewUpdated, (update) => {
-      view.applyUpdate(update);
-      order.push("view");
-    });
     emitter.on(ChainEvent.chainViewBlocksAdded, (blocks, state) => {
       view.addBlocks(blocks, state);
       order.push("view");
     });
-    events.on(BeaconEngineEvent.headUpdated, onHeadUpdated);
     emitter.on(routes.events.EventType.head, (event) => {
       expect(view.getHead()).toEqual(toChainViewBlock(next));
       order.push("head");
@@ -119,19 +122,14 @@ describe("BeaconEngine head notifications", () => {
     const headPull = vi.spyOn(core, "getHeadSnapshot");
     const coreEmit = vi.spyOn(events, "emit");
     if (trigger === "recompute") await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead());
-    else core.updateTime(next.slot);
+    else await engine.onSlot(next.slot, view.getHead());
 
     expect(order).toEqual(["view", "head", "head_v2"]);
-    if (trigger === "recompute") {
-      expect(coreEmit).not.toHaveBeenCalled();
-      expect(headPull).toHaveBeenCalledExactlyOnceWith({
-        blockRoot: fromHex(previous.blockRoot),
-        payloadStatus: previous.payloadStatus,
-      });
-    } else {
-      expect(onHeadUpdated).toHaveBeenCalledOnce();
-      expect(headPull).not.toHaveBeenCalled();
-    }
+    expect(coreEmit).not.toHaveBeenCalled();
+    expect(headPull).toHaveBeenCalledExactlyOnceWith({
+      blockRoot: fromHex(previous.blockRoot),
+      payloadStatus: previous.payloadStatus,
+    });
     expect(onHead).toHaveBeenCalledExactlyOnceWith({
       slot: next.slot,
       block: next.blockRoot,
@@ -167,7 +165,6 @@ describe("BeaconEngine head notifications", () => {
 
     expect(order).toEqual(["view", "head_v2"]);
     expect(onHead).not.toHaveBeenCalled();
-    expect(onHeadUpdated).not.toHaveBeenCalled();
     expect(onHeadV2).toHaveBeenCalledOnce();
     expect(onHeadV2.mock.calls[0][0].data).toMatchObject({payloadStatus: expected, epochTransition: false});
   });
@@ -179,7 +176,6 @@ describe("BeaconEngine head notifications", () => {
 
     expect(order).toEqual([]);
     expect(headPull).not.toHaveBeenCalled();
-    expect(onHeadUpdated).not.toHaveBeenCalled();
     expect(getDependentRoot).not.toHaveBeenCalled();
   });
 
@@ -224,7 +220,6 @@ describe("BeaconEngine head notifications", () => {
     await expect(engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead())).resolves.toBeUndefined();
     expect(order).toEqual(["view"]);
     expect(view.getHead()).toEqual(toChainViewBlock(next));
-    expect(onHeadUpdated).not.toHaveBeenCalled();
     expect(core.logger.debug).toHaveBeenCalled();
   });
 
@@ -241,7 +236,7 @@ describe("BeaconEngine head notifications", () => {
     );
   });
 
-  it.each([false, true])("detaches public head events on close, including failed close=%s", async (failClose) => {
+  it.each([false, true])("does not pull or notify after close, including failed close=%s", async (failClose) => {
     if (failClose) close.mockRejectedValueOnce(Error("close failed"));
     if (failClose) await expect(engine.close()).rejects.toThrow("close failed");
     else await engine.close();
@@ -249,11 +244,10 @@ describe("BeaconEngine head notifications", () => {
 
     const headPull = vi.spyOn(core, "getHeadSnapshot");
     await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, view.getHead());
+    next = {...next, blockRoot: root(7)};
+    await engine.onSlot(next.slot, view.getHead());
     expect(headPull).not.toHaveBeenCalled();
     expect(order).toEqual([]);
-    next = {...next, blockRoot: root(7)};
-    core.updateTime(next.slot);
-    expect(onHeadUpdated).toHaveBeenCalledOnce();
     expect(onHead).not.toHaveBeenCalled();
     expect(onHeadV2).not.toHaveBeenCalled();
   });

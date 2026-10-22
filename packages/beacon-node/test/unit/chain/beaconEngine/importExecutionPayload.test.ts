@@ -113,7 +113,6 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     expect(result.err).not.toBeInstanceOf(Error);
     expect(putEnvelope).not.toHaveBeenCalled();
     expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
-    expect(chain.publishChainView).not.toHaveBeenCalled();
   });
 
   it.each([false, true])(
@@ -196,7 +195,6 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     expect(chain.forkChoice.onExecutionPayload.mock.invocationCallOrder[0]).toBeLessThan(
       chain.executionEngine.notifyForkchoiceUpdate.mock.invocationCallOrder[0]
     );
-    expect(chain.publishChainView).not.toHaveBeenCalled();
   });
 
   it.each(["bytes", "object"] as const)(
@@ -230,7 +228,6 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
         )
       );
       expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
-      expect(chain.publishChainView).not.toHaveBeenCalled();
       expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
       if (inputType === "object") {
         expect(putEnvelope.mock.calls[0][1]).toBe(envelopeBytes);
@@ -244,7 +241,6 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
         result: {block: {blockRoot: Uint8Array.from(blockRoot), payloadStatus: PayloadStatus.FULL}},
       });
       expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
-      expect(chain.publishChainView).not.toHaveBeenCalled();
       expect(candidateCacheAccess).not.toHaveBeenCalled();
     }
   );
@@ -254,7 +250,6 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     putEnvelope.mockRejectedValue(error);
     await expect(importPayload()).rejects.toBe(error);
     expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
-    expect(chain.publishChainView).not.toHaveBeenCalled();
     expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
   });
 
@@ -321,7 +316,6 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     });
     expect(structuredClone(response)).toEqual(response);
     expect(emit).not.toHaveBeenCalled();
-    expect(chain.publishChainView).not.toHaveBeenCalled();
     if (response.err !== null) throw Error("Expected import success");
     response.result.block.blockRoot.fill(9);
     expect(envelope.message.beaconBlockRoot).toEqual(blockRoot);

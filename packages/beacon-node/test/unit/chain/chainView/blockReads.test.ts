@@ -29,7 +29,6 @@ describe("BeaconChain serialized block reads", () => {
     chain = Object.assign(Object.create(BeaconChain.prototype) as BeaconChain, {
       config,
       chainView: new ChainView({
-        revision: 0,
         blocks: [anchor, head],
         head,
         justified: checkpoint,

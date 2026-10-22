@@ -56,7 +56,6 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       forkChoice: engine.forkChoice,
       db: modules.db,
     });
-    vi.spyOn(engine, "publishChainView").mockImplementation(() => {});
     block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
     block.message.proposerIndex = 7;

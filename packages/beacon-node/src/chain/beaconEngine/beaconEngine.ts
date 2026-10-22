@@ -49,7 +49,7 @@ import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {SignedBlockRoot, computeSignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {ChainViewBlock, ChainViewSnapshot, ChainViewUpdate} from "../chainView/interface.js";
+import {ChainViewBlock, ChainViewSnapshot} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockError} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
@@ -128,14 +128,10 @@ export class BeaconEngine implements IBeaconEngine {
     this.serializedCache = serializedCache;
     this.beaconEngineWorker = beaconEngineWorker;
     this.logger = logger;
-    // TODO - beacon engine: in worker mode, post core notifications to a main-thread event bus,
-    // preserving their order so ChainView is updated before head/head_v2 and finalization consumers run.
-    // TODO - beacon engine: remove this event
-    this.core.emitter.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
+    // TODO - beacon engine: in worker mode, post core notifications to a main-thread event bus.
     this.core.emitter.on(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.core.emitter.on(BeaconEngineEvent.fatalError, this.onFatalError);
     this.core.emitter.on(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
-    this.core.emitter.on(BeaconEngineEvent.headUpdated, this.emitHeadUpdate);
     this.core.emitter.on(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
     this.core.emitter.on(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
     this.core.emitter.on(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
@@ -147,21 +143,15 @@ export class BeaconEngine implements IBeaconEngine {
     try {
       await this.core.close();
     } finally {
-      this.core.emitter.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
       this.core.emitter.off(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
       this.core.emitter.off(BeaconEngineEvent.fatalError, this.onFatalError);
       this.core.emitter.off(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
-      this.core.emitter.off(BeaconEngineEvent.headUpdated, this.emitHeadUpdate);
       this.core.emitter.off(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
       this.core.emitter.off(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
       this.core.emitter.off(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
       this.core.emitter.off(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     }
   }
-
-  private readonly onChainViewUpdated = (update: ChainViewUpdate): void => {
-    this.emitter.emit(ChainEvent.chainViewUpdated, update);
-  };
 
   private readonly onHeadUpdated = async (
     previousHead?: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
@@ -217,20 +207,13 @@ export class BeaconEngine implements IBeaconEngine {
     this.emitter.emit(ChainEvent.fatalError, error);
   };
 
-  // TODO - beacon engine: remove hex-root input when the remaining Core head events use responses.
-  private readonly emitHeadUpdate = (update: HeadUpdate | HeadUpdate<Root>): void => {
+  private readonly emitHeadUpdate = (update: HeadUpdate<Root>): void => {
     const {slot, payloadStatus, headRootChanged, epochTransition, executionOptimistic} = update;
-    const blockRoot = typeof update.blockRoot === "string" ? update.blockRoot : toRootHex(update.blockRoot);
+    const blockRoot = toRootHex(update.blockRoot);
     try {
-      const stateRoot = typeof update.stateRoot === "string" ? update.stateRoot : toRootHex(update.stateRoot);
-      const previousDutyDependentRoot =
-        typeof update.previousDutyDependentRoot === "string"
-          ? update.previousDutyDependentRoot
-          : toRootHex(update.previousDutyDependentRoot);
-      const currentDutyDependentRoot =
-        typeof update.currentDutyDependentRoot === "string"
-          ? update.currentDutyDependentRoot
-          : toRootHex(update.currentDutyDependentRoot);
+      const stateRoot = toRootHex(update.stateRoot);
+      const previousDutyDependentRoot = toRootHex(update.previousDutyDependentRoot);
+      const currentDutyDependentRoot = toRootHex(update.currentDutyDependentRoot);
       if (headRootChanged) {
         this.emitter.emit(routes.events.EventType.head, {
           slot,
