@@ -388,9 +388,7 @@ export type IBeaconStateViewNative = Omit<
     options?: StateTransitionOpts
   ): IBeaconStateViewNative;
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}): IBeaconStateViewNative;
-  withParentPayloadApplied(
-    ...args: Parameters<IBeaconStateViewLatestFork["withParentPayloadApplied"]>
-  ): IBeaconStateViewNative;
+  withParentPayloadApplied(executionRequestsBytes: Uint8Array): IBeaconStateViewNative;
 };
 
 export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {
