@@ -162,3 +162,71 @@ describe("BeaconDb.pruneHotDb", () => {
     expect(await db.dataColumns.getManyBinary(key, [column.index])).toEqual([columnBytes]);
   });
 });
+
+describe("archive repositories pruneBefore", () => {
+  const config = createChainForkConfig({FULU_FORK_EPOCH: 0});
+  const logger = testLogger();
+  let tmpDir: string;
+  let db: BeaconDb;
+  let controller: LevelDbController;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), "lodestar-archive-prune-"));
+    controller = await LevelDbController.create({name: path.join(tmpDir, "leveldb")}, {logger});
+    db = new BeaconDb(config, controller, {dataColumnDir: path.join(tmpDir, "data_columns"), logger});
+    await db.init();
+  });
+
+  afterEach(async () => {
+    await db.close();
+    await rm(tmpDir, {recursive: true, force: true});
+  });
+
+  it("prunes blob sidecars from where the previous prune ended", async () => {
+    for (const slot of [1, 2, 3, 4, 5]) {
+      await db.blobSidecarsArchive.put(slot, {blockRoot: Buffer.alloc(32, slot), slot, blobSidecars: []});
+    }
+    const compactRange = vi.spyOn(controller, "compactRange");
+    const keys = vi.spyOn(db.blobSidecarsArchive, "keys");
+
+    await expect(db.blobSidecarsArchive.pruneBefore(3)).resolves.toEqual([1, 2]);
+    await expect(db.blobSidecarsArchive.pruneBefore(3)).resolves.toEqual([]);
+    await expect(db.blobSidecarsArchive.pruneBefore(5)).resolves.toEqual([3, 4]);
+
+    expect(compactRange).toHaveBeenCalledOnce();
+    expect(compactRange).toHaveBeenCalledWith(
+      encodeKey(Bucket.deneb_blobSidecarsArchive, Buffer.alloc(0)),
+      db.blobSidecarsArchive.encodeKey(3)
+    );
+    expect(keys.mock.calls).toEqual([[{gte: undefined, lt: 3}], [{gte: 3, lt: 5}]]);
+    expect(await db.blobSidecarsArchive.keys()).toEqual([5]);
+  });
+
+  it("prunes legacy data columns from where the previous prune ended", async () => {
+    for (const slot of [1, 2, 3, 4, 5]) {
+      for (const index of [0, 1]) {
+        await db.dataColumnSidecarArchive.put(slot, {...ssz.fulu.DataColumnSidecar.defaultValue(), index});
+      }
+    }
+    const compactRange = vi.spyOn(controller, "compactRange");
+    const keys = vi.spyOn(db.dataColumnSidecarArchive, "keys");
+
+    await expect(db.dataColumnSidecarArchive.pruneBefore(3)).resolves.toEqual([1, 2]);
+    await expect(db.dataColumnSidecarArchive.pruneBefore(2)).resolves.toEqual([]);
+    await expect(db.dataColumnSidecarArchive.pruneBefore(5)).resolves.toEqual([3, 4]);
+
+    expect(compactRange).toHaveBeenCalledOnce();
+    expect(compactRange).toHaveBeenCalledWith(
+      encodeKey(Bucket.allForks_dataColumnSidecarsArchive, db.dataColumnSidecarArchive.getMinKeyRaw(0)),
+      encodeKey(Bucket.allForks_dataColumnSidecarsArchive, db.dataColumnSidecarArchive.getMinKeyRaw(3))
+    );
+    expect(keys.mock.calls).toEqual([
+      [{gte: {prefix: 0, id: 0}, lt: {prefix: 3, id: 0}}],
+      [{gte: {prefix: 3, id: 0}, lt: {prefix: 5, id: 0}}],
+    ]);
+    expect(await db.dataColumnSidecarArchive.keys()).toEqual([
+      {prefix: 5, id: 0},
+      {prefix: 5, id: 1},
+    ]);
+  });
+});

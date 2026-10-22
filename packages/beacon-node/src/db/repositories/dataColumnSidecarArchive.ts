@@ -15,6 +15,8 @@ const SLOT_BYTE_SIZE = 8;
  * Indexed data by `slot` + `columnIndex`
  */
 export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot, ColumnIndex, DataColumnSidecar> {
+  private prunedBeforeSlot: Slot | null = null;
+
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_dataColumnSidecarsArchive;
     // Type won't be used since we select it dynamically based on fork
@@ -69,5 +71,23 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
       encodeNumberForDbKey(prefix, SLOT_BYTE_SIZE),
       encodeNumberForDbKey(0, COLUMN_INDEX_BYTE_SIZE),
     ]);
+  }
+
+  /**
+   * Deletes all entries before `slot`. Prunes only delete from the start of the bucket, so the first prune
+   * compacts the range to drop tombstones of earlier runs and later prunes resume where the previous one ended.
+   */
+  async pruneBefore(slot: Slot): Promise<Slot[]> {
+    if (this.prunedBeforeSlot === null) {
+      await this.db.compactRange(this.wrapKey(this.getMinKeyRaw(0)), this.wrapKey(this.getMinKeyRaw(slot)));
+    } else if (slot <= this.prunedBeforeSlot) {
+      return [];
+    }
+
+    const keys = await this.keys({gte: {prefix: this.prunedBeforeSlot ?? 0, id: 0}, lt: {prefix: slot, id: 0}});
+    const slots = [...new Set(keys.map(({prefix}) => prefix))];
+    if (slots.length > 0) await this.deleteMany(slots);
+    this.prunedBeforeSlot = slot;
+    return slots;
   }
 }
