@@ -135,9 +135,10 @@ describe("facade execution payload envelope serving", () => {
       envelopeBytes
     );
 
-    chain.getFinalizedBlockSnapshot = vi
-      .fn()
-      .mockReturnValue({canonical: [protoBlock], nonCanonical: [{...protoBlock, blockRoot: toRootHex(orphanRoot)}]});
+    const blockSnapshot = {
+      canonical: [protoBlock],
+      nonCanonical: [{...protoBlock, blockRoot: toRootHex(orphanRoot)}],
+    };
     chain.beaconEngine.migrateExecutionPayloadEnvelopes =
       BeaconEngineCore.prototype.migrateExecutionPayloadEnvelopes.bind(chain.beaconEngine);
     chain.beaconEngine.deleteNonCanonicalExecutionPayloadEnvelopes =
@@ -154,7 +155,7 @@ describe("facade execution payload envelope serving", () => {
       config,
       db,
       chain.beaconEngine,
-      chain.getFinalizedBlockSnapshot(rootHex),
+      blockSnapshot,
       chain.logger,
       {epoch: 1, root, rootHex},
       1,

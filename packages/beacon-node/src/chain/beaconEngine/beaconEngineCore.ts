@@ -138,7 +138,7 @@ import {ImportBlockOpts} from "../blocks/types.js";
 import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
-import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
+import {ChainViewSnapshot} from "../chainView/interface.js";
 import {BlockErrorCode} from "../errors/blockError.js";
 import {GossipActionError} from "../errors/gossipValidation.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
@@ -293,7 +293,13 @@ import {GossipValidationResult, fromResult} from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
 import {importExecutionPayload, importExecutionPayloadBytes} from "./importExecutionPayload.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
-import type {ApiBlockId, ApiStateId, BlockRootResponse, FinalizedCheckpoint} from "./interface.js";
+import type {
+  ApiBlockId,
+  ApiStateId,
+  BlockRootResponse,
+  FinalizedCheckpointSnapshot,
+  FinalizedProtoSummary,
+} from "./interface.js";
 import {
   ApiStateResult,
   ApiStateResultWithFork,
@@ -2997,15 +3003,26 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return block ? {blockRoot: block.blockRoot, slot: block.slot} : null;
   }
 
-  getFinalizedCheckpoint(): FinalizedCheckpoint {
+  getFinalizedCheckpointSnapshot(): FinalizedCheckpointSnapshot<Root> {
     const checkpoint = this.forkChoice.getFinalizedCheckpoint();
     const block = this.forkChoice.getFinalizedBlock();
+    // Source: unstable@9cb14e3381 chain/archiveStore/utils/archiveBlocks.ts#archiveBlocks (archival selection).
+    const {ancestors, nonAncestors} = this.forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(
+      checkpoint.rootHex
+    );
+    // Return detached byte roots for the worker/native boundary.
+    const toSummary = ({slot, blockRoot, payloadStatus}: ProtoBlock): FinalizedProtoSummary<Root> => ({
+      slot,
+      blockRoot: fromHex(blockRoot),
+      payloadStatus,
+    });
     return {
       epoch: checkpoint.epoch,
       root: Uint8Array.from(checkpoint.root),
       slot: block.slot,
       stateRoot: fromHex(block.stateRoot),
       executionOptimistic: isOptimisticBlock(block),
+      blockSnapshot: {canonical: ancestors.map(toSummary), nonCanonical: nonAncestors.map(toSummary)},
     };
   }
 

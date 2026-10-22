@@ -4,24 +4,8 @@ import {BlockRootSlot} from "../../util/sszBytes.js";
 
 export type ChainViewBlock = Pick<
   ProtoBlock,
-  | "blockRoot"
-  | "slot"
-  | "parentRoot"
-  | "stateRoot"
-  | "parentBlockHash"
-  | "payloadStatus"
-  | "executionPayloadBlockHash"
-  | "dataAvailabilityStatus"
-  | "finalizedEpoch"
-  | "finalizedRoot"
+  "blockRoot" | "slot" | "parentRoot" | "stateRoot" | "parentBlockHash" | "payloadStatus" | "executionPayloadBlockHash"
 > & {executionPayloadNumber?: number};
-
-export type FinalizedProtoSummary = Pick<ChainViewBlock, "slot" | "blockRoot" | "payloadStatus">;
-
-export type FinalizedBlockSnapshot = {
-  canonical: FinalizedProtoSummary[];
-  nonCanonical: FinalizedProtoSummary[];
-};
 
 export type ChainViewState = {
   head: ChainViewBlock;
@@ -38,7 +22,6 @@ export type ChainViewSnapshot = ChainViewState & {
 export type ChainViewUpdate = ChainViewSnapshot;
 
 export interface IChainView {
-  getFinalizedBlockSnapshot(root: RootHex): FinalizedBlockSnapshot;
   getHead(): ChainViewBlock;
   getHeadRoot(): RootHex;
   getFinalizedCheckpoint(): CheckpointWithHex;

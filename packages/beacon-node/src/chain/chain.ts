@@ -42,7 +42,7 @@ import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../util/ssz
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
 import {EngineBootstrap} from "./beaconEngine/initialization.js";
-import type {FinalizedCheckpoint} from "./beaconEngine/interface.js";
+import type {FinalizedCheckpointSnapshot} from "./beaconEngine/interface.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
@@ -54,7 +54,7 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainView} from "./chainView/chainView.js";
-import {ChainViewBlock, ChainViewSnapshot, ChainViewUpdate, IChainView} from "./chainView/interface.js";
+import {ChainViewBlock, ChainViewSnapshot, ChainViewUpdate} from "./chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -373,10 +373,6 @@ export class BeaconChain implements IBeaconChain {
 
   pruneChainView(finalized: CheckpointWithHex): void {
     this.chainView.prune(finalized);
-  }
-
-  getFinalizedBlockSnapshot(root: RootHex): ReturnType<IChainView["getFinalizedBlockSnapshot"]> {
-    return this.chainView.getFinalizedBlockSnapshot(root);
   }
 
   getHead(): ChainViewBlock {
@@ -834,9 +830,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getStatus(): Status {
-    // Read the cached head instead of the engine — its finalized* fields ARE the head state's
-    // finalized checkpoint (exactly what Status wants), so no separate getFinalizedCheckpoint() call.
     const head = this.getHead();
+    const finalizedCheckpoint = this.getFinalizedCheckpoint();
     const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
     return {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
@@ -845,8 +840,8 @@ export class BeaconChain implements IBeaconChain {
       // - epoch of fork boundary is used to get blob parameters of current Blob Parameter Only (BPO) fork
       forkDigest: this.config.forkBoundary2ForkDigest(boundary),
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
-      finalizedRoot: head.finalizedEpoch === GENESIS_EPOCH ? ZERO_HASH : fromHex(head.finalizedRoot),
-      finalizedEpoch: head.finalizedEpoch,
+      finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
+      finalizedEpoch: finalizedCheckpoint.epoch,
       // TODO: PERFORMANCE: Memoize to prevent re-computing every time
       headRoot: fromHex(head.blockRoot),
       headSlot: head.slot,
@@ -978,7 +973,10 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
-  private async onForkChoiceFinalized(this: BeaconChain, cp: FinalizedCheckpoint & {rootHex: RootHex}): Promise<void> {
+  private async onForkChoiceFinalized(
+    this: BeaconChain,
+    cp: FinalizedCheckpointSnapshot & {rootHex: RootHex}
+  ): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.metrics?.finalizedEpoch.set(cp.epoch);
     const event = {
@@ -992,7 +990,7 @@ export class BeaconChain implements IBeaconChain {
     // Engine prunes proposer observations in pruneOnFinalized below.
 
     // Update validator custody to account for effective balance changes
-    await this.updateValidatorsCustodyRequirement(cp);
+    await this.updateValidatorsCustodyRequirement({epoch: cp.epoch, root: cp.root, rootHex: cp.rootHex});
 
     // Engine prunes its own op pool + seen-block-proposers on finalization.
     await this.beaconEngine.pruneOnFinalized();

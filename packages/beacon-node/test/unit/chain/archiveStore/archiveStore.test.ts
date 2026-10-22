@@ -38,6 +38,7 @@ describe("chain / archive / ArchiveStore", () => {
       slot: 32,
       stateRoot: new Uint8Array(32),
       executionOptimistic: false,
+      blockSnapshot: {canonical: [], nonCanonical: []},
     };
 
     (archiveStore as unknown as {jobQueue: {push(finalized: CheckpointWithHex): Promise<void>}}).jobQueue = {

@@ -2377,6 +2377,7 @@ describe("UnknownBlockSync", () => {
         slot: finalizedBlockSlot,
         stateRoot: new Uint8Array(32),
         executionOptimistic: false,
+        blockSnapshot: {canonical: [], nonCanonical: []},
       });
 
       expect(pendingPayloads.has(rootHexBelow)).toBe(false);

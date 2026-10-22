@@ -6,6 +6,7 @@ import {IBeaconChainDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
+import {FinalizedBlockSnapshot, FinalizedCheckpointSnapshot} from "../beaconEngine/interface.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH} from "./constants.js";
@@ -30,7 +31,7 @@ type ArchiveStoreInitOpts = ArchiveStoreOpts & {
  * periodically.
  */
 export class ArchiveStore {
-  private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
+  private jobQueue: JobItemQueue<[CheckpointWithHex, FinalizedBlockSnapshot], void>;
 
   private archiveDataEpochs?: number;
   private readonly chain: IBeaconChain;
@@ -49,10 +50,13 @@ export class ArchiveStore {
     this.signal = signal;
     this.archiveDataEpochs = opts.archiveDataEpochs;
 
-    this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
-      maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
-      signal,
-    });
+    this.jobQueue = new JobItemQueue<[CheckpointWithHex, FinalizedBlockSnapshot], void>(
+      this.processFinalizedCheckpoint,
+      {
+        maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
+        signal,
+      }
+    );
 
     // State archival is engine-owned. ArchiveStore coordinates it with BeaconChain's DA/light-client cleanup
     // and keeps fork choice and ChainView available until all dependent work completes.
@@ -97,13 +101,15 @@ export class ArchiveStore {
   //-------------------------------------------------------------------------
   // Event handlers
   //-------------------------------------------------------------------------
-  private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
+  private onFinalizedCheckpoint = (snapshot: FinalizedCheckpointSnapshot & CheckpointWithHex): void => {
+    const {epoch, root, rootHex, blockSnapshot} = snapshot;
+    const finalized = {epoch, root, rootHex};
     // Decouple archival from finalization notification delivery so queue failures cannot interrupt other listeners.
     // `jobQueue.push()` can throw synchronously (queue aborted / full) or reject asynchronously;
     // awaiting it inside the deferred callback funnels both failure modes into the one catch.
     callInNextEventLoop(async () => {
       try {
-        await this.jobQueue.push(finalized);
+        await this.jobQueue.push(finalized, blockSnapshot);
       } catch (e) {
         if (!isQueueErrorAborted(e)) {
           this.logger.error(
@@ -119,10 +125,13 @@ export class ArchiveStore {
   /**
    * The facade orchestrates finalization because blocks, envelopes, states and fork choice belong to BeaconEngine,
    * while columns and ChainView belong to BeaconChain. Keep these steps awaited in the checkpoint queue:
-   * neither owner may prune its fork-choice metadata before the other has finished using it for archival
-   * and cleanup. The detailed cross-owner ordering is documented in beaconEngine/processFinalizedCheckpoint.ts.
+   * finish archival and cleanup before pruning fork choice and ChainView. The detailed cross-owner ordering
+   * is documented in beaconEngine/processFinalizedCheckpoint.ts.
    */
-  private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
+  private processFinalizedCheckpoint = async (
+    finalized: CheckpointWithHex,
+    blockSnapshot: FinalizedBlockSnapshot
+  ): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
@@ -132,7 +141,7 @@ export class ArchiveStore {
         this.chain.config,
         this.db,
         this.chain.beaconEngine,
-        this.chain.getFinalizedBlockSnapshot(finalized.rootHex),
+        blockSnapshot,
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,

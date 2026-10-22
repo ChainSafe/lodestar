@@ -2,15 +2,7 @@ import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Root, RootHex, Slot} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, toRootHex} from "@lodestar/utils";
-import {
-  ChainViewBlock,
-  ChainViewSnapshot,
-  ChainViewState,
-  ChainViewUpdate,
-  FinalizedBlockSnapshot,
-  FinalizedProtoSummary,
-  IChainView,
-} from "./interface.js";
+import {ChainViewBlock, ChainViewSnapshot, ChainViewState, ChainViewUpdate, IChainView} from "./interface.js";
 
 export enum ChainViewErrorCode {
   INVALID_REVISION = "CHAIN_VIEW_INVALID_REVISION",
@@ -25,7 +17,6 @@ export class ChainViewError extends LodestarError<
 /** Replicated imported-block metadata. Canonical ancestry is derived from the shared head. */
 export class ChainView implements IChainView {
   private readonly blocks = new Map<RootHex, Partial<Record<PayloadStatus, ChainViewBlock>>>();
-  private readonly orderedBlocks = new Map<string, ChainViewBlock>();
   private state: ChainViewState;
   private revision: number;
   private prunedCheckpoint?: CheckpointWithHex;
@@ -41,7 +32,7 @@ export class ChainView implements IChainView {
       finalized: snapshot.finalized,
     });
     this.revision = snapshot.revision;
-    this.upsert(snapshot.blocks);
+    this.mergeBlocks(snapshot.blocks);
   }
 
   applyUpdate(update: ChainViewUpdate): void {
@@ -58,7 +49,7 @@ export class ChainView implements IChainView {
     ) {
       this.finalizedDescendants.clear();
     }
-    this.upsert(update.blocks);
+    this.mergeBlocks(update.blocks);
     this.state = structuredClone({
       head: update.head,
       justified: update.justified,
@@ -80,9 +71,6 @@ export class ChainView implements IChainView {
     for (const root of this.blocks.keys()) {
       if (!retained.has(root)) this.blocks.delete(root);
     }
-    for (const [key, block] of this.orderedBlocks) {
-      if (!retained.has(block.blockRoot)) this.orderedBlocks.delete(key);
-    }
     this.finalizedDescendants.clear();
     this.prunedCheckpoint = structuredClone(finalized);
     this.logger?.debug("Pruned ChainView", {
@@ -91,27 +79,6 @@ export class ChainView implements IChainView {
       prunedRoots: previousSize - this.blocks.size,
       retainedRoots: this.blocks.size,
     });
-  }
-
-  getFinalizedBlockSnapshot(root: RootHex): FinalizedBlockSnapshot {
-    const variants = this.blocks.get(root);
-    const status = variants?.[PayloadStatus.PENDING] ? PayloadStatus.PENDING : PayloadStatus.FULL;
-    const blocks = Array.from(this.orderedBlocks.values());
-    const index = blocks.findIndex((block) => block.blockRoot === root && block.payloadStatus === status);
-    if (!variants || index === -1) throw new ChainViewError({code: ChainViewErrorCode.UNKNOWN_BLOCK, root});
-    // Include the finalized PENDING node and stop at the previous archive boundary retained by this view.
-    const ancestors = Array.from(this.iterateAncestorBlocks(root, status));
-    const canonicalKeys = new Set(ancestors.map((block) => `${block.blockRoot}:${block.payloadStatus}`));
-    // Match proto-array archival: exclude index 0 and nodes inserted after the finalized variant.
-    const nonCanonical = blocks
-      .slice(1, index)
-      .reverse()
-      .filter(
-        (block) =>
-          block.payloadStatus !== PayloadStatus.PENDING &&
-          !canonicalKeys.has(`${block.blockRoot}:${block.payloadStatus}`)
-      );
-    return {canonical: ancestors.map(toFinalizedProtoSummary), nonCanonical: nonCanonical.map(toFinalizedProtoSummary)};
   }
 
   getHead(): ChainViewBlock {
@@ -262,7 +229,7 @@ export class ChainView implements IChainView {
     return {finalizedSlot, nonFinalized};
   }
 
-  private upsert(blocks: ChainViewBlock[]): void {
+  private mergeBlocks(blocks: ChainViewBlock[]): void {
     // A batch may contain late updates for nodes the engine has not pruned yet.
     for (const block of this.prunedCheckpoint ? [...blocks].sort((a, b) => a.slot - b.slot) : blocks) {
       if (
@@ -277,11 +244,6 @@ export class ChainView implements IChainView {
         this.blocks.set(block.blockRoot, variants);
       }
       variants[block.payloadStatus] = {...block};
-    }
-    // Preserve import order for archival even when the retention check above sorts by slot.
-    for (const block of blocks) {
-      const retained = this.blocks.get(block.blockRoot)?.[block.payloadStatus];
-      if (retained) this.orderedBlocks.set(`${block.blockRoot}:${block.payloadStatus}`, retained);
     }
   }
 
@@ -317,9 +279,4 @@ export class ChainView implements IChainView {
     for (const root of path) this.finalizedDescendants.set(root, descendant);
     return descendant;
   }
-}
-
-function toFinalizedProtoSummary(block: ChainViewBlock): FinalizedProtoSummary {
-  const {slot, blockRoot, payloadStatus} = block;
-  return {slot, blockRoot, payloadStatus};
 }

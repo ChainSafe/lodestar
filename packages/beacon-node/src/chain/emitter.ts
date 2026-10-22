@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {DataColumnSidecar, RootHex, Slot, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
-import type {FinalizedCheckpoint} from "./beaconEngine/interface.js";
+import type {FinalizedCheckpointSnapshot} from "./beaconEngine/interface.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {ChainViewUpdate} from "./chainView/interface.js";
@@ -112,7 +112,7 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.builderRegistered]: (url: string) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
-  [ChainEvent.forkChoiceFinalized]: (checkpoint: FinalizedCheckpoint & {rootHex: RootHex}) => void;
+  [ChainEvent.forkChoiceFinalized]: (checkpoint: FinalizedCheckpointSnapshot & {rootHex: RootHex}) => void;
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 

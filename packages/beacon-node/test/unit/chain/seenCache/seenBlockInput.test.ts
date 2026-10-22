@@ -271,6 +271,7 @@ describe("SeenBlockInputCache", async () => {
         slot: 0,
         stateRoot: root,
         executionOptimistic: false,
+        blockSnapshot: {canonical: [], nonCanonical: []},
       });
       expect(cache.get(childRootHex)).toBeUndefined();
       expect(cache.get(parentRootHex)).toBeUndefined();
@@ -286,6 +287,7 @@ describe("SeenBlockInputCache", async () => {
         slot: 0,
         stateRoot: root,
         executionOptimistic: false,
+        blockSnapshot: {canonical: [], nonCanonical: []},
       });
       expect(cache.get(childRootHex)).toBe(childBlockInput);
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);

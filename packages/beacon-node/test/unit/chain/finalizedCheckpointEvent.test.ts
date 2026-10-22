@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {RootHex} from "@lodestar/types";
 import {defer, fromHex} from "@lodestar/utils";
-import {FinalizedCheckpoint} from "../../../src/chain/beaconEngine/interface.js";
+import {FinalizedCheckpointSnapshot} from "../../../src/chain/beaconEngine/interface.js";
 import {BeaconChain} from "../../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../../src/chain/emitter.js";
 import {getMockedLogger} from "../../mocks/loggerMock.js";
@@ -10,13 +10,14 @@ import {getMockedLogger} from "../../mocks/loggerMock.js";
 describe("BeaconChain finalized_checkpoint event", () => {
   const rootHex = `0x${"aa".repeat(32)}`;
   const stateRoot = `0x${"bb".repeat(32)}`;
-  const cp: FinalizedCheckpoint & {rootHex: RootHex} = {
+  const cp: FinalizedCheckpointSnapshot & {rootHex: RootHex} = {
     epoch: 2,
     root: fromHex(rootHex),
     rootHex,
     slot: 63,
     stateRoot: fromHex(stateRoot),
     executionOptimistic: false,
+    blockSnapshot: {canonical: [], nonCanonical: []},
   };
 
   beforeEach(() => {
@@ -52,7 +53,11 @@ describe("BeaconChain finalized_checkpoint event", () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(events).toEqual([{block: rootHex, epoch: cp.epoch, state: stateRoot, executionOptimistic: false}]);
     expect(chain.metrics.finalizedEpoch.set).toHaveBeenCalledWith(cp.epoch);
-    expect(chain.updateValidatorsCustodyRequirement).toHaveBeenCalledWith(cp);
+    expect(chain.updateValidatorsCustodyRequirement).toHaveBeenCalledWith({
+      epoch: cp.epoch,
+      root: cp.root,
+      rootHex: cp.rootHex,
+    });
     expect(chain.beaconEngine.pruneOnFinalized).toHaveBeenCalledOnce();
   });
 

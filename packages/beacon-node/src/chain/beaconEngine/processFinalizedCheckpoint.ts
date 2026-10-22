@@ -7,9 +7,9 @@
  * 3. Call completeFinalization to finish state archival before pruning the engine's fork choice.
  * 4. Only after that resolves, prune BeaconChain's ChainView.
  *
- * Fork choice and ChainView retain the roots, ancestry and payload variants needed to select data throughout
- * this flow. Prune their metadata last, after the dependent work succeeds, so failures during archival or
- * cleanup leave that metadata available for a later attempt. Individual migration helpers must not prune it.
+ * Core supplies the facade's archival selection in the finalized-checkpoint snapshot. Fork choice remains
+ * available for engine migration and state archival until they succeed, so failures leave metadata for a
+ * later attempt. Individual migration helpers must not prune it; ChainView is pruned after completion.
  *
  * Upstream comparison: local origin/unstable at 0edec865c8d88a9457364fc648eef3a5c905d72d.
  * Commit: 2026-10-08, "feat: persist earliest available slot (#10267)".
@@ -28,10 +28,9 @@ import {toSignedHeaderEnvelope} from "../../util/headerEnvelope.js";
 import {BlockRootHex} from "../../util/sszBytes.js";
 import {StateArchiveStrategy} from "../archiveStore/interface.js";
 import {pruneHistory as pruneHistoryFromDb} from "../archiveStore/utils/pruneHistory.js";
-import {FinalizedProtoSummary} from "../chainView/interface.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import {BeaconEngineEvent} from "./events.js";
-import {LateCanonicalBlockReason} from "./interface.js";
+import {FinalizedProtoSummary, LateCanonicalBlockReason} from "./interface.js";
 
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts

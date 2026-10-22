@@ -49,7 +49,7 @@ import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {SignedBlockRoot, computeSignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {ChainViewSnapshot, ChainViewUpdate, FinalizedProtoSummary} from "../chainView/interface.js";
+import {ChainViewSnapshot, ChainViewUpdate} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockError} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
@@ -69,6 +69,7 @@ import {
   ApiStateResult,
   ApiStateResultWithFork,
   BlockRootResponse,
+  FinalizedProtoSummary,
   HeadExecutionStateInfo,
   HeadParentPayload,
   IBeaconEngine,
@@ -169,9 +170,22 @@ export class BeaconEngine implements IBeaconEngine {
   private readonly onNewFinalizedCheckpoint = async (): Promise<void> => {
     if (this.closed) return;
     try {
-      const checkpoint = await this.core.getFinalizedCheckpoint();
+      const snapshot = await this.core.getFinalizedCheckpointSnapshot();
       if (this.closed) return;
-      this.emitter.emit(ChainEvent.forkChoiceFinalized, {...checkpoint, rootHex: toRootHex(checkpoint.root)});
+      // Core uses byte roots for transport; archival consumers expect root hexes.
+      const toSummary = ({slot, blockRoot, payloadStatus}: FinalizedProtoSummary<Root>): FinalizedProtoSummary => ({
+        slot,
+        blockRoot: toRootHex(blockRoot),
+        payloadStatus,
+      });
+      this.emitter.emit(ChainEvent.forkChoiceFinalized, {
+        ...snapshot,
+        rootHex: toRootHex(snapshot.root),
+        blockSnapshot: {
+          canonical: snapshot.blockSnapshot.canonical.map(toSummary),
+          nonCanonical: snapshot.blockSnapshot.nonCanonical.map(toSummary),
+        },
+      });
     } catch (e) {
       this.logger?.error("Error pulling finalized checkpoint", {}, e as Error);
     }

@@ -11,9 +11,6 @@ export function toChainViewBlock(block: ProtoBlock): ChainViewBlock {
     payloadStatus: block.payloadStatus,
     executionPayloadBlockHash: block.executionPayloadBlockHash,
     executionPayloadNumber: "executionPayloadNumber" in block ? block.executionPayloadNumber : undefined,
-    dataAvailabilityStatus: block.dataAvailabilityStatus,
-    finalizedEpoch: block.finalizedEpoch,
-    finalizedRoot: block.finalizedRoot,
   };
 }
 

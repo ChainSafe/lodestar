@@ -55,7 +55,7 @@ import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeI
 import {SignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {ChainViewSnapshot, FinalizedProtoSummary} from "../chainView/interface.js";
+import {ChainViewSnapshot} from "../chainView/interface.js";
 import {BlockErrorCode} from "../errors/blockError.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {InsertOutcome} from "../opPools/types.js";
@@ -83,10 +83,20 @@ export type HeadExecutionStateInfo = {
 
 export type PayloadAttestationBlock = Pick<ProtoBlock, "blockRoot" | "slot">;
 
-export type FinalizedCheckpoint = phase0.Checkpoint & {
+export type FinalizedProtoSummary<TRoot = RootHex> = Pick<ProtoBlock, "slot" | "payloadStatus"> & {
+  blockRoot: TRoot;
+};
+
+export type FinalizedBlockSnapshot<TRoot = RootHex> = {
+  canonical: FinalizedProtoSummary<TRoot>[];
+  nonCanonical: FinalizedProtoSummary<TRoot>[];
+};
+
+export type FinalizedCheckpointSnapshot<TRoot = RootHex> = phase0.Checkpoint & {
   slot: Slot;
   stateRoot: Root;
   executionOptimistic: boolean;
+  blockSnapshot: FinalizedBlockSnapshot<TRoot>;
 };
 
 export type HeadParentPayload = {
@@ -322,7 +332,7 @@ export interface IBeaconEngine
     | "onSlot"
     | "onEpoch"
     | "getPayloadAttestationBlock"
-    | "getFinalizedCheckpoint"
+    | "getFinalizedCheckpointSnapshot"
     | "produceSyncCommitteeContribution"
     | "getCanonicalBlockAtSlot"
     | "getBlockByRoot"
@@ -736,7 +746,7 @@ export interface IBeaconEngineCore {
     committeeIndex?: CommitteeIndex
   ): Promise<ProductionResponse<phase0.AttestationData>>;
   getPayloadAttestationBlock(slot: Slot): PayloadAttestationBlock | null;
-  getFinalizedCheckpoint(): FinalizedCheckpoint;
+  getFinalizedCheckpointSnapshot(): FinalizedCheckpointSnapshot<Root>;
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
   getAttestationsRewards(
     epoch: Epoch,
