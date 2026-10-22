@@ -40,7 +40,6 @@ describe("BeaconEngine validator data", () => {
     getCanonicalBlockClosestLteSlot: vi.fn<(slot: Slot) => ProtoBlock | null>(),
     getCanonicalBlockAtSlot: vi.fn<(slot: Slot) => ProtoBlock | null>(),
     getBlockDefaultStatus: vi.fn<(root: Root) => ProtoBlock | null>(),
-    getBlock: vi.fn<(root: Root, status: PayloadStatus) => ProtoBlock | null>(),
   };
   const regen = {
     getClosestHeadState: vi.fn<() => IBeaconStateView>(),
@@ -56,7 +55,6 @@ describe("BeaconEngine validator data", () => {
     forkChoice.getCanonicalBlockClosestLteSlot.mockImplementation(() => head);
     forkChoice.getCanonicalBlockAtSlot.mockImplementation(() => head);
     forkChoice.getBlockDefaultStatus.mockImplementation(() => head);
-    forkChoice.getBlock.mockImplementation(() => head);
     regen.getClosestHeadState.mockImplementation(
       () => ({slot: head.slot, currentJustifiedCheckpoint: source}) as IBeaconStateView
     );
@@ -188,28 +186,5 @@ describe("BeaconEngine validator data", () => {
       ok: true,
       data: null,
     });
-  });
-
-  it("reads current execution optimism for the requested variant and distinguishes missing blocks", async () => {
-    const blockRoot = fromHex(head.blockRoot);
-    forkChoice.getBlock.mockReturnValue(
-      generateProtoBlock({
-        blockRoot: head.blockRoot,
-        payloadStatus: PayloadStatus.FULL,
-        executionStatus: ExecutionStatus.Syncing,
-      })
-    );
-    expect(await engine.getBlockExecutionOptimistic(blockRoot, PayloadStatus.FULL)).toBe(true);
-    expect(forkChoice.getBlock).toHaveBeenCalledWith(blockRoot, PayloadStatus.FULL);
-    forkChoice.getBlock.mockReturnValue(
-      generateProtoBlock({blockRoot: head.blockRoot, executionStatus: ExecutionStatus.Valid})
-    );
-    expect(await engine.getBlockExecutionOptimistic(blockRoot, PayloadStatus.FULL)).toBe(false);
-    forkChoice.getBlock.mockReturnValue(null);
-    expect(await engine.getBlockExecutionOptimistic(blockRoot, PayloadStatus.FULL)).toBeNull();
-    expect(await engine.getBlockExecutionOptimistic(blockRoot)).toBe(false);
-    expect(forkChoice.getBlockDefaultStatus).toHaveBeenCalledWith(blockRoot);
-    forkChoice.getBlockDefaultStatus.mockReturnValue(null);
-    expect(await engine.getBlockExecutionOptimistic(blockRoot)).toBeNull();
   });
 });

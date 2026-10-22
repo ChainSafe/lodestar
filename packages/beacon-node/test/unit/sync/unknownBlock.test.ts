@@ -2372,7 +2372,12 @@ describe("UnknownBlockSync", () => {
         root: Buffer.alloc(32, 0xcc),
         rootHex: toRootHex(Buffer.alloc(32, 0xcc)),
       };
-      emitter.emit(ChainEvent.forkChoiceFinalized, checkpoint);
+      emitter.emit(ChainEvent.forkChoiceFinalized, {
+        ...checkpoint,
+        slot: finalizedBlockSlot,
+        stateRoot: new Uint8Array(32),
+        executionOptimistic: false,
+      });
 
       expect(pendingPayloads.has(rootHexBelow)).toBe(false);
       expect(pendingPayloads.has(inputRootHex)).toBe(false);

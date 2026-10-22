@@ -266,6 +266,7 @@ export class BeaconNode {
       builderApiClientOpts,
     });
     const beaconEngine = new BeaconEngine({
+      logger,
       core: beaconEngineCore,
       config,
       emitter,

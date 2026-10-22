@@ -31,7 +31,14 @@ describe("chain / archive / ArchiveStore", () => {
       },
       controller.signal
     );
-    const finalized: CheckpointWithHex = {epoch: 1, root: new Uint8Array(32), rootHex: "0x00"};
+    const finalized = {
+      epoch: 1,
+      root: new Uint8Array(32),
+      rootHex: "0x00",
+      slot: 32,
+      stateRoot: new Uint8Array(32),
+      executionOptimistic: false,
+    };
 
     (archiveStore as unknown as {jobQueue: {push(finalized: CheckpointWithHex): Promise<void>}}).jobQueue = {
       push: vi.fn(() => {

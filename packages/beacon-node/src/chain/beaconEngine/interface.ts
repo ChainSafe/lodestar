@@ -2,7 +2,7 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
 import {BeaconConfig, SpecJson} from "@lodestar/config";
-import {CheckpointWithHex, ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
@@ -82,6 +82,12 @@ export type HeadExecutionStateInfo = {
 };
 
 export type PayloadAttestationBlock = Pick<ProtoBlock, "blockRoot" | "slot">;
+
+export type FinalizedCheckpoint = phase0.Checkpoint & {
+  slot: Slot;
+  stateRoot: Root;
+  executionOptimistic: boolean;
+};
 
 export type HeadParentPayload = {
   blockRoot: Root;
@@ -309,7 +315,7 @@ export interface IBeaconEngine
     | "onSlot"
     | "onEpoch"
     | "getPayloadAttestationBlock"
-    | "getBlockExecutionOptimistic"
+    | "getFinalizedCheckpoint"
     | "produceSyncCommitteeContribution"
     | "getCanonicalBlockAtSlot"
     | "getBlockByRoot"
@@ -326,7 +332,6 @@ export interface IBeaconEngine
   onSlot(slot: Slot): Promise<void>;
   onEpoch(epoch: Epoch): Promise<void>;
   getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null>;
-  getBlockExecutionOptimistic(blockRoot: Root, payloadStatus?: PayloadStatus): Promise<boolean | null>;
   getCanonicalBlockAtSlot(
     slot: Slot
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
@@ -718,7 +723,7 @@ export interface IBeaconEngineCore {
     committeeIndex?: CommitteeIndex
   ): Promise<ProductionResponse<phase0.AttestationData>>;
   getPayloadAttestationBlock(slot: Slot): PayloadAttestationBlock | null;
-  getBlockExecutionOptimistic(blockRoot: Root, payloadStatus?: PayloadStatus): boolean | null;
+  getFinalizedCheckpoint(): FinalizedCheckpoint;
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
   getAttestationsRewards(
     epoch: Epoch,

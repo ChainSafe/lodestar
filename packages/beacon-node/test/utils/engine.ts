@@ -104,6 +104,7 @@ export function createTestBeaconEngine(
     isAnchorStateFinalized,
   });
   const beaconEngine = new BeaconEngine({
+    logger,
     core: beaconEngineCore,
     config,
     emitter,

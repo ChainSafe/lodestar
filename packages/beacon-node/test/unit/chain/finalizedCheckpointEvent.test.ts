@@ -1,16 +1,23 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {RootHex} from "@lodestar/types";
 import {defer, fromHex} from "@lodestar/utils";
+import {FinalizedCheckpoint} from "../../../src/chain/beaconEngine/interface.js";
 import {BeaconChain} from "../../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../../src/chain/emitter.js";
 import {getMockedLogger} from "../../mocks/loggerMock.js";
-import {generateProtoBlock} from "../../utils/typeGenerator.js";
 
 describe("BeaconChain finalized_checkpoint event", () => {
   const rootHex = `0x${"aa".repeat(32)}`;
   const stateRoot = `0x${"bb".repeat(32)}`;
-  const cp: CheckpointWithHex = {epoch: 2, root: fromHex(rootHex), rootHex};
+  const cp: FinalizedCheckpoint & {rootHex: RootHex} = {
+    epoch: 2,
+    root: fromHex(rootHex),
+    rootHex,
+    slot: 63,
+    stateRoot: fromHex(stateRoot),
+    executionOptimistic: false,
+  };
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -20,7 +27,7 @@ describe("BeaconChain finalized_checkpoint event", () => {
     vi.useRealTimers();
   });
 
-  function onForkChoiceFinalized(finalizedBlock: ProtoBlock | null, custodyUpdate = Promise.resolve()) {
+  function onForkChoiceFinalized(checkpoint = cp, custodyUpdate = Promise.resolve()) {
     const emitter = new ChainEventEmitter();
     const events: routes.events.EventData[routes.events.EventType.finalizedCheckpoint][] = [];
     emitter.on(routes.events.EventType.finalizedCheckpoint, (data) => {
@@ -30,56 +37,38 @@ describe("BeaconChain finalized_checkpoint event", () => {
       emitter,
       logger: getMockedLogger(),
       metrics: {finalizedEpoch: {set: vi.fn()}},
-      getBlockHexDefaultStatus: vi.fn().mockReturnValue(finalizedBlock),
-      beaconEngine: {
-        pruneOnFinalized: vi.fn().mockResolvedValue(undefined),
-      },
+      beaconEngine: {pruneOnFinalized: vi.fn().mockResolvedValue(undefined)},
       updateValidatorsCustodyRequirement: vi.fn().mockReturnValue(custodyUpdate),
     };
 
-    const completed = BeaconChain.prototype["onForkChoiceFinalized"].call(chain as unknown as BeaconChain, cp);
+    const completed = BeaconChain.prototype["onForkChoiceFinalized"].call(chain as unknown as BeaconChain, checkpoint);
     return {events, chain, completed};
   }
 
-  it("emits the finalized block root and state root on the next event loop", async () => {
-    const {events, completed} = onForkChoiceFinalized(
-      generateProtoBlock({blockRoot: rootHex, stateRoot, executionStatus: ExecutionStatus.Valid})
-    );
-
+  it("emits the pulled checkpoint data on the next event loop without another read", async () => {
+    const {events, chain, completed} = onForkChoiceFinalized();
     expect(events).toHaveLength(0);
     await completed;
     await vi.advanceTimersByTimeAsync(1);
     expect(events).toEqual([{block: rootHex, epoch: cp.epoch, state: stateRoot, executionOptimistic: false}]);
-  });
-
-  it("flags execution optimistic when the finalized block is still syncing", async () => {
-    const {events, completed} = onForkChoiceFinalized(
-      generateProtoBlock({blockRoot: rootHex, stateRoot, executionStatus: ExecutionStatus.Syncing})
-    );
-
-    await completed;
-    await vi.advanceTimersByTimeAsync(1);
-    expect(events[0]?.executionOptimistic).toBe(true);
-  });
-
-  it("continues finalization without emitting when the finalized block is unknown", async () => {
-    const {events, chain, completed} = onForkChoiceFinalized(null);
-
-    await completed;
-    await vi.advanceTimersByTimeAsync(1);
-    expect(events).toHaveLength(0);
     expect(chain.metrics.finalizedEpoch.set).toHaveBeenCalledWith(cp.epoch);
     expect(chain.updateValidatorsCustodyRequirement).toHaveBeenCalledWith(cp);
     expect(chain.beaconEngine.pruneOnFinalized).toHaveBeenCalledOnce();
   });
 
+  it("preserves pulled metadata until deferred delivery", async () => {
+    const checkpoint = {...cp, stateRoot: cp.stateRoot.slice(), executionOptimistic: true};
+    const {events, completed} = onForkChoiceFinalized(checkpoint);
+    checkpoint.stateRoot.fill(0);
+    checkpoint.executionOptimistic = false;
+    await completed;
+    await vi.advanceTimersByTimeAsync(1);
+    expect(events).toEqual([{block: rootHex, epoch: cp.epoch, state: stateRoot, executionOptimistic: true}]);
+  });
+
   it("emits without waiting for the custody update", async () => {
     const {promise, resolve} = defer<void>();
-    const {events, chain, completed} = onForkChoiceFinalized(
-      generateProtoBlock({blockRoot: rootHex, stateRoot, executionStatus: ExecutionStatus.Valid}),
-      promise
-    );
-
+    const {events, chain, completed} = onForkChoiceFinalized(cp, promise);
     try {
       expect(events).toHaveLength(0);
       await vi.advanceTimersByTimeAsync(1);

@@ -292,7 +292,7 @@ import {GossipValidationResult, fromResult} from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
 import {importExecutionPayload, importExecutionPayloadBytes} from "./importExecutionPayload.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
-import type {ApiStateId} from "./interface.js";
+import type {ApiStateId, FinalizedCheckpoint} from "./interface.js";
 import {
   ApiStateResult,
   ApiStateResultWithFork,
@@ -364,14 +364,17 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   readonly checkpointBalancesCache = new CheckpointBalancesCache();
   readonly emitter = new BeaconEngineEventBus();
   private chainViewPublisher?: ChainViewPublisher;
+  private publishedFinalizedCheckpoint?: Pick<CheckpointWithHex, "epoch" | "rootHex">;
   private reportedIrrecoverableError?: Error;
 
   async getChainViewSnapshot(): Promise<ChainViewSnapshot> {
     this.chainViewPublisher ??= new ChainViewPublisher(this.forkChoice);
-    return this.chainViewPublisher.snapshot();
+    const snapshot = this.chainViewPublisher.snapshot();
+    this.publishedFinalizedCheckpoint ??= {epoch: snapshot.finalized.epoch, rootHex: snapshot.finalized.rootHex};
+    return snapshot;
   }
 
-  // TODO - beacon engine: need to review this
+  // TODO - beacon engine: may remove this
   // the update could be too much
   // we can just update on import block/payload
   publishChainView(blocksChanged = true): void {
@@ -381,7 +384,15 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       this.emitter.emit(BeaconEngineEvent.fatalError, error);
     }
     const update = this.chainViewPublisher?.update(blocksChanged);
-    if (update) this.emitter.emit(BeaconEngineEvent.chainViewUpdated, update);
+    if (update) {
+      const previous = this.publishedFinalizedCheckpoint;
+      this.publishedFinalizedCheckpoint = {epoch: update.finalized.epoch, rootHex: update.finalized.rootHex};
+      // Finalization listeners read ChainView, so deliver its update before signaling the pull.
+      this.emitter.emit(BeaconEngineEvent.chainViewUpdated, update);
+      if (previous && (update.finalized.epoch !== previous.epoch || update.finalized.rootHex !== previous.rootHex)) {
+        this.emitter.emit(BeaconEngineEvent.newFinalizedCheckpoint);
+      }
+    }
   }
 
   forkChoice!: IForkChoice;
@@ -2926,12 +2937,16 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return block ? {blockRoot: block.blockRoot, slot: block.slot} : null;
   }
 
-  getBlockExecutionOptimistic(blockRoot: Root, payloadStatus?: PayloadStatus): boolean | null {
-    const block =
-      payloadStatus === undefined
-        ? this.forkChoice.getBlockDefaultStatus(blockRoot)
-        : this.forkChoice.getBlock(blockRoot, payloadStatus);
-    return block ? isOptimisticBlock(block) : null;
+  getFinalizedCheckpoint(): FinalizedCheckpoint {
+    const checkpoint = this.forkChoice.getFinalizedCheckpoint();
+    const block = this.forkChoice.getFinalizedBlock();
+    return {
+      epoch: checkpoint.epoch,
+      root: Uint8Array.from(checkpoint.root),
+      slot: block.slot,
+      stateRoot: fromHex(block.stateRoot),
+      executionOptimistic: isOptimisticBlock(block),
+    };
   }
 
   async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {

@@ -101,6 +101,7 @@ export function withBeaconEngineFacade(chain: MockedBeaconChain): BeaconChain {
   return Object.assign(Object.create(chain) as BeaconChain, {
     emitter,
     beaconEngine: new BeaconEngine({
+      logger: chain.logger,
       core: chain.beaconEngine,
       config: chain.config,
       emitter,
@@ -414,7 +415,6 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "produceAttestationData",
     "produceSyncCommitteeContribution",
     "getPayloadAttestationBlock",
-    "getBlockExecutionOptimistic",
     "getPoolPayloadAttestations",
     "getPoolProposerPreferences",
     "registerLocalValidators",

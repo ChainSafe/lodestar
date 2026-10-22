@@ -42,6 +42,7 @@ import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../util/ssz
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
 import {EngineBootstrap} from "./beaconEngine/initialization.js";
+import type {FinalizedCheckpoint} from "./beaconEngine/interface.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
@@ -865,16 +866,13 @@ export class BeaconChain implements IBeaconChain {
     this.processShutdownCallback(error);
   };
 
+  // TODO - beacon engine: may remove this
   private onChainViewUpdated = (update: ChainViewUpdate): void => {
     const previousJustified = this.getJustifiedCheckpoint();
-    const previousFinalized = this.getFinalizedCheckpoint();
     this.chainView.applyUpdate(update);
     this.metrics?.headSlot.set(update.head.slot);
     if (update.justified.epoch !== previousJustified.epoch || update.justified.rootHex !== previousJustified.rootHex) {
       this.emitter.emit(ChainEvent.forkChoiceJustified, this.getJustifiedCheckpoint());
-    }
-    if (update.finalized.epoch !== previousFinalized.epoch || update.finalized.rootHex !== previousFinalized.rootHex) {
-      this.emitter.emit(ChainEvent.forkChoiceFinalized, this.getFinalizedCheckpoint());
     }
   };
 
@@ -984,31 +982,16 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
-  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
+  private async onForkChoiceFinalized(this: BeaconChain, cp: FinalizedCheckpoint & {rootHex: RootHex}): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.metrics?.finalizedEpoch.set(cp.epoch);
-    const finalizedBlock = this.getBlockHexDefaultStatus(cp.rootHex);
-    if (finalizedBlock) {
-      // The callback runs synchronously inside fork choice checkpoint updates, defer writing to subscribers
-      callInNextEventLoop(async () => {
-        try {
-          const executionOptimistic = await this.beaconEngine.getBlockExecutionOptimistic(cp.root);
-          this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
-            block: cp.rootHex,
-            epoch: cp.epoch,
-            state: finalizedBlock.stateRoot,
-            executionOptimistic: executionOptimistic ?? false,
-          });
-        } catch (e) {
-          this.logger.error("Error emitting finalized checkpoint", {epoch: cp.epoch, root: cp.rootHex}, e as Error);
-        }
-      });
-    } else {
-      this.logger.debug("Finalized block not found in fork choice, skip finalized_checkpoint event", {
-        epoch: cp.epoch,
-        root: cp.rootHex,
-      });
-    }
+    const event = {
+      block: cp.rootHex,
+      epoch: cp.epoch,
+      state: toRootHex(cp.stateRoot),
+      executionOptimistic: cp.executionOptimistic,
+    };
+    callInNextEventLoop(() => this.emitter.emit(routes.events.EventType.finalizedCheckpoint, event));
 
     // Engine prunes proposer observations in pruneOnFinalized below.
 

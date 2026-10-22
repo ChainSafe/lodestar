@@ -4,6 +4,7 @@ import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {DataColumnSidecar, RootHex, Slot, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
+import type {FinalizedCheckpoint} from "./beaconEngine/interface.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {ChainViewUpdate} from "./chainView/interface.js";
@@ -30,7 +31,7 @@ export enum ChainEvent {
   /**
    * This event signals that the fork choice store has been updated.
    *
-   * This event is guaranteed to be triggered whenever the fork choice finalized checkpoint is updated. This is either in response to a newly processed block or a new clock tick.
+   * Emitted after updating ChainView and pulling the finalized checkpoint from Core.
    */
   forkChoiceFinalized = "forkChoice:finalized",
   /**
@@ -111,7 +112,7 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.builderRegistered]: (url: string) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
-  [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
+  [ChainEvent.forkChoiceFinalized]: (checkpoint: FinalizedCheckpoint & {rootHex: RootHex}) => void;
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 

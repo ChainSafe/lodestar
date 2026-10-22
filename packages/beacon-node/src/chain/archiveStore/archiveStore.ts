@@ -98,12 +98,7 @@ export class ArchiveStore {
   // Event handlers
   //-------------------------------------------------------------------------
   private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
-    // Decouple finalized-checkpoint processing from block import. This handler runs synchronously
-    // inside the `ChainEvent.forkChoiceFinalized` emit from `forkChoice.onBlock()` during
-    // `importBlock()`; deferring the work to the next event-loop tick keeps any failure here off the
-    // import call stack, so it can't abort `importBlock()` before `regen.processState()` caches the
-    // head post-state — the deep-sync wedge this PR fixes (#9716).
-    //
+    // Decouple archival from finalization notification delivery so queue failures cannot interrupt other listeners.
     // `jobQueue.push()` can throw synchronously (queue aborted / full) or reject asynchronously;
     // awaiting it inside the deferred callback funnels both failure modes into the one catch.
     callInNextEventLoop(async () => {

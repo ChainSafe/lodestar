@@ -143,6 +143,7 @@ describe("BeaconEngine event forwarding", () => {
       blocks: [],
     });
     events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, slot);
+    events.emit(BeaconEngineEvent.newFinalizedCheckpoint);
     events.emit(BeaconEngineEvent.fatalError, Error("core failed"));
     events.emit(BeaconEngineEvent.builderRegistered, "https://builder.example.com");
     events.emit(BeaconEngineEvent.headUpdated, {

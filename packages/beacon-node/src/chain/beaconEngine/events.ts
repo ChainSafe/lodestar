@@ -9,7 +9,9 @@ export enum BeaconEngineEvent {
   fatalError = "fatalError",
   builderRegistered = "builderRegistered",
   executionPayloadImported = "executionPayloadImported",
+  // TODO - beacon engine: may remove this
   chainViewUpdated = "chainViewUpdated",
+  newFinalizedCheckpoint = "newFinalizedCheckpoint",
   earliestAvailableSlotUpdated = "earliestAvailableSlotUpdated",
   headUpdated = "headUpdated",
   chainReorg = "chainReorg",
@@ -60,6 +62,7 @@ export type BeaconEngineEventData = {
   [BeaconEngineEvent.builderRegistered]: string;
   [BeaconEngineEvent.executionPayloadImported]: ExecutionPayloadImported;
   [BeaconEngineEvent.chainViewUpdated]: ChainViewUpdate;
+  [BeaconEngineEvent.newFinalizedCheckpoint]: void;
   [BeaconEngineEvent.chainReorg]: ChainReorg;
   [BeaconEngineEvent.proposerSlashingProduced]: phase0.ProposerSlashing;
   [BeaconEngineEvent.fastConfirmation]: FastConfirmation;

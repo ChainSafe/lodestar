@@ -35,6 +35,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
 import {SerializedCache} from "../../util/serializedCache.js";
@@ -92,6 +93,7 @@ export type BeaconEngineModules = {
   clock: IClock;
   serializedCache: SerializedCache;
   beaconEngineWorker?: boolean;
+  logger?: Logger;
 };
 
 export class BeaconEngine implements IBeaconEngine {
@@ -101,17 +103,29 @@ export class BeaconEngine implements IBeaconEngine {
   private readonly clock: IClock;
   private readonly serializedCache: SerializedCache;
   private readonly beaconEngineWorker: boolean;
+  private readonly logger?: Logger;
+  private closed = false;
 
-  constructor({core, config, emitter, clock, serializedCache, beaconEngineWorker = false}: BeaconEngineModules) {
+  constructor({
+    core,
+    config,
+    emitter,
+    clock,
+    serializedCache,
+    beaconEngineWorker = false,
+    logger,
+  }: BeaconEngineModules) {
     this.core = core;
     this.config = config;
     this.emitter = emitter;
     this.clock = clock;
     this.serializedCache = serializedCache;
     this.beaconEngineWorker = beaconEngineWorker;
+    this.logger = logger;
     // TODO - beacon engine: in worker mode, post core notifications to a main-thread event bus,
-    // preserving their order so ChainView is updated before head/head_v2 consumers run.
+    // preserving their order so ChainView is updated before head/head_v2 and finalization consumers run.
     this.core.emitter.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
+    this.core.emitter.on(BeaconEngineEvent.newFinalizedCheckpoint, this.onNewFinalizedCheckpoint);
     this.core.emitter.on(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.core.emitter.on(BeaconEngineEvent.fatalError, this.onFatalError);
     this.core.emitter.on(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
@@ -125,10 +139,12 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   async close(): Promise<void> {
+    this.closed = true;
     try {
       await this.core.close();
     } finally {
       this.core.emitter.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
+      this.core.emitter.off(BeaconEngineEvent.newFinalizedCheckpoint, this.onNewFinalizedCheckpoint);
       this.core.emitter.off(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
       this.core.emitter.off(BeaconEngineEvent.fatalError, this.onFatalError);
       this.core.emitter.off(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
@@ -144,6 +160,17 @@ export class BeaconEngine implements IBeaconEngine {
 
   private readonly onChainViewUpdated = (update: ChainViewUpdate): void => {
     this.emitter.emit(ChainEvent.chainViewUpdated, update);
+  };
+
+  private readonly onNewFinalizedCheckpoint = async (): Promise<void> => {
+    if (this.closed) return;
+    try {
+      const checkpoint = await this.core.getFinalizedCheckpoint();
+      if (this.closed) return;
+      this.emitter.emit(ChainEvent.forkChoiceFinalized, {...checkpoint, rootHex: toRootHex(checkpoint.root)});
+    } catch (e) {
+      this.logger?.error("Error pulling finalized checkpoint", {}, e as Error);
+    }
   };
 
   private readonly onEarliestAvailableSlotUpdated = (slot: Slot): void => {
@@ -700,10 +727,6 @@ export class BeaconEngine implements IBeaconEngine {
 
   async getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null> {
     return this.core.getPayloadAttestationBlock(slot);
-  }
-
-  async getBlockExecutionOptimistic(blockRoot: Root, payloadStatus?: PayloadStatus): Promise<boolean | null> {
-    return this.core.getBlockExecutionOptimistic(blockRoot, payloadStatus);
   }
 
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {

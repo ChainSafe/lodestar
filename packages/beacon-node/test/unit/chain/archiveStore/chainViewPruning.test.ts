@@ -1,5 +1,4 @@
 import {describe, expect, it, vi} from "vitest";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {defer} from "@lodestar/utils";
 import {ArchiveMode, ArchiveStore} from "../../../../src/chain/archiveStore/index.js";
 import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
@@ -11,7 +10,14 @@ describe("ArchiveStore ChainView pruning", () => {
   it.each(["none", "archive", "finalization"])("prunes only after successful archival (failure: %s)", async (fail) => {
     const controller = new AbortController();
     const emitter = new ChainEventEmitter();
-    const finalized: CheckpointWithHex = {epoch: 1, root: new Uint8Array(32), rootHex: "0x00"};
+    const finalized = {
+      epoch: 1,
+      root: new Uint8Array(32),
+      rootHex: "0x00",
+      slot: 32,
+      stateRoot: new Uint8Array(32),
+      executionOptimistic: false,
+    };
     const completion = defer<number>();
     const archival = defer<void>();
     const completeFinalization = vi.fn(() => completion.promise);
