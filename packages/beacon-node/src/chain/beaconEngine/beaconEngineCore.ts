@@ -138,7 +138,7 @@ import {ImportBlockOpts} from "../blocks/types.js";
 import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
-import {ChainViewSnapshot} from "../chainView/interface.js";
+import {ChainViewBlock, ChainViewSnapshot} from "../chainView/interface.js";
 import {BlockErrorCode} from "../errors/blockError.js";
 import {GossipActionError} from "../errors/gossipValidation.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
@@ -217,7 +217,7 @@ import {
   getStateValidatorIdentities,
   getStateValidators,
 } from "./beaconApis.js";
-import {ChainViewPublisher} from "./chainView.js";
+import {ChainViewPublisher, toChainViewBlockBytes} from "./chainView.js";
 import {
   getAttesterDuties,
   getProposerDuties,
@@ -226,7 +226,7 @@ import {
   produceAttestationData,
   produceSyncCommitteeContribution,
 } from "./duties.js";
-import {BeaconEngineEvent, BeaconEngineEventBus} from "./events.js";
+import {BeaconEngineEvent, BeaconEngineEventBus, HeadUpdate} from "./events.js";
 import {
   validateApiAggregateAndProof,
   validateApiAttestation,
@@ -307,10 +307,12 @@ import {
   BeaconEngineErrorCode,
   HeadExecutionStateInfo,
   HeadParentPayload,
+  HeadSnapshot,
   IBeaconEngineCore,
-  ImportBlockResult,
+  ImportBlockResponse,
   ImportExecutionPayloadOpts,
   ImportExecutionPayloadResult,
+  OnSlotResponse,
   PayloadAttestationBlock,
   PrepareNextSlotOpts,
   PrepareNextSlotResponse,
@@ -372,14 +374,32 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   readonly checkpointBalancesCache = new CheckpointBalancesCache();
   readonly emitter = new BeaconEngineEventBus();
   private chainViewPublisher?: ChainViewPublisher;
-  private publishedFinalizedCheckpoint?: Pick<CheckpointWithHex, "epoch" | "rootHex">;
   private reportedIrrecoverableError?: Error;
 
   async getChainViewSnapshot(): Promise<ChainViewSnapshot> {
     this.chainViewPublisher ??= new ChainViewPublisher(this.forkChoice);
-    const snapshot = this.chainViewPublisher.snapshot();
-    this.publishedFinalizedCheckpoint ??= {epoch: snapshot.finalized.epoch, rootHex: snapshot.finalized.rootHex};
-    return snapshot;
+    return this.chainViewPublisher.snapshot();
+  }
+
+  getHeadSnapshot(previousHead: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot {
+    const head = this.forkChoice.getHead();
+    const justified = this.forkChoice.getJustifiedCheckpoint();
+    const finalized = this.forkChoice.getFinalizedCheckpoint();
+    const headUpdate = this.getHeadUpdate({...previousHead, blockRoot: toRootHex(previousHead.blockRoot)}, head);
+    return {
+      head: toChainViewBlockBytes(head),
+      justified: {epoch: justified.epoch, root: fromHex(justified.rootHex)},
+      finalized: {epoch: finalized.epoch, root: fromHex(finalized.rootHex)},
+      headUpdate: headUpdate
+        ? {
+            ...headUpdate,
+            blockRoot: fromHex(headUpdate.blockRoot),
+            stateRoot: fromHex(headUpdate.stateRoot),
+            previousDutyDependentRoot: fromHex(headUpdate.previousDutyDependentRoot),
+            currentDutyDependentRoot: fromHex(headUpdate.currentDutyDependentRoot),
+          }
+        : null,
+    };
   }
 
   // TODO - beacon engine: may remove this
@@ -393,13 +413,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
     const update = this.chainViewPublisher?.update(blocksChanged);
     if (update) {
-      const previous = this.publishedFinalizedCheckpoint;
-      this.publishedFinalizedCheckpoint = {epoch: update.finalized.epoch, rootHex: update.finalized.rootHex};
-      // Finalization listeners read ChainView, so deliver its update before signaling the pull.
       this.emitter.emit(BeaconEngineEvent.chainViewUpdated, update);
-      if (previous && (update.finalized.epoch !== previous.epoch || update.finalized.rootHex !== previous.rootHex)) {
-        this.emitter.emit(BeaconEngineEvent.newFinalizedCheckpoint);
-      }
     }
   }
 
@@ -825,8 +839,12 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   // Source: unstable@75239241d4 chain/chain.ts#onClockSlot and #onClockEpoch.
   // [beacon-engine] BeaconChain forwards clock events; engine-owned maintenance stays here.
-  onSlot(slot: Slot): void {
-    this.updateTime(slot);
+  onSlot(slot: Slot): OnSlotResponse {
+    const previousHead = this.forkChoice.getHead();
+    const previousJustified = this.forkChoice.getJustifiedCheckpoint();
+    const previousFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+    this.updateTime(slot, false);
+    // TODO - beacon engine: return or pull fork-choice changes if slot maintenance fails after updating time.
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
     this.syncCommitteeMessagePool.prune(slot);
@@ -853,6 +871,16 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         this.config.getSlotComponentDurationMs(this.config.getForkName(slot), HALF_SLOT_BPS)
       );
     }
+    const head = this.forkChoice.getHead();
+    const justified = this.forkChoice.getJustifiedCheckpoint();
+    return {
+      headUpdate:
+        head.blockRoot !== previousHead.blockRoot ||
+        head.payloadStatus !== previousHead.payloadStatus ||
+        justified.epoch !== previousJustified.epoch ||
+        justified.rootHex !== previousJustified.rootHex,
+      finalizedCheckpointChanged: this.forkChoice.getFinalizedCheckpoint().epoch !== previousFinalizedEpoch,
+    };
   }
 
   onEpoch(epoch: Epoch): void {
@@ -1542,14 +1570,14 @@ export class BeaconEngineCore implements IBeaconEngineCore {
    * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#recomputeForkChoiceHead.
    * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
    */
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
+  recomputeForkChoiceHead(caller: ForkchoiceCaller, emitEvents = true): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
       const prevHead = this.forkChoice.getHead();
       const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
-      this.emitHeadEvents(prevHead, head);
+      if (emitEvents) this.emitHeadEvents(prevHead, head);
       return head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
@@ -2449,7 +2477,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     signedBlockRoot: SignedBlockRoot,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
-  ): Promise<Result<ImportBlockResult, BlockFailure>> {
+  ): Promise<Result<ImportBlockResponse, BlockFailure>> {
     // Both modes import the engine-owned bundle for this exact signed candidate.
     const signedBlockRootHex = toSignedBlockRootHex(signedBlockRoot);
     const v = this.verifiedBlocks.get(signedBlockRootHex);
@@ -2458,10 +2486,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     try {
       return await wrapError(
         () => importBlock.call(this, v, dataAvailabilityStatus, opts),
-        (error) => {
-          this.publishChainView();
-          return blockFailureFromError(error, this.config, [signedBlockRoot]);
-        }
+        // TODO - beacon engine: return or pull fork-choice changes if import fails after inserting the block.
+        (error) => blockFailureFromError(error, this.config, [signedBlockRoot])
       );
     } finally {
       this.verifiedBlocks.delete(signedBlockRootHex);
@@ -2503,10 +2529,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   // --- Fork-choice writes (routed here so the facade never writes fork choice directly) ---
 
-  updateTime(currentSlot: Slot): void {
+  updateTime(currentSlot: Slot, emitEvents = true): void {
     const previous = this.forkChoice.getHead();
     this.forkChoice.updateTime(currentSlot);
-    this.emitHeadEvents(previous, this.forkChoice.getHead(), false);
+    if (emitEvents) this.emitHeadEvents(previous, this.forkChoice.getHead(), false);
   }
 
   // --- DB ownership (blocks + states + payload envelopes) ---
@@ -3255,10 +3281,25 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock, blocksChanged = true): void {
     this.publishChainView(blocksChanged);
+    const update = this.getHeadUpdate(prevHead, head);
+    if (update) {
+      try {
+        this.emitter.emit(BeaconEngineEvent.headUpdated, update);
+      } catch (e) {
+        this.logger.debug(
+          "Error emitting head update",
+          {slot: head.slot, root: head.blockRoot, headRootChanged: update.headRootChanged},
+          e as Error
+        );
+      }
+    }
+  }
+
+  getHeadUpdate(prevHead: Pick<ProtoBlock, "blockRoot" | "payloadStatus">, head: ProtoBlock): HeadUpdate | null {
     const headRootChanged = head.blockRoot !== prevHead.blockRoot;
 
     if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
-      return;
+      return null;
     }
 
     try {
@@ -3267,7 +3308,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
       const executionOptimistic = isOptimisticBlock(head);
 
-      this.emitter.emit(BeaconEngineEvent.headUpdated, {
+      return {
         slot: head.slot,
         blockRoot: head.blockRoot,
         stateRoot: head.stateRoot,
@@ -3277,7 +3318,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         previousDutyDependentRoot,
         currentDutyDependentRoot,
         executionOptimistic,
-      });
+      };
     } catch (e) {
       // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
       this.logger.debug(
@@ -3285,6 +3326,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         {slot: head.slot, root: head.blockRoot, headRootChanged},
         e as Error
       );
+      return null;
     }
   }
 }

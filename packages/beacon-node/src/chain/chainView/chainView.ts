@@ -36,32 +36,39 @@ export class ChainView implements IChainView {
   }
 
   applyUpdate(update: ChainViewUpdate): void {
-    if (update.revision !== this.revision + 1) {
+    if (update.revision !== undefined && update.revision !== this.revision + 1) {
       throw new ChainViewError({
         code: ChainViewErrorCode.INVALID_REVISION,
         expected: this.revision + 1,
         actual: update.revision,
       });
     }
+    this.addBlocks(update.blocks, update);
+    if (update.revision !== undefined) this.revision = update.revision;
+  }
+
+  addBlocks(blocks: ChainViewBlock[], state?: ChainViewState): void {
+    // Operation results do not advance the revision of the remaining Core publisher.
     if (
-      update.finalized.epoch !== this.state.finalized.epoch ||
-      update.finalized.rootHex !== this.state.finalized.rootHex
+      state &&
+      (state.finalized.epoch !== this.state.finalized.epoch || state.finalized.rootHex !== this.state.finalized.rootHex)
     ) {
       this.finalizedDescendants.clear();
     }
-    this.mergeBlocks(update.blocks);
-    this.state = structuredClone({
-      head: update.head,
-      justified: update.justified,
-      finalized: update.finalized,
-    });
-    this.revision = update.revision;
+    this.mergeBlocks(blocks);
+    if (state) {
+      this.state = structuredClone({head: state.head, justified: state.justified, finalized: state.finalized});
+    }
   }
 
-  addBlocks(blocks: ChainViewBlock[]): void {
-    // Block-only results do not advance the revision of the remaining Core publisher.
-    // TODO - beacon engine: recover missing ancestry when block import also moves to result-based updates.
-    this.mergeBlocks(blocks);
+  applyFinalizedCheckpoint(checkpoint: CheckpointWithHex): void {
+    if (checkpoint.epoch <= this.state.finalized.epoch) return;
+    this.finalizedDescendants.clear();
+    this.state.finalized = {
+      epoch: checkpoint.epoch,
+      root: Uint8Array.from(checkpoint.root),
+      rootHex: checkpoint.rootHex,
+    };
   }
 
   prune(finalized: CheckpointWithHex): void {
@@ -236,6 +243,7 @@ export class ChainView implements IChainView {
   }
 
   private mergeBlocks(blocks: ChainViewBlock[]): void {
+    // TODO - beacon engine: pull a snapshot when a response references ancestry missing from ChainView.
     // A batch may contain late updates for nodes the engine has not pruned yet.
     for (const block of this.prunedCheckpoint ? [...blocks].sort((a, b) => a.slot - b.slot) : blocks) {
       if (
@@ -250,6 +258,10 @@ export class ChainView implements IChainView {
         this.blocks.set(block.blockRoot, variants);
       }
       variants[block.payloadStatus] = {...block};
+      if (block.payloadStatus === PayloadStatus.PENDING) {
+        // Gloas block import creates PENDING and EMPTY with identical structural metadata.
+        variants[PayloadStatus.EMPTY] ??= {...block, payloadStatus: PayloadStatus.EMPTY};
+      }
     }
   }
 

@@ -22,6 +22,7 @@ import {getLodestarApi} from "../../../../src/api/impl/lodestar/index.js";
 import {ApiModules} from "../../../../src/api/impl/types.js";
 import {HistoricalStateRegen} from "../../../../src/chain/archiveStore/historicalState/historicalStateRegen.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconEngineCoreModules} from "../../../../src/chain/beaconEngine/interface.js";
@@ -503,7 +504,7 @@ describe("bytes-based engine startup", () => {
       const onEpoch = core.onEpoch.bind(core);
       vi.spyOn(core, "onSlot").mockImplementation((slot) => {
         forwarded.push(`slot:${slot}`);
-        onSlot(slot);
+        return onSlot(slot);
       });
       vi.spyOn(core, "onEpoch").mockImplementation((epoch) => {
         forwarded.push(`epoch:${epoch}`);
@@ -1062,7 +1063,7 @@ describe("bytes-based engine startup", () => {
     });
     expect(beaconChain.getHead()).toEqual(head);
     clock.emit(ClockEvent.slot, clock.currentSlot);
-    expect(updateTime).toHaveBeenCalledExactlyOnceWith(1);
+    expect(updateTime).toHaveBeenCalledExactlyOnceWith(1, false);
   });
 
   it("applies a view update once before downstream chain listeners read the head", async () => {
@@ -1095,6 +1096,118 @@ describe("bytes-based engine startup", () => {
     await beaconChain.close();
     core.emitter.emit(BeaconEngineEvent.chainViewUpdated, update);
     expect(onUpdate).toHaveBeenCalledOnce();
+  });
+
+  it("merges imported blocks and checkpoints before head events without the legacy view event", async () => {
+    const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    modules.metrics = metrics;
+    chain = await createBeaconChain(opts, modules);
+    const beaconChain = chain;
+    const core = getBeaconEngineCore(beaconChain.beaconEngine);
+    const previousHead = core.forkChoice.getHead();
+    const block = {
+      ...previousHead,
+      slot: SLOTS_PER_EPOCH,
+      parentRoot: previousHead.blockRoot,
+      blockRoot: toRootHex(Buffer.alloc(32, 1)),
+    };
+    const summary = toChainViewBlockBytes(block);
+    const justified = {epoch: 1, root: summary.blockRoot, rootHex: block.blockRoot};
+    vi.spyOn(core, "importBlock").mockResolvedValue({
+      err: null,
+      result: {
+        block: summary,
+        newHead: summary,
+        justified: {epoch: justified.epoch, root: justified.root},
+        finalized: core.forkChoice.getFinalizedCheckpoint(),
+        finalizedCheckpointChanged: false,
+        executionOptimistic: false,
+        headUpdate: {
+          slot: block.slot,
+          blockRoot: summary.blockRoot,
+          stateRoot: summary.stateRoot,
+          payloadStatus: block.payloadStatus,
+          headRootChanged: true,
+          epochTransition: true,
+          previousDutyDependentRoot: fromHex(previousHead.blockRoot),
+          currentDutyDependentRoot: summary.blockRoot,
+          executionOptimistic: false,
+        },
+        reorg: null,
+      },
+    });
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = block.slot;
+    const input = BlockInputPreData.createFromBlock({
+      block: signedBlock,
+      blockRootHex: block.blockRoot,
+      forkName: ForkName.phase0,
+      daOutOfRange: false,
+      source: BlockInputSource.gossip,
+      seenTimestampSec: 0,
+    });
+    const onLegacyUpdate = vi.fn();
+    const onJustified = vi.fn();
+    const onStatus = vi.fn(() => beaconChain.getStatus());
+    const onHead = vi.fn(() => ({
+      head: beaconChain.getHead(),
+      justified: beaconChain.getJustifiedCheckpoint(),
+      block: beaconChain.getBlockHexDefaultStatus(block.blockRoot),
+    }));
+    beaconChain.emitter.on(ChainEvent.chainViewUpdated, onLegacyUpdate);
+    beaconChain.emitter.on(ChainEvent.forkChoiceJustified, onJustified);
+    beaconChain.emitter.on(ChainEvent.updateStatus, onStatus);
+    beaconChain.emitter.on(routes.events.EventType.head, onHead);
+    await beaconChain.beaconEngine.importBlock(input, stateTransition.DataAvailabilityStatus.PreData, {});
+    expect(onLegacyUpdate).not.toHaveBeenCalled();
+    expect(onJustified).toHaveBeenCalledExactlyOnceWith(justified);
+    expect(onStatus).toHaveBeenCalledOnce();
+    expect(onStatus.mock.results[0].value).toMatchObject({headRoot: summary.blockRoot, headSlot: block.slot});
+    expect(onHead).toHaveBeenCalledOnce();
+    expect(onHead.mock.results[0].value).toEqual({
+      head: toChainViewBlock(block),
+      justified,
+      block: toChainViewBlock(block),
+    });
+    expect(await metrics.register.getSingleMetricAsString("beacon_head_slot")).toContain(
+      `beacon_head_slot ${block.slot}`
+    );
+    await beaconChain.beaconEngine.importBlock(input, stateTransition.DataAvailabilityStatus.PreData, {});
+    expect(onJustified).toHaveBeenCalledOnce();
+  });
+
+  it("refreshes network status when a pulled checkpoint finalizes without a head change", async () => {
+    chain = await createBeaconChain(opts, modules);
+    const beaconChain = chain;
+    const core = getBeaconEngineCore(beaconChain.beaconEngine);
+    const head = beaconChain.getHead();
+    vi.spyOn(core, "onSlot").mockReturnValue({headUpdate: false, finalizedCheckpointChanged: true});
+    vi.spyOn(core, "getFinalizedCheckpointSnapshot").mockReturnValue({
+      epoch: 1,
+      root: fromHex(head.blockRoot),
+      slot: head.slot,
+      stateRoot: fromHex(head.stateRoot),
+      executionOptimistic: false,
+      blockSnapshot: {
+        canonical: [{slot: head.slot, blockRoot: fromHex(head.blockRoot), payloadStatus: head.payloadStatus}],
+        nonCanonical: [],
+      },
+    });
+    vi.spyOn(beaconChain.beaconEngine, "getFinalizedEffectiveBalances").mockResolvedValue([]);
+    vi.spyOn(beaconChain.beaconEngine, "pruneOnFinalized").mockResolvedValue(undefined);
+    const onStatus = vi.fn(() => beaconChain.getStatus());
+    beaconChain.emitter.on(ChainEvent.updateStatus, onStatus);
+    await beaconChain.beaconEngine.onSlot(SLOTS_PER_EPOCH, head);
+    expect(beaconChain.getHead()).toEqual(head);
+    expect(onStatus).toHaveBeenCalledOnce();
+    expect(onStatus.mock.results[0].value).toMatchObject({
+      headRoot: fromHex(head.blockRoot),
+      headSlot: head.slot,
+      finalizedEpoch: 1,
+      finalizedRoot: fromHex(head.blockRoot),
+    });
+    await beaconChain.beaconEngine.onSlot(SLOTS_PER_EPOCH + 1, head);
+    expect(onStatus).toHaveBeenCalledOnce();
   });
 
   it("notifies the facade once when fork choice becomes irrecoverable", async () => {
@@ -1265,13 +1378,13 @@ describe("bytes-based engine startup", () => {
     vi.useFakeTimers();
     const halfSlot = config.SLOT_DURATION_MS / 2;
 
-    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
+    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1, dependencies.chainViewSnapshot.head);
     await vi.advanceTimersByTimeAsync(halfSlot - 1);
     expect(monitorEpoch).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(monitorEpoch).toHaveBeenCalledExactlyOnceWith(beaconEngine.getHeadState());
 
-    await dependencies.beaconEngine.onSlot(2 * SLOTS_PER_EPOCH - 1);
+    await dependencies.beaconEngine.onSlot(2 * SLOTS_PER_EPOCH - 1, dependencies.chainViewSnapshot.head);
     expect(vi.getTimerCount()).toBe(1);
     await dependencies.beaconEngine.close();
     expect(vi.getTimerCount()).toBe(0);
@@ -1289,7 +1402,7 @@ describe("bytes-based engine startup", () => {
     expect(await beaconEngine.getMonitoredValidatorIndices()).toEqual([1]);
     expect(await beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
     vi.useFakeTimers();
-    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
+    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1, dependencies.chainViewSnapshot.head);
     expect(vi.getTimerCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
     expect(monitorEpoch).not.toHaveBeenCalled();

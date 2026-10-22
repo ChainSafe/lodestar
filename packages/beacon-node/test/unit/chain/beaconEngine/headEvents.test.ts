@@ -94,6 +94,7 @@ describe("BeaconEngine head notifications", () => {
       emitter,
       clock: new ClockStopped(0),
       serializedCache: new SerializedCache(),
+      logger: core.logger,
     });
     emitter.on(ChainEvent.chainViewUpdated, () => order.push("view"));
     events.on(BeaconEngineEvent.headUpdated, onHeadUpdated);
@@ -169,6 +170,19 @@ describe("BeaconEngine head notifications", () => {
     expect(order).toEqual(["view"]);
     expect(onHeadUpdated).not.toHaveBeenCalled();
     expect(core.logger.debug).toHaveBeenCalled();
+  });
+
+  it("keeps head computation successful when a public head listener throws", async () => {
+    const error = new Error("head listener failed");
+    emitter.on(routes.events.EventType.head, () => {
+      throw error;
+    });
+    await expect(engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock)).resolves.toBe(next);
+    expect(core.logger.debug).toHaveBeenCalledWith(
+      "Error emitting head update",
+      {slot: next.slot, root: next.blockRoot, headRootChanged: true},
+      error
+    );
   });
 
   it.each([false, true])("detaches public head events on close, including failed close=%s", async (failClose) => {

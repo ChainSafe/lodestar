@@ -7,7 +7,7 @@ import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {BeaconEngineEvent, BeaconEngineEventBus, ChainReorg} from "../../../../src/chain/beaconEngine/events.js";
+import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -21,16 +21,6 @@ describe("BeaconEngine event forwarding", () => {
   const slot = 2 * SLOTS_PER_EPOCH - 1;
   const root = toRootHex(Buffer.alloc(32, 1));
   const previousRoot = toRootHex(Buffer.alloc(32, 2));
-  const reorg: ChainReorg = {
-    slot,
-    depth: 2,
-    epoch: 1,
-    oldHeadBlock: previousRoot,
-    newHeadBlock: root,
-    oldHeadState: previousRoot,
-    newHeadState: root,
-    executionOptimistic: true,
-  };
   let engine: BeaconEngine;
   let events: BeaconEngineEventBus;
   let emitter: ChainEventEmitter;
@@ -65,16 +55,12 @@ describe("BeaconEngine event forwarding", () => {
     expect(observed).toEqual(["sse", "gossip"]);
   });
 
-  it("preserves repeated fast confirmations and reorg metadata", () => {
-    const onReorg = vi.fn();
+  it("preserves repeated fast confirmations", () => {
     const onConfirmation = vi.fn();
-    emitter.on(routes.events.EventType.chainReorg, onReorg);
     emitter.on(routes.events.EventType.fastConfirmation, onConfirmation);
     const confirmation = {block: root, slot, currentSlot: slot + 1};
-    events.emit(BeaconEngineEvent.chainReorg, structuredClone(reorg));
     events.emit(BeaconEngineEvent.fastConfirmation, structuredClone(confirmation));
     events.emit(BeaconEngineEvent.fastConfirmation, {...confirmation, currentSlot: slot + 2});
-    expect(onReorg).toHaveBeenCalledExactlyOnceWith(reorg);
     expect(onConfirmation.mock.calls).toEqual([[confirmation], [{...confirmation, currentSlot: slot + 2}]]);
   });
 
@@ -119,7 +105,7 @@ describe("BeaconEngine event forwarding", () => {
     else await engine.close();
     const emit = vi.spyOn(emitter, "emit");
     const coreListener = vi.fn();
-    events.on(BeaconEngineEvent.chainReorg, coreListener);
+    events.on(BeaconEngineEvent.fastConfirmation, coreListener);
 
     const checkpoint = {epoch: 0, root: Buffer.alloc(32, 1), rootHex: root};
     events.emit(BeaconEngineEvent.chainViewUpdated, {
@@ -130,7 +116,6 @@ describe("BeaconEngine event forwarding", () => {
       blocks: [],
     });
     events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, slot);
-    events.emit(BeaconEngineEvent.newFinalizedCheckpoint);
     events.emit(BeaconEngineEvent.fatalError, Error("core failed"));
     events.emit(BeaconEngineEvent.builderRegistered, "https://builder.example.com");
     events.emit(BeaconEngineEvent.headUpdated, {
@@ -144,7 +129,6 @@ describe("BeaconEngine event forwarding", () => {
       currentDutyDependentRoot: root,
       executionOptimistic: false,
     });
-    events.emit(BeaconEngineEvent.chainReorg, reorg);
     events.emit(BeaconEngineEvent.proposerSlashingProduced, ssz.phase0.ProposerSlashing.defaultValue());
     events.emit(BeaconEngineEvent.fastConfirmation, {block: root, slot, currentSlot: slot});
     events.emit(BeaconEngineEvent.lightClientOptimisticUpdate, {
@@ -156,6 +140,6 @@ describe("BeaconEngine event forwarding", () => {
       data: ssz.capella.LightClientFinalityUpdate.serialize(ssz.capella.LightClientFinalityUpdate.defaultValue()),
     });
     expect(emit).not.toHaveBeenCalled();
-    expect(coreListener).toHaveBeenCalledExactlyOnceWith(reorg);
+    expect(coreListener).toHaveBeenCalledExactlyOnceWith({block: root, slot, currentSlot: slot});
   });
 });

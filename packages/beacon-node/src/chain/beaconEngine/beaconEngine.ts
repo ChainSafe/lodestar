@@ -49,7 +49,7 @@ import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {SignedBlockRoot, computeSignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {ChainViewSnapshot, ChainViewUpdate} from "../chainView/interface.js";
+import {ChainViewBlock, ChainViewSnapshot, ChainViewUpdate} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockError} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
@@ -59,7 +59,8 @@ import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "..
 import {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {ValidatorMonitorAttestation, ValidatorMonitorBlock} from "../validatorMonitor.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
-import {BeaconEngineEvent, ChainReorg, FastConfirmation, HeadUpdate} from "./events.js";
+import {fromChainViewBlockBytes} from "./chainView.js";
+import {BeaconEngineEvent, FastConfirmation, HeadUpdate} from "./events.js";
 import {GossipBlockResult} from "./gossipValidation/block.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
@@ -129,13 +130,12 @@ export class BeaconEngine implements IBeaconEngine {
     this.logger = logger;
     // TODO - beacon engine: in worker mode, post core notifications to a main-thread event bus,
     // preserving their order so ChainView is updated before head/head_v2 and finalization consumers run.
+    // TODO - beacon engine: remove this event
     this.core.emitter.on(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
-    this.core.emitter.on(BeaconEngineEvent.newFinalizedCheckpoint, this.onNewFinalizedCheckpoint);
     this.core.emitter.on(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.core.emitter.on(BeaconEngineEvent.fatalError, this.onFatalError);
     this.core.emitter.on(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
-    this.core.emitter.on(BeaconEngineEvent.headUpdated, this.onHeadUpdated);
-    this.core.emitter.on(BeaconEngineEvent.chainReorg, this.onChainReorg);
+    this.core.emitter.on(BeaconEngineEvent.headUpdated, this.emitHeadUpdate);
     this.core.emitter.on(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
     this.core.emitter.on(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
     this.core.emitter.on(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
@@ -148,12 +148,10 @@ export class BeaconEngine implements IBeaconEngine {
       await this.core.close();
     } finally {
       this.core.emitter.off(BeaconEngineEvent.chainViewUpdated, this.onChainViewUpdated);
-      this.core.emitter.off(BeaconEngineEvent.newFinalizedCheckpoint, this.onNewFinalizedCheckpoint);
       this.core.emitter.off(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
       this.core.emitter.off(BeaconEngineEvent.fatalError, this.onFatalError);
       this.core.emitter.off(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
-      this.core.emitter.off(BeaconEngineEvent.headUpdated, this.onHeadUpdated);
-      this.core.emitter.off(BeaconEngineEvent.chainReorg, this.onChainReorg);
+      this.core.emitter.off(BeaconEngineEvent.headUpdated, this.emitHeadUpdate);
       this.core.emitter.off(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
       this.core.emitter.off(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
       this.core.emitter.off(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
@@ -163,6 +161,24 @@ export class BeaconEngine implements IBeaconEngine {
 
   private readonly onChainViewUpdated = (update: ChainViewUpdate): void => {
     this.emitter.emit(ChainEvent.chainViewUpdated, update);
+  };
+
+  private readonly onHeadUpdated = async (
+    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
+  ): Promise<void> => {
+    if (this.closed) return;
+    const snapshot = await this.core.getHeadSnapshot({
+      blockRoot: fromHex(previousHead.blockRoot),
+      payloadStatus: previousHead.payloadStatus,
+    });
+    if (this.closed) return;
+    const head = fromChainViewBlockBytes(snapshot.head);
+    this.emitter.emit(ChainEvent.chainViewBlocksAdded, [head], {
+      head,
+      justified: {...snapshot.justified, rootHex: toRootHex(snapshot.justified.root)},
+      finalized: {...snapshot.finalized, rootHex: toRootHex(snapshot.finalized.root)},
+    });
+    if (snapshot.headUpdate) this.emitHeadUpdate(snapshot.headUpdate);
   };
 
   private readonly onNewFinalizedCheckpoint = async (): Promise<void> => {
@@ -202,46 +218,47 @@ export class BeaconEngine implements IBeaconEngine {
     this.emitter.emit(ChainEvent.fatalError, error);
   };
 
-  private readonly onHeadUpdated = (update: HeadUpdate): void => {
-    const {
-      slot,
-      blockRoot,
-      stateRoot,
-      payloadStatus,
-      headRootChanged,
-      epochTransition,
-      previousDutyDependentRoot,
-      currentDutyDependentRoot,
-      executionOptimistic,
-    } = update;
-    if (headRootChanged) {
-      this.emitter.emit(routes.events.EventType.head, {
-        slot,
-        block: blockRoot,
-        state: stateRoot,
-        epochTransition,
-        previousDutyDependentRoot,
-        currentDutyDependentRoot,
-        executionOptimistic,
+  // TODO - beacon engine: remove hex-root input when the remaining Core head events use responses.
+  private readonly emitHeadUpdate = (update: HeadUpdate | HeadUpdate<Root>): void => {
+    const {slot, payloadStatus, headRootChanged, epochTransition, executionOptimistic} = update;
+    const blockRoot = typeof update.blockRoot === "string" ? update.blockRoot : toRootHex(update.blockRoot);
+    try {
+      const stateRoot = typeof update.stateRoot === "string" ? update.stateRoot : toRootHex(update.stateRoot);
+      const previousDutyDependentRoot =
+        typeof update.previousDutyDependentRoot === "string"
+          ? update.previousDutyDependentRoot
+          : toRootHex(update.previousDutyDependentRoot);
+      const currentDutyDependentRoot =
+        typeof update.currentDutyDependentRoot === "string"
+          ? update.currentDutyDependentRoot
+          : toRootHex(update.currentDutyDependentRoot);
+      if (headRootChanged) {
+        this.emitter.emit(routes.events.EventType.head, {
+          slot,
+          block: blockRoot,
+          state: stateRoot,
+          epochTransition,
+          previousDutyDependentRoot,
+          currentDutyDependentRoot,
+          executionOptimistic,
+        });
+      }
+      this.emitter.emit(routes.events.EventType.headV2, {
+        version: this.config.getForkName(slot),
+        data: {
+          slot,
+          block: blockRoot,
+          state: stateRoot,
+          payloadStatus: payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+          epochTransition,
+          currentEpochDependentRoot: previousDutyDependentRoot,
+          nextEpochDependentRoot: currentDutyDependentRoot,
+          executionOptimistic,
+        },
       });
+    } catch (e) {
+      this.logger?.debug("Error emitting head update", {slot, root: blockRoot, headRootChanged}, e as Error);
     }
-    this.emitter.emit(routes.events.EventType.headV2, {
-      version: this.config.getForkName(slot),
-      data: {
-        slot,
-        block: blockRoot,
-        state: stateRoot,
-        payloadStatus: payloadStatus === PayloadStatus.FULL ? "full" : "empty",
-        epochTransition,
-        currentEpochDependentRoot: previousDutyDependentRoot,
-        nextEpochDependentRoot: currentDutyDependentRoot,
-        executionOptimistic,
-      },
-    });
-  };
-
-  private readonly onChainReorg = (reorg: ChainReorg): void => {
-    this.emitter.emit(routes.events.EventType.chainReorg, reorg);
   };
 
   private readonly onProposerSlashingProduced = (slashing: phase0.ProposerSlashing): void => {
@@ -1262,15 +1279,41 @@ export class BeaconEngine implements IBeaconEngine {
       opts
     );
     if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
-    return res.result;
+    const {justified, finalized, headUpdate, reorg, finalizedCheckpointChanged, executionOptimistic} = res.result;
+    const block = fromChainViewBlockBytes(res.result.block);
+    const newHead = fromChainViewBlockBytes(res.result.newHead);
+    if (!this.closed) {
+      this.emitter.emit(ChainEvent.chainViewBlocksAdded, [block, newHead], {
+        head: newHead,
+        justified: {...justified, rootHex: toRootHex(justified.root)},
+        finalized: {...finalized, rootHex: toRootHex(finalized.root)},
+      });
+      if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
+      if (headUpdate) {
+        this.emitHeadUpdate(headUpdate);
+      }
+      if (reorg) {
+        this.emitter.emit(routes.events.EventType.chainReorg, {
+          ...reorg,
+          newHeadBlock: toRootHex(reorg.newHeadBlock),
+          oldHeadBlock: toRootHex(reorg.oldHeadBlock),
+          newHeadState: toRootHex(reorg.newHeadState),
+          oldHeadState: toRootHex(reorg.oldHeadState),
+        });
+      }
+    }
+    return {block, newHead, executionOptimistic};
   }
 
   async discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void> {
     return this.core.discardVerifiedBlocks(signedBlockRoots);
   }
 
-  async onSlot(slot: Slot): Promise<void> {
-    return this.core.onSlot(slot);
+  async onSlot(slot: Slot, previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">): Promise<void> {
+    const {headUpdate, finalizedCheckpointChanged} = await this.core.onSlot(slot);
+    if (this.closed) return;
+    if (headUpdate) await this.onHeadUpdated(previousHead);
+    if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
   }
 
   async onEpoch(epoch: Epoch): Promise<void> {
@@ -1297,17 +1340,7 @@ export class BeaconEngine implements IBeaconEngine {
     }
     const {block, executionOptimistic} = res.result;
     if (this.closed) return {executionOptimistic};
-    this.emitter.emit(ChainEvent.chainViewBlocksAdded, [
-      {
-        ...block,
-        blockRoot: toRootHex(block.blockRoot),
-        parentRoot: toRootHex(block.parentRoot),
-        stateRoot: toRootHex(block.stateRoot),
-        parentBlockHash: block.parentBlockHash === null ? null : toRootHex(block.parentBlockHash),
-        executionPayloadBlockHash:
-          block.executionPayloadBlockHash === null ? null : toRootHex(block.executionPayloadBlockHash),
-      },
-    ]);
+    this.emitter.emit(ChainEvent.chainViewBlocksAdded, [fromChainViewBlockBytes(block)]);
 
     // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.
     const envelope = payloadInput.getPayloadEnvelope().message;

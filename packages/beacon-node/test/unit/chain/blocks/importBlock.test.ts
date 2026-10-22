@@ -1,9 +1,11 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {defer, toRootHex} from "@lodestar/utils";
-import {ImportBlockResult} from "../../../../src/chain/beaconEngine/interface.js";
+import {defer, fromHex, toRootHex} from "@lodestar/utils";
+import {toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/chainView.js";
+import {ImportBlockResponse} from "../../../../src/chain/beaconEngine/interface.js";
 import {blockFailureFromError} from "../../../../src/chain/beaconEngine/processingResult.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerializedCache.js";
@@ -29,21 +31,19 @@ describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngi
     source: BlockInputSource.gossip,
     seenTimestampSec: 0,
   });
-  const importResult: ImportBlockResult = {
-    headChanged: false,
-    head: null,
-    blockSummary: null,
-    newHead: zeroProtoBlock,
-    proposerIndexNextSlot: null,
-    isExecutionState: false,
-    prevFinalizedEpoch: 0,
-    currFinalizedEpoch: 0,
-    oldHeadBlockRoot: blockRootHex,
-    newHeadBlockRoot: blockRootHex,
-    blockMeta: {slot: 0, blockRootHex, proposerBalanceDelta: 0, parentBlockSlot: 0, seenTimestampSec: 0},
+  const importedBlock = toChainViewBlockBytes({...zeroProtoBlock, blockRoot: blockRootHex});
+  const importResult: ImportBlockResponse = {
+    block: importedBlock,
+    newHead: importedBlock,
+    justified: {epoch: 0, root: fromHex(blockRootHex)},
+    finalized: {epoch: 0, root: fromHex(blockRootHex)},
+    executionOptimistic: false,
+    headUpdate: null,
+    reorg: null,
+    finalizedCheckpointChanged: false,
   };
   let chain: ReturnType<typeof getMockedBeaconChain>;
-  let engineImport: ReturnType<typeof defer<ImportBlockResult>>;
+  let engineImport: ReturnType<typeof defer<ImportBlockResponse>>;
   let sidecarWrite: ReturnType<typeof defer<void>>;
   let engineCache: BlockSerializedCache;
 
@@ -51,7 +51,7 @@ describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngi
     chain = getMockedBeaconChain();
     chain.opts.beaconEngineWorker = beaconEngineWorker;
     engineCache = chain.beaconEngine.blockSerializedCache;
-    engineImport = defer<ImportBlockResult>();
+    engineImport = defer<ImportBlockResponse>();
     sidecarWrite = defer<void>();
     chain.beaconEngine.importBlock = vi.fn().mockImplementation(async () => {
       const result = await engineImport.promise;
@@ -86,6 +86,17 @@ describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngi
     expect(chain.serializedCache.get(block)).toBe(blockBytes);
     expect(engineCache.get(signedRoot)).toBeUndefined();
     expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+  });
+
+  it("uses the engine's returned optimism for the block event", async () => {
+    const facade = withBeaconEngineFacade(chain);
+    const onBlock = vi.fn();
+    facade.emitter.on(routes.events.EventType.block, onBlock);
+    vi.mocked(eventLoop.callInNextEventLoop).mockImplementationOnce((callback) => callback());
+    const importing = importBlock.call(facade, blockInput, DataAvailabilityStatus.PreData, {});
+    engineImport.resolve({...importResult, executionOptimistic: true});
+    await importing;
+    expect(onBlock).toHaveBeenCalledExactlyOnceWith({block: blockRootHex, slot: 0, executionOptimistic: true});
   });
 
   it("retains the main-thread entry when engine import fails", async () => {

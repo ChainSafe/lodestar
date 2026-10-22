@@ -4,7 +4,6 @@ import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {capella, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
@@ -60,7 +59,7 @@ export async function importBlock(
     }
   }
 
-  // [beacon-engine] moved: head/reorg events are emitted by engine fork-choice transitions.
+  // [beacon-engine] moved: BeaconEngine applies the import response before emitting head/reorg events.
   if (this.config.getForkSeq(blockSlot) >= ForkSeq.gloas) {
     callInNextEventLoop(() => {
       const parent = this.getBlockHexDefaultStatus(r.newHead.parentRoot);
@@ -68,8 +67,7 @@ export async function importBlock(
     });
   }
 
-  const blockRootHex = r.blockMeta.blockRootHex;
-  const blockSummary = r.blockSummary;
+  const blockRootHex = r.block.blockRoot;
 
   if (this.clock.currentSlot - blockSlot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
     callInNextEventLoop(() => {
@@ -77,7 +75,7 @@ export async function importBlock(
         this.emitter.emit(routes.events.EventType.block, {
           block: blockRootHex,
           slot: blockSlot,
-          executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+          executionOptimistic: r.executionOptimistic,
           ...(isGloasBeaconBlock(block.message) && {
             blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
             builderIndex: block.message.body.signedExecutionPayloadBid.message.builderIndex,

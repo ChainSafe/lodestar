@@ -27,13 +27,31 @@ function update(initial: ChainViewSnapshot, changes: Partial<ChainViewUpdate>): 
 }
 
 describe("ChainView", () => {
+  it("applies import state without advancing the remaining publisher revision", () => {
+    const a = block(1, 0, 0);
+    const b = block(2, SLOTS_PER_EPOCH - 1, 1);
+    const initial = snapshot([a]);
+    const view = new ChainView(initial);
+    view.addBlocks([b], {head: b, justified: checkpoint(2, 1), finalized: checkpoint(2, 1)});
+    expect(view.getHead()).toEqual(b);
+    expect(view.getFinalizedBlock()).toEqual(b);
+    expect(view.getJustifiedBlock()).toEqual(b);
+    view.applyUpdate(update(initial, {head: b, justified: checkpoint(2, 1), finalized: checkpoint(2, 1)}));
+    expect(view.getHead()).toEqual(b);
+    expect(() => view.applyUpdate(update(initial, {}))).toThrow(ChainViewErrorCode.INVALID_REVISION);
+  });
+
   it("adds returned FULL metadata without changing head, checkpoints, or the publisher revision", () => {
     const a = block(1, 0, 0);
     const pending = block(2, 1, 1, {payloadStatus: PayloadStatus.PENDING});
     const empty = {...pending, payloadStatus: PayloadStatus.EMPTY};
     const full = {...pending, payloadStatus: PayloadStatus.FULL, executionPayloadBlockHash: root(3)};
-    const initial = snapshot([a, pending, empty], empty);
+    const initial = snapshot([a]);
     const view = new ChainView(initial);
+    view.addBlocks([pending], {head: empty, justified: initial.justified, finalized: initial.finalized});
+    expect(view.getBlockHex(pending.blockRoot, PayloadStatus.PENDING)).toEqual(pending);
+    expect(view.getBlockHex(pending.blockRoot, PayloadStatus.EMPTY)).toEqual(empty);
+    expect(view.hasPayloadHexUnsafe(pending.blockRoot)).toBe(false);
     const finalized = view.getFinalizedCheckpoint();
     const justified = view.getJustifiedCheckpoint();
     view.addBlocks([full]);
@@ -79,29 +97,39 @@ describe("ChainView", () => {
     expect(view.hasBlockHex(c.blockRoot)).toBe(true);
   });
 
-  it("distinguishes finalized ancestry from retained membership until archive completion", () => {
-    const a = block(1, 0, 0);
-    const finalized = block(2, SLOTS_PER_EPOCH - 1, 1);
-    const canonical = block(3, SLOTS_PER_EPOCH + 2, 2);
-    const orphan = block(4, SLOTS_PER_EPOCH + 3, 1);
-    const initial = snapshot([a, finalized, canonical, orphan], canonical);
-    const view = new ChainView(initial);
-    expect(view.hasBlockHex(orphan.blockRoot)).toBe(true);
-    const finalization = update(initial, {finalized: checkpoint(2, 1), justified: checkpoint(2, 1)});
-    view.applyUpdate(finalization);
-    expect(view.getFinalizedBlock().slot).toBe(SLOTS_PER_EPOCH - 1);
-    expect(view.hasBlockHex(orphan.blockRoot)).toBe(false);
-    expect(view.hasBlockHexUnsafe(orphan.blockRoot)).toBe(true);
-    expect(view.hasBlockHex(canonical.blockRoot)).toBe(true);
-    expect(view.hasBlockHex(finalized.blockRoot)).toBe(true);
-    view.prune(finalization.finalized);
-    view.applyUpdate({...finalization, revision: 2, blocks: [orphan, a]});
-    expect(view.hasBlockHexUnsafe(orphan.blockRoot)).toBe(false);
-    expect(view.getAllAncestorBlocks(canonical.blockRoot, PayloadStatus.FULL).map((b) => b.blockRoot)).toEqual([
-      canonical.blockRoot,
-      finalized.blockRoot,
-    ]);
-  });
+  it.each([false, true])(
+    "distinguishes finalized ancestry from retained membership (checkpoint only: %s)",
+    (checkpointOnly) => {
+      const a = block(1, 0, 0);
+      const finalized = block(2, SLOTS_PER_EPOCH - 1, 1);
+      const canonical = block(3, SLOTS_PER_EPOCH + 2, 2);
+      const orphan = block(4, SLOTS_PER_EPOCH + 3, 1);
+      const initial = snapshot([a, finalized, canonical, orphan], canonical);
+      const view = new ChainView(initial);
+      expect(view.hasBlockHex(orphan.blockRoot)).toBe(true);
+      const finalization = update(initial, {finalized: checkpoint(2, 1), justified: checkpoint(2, 1)});
+      if (checkpointOnly) {
+        view.applyFinalizedCheckpoint(finalization.finalized);
+        view.applyFinalizedCheckpoint(initial.finalized);
+        expect(view.getHead()).toEqual(canonical);
+        expect(view.getJustifiedCheckpoint()).toEqual(structuredClone(initial.justified));
+      } else {
+        view.applyUpdate(finalization);
+      }
+      expect(view.getFinalizedBlock().slot).toBe(SLOTS_PER_EPOCH - 1);
+      expect(view.hasBlockHex(orphan.blockRoot)).toBe(false);
+      expect(view.hasBlockHexUnsafe(orphan.blockRoot)).toBe(true);
+      expect(view.hasBlockHex(canonical.blockRoot)).toBe(true);
+      expect(view.hasBlockHex(finalized.blockRoot)).toBe(true);
+      view.prune(finalization.finalized);
+      view.applyUpdate({...finalization, revision: checkpointOnly ? 1 : 2, blocks: [orphan, a]});
+      expect(view.hasBlockHexUnsafe(orphan.blockRoot)).toBe(false);
+      expect(view.getAllAncestorBlocks(canonical.blockRoot, PayloadStatus.FULL).map((b) => b.blockRoot)).toEqual([
+        canonical.blockRoot,
+        finalized.blockRoot,
+      ]);
+    }
+  );
 
   it("selects EMPTY or FULL ancestors by execution hash, independently of payload availability", () => {
     const a = block(1, 0, 0, {executionPayloadBlockHash: root(10)});

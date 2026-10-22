@@ -66,6 +66,7 @@ import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {ValidatorMonitorAttestation, ValidatorMonitorBlock, ValidatorMonitorOpts} from "../validatorMonitor.js";
+import {ChainReorg, HeadUpdate} from "./events.js";
 import {GossipBlockResult} from "./gossipValidation/block.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
@@ -163,31 +164,35 @@ export type VerifyGossipBlockResult = Result<
 >;
 
 export type ImportBlockResult = {
-  headChanged: boolean;
-  head: {
-    block: string;
-    slot: number;
-    state: string;
-    epochTransition: boolean;
-    previousDutyDependentRoot: string;
-    currentDutyDependentRoot: string;
-    executionOptimistic: boolean;
-  } | null;
-  blockSummary: ProtoBlock | null;
-  newHead: ProtoBlock;
-  proposerIndexNextSlot: number | null;
-  isExecutionState: boolean;
-  prevFinalizedEpoch: number;
-  currFinalizedEpoch: number;
-  oldHeadBlockRoot: string;
-  newHeadBlockRoot: string;
-  blockMeta: {
-    slot: number;
-    blockRootHex: string;
-    proposerBalanceDelta: number;
-    parentBlockSlot: number;
-    seenTimestampSec: number;
-  };
+  block: ChainViewBlock;
+  newHead: ChainViewBlock;
+  executionOptimistic: boolean;
+};
+
+export type ImportBlockResponse = {
+  block: ChainViewBlock<Root>;
+  newHead: ChainViewBlock<Root>;
+  justified: phase0.Checkpoint;
+  finalized: phase0.Checkpoint;
+  executionOptimistic: boolean;
+  /** Head updates are common during block import, so return the data here to avoid another Core round trip. */
+  headUpdate: HeadUpdate<Root> | null;
+  reorg: ChainReorg<Root> | null;
+  /** Finalization is infrequent; the facade pulls its larger block snapshot only when the checkpoint changes. */
+  finalizedCheckpointChanged: boolean;
+};
+
+export type OnSlotResponse = {
+  /** Refresh head metadata when the head or justified checkpoint changes. */
+  headUpdate: boolean;
+  finalizedCheckpointChanged: boolean;
+};
+
+export type HeadSnapshot = {
+  head: ChainViewBlock<Root>;
+  justified: phase0.Checkpoint;
+  finalized: phase0.Checkpoint;
+  headUpdate: HeadUpdate<Root> | null;
 };
 
 export type ProduceBlockRequest = {
@@ -338,6 +343,7 @@ export interface IBeaconEngine
     | "onEpoch"
     | "getPayloadAttestationBlock"
     | "getFinalizedCheckpointSnapshot"
+    | "getHeadSnapshot"
     | "produceSyncCommitteeContribution"
     | "getCanonicalBlockAtSlot"
     | "getBlockByRoot"
@@ -353,7 +359,7 @@ export interface IBeaconEngine
   resumeFastConfirmation(): Promise<void>;
   recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<ProtoBlock>;
   discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void>;
-  onSlot(slot: Slot): Promise<void>;
+  onSlot(slot: Slot, previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">): Promise<void>;
   onEpoch(epoch: Epoch): Promise<void>;
   getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null>;
   isHeadOptimistic(): Promise<boolean>;
@@ -518,6 +524,8 @@ export interface IBeaconEngineCore {
   persistAnchorState(): Promise<void>;
   initializeFromAnchor(): Promise<EngineBootstrap>;
   getChainViewSnapshot(): Promise<ChainViewSnapshot>;
+  /** Compare with the ChainView head to distinguish root changes from payload-status changes. */
+  getHeadSnapshot(previousHead: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot;
   readonly config: BeaconConfig;
 
   getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData>;
@@ -928,10 +936,10 @@ export interface IBeaconEngineCore {
     signedBlockRoot: SignedBlockRoot,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
-  ): Promise<Result<ImportBlockResult, BlockFailure>>;
+  ): Promise<Result<ImportBlockResponse, BlockFailure>>;
   discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): void;
 
-  onSlot(slot: Slot): void;
+  onSlot(slot: Slot): OnSlotResponse;
   onEpoch(epoch: Epoch): void;
 
   // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts.

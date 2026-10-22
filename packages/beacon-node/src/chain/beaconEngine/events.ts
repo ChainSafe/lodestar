@@ -10,10 +10,8 @@ export enum BeaconEngineEvent {
   builderRegistered = "builderRegistered",
   // TODO - beacon engine: may remove this
   chainViewUpdated = "chainViewUpdated",
-  newFinalizedCheckpoint = "newFinalizedCheckpoint",
   earliestAvailableSlotUpdated = "earliestAvailableSlotUpdated",
   headUpdated = "headUpdated",
-  chainReorg = "chainReorg",
   proposerSlashingProduced = "proposerSlashingProduced",
   fastConfirmation = "fastConfirmation",
   lightClientOptimisticUpdate = "lightClientOptimisticUpdate",
@@ -21,25 +19,25 @@ export enum BeaconEngineEvent {
   checkpoint = "checkpoint",
 }
 
-export type HeadUpdate = {
+export type HeadUpdate<TRoot = RootHex> = {
   slot: Slot;
-  blockRoot: RootHex;
-  stateRoot: RootHex;
+  blockRoot: TRoot;
+  stateRoot: TRoot;
   payloadStatus: PayloadStatus;
   headRootChanged: boolean;
   epochTransition: boolean;
-  previousDutyDependentRoot: RootHex;
-  currentDutyDependentRoot: RootHex;
+  previousDutyDependentRoot: TRoot;
+  currentDutyDependentRoot: TRoot;
   executionOptimistic: boolean;
 };
 
-export type ChainReorg = {
+export type ChainReorg<TRoot = RootHex> = {
   slot: Slot;
   depth: number;
-  oldHeadBlock: RootHex;
-  newHeadBlock: RootHex;
-  oldHeadState: RootHex;
-  newHeadState: RootHex;
+  oldHeadBlock: TRoot;
+  newHeadBlock: TRoot;
+  oldHeadState: TRoot;
+  newHeadState: TRoot;
   epoch: Epoch;
   executionOptimistic: boolean;
 };
@@ -52,8 +50,6 @@ export type BeaconEngineEventData = {
   [BeaconEngineEvent.fatalError]: Error;
   [BeaconEngineEvent.builderRegistered]: string;
   [BeaconEngineEvent.chainViewUpdated]: ChainViewUpdate;
-  [BeaconEngineEvent.newFinalizedCheckpoint]: void;
-  [BeaconEngineEvent.chainReorg]: ChainReorg;
   [BeaconEngineEvent.proposerSlashingProduced]: phase0.ProposerSlashing;
   [BeaconEngineEvent.fastConfirmation]: FastConfirmation;
   [BeaconEngineEvent.lightClientOptimisticUpdate]: SerializedLightClientData;

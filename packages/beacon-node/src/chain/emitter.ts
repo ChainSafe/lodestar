@@ -7,7 +7,7 @@ import {PeerIdStr} from "../util/peerId.js";
 import type {FinalizedCheckpointSnapshot} from "./beaconEngine/interface.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {ChainViewBlock, ChainViewUpdate} from "./chainView/interface.js";
+import {ChainViewBlock, ChainViewState, ChainViewUpdate} from "./chainView/interface.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -55,7 +55,7 @@ export enum ChainEvent {
    */
   publishProposerSlashing = "publishProposerSlashing",
   /**
-   * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
+   * Refresh peer status after the head, finalized checkpoint, or earliestAvailableSlot changes.
    */
   updateStatus = "updateStatus",
   /**
@@ -108,7 +108,7 @@ export type ChainEventData = {
 
 export type IChainEvents = ApiEvents & {
   [ChainEvent.chainViewUpdated]: (update: ChainViewUpdate) => void;
-  [ChainEvent.chainViewBlocksAdded]: (blocks: ChainViewBlock[]) => void;
+  [ChainEvent.chainViewBlocksAdded]: (blocks: ChainViewBlock[], state?: ChainViewState) => void;
   [ChainEvent.earliestAvailableSlotUpdated]: (slot: Slot) => void;
   [ChainEvent.fatalError]: (error: Error) => void;
   [ChainEvent.builderRegistered]: (url: string) => void;

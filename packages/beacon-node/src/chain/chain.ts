@@ -54,7 +54,7 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainView} from "./chainView/chainView.js";
-import {ChainViewBlock, ChainViewSnapshot, ChainViewUpdate} from "./chainView/interface.js";
+import {ChainViewBlock, ChainViewSnapshot, ChainViewState, ChainViewUpdate} from "./chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -281,6 +281,8 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = emitter;
     this.emitter.on(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
     this.emitter.on(ChainEvent.chainViewBlocksAdded, this.onChainViewBlocksAdded);
+    // Finalization consumers read ChainView even when no head update preceded the checkpoint pull.
+    this.emitter.prependListener(ChainEvent.forkChoiceFinalized, this.onChainViewFinalized);
     this.emitter.on(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.on(ChainEvent.fatalError, this.onEngineFatalError);
     if (!modules.builderApiClient) this.emitter.on(ChainEvent.builderRegistered, this.onBuilderRegistered);
@@ -360,6 +362,7 @@ export class BeaconChain implements IBeaconChain {
     await this.bls.close();
     this.emitter.off(ChainEvent.chainViewUpdated, this.onChainViewUpdated);
     this.emitter.off(ChainEvent.chainViewBlocksAdded, this.onChainViewBlocksAdded);
+    this.emitter.off(ChainEvent.forkChoiceFinalized, this.onChainViewFinalized);
     this.emitter.off(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.off(ChainEvent.fatalError, this.onEngineFatalError);
     this.emitter.off(ChainEvent.builderRegistered, this.onBuilderRegistered);
@@ -859,19 +862,33 @@ export class BeaconChain implements IBeaconChain {
     this.processShutdownCallback(error);
   };
 
-  private onChainViewBlocksAdded = (blocks: ChainViewBlock[]): void => {
-    this.chainView.addBlocks(blocks);
+  private onChainViewBlocksAdded = (blocks: ChainViewBlock[], state?: ChainViewState): void => {
+    const previousJustified = state ? this.getJustifiedCheckpoint() : undefined;
+    this.chainView.addBlocks(blocks, state);
+    if (previousJustified) this.onChainViewStateUpdated(previousJustified);
+  };
+
+  private onChainViewFinalized = (checkpoint: CheckpointWithHex): void => {
+    const previousFinalized = this.getFinalizedCheckpoint();
+    this.chainView.applyFinalizedCheckpoint(checkpoint);
+    if (checkpoint.epoch > previousFinalized.epoch) this.emitter.emit(ChainEvent.updateStatus);
   };
 
   // TODO - beacon engine: may remove this
   private onChainViewUpdated = (update: ChainViewUpdate): void => {
     const previousJustified = this.getJustifiedCheckpoint();
     this.chainView.applyUpdate(update);
-    this.metrics?.headSlot.set(update.head.slot);
-    if (update.justified.epoch !== previousJustified.epoch || update.justified.rootHex !== previousJustified.rootHex) {
-      this.emitter.emit(ChainEvent.forkChoiceJustified, this.getJustifiedCheckpoint());
-    }
+    this.onChainViewStateUpdated(previousJustified);
   };
+
+  private onChainViewStateUpdated(previousJustified: CheckpointWithHex): void {
+    this.metrics?.headSlot.set(this.chainView.getHead().slot);
+    const justified = this.getJustifiedCheckpoint();
+    if (justified.epoch !== previousJustified.epoch || justified.rootHex !== previousJustified.rootHex) {
+      this.emitter.emit(ChainEvent.forkChoiceJustified, justified);
+    }
+    this.emitter.emit(ChainEvent.updateStatus);
+  }
 
   /**
    * Returns Promise that resolves either on block found or once 1 slot passes.
@@ -957,7 +974,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Clock slot", {slot});
 
     // CRITICAL UPDATE
-    this.beaconEngine.onSlot(slot).catch((e) => {
+    this.beaconEngine.onSlot(slot, this.chainView.getHead()).catch((e) => {
       this.logger.error("Error processing beacon engine slot", {slot}, e);
     });
     this.metrics?.clockSlot.set(slot);

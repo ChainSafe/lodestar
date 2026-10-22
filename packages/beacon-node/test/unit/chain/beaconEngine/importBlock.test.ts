@@ -1,12 +1,13 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {AncestorStatus, ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/chainView.js";
 import {VerifiedBlockBundle, importBlock} from "../../../../src/chain/beaconEngine/importBlock.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {BlockInputBlobs, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
@@ -66,6 +67,86 @@ describe("BeaconEngine block persistence", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
+  it.each([
+    [ForkName.phase0, true],
+    [ForkName.gloas, true],
+    [ForkName.gloas, false],
+  ] as const)(
+    "returns detached %s import metadata without publishing (head changed: %s)",
+    async (fork, headChanged) => {
+      const config = createBeaconConfig(getConfig(fork), Buffer.alloc(32));
+      Object.defineProperty(chain, "config", {value: config});
+      const imported = config.getForkTypes(1).SignedBeaconBlock.defaultValue();
+      imported.message.slot = 1;
+      const importedRoot = config.getForkTypes(1).BeaconBlock.hashTreeRoot(imported.message);
+      const importedSignedRoot = computeSignedBlockRoot(fork, imported);
+      const importedSignedRootHex = toSignedBlockRootHex(importedSignedRoot);
+      const summary: ProtoBlock = {
+        ...zeroProtoBlock,
+        slot: 1,
+        blockRoot: toRootHex(importedRoot),
+        payloadStatus: fork === ForkName.gloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
+      };
+      const checkpoint = {epoch: 0, root: Buffer.alloc(32), rootHex: zeroProtoBlock.blockRoot};
+      chain.opts.disableImportExecutionFcU = true;
+      chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
+      chain.forkChoice.onBlock.mockReturnValue(summary);
+      chain.forkChoice.updateAndGetHead = vi.fn().mockReturnValue({head: headChanged ? summary : zeroProtoBlock});
+      chain.forkChoice.getCommonAncestorDepth = vi
+        .fn()
+        .mockReturnValue({code: AncestorStatus.CommonAncestor, depth: 1});
+      chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
+      chain.forkChoice.getBlockHexAndBlockHash.mockReturnValue(zeroProtoBlock);
+      chain.forkChoice.getDependentRoot.mockReturnValue(zeroProtoBlock.blockRoot);
+      chain.forkChoice.getJustifiedCheckpoint = vi.fn().mockReturnValue(checkpoint);
+      chain.syncContributionAndProofPool.prune = vi.fn();
+      Object.defineProperty(chain.beaconEngine, "seenPayloadEnvelopeInputCache", {
+        value: {add: vi.fn(), pruneBelowParent: vi.fn()},
+      });
+      Object.assign(chain.beaconEngine, {
+        recomputeForkChoiceHead: BeaconEngineCore.prototype.recomputeForkChoiceHead,
+        getHeadUpdate: BeaconEngineCore.prototype.getHeadUpdate,
+      });
+      chain.forkChoice.onBlock.mockImplementation(() => {
+        chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({...checkpoint, epoch: 1});
+        return summary;
+      });
+      chain.beaconEngine.verifiedBlocks.set(importedSignedRootHex, {
+        ...bundle,
+        block: imported,
+        blockBytes: config.getForkTypes(1).SignedBeaconBlock.serialize(imported),
+      });
+      const emit = vi.spyOn(chain.beaconEngine.emitter, "emit");
+      const result = await BeaconEngineCore.prototype.importBlock.call(
+        chain.beaconEngine,
+        importedSignedRoot,
+        DataAvailabilityStatus.PreData,
+        {}
+      );
+      if (result.err !== null) throw Error("Expected import success");
+      const response = result.result;
+      expect(response.block).toEqual(toChainViewBlockBytes(summary));
+      expect(response.newHead).toEqual(toChainViewBlockBytes(headChanged ? summary : zeroProtoBlock));
+      if (headChanged) {
+        expect(response.headUpdate).toMatchObject({blockRoot: Uint8Array.from(importedRoot), headRootChanged: true});
+        expect(response.reorg).toMatchObject({newHeadBlock: Uint8Array.from(importedRoot), depth: 1});
+      } else {
+        expect(response.headUpdate).toBeNull();
+        expect(response.reorg).toBeNull();
+      }
+      expect(response.finalizedCheckpointChanged).toBe(true);
+      expect(response.finalized).toEqual({epoch: 1, root: new Uint8Array(32)});
+      expect(structuredClone(response)).toEqual(response);
+      expect(response.block).not.toHaveProperty("executionStatus");
+      expect(response.block).not.toHaveProperty("dataAvailabilityStatus");
+      expect(chain.publishChainView).not.toHaveBeenCalled();
+      expect(emit).not.toHaveBeenCalled();
+      expect(chain.beaconEngine.verifiedBlocks.has(importedSignedRootHex)).toBe(false);
+      response.block.blockRoot.fill(9);
+      expect(summary.blockRoot).toBe(toRootHex(importedRoot));
+    }
+  );
+
   it.each([false, true])(
     "releases only the requested signed bundle after an import failure (typed: %s)",
     async (typed) => {
@@ -103,7 +184,7 @@ describe("BeaconEngine block persistence", () => {
       } else {
         await expect(importing).rejects.toBe(error);
       }
-      expect(chain.publishChainView).toHaveBeenCalledOnce();
+      expect(chain.publishChainView).not.toHaveBeenCalled();
       expect(putBinary).toHaveBeenCalledExactlyOnceWith(root, blockBytes);
       expect(chain.beaconEngine.verifiedBlocks.get(signedRoot)).toBeUndefined();
       expect(chain.beaconEngine.verifiedBlocks.get(otherRoot)).toBe(otherBundle);

@@ -1,4 +1,3 @@
-// TODO - beacon engine: transport engine-emitted events through the worker boundary.
 import {BitArray} from "@chainsafe/ssz";
 import {
   AncestorStatus,
@@ -35,6 +34,7 @@ import {
   BeaconBlock,
   Epoch,
   IndexedAttestation,
+  Root,
   SignedBeaconBlock,
   altair,
   electra,
@@ -42,7 +42,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {fromHex, isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -53,8 +53,9 @@ import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
+import {toChainViewBlockBytes} from "./chainView.js";
 import {BeaconEngineEvent, ChainReorg} from "./events.js";
-import {ImportBlockResult} from "./interface.js";
+import {ImportBlockResponse} from "./interface.js";
 
 export type VerifiedBlockBundle = {
   executionStatus: BlockExecutionStatus;
@@ -78,7 +79,7 @@ export async function importBlock(
   v: VerifiedBlockBundle,
   dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportBlockOpts
-): Promise<ImportBlockResult> {
+): Promise<ImportBlockResponse> {
   const fullyVerifiedBlock = {...v, dataAvailabilityStatus};
   const {block, postState, parentBlockSlot, indexedAttestations} = fullyVerifiedBlock;
 
@@ -302,7 +303,10 @@ export async function importBlock(
 
   const oldHead = this.forkChoice.getHead();
 
-  const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+  // Public notifications follow application of the returned ChainView metadata in the facade.
+  const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, false);
+  const headUpdate = this.getHeadUpdate(oldHead, newHead);
+  let reorg: ChainReorg<Root> | null = null;
 
   if (fork >= ForkSeq.gloas) {
     const parent = this.forkChoice.getBlockHexDefaultStatus(newHead.parentRoot);
@@ -355,7 +359,13 @@ export async function importBlock(
         executionOptimistic: isOptimisticBlock(newHead),
       };
 
-      this.emitter.emit(BeaconEngineEvent.chainReorg, forkChoiceReorgEventData);
+      reorg = {
+        ...forkChoiceReorgEventData,
+        newHeadBlock: fromHex(newHead.blockRoot),
+        oldHeadBlock: fromHex(oldHead.blockRoot),
+        newHeadState: fromHex(newHead.stateRoot),
+        oldHeadState: fromHex(oldHead.stateRoot),
+      };
       this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
 
       this.metrics?.forkChoice.reorg.inc();
@@ -385,7 +395,7 @@ export async function importBlock(
 
   // 6. Queue notifyForkchoiceUpdate to engine api
   //
-  // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change in response to an onBlock event
+  // Finalization can also advance on epoch-boundary ticks when unrealized checkpoints are pulled up.
   // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.
   // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
   // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
@@ -539,25 +549,27 @@ export async function importBlock(
     );
   }
 
-  // [beacon-engine] deviation: return plain metadata; events and state remain engine-local.
+  const justified = this.forkChoice.getJustifiedCheckpoint();
+  const finalized = this.forkChoice.getFinalizedCheckpoint();
+
+  // [beacon-engine] deviation: return detached metadata before facade-side event delivery.
   return {
-    headChanged: newHead.blockRoot !== oldHead.blockRoot,
-    head: null,
-    blockSummary,
-    proposerIndexNextSlot: null,
-    isExecutionState: isStatePostBellatrix(postState) && postState.isExecutionStateType,
-    prevFinalizedEpoch,
-    currFinalizedEpoch,
-    oldHeadBlockRoot: oldHead.blockRoot,
-    newHeadBlockRoot: newHead.blockRoot,
-    newHead,
-    blockMeta: {
-      slot: blockSlot,
-      blockRootHex,
-      proposerBalanceDelta: v.proposerBalanceDelta,
-      parentBlockSlot,
-      seenTimestampSec: v.seenTimestampSec,
-    },
+    block: toChainViewBlockBytes(blockSummary),
+    newHead: toChainViewBlockBytes(newHead),
+    justified: {epoch: justified.epoch, root: fromHex(justified.rootHex)},
+    finalized: {epoch: finalized.epoch, root: fromHex(finalized.rootHex)},
+    executionOptimistic: isOptimisticBlock(blockSummary),
+    headUpdate: headUpdate
+      ? {
+          ...headUpdate,
+          blockRoot: fromHex(headUpdate.blockRoot),
+          stateRoot: fromHex(headUpdate.stateRoot),
+          previousDutyDependentRoot: fromHex(headUpdate.previousDutyDependentRoot),
+          currentDutyDependentRoot: fromHex(headUpdate.currentDutyDependentRoot),
+        }
+      : null,
+    reorg,
+    finalizedCheckpointChanged: currFinalizedEpoch !== prevFinalizedEpoch,
   };
 }
 

@@ -1,6 +1,6 @@
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Root} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {ChainViewBlock, ChainViewSnapshot, ChainViewState, ChainViewUpdate} from "../chainView/interface.js";
 
 export function toChainViewBlock(block: ProtoBlock): ChainViewBlock {
@@ -25,6 +25,18 @@ export function toChainViewBlockBytes(block: ProtoBlock): ChainViewBlock<Root> {
     parentBlockHash: block.parentBlockHash === null ? null : fromHex(block.parentBlockHash),
     executionPayloadBlockHash:
       block.executionPayloadBlockHash === null ? null : fromHex(block.executionPayloadBlockHash),
+  };
+}
+
+export function fromChainViewBlockBytes(block: ChainViewBlock<Root>): ChainViewBlock {
+  return {
+    ...block,
+    blockRoot: toRootHex(block.blockRoot),
+    parentRoot: toRootHex(block.parentRoot),
+    stateRoot: toRootHex(block.stateRoot),
+    parentBlockHash: block.parentBlockHash === null ? null : toRootHex(block.parentBlockHash),
+    executionPayloadBlockHash:
+      block.executionPayloadBlockHash === null ? null : toRootHex(block.executionPayloadBlockHash),
   };
 }
 
