@@ -123,7 +123,7 @@ export interface IForkChoice {
    */
   shouldOverrideForkChoiceUpdate(
     headBlock: ProtoBlock,
-    secFromSlot: number,
+    msFromSlot: number,
     currentSlot: Slot
   ): ShouldOverrideForkChoiceUpdateResult;
   /**
@@ -159,8 +159,8 @@ export interface IForkChoice {
   onBlock(
     block: BeaconBlock,
     state: IBeaconStateView,
-    receiveDelaySec: number,
-    importDelaySec: number,
+    receiveDelayMs: number,
+    importDelayMs: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
