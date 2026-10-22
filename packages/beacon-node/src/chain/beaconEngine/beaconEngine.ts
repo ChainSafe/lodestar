@@ -164,13 +164,12 @@ export class BeaconEngine implements IBeaconEngine {
   };
 
   private readonly onHeadUpdated = async (
-    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
+    previousHead?: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
   ): Promise<void> => {
     if (this.closed) return;
-    const snapshot = await this.core.getHeadSnapshot({
-      blockRoot: fromHex(previousHead.blockRoot),
-      payloadStatus: previousHead.payloadStatus,
-    });
+    const snapshot = await this.core.getHeadSnapshot(
+      previousHead ? {blockRoot: fromHex(previousHead.blockRoot), payloadStatus: previousHead.payloadStatus} : undefined
+    );
     if (this.closed) return;
     const head = fromChainViewBlockBytes(snapshot.head);
     this.emitter.emit(ChainEvent.chainViewBlocksAdded, [head], {
@@ -375,12 +374,16 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.batchPersistArchiveBlocks(entries);
   }
 
-  produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse> {
-    return this.core.produceBlock(request);
+  async produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse> {
+    const response = await this.core.produceBlock(request);
+    if (response.headUpdate) await this.onHeadUpdated();
+    return response;
   }
 
-  produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response> {
-    return this.core.produceBlockV4(request);
+  async produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response> {
+    const response = await this.core.produceBlockV4(request);
+    if (response.headUpdate) await this.onHeadUpdated();
+    return response;
   }
 
   registerAuthenticatedBuilder(url: string): Promise<void> {

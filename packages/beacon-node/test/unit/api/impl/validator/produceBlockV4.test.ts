@@ -77,6 +77,12 @@ describe("api/validator - produceBlockV4", () => {
 
   beforeEach(() => {
     modules = getApiTestModules({config});
+    modules.chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
+    modules.chain.forkChoice.getJustifiedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: new Uint8Array(32),
+      rootHex: zeroProtoBlock.blockRoot,
+    });
     produceFull = vi.fn();
     const produce = produceFull;
     modules.chain.beaconEngine.produceBlockV4 = vi.fn(

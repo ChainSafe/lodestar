@@ -381,11 +381,13 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return this.chainViewPublisher.snapshot();
   }
 
-  getHeadSnapshot(previousHead: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot {
+  getHeadSnapshot(previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot {
     const head = this.forkChoice.getHead();
     const justified = this.forkChoice.getJustifiedCheckpoint();
     const finalized = this.forkChoice.getFinalizedCheckpoint();
-    const headUpdate = this.getHeadUpdate({...previousHead, blockRoot: toRootHex(previousHead.blockRoot)}, head);
+    const headUpdate = previousHead
+      ? this.getHeadUpdate({...previousHead, blockRoot: toRootHex(previousHead.blockRoot)}, head)
+      : null;
     return {
       head: toChainViewBlockBytes(head),
       justified: {epoch: justified.epoch, root: fromHex(justified.rootHex)},
@@ -998,7 +1000,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetProposerHead});
       throw e;
     } finally {
-      this.publishChainView(false);
       timer?.();
     }
   }
@@ -1412,28 +1413,51 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   /** Runs inside BeaconEngineCore. Single V3 production entry and plain-data error boundary. */
   async produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse> {
+    const previousHead = this.forkChoice.getHead();
+    const previousJustified = this.forkChoice.getJustifiedCheckpoint();
+    let response: ProduceBlockResponse;
     try {
       const {slot, randaoReveal, graffiti, builderBoostFactor, ...opts} = request;
-      return {
+      response = {
         ok: true,
+        headUpdate: false,
         data: await produceEngineOrBuilderBlock.call(this, slot, randaoReveal, graffiti, builderBoostFactor, opts),
       };
     } catch (e) {
-      if (e instanceof NodeIsSyncing)
-        return {
+      if (e instanceof NodeIsSyncing) {
+        response = {
           ok: false,
+          headUpdate: false,
           code: BeaconEngineErrorCode.NODE_SYNCING,
           payload: {message: e.message.replace(/^Node is syncing - /, "")},
         };
-      if (e instanceof ApiError)
-        return {ok: false, code: BeaconEngineErrorCode.API_ERROR, payload: {status: e.statusCode, message: e.message}};
-      return {
-        ok: false,
-        code:
-          isErrorAborted(e) || isQueueErrorAborted(e) ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
-        payload: {message: e instanceof Error ? e.message : String(e)},
-      };
+      } else if (e instanceof ApiError) {
+        response = {
+          ok: false,
+          headUpdate: false,
+          code: BeaconEngineErrorCode.API_ERROR,
+          payload: {status: e.statusCode, message: e.message},
+        };
+      } else {
+        response = {
+          ok: false,
+          headUpdate: false,
+          code:
+            isErrorAborted(e) || isQueueErrorAborted(e)
+              ? BeaconEngineErrorCode.ABORTED
+              : BeaconEngineErrorCode.INTERNAL,
+          payload: {message: e instanceof Error ? e.message : String(e)},
+        };
+      }
     }
+    const head = this.forkChoice.getHead();
+    const justified = this.forkChoice.getJustifiedCheckpoint();
+    response.headUpdate =
+      head.blockRoot !== previousHead.blockRoot ||
+      head.payloadStatus !== previousHead.payloadStatus ||
+      justified.epoch !== previousJustified.epoch ||
+      justified.rootHex !== previousJustified.rootHex;
+    return response;
   }
 
   async registerAuthenticatedBuilder(url: string): Promise<void> {
@@ -1503,24 +1527,46 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   /** Runs inside BeaconEngineCore. Single Gloas V4 production entry and plain-data error boundary. */
   async produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response> {
+    const previousHead = this.forkChoice.getHead();
+    const previousJustified = this.forkChoice.getJustifiedCheckpoint();
+    let response: ProduceBlockV4Response;
     try {
-      return {ok: true, data: await produceBlockV4.call(this, request)};
+      response = {ok: true, data: await produceBlockV4.call(this, request), headUpdate: false};
     } catch (e) {
-      if (e instanceof NodeIsSyncing)
-        return {
+      if (e instanceof NodeIsSyncing) {
+        response = {
           ok: false,
+          headUpdate: false,
           code: BeaconEngineErrorCode.NODE_SYNCING,
           payload: {message: e.message.replace(/^Node is syncing - /, "")},
         };
-      if (e instanceof ApiError)
-        return {ok: false, code: BeaconEngineErrorCode.API_ERROR, payload: {status: e.statusCode, message: e.message}};
-      return {
-        ok: false,
-        code:
-          isErrorAborted(e) || isQueueErrorAborted(e) ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
-        payload: {message: e instanceof Error ? e.message : String(e)},
-      };
+      } else if (e instanceof ApiError) {
+        response = {
+          ok: false,
+          headUpdate: false,
+          code: BeaconEngineErrorCode.API_ERROR,
+          payload: {status: e.statusCode, message: e.message},
+        };
+      } else {
+        response = {
+          ok: false,
+          headUpdate: false,
+          code:
+            isErrorAborted(e) || isQueueErrorAborted(e)
+              ? BeaconEngineErrorCode.ABORTED
+              : BeaconEngineErrorCode.INTERNAL,
+          payload: {message: e instanceof Error ? e.message : String(e)},
+        };
+      }
     }
+    const head = this.forkChoice.getHead();
+    const justified = this.forkChoice.getJustifiedCheckpoint();
+    response.headUpdate =
+      head.blockRoot !== previousHead.blockRoot ||
+      head.payloadStatus !== previousHead.payloadStatus ||
+      justified.epoch !== previousJustified.epoch ||
+      justified.rootHex !== previousJustified.rootHex;
+    return response;
   }
 
   /**

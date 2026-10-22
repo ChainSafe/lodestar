@@ -22,6 +22,12 @@ describe("BeaconEngineCore V3 production race", () => {
   );
   beforeEach(() => {
     modules = getApiTestModules({config});
+    modules.chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
+    modules.chain.forkChoice.getJustifiedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: new Uint8Array(32),
+      rootHex: zeroProtoBlock.blockRoot,
+    });
     vi.spyOn(modules.chain.clock, "msFromSlot").mockReturnValue(0);
     modules.chain.executionBuilder.status = BuilderStatus.enabled;
     modules.chain.beaconEngine.produceBlock = vi.fn(
@@ -205,6 +211,7 @@ describe("BeaconEngineCore V3 production race", () => {
     await vi.advanceTimersByTimeAsync(14000);
     expect(await production).toEqual({
       ok: false,
+      headUpdate: false,
       code: BeaconEngineErrorCode.INTERNAL,
       payload: {message: "Builder and engine both failed to produce the block within timeout"},
     });

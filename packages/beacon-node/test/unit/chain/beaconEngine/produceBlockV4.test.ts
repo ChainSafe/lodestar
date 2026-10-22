@@ -37,6 +37,13 @@ describe("BeaconEngineCore V4 production", () => {
   };
   beforeEach(() => {
     modules = getApiTestModules({config});
+    const head = generateProtoBlock();
+    modules.chain.forkChoice.getHead.mockReturnValue(head);
+    modules.chain.forkChoice.getJustifiedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: new Uint8Array(32),
+      rootHex: head.blockRoot,
+    });
     modules.chain.beaconEngine.produceBlockV4 = vi.fn(
       BeaconEngineCore.prototype.produceBlockV4.bind(modules.chain.beaconEngine)
     );
@@ -101,6 +108,7 @@ describe("BeaconEngineCore V4 production", () => {
     );
     expect(await modules.chain.beaconEngine.produceBlockV4(attrs)).toEqual({
       ok: false,
+      headUpdate: false,
       code: BeaconEngineErrorCode.NODE_SYNCING,
       payload: {message: "Block's data is out of range and not validated"},
     });
@@ -117,14 +125,19 @@ describe("BeaconEngineCore V4 production", () => {
       modules.chain.getProposerHead.mockImplementation(() => {
         throw error;
       });
-      expect(await modules.chain.beaconEngine.produceBlockV4(attrs)).toEqual({ok: false, code, payload});
+      expect(await modules.chain.beaconEngine.produceBlockV4(attrs)).toEqual({
+        ok: false,
+        code,
+        payload,
+        headUpdate: false,
+      });
       expect(
         await BeaconEngineCore.prototype.produceBlock.call(modules.chain.beaconEngine, {
           ...attrs,
           builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
           builderBoostFactor: 100n,
         })
-      ).toEqual({ok: false, code, payload});
+      ).toEqual({ok: false, code, payload, headUpdate: false});
     });
   }
 

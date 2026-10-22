@@ -40,6 +40,7 @@ describe("validator production engine boundary", () => {
     };
     vi.mocked(modules.chain.beaconEngine.produceBlock).mockResolvedValue({
       ok: true,
+      headUpdate: false,
       data: {
         data: {block},
         version: ForkName.bellatrix,
@@ -101,6 +102,7 @@ describe("validator production engine boundary", () => {
     };
     vi.mocked(modules.chain.beaconEngine.produceBlockV4).mockResolvedValue({
       ok: true,
+      headUpdate: false,
       data: {
         data: block,
         meta: {
@@ -154,7 +156,7 @@ describe("validator production engine boundary", () => {
     it(`reconstructs ${code} without caching`, async () => {
       const api = getValidatorApi(defaultApiOptions, modules);
       const failure = {ok: false, code, payload} as ProductionError;
-      vi.mocked(modules.chain.beaconEngine.produceBlock).mockResolvedValue(failure);
+      vi.mocked(modules.chain.beaconEngine.produceBlock).mockResolvedValue({...failure, headUpdate: false});
       await expect(api.produceBlockV3(request)).rejects.toBeInstanceOf(errorClass);
       await expect(api.produceBlockV3(request)).rejects.toThrow(message);
       expect(modules.chain.blockProductionCache.size).toBe(0);

@@ -45,6 +45,12 @@ describe("api/validator - produceBlockV3", () => {
 
   beforeEach(() => {
     modules = getApiTestModules({config});
+    modules.chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
+    modules.chain.forkChoice.getJustifiedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: new Uint8Array(32),
+      rootHex: zeroProtoBlock.blockRoot,
+    });
     state = new BeaconStateView(generateCachedBellatrixState());
     produceFull.mockReset();
     produceBlinded.mockReset();

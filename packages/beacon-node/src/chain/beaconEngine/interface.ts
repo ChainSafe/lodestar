@@ -225,8 +225,8 @@ export type ProductionError =
       payload: {message: string};
     };
 export type ProductionResponse<T> = {ok: true; data: T} | ProductionError;
-export type ProduceBlockResponse = ProductionResponse<ProduceBlindedBlockOrBlockContentsRes>;
-export type ProduceBlockV4Response = ProductionResponse<ProduceBlockV4Result>;
+export type ProduceBlockResponse = ProductionResponse<ProduceBlindedBlockOrBlockContentsRes> & {headUpdate: boolean};
+export type ProduceBlockV4Response = ProductionResponse<ProduceBlockV4Result> & {headUpdate: boolean};
 
 export type SubmitBlindedBlockResponse = {
   signedBlockContents: SignedBlockContents;
@@ -537,8 +537,8 @@ export interface IBeaconEngineCore {
   persistAnchorState(): Promise<void>;
   initializeFromAnchor(): Promise<EngineBootstrap>;
   getChainViewSnapshot(): Promise<ChainViewSnapshot>;
-  /** Compare with the ChainView head to distinguish root changes from payload-status changes. */
-  getHeadSnapshot(previousHead: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot;
+  /** Include head-event metadata only when a previous ChainView head is supplied. */
+  getHeadSnapshot(previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot;
   readonly config: BeaconConfig;
 
   getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData>;
