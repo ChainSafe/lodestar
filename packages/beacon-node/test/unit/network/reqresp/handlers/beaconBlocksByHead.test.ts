@@ -191,7 +191,7 @@ function createChain(blocks: TestBlock[], currentEpoch = 0, testConfig = config)
     clock: {currentEpoch, currentSlot: computeStartSlotAtEpoch(currentEpoch)},
     getSerializedBlockByRoot: vi.fn(async (root: Uint8Array) => {
       const block = blocksByRoot.get(toRootHex(root));
-      return block ? {block: block.bytes, executionOptimistic: false, finalized: false, slot: block.slot} : null;
+      return block ? {block: block.bytes, slot: block.slot} : null;
     }),
     logger: {verbose: vi.fn()},
   } as unknown as IBeaconChain;

@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {CheckpointWithHex, ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toRootHex} from "@lodestar/utils";
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
@@ -14,7 +14,14 @@ function block(n: number, slot: number, parent: number, extra: Partial<ChainView
 }
 function snapshot(blocks: ChainViewBlock[], head = blocks.at(-1)): ChainViewSnapshot {
   if (!head) throw new Error("Snapshot requires a head");
-  return {revision: 0, blocks, head, justified: checkpoint(1), finalized: checkpoint(1)};
+  return {
+    revision: 0,
+    blocks,
+    head,
+    headExecutionOptimistic: false,
+    justified: checkpoint(1),
+    finalized: checkpoint(1),
+  };
 }
 function update(initial: ChainViewSnapshot, changes: Partial<ChainViewUpdate>): ChainViewUpdate {
   return {...initial, revision: 1, blocks: [], ...changes};
@@ -108,19 +115,20 @@ describe("ChainView", () => {
 
   it("publishes same-root payload and execution changes without sharing mutable objects", () => {
     const a = block(1, 0, 0);
-    const pending = block(2, 1, 1, {payloadStatus: PayloadStatus.PENDING, executionStatus: ExecutionStatus.Syncing});
-    const initial = snapshot([a, pending]);
+    const pending = block(2, 1, 1, {payloadStatus: PayloadStatus.PENDING});
+    const initial = {...snapshot([a, pending]), headExecutionOptimistic: true};
     const view = new ChainView(initial);
     initial.head.slot = 999;
-    const full = {...pending, slot: 1, payloadStatus: PayloadStatus.FULL, executionStatus: ExecutionStatus.Valid};
-    const next = update(initial, {blocks: [full], head: full});
+    const full = {...pending, slot: 1, payloadStatus: PayloadStatus.FULL};
+    const next = update(initial, {blocks: [full], head: full, headExecutionOptimistic: false});
     view.applyUpdate(next);
     next.head.slot = 888;
     const head = view.getHead();
     head.slot = 777;
     expect(view.getHead().slot).toBe(1);
     expect(view.getHead().payloadStatus).toBe(PayloadStatus.FULL);
-    expect(view.getHead().executionStatus).toBe(ExecutionStatus.Valid);
+    expect(view.isHeadOptimistic()).toBe(false);
+    expect(view.getHead()).not.toHaveProperty("executionStatus");
     expect(view.hasPayloadHexUnsafe(full.blockRoot)).toBe(true);
   });
 

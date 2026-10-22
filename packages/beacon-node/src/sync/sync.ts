@@ -7,7 +7,6 @@ import {ExecutionEngineState} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
-import {isOptimisticBlock} from "../util/forkChoice.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {IBeaconSync, SyncChainDebugState, SyncModules, SyncState, SyncingStatus, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
@@ -121,7 +120,7 @@ export class BeaconSync implements IBeaconSync {
           headSlot: head.slot,
           syncDistance: currentSlot - head.slot,
           isSyncing: true,
-          isOptimistic: isOptimisticBlock(head),
+          isOptimistic: this.chain.isHeadOptimistic(),
           elOffline,
         };
       case SyncState.Synced:
@@ -129,7 +128,7 @@ export class BeaconSync implements IBeaconSync {
           headSlot: head.slot,
           syncDistance: 0,
           isSyncing: false,
-          isOptimistic: isOptimisticBlock(head),
+          isOptimistic: this.chain.isHeadOptimistic(),
           elOffline,
         };
       default:

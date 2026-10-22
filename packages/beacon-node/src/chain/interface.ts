@@ -9,7 +9,6 @@ import {
   Epoch,
   Root,
   RootHex,
-  SignedBeaconBlock,
   Slot,
   Status,
   UintNum64,
@@ -121,25 +120,9 @@ export interface IBeaconChain extends IChainView {
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
 
   /**
-   * Since we can have multiple parallel chains,
-   * this methods returns blocks in current chain head according to
-   * forkchoice. Works for finalized slots as well
-   */
-  getCanonicalBlockAtSlot(
-    slot: Slot
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
-  /**
    * Get local serialized block by root (bytes-first), does not fetch from the network
    */
-  getSerializedBlockByRoot(
-    root: Uint8Array
-  ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null>;
-  /**
-   * Get local block by root, does not fetch from the network
-   */
-  getBlockByRoot(
-    root: RootHex
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  getSerializedBlockByRoot(root: Uint8Array): Promise<{block: Uint8Array; slot: Slot} | null>;
   getCanonicalBlockRootSlotsByRange(
     startSlot: Slot,
     endSlot: Slot

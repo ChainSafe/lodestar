@@ -35,7 +35,12 @@ export class ChainView implements IChainView {
     snapshot: ChainViewSnapshot,
     private readonly logger?: Logger
   ) {
-    this.state = structuredClone({head: snapshot.head, justified: snapshot.justified, finalized: snapshot.finalized});
+    this.state = structuredClone({
+      head: snapshot.head,
+      headExecutionOptimistic: snapshot.headExecutionOptimistic,
+      justified: snapshot.justified,
+      finalized: snapshot.finalized,
+    });
     this.revision = snapshot.revision;
     this.upsert(snapshot.blocks);
   }
@@ -55,7 +60,12 @@ export class ChainView implements IChainView {
       this.finalizedDescendants.clear();
     }
     this.upsert(update.blocks);
-    this.state = structuredClone({head: update.head, justified: update.justified, finalized: update.finalized});
+    this.state = structuredClone({
+      head: update.head,
+      headExecutionOptimistic: update.headExecutionOptimistic,
+      justified: update.justified,
+      finalized: update.finalized,
+    });
     this.revision = update.revision;
   }
 
@@ -108,6 +118,9 @@ export class ChainView implements IChainView {
 
   getHead(): ChainViewBlock {
     return {...this.state.head};
+  }
+  isHeadOptimistic(): boolean {
+    return this.state.headExecutionOptimistic;
   }
   getHeadRoot(): RootHex {
     return this.state.head.blockRoot;
@@ -312,6 +325,6 @@ export class ChainView implements IChainView {
 }
 
 function toFinalizedProtoSummary(block: ChainViewBlock): FinalizedProtoSummary {
-  const {slot, blockRoot, payloadStatus, executionStatus} = block;
-  return {slot, blockRoot, payloadStatus, executionStatus};
+  const {slot, blockRoot, payloadStatus} = block;
+  return {slot, blockRoot, payloadStatus};
 }

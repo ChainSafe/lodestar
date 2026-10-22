@@ -112,6 +112,7 @@ import {
 } from "../../execution/index.js";
 import {BeaconEngineMetrics, createBeaconEngineMetrics} from "../../metrics/index.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
+import {toBeaconHeaderResponse} from "../../util/blockHeader.js";
 import {BufferPool} from "../../util/bufferPool.js";
 import {Clock, IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -216,7 +217,14 @@ import {
   getStateValidators,
 } from "./beaconApis.js";
 import {ChainViewPublisher} from "./chainView.js";
-import {getAttesterDuties, getProposerDuties, getPtcDuties, getSyncCommitteeDuties} from "./duties.js";
+import {
+  getAttesterDuties,
+  getProposerDuties,
+  getPtcDuties,
+  getSyncCommitteeDuties,
+  produceAttestationData,
+  produceSyncCommitteeContribution,
+} from "./duties.js";
 import {BeaconEngineEvent, BeaconEngineEventBus} from "./events.js";
 import {
   validateApiAggregateAndProof,
@@ -290,16 +298,19 @@ import {
   ApiStateResultWithFork,
   BeaconEngineCoreModules,
   BeaconEngineErrorCode,
+  HeadExecutionStateInfo,
   HeadParentPayload,
   IBeaconEngineCore,
   ImportBlockResult,
   ImportExecutionPayloadOpts,
+  PayloadAttestationBlock,
   PrepareNextSlotOpts,
   PrepareNextSlotResponse,
   ProduceBlockRequest,
   ProduceBlockResponse,
   ProduceBlockV4Request,
   ProduceBlockV4Response,
+  ProductionResponse,
   SerializedLightClientData,
   VerifyBlocksOpts,
   VerifyBlocksSuccess,
@@ -1068,7 +1079,154 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   resumeFastConfirmation(): void {
     this.forkChoice.resumeFastConfirmation();
   }
-  // --- Internal block DB read for op-pool pruning. ---
+  /**
+   * Source: unstable@9cb14e3381 chain/chain.ts#getCanonicalBlockAtSlot.
+   * [beacon-engine] Return persisted bytes without the facade's block-input cache; retain hot-to-cold fallback.
+   */
+  async getCanonicalBlockAtSlot(
+    slot: Slot
+  ): Promise<{block: Uint8Array; slot: Slot; executionOptimistic: boolean; finalized: boolean} | null> {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    if (slot > finalizedBlock.slot) {
+      const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      if (block) {
+        const executionOptimistic = isOptimisticBlock(block);
+        const res = await this.getSerializedBlockByRoot(fromHex(block.blockRoot));
+        if (res) {
+          return {block: res.bytes, slot: res.slot, executionOptimistic, finalized: res.finalized};
+        }
+      }
+      // The block may have been archived during the read; fall back to the archive by slot.
+    }
+
+    const bytes = await this.db.blockArchive.getBinary(slot);
+    return bytes && {block: bytes, slot, executionOptimistic: false, finalized: true};
+  }
+
+  /**
+   * Source: unstable@9cb14e3381 chain/chain.ts#getBlockByRoot.
+   * [beacon-engine] Return persisted bytes without the facade's block-input cache; retain hot-to-cold fallback.
+   */
+  async getBlockByRoot(
+    root: Root
+  ): Promise<{block: Uint8Array; slot: Slot; executionOptimistic: boolean; finalized: boolean} | null> {
+    const block = this.forkChoice.getBlockDefaultStatus(root);
+    const executionOptimistic = block !== null && isOptimisticBlock(block);
+    const res = await this.getSerializedBlockByRoot(root);
+    return res && {block: res.bytes, slot: res.slot, executionOptimistic, finalized: res.finalized};
+  }
+
+  /**
+   * Source: unstable@9cb14e3381 api/impl/beacon/blocks/index.ts#getBlockHeaders.
+   * [beacon-engine] Read fork choice and blocks locally; accept a byte parent root and serialize response data.
+   */
+  async getBlockHeaders({slot, parentRoot}: {slot?: Slot; parentRoot?: Root}): Promise<{
+    data: Uint8Array;
+    meta: {executionOptimistic: boolean; finalized: boolean};
+  }> {
+    // TODO - SLOW CODE: This code seems like it could be improved
+
+    // If one block in the response contains an optimistic block, mark the entire response as optimistic
+    let executionOptimistic = false;
+    // If one block in the response is non finalized, mark the entire response as unfinalized
+    let finalized = true;
+
+    const result: routes.beacon.BlockHeaderResponse[] = [];
+    if (parentRoot) {
+      const finalizedBlock = await this.db.blockArchive.getByParentRoot(parentRoot);
+      if (finalizedBlock) {
+        result.push(toBeaconHeaderResponse(this.config, finalizedBlock, true));
+      }
+      const nonFinalizedBlocks = this.forkChoice.getBlockSummariesByParentRoot(toRootHex(parentRoot));
+      await Promise.all(
+        nonFinalizedBlocks.map(async (summary) => {
+          const blockResult = await this.getBlockByRoot(fromHex(summary.blockRoot));
+          if (blockResult) {
+            const block = this.config
+              .getForkTypes(blockResult.slot)
+              .SignedBeaconBlock.deserialize(blockResult.block, {reuseBytes: false});
+            const canonical = this.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
+            if (canonical) {
+              result.push(toBeaconHeaderResponse(this.config, block, canonical.blockRoot === summary.blockRoot));
+              if (isOptimisticBlock(canonical)) {
+                executionOptimistic = true;
+              }
+              // Block from hot db which only contains unfinalized blocks
+              finalized = false;
+            }
+          }
+        })
+      );
+      return {
+        data: routes.beacon.block.BlockHeadersResponseType.serialize(
+          result.filter(
+            (item) =>
+              // skip if no slot filter
+              !(slot !== undefined && slot !== 0) || item.header.message.slot === slot
+          )
+        ),
+        meta: {executionOptimistic, finalized},
+      };
+    }
+
+    const headSlot = this.forkChoice.getHead().slot;
+    if (!parentRoot && slot === undefined) {
+      slot = headSlot;
+    }
+
+    if (slot !== undefined) {
+      // future slot
+      if (slot > headSlot) {
+        return {
+          data: routes.beacon.block.BlockHeadersResponseType.serialize([]),
+          meta: {executionOptimistic: false, finalized: false},
+        };
+      }
+
+      const canonicalBlock = await this.getCanonicalBlockAtSlot(slot);
+      // skip slot
+      if (!canonicalBlock) {
+        return {
+          data: routes.beacon.block.BlockHeadersResponseType.serialize([]),
+          meta: {executionOptimistic: false, finalized: false},
+        };
+      }
+      const block = this.config
+        .getForkTypes(canonicalBlock.slot)
+        .SignedBeaconBlock.deserialize(canonicalBlock.block, {reuseBytes: false});
+      const canonicalRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      result.push(toBeaconHeaderResponse(this.config, block, true));
+      if (!canonicalBlock.finalized) {
+        finalized = false;
+      }
+
+      // fork blocks
+      // TODO: What is this logic?
+      await Promise.all(
+        this.forkChoice.getBlockSummariesAtSlot(slot).map(async (summary) => {
+          if (isOptimisticBlock(summary)) {
+            executionOptimistic = true;
+          }
+          finalized = false;
+
+          if (summary.blockRoot !== toRootHex(canonicalRoot)) {
+            const blockResult = await this.getBlockByRoot(fromHex(summary.blockRoot));
+            if (blockResult) {
+              const block = this.config
+                .getForkTypes(blockResult.slot)
+                .SignedBeaconBlock.deserialize(blockResult.block, {reuseBytes: false});
+              result.push(toBeaconHeaderResponse(this.config, block));
+            }
+          }
+        })
+      );
+    }
+
+    return {
+      data: routes.beacon.block.BlockHeadersResponseType.serialize(result),
+      meta: {executionOptimistic, finalized},
+    };
+  }
 
   private async getSerializedBlockByRoot(
     root: Uint8Array
@@ -1920,12 +2078,12 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return [...this.aggregatedAttestationPool.getAll(bySlot), ...this.attestationPool.getAll(bySlot)];
   }
 
-  async getSyncCommitteeContribution(
+  produceSyncCommitteeContribution(
     subnet: SubcommitteeIndex,
     slot: Slot,
-    prevBlockRoot: Root
-  ): Promise<altair.SyncCommitteeContribution | null> {
-    return this.syncCommitteeMessagePool.getContribution(subnet, slot, prevBlockRoot);
+    blockRoot: Root
+  ): ProductionResponse<Uint8Array | null> {
+    return produceSyncCommitteeContribution.call(this, subnet, slot, blockRoot);
   }
 
   async getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]> {
@@ -2466,12 +2624,17 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   /** Head-state execution flags for the notifier (post-bellatrix merge-transition display). */
-  async getHeadExecutionStateInfo(): Promise<{isExecutionStateType: boolean; isMergeTransitionComplete: boolean}> {
+  async getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo> {
+    const head = this.forkChoice.getHead();
     const state = this.getHeadState();
-    if (!isStatePostBellatrix(state) || !state.isExecutionStateType) {
-      return {isExecutionStateType: false, isMergeTransitionComplete: false};
-    }
-    return {isExecutionStateType: true, isMergeTransitionComplete: state.isMergeTransitionComplete};
+    const isExecutionStateType = isStatePostBellatrix(state) && state.isExecutionStateType;
+    return {
+      isExecutionStateType,
+      isMergeTransitionComplete: isExecutionStateType && state.isMergeTransitionComplete,
+      executionStatus: head.executionStatus,
+      executionPayloadBlockHash: head.executionPayloadBlockHash,
+      executionPayloadNumber: "executionPayloadNumber" in head ? head.executionPayloadNumber : undefined,
+    };
   }
 
   /** Build the historical-state worker if enabled (--serveHistoricalState). Idempotent; call on startup. */
@@ -2739,14 +2902,36 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return kept;
   }
 
-  /**
-   * Attestation `source` = the state's *realized* `currentJustifiedCheckpoint` in `attEpoch` (may regen
-   * forward past head). Not fork-choice's justified checkpoint — the two diverge at an epoch boundary and
-   * using fork-choice's would yield an invalid source.
-   */
-  async getAttestationSourceCheckpoint(attEpoch: Epoch): Promise<phase0.Checkpoint> {
-    const state = await this.getHeadStateAtEpoch(attEpoch, RegenCaller.produceAttestationData);
-    return state.currentJustifiedCheckpoint;
+  async produceAttestationData(
+    slot: Slot,
+    committeeIndex?: CommitteeIndex
+  ): Promise<ProductionResponse<phase0.AttestationData>> {
+    try {
+      return await produceAttestationData.call(this, slot, committeeIndex, this.getHeadStateAtEpoch.bind(this));
+    } catch (e) {
+      if (e instanceof ApiError) {
+        return {ok: false, code: BeaconEngineErrorCode.API_ERROR, payload: {status: e.statusCode, message: e.message}};
+      }
+      return {
+        ok: false,
+        code:
+          isErrorAborted(e) || isQueueErrorAborted(e) ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
+        payload: {message: e instanceof Error ? e.message : String(e)},
+      };
+    }
+  }
+
+  getPayloadAttestationBlock(slot: Slot): PayloadAttestationBlock | null {
+    const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+    return block ? {blockRoot: block.blockRoot, slot: block.slot} : null;
+  }
+
+  getBlockExecutionOptimistic(blockRoot: Root, payloadStatus?: PayloadStatus): boolean | null {
+    const block =
+      payloadStatus === undefined
+        ? this.forkChoice.getBlockDefaultStatus(blockRoot)
+        : this.forkChoice.getBlock(blockRoot, payloadStatus);
+    return block ? isOptimisticBlock(block) : null;
   }
 
   async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {

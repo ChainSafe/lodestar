@@ -63,18 +63,18 @@ import {
   kzgCommitmentToVersionedHash,
   reconstructBlobs,
 } from "../../../../util/blobs.js";
+import {toBeaconHeaderResponse} from "../../../../util/blockHeader.js";
 import {
   getBlobKzgCommitments,
   getDataColumnSidecarsFromBlock,
   getGloasDataColumnSidecars,
 } from "../../../../util/dataColumns.js";
-import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {getSignedBlockBytesFromSignedBlockContentsSerialized} from "../../../../util/sszBytes.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
-import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
+import {getBlockResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
 
@@ -94,11 +94,7 @@ export function getBeaconBlockApi({
   config,
   metrics,
   network,
-  db,
-}: Pick<
-  ApiModules,
-  "chain" | "config" | "metrics" | "network" | "db"
->): ApplicationMethods<routes.beacon.block.Endpoints> {
+}: Pick<ApiModules, "chain" | "config" | "metrics" | "network">): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation, builderUrl},
     context,
@@ -562,95 +558,7 @@ export function getBeaconBlockApi({
 
   return {
     async getBlockHeaders({slot, parentRoot}) {
-      // TODO - SLOW CODE: This code seems like it could be improved
-
-      // If one block in the response contains an optimistic block, mark the entire response as optimistic
-      let executionOptimistic = false;
-      // If one block in the response is non finalized, mark the entire response as unfinalized
-      let finalized = true;
-
-      const result: routes.beacon.BlockHeaderResponse[] = [];
-      if (parentRoot) {
-        const finalizedBlock = await db.blockArchive.getByParentRoot(fromHex(parentRoot));
-        if (finalizedBlock) {
-          result.push(toBeaconHeaderResponse(config, finalizedBlock, true));
-        }
-        const nonFinalizedBlocks = chain.getBlockSummariesByParentRoot(parentRoot);
-        await Promise.all(
-          nonFinalizedBlocks.map(async (summary) => {
-            const blockResult = await chain.getBlockByRoot(summary.blockRoot);
-            if (blockResult) {
-              const canonical = chain.getCanonicalProtoBlockAtSlot(blockResult.block.message.slot);
-              if (canonical) {
-                result.push(
-                  toBeaconHeaderResponse(config, blockResult.block, canonical.blockRoot === summary.blockRoot)
-                );
-                if (isOptimisticBlock(canonical)) {
-                  executionOptimistic = true;
-                }
-                // Block from hot db which only contains unfinalized blocks
-                finalized = false;
-              }
-            }
-          })
-        );
-        return {
-          data: result.filter(
-            (item) =>
-              // skip if no slot filter
-              !(slot !== undefined && slot !== 0) || item.header.message.slot === slot
-          ),
-          meta: {executionOptimistic, finalized},
-        };
-      }
-
-      const headSlot = chain.getHead().slot;
-      if (!parentRoot && slot === undefined) {
-        slot = headSlot;
-      }
-
-      if (slot !== undefined) {
-        // future slot
-        if (slot > headSlot) {
-          return {data: [], meta: {executionOptimistic: false, finalized: false}};
-        }
-
-        const canonicalBlock = await chain.getCanonicalBlockAtSlot(slot);
-        // skip slot
-        if (!canonicalBlock) {
-          return {data: [], meta: {executionOptimistic: false, finalized: false}};
-        }
-        const canonicalRoot = config
-          .getForkTypes(canonicalBlock.block.message.slot)
-          .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
-        result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
-        if (!canonicalBlock.finalized) {
-          finalized = false;
-        }
-
-        // fork blocks
-        // TODO: What is this logic?
-        await Promise.all(
-          chain.getBlockSummariesAtSlot(slot).map(async (summary) => {
-            if (isOptimisticBlock(summary)) {
-              executionOptimistic = true;
-            }
-            finalized = false;
-
-            if (summary.blockRoot !== toRootHex(canonicalRoot)) {
-              const blockResult = await chain.getBlockByRoot(summary.blockRoot);
-              if (blockResult) {
-                result.push(toBeaconHeaderResponse(config, blockResult.block));
-              }
-            }
-          })
-        );
-      }
-
-      return {
-        data: result,
-        meta: {executionOptimistic, finalized},
-      };
+      return chain.beaconEngine.getBlockHeaders({slot, parentRoot: parentRoot ? fromHex(parentRoot) : undefined});
     },
 
     async getBlockHeader({blockId}) {
@@ -714,7 +622,7 @@ export function getBeaconBlockApi({
         if (slot === head.slot) {
           return {
             data: {root: fromHex(head.blockRoot)},
-            meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
+            meta: {executionOptimistic: chain.isHeadOptimistic(), finalized: false},
           };
         }
 
@@ -724,7 +632,7 @@ export function getBeaconBlockApi({
             return {
               data: {root: fromHex(canonical.blockRoot)},
               meta: {
-                executionOptimistic: isOptimisticBlock(head),
+                executionOptimistic: chain.isHeadOptimistic(),
                 finalized: computeEpochAtSlot(slot) <= chain.getFinalizedCheckpoint().epoch,
               },
             };
@@ -734,7 +642,7 @@ export function getBeaconBlockApi({
         const head = chain.getHead();
         return {
           data: {root: fromHex(head.blockRoot)},
-          meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
+          meta: {executionOptimistic: chain.isHeadOptimistic(), finalized: false},
         };
       }
 

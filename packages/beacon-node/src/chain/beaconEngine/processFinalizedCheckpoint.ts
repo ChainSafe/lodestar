@@ -17,7 +17,7 @@
  */
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
-import {CheckpointWithHex, ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromHex, prettyPrintIndices} from "@lodestar/utils";
@@ -277,7 +277,7 @@ export async function persistOrphanedBlock(
 
 /**
  * Source: unstable@0edec865c8 chain/archiveStore/utils/archiveBlocks.ts#migrateExecutionPayloadEnvelopesFromHotToColdDb.
- * [beacon-engine] Use IBeaconEngineDb and FinalizedProtoSummary; preserve the upstream migration body.
+ * [beacon-engine] Use IBeaconEngineDb and engine-owned execution validity; preserve the upstream migration body.
  *
  * Post-gloas given a finalized checkpoint at a block root, payload of that block root
  * is not considered finalized, hence they are archived in the next run.
@@ -290,7 +290,7 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconEngineDb,
   logger: Logger,
-  canonicalBlocks: FinalizedProtoSummary[],
+  canonicalBlocks: Pick<ProtoBlock, "slot" | "blockRoot" | "payloadStatus" | "executionStatus">[],
   dedupePayloads: boolean
 ): Promise<Slot[]> {
   const payloadBlocks = canonicalBlocks.filter(

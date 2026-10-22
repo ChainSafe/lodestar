@@ -4,7 +4,7 @@ import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/param
 import {computeEpochAtSlot, computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
-import {ChainViewBlock} from "../chain/chainView/interface.js";
+import {HeadExecutionStateInfo} from "../chain/beaconEngine/interface.js";
 import {IBeaconChain} from "../chain/index.js";
 import {ExecutionEngineState} from "../execution/index.js";
 import {INetwork} from "../network/index.js";
@@ -81,8 +81,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const executionInfo = getHeadExecutionInfo(
         config,
         clockEpoch,
-        await chain.beaconEngine.getHeadExecutionStateInfo(),
-        headInfo
+        await chain.beaconEngine.getHeadExecutionStateInfo()
       );
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
 
@@ -158,25 +157,20 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
   return Math.max(0, nextMidpointMs - nowMs);
 }
 
-function getHeadExecutionInfo(
-  config: BeaconConfig,
-  clockEpoch: Epoch,
-  execState: {isExecutionStateType: boolean; isMergeTransitionComplete: boolean},
-  headInfo: ChainViewBlock
-): string[] {
+function getHeadExecutionInfo(config: BeaconConfig, clockEpoch: Epoch, execState: HeadExecutionStateInfo): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
     return [];
   }
 
-  const executionStatusStr = headInfo.executionStatus.toLowerCase();
+  const executionStatusStr = execState.executionStatus.toLowerCase();
 
   // Add execution status to notifier only if head is on/post bellatrix
   if (execState.isExecutionStateType) {
     if (execState.isMergeTransitionComplete) {
       const executionPayloadHashInfo =
-        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
+        execState.executionStatus !== ExecutionStatus.PreMerge ? execState.executionPayloadBlockHash : "empty";
       const executionPayloadNumberInfo =
-        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
+        execState.executionStatus !== ExecutionStatus.PreMerge ? execState.executionPayloadNumber : NaN;
       return [
         `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
           executionPayloadHashInfo ?? "empty"

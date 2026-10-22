@@ -1042,7 +1042,6 @@ describe("UnknownBlockSync", () => {
           set: vi.fn(),
           delete: vi.fn(),
         } as unknown as IBeaconChain["serializedCache"],
-        getBlockByRoot: vi.fn().mockResolvedValue(null),
         processExecutionPayload: vi.fn().mockResolvedValue(undefined),
         seenPayloadEnvelopeInputCache: {
           add: vi.fn(),

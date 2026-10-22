@@ -52,9 +52,10 @@ describe("ChainViewPublisher", () => {
     forkChoice.getHead.mockReturnValue(child);
     expect(publish()?.blocks.map((b) => b.blockRoot)).toEqual([child.blockRoot]);
     child.executionStatus = ExecutionStatus.Syncing;
-    expect(publish()?.blocks).toHaveLength(1);
+    expect(publish()?.blocks).toHaveLength(0);
     for (const view of views) {
-      expect(view.getHead().executionStatus, "replicated execution status").toBe(ExecutionStatus.Syncing);
+      expect(view.isHeadOptimistic(), "head optimism").toBe(true);
+      expect(view.getHead(), "structural block metadata").not.toHaveProperty("executionStatus");
       expect(
         view.getAllAncestorBlocks(child.blockRoot, PayloadStatus.FULL).map((b) => b.slot),
         "replicated ancestry"
@@ -68,6 +69,23 @@ describe("ChainViewPublisher", () => {
     for (const view of views) {
       expect(view.getHeadRoot(), "replicated reorg head").toBe(anchor.blockRoot);
       expect(view.hasBlockHexUnsafe(child.blockRoot), "engine pruning does not control retention").toBe(true);
+    }
+  });
+
+  it("does not replicate execution-status changes on ancestors", () => {
+    const {anchor, forkChoice, views, publish} = setup();
+    const child = {...anchor, blockRoot: toRootHex(Buffer.alloc(32, 2)), parentRoot: anchor.blockRoot, slot: 2};
+    forkChoice.getAllNodes.mockReturnValue([anchor, child]);
+    forkChoice.getHead.mockReturnValue(child);
+    publish();
+    anchor.executionStatus = ExecutionStatus.Syncing;
+    expect(publish()).toBeNull();
+    anchor.executionStatus = ExecutionStatus.Valid;
+    expect(publish()).toBeNull();
+    for (const view of views) {
+      expect(view.getBlockHexDefaultStatus(anchor.blockRoot), "ancestor metadata").not.toHaveProperty(
+        "executionStatus"
+      );
     }
   });
 
@@ -180,11 +198,10 @@ describe("ChainViewPublisher", () => {
     });
     const publisher = new ChainViewPublisher(forkChoice);
     const view = new ChainView(publisher.snapshot());
-    const summarize = ({slot, blockRoot, payloadStatus, executionStatus}: ProtoNode) => ({
+    const summarize = ({slot, blockRoot, payloadStatus}: ProtoNode) => ({
       slot,
       blockRoot,
       payloadStatus,
-      executionStatus,
     });
     const expected = protoArray.getAllAncestorAndNonAncestorNodes(root(4), PayloadStatus.PENDING);
     expect(view.getFinalizedBlockSnapshot(root(4))).toEqual({

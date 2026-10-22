@@ -13,7 +13,6 @@ import {
   Epoch,
   Root,
   RootHex,
-  SignedBeaconBlock,
   Slot,
   Status,
   UintNum64,
@@ -37,7 +36,6 @@ import {ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
 import {ReconstructMissPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
-import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
@@ -384,6 +382,10 @@ export class BeaconChain implements IBeaconChain {
     return this.chainView.getHead();
   }
 
+  isHeadOptimistic(): boolean {
+    return this.chainView.isHeadOptimistic();
+  }
+
   getHeadRoot(): RootHex {
     return this.chainView.getHeadRoot();
   }
@@ -509,75 +511,15 @@ export class BeaconChain implements IBeaconChain {
     await this.beaconEngine.persistOpPoolToDisk();
   }
 
-  async getCanonicalBlockAtSlot(
-    slot: Slot
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.getFinalizedBlock();
-    if (slot > finalizedBlock.slot) {
-      // Unfinalized slot, attempt to find in fork-choice
-      const block = this.getCanonicalProtoBlockAtSlot(slot);
-      if (block) {
-        // Block found in fork-choice.
-        // It may be in the block input cache, awaiting full DA reconstruction, check there first
-        // Otherwise (most likely), read the hot db (falling back to cold on an archive race)
-        const blockInput = this.seenBlockInputCache.get(block.blockRoot);
-        if (blockInput?.hasBlock()) {
-          return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized: false};
-        }
-        const res = await this.readStoredBlockByRoot(fromHex(block.blockRoot));
-        if (res) {
-          return {
-            block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.bytes),
-            executionOptimistic: isOptimisticBlock(block),
-            finalized: res.finalized,
-          };
-        }
-      }
-      // A non-finalized slot expected to be found in the hot db, could be archived during
-      // this function runtime, so if not found, fallback to the cold db (by slot)
-    }
-
-    const bytes = await this.db.blockArchive.getBinary(slot);
-    return (
-      bytes && {
-        block: this.config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes),
-        executionOptimistic: false,
-        finalized: true,
-      }
-    );
-  }
-
-  async getBlockByRoot(
-    root: string
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const protoBlock = this.getBlockHexDefaultStatus(root);
+  /**
+   * [beacon-engine] Unlike unstable, omit execution status (executionOptimistic) and finalized metadata:
+   * P2P handlers only need block bytes and slot.
+   */
+  async getSerializedBlockByRoot(root: Uint8Array): Promise<{block: Uint8Array; slot: Slot} | null> {
+    const rootHex = toRootHex(root);
+    const protoBlock = this.getBlockHexDefaultStatus(rootHex);
     if (protoBlock) {
-      // Block found in fork-choice.
-      // It may be in the block input cache, awaiting full DA reconstruction, check there first
-      // Otherwise (most likely), read the hot db (falling back to cold on an archive race)
-      const blockInput = this.seenBlockInputCache.get(protoBlock.blockRoot);
-      if (blockInput?.hasBlock()) {
-        return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(protoBlock), finalized: false};
-      }
-    }
-
-    const res = await this.readStoredBlockByRoot(fromHex(root));
-    return (
-      res && {
-        block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.bytes),
-        executionOptimistic: protoBlock != null && isOptimisticBlock(protoBlock),
-        finalized: res.finalized,
-      }
-    );
-  }
-
-  async getSerializedBlockByRoot(
-    root: Uint8Array
-  ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
-    // TODO - beacon engine: make a separate call, need to be lightweight
-    const protoBlock = this.getBlockHexDefaultStatus(toRootHex(root));
-    if (protoBlock) {
-      // Block found in fork-choice.
+      // Block found in ChainView.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
       // Otherwise (most likely), read the hot db (falling back to cold on an archive race)
       const blockInput = this.seenBlockInputCache.get(protoBlock.blockRoot);
@@ -587,33 +529,19 @@ export class BeaconChain implements IBeaconChain {
           block:
             this.serializedCache.get(signedBlock) ??
             this.config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(signedBlock),
-          executionOptimistic: isOptimisticBlock(protoBlock),
-          finalized: false,
           slot: blockInput.slot,
         };
       }
     }
 
-    const res = await this.readStoredBlockByRoot(root);
-    return (
-      res && {
-        block: res.bytes,
-        executionOptimistic: protoBlock != null && isOptimisticBlock(protoBlock),
-        finalized: res.finalized,
-        slot: res.slot,
-      }
-    );
-  }
-
-  private async readStoredBlockByRoot(root: Root): Promise<{bytes: Uint8Array; slot: Slot; finalized: boolean} | null> {
     const hot = await this.db.block.getBinary(root);
     if (hot) {
       const slot = getSlotFromSignedBeaconBlockSerialized(hot);
       if (slot === null) throw Error(`Invalid block data stored in DB for root: ${toRootHex(root)}`);
-      return {bytes: hot, slot, finalized: false};
+      return {block: hot, slot};
     }
     const cold = await this.db.blockArchive.getBinaryEntryByRoot(root);
-    return cold && {bytes: cold.value, slot: cold.key, finalized: true};
+    return cold && {block: cold.value, slot: cold.key};
   }
 
   getCanonicalBlockRootSlotsByRange(
@@ -1062,13 +990,18 @@ export class BeaconChain implements IBeaconChain {
     const finalizedBlock = this.getBlockHexDefaultStatus(cp.rootHex);
     if (finalizedBlock) {
       // The callback runs synchronously inside fork choice checkpoint updates, defer writing to subscribers
-      callInNextEventLoop(() => {
-        this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
-          block: cp.rootHex,
-          epoch: cp.epoch,
-          state: finalizedBlock.stateRoot,
-          executionOptimistic: isOptimisticBlock(finalizedBlock),
-        });
+      callInNextEventLoop(async () => {
+        try {
+          const executionOptimistic = await this.beaconEngine.getBlockExecutionOptimistic(cp.root);
+          this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
+            block: cp.rootHex,
+            epoch: cp.epoch,
+            state: finalizedBlock.stateRoot,
+            executionOptimistic: executionOptimistic ?? false,
+          });
+        } catch (e) {
+          this.logger.error("Error emitting finalized checkpoint", {epoch: cp.epoch, root: cp.rootHex}, e as Error);
+        }
       });
     } else {
       this.logger.debug("Finalized block not found in fork choice, skip finalized_checkpoint event", {

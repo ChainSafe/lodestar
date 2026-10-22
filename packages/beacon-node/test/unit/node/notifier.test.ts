@@ -49,6 +49,8 @@ describe("node notifier", () => {
         rootHex: `0x${"00".repeat(32)}`,
       });
       chain.beaconEngine.getHeadExecutionStateInfo = vi.fn().mockResolvedValue({
+        executionStatus: zeroProtoBlock.executionStatus,
+        executionPayloadBlockHash: zeroProtoBlock.executionPayloadBlockHash,
         isExecutionStateType: false,
         isMergeTransitionComplete: false,
       });

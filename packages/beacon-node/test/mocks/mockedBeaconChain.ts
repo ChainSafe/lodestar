@@ -2,7 +2,7 @@ import {Mock, Mocked, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {EpochDifference, ExecutionStatus, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -83,6 +83,8 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   // Engine state-read methods surfaced on the flat mock (the mock doubles as the engine). No longer on
   // the facade after BLK-3 — stubbed here so validation tests can control the head state.
   getHeadState: Mock<() => IBeaconStateView>;
+  getCanonicalBlockAtSlot: Mock<BeaconEngineCore["getCanonicalBlockAtSlot"]>;
+  getBlockByRoot: Mock<BeaconEngineCore["getBlockByRoot"]>;
   getHeadStateAtCurrentEpoch: Mock<() => Promise<IBeaconStateView>>;
   bls: {
     verifySignatureSets: Mock<BeaconEngineCore["bls"]["verifySignatureSets"]>;
@@ -409,7 +411,10 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "addAttestationToPool",
     "getAttestationAggregate",
     "getPoolAggregatedAttestations",
-    "getSyncCommitteeContribution",
+    "produceAttestationData",
+    "produceSyncCommitteeContribution",
+    "getPayloadAttestationBlock",
+    "getBlockExecutionOptimistic",
     "getPoolPayloadAttestations",
     "getPoolProposerPreferences",
     "registerLocalValidators",
@@ -433,6 +438,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
       BeaconEngineCore.prototype as unknown as Record<string, unknown>
     )[name];
   }
+  chain.isHeadOptimistic = vi.fn(() => chain.forkChoice.getHead().executionStatus === ExecutionStatus.Syncing);
   vi.spyOn(chain.proposerPreferencesPool, "get");
   chain.beaconEngine.prepareBeaconCommitteeSubnets = vi.fn().mockResolvedValue(undefined);
   for (const [name, forkChoiceName] of Object.entries({

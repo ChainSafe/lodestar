@@ -5,7 +5,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RootHex, Slot} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {fromHex, toHexString} from "@lodestar/utils";
 import {ReorgEventData} from "../../../src/chain/emitter.js";
 import {TimelinessForkChoice} from "../../mocks/fork-choice/timeliness.js";
 import {getBeaconEngineCore} from "../../utils/engine.js";
@@ -130,7 +130,7 @@ describe("proposer boost reorg", () => {
       waitForEvent<ReorgEventData>(bn.chain.emitter, routes.events.EventType.chainReorg, 240000),
     ]);
     expect(reorgEventData.slot).toEqual(reorgSlot + 1);
-    const newBlock = await bn.chain.getBlockByRoot(newBlockEventData.block);
+    const newBlock = await bn.chain.beaconEngine.getBlockByRoot(fromHex(newBlockEventData.block));
     if (newBlock == null) {
       throw Error(`Block ${reorgSlot + 1} not found`);
     }

@@ -1,21 +1,42 @@
 import {routes} from "@lodestar/api";
-import {ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
+  ForkName,
+  GENESIS_SLOT,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+  isForkPostElectra,
+  isForkPostGloas,
+} from "@lodestar/params";
+import {
+  DataAvailabilityStatus,
   IBeaconStateView,
   calculateCommitteeAssignments,
+  computeEpochAtSlot,
   computeStartSlotAtEpoch,
   isStatePostAltair,
   isStatePostGloas,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, Root, ValidatorIndex, phase0, ssz} from "@lodestar/types";
+import {
+  BLSPubkey,
+  CommitteeIndex,
+  Epoch,
+  Root,
+  Slot,
+  SubcommitteeIndex,
+  ValidatorIndex,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {fromHex, sleep, toRootHex} from "@lodestar/utils";
+import {ApiError} from "../../api/impl/errors.js";
 import {ZERO_HASH} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {CheckpointHex} from "../stateCache/types.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import {BeaconEngineEvent} from "./events.js";
+import {BeaconEngineErrorCode, ProductionError, ProductionResponse} from "./interface.js";
 
 type GetHeadStateAtEpoch = (epoch: Epoch, regenCaller: RegenCaller) => Promise<IBeaconStateView>;
 
@@ -316,4 +337,129 @@ export function getPubkeysForIndices(state: IBeaconStateView, indexes: Validator
   }
 
   return pubkeys;
+}
+
+/** Source: unstable@9cb14e3381 api/impl/validator/index.ts#produceAttestationData. */
+export async function produceAttestationData(
+  this: BeaconEngineCore,
+  slot: Slot,
+  committeeIndex: CommitteeIndex | undefined,
+  getHeadStateAtEpoch: GetHeadStateAtEpoch
+): Promise<ProductionResponse<phase0.AttestationData>> {
+  // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
+  // Note: This may trigger an epoch transition if there skipped slots at the beginning of the epoch.
+  const head = this.forkChoice.getHead();
+  const headSlot = head.slot;
+  const attEpoch = computeEpochAtSlot(slot);
+  const headBlockRoot = fromHex(head.blockRoot);
+  const fork = this.config.getForkName(slot);
+
+  // Canonical block root ≤ slot (matches the former state.getBlockRootAtSlot; handles skipped slots).
+  const blockRootAtSlot = (atSlot: Slot): Root => {
+    const canonical = this.forkChoice.getCanonicalBlockClosestLteSlot(atSlot);
+    if (!canonical) {
+      throw Error(`No canonical block found for slot=${atSlot}`);
+    }
+    return fromHex(canonical.blockRoot);
+  };
+
+  const beaconBlockRoot =
+    slot >= headSlot
+      ? // When attesting to the head slot or later, always use the head of the chain.
+        headBlockRoot
+      : // Permit attesting to slots *prior* to the current head. This is desirable when
+        // the VC and BN are out-of-sync due to time issues or overloading.
+        blockRootAtSlot(slot);
+
+  let index: CommitteeIndex;
+  if (isForkPostGloas(fork)) {
+    const canonicalBlock = this.forkChoice.getCanonicalBlockByRoot(beaconBlockRoot);
+    if (!canonicalBlock) {
+      // This should never happen
+      throw Error(`Block not found in fork choice for slot=${slot}, root=${toRootHex(beaconBlockRoot)}`);
+    }
+    // After Gloas, attestation.data.index signals payload status in fork-choice:
+    // - 0 = EMPTY / not present, 1 = FULL / present
+    // - same-slot attestations must always use index = 0
+    if (canonicalBlock.slot !== slot) {
+      index = canonicalBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
+    } else {
+      index = 0;
+    }
+  } else if (isForkPostElectra(fork)) {
+    index = 0;
+  } else {
+    if (committeeIndex === undefined) {
+      throw new ApiError(400, `Committee index must be provided for pre-electra fork=${fork}`);
+    }
+    index = committeeIndex;
+  }
+
+  const targetSlot = computeStartSlotAtEpoch(attEpoch);
+  const targetRoot =
+    targetSlot >= headSlot
+      ? // If the state is earlier than the target slot then the target *must* be the head block root.
+        headBlockRoot
+      : blockRootAtSlot(targetSlot);
+
+  // Check the execution status as validator shouldn't vote on an optimistic head
+  // Check on target is sufficient as a valid target would imply a valid source
+  const error = getValidatorBlockError.call(this, targetRoot);
+  if (error) return error;
+
+  // To get the correct source we must get a state in the same epoch as the attestation's epoch.
+  // Use the state's realized checkpoint; fork choice may already have pulled up its justified checkpoint.
+  const state = await getHeadStateAtEpoch(attEpoch, RegenCaller.produceAttestationData);
+  const source = state.currentJustifiedCheckpoint;
+
+  return {
+    ok: true,
+    data: {
+      slot,
+      index,
+      beaconBlockRoot,
+      source,
+      target: {epoch: attEpoch, root: targetRoot},
+    },
+  };
+}
+
+export function produceSyncCommitteeContribution(
+  this: BeaconEngineCore,
+  subnet: SubcommitteeIndex,
+  slot: Slot,
+  blockRoot: Root
+): ProductionResponse<Uint8Array | null> {
+  const error = getValidatorBlockError.call(this, blockRoot);
+  if (error) return error;
+  const contribution = this.syncCommitteeMessagePool.getContribution(subnet, slot, blockRoot);
+  return {ok: true, data: contribution ? ssz.altair.SyncCommitteeContribution.serialize(contribution) : null};
+}
+
+function getValidatorBlockError(this: BeaconEngineCore, blockRoot: Root): ProductionError | null {
+  const block = this.forkChoice.getBlockDefaultStatus(blockRoot);
+  if (!block) {
+    return {
+      ok: false,
+      code: BeaconEngineErrorCode.API_ERROR,
+      payload: {status: 404, message: `Block not in forkChoice, beaconBlockRoot=${toRootHex(blockRoot)}`},
+    };
+  }
+  if (block.executionStatus === ExecutionStatus.Syncing) {
+    return {
+      ok: false,
+      code: BeaconEngineErrorCode.NODE_SYNCING,
+      payload: {
+        message: `Block's execution payload not yet validated, executionPayloadBlockHash=${block.executionPayloadBlockHash} number=${"executionPayloadNumber" in block ? block.executionPayloadNumber : undefined}`,
+      },
+    };
+  }
+  if (block.dataAvailabilityStatus === DataAvailabilityStatus.OutOfRange) {
+    return {
+      ok: false,
+      code: BeaconEngineErrorCode.NODE_SYNCING,
+      payload: {message: "Block's data is out of range and not validated"},
+    };
+  }
+  return null;
 }

@@ -179,6 +179,7 @@ describe("FlatFileStore reqresp handler integration", () => {
           getFinalizedBlockRootBySlot: blockArchive.getRootBySlot,
           getSerializedUnfinalizedBlockByRoot: db.block.getBinary,
           getFinalizedBlockSlotByRoot: blockArchive.getSlotByRoot,
+          getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range reads must use the root index")),
         },
         custodyConfig: {
           custodyColumns: opts.custodyColumns,
@@ -194,7 +195,6 @@ describe("FlatFileStore reqresp handler integration", () => {
           : null,
         getSerializedFinalizedBlockBySlot: blockArchive.getBinary,
         getFinalizedBlockSlotByRoot: blockArchive.getSlotByRoot,
-        getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range reads must use the root index")),
         getSerializedDataColumnSidecars:
           opts.getSerializedDataColumnSidecars ??
           ((slot: number, root: string, indices: number[]) =>
@@ -254,7 +254,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(responses).toHaveLength(1);
       expect(new Uint8Array(responses[0].data)).toEqual(column);
       expect(getRootBySlot.mock.calls).toEqual([[10], [11]]);
-      expect(chain.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
+      expect(chain.beaconEngine.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
     });
 
     it("should serve archived columns using the slot index without loading state", async () => {
@@ -285,7 +285,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
       );
       expect(responses).toEqual([]);
-      expect(chain.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
+      expect(chain.beaconEngine.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
       expect(db.blockArchive.getBinary).not.toHaveBeenCalled();
     });
 

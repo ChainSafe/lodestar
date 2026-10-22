@@ -2,7 +2,7 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import type {ApiError} from "@lodestar/api/server";
 import {BeaconConfig, SpecJson} from "@lodestar/config";
-import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
@@ -72,6 +72,16 @@ import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import {IBeaconEngineOptions} from "./options.js";
 import {BlockFailure, PayloadFailure} from "./processingResult.js";
 import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
+
+export type HeadExecutionStateInfo = {
+  isExecutionStateType: boolean;
+  isMergeTransitionComplete: boolean;
+  executionStatus: ExecutionStatus;
+  executionPayloadBlockHash: RootHex | null;
+  executionPayloadNumber?: number;
+};
+
+export type PayloadAttestationBlock = Pick<ProtoBlock, "blockRoot" | "slot">;
 
 export type HeadParentPayload = {
   blockRoot: Root;
@@ -298,6 +308,12 @@ export interface IBeaconEngine
     | "discardVerifiedBlocks"
     | "onSlot"
     | "onEpoch"
+    | "getPayloadAttestationBlock"
+    | "getBlockExecutionOptimistic"
+    | "produceSyncCommitteeContribution"
+    | "getCanonicalBlockAtSlot"
+    | "getBlockByRoot"
+    | "getBlockHeaders"
   > {
   validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
   validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
@@ -309,6 +325,23 @@ export interface IBeaconEngine
   discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void>;
   onSlot(slot: Slot): Promise<void>;
   onEpoch(epoch: Epoch): Promise<void>;
+  getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null>;
+  getBlockExecutionOptimistic(blockRoot: Root, payloadStatus?: PayloadStatus): Promise<boolean | null>;
+  getCanonicalBlockAtSlot(
+    slot: Slot
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  getBlockByRoot(
+    root: Root
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  getBlockHeaders(opts: {slot?: Slot; parentRoot?: Root}): Promise<{
+    data: routes.beacon.BlockHeaderResponse[];
+    meta: {executionOptimistic: boolean; finalized: boolean};
+  }>;
+  produceSyncCommitteeContribution(
+    subnet: SubcommitteeIndex,
+    slot: Slot,
+    blockRoot: Root
+  ): Promise<ProductionResponse<altair.SyncCommitteeContribution | null>>;
 
   registerValidator(
     epoch: Epoch,
@@ -573,12 +606,22 @@ export interface IBeaconEngineCore {
   initRegen(): Promise<void>;
   /** Tear down engine-owned resources (historical-state regen worker, BLS pool, …). */
   close(): Promise<void>;
-  getHeadExecutionStateInfo(): Promise<{isExecutionStateType: boolean; isMergeTransitionComplete: boolean}>;
+  getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo>;
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch>;
   // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
   loadHistoricalStateRegen(): Promise<void>;
   /** Return serialized bytes of a persisted checkpoint state, or the latest safe checkpoint if omitted. */
   getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
+  getCanonicalBlockAtSlot(
+    slot: Slot
+  ): Promise<{block: Uint8Array; slot: Slot; executionOptimistic: boolean; finalized: boolean} | null>;
+  getBlockByRoot(
+    root: Root
+  ): Promise<{block: Uint8Array; slot: Slot; executionOptimistic: boolean; finalized: boolean} | null>;
+  getBlockHeaders(opts: {slot?: Slot; parentRoot?: Root}): Promise<{
+    data: Uint8Array;
+    meta: {executionOptimistic: boolean; finalized: boolean};
+  }>;
   // API state queries — the engine resolves the state internally (no IBeaconStateView crosses). `id` is
   // the resolved stateId (root / slot / checkpoint); the API keeps `resolveStateId` (400 on bad input).
   getSerializedState(
@@ -670,7 +713,12 @@ export interface IBeaconEngineCore {
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>>;
   getHeadParentPayload(): Promise<HeadParentPayload | undefined>;
   getActiveOrPendingValidators(indices: ValidatorIndex[]): Promise<Set<ValidatorIndex>>;
-  getAttestationSourceCheckpoint(attEpoch: Epoch): Promise<phase0.Checkpoint>;
+  produceAttestationData(
+    slot: Slot,
+    committeeIndex?: CommitteeIndex
+  ): Promise<ProductionResponse<phase0.AttestationData>>;
+  getPayloadAttestationBlock(slot: Slot): PayloadAttestationBlock | null;
+  getBlockExecutionOptimistic(blockRoot: Root, payloadStatus?: PayloadStatus): boolean | null;
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
   getAttestationsRewards(
     epoch: Epoch,
@@ -796,11 +844,11 @@ export interface IBeaconEngineCore {
     committeeIndex: CommitteeIndex
   ): Promise<Attestation | null>;
   getPoolAggregatedAttestations(bySlot?: Slot): Promise<Attestation[]>;
-  getSyncCommitteeContribution(
+  produceSyncCommitteeContribution(
     subnet: SubcommitteeIndex,
     slot: Slot,
-    prevBlockRoot: Root
-  ): Promise<altair.SyncCommitteeContribution | null>;
+    blockRoot: Root
+  ): ProductionResponse<Uint8Array | null>;
   getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]>;
 
   // Proposer cache + finalized balances (engine-internal).

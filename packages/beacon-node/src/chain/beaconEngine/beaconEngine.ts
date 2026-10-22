@@ -32,6 +32,7 @@ import {
   gloas,
   phase0,
   rewards,
+  ssz,
   sszTypesFor,
 } from "@lodestar/types";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
@@ -63,16 +64,19 @@ import {
   ApiStateId,
   ApiStateResult,
   ApiStateResultWithFork,
+  HeadExecutionStateInfo,
   HeadParentPayload,
   IBeaconEngine,
   ImportBlockResult,
   ImportExecutionPayloadOpts,
+  PayloadAttestationBlock,
   PrepareNextSlotOpts,
   PrepareNextSlotResponse,
   ProduceBlockRequest,
   ProduceBlockResponse,
   ProduceBlockV4Request,
   ProduceBlockV4Response,
+  ProductionResponse,
   SerializedLightClientData,
   SubmitBlindedBlockResponse,
   VerifyBlocksOpts,
@@ -468,7 +472,7 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.initRegen();
   }
 
-  getHeadExecutionStateInfo(): Promise<{isExecutionStateType: boolean; isMergeTransitionComplete: boolean}> {
+  getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo> {
     return this.core.getHeadExecutionStateInfo();
   }
 
@@ -482,6 +486,43 @@ export class BeaconEngine implements IBeaconEngine {
 
   getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
     return this.core.getPersistedCheckpointState(checkpoint);
+  }
+
+  async getCanonicalBlockAtSlot(
+    slot: Slot
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
+    const res = await this.core.getCanonicalBlockAtSlot(slot);
+    return (
+      res && {
+        block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.block, {reuseBytes: false}),
+        executionOptimistic: res.executionOptimistic,
+        finalized: res.finalized,
+      }
+    );
+  }
+
+  async getBlockByRoot(
+    root: Root
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
+    const res = await this.core.getBlockByRoot(root);
+    return (
+      res && {
+        block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.block, {reuseBytes: false}),
+        executionOptimistic: res.executionOptimistic,
+        finalized: res.finalized,
+      }
+    );
+  }
+
+  async getBlockHeaders(opts: {slot?: Slot; parentRoot?: Root}): Promise<{
+    data: routes.beacon.BlockHeaderResponse[];
+    meta: {executionOptimistic: boolean; finalized: boolean};
+  }> {
+    const res = await this.core.getBlockHeaders(opts);
+    return {
+      data: routes.beacon.block.BlockHeadersResponseType.deserialize(res.data, {reuseBytes: false}),
+      meta: res.meta,
+    };
   }
 
   getSerializedState(
@@ -650,8 +691,19 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getActiveOrPendingValidators(indices);
   }
 
-  getAttestationSourceCheckpoint(attEpoch: Epoch): Promise<phase0.Checkpoint> {
-    return this.core.getAttestationSourceCheckpoint(attEpoch);
+  produceAttestationData(
+    slot: Slot,
+    committeeIndex?: CommitteeIndex
+  ): Promise<ProductionResponse<phase0.AttestationData>> {
+    return this.core.produceAttestationData(slot, committeeIndex);
+  }
+
+  async getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null> {
+    return this.core.getPayloadAttestationBlock(slot);
+  }
+
+  async getBlockExecutionOptimistic(blockRoot: Root, payloadStatus?: PayloadStatus): Promise<boolean | null> {
+    return this.core.getBlockExecutionOptimistic(blockRoot, payloadStatus);
   }
 
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {
@@ -990,12 +1042,15 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getPoolAggregatedAttestations(bySlot);
   }
 
-  getSyncCommitteeContribution(
+  async produceSyncCommitteeContribution(
     subnet: SubcommitteeIndex,
     slot: Slot,
-    prevBlockRoot: Root
-  ): Promise<altair.SyncCommitteeContribution | null> {
-    return this.core.getSyncCommitteeContribution(subnet, slot, prevBlockRoot);
+    blockRoot: Root
+  ): Promise<ProductionResponse<altair.SyncCommitteeContribution | null>> {
+    const result = await this.core.produceSyncCommitteeContribution(subnet, slot, blockRoot);
+    return result.ok
+      ? {ok: true, data: result.data === null ? null : ssz.altair.SyncCommitteeContribution.deserialize(result.data)}
+      : result;
   }
 
   getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]> {

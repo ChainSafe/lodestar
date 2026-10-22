@@ -93,13 +93,13 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       clock: {currentEpoch: Math.floor(headSlot / SLOTS_PER_EPOCH)},
       beaconEngine: {
         getFinalizedBlockRootBySlot: (slot: number) => db.blockArchive.getRootBySlot(slot),
+        getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range serving must not load blocks")),
       },
       custodyConfig: {custodyColumns: [0, 1], custodyColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS).fill(1)},
       earliestAvailableSlot: 0,
       seenPayloadEnvelopeInputCache: {hasPayload: () => false},
       logger,
       metrics: null,
-      getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range serving must not load blocks")),
       getSerializedDataColumnSidecars: (slot: number, root: string, indices: number[]) =>
         BeaconChain.prototype.getSerializedDataColumnSidecars.call(fallbackChain, slot, root, indices),
 

@@ -22,7 +22,7 @@ import {BeaconChain} from "../../../../../src/chain/chain.js";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {onExecutionPayloadEnvelopesByRange} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRange.js";
 import {onExecutionPayloadEnvelopesByRoot} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRoot.js";
-import {getMockedBeaconChain} from "../../../../mocks/mockedBeaconChain.js";
+import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../../mocks/mockedBeaconChain.js";
 import {getMockedNetwork} from "../../../../mocks/mockedNetwork.js";
 import {zeroProtoBlock} from "../../../../utils/state.js";
 
@@ -109,8 +109,18 @@ describe("facade execution payload envelope serving", () => {
       (await fromAsync(onExecutionPayloadEnvelopesByRoot([root], chain, db, peerId, "test"))).map((r) => r.data)
     ).toEqual([envelopeBytes]);
 
-    chain.getBlockByRoot.mockResolvedValue({block, executionOptimistic: false, finalized: false});
-    const api = getBeaconBlockApi({chain, config, db, metrics: null, network: getMockedNetwork()});
+    chain.getBlockByRoot.mockResolvedValue({
+      block: ssz.gloas.SignedBeaconBlock.serialize(block),
+      slot: block.message.slot,
+      executionOptimistic: false,
+      finalized: false,
+    });
+    const api = getBeaconBlockApi({
+      chain: withBeaconEngineFacade(chain),
+      config,
+      metrics: null,
+      network: getMockedNetwork(),
+    });
     expect((await api.getSignedExecutionPayloadEnvelope({blockId: rootHex}, {returnBytes: true})).data).toEqual(
       envelopeBytes
     );

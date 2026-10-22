@@ -1,7 +1,9 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {IBeaconEngine} from "../../../../../../src/chain/beaconEngine/interface.js";
+import {withBeaconEngineFacade} from "../../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
 
@@ -10,6 +12,8 @@ describe("getBlockRoot", () => {
   const slotZeroRoot = Buffer.alloc(32, 0x11);
   let modules: ApiTestModules;
   let api: ReturnType<typeof getBeaconBlockApi>;
+  const getCanonicalBlockAtSlot = vi.fn<IBeaconEngine["getCanonicalBlockAtSlot"]>();
+  const getBlockByRoot = vi.fn<IBeaconEngine["getBlockByRoot"]>();
 
   function getRootHex(res: Awaited<ReturnType<typeof api.getBlockRoot>>): string {
     if (res.data instanceof Uint8Array) {
@@ -20,7 +24,12 @@ describe("getBlockRoot", () => {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    api = getBeaconBlockApi(modules);
+    const chain = withBeaconEngineFacade(modules.chain);
+    getCanonicalBlockAtSlot.mockReset();
+    chain.beaconEngine.getCanonicalBlockAtSlot = getCanonicalBlockAtSlot;
+    getBlockByRoot.mockReset();
+    chain.beaconEngine.getBlockByRoot = getBlockByRoot;
+    api = getBeaconBlockApi({...modules, chain});
     modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 10, blockRoot: headRoot}));
     modules.forkChoice.getFinalizedCheckpoint.mockReturnValue({
       epoch: 0,
@@ -35,7 +44,7 @@ describe("getBlockRoot", () => {
   it("returns the head root for the head id and for the head slot", async () => {
     expect(getRootHex(await api.getBlockRoot({blockId: "head"}))).toBe(headRoot);
     expect(getRootHex(await api.getBlockRoot({blockId: 10}))).toBe(headRoot);
-    expect(modules.chain.getBlockByRoot).not.toHaveBeenCalled();
+    expect(getBlockByRoot).not.toHaveBeenCalled();
   });
 
   it("reads a recent slot from ChainView", async () => {
@@ -49,17 +58,17 @@ describe("getBlockRoot", () => {
     expect(modules.chain.getCanonicalBlockClosestLteSlot).toHaveBeenCalledWith(3);
     expect(getRootHex(res)).toBe(toRootHex(recentRoot));
     expect(res.meta.finalized).toBe(true);
-    expect(modules.chain.getBlockByRoot).not.toHaveBeenCalled();
+    expect(getBlockByRoot).not.toHaveBeenCalled();
   });
 
   it("serves a block root id that parseInt would read as a recent slot", async () => {
     const blockId = `0x${"00".repeat(31)}05`;
     const block = generateSignedBlockAtSlot(4);
-    modules.chain.getBlockByRoot.mockResolvedValue({block, executionOptimistic: false, finalized: false});
+    getBlockByRoot.mockResolvedValue({block, executionOptimistic: false, finalized: false});
 
     const res = await api.getBlockRoot({blockId});
 
-    expect(modules.chain.getBlockByRoot).toHaveBeenCalledWith(blockId);
+    expect(getBlockByRoot).toHaveBeenCalledWith(fromHex(blockId));
     expect(getRootHex(res)).toBe(
       toRootHex(modules.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message))
     );
@@ -68,11 +77,11 @@ describe("getBlockRoot", () => {
   it("serves a block root id while the head is inside the historical root window", async () => {
     const blockId = `0x${"ab".repeat(32)}`;
     const block = generateSignedBlockAtSlot(4);
-    modules.chain.getBlockByRoot.mockResolvedValue({block, executionOptimistic: false, finalized: false});
+    getBlockByRoot.mockResolvedValue({block, executionOptimistic: false, finalized: false});
 
     const res = await api.getBlockRoot({blockId});
 
-    expect(modules.chain.getBlockByRoot).toHaveBeenCalledWith(blockId);
+    expect(getBlockByRoot).toHaveBeenCalledWith(fromHex(blockId));
     expect(getRootHex(res)).toBe(
       toRootHex(modules.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message))
     );
@@ -83,11 +92,11 @@ describe("getBlockRoot", () => {
     const slot = 10 + SLOTS_PER_HISTORICAL_ROOT;
     modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot, blockRoot: headRoot}));
     const block = generateSignedBlockAtSlot(1);
-    modules.chain.getCanonicalBlockAtSlot.mockResolvedValue({block, executionOptimistic: true, finalized: true});
+    getCanonicalBlockAtSlot.mockResolvedValue({block, executionOptimistic: true, finalized: true});
 
     const res = await api.getBlockRoot({blockId: 1});
 
-    expect(modules.chain.getCanonicalBlockAtSlot).toHaveBeenCalledWith(1);
+    expect(getCanonicalBlockAtSlot).toHaveBeenCalledWith(1);
     expect(res.meta).toEqual({executionOptimistic: true, finalized: true});
   });
 });

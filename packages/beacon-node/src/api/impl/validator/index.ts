@@ -1,6 +1,5 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
@@ -8,12 +7,10 @@ import {
   ForkPreGloas,
   ForkSeq,
   SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
-  DataAvailabilityStatus,
   beaconBlockToBlinded,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -24,10 +21,8 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlockContents,
-  CommitteeIndex,
   Epoch,
   ProducedBlockSource,
-  Root,
   Slot,
   ValidatorIndex,
   gloas,
@@ -147,49 +142,6 @@ export function getValidatorApi(
 
   function currentEpochWithDisparity(): Epoch {
     return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_SEC));
-  }
-
-  /**
-   * Post merge, the CL and EL could be out of step in the sync, and could result in
-   * Syncing status of the chain head. To be precise:
-   * 1. CL could be ahead of the EL, with the validity of head payload not yet verified
-   * 2. CL could be on an invalid chain of execution blocks with a non-existent
-   *    or non-available parent that never syncs up
-   *
-   * Both the above scenarios could be problematic and hence validator shouldn't participate
-   * or weigh its vote on a head till it resolves to a Valid execution status.
-   * Following activities should be skipped on an Optimistic head (with Syncing status):
-   * 1. Attestation if targetRoot is optimistic
-   * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
-   * 3. ProduceBlock if the parentRoot (chain's current head) is optimistic. Must be checked
-   *    explicitly as only local payload production consults the EL, blinded blocks from an
-   *    external builder or bid based blocks (gloas) can be produced without a synced EL.
-   * 4. SyncCommitteeSignature (base sync committee message) is aborted in the validator client
-   *    (see SyncCommitteeService) when the head root it would sign is optimistic, since it is
-   *    produced from the head root without a beacon-node produce endpoint to gate here. Spec:
-   *    https://github.com/ethereum/consensus-specs/blob/v1.6.1/sync/optimistic.md#participating-in-sync-committees
-   */
-
-  function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.getBlockDefaultStatus(beaconBlockRoot);
-    if (!protoBeaconBlock) {
-      throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
-    }
-
-    if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
-      throw new NodeIsSyncing(
-        `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash} number=${protoBeaconBlock.executionPayloadNumber}`
-      );
-  }
-
-  function notOnOutOfRangeData(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.getBlockDefaultStatus(beaconBlockRoot);
-    if (!protoBeaconBlock) {
-      throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
-    }
-
-    if (protoBeaconBlock.dataAvailabilityStatus === DataAvailabilityStatus.OutOfRange)
-      throw new NodeIsSyncing("Block's data is out of range and not validated");
   }
 
   // [beacon-engine] moved: produceEngineOrBuilderBlock, produceBuilderBlindedBlock,
@@ -341,80 +293,7 @@ export function getValidatorApi(
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
-      // Note: This may trigger an epoch transition if there skipped slots at the beginning of the epoch.
-      const head = chain.getHead();
-      const headSlot = head.slot;
-      const attEpoch = computeEpochAtSlot(slot);
-      const headBlockRoot = fromHex(head.blockRoot);
-      const fork = config.getForkName(slot);
-
-      // Canonical block root ≤ slot (matches the former state.getBlockRootAtSlot; handles skipped slots).
-      const blockRootAtSlot = (atSlot: Slot): Root => {
-        const canonical = chain.getCanonicalBlockClosestLteSlot(atSlot);
-        if (!canonical) {
-          throw Error(`No canonical block found for slot=${atSlot}`);
-        }
-        return fromHex(canonical.blockRoot);
-      };
-
-      const beaconBlockRoot =
-        slot >= headSlot
-          ? // When attesting to the head slot or later, always use the head of the chain.
-            headBlockRoot
-          : // Permit attesting to slots *prior* to the current head. This is desirable when
-            // the VC and BN are out-of-sync due to time issues or overloading.
-            blockRootAtSlot(slot);
-
-      let index: CommitteeIndex;
-      if (isForkPostGloas(fork)) {
-        const canonicalBlock = chain.getCanonicalBlockByRoot(beaconBlockRoot);
-        if (!canonicalBlock) {
-          // This should never happen
-          throw Error(`Block not found in fork choice for slot=${slot}, root=${toRootHex(beaconBlockRoot)}`);
-        }
-        // After Gloas, attestation.data.index signals payload status in fork-choice:
-        // - 0 = EMPTY / not present, 1 = FULL / present
-        // - same-slot attestations must always use index = 0
-        if (canonicalBlock.slot !== slot) {
-          index = canonicalBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
-        } else {
-          index = 0;
-        }
-      } else if (isForkPostElectra(fork)) {
-        index = 0;
-      } else {
-        if (committeeIndex === undefined) {
-          throw new ApiError(400, `Committee index must be provided for pre-electra fork=${fork}`);
-        }
-        index = committeeIndex;
-      }
-
-      const targetSlot = computeStartSlotAtEpoch(attEpoch);
-      const targetRoot =
-        targetSlot >= headSlot
-          ? // If the state is earlier than the target slot then the target *must* be the head block root.
-            headBlockRoot
-          : blockRootAtSlot(targetSlot);
-
-      // Check the execution status as validator shouldn't vote on an optimistic head
-      // Check on target is sufficient as a valid target would imply a valid source
-      notOnOptimisticBlockRoot(targetRoot);
-      notOnOutOfRangeData(targetRoot);
-
-      // To get the correct source we must get a state in the same epoch as the attestation's epoch.
-      // An epoch transition may change state.currentJustifiedCheckpoint (resolved inside the engine).
-      const source = await chain.beaconEngine.getAttestationSourceCheckpoint(attEpoch);
-
-      return {
-        data: {
-          slot,
-          index,
-          beaconBlockRoot,
-          source,
-          target: {epoch: attEpoch, root: targetRoot},
-        },
-      };
+      return {data: unwrapProductionResult(await chain.beaconEngine.produceAttestationData(slot, committeeIndex))};
     },
 
     async producePayloadAttestationData({slot}) {
@@ -426,7 +305,7 @@ export function getValidatorApi(
       notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
-      const block = chain.getCanonicalProtoBlockAtSlot(slot);
+      const block = await chain.beaconEngine.getPayloadAttestationBlock(slot);
       if (!block) {
         // No canonical block is seen at slot. Return 204 so vc can skip casting payload attestation.
         return {data: undefined, meta: {version: fork}, status: 204};
@@ -484,18 +363,12 @@ export function getValidatorApi(
       if (!chain.hasBlock(beaconBlockRoot)) {
         const rootHex = toRootHex(beaconBlockRoot);
         network.searchUnknownBlock({slot, root: rootHex}, BlockInputSource.api);
-        // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
+        // The engine checks existence and eligibility after the wait.
         await chain.waitForBlock(slot, rootHex);
       }
 
-      // Check the execution status as validator shouldn't contribute on an optimistic head
-      notOnOptimisticBlockRoot(beaconBlockRoot);
-      notOnOutOfRangeData(beaconBlockRoot);
-
-      const contribution = await chain.beaconEngine.getSyncCommitteeContribution(
-        subcommitteeIndex,
-        slot,
-        beaconBlockRoot
+      const contribution = unwrapProductionResult(
+        await chain.beaconEngine.produceSyncCommitteeContribution(subcommitteeIndex, slot, beaconBlockRoot)
       );
       if (!contribution) {
         throw new ApiError(

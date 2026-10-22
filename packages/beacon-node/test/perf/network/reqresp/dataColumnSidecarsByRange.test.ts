@@ -139,7 +139,6 @@ for (const rootSource of ["archive index", "head state"] as const) {
         seenPayloadEnvelopeInputCache: {get: () => undefined},
         serializedCache: new WeakMap(),
       } as unknown as BeaconChain;
-      chain.getCanonicalBlockAtSlot = BeaconChain.prototype.getCanonicalBlockAtSlot.bind(chain);
       chain.getSerializedDataColumnSidecars = BeaconChain.prototype.getSerializedDataColumnSidecars.bind(chain);
 
       for (const count of [1, slotCount]) {
@@ -195,9 +194,9 @@ for (const rootSource of ["archive index", "head state"] as const) {
       minRuns: 25,
       maxMs: 15_000,
       fn: async () => {
-        const result = await chain.getCanonicalBlockAtSlot(startSlot);
-        assert(result);
-        config.getForkTypes(startSlot).BeaconBlock.hashTreeRoot(result.block.message);
+        const block = await db.blockArchive.get(startSlot);
+        assert(block);
+        config.getForkTypes(startSlot).BeaconBlock.hashTreeRoot(block.message);
       },
     });
 
