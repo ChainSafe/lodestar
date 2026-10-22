@@ -1,5 +1,9 @@
 # Install Options
 
+Lodestar requires Node.js **24.22.1 or a newer 24.x release**. Use the latest supported 24.x release to receive security updates and bug fixes.
+
+For source installations, upgrade the Node.js runtime used by the service and restart Lodestar. Docker images and standalone binaries include their own runtime, so update those artifacts and restart to receive runtime updates. When building Docker images locally, use `docker build --pull` to refresh the base image.
+
 ## Binaries
 
 Binaries can be downloaded from the Lodestar [release page](https://github.com/ChainSafe/lodestar/releases/latest) under the `Assets` section.
@@ -42,10 +46,10 @@ Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scrip
 
 ### Prerequisites
 
-Make sure to have [pnpm installed](https://pnpm.io/). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v24) of [NodeJS](https://nodejs.org/en/).
+Make sure to have [pnpm installed](https://pnpm.io/). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the latest 24.x release of [Node.js](https://nodejs.org/en/), at least 24.22.1.
 
 :::info
-NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.
+Lodestar supports Node.js 24.22.1 and newer releases within the 24.x LTS line.
 It is important to make sure the NodeJS version is not changed after reboot by setting a default `nvm alias default <version> && nvm use default`.
 :::
 

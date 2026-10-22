@@ -47,7 +47,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push lodestar
         run: >
-          docker buildx build . --push --provenance=false --sbom=false
+          docker buildx build . --pull --push --provenance=false --sbom=false
           --tag chainsafe/lodestar:${{ inputs.tag }}-${{ matrix.arch }}
           --platform linux/${{ matrix.arch }}
           --build-arg COMMIT=$(git rev-parse HEAD)
