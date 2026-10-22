@@ -37,6 +37,12 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub = getMockedBeaconChain({clock: "real", genesisTime: 0});
     updateBuilderStatus = chainStub.updateBuilderStatus;
     forkChoiceStub = chainStub.forkChoice;
+    forkChoiceStub.getHead.mockReturnValue(zeroProtoBlock);
+    forkChoiceStub.getJustifiedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: new Uint8Array(32),
+      rootHex: zeroProtoBlock.blockRoot,
+    });
     regenStub = chainStub.regen;
     loggerStub = getMockedLogger();
     beaconProposerCacheStub = chainStub.beaconProposerCache;
@@ -74,7 +80,7 @@ describe("PrepareNextSlot scheduler", () => {
       chainStub.emitter.on(routes.events.EventType.payloadAttributes, vi.fn());
       await vi.advanceTimersByTimeAsync(1);
       expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
-      expect(prepare).toHaveBeenCalledWith(clockSlot, {produceSSEPayloadAttributes: true});
+      expect(prepare).toHaveBeenCalledWith(clockSlot, {produceSSEPayloadAttributes: true}, chainStub.getHead());
       await preparing;
     }
   );
@@ -198,7 +204,11 @@ describe("PrepareNextSlot scheduler", () => {
 
       expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
       expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
-      expect(prepare).toHaveBeenCalledWith(prepareSlot - 1, {produceSSEPayloadAttributes: hasListener});
+      expect(prepare).toHaveBeenCalledWith(
+        prepareSlot - 1,
+        {produceSSEPayloadAttributes: hasListener},
+        chainStub.getHead()
+      );
       expect(listenerCount).toHaveBeenCalledExactlyOnceWith(routes.events.EventType.payloadAttributes);
       expect(updateBuilderStatus).toHaveBeenCalledTimes(hasProposer ? 1 : 0);
       expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledTimes(2);
@@ -240,6 +250,7 @@ describe("PrepareNextSlot scheduler", () => {
     getForkStub.mockReturnValue(ForkName.fulu);
     vi.spyOn(chainStub.beaconEngine, "prepareForNextSlot").mockResolvedValue({
       ok: false,
+      headUpdate: false,
       code: BeaconEngineErrorCode.INTERNAL,
       payload: {message: "EL preparation failed"},
     });

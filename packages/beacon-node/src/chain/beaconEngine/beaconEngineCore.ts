@@ -1554,16 +1554,28 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   /** Prepare consensus state, builder status, EL payload and requested payload attributes for the next slot. */
   async prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {
+    const previousHead = this.forkChoice.getHead();
+    const previousJustified = this.forkChoice.getJustifiedCheckpoint();
+    let response: PrepareNextSlotResponse;
     try {
-      return {ok: true, data: await prepareForNextSlot.call(this, clockSlot, opts)};
+      response = {ok: true, data: await prepareForNextSlot.call(this, clockSlot, opts), headUpdate: false};
     } catch (e) {
-      return {
+      response = {
         ok: false,
+        headUpdate: false,
         code:
           isErrorAborted(e) || isQueueErrorAborted(e) ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
         payload: {message: e instanceof Error ? e.message : String(e)},
       };
     }
+    const head = this.forkChoice.getHead();
+    const justified = this.forkChoice.getJustifiedCheckpoint();
+    response.headUpdate =
+      head.blockRoot !== previousHead.blockRoot ||
+      head.payloadStatus !== previousHead.payloadStatus ||
+      justified.epoch !== previousJustified.epoch ||
+      justified.rootHex !== previousJustified.rootHex;
+    return response;
   }
 
   /**
@@ -1603,7 +1615,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
     } finally {
-      this.publishChainView(false);
       timer?.();
     }
   }

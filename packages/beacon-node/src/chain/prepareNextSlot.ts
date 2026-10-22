@@ -71,9 +71,13 @@ export class PrepareNextSlotScheduler {
       // [beacon-engine] moved: consensus/EL preparation and computeStateHashTreeRoot now live in
       // packages/beacon-node/src/chain/beaconEngine/prepareNextSlot.ts under the same names.
       // On unstable merges, sync that logic there; retain scheduling, SSE emission and error logging here.
-      const result = await this.chain.beaconEngine.prepareForNextSlot(clockSlot, {
-        produceSSEPayloadAttributes: this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes) > 0,
-      });
+      const result = await this.chain.beaconEngine.prepareForNextSlot(
+        clockSlot,
+        {
+          produceSSEPayloadAttributes: this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes) > 0,
+        },
+        this.chain.getHead()
+      );
       if (!result.ok) {
         if (result.code !== BeaconEngineErrorCode.ABORTED) {
           this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);

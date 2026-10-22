@@ -428,8 +428,14 @@ export class BeaconEngine implements IBeaconEngine {
       : this.core.submitBlindedBlockNoResponse({data: signedBlindedBlock, bytes: signedBlindedBlockBytes});
   }
 
-  prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {
-    return this.core.prepareForNextSlot(clockSlot, opts);
+  async prepareForNextSlot(
+    clockSlot: Slot,
+    opts: PrepareNextSlotOpts,
+    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
+  ): Promise<PrepareNextSlotResponse> {
+    const response = await this.core.prepareForNextSlot(clockSlot, opts);
+    if (response.headUpdate) await this.onHeadUpdated(previousHead);
+    return response;
   }
 
   getProposerDuties(

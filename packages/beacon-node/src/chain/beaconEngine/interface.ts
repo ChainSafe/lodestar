@@ -253,9 +253,13 @@ export enum BeaconEngineErrorCode {
   NODE_SYNCING = "NODE_SYNCING",
 }
 
-export type PrepareNextSlotResponse =
+export type PrepareNextSlotResponse = {
+  /** Refresh head metadata independently of preparation success. */
+  headUpdate: boolean;
+} & (
   | {ok: true; data: PrepareNextSlotResult | null}
-  | {ok: false; code: BeaconEngineErrorCode; payload: {message: string}};
+  | {ok: false; code: BeaconEngineErrorCode; payload: {message: string}}
+);
 
 /**
  * The consensus engine seam. Starts minimal and transitional (JS-only); ownership of consensus
@@ -341,6 +345,7 @@ export interface IBeaconEngine
     | "discardVerifiedBlocks"
     | "onSlot"
     | "onEpoch"
+    | "prepareForNextSlot"
     | "getPayloadAttestationBlock"
     | "getFinalizedCheckpointSnapshot"
     | "getHeadSnapshot"
@@ -361,6 +366,11 @@ export interface IBeaconEngine
   discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void>;
   onSlot(slot: Slot, previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">): Promise<void>;
   onEpoch(epoch: Epoch): Promise<void>;
+  prepareForNextSlot(
+    clockSlot: Slot,
+    opts: PrepareNextSlotOpts,
+    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
+  ): Promise<PrepareNextSlotResponse>;
   getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null>;
   isHeadOptimistic(): Promise<boolean>;
   getBlockRoot(blockId: routes.beacon.BlockId): Promise<BlockRootResponse>;
