@@ -551,6 +551,7 @@ describe("block archiver task", () => {
       const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(ssz.fulu.SignedBeaconBlock.defaultValue());
       vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
       dbStub.blobSidecars.getBinary = vi.fn().mockResolvedValue(null);
+      dbStub.blobSidecars.batchDelete = vi.fn().mockResolvedValue(undefined);
       const canonicalBlocks = [oldestSlot + 2, oldestSlot + 1, oldestSlot].map((slot) =>
         generateProtoBlock({slot, blockRoot: toHexString(Buffer.alloc(32, slot)), payloadStatus: PayloadStatus.FULL})
       );
@@ -573,8 +574,10 @@ describe("block archiver task", () => {
 
       if (migrated) {
         expect(dbStub.blobSidecars.getBinary).toHaveBeenCalledWith(fromHexString(canonicalBlocks[2].blockRoot));
+        expect(dbStub.blobSidecars.batchDelete).toHaveBeenCalled();
       } else {
         expect(dbStub.blobSidecars.getBinary).not.toHaveBeenCalled();
+        expect(dbStub.blobSidecars.batchDelete).not.toHaveBeenCalled();
       }
       expect(dbStub.blobSidecarsArchive.pruneBefore).toHaveBeenCalledWith(pruneSlot);
     }
