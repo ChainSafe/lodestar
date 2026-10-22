@@ -93,7 +93,7 @@ export class BeaconSync implements IBeaconSync {
     this.unknownBlockSync.close();
   }
 
-  getSyncStatus(): SyncingStatus {
+  async getSyncStatus(): Promise<SyncingStatus> {
     const currentSlot = this.chain.clock.currentSlot;
     const elOffline =
       this.chain.executionEngine.state === ExecutionEngineState.OFFLINE ||
@@ -110,6 +110,7 @@ export class BeaconSync implements IBeaconSync {
       };
     }
 
+    // TODO - beacon engine: may pull the full head from BeaconEngine with head execution status
     const head = this.chain.getHead();
 
     switch (this.state) {
@@ -120,7 +121,7 @@ export class BeaconSync implements IBeaconSync {
           headSlot: head.slot,
           syncDistance: currentSlot - head.slot,
           isSyncing: true,
-          isOptimistic: this.chain.isHeadOptimistic(),
+          isOptimistic: await this.chain.beaconEngine.isHeadOptimistic(),
           elOffline,
         };
       case SyncState.Synced:
@@ -128,7 +129,7 @@ export class BeaconSync implements IBeaconSync {
           headSlot: head.slot,
           syncDistance: 0,
           isSyncing: false,
-          isOptimistic: this.chain.isHeadOptimistic(),
+          isOptimistic: await this.chain.beaconEngine.isHeadOptimistic(),
           elOffline,
         };
       default:

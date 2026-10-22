@@ -18,7 +18,6 @@ function snapshot(blocks: ChainViewBlock[], head = blocks.at(-1)): ChainViewSnap
     revision: 0,
     blocks,
     head,
-    headExecutionOptimistic: false,
     justified: checkpoint(1),
     finalized: checkpoint(1),
   };
@@ -113,21 +112,20 @@ describe("ChainView", () => {
     ]);
   });
 
-  it("publishes same-root payload and execution changes without sharing mutable objects", () => {
+  it("publishes same-root payload changes without sharing mutable objects", () => {
     const a = block(1, 0, 0);
     const pending = block(2, 1, 1, {payloadStatus: PayloadStatus.PENDING});
-    const initial = {...snapshot([a, pending]), headExecutionOptimistic: true};
+    const initial = snapshot([a, pending]);
     const view = new ChainView(initial);
     initial.head.slot = 999;
     const full = {...pending, slot: 1, payloadStatus: PayloadStatus.FULL};
-    const next = update(initial, {blocks: [full], head: full, headExecutionOptimistic: false});
+    const next = update(initial, {blocks: [full], head: full});
     view.applyUpdate(next);
     next.head.slot = 888;
     const head = view.getHead();
     head.slot = 777;
     expect(view.getHead().slot).toBe(1);
     expect(view.getHead().payloadStatus).toBe(PayloadStatus.FULL);
-    expect(view.isHeadOptimistic()).toBe(false);
     expect(view.getHead()).not.toHaveProperty("executionStatus");
     expect(view.hasPayloadHexUnsafe(full.blockRoot)).toBe(true);
   });

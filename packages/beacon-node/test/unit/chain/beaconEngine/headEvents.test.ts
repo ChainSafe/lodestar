@@ -81,7 +81,6 @@ describe("BeaconEngine head notifications", () => {
         const checkpoint = {epoch: 0, root: Buffer.alloc(32), rootHex: root(0)};
         events.emit(BeaconEngineEvent.chainViewUpdated, {
           revision: 1,
-          headExecutionOptimistic: head.executionStatus === ExecutionStatus.Syncing,
           head,
           justified: checkpoint,
           finalized: checkpoint,

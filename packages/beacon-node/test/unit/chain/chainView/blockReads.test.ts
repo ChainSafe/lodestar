@@ -32,7 +32,6 @@ describe("BeaconChain serialized block reads", () => {
         revision: 0,
         blocks: [anchor, head],
         head,
-        headExecutionOptimistic: false,
         justified: checkpoint,
         finalized: checkpoint,
       }),

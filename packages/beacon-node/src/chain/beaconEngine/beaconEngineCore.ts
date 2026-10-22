@@ -30,6 +30,7 @@ import {
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
   ZERO_HASH_HEX,
   isForkPostDeneb,
   isForkPostGloas,
@@ -292,7 +293,7 @@ import {GossipValidationResult, fromResult} from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
 import {importExecutionPayload, importExecutionPayloadBytes} from "./importExecutionPayload.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
-import type {ApiStateId, FinalizedCheckpoint} from "./interface.js";
+import type {ApiBlockId, ApiStateId, BlockRootResponse, FinalizedCheckpoint} from "./interface.js";
 import {
   ApiStateResult,
   ApiStateResultWithFork,
@@ -1125,6 +1126,61 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     const executionOptimistic = block !== null && isOptimisticBlock(block);
     const res = await this.getSerializedBlockByRoot(root);
     return res && {block: res.bytes, slot: res.slot, executionOptimistic, finalized: res.finalized};
+  }
+
+  /**
+   * Source: unstable@9cb14e3381 api/impl/beacon/blocks/index.ts#getBlockRoot.
+   * [beacon-engine] Resolve recent slots from fork choice, falling back to persisted blocks when absent.
+   * The facade parses identifiers and passes byte roots; Core returns a byte root and response metadata.
+   */
+  async getBlockRoot(blockId: ApiBlockId): Promise<BlockRootResponse | null> {
+    if (typeof blockId === "number") {
+      const head = this.forkChoice.getHead();
+      if (blockId === head.slot) {
+        return {
+          data: {root: fromHex(head.blockRoot)},
+          meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
+        };
+      }
+      if (blockId < head.slot && head.slot <= blockId + SLOTS_PER_HISTORICAL_ROOT) {
+        const canonical = this.forkChoice.getCanonicalBlockClosestLteSlot(blockId);
+        if (canonical) {
+          return {
+            data: {root: fromHex(canonical.blockRoot)},
+            meta: {
+              executionOptimistic: isOptimisticBlock(head),
+              finalized: computeEpochAtSlot(blockId) <= this.forkChoice.getFinalizedCheckpoint().epoch,
+            },
+          };
+        }
+      }
+    } else if (blockId === "head") {
+      const head = this.forkChoice.getHead();
+      return {
+        data: {root: fromHex(head.blockRoot)},
+        meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
+      };
+    }
+
+    const rootOrSlot =
+      blockId === "genesis"
+        ? GENESIS_SLOT
+        : blockId === "finalized"
+          ? fromHex(this.forkChoice.getFinalizedBlock().blockRoot)
+          : blockId === "justified"
+            ? fromHex(this.forkChoice.getJustifiedBlock().blockRoot)
+            : blockId;
+    const res =
+      typeof rootOrSlot === "number"
+        ? await this.getCanonicalBlockAtSlot(rootOrSlot)
+        : await this.getBlockByRoot(rootOrSlot);
+    if (!res) return null;
+    const types = this.config.getForkTypes(res.slot);
+    const block = types.SignedBeaconBlock.deserialize(res.block);
+    return {
+      data: {root: types.BeaconBlock.hashTreeRoot(block.message)},
+      meta: {executionOptimistic: res.executionOptimistic, finalized: res.finalized},
+    };
   }
 
   /**
@@ -2646,6 +2702,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       executionPayloadBlockHash: head.executionPayloadBlockHash,
       executionPayloadNumber: "executionPayloadNumber" in head ? head.executionPayloadNumber : undefined,
     };
+  }
+
+  isHeadOptimistic(): boolean {
+    return isOptimisticBlock(this.forkChoice.getHead());
   }
 
   /** Build the historical-state worker if enabled (--serveHistoricalState). Idempotent; call on startup. */

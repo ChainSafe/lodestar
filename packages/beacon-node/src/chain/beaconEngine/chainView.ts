@@ -1,5 +1,4 @@
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {ChainViewBlock, ChainViewSnapshot, ChainViewState, ChainViewUpdate} from "../chainView/interface.js";
 
 export function toChainViewBlock(block: ProtoBlock): ChainViewBlock {
@@ -58,7 +57,6 @@ export class ChainViewPublisher {
     const previous = this.previousState;
     if (
       previous &&
-      state.headExecutionOptimistic === previous.headExecutionOptimistic &&
       blocks.length === 0 &&
       (Object.keys(state.head) as (keyof ChainViewBlock)[]).every(
         (field) => state.head[field] === previous.head[field]
@@ -77,7 +75,6 @@ export class ChainViewPublisher {
     const head = this.forkChoice.getHead();
     return {
       head: toChainViewBlock(head),
-      headExecutionOptimistic: isOptimisticBlock(head),
       justified: this.forkChoice.getJustifiedCheckpoint(),
       finalized: this.forkChoice.getFinalizedCheckpoint(),
     };

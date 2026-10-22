@@ -9,14 +9,12 @@ import {
   ForkPreBellatrix,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
-  SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
-  computeEpochAtSlot,
   computeTimeAtSlot,
   reconstructSignedBlockContents,
   signedBeaconBlockToBlinded,
@@ -608,50 +606,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockRoot({blockId}) {
-      // Fast path: From head state already available in memory get historical blockRoot.
-      // A 0x id is a root. parseInt() accepts that prefix as hex and can return a slot.
-      const slot =
-        typeof blockId === "number"
-          ? blockId
-          : blockId.toLowerCase().startsWith("0x")
-            ? Number.NaN
-            : parseInt(blockId, 10);
-      if (!Number.isNaN(slot)) {
-        const head = chain.getHead();
-
-        if (slot === head.slot) {
-          return {
-            data: {root: fromHex(head.blockRoot)},
-            meta: {executionOptimistic: chain.isHeadOptimistic(), finalized: false},
-          };
-        }
-
-        if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
-          const canonical = chain.getCanonicalBlockClosestLteSlot(slot);
-          if (canonical) {
-            return {
-              data: {root: fromHex(canonical.blockRoot)},
-              meta: {
-                executionOptimistic: chain.isHeadOptimistic(),
-                finalized: computeEpochAtSlot(slot) <= chain.getFinalizedCheckpoint().epoch,
-              },
-            };
-          }
-        }
-      } else if (blockId === "head") {
-        const head = chain.getHead();
-        return {
-          data: {root: fromHex(head.blockRoot)},
-          meta: {executionOptimistic: chain.isHeadOptimistic(), finalized: false},
-        };
-      }
-
-      // Slow path
-      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      return {
-        data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
-        meta: {executionOptimistic, finalized},
-      };
+      return chain.beaconEngine.getBlockRoot(blockId);
     },
 
     publishBlockV2,

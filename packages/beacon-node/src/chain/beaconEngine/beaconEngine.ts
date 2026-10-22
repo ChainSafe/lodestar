@@ -35,7 +35,9 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {ApiError, ValidationError} from "../../api/impl/errors.js";
+import {rootHexRegex} from "../../execution/engine/utils.js";
 import {CommitteeSubscription} from "../../network/subnets/interface.js";
 import {IClock} from "../../util/clock.js";
 import {SerializedCache} from "../../util/serializedCache.js";
@@ -62,9 +64,11 @@ import {GossipBlockResult} from "./gossipValidation/block.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./initialization.js";
 import {
+  ApiBlockId,
   ApiStateId,
   ApiStateResult,
   ApiStateResultWithFork,
+  BlockRootResponse,
   HeadExecutionStateInfo,
   HeadParentPayload,
   IBeaconEngine,
@@ -501,6 +505,32 @@ export class BeaconEngine implements IBeaconEngine {
 
   getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo> {
     return this.core.getHeadExecutionStateInfo();
+  }
+
+  async isHeadOptimistic(): Promise<boolean> {
+    return this.core.isHeadOptimistic();
+  }
+
+  /** Source: unstable@9cb14e3381 api/impl/beacon/blocks/utils.ts#resolveBlockId. */
+  async getBlockRoot(blockId: routes.beacon.BlockId): Promise<BlockRootResponse> {
+    const normalized = String(blockId).toLowerCase();
+    let id: ApiBlockId;
+    if (normalized === "head" || normalized === "genesis" || normalized === "finalized" || normalized === "justified") {
+      id = normalized;
+    } else if (normalized.startsWith("0x")) {
+      if (!rootHexRegex.test(normalized)) {
+        throw new ValidationError(`Invalid block id '${normalized}'`, "blockId");
+      }
+      id = fromHex(normalized);
+    } else {
+      id = typeof blockId === "number" ? blockId : parseInt(normalized, 10);
+      if (Number.isNaN(id)) {
+        throw new ValidationError(`Invalid block id '${normalized}'`, "blockId");
+      }
+    }
+    const res = await this.core.getBlockRoot(id);
+    if (!res) throw new ApiError(404, `Block not found for id '${blockId}'`);
+    return res;
   }
 
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch> {

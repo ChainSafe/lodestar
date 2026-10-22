@@ -136,7 +136,6 @@ describe("BeaconEngine event forwarding", () => {
     const checkpoint = {epoch: 0, root: Buffer.alloc(32, 1), rootHex: root};
     events.emit(BeaconEngineEvent.chainViewUpdated, {
       revision: 1,
-      headExecutionOptimistic: false,
       head: generateProtoBlock({slot, blockRoot: root}),
       justified: checkpoint,
       finalized: checkpoint,

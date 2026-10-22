@@ -45,16 +45,15 @@ function setup() {
 }
 
 describe("ChainViewPublisher", () => {
-  it("replicates imports, reorgs, same-root execution changes to every subscriber", () => {
+  it("replicates imports and reorgs without publishing execution-status changes", () => {
     const {anchor, forkChoice, views, publish} = setup();
     const child = {...anchor, blockRoot: toRootHex(Buffer.alloc(32, 2)), parentRoot: anchor.blockRoot, slot: 2};
     forkChoice.getAllNodes.mockReturnValue([anchor, child]);
     forkChoice.getHead.mockReturnValue(child);
     expect(publish()?.blocks.map((b) => b.blockRoot)).toEqual([child.blockRoot]);
     child.executionStatus = ExecutionStatus.Syncing;
-    expect(publish()?.blocks).toHaveLength(0);
+    expect(publish()).toBeNull();
     for (const view of views) {
-      expect(view.isHeadOptimistic(), "head optimism").toBe(true);
       expect(view.getHead(), "structural block metadata").not.toHaveProperty("executionStatus");
       expect(
         view.getAllAncestorBlocks(child.blockRoot, PayloadStatus.FULL).map((b) => b.slot),
@@ -111,6 +110,10 @@ describe("ChainViewPublisher", () => {
     const head = forkChoice.getHead();
     head.executionStatus = ExecutionStatus.Syncing;
     forkChoice.getHead.mockReturnValue(head);
+    expect(publish(false)).toBeNull();
+    head.executionStatus = ExecutionStatus.Valid;
+    expect(publish(false)).toBeNull();
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({...forkChoice.getFinalizedCheckpoint(), epoch: 1});
     expect(publish(false)?.revision).toBe(1);
     expect(publish(false)).toBeNull();
   });

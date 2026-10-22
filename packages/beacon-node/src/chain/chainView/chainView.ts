@@ -37,7 +37,6 @@ export class ChainView implements IChainView {
   ) {
     this.state = structuredClone({
       head: snapshot.head,
-      headExecutionOptimistic: snapshot.headExecutionOptimistic,
       justified: snapshot.justified,
       finalized: snapshot.finalized,
     });
@@ -62,7 +61,6 @@ export class ChainView implements IChainView {
     this.upsert(update.blocks);
     this.state = structuredClone({
       head: update.head,
-      headExecutionOptimistic: update.headExecutionOptimistic,
       justified: update.justified,
       finalized: update.finalized,
     });
@@ -118,9 +116,6 @@ export class ChainView implements IChainView {
 
   getHead(): ChainViewBlock {
     return {...this.state.head};
-  }
-  isHeadOptimistic(): boolean {
-    return this.state.headExecutionOptimistic;
   }
   getHeadRoot(): RootHex {
     return this.state.head.blockRoot;

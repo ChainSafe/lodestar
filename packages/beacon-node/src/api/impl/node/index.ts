@@ -79,7 +79,7 @@ export function getNodeApi(
     },
 
     async getSyncingStatus() {
-      return {data: sync.getSyncStatus()};
+      return {data: await sync.getSyncStatus()};
     },
 
     async getHealth({syncingStatus}) {
@@ -87,7 +87,7 @@ export function getNodeApi(
         throw new ApiError(400, `Invalid syncing status code: ${syncingStatus}`);
       }
 
-      const {isSyncing, isOptimistic, elOffline} = sync.getSyncStatus();
+      const {isSyncing, isOptimistic, elOffline} = await sync.getSyncStatus();
 
       if (isSyncing || isOptimistic || elOffline) {
         // 206: Node is syncing but can serve incomplete data

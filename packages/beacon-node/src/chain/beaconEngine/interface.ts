@@ -254,6 +254,13 @@ export type PrepareNextSlotResponse =
  */
 export type ApiStateId = RootHex | Slot | CheckpointWithHex | {head: true};
 
+export type ApiBlockId = Root | Slot | "head" | "genesis" | "finalized" | "justified";
+
+export type BlockRootResponse = {
+  data: {root: Root};
+  meta: {executionOptimistic: boolean; finalized: boolean};
+};
+
 export type ApiStateResult<T> =
   | {data: T; executionOptimistic: boolean; finalized: boolean; fork?: ForkName}
   | {invalid: {code: number; message: string}}
@@ -320,6 +327,8 @@ export interface IBeaconEngine
     | "getCanonicalBlockAtSlot"
     | "getBlockByRoot"
     | "getBlockHeaders"
+    | "getBlockRoot"
+    | "isHeadOptimistic"
   > {
   validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
   validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
@@ -332,6 +341,8 @@ export interface IBeaconEngine
   onSlot(slot: Slot): Promise<void>;
   onEpoch(epoch: Epoch): Promise<void>;
   getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null>;
+  isHeadOptimistic(): Promise<boolean>;
+  getBlockRoot(blockId: routes.beacon.BlockId): Promise<BlockRootResponse>;
   getCanonicalBlockAtSlot(
     slot: Slot
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
@@ -612,6 +623,8 @@ export interface IBeaconEngineCore {
   /** Tear down engine-owned resources (historical-state regen worker, BLS pool, …). */
   close(): Promise<void>;
   getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo>;
+  isHeadOptimistic(): boolean;
+  getBlockRoot(blockId: ApiBlockId): Promise<BlockRootResponse | null>;
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch>;
   // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
   loadHistoricalStateRegen(): Promise<void>;

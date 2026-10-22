@@ -2,7 +2,7 @@ import {Mock, Mocked, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {EpochDifference, ExecutionStatus, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -415,6 +415,8 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "produceAttestationData",
     "produceSyncCommitteeContribution",
     "getPayloadAttestationBlock",
+    "getBlockRoot",
+    "isHeadOptimistic",
     "getPoolPayloadAttestations",
     "getPoolProposerPreferences",
     "registerLocalValidators",
@@ -438,7 +440,6 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
       BeaconEngineCore.prototype as unknown as Record<string, unknown>
     )[name];
   }
-  chain.isHeadOptimistic = vi.fn(() => chain.forkChoice.getHead().executionStatus === ExecutionStatus.Syncing);
   vi.spyOn(chain.proposerPreferencesPool, "get");
   chain.beaconEngine.prepareBeaconCommitteeSubnets = vi.fn().mockResolvedValue(undefined);
   for (const [name, forkChoiceName] of Object.entries({

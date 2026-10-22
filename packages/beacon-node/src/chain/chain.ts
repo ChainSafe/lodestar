@@ -383,10 +383,6 @@ export class BeaconChain implements IBeaconChain {
     return this.chainView.getHead();
   }
 
-  isHeadOptimistic(): boolean {
-    return this.chainView.isHeadOptimistic();
-  }
-
   getHeadRoot(): RootHex {
     return this.chainView.getHeadRoot();
   }

@@ -25,7 +25,6 @@ export type FinalizedBlockSnapshot = {
 
 export type ChainViewState = {
   head: ChainViewBlock;
-  headExecutionOptimistic: boolean;
   justified: CheckpointWithHex;
   finalized: CheckpointWithHex;
 };
@@ -41,7 +40,6 @@ export type ChainViewUpdate = ChainViewSnapshot;
 export interface IChainView {
   getFinalizedBlockSnapshot(root: RootHex): FinalizedBlockSnapshot;
   getHead(): ChainViewBlock;
-  isHeadOptimistic(): boolean;
   getHeadRoot(): RootHex;
   getFinalizedCheckpoint(): CheckpointWithHex;
   getJustifiedCheckpoint(): CheckpointWithHex;
