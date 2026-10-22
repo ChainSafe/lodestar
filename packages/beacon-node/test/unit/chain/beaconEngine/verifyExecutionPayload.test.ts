@@ -62,7 +62,7 @@ describe("BeaconEngineCore envelope verification", () => {
   afterEach(() => vi.restoreAllMocks());
 
   function verify(validSignature = false) {
-    return BeaconEngineCore.prototype.importExecutionPayload.call(
+    return BeaconEngineCore.prototype.importExecutionPayloadBytes.call(
       chain.beaconEngine,
       bytes,
       DataAvailabilityStatus.Available,
@@ -133,7 +133,7 @@ describe("BeaconEngineCore envelope verification", () => {
     "rejects malformed envelope bytes before EL verification",
     async (malformed) => {
       await expect(
-        BeaconEngineCore.prototype.importExecutionPayload.call(
+        BeaconEngineCore.prototype.importExecutionPayloadBytes.call(
           chain.beaconEngine,
           malformed,
           DataAvailabilityStatus.Available,

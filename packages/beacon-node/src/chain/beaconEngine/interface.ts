@@ -259,37 +259,39 @@ export type ImportExecutionPayloadOpts = {
 export interface IBeaconEngine
   extends Omit<
     IBeaconEngineCore,
-    | "validateGossipBlock"
-    | "validateApiBlock"
-    | "verifyBlocks"
-    | "verifyGossipBlock"
+    | "validateGossipLightClientOptimisticUpdateBytes"
+    | "validateGossipLightClientFinalityUpdateBytes"
+    | "validateGossipBlockBytes"
+    | "validateApiBlockBytes"
+    | "verifyBlocksBytes"
+    | "verifyGossipBlockBytes"
     | "importBlock"
-    | "importExecutionPayload"
-    | "registerValidator"
-    | "submitBlindedBlock"
-    | "submitBlindedBlockNoResponse"
-    | "validateGossipSyncCommittee"
-    | "validateSyncCommitteeGossipContributionAndProof"
-    | "validateGossipBlobSidecar"
-    | "validateGossipFuluDataColumnSidecar"
-    | "validateGossipGloasDataColumnSidecar"
-    | "validateGossipPayloadAttestationMessage"
-    | "validateGossipAggregateAndProof"
-    | "validateGossipExecutionPayloadEnvelope"
-    | "validateGossipExecutionPayloadBid"
-    | "validateGossipProposerPreferences"
-    | "validateGossipAttesterSlashing"
-    | "validateGossipProposerSlashing"
-    | "validateGossipVoluntaryExit"
-    | "validateGossipBlsToExecutionChange"
-    | "validateApiSyncCommittee"
-    | "validateApiSyncCommitteeContributionAndProof"
-    | "validateApiPayloadAttestationMessage"
-    | "validateApiAggregateAndProof"
-    | "validateApiExecutionPayloadEnvelope"
-    | "validateApiExecutionPayloadBid"
-    | "verifyAndObserveBlockProposer"
-    | "verifyEnvelopeForPublish"
+    | "importExecutionPayloadBytes"
+    | "registerValidatorBytes"
+    | "submitBlindedBlockBytes"
+    | "submitBlindedBlockNoResponseBytes"
+    | "validateGossipSyncCommitteeBytes"
+    | "validateSyncCommitteeGossipContributionAndProofBytes"
+    | "validateGossipBlobSidecarBytes"
+    | "validateGossipFuluDataColumnSidecarBytes"
+    | "validateGossipGloasDataColumnSidecarBytes"
+    | "validateGossipPayloadAttestationMessageBytes"
+    | "validateGossipAggregateAndProofBytes"
+    | "validateGossipExecutionPayloadEnvelopeBytes"
+    | "validateGossipExecutionPayloadBidBytes"
+    | "validateGossipProposerPreferencesBytes"
+    | "validateGossipAttesterSlashingBytes"
+    | "validateGossipProposerSlashingBytes"
+    | "validateGossipVoluntaryExitBytes"
+    | "validateGossipBlsToExecutionChangeBytes"
+    | "validateApiSyncCommitteeBytes"
+    | "validateApiSyncCommitteeContributionAndProofBytes"
+    | "validateApiPayloadAttestationMessageBytes"
+    | "validateApiAggregateAndProofBytes"
+    | "validateApiExecutionPayloadEnvelopeBytes"
+    | "validateApiExecutionPayloadBidBytes"
+    | "verifyAndObserveBlockProposerBytes"
+    | "verifyEnvelopeForPublishBytes"
     | "pauseFastConfirmation"
     | "resumeFastConfirmation"
     | "recomputeForkChoiceHead"
@@ -297,6 +299,8 @@ export interface IBeaconEngine
     | "onSlot"
     | "onEpoch"
   > {
+  validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
+  validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
   pauseFastConfirmation(): Promise<void>;
@@ -458,8 +462,14 @@ export interface IBeaconEngineCore {
   getLightClientFinalityUpdate(): Promise<SerializedLightClientData | null>;
   getLightClientCommitteeRoot(period: number): Promise<Root>;
   pruneLightClientNonCheckpointData(roots: Root[]): Promise<void>;
-  validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
-  validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
+  validateGossipLightClientOptimisticUpdateBytes(
+    bytes: Uint8Array,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipLightClientFinalityUpdateBytes(
+    bytes: Uint8Array,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>>;
 
   // Developer API diagnostics only. Operational reads belong to BeaconChain.
   getHeads(): Promise<ProtoBlock[]>;
@@ -485,14 +495,17 @@ export interface IBeaconEngineCore {
   produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse>;
   produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response>;
 
-  registerValidator(epoch: Epoch, registrationsBytes: Uint8Array): Promise<void>;
+  registerValidatorBytes(epoch: Epoch, registrationsBytes: Uint8Array): Promise<void>;
   /**
    * Pre-Fulu path: submit via Builder API v1 and return full block contents for BeaconChain to gossip.
    * Returns SSZ SignedBeaconBlock before Deneb, or SignedBlockContents from Deneb.
    */
-  submitBlindedBlock(signedBlindedBlockBytes: Uint8Array, fork: ForkPostBellatrix & ForkPreGloas): Promise<Uint8Array>;
+  submitBlindedBlockBytes(
+    signedBlindedBlockBytes: Uint8Array,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<Uint8Array>;
   /** Fulu path (before Gloas): submit via Builder API v2; the relay publishes and returns only an acknowledgement. */
-  submitBlindedBlockNoResponse(
+  submitBlindedBlockNoResponseBytes(
     signedBlindedBlockBytes: Uint8Array,
     fork: ForkPostBellatrix & ForkPreGloas
   ): Promise<void>;
@@ -672,34 +685,41 @@ export interface IBeaconEngineCore {
    * Always returns a validation result, including decoding failures. Invalid SSZ or a mismatched
    * root returns Reject; unexpected internal failures are logged and return Ignore/UNEXPECTED_ERROR.
    */
-  validateGossipBlock(
+  validateGossipBlockBytes(
     signedBlockRoot: SignedBlockRoot,
     blockBytes: Uint8Array,
     fork: ForkName,
     seenTimestampSec?: number
   ): Promise<GossipBlockResult>;
-  validateGossipSyncCommittee(syncCommitteeBytes: Uint8Array, subnet: SubnetID): Promise<GossipValidationResult<void>>;
-  validateApiSyncCommittee(syncCommitteeBytes: Uint8Array): Promise<GossipValidationResult<{subnets: number[]}>>;
-  validateSyncCommitteeGossipContributionAndProof(
+  validateGossipSyncCommitteeBytes(
+    syncCommitteeBytes: Uint8Array,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateApiSyncCommitteeBytes(syncCommitteeBytes: Uint8Array): Promise<GossipValidationResult<{subnets: number[]}>>;
+  validateSyncCommitteeGossipContributionAndProofBytes(
     contributionBytes: Uint8Array,
     skipValidationKnownParticipants?: boolean
   ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>>;
-  validateApiSyncCommitteeContributionAndProof(contributionBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-  validateGossipBlobSidecar(
+  validateApiSyncCommitteeContributionAndProofBytes(
+    contributionBytes: Uint8Array
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipBlobSidecarBytes(
     blobBytes: Uint8Array,
     fork: ForkName,
     subnet: SubnetID
   ): Promise<GossipValidationResult<void>>;
-  validateGossipFuluDataColumnSidecar(
+  validateGossipFuluDataColumnSidecarBytes(
     dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>>;
-  validateGossipGloasDataColumnSidecar(
+  validateGossipGloasDataColumnSidecarBytes(
     dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>>;
-  validateGossipPayloadAttestationMessage(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-  validateApiPayloadAttestationMessage(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateGossipPayloadAttestationMessageBytes(
+    payloadAttestationBytes: Uint8Array
+  ): Promise<GossipValidationResult<void>>;
+  validateApiPayloadAttestationMessageBytes(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateGossipAttestationsSameAttData(
     fork: ForkName,
     attestations: GossipAttestation[],
@@ -710,47 +730,47 @@ export interface IBeaconEngineCore {
     fork: ForkName,
     attestationOrBytes: ApiAttestation
   ): Promise<GossipValidationResult<AttestationValidationResult>>;
-  validateGossipAggregateAndProof(
+  validateGossipAggregateAndProofBytes(
     aggregateBytes: Uint8Array,
     fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
-  validateApiAggregateAndProof(
+  validateApiAggregateAndProofBytes(
     aggregateBytes: Uint8Array,
     fork: ForkName
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
-  validateGossipExecutionPayloadEnvelope(
+  validateGossipExecutionPayloadEnvelopeBytes(
     envelopeBytes: Uint8Array,
     source: SourceMeta
   ): Promise<GossipValidationResult<void>>;
-  validateApiExecutionPayloadEnvelope(
+  validateApiExecutionPayloadEnvelopeBytes(
     envelopeBytes: Uint8Array,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<void>>;
-  validateGossipExecutionPayloadBid(
+  validateGossipExecutionPayloadBidBytes(
     bidBytes: Uint8Array,
     fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
-  validateApiExecutionPayloadBid(bidBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-  validateGossipProposerPreferences(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateApiExecutionPayloadBidBytes(bidBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateGossipProposerPreferencesBytes(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>>;
 
   // Op pool: gossip validate (+ insert on Accept) / API validate (throws, + insert) / REST reads. The
   // pools live inside the engine (not exposed as cache objects); the facade reaches them only here.
-  validateGossipAttesterSlashing(
+  validateGossipAttesterSlashingBytes(
     attesterSlashingBytes: Uint8Array,
     fork: ForkName
   ): Promise<GossipValidationResult<void>>;
   validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void>;
-  validateGossipProposerSlashing(proposerSlashingBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateGossipProposerSlashingBytes(proposerSlashingBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void>;
-  validateGossipVoluntaryExit(voluntaryExitBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateGossipVoluntaryExitBytes(voluntaryExitBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateApiVoluntaryExit(
     voluntaryExit: phase0.SignedVoluntaryExit
   ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}>;
   drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]>;
   insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>;
-  validateGossipBlsToExecutionChange(blsToExecutionChangeBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateGossipBlsToExecutionChangeBytes(blsToExecutionChangeBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateApiBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
     preCapella: boolean
@@ -796,8 +816,8 @@ export interface IBeaconEngineCore {
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]>;
-  verifyAndObserveBlockProposer(bytes: Uint8Array, root: RootHex): Promise<void>;
-  verifyEnvelopeForPublish(bytes: Uint8Array, blockRootHex: RootHex): Promise<void>;
+  verifyAndObserveBlockProposerBytes(bytes: Uint8Array, root: RootHex): Promise<void>;
+  verifyEnvelopeForPublishBytes(bytes: Uint8Array, blockRootHex: RootHex): Promise<void>;
   isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean>;
 
   /**
@@ -806,7 +826,7 @@ export interface IBeaconEngineCore {
    * Records authenticated proposer headers without triggering slashing production.
    * The facade must still wait for DA before publishing the block.
    */
-  validateApiBlock(
+  validateApiBlockBytes(
     signedBlockRoot: SignedBlockRoot,
     blockBytes: Uint8Array,
     opts: VerifyBlocksOpts
@@ -815,13 +835,13 @@ export interface IBeaconEngineCore {
    * Marks verified proposals as known independently of DA and retains bundles by signed root until
    * importBlock or discardVerifiedBlocks releases them.
    */
-  verifyBlocks(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>>;
+  verifyBlocksBytes(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>>;
   /**
-   * Uses the same verification pipeline as verifyBlocks, for one cached gossip candidate.
-   * validateGossipBlock must run first and retain its block/bytes. An absent or evicted candidate
+   * Uses the same verification pipeline as verifyBlocksBytes, for one cached gossip candidate.
+   * validateGossipBlockBytes must run first and retain its block/bytes. An absent or evicted candidate
    * returns GOSSIP_BLOCK_NOT_CACHED; its bytes are never requested again through this method.
    */
-  verifyGossipBlock(signedBlockRoot: SignedBlockRoot, opts: VerifyBlocksOpts): Promise<VerifyGossipBlockResult>;
+  verifyGossipBlockBytes(signedBlockRoot: SignedBlockRoot, opts: VerifyBlocksOpts): Promise<VerifyGossipBlockResult>;
   /** Import and release the verification bundle for this exact signed candidate. */
   importBlock(
     signedBlockRoot: SignedBlockRoot,
@@ -835,7 +855,7 @@ export interface IBeaconEngineCore {
 
   // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts.
   // The facade supplies DA; the engine verifies, persists and imports the envelope in one call.
-  importExecutionPayload(
+  importExecutionPayloadBytes(
     envelopeBytes: Uint8Array,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts

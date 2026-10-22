@@ -110,7 +110,7 @@ export function validateApiAttestation(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.beacon_aggregate_and_proof.
  * [beacon-engine] deviation: pool/fork-choice updates precede the verdict; monitoring stays deferred.
  */
-export async function validateGossipAggregateAndProof(
+export async function validateGossipAggregateAndProofBytes(
   this: BeaconEngineCore,
   aggregateBytes: Uint8Array,
   fork: ForkName,
@@ -124,7 +124,7 @@ export async function validateGossipAggregateAndProof(
       // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
       {reuseBytes: false}
     );
-    return await validateGossipAggregateAndProofObject.call(
+    return await validateGossipAggregateAndProof.call(
       this,
       {data: signedAggregateAndProof, bytes: aggregateBytes},
       fork,
@@ -137,7 +137,7 @@ export async function validateGossipAggregateAndProof(
   }
 }
 
-export async function validateGossipAggregateAndProofObject(
+export async function validateGossipAggregateAndProof(
   this: BeaconEngineCore,
   {data: signedAggregateAndProof, bytes: aggregateBytes}: WithBytes<SignedAggregateAndProof>,
   fork: ForkName,

@@ -35,8 +35,8 @@ describe("API block validation", () => {
           err: blockFailureFromError(error, chain.config, [computeSignedBlockRoot(ForkName.phase0, block)]),
         })
       );
+      chain.beaconEngine.validateApiBlockBytes = validate;
       chain.beaconEngine.validateApiBlock = validate;
-      chain.beaconEngine.validateApiBlockObject = validate;
       const available = vi
         .spyOn(da, "verifyBlocksDataAvailability")
         .mockImplementation(
@@ -77,7 +77,7 @@ describe("API block validation", () => {
     const available = defer<Awaited<ReturnType<typeof da.verifyBlocksDataAvailability>>>();
     vi.spyOn(da, "verifyBlocksDataAvailability").mockReturnValue(available.promise);
     const validate = vi.fn().mockResolvedValue({err: null, result: undefined});
-    chain.beaconEngine.validateApiBlockObject = validate;
+    chain.beaconEngine.validateApiBlock = validate;
     const discard = vi.spyOn(chain.beaconEngine, "discardVerifiedBlocks");
     const validation = validateApiBlock.call(withBeaconEngineFacade(chain), blockInput, {});
     let settled = false;

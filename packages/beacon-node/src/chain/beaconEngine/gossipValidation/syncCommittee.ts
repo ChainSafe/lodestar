@@ -14,14 +14,14 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.sync_committee.
  * [beacon-engine] deviation: insert into the engine pool before returning the verdict.
  */
-export async function validateGossipSyncCommittee(
+export async function validateGossipSyncCommitteeBytes(
   this: BeaconEngineCore,
   syncCommitteeBytes: Uint8Array,
   subnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
   try {
     const syncCommittee = deserializeGossipMessage(ssz.altair.SyncCommitteeMessage, syncCommitteeBytes);
-    return await validateGossipSyncCommitteeObject.call(this, syncCommittee, subnet);
+    return await validateGossipSyncCommittee.call(this, syncCommittee, subnet);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip sync committee", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -29,7 +29,7 @@ export async function validateGossipSyncCommittee(
   }
 }
 
-export async function validateGossipSyncCommitteeObject(
+export async function validateGossipSyncCommittee(
   this: BeaconEngineCore,
   syncCommittee: altair.SyncCommitteeMessage,
   subnet: SubnetID
@@ -95,7 +95,7 @@ export function validateApiSyncCommittee(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.sync_committee_contribution_and_proof.
  * [beacon-engine] deviation: pool insertion precedes the verdict; monitoring stays deferred.
  */
-export async function validateSyncCommitteeGossipContributionAndProof(
+export async function validateSyncCommitteeGossipContributionAndProofBytes(
   this: BeaconEngineCore,
   contributionBytes: Uint8Array,
   skipValidationKnownParticipants = false
@@ -105,7 +105,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
       ssz.altair.SignedContributionAndProof,
       contributionBytes
     );
-    return await validateSyncCommitteeGossipContributionAndProofObject.call(
+    return await validateSyncCommitteeGossipContributionAndProof.call(
       this,
       signedContributionAndProof,
       skipValidationKnownParticipants
@@ -121,7 +121,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   }
 }
 
-export async function validateSyncCommitteeGossipContributionAndProofObject(
+export async function validateSyncCommitteeGossipContributionAndProof(
   this: BeaconEngineCore,
   signedContributionAndProof: altair.SignedContributionAndProof,
   skipValidationKnownParticipants = false

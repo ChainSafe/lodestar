@@ -7,14 +7,14 @@ import type {BeaconEngineCore} from "../beaconEngineCore.js";
 import {GossipValidationResult, accept, fromResult, ignore} from "../gossipValidationResult.js";
 import {deserializeGossipMessage} from "./deserialize.js";
 
-export async function validateGossipLightClientOptimisticUpdate(
+export async function validateGossipLightClientOptimisticUpdateBytes(
   this: BeaconEngineCore,
   bytes: Uint8Array,
   fork: ForkName
 ): Promise<GossipValidationResult<void>> {
   try {
     const update = deserializeGossipMessage(sszTypesFor(fork as ForkPostAltair, "LightClientOptimisticUpdate"), bytes);
-    return await validateGossipLightClientOptimisticUpdateObject.call(this, update);
+    return await validateGossipLightClientOptimisticUpdate.call(this, update);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error(
@@ -26,7 +26,7 @@ export async function validateGossipLightClientOptimisticUpdate(
   }
 }
 
-export async function validateGossipLightClientOptimisticUpdateObject(
+export async function validateGossipLightClientOptimisticUpdate(
   this: BeaconEngineCore,
   update: LightClientOptimisticUpdate
 ): Promise<GossipValidationResult<void>> {
@@ -49,14 +49,14 @@ export async function validateGossipLightClientOptimisticUpdateObject(
   }
 }
 
-export async function validateGossipLightClientFinalityUpdate(
+export async function validateGossipLightClientFinalityUpdateBytes(
   this: BeaconEngineCore,
   bytes: Uint8Array,
   fork: ForkName
 ): Promise<GossipValidationResult<void>> {
   try {
     const update = deserializeGossipMessage(sszTypesFor(fork as ForkPostAltair, "LightClientFinalityUpdate"), bytes);
-    return await validateGossipLightClientFinalityUpdateObject.call(this, update);
+    return await validateGossipLightClientFinalityUpdate.call(this, update);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error(
@@ -68,7 +68,7 @@ export async function validateGossipLightClientFinalityUpdate(
   }
 }
 
-export async function validateGossipLightClientFinalityUpdateObject(
+export async function validateGossipLightClientFinalityUpdate(
   this: BeaconEngineCore,
   update: LightClientFinalityUpdate
 ): Promise<GossipValidationResult<void>> {

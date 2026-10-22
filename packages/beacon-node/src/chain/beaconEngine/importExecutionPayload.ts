@@ -37,7 +37,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * Runs inside BeaconEngineCore. Moved from unstable@1bf214377e packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
-export async function importExecutionPayload(
+export async function importExecutionPayloadBytes(
   this: BeaconEngineCore,
   // [beacon-engine] deviation: serialized envelope replaces the upstream payload-input object.
   envelopeBytes: Uint8Array,
@@ -50,15 +50,10 @@ export async function importExecutionPayload(
   } catch (e) {
     throw new PayloadError({code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: (e as Error).message});
   }
-  return importExecutionPayloadObject.call(
-    this,
-    {data: signedEnvelope, bytes: envelopeBytes},
-    dataAvailabilityStatus,
-    opts
-  );
+  return importExecutionPayload.call(this, {data: signedEnvelope, bytes: envelopeBytes}, dataAvailabilityStatus, opts);
 }
 
-export async function importExecutionPayloadObject(
+export async function importExecutionPayload(
   this: BeaconEngineCore,
   {data: signedEnvelope, bytes: envelopeBytes}: WithBytes<gloas.SignedExecutionPayloadEnvelope>,
   dataAvailabilityStatus: DataAvailabilityStatus,

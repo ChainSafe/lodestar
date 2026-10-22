@@ -253,8 +253,8 @@ describe("BeaconEngineCore light client ownership", () => {
     });
     const validateObject = () =>
       kind === "optimistic"
-        ? engine.validateGossipLightClientOptimisticUpdateObject(value)
-        : engine.validateGossipLightClientFinalityUpdateObject(value);
+        ? engine.validateGossipLightClientOptimisticUpdate(value)
+        : engine.validateGossipLightClientFinalityUpdate(value);
     const candidateCacheAccess = vi.fn(() => {
       throw Error("Light-client object validation must not access BlockSerializedCache");
     });

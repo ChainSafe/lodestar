@@ -9,14 +9,14 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/dataColumnSidecar.ts#validateGossipFuluDataColumnSidecar.
  * [beacon-engine] deviation: invoke validation with engine state and convert gossip errors to verdicts.
  */
-export async function validateGossipFuluDataColumnSidecar(
+export async function validateGossipFuluDataColumnSidecarBytes(
   this: BeaconEngineCore,
   dataColumnBytes: Uint8Array,
   gossipSubnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
   try {
     const dataColumnSidecar = deserializeGossipMessage(ssz.fulu.DataColumnSidecar, dataColumnBytes);
-    return await validateGossipFuluDataColumnSidecarObject.call(this, dataColumnSidecar, gossipSubnet);
+    return await validateGossipFuluDataColumnSidecar.call(this, dataColumnSidecar, gossipSubnet);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip fulu data column sidecar", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -24,7 +24,7 @@ export async function validateGossipFuluDataColumnSidecar(
   }
 }
 
-export async function validateGossipFuluDataColumnSidecarObject(
+export async function validateGossipFuluDataColumnSidecar(
   this: BeaconEngineCore,
   dataColumnSidecar: fulu.DataColumnSidecar,
   gossipSubnet: SubnetID
@@ -49,14 +49,14 @@ export async function validateGossipFuluDataColumnSidecarObject(
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/dataColumnSidecar.ts#validateGossipGloasDataColumnSidecar.
  * [beacon-engine] deviation: invoke validation with engine state and convert gossip errors to verdicts.
  */
-export async function validateGossipGloasDataColumnSidecar(
+export async function validateGossipGloasDataColumnSidecarBytes(
   this: BeaconEngineCore,
   dataColumnBytes: Uint8Array,
   gossipSubnet: SubnetID
 ): Promise<GossipValidationResult<void>> {
   try {
     const dataColumnSidecar = deserializeGossipMessage(ssz.gloas.DataColumnSidecar, dataColumnBytes);
-    return await validateGossipGloasDataColumnSidecarObject.call(this, dataColumnSidecar, gossipSubnet);
+    return await validateGossipGloasDataColumnSidecar.call(this, dataColumnSidecar, gossipSubnet);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip gloas data column sidecar", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -64,7 +64,7 @@ export async function validateGossipGloasDataColumnSidecar(
   }
 }
 
-export async function validateGossipGloasDataColumnSidecarObject(
+export async function validateGossipGloasDataColumnSidecar(
   this: BeaconEngineCore,
   dataColumnSidecar: gloas.DataColumnSidecar,
   gossipSubnet: SubnetID

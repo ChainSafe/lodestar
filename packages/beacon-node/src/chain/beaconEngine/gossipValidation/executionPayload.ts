@@ -17,7 +17,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * Handler source: unstable@2593063a82 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.payload_attestation_message.
  * [beacon-engine] deviation: pool/fork-choice updates precede the verdict; consume indices internally.
  */
-export async function validateGossipPayloadAttestationMessage(
+export async function validateGossipPayloadAttestationMessageBytes(
   this: BeaconEngineCore,
   payloadAttestationBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
@@ -26,7 +26,7 @@ export async function validateGossipPayloadAttestationMessage(
       ssz.gloas.PayloadAttestationMessage,
       payloadAttestationBytes
     );
-    return await validateGossipPayloadAttestationMessageObject.call(this, payloadAttestationMessage);
+    return await validateGossipPayloadAttestationMessage.call(this, payloadAttestationMessage);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error(
@@ -38,7 +38,7 @@ export async function validateGossipPayloadAttestationMessage(
   }
 }
 
-export async function validateGossipPayloadAttestationMessageObject(
+export async function validateGossipPayloadAttestationMessage(
   this: BeaconEngineCore,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<GossipValidationResult<void>> {
@@ -132,14 +132,14 @@ function insertPayloadAttestationOnAccept(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.execution_payload.
  * [beacon-engine] deviation: cache and monitor the envelope in the engine before returning a verdict.
  */
-export async function validateGossipExecutionPayloadEnvelope(
+export async function validateGossipExecutionPayloadEnvelopeBytes(
   this: BeaconEngineCore,
   envelopeBytes: Uint8Array,
   source: SourceMeta
 ): Promise<GossipValidationResult<void>> {
   try {
     const executionPayloadEnvelope = deserializeGossipMessage(ssz.gloas.SignedExecutionPayloadEnvelope, envelopeBytes);
-    return await validateGossipExecutionPayloadEnvelopeObject.call(this, executionPayloadEnvelope, source);
+    return await validateGossipExecutionPayloadEnvelope.call(this, executionPayloadEnvelope, source);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip execution payload envelope", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -147,7 +147,7 @@ export async function validateGossipExecutionPayloadEnvelope(
   }
 }
 
-export async function validateGossipExecutionPayloadEnvelopeObject(
+export async function validateGossipExecutionPayloadEnvelope(
   this: BeaconEngineCore,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
   source: SourceMeta
@@ -212,7 +212,7 @@ export function validateApiExecutionPayloadEnvelope(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.execution_payload_bid.
  * [beacon-engine] deviation: pool insertion precedes the verdict; monitoring stays deferred.
  */
-export async function validateGossipExecutionPayloadBid(
+export async function validateGossipExecutionPayloadBidBytes(
   this: BeaconEngineCore,
   bidBytes: Uint8Array,
   fork: ForkName,
@@ -223,7 +223,7 @@ export async function validateGossipExecutionPayloadBid(
       isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid,
       bidBytes
     );
-    return await validateGossipExecutionPayloadBidObject.call(this, signedExecutionPayloadBid, seenTimestampSec);
+    return await validateGossipExecutionPayloadBid.call(this, signedExecutionPayloadBid, seenTimestampSec);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip execution payload bid", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -231,7 +231,7 @@ export async function validateGossipExecutionPayloadBid(
   }
 }
 
-export async function validateGossipExecutionPayloadBidObject(
+export async function validateGossipExecutionPayloadBid(
   this: BeaconEngineCore,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
   seenTimestampSec: number

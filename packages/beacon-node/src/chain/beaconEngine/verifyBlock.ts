@@ -25,7 +25,7 @@ import {VerifyBlocksOpts, VerifyBlocksSuccess} from "./interface.js";
  * Synced through unstable@2593063a82.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
-export async function verifyBlocks(
+export async function verifyBlocksBytes(
   this: BeaconEngineCore,
   // [beacon-engine] deviation: bytes/POJO seam leaves DA verification in the facade.
   blockData: BlockBytes[],
@@ -38,10 +38,10 @@ export async function verifyBlocks(
       : this.blockSerializedCache.getOrDeserialize(signedBlockRoot, blockBytes);
     return {data: entry.block, bytes: entry.bytes};
   });
-  return verifyBlocksObject.call(this, entries, opts, isApiValidation);
+  return verifyBlocks.call(this, entries, opts, isApiValidation);
 }
 
-export async function verifyBlocksObject(
+export async function verifyBlocks(
   this: BeaconEngineCore,
   blockData: WithBytes<SignedBeaconBlock>[],
   opts: VerifyBlocksOpts,

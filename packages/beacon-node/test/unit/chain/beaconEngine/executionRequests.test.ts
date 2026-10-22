@@ -75,8 +75,8 @@ describe("BeaconEngineCore execution requests persistence", () => {
       chain.beaconEngine
     );
     const core: BeaconEngineCore = chain.beaconEngine;
+    core.importExecutionPayloadBytes = vi.fn(BeaconEngineCore.prototype.importExecutionPayloadBytes.bind(core));
     core.importExecutionPayload = vi.fn(BeaconEngineCore.prototype.importExecutionPayload.bind(core));
-    core.importExecutionPayloadObject = vi.fn(BeaconEngineCore.prototype.importExecutionPayloadObject.bind(core));
     chain.forkChoice.onExecutionPayload = vi.fn();
     chain.forkChoice.getBlockHex.mockReturnValue(null);
     const state = new BeaconStateView(createCachedBeaconState(generateState({slot: 1}, config), {config, pubkeyCache}));
@@ -141,7 +141,7 @@ describe("BeaconEngineCore execution requests persistence", () => {
   async function importEnvelope(): Promise<void> {
     const envelope = makeEnvelope();
     await expect(
-      chain.beaconEngine.importExecutionPayload(
+      chain.beaconEngine.importExecutionPayloadBytes(
         ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
         DataAvailabilityStatus.Available,
         {validSignature: true}
@@ -171,7 +171,7 @@ describe("BeaconEngineCore execution requests persistence", () => {
     });
 
     await importExecutionPayload.call(withBeaconEngineFacade(chain), input, DataAvailabilityStatus.Available);
-    expect(chain.beaconEngine.importExecutionPayloadObject).toHaveBeenCalledExactlyOnceWith(
+    expect(chain.beaconEngine.importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
       {data: envelope, bytes: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)},
       DataAvailabilityStatus.Available,
       {validSignature: false, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0}

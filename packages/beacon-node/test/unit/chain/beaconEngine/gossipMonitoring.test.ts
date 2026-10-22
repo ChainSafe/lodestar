@@ -105,7 +105,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
         );
       }
 
-      const result = await engine.validateGossipBlock(
+      const result = await engine.validateGossipBlockBytes(
         computeSignedBlockRoot(ForkName.phase0, block),
         ssz.phase0.SignedBeaconBlock.serialize(block),
         ForkName.phase0,
@@ -130,7 +130,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
   it("does not count API use of the block validator as gossip reception", async () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
     const observed = vi.spyOn(monitor, "registerBeaconBlock");
-    const result = await engine.validateGossipBlock(
+    const result = await engine.validateGossipBlockBytes(
       computeSignedBlockRoot(ForkName.phase0, ssz.phase0.SignedBeaconBlock.defaultValue()),
       ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
       ForkName.phase0
@@ -145,7 +145,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
     vi.spyOn(monitor, "registerBeaconBlock").mockImplementation(() => {
       throw new Error("monitor failed");
     });
-    const result = await engine.validateGossipBlock(
+    const result = await engine.validateGossipBlockBytes(
       computeSignedBlockRoot(ForkName.phase0, ssz.phase0.SignedBeaconBlock.defaultValue()),
       ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue()),
       ForkName.phase0,
@@ -218,15 +218,10 @@ describe("BeaconEngineCore gossip monitoring", () => {
     const observedContribution = vi.spyOn(monitor, "registerGossipSyncContributionAndProof");
     const aggregateBytes = ssz.electra.SignedAggregateAndProof.serialize(aggregate);
     expect(
-      (
-        await engine.validateGossipAggregateAndProofObject(
-          {data: aggregate, bytes: aggregateBytes},
-          ForkName.electra,
-          12.5
-        )
-      ).err
+      (await engine.validateGossipAggregateAndProof({data: aggregate, bytes: aggregateBytes}, ForkName.electra, 12.5))
+        .err
     ).toBeNull();
-    expect((await engine.validateSyncCommitteeGossipContributionAndProofObject(contribution)).err).toBeNull();
+    expect((await engine.validateSyncCommitteeGossipContributionAndProof(contribution)).err).toBeNull();
     expect(observedAggregate).not.toHaveBeenCalled();
     expect(observedContribution).not.toHaveBeenCalled();
     await vi.runAllTimersAsync();
@@ -243,7 +238,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
     const observed = vi.spyOn(monitor, "registerExecutionPayloadBid").mockImplementation(() => {
       throw new Error("monitor failed");
     });
-    const result = await engine.validateGossipExecutionPayloadBid(
+    const result = await engine.validateGossipExecutionPayloadBidBytes(
       ssz.gloas.SignedExecutionPayloadBid.serialize(bid),
       ForkName.gloas,
       1

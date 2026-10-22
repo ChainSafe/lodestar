@@ -93,7 +93,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
         return {skippedSlots: 0};
       });
 
-      const result = await engine.validateGossipBlock(
+      const result = await engine.validateGossipBlockBytes(
         computeSignedBlockRoot(ForkName.gloas, block),
         ssz.gloas.SignedBeaconBlock.serialize(block),
         ForkName.gloas
@@ -129,7 +129,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
         });
       });
 
-      const result = await engine.validateGossipBlock(
+      const result = await engine.validateGossipBlockBytes(
         computeSignedBlockRoot(ForkName.gloas, block),
         ssz.gloas.SignedBeaconBlock.serialize(block),
         ForkName.gloas,
@@ -185,7 +185,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
           throw new Error("unexpected validation failure");
       }
     });
-    const pending = engine.validateGossipBlock(
+    const pending = engine.validateGossipBlockBytes(
       computeSignedBlockRoot(ForkName.gloas, block),
       ssz.gloas.SignedBeaconBlock.serialize(block),
       ForkName.gloas,
@@ -221,7 +221,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       })
     );
     vi.mocked(blockValidation.verifyBlockProposerSignature).mockReturnValue(verified.promise);
-    const pending = engine.validateGossipBlock(
+    const pending = engine.validateGossipBlockBytes(
       computeSignedBlockRoot(ForkName.gloas, block),
       ssz.gloas.SignedBeaconBlock.serialize(block),
       ForkName.gloas,
@@ -281,13 +281,13 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       engine.seenBlockProposers.observeBlockRoot(1, 7, siblingRoot, signedBlockToSignedHeader(config, sibling));
       const bytes = ssz.gloas.SignedBeaconBlock.serialize(block);
 
-      await engine.validateGossipBlock(computeSignedBlockRoot(ForkName.gloas, block), bytes, ForkName.gloas, 0);
+      await engine.validateGossipBlockBytes(computeSignedBlockRoot(ForkName.gloas, block), bytes, ForkName.gloas, 0);
 
       if (scenario === "invalid_signature") expect(process).not.toHaveBeenCalled();
       else expect(process).toHaveBeenCalledExactlyOnceWith(1, 7);
 
       process.mockClear();
-      await engine.validateGossipBlock(computeSignedBlockRoot(ForkName.gloas, block), bytes, ForkName.gloas);
+      await engine.validateGossipBlockBytes(computeSignedBlockRoot(ForkName.gloas, block), bytes, ForkName.gloas);
       expect(process).not.toHaveBeenCalled();
     }
   );
@@ -310,7 +310,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       }
       const validate = vi.spyOn(blockValidation, "validateGossipBlock");
 
-      const result = await engine.validateGossipBlock(
+      const result = await engine.validateGossipBlockBytes(
         computeSignedBlockRoot(ForkName.gloas, block),
         bytes,
         ForkName.gloas,
@@ -339,7 +339,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
     });
 
     await expect(
-      engine.validateGossipBlock(
+      engine.validateGossipBlockBytes(
         computeSignedBlockRoot(ForkName.gloas, block),
         ssz.gloas.SignedBeaconBlock.serialize(block),
         ForkName.gloas,
@@ -356,7 +356,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
 
   it("retains API observations on validation failure and preserves an existing envelope candidate", async () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
-    await engine.validateGossipBlock(
+    await engine.validateGossipBlockBytes(
       computeSignedBlockRoot(ForkName.gloas, block),
       ssz.gloas.SignedBeaconBlock.serialize(block),
       ForkName.gloas
@@ -371,7 +371,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
     );
     expect(
       (
-        await engine.validateGossipBlock(
+        await engine.validateGossipBlockBytes(
           computeSignedBlockRoot(ForkName.gloas, block),
           ssz.gloas.SignedBeaconBlock.serialize(block),
           ForkName.gloas
@@ -404,7 +404,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       throw new Error("pre-state unavailable");
     });
     await expect(
-      engine.verifyBlocks(
+      engine.verifyBlocksBytes(
         blocks.map((block) => ({
           signedBlockRoot: computeSignedBlockRoot(ForkName.gloas, block),
           blockBytes: ssz.gloas.SignedBeaconBlock.serialize(block),
@@ -425,7 +425,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
       throw new Error("invalid proposer signature");
     });
     await expect(
-      engine.verifyAndObserveBlockProposer(ssz.gloas.SignedBeaconBlock.serialize(block), root)
+      engine.verifyAndObserveBlockProposerBytes(ssz.gloas.SignedBeaconBlock.serialize(block), root)
     ).rejects.toThrow("invalid proposer signature");
     expect(engine.seenPayloadEnvelopeInputCache.get(root)?.proposerIndex).toBe(7);
   });
@@ -433,7 +433,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
   it("does not create payload inputs for pre-Gloas blocks", async () => {
     vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    await engine.validateGossipBlock(
+    await engine.validateGossipBlockBytes(
       computeSignedBlockRoot(ForkName.phase0, block),
       ssz.phase0.SignedBeaconBlock.serialize(block),
       ForkName.phase0

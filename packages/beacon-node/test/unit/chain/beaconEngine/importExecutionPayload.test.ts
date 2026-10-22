@@ -103,7 +103,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       validationError: "EL failure",
     });
     const result = structuredClone(
-      await BeaconEngineCore.prototype.importExecutionPayload.call(
+      await BeaconEngineCore.prototype.importExecutionPayloadBytes.call(
         chain.beaconEngine,
         envelopeBytes,
         DataAvailabilityStatus.Available,
@@ -124,8 +124,9 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       chain.opts.beaconEngineWorker = beaconEngineWorker;
       Object.defineProperty(chain, "serializedCache", {value: cache});
       const core: BeaconEngineCore = chain.beaconEngine;
-      core.validateGossipExecutionPayloadEnvelope = BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelope;
-      core.importExecutionPayload = BeaconEngineCore.prototype.importExecutionPayload;
+      core.validateGossipExecutionPayloadEnvelopeBytes =
+        BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelopeBytes;
+      core.importExecutionPayloadBytes = BeaconEngineCore.prototype.importExecutionPayloadBytes;
       const facade = withBeaconEngineFacade(chain).beaconEngine;
       const input = PayloadEnvelopeInput.createFromBlock({
         block: ssz.gloas.SignedBeaconBlock.defaultValue(),
@@ -169,7 +170,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
         ? {status: ExecutionPayloadStatus.VALID, latestValidHash: blockHashHex, validationError: null}
         : {status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null}
     );
-    return BeaconEngineCore.prototype.importExecutionPayload.call(
+    return BeaconEngineCore.prototype.importExecutionPayloadBytes.call(
       chain.beaconEngine,
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(candidate),
       DataAvailabilityStatus.Available,
@@ -219,7 +220,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       const importing =
         inputType === "bytes"
           ? importPayload()
-          : BeaconEngineCore.prototype.importExecutionPayloadObject.call(
+          : BeaconEngineCore.prototype.importExecutionPayload.call(
               chain.beaconEngine,
               {data: envelope, bytes: envelopeBytes},
               DataAvailabilityStatus.Available,

@@ -15,13 +15,13 @@ import {deserializeGossipMessage} from "./deserialize.js";
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.proposer_preferences.
  * [beacon-engine] deviation: insert into the engine pool before returning the verdict.
  */
-export async function validateGossipProposerPreferences(
+export async function validateGossipProposerPreferencesBytes(
   this: BeaconEngineCore,
   preferencesBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
     const signedProposerPreferences = deserializeGossipMessage(ssz.gloas.SignedProposerPreferences, preferencesBytes);
-    return await validateGossipProposerPreferencesObject.call(this, signedProposerPreferences);
+    return await validateGossipProposerPreferences.call(this, signedProposerPreferences);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip proposer preferences", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -29,7 +29,7 @@ export async function validateGossipProposerPreferences(
   }
 }
 
-export async function validateGossipProposerPreferencesObject(
+export async function validateGossipProposerPreferences(
   this: BeaconEngineCore,
   signedProposerPreferences: gloas.SignedProposerPreferences
 ): Promise<GossipValidationResult<void>> {
@@ -54,14 +54,14 @@ export async function validateGossipProposerPreferencesObject(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.attester_slashing.
  * [beacon-engine] deviation: pool/fork-choice writes precede the verdict; consume verified domains internally.
  */
-export async function validateGossipAttesterSlashing(
+export async function validateGossipAttesterSlashingBytes(
   this: BeaconEngineCore,
   attesterSlashingBytes: Uint8Array,
   fork: ForkName
 ): Promise<GossipValidationResult<void>> {
   try {
     const attesterSlashing = deserializeGossipMessage(sszTypesFor(fork).AttesterSlashing, attesterSlashingBytes);
-    return await validateGossipAttesterSlashingObject.call(this, attesterSlashing, fork);
+    return await validateGossipAttesterSlashing.call(this, attesterSlashing, fork);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip attester slashing", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -69,7 +69,7 @@ export async function validateGossipAttesterSlashing(
   }
 }
 
-export async function validateGossipAttesterSlashingObject(
+export async function validateGossipAttesterSlashing(
   this: BeaconEngineCore,
   attesterSlashing: AttesterSlashing,
   fork: ForkName
@@ -114,13 +114,13 @@ export async function validateApiAttesterSlashing(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.proposer_slashing.
  * [beacon-engine] deviation: pool insertion precedes the verdict; consume the verified domain internally.
  */
-export async function validateGossipProposerSlashing(
+export async function validateGossipProposerSlashingBytes(
   this: BeaconEngineCore,
   proposerSlashingBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
     const proposerSlashing = deserializeGossipMessage(ssz.phase0.ProposerSlashing, proposerSlashingBytes);
-    return await validateGossipProposerSlashingObject.call(this, proposerSlashing);
+    return await validateGossipProposerSlashing.call(this, proposerSlashing);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip proposer slashing", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -128,7 +128,7 @@ export async function validateGossipProposerSlashing(
   }
 }
 
-export async function validateGossipProposerSlashingObject(
+export async function validateGossipProposerSlashing(
   this: BeaconEngineCore,
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<GossipValidationResult<void>> {
@@ -169,13 +169,13 @@ export async function validateApiProposerSlashing(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.voluntary_exit.
  * [beacon-engine] deviation: pool insertion precedes the verdict; API/network event handling stays outside.
  */
-export async function validateGossipVoluntaryExit(
+export async function validateGossipVoluntaryExitBytes(
   this: BeaconEngineCore,
   voluntaryExitBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
   try {
     const voluntaryExit = deserializeGossipMessage(ssz.phase0.SignedVoluntaryExit, voluntaryExitBytes);
-    return await validateGossipVoluntaryExitObject.call(this, voluntaryExit);
+    return await validateGossipVoluntaryExit.call(this, voluntaryExit);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip voluntary exit", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -183,7 +183,7 @@ export async function validateGossipVoluntaryExit(
   }
 }
 
-export async function validateGossipVoluntaryExitObject(
+export async function validateGossipVoluntaryExit(
   this: BeaconEngineCore,
   voluntaryExit: phase0.SignedVoluntaryExit
 ): Promise<GossipValidationResult<void>> {
@@ -230,7 +230,7 @@ export async function validateApiVoluntaryExit(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.bls_to_execution_change.
  * [beacon-engine] deviation: pool insertion precedes the verdict; API/network event handling stays outside.
  */
-export async function validateGossipBlsToExecutionChange(
+export async function validateGossipBlsToExecutionChangeBytes(
   this: BeaconEngineCore,
   blsToExecutionChangeBytes: Uint8Array
 ): Promise<GossipValidationResult<void>> {
@@ -239,7 +239,7 @@ export async function validateGossipBlsToExecutionChange(
       ssz.capella.SignedBLSToExecutionChange,
       blsToExecutionChangeBytes
     );
-    return await validateGossipBlsToExecutionChangeObject.call(this, blsToExecutionChange);
+    return await validateGossipBlsToExecutionChange.call(this, blsToExecutionChange);
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip bls to execution change", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -247,7 +247,7 @@ export async function validateGossipBlsToExecutionChange(
   }
 }
 
-export async function validateGossipBlsToExecutionChangeObject(
+export async function validateGossipBlsToExecutionChange(
   this: BeaconEngineCore,
   blsToExecutionChange: capella.SignedBLSToExecutionChange
 ): Promise<GossipValidationResult<void>> {

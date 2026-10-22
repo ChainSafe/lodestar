@@ -30,10 +30,10 @@ describe("api/validator - submitProposerPreferences", () => {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    modules.chain.beaconEngine.validateGossipProposerPreferences =
-      BeaconEngineCore.prototype.validateGossipProposerPreferences.bind(modules.chain.beaconEngine);
-    modules.chain.beaconEngine.validateGossipProposerPreferencesObject =
-      BeaconEngineCore.prototype.validateGossipProposerPreferencesObject.bind(modules.chain.beaconEngine);
+    const core: BeaconEngineCore = modules.chain.beaconEngine;
+    core.validateGossipProposerPreferencesBytes =
+      BeaconEngineCore.prototype.validateGossipProposerPreferencesBytes.bind(core);
+    core.validateGossipProposerPreferences = BeaconEngineCore.prototype.validateGossipProposerPreferences.bind(core);
     api = getValidatorApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
     vi.spyOn(modules.chain.clock, "currentEpoch", "get").mockReturnValue(5);
     modules.network.publishProposerPreferences = vi.fn().mockResolvedValue(1);

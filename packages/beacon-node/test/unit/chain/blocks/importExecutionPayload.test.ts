@@ -39,8 +39,8 @@ describe("payload import error context", () => {
     });
     const error = new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
     const importPayload = vi.fn().mockResolvedValue(structuredClone({err: payloadFailureFromError(error)}));
+    chain.beaconEngine.importExecutionPayloadBytes = importPayload;
     chain.beaconEngine.importExecutionPayload = importPayload;
-    chain.beaconEngine.importExecutionPayloadObject = importPayload;
     chain.executionEngine.notifyNewPayload = vi.fn<typeof chain.executionEngine.notifyNewPayload>().mockResolvedValue({
       status: ExecutionPayloadStatus.VALID,
       latestValidHash: toRootHex(new Uint8Array(32)),

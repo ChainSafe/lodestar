@@ -62,15 +62,15 @@ describe("BeaconEngineCore payload gossip validation", () => {
     chain.regen.getState.mockResolvedValue(state);
     chain.regen.getBlockSlotState.mockResolvedValue(state);
     vi.mocked(engine.bls.verifySignatureSets).mockResolvedValue(true);
-    engine.validateGossipExecutionPayloadEnvelope =
-      BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelope.bind(engine);
+    engine.validateGossipExecutionPayloadEnvelopeBytes =
+      BeaconEngineCore.prototype.validateGossipExecutionPayloadEnvelopeBytes.bind(engine);
   });
 
   afterEach(() => vi.restoreAllMocks());
 
   function validateEnvelope() {
     const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
-    return engine.validateGossipExecutionPayloadEnvelope(bytes, {
+    return engine.validateGossipExecutionPayloadEnvelopeBytes(bytes, {
       source: PayloadEnvelopeInputSource.gossip,
       seenTimestampSec: 1,
       peerIdStr: "peer",
@@ -137,7 +137,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
 
   it("records API validation in the engine cache", async () => {
     const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope");
-    const result = await BeaconEngineCore.prototype.validateApiExecutionPayloadEnvelope.call(
+    const result = await BeaconEngineCore.prototype.validateApiExecutionPayloadEnvelopeBytes.call(
       engine,
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
       1
@@ -157,7 +157,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
     });
     chain.forkChoice.hasBlockHex.mockReturnValue(true);
     const source = {source: PayloadEnvelopeInputSource.byRoot, seenTimestampSec: 2, peerIdStr: "sync-peer"};
-    const result = await engine.validateGossipExecutionPayloadEnvelope(
+    const result = await engine.validateGossipExecutionPayloadEnvelopeBytes(
       ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
       source
     );
@@ -193,7 +193,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
     chain.forkChoice.getBlockHex.mockReturnValue({...zeroProtoBlock, slot: 1, blockRoot: root});
     chain.regen.getBlockSlotState.mockRejectedValueOnce(new Error("state unavailable"));
     const verify = () =>
-      BeaconEngineCore.prototype.verifyEnvelopeForPublish.call(
+      BeaconEngineCore.prototype.verifyEnvelopeForPublishBytes.call(
         engine,
         ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
         root
@@ -218,7 +218,11 @@ describe("BeaconEngineCore payload gossip validation", () => {
     const column = columnSidecars[0];
     const bytes = ssz.gloas.DataColumnSidecar.serialize(column);
     const subnet = computeSubnetForDataColumnSidecar(config, column);
-    const result = await BeaconEngineCore.prototype.validateGossipGloasDataColumnSidecar.call(engine, bytes, subnet);
+    const result = await BeaconEngineCore.prototype.validateGossipGloasDataColumnSidecarBytes.call(
+      engine,
+      bytes,
+      subnet
+    );
     expect(result).toEqual({err: null, result: undefined});
   });
 
@@ -226,7 +230,7 @@ describe("BeaconEngineCore payload gossip validation", () => {
     const column = ssz.gloas.DataColumnSidecar.defaultValue();
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
     chain.forkChoice.hasBlockHex.mockReturnValue(false);
-    const result = await BeaconEngineCore.prototype.validateGossipGloasDataColumnSidecar.call(
+    const result = await BeaconEngineCore.prototype.validateGossipGloasDataColumnSidecarBytes.call(
       engine,
       ssz.gloas.DataColumnSidecar.serialize(column),
       0

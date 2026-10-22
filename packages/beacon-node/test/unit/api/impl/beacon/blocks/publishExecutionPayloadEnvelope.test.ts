@@ -40,8 +40,9 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.network.publishSignedExecutionPayloadEnvelope = vi.fn();
     modules.chain.processExecutionPayload = vi.fn();
-    modules.chain.beaconEngine.validateApiExecutionPayloadEnvelopeObject = vi
-      .fn<BeaconEngineCore["validateApiExecutionPayloadEnvelopeObject"]>()
+    const core: BeaconEngineCore = modules.chain.beaconEngine;
+    core.validateApiExecutionPayloadEnvelope = vi
+      .fn<BeaconEngineCore["validateApiExecutionPayloadEnvelope"]>()
       .mockResolvedValue(accept(undefined));
     modules.chain.beaconEngine.getConflictingBlockRoots = BeaconEngineCore.prototype.getConflictingBlockRoots.bind(
       modules.chain.beaconEngine
@@ -79,7 +80,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       signedEnvelope.message.payload.slotNumber = 1;
       const seenTimestampSec = computeTimeAtSlot(config, 1, modules.chain.genesisTime) + 1.25;
       vi.spyOn(Date, "now").mockReturnValue(seenTimestampSec * 1000);
-      vi.mocked(modules.chain.beaconEngine.validateApiExecutionPayloadEnvelopeObject).mockImplementation(async () => {
+      vi.mocked(modules.chain.beaconEngine.validateApiExecutionPayloadEnvelope).mockImplementation(async () => {
         vi.mocked(Date.now).mockReturnValue((seenTimestampSec + 1) * 1000);
         return accept(undefined);
       });

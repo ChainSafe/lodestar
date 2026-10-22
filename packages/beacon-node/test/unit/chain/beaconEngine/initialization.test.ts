@@ -673,7 +673,7 @@ describe("bytes-based engine startup", () => {
       const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
       vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
       const signedBlockRoot = computeSignedBlockRoot(ForkName.phase0, block);
-      await engine.validateGossipBlock(
+      await engine.validateGossipBlockBytes(
         signedBlockRoot,
         beaconEngineWorker ? structuredClone(bytes) : bytes,
         ForkName.phase0,
@@ -684,7 +684,10 @@ describe("bytes-based engine startup", () => {
       );
       vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
       await expect(
-        engine.verifyBlocks([{signedBlockRoot, blockBytes: beaconEngineWorker ? structuredClone(bytes) : bytes}], {})
+        engine.verifyBlocksBytes(
+          [{signedBlockRoot, blockBytes: beaconEngineWorker ? structuredClone(bytes) : bytes}],
+          {}
+        )
       ).resolves.toMatchObject({
         err: {type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"}},
       });
@@ -695,8 +698,8 @@ describe("bytes-based engine startup", () => {
       expect(cached?.block).not.toBe(block);
       expect(cached?.block).toEqual(block);
 
-      const verifyGossipBlock = vi.spyOn(engine, "verifyGossipBlock");
-      const verifyBlocksObject = vi.spyOn(engine, "verifyBlocksObject");
+      const verifyGossipBlock = vi.spyOn(engine, "verifyGossipBlockBytes");
+      const verifyBlocks = vi.spyOn(engine, "verifyBlocks");
       const input = BlockInputPreData.createFromBlock({
         block,
         blockRootHex: toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
@@ -709,7 +712,7 @@ describe("bytes-based engine startup", () => {
         type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"},
       });
       expect(verifyGossipBlock).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-      expect(verifyBlocksObject).toHaveBeenCalledTimes(beaconEngineWorker ? 0 : 1);
+      expect(verifyBlocks).toHaveBeenCalledTimes(beaconEngineWorker ? 0 : 1);
       expect(deserialize).toHaveBeenCalledTimes(1);
 
       expect(engine).not.toHaveProperty("serializedCache");
@@ -784,7 +787,7 @@ describe("bytes-based engine startup", () => {
     executionBuilderApi.submitBlindedBlock.mockResolvedValue({value: () => response});
     executionBuilderApi.submitBlindedBlockV2.mockResolvedValue({assertOk: () => {}});
     const submitBlindedBlock = vi.spyOn(builder, "submitBlindedBlock");
-    const submitBlindedBlockBytes = vi.spyOn(core, "submitBlindedBlock");
+    const submitBlindedBlockBytes = vi.spyOn(core, "submitBlindedBlockBytes");
     const serializeContents = vi.spyOn(ssz.electra.SignedBlockContents, "serialize");
     const deserializeContents = vi.spyOn(ssz.electra.SignedBlockContents, "deserialize");
 
@@ -851,17 +854,17 @@ describe("bytes-based engine startup", () => {
     deserialize.mockClear();
     serializeContents.mockClear();
     deserializeContents.mockClear();
-    const contents = await core.submitBlindedBlockObject(request);
+    const contents = await core.submitBlindedBlock(request);
     expect(contents).toBe(await submitBlindedBlock.mock.results.at(-1)?.value);
     expect(executionBuilderApi.submitBlindedBlock.mock.lastCall?.[0].signedBlindedBlock).toBe(request);
-    await core.submitBlindedBlockNoResponseObject(request);
+    await core.submitBlindedBlockNoResponse(request);
     expect(executionBuilderApi.submitBlindedBlockV2.mock.lastCall?.[0].signedBlindedBlock).toBe(request);
     expect(deserialize).not.toHaveBeenCalled();
     expect(serializeContents).not.toHaveBeenCalled();
     expect(deserializeContents).not.toHaveBeenCalled();
     const registrationDecode = vi.spyOn(routes.validator.SignedValidatorRegistrationV1ListType, "deserialize");
     const registrations = [registration];
-    await core.registerValidatorObject(3, registrations);
+    await core.registerValidator(3, registrations);
     expect(executionBuilderApi.registerValidator.mock.lastCall?.[0].registrations).toBe(registrations);
     expect(builder.getValidatorRegistration(registration.message.pubkey)).toEqual({epoch: 3, gasLimit: 36_000_000});
     expect(registrationDecode).not.toHaveBeenCalled();
@@ -897,9 +900,9 @@ describe("bytes-based engine startup", () => {
     executionBuilderApi.registerValidator.mockClear();
     executionBuilderApi.submitBlindedBlock.mockClear();
     executionBuilderApi.submitBlindedBlockV2.mockClear();
-    await expect(core.registerValidator(1, Uint8Array.of(1))).rejects.toThrow();
-    await expect(core.submitBlindedBlock(Uint8Array.of(1), ForkName.electra)).rejects.toThrow();
-    await expect(core.submitBlindedBlockNoResponse(Uint8Array.of(1), ForkName.fulu)).rejects.toThrow();
+    await expect(core.registerValidatorBytes(1, Uint8Array.of(1))).rejects.toThrow();
+    await expect(core.submitBlindedBlockBytes(Uint8Array.of(1), ForkName.electra)).rejects.toThrow();
+    await expect(core.submitBlindedBlockNoResponseBytes(Uint8Array.of(1), ForkName.fulu)).rejects.toThrow();
     expect(executionBuilderApi.registerValidator).not.toHaveBeenCalled();
     expect(executionBuilderApi.submitBlindedBlock).not.toHaveBeenCalled();
     expect(executionBuilderApi.submitBlindedBlockV2).not.toHaveBeenCalled();
