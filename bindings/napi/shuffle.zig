@@ -78,19 +78,19 @@ pub fn computeSyncCommitteeIndices(
     effective_balance_increment: js.Number,
     rounds: js.Number,
 ) !js.Uint32Array {
-    const result = try sons.computeSyncCommitteeIndices(
+    const out_array = try js.Uint32Array.alloc(sync_committee_size.assertU32());
+    try sons.computeSyncCommitteeIndicesInto(
         allocator,
         try seed.toSlice(),
         try active_indices.toSlice(),
         try effective_balance_increments.toSlice(),
         try byteCountFromJs(rand_byte_count),
-        sync_committee_size.assertU32(),
         max_effective_balance.assertI64(),
         effective_balance_increment.assertI64(),
         rounds.assertU32(),
+        try out_array.toSlice(),
     );
-    defer allocator.free(result);
-    return js.Uint32Array.from(result);
+    return out_array;
 }
 
 pub fn computePtcIndices(

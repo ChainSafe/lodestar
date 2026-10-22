@@ -101,6 +101,7 @@ pub fn TestCase(comptime target_fork: ForkSeq) type {
                 .altair => {
                     const upgraded = try upgradeStateToAltair(
                         self.pre.allocator,
+                        std.testing.io,
                         config,
                         epoch_cache,
                         try cached_state.state.tryCastToFork(.phase0),

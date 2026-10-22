@@ -114,7 +114,7 @@ pub fn processSlots(
 
             if (state_epoch == config.chain.ALTAIR_FORK_EPOCH) {
                 const phase0_state = try state.tryCastToFork(.phase0);
-                const upgraded = try upgradeStateToAltair(allocator, config, epoch_cache, phase0_state);
+                const upgraded = try upgradeStateToAltair(allocator, io, config, epoch_cache, phase0_state);
                 state.* = .{ .altair = upgraded.inner };
             }
             if (state_epoch == config.chain.BELLATRIX_FORK_EPOCH) {

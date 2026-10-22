@@ -214,31 +214,28 @@ describe("committee indices", () => {
   });
 
   it("computeSyncCommitteeIndices should match the naive implementation", {timeout: 20_000}, () => {
+    const seed = new Uint8Array(SEED_SIZE).fill(0x5a);
     for (const byteCount of byteCounts) {
-      const seed = new Uint8Array(randomBytes(32));
-      expect(
-        Array.from(
-          shuffle.computeSyncCommitteeIndices(
-            seed,
-            activeIndices,
-            effectiveBalanceIncrements,
-            byteCount,
-            SYNC_COMMITTEE_SIZE,
-            maxEffectiveBalanceFor(byteCount),
-            EFFECTIVE_BALANCE_INCREMENT,
-            SHUFFLE_ROUND_COUNT
-          )
-        ),
-        `byteCount ${byteCount}, seed 0x${Buffer.from(seed).toString("hex")}`
-      ).toEqual(
-        shuffleReference.naiveComputeSyncCommitteeIndices(
+      const expected = shuffleReference.naiveComputeSyncCommitteeIndices(
+        seed,
+        activeIndices,
+        effectiveBalanceIncrements,
+        byteCount,
+        maxEffectiveBalanceFor(byteCount)
+      );
+      for (const size of [32, SYNC_COMMITTEE_SIZE]) {
+        const result = shuffle.computeSyncCommitteeIndices(
           seed,
           activeIndices,
           effectiveBalanceIncrements,
           byteCount,
-          maxEffectiveBalanceFor(byteCount)
-        )
-      );
+          size,
+          maxEffectiveBalanceFor(byteCount),
+          EFFECTIVE_BALANCE_INCREMENT,
+          SHUFFLE_ROUND_COUNT
+        );
+        expect(Array.from(result), `byteCount ${byteCount}, size ${size}`).toEqual(expected.slice(0, size));
+      }
     }
   });
 });

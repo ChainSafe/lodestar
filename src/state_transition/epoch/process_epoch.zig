@@ -107,7 +107,7 @@ pub fn processEpoch(
 
     if (comptime fork.gte(.altair)) {
         timer = time.start(io);
-        try processSyncCommitteeUpdates(fork, allocator, epoch_cache, state);
+        try processSyncCommitteeUpdates(fork, allocator, io, epoch_cache, state);
         try observeEpochTransitionStep(.{ .step = .process_sync_committee_updates }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
     }
 

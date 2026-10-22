@@ -11,6 +11,7 @@ const Node = @import("persistent_merkle_tree").Node;
 pub fn processSyncCommitteeUpdates(
     comptime fork: ForkSeq,
     allocator: Allocator,
+    io: std.Io,
     epoch_cache: *EpochCache,
     state: *BeaconState(fork),
 ) !void {
@@ -21,7 +22,16 @@ pub fn processSyncCommitteeUpdates(
 
         // Compute next
         var next_sync_committee_info: SyncCommitteeInfo = undefined;
-        try getNextSyncCommittee(fork, allocator, state, active_validator_indices, effective_balance_increments, &next_sync_committee_info);
+        try getNextSyncCommittee(
+            fork,
+            allocator,
+            io,
+            epoch_cache.pubkey_cache,
+            state,
+            active_validator_indices,
+            effective_balance_increments,
+            &next_sync_committee_info,
+        );
 
         // Rotate syncCommittee in state
         try state.rotateSyncCommittees(&next_sync_committee_info.sync_committee);
@@ -46,6 +56,7 @@ test "processSyncCommitteeUpdates - sanity" {
     try processSyncCommitteeUpdates(
         .electra,
         allocator,
+        std.testing.io,
         test_state.cached_state.epoch_cache,
         test_state.cached_state.state.castToFork(.electra),
     );
