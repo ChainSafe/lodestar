@@ -26,7 +26,7 @@ Name of the Ethereum Consensus chain network to join
 
 type: `string`
 
-choices: "mainnet", "gnosis", "sepolia", "hoodi", "chiado", "ephemery", "dev"
+choices: "mainnet", "gnosis", "sepolia", "hoodi", "plataberget", "chiado", "ephemery", "dev"
 
 default: `"mainnet"`
 
@@ -45,6 +45,16 @@ type: `string`
 RC file to supplement command line args, accepted formats: .yml, .yaml, .json
 
 type: `string`
+
+example: Options can be written as nested maps or dotted keys
+
+```yaml
+network: hoodi
+logLevel: debug
+metrics:
+  enabled: true
+  port: 8008
+```
 
 
 
@@ -90,7 +100,7 @@ The IPv6 address to listen for discv5 connections
 
 type: `string`
 
-default: `"::"`
+default: `":: if the host has a global IPv6 address"`
 
 
 

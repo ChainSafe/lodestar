@@ -13,8 +13,6 @@ This dependency graph only applies to dependencies as they are used in the `src/
 ```mermaid
 graph TD
     api["api"]:::nodemodule
-    light-client["light-client"]:::nodemodule
-    prover["prover"]:::nodemodule
     logger["logger"]:::nodemodule
     reqresp["reqresp"]:::nodemodule
     beacon-node["beacon-node"]:::nodemodule
@@ -28,7 +26,7 @@ graph TD
     validator["validator"]:::nodemodule
     state-transition["state-transition"]:::nodemodule
     ssz["ssz"]:::nodemodule
-    blst["blst"]:::nodemodule
+    lodestar-z["lodestar-z"]:::nodemodule
     discv5["discv5"]:::nodemodule
     libp2p["libp2p"]:::nodemodule
     libp2p-gossipsub["libp2p-gossipsub"]:::nodemodule
@@ -40,11 +38,10 @@ graph TD
     ssz-->types
     ssz-->beacon-node
     ssz-->validator
-    ssz-->light-client
     ssz-->state-transition
 
-    blst-->beacon-node
-    blst-->state-transition
+    lodestar-z-->beacon-node
+    lodestar-z-->state-transition
 
     discv5-->beacon-node
 
@@ -56,17 +53,11 @@ graph TD
 
     api-->beacon-node
     api-->validator
-    api-->light-client
-
-    light-client-->prover
-
     params-->api
     params-->config
     params-->types
     params-->beacon-node
     params-->validator
-    params-->light-client
-    params-->prover
 
     types-->api
     types-->beacon-node
@@ -74,8 +65,6 @@ graph TD
     types-->config
     types-->validator
     types-->fork-choice
-    types-->light-client
-    types-->prover
 
     config-->api
     config-->beacon-node
@@ -84,8 +73,6 @@ graph TD
     config-->fork-choice
     config-->state-transition
     config-->db
-    config-->light-client
-    config-->prover
 
     utils-->api
     utils-->beacon-node
@@ -94,12 +81,9 @@ graph TD
     utils-->validator
     utils-->fork-choice
     utils-->state-transition
-    utils-->light-client
 
     logger-->beacon-node
     logger-->validator
-    logger-->light-client
-    logger-->prover
     logger-->cli
 
     reqresp-->beacon-node
@@ -115,11 +99,8 @@ graph TD
 
     beacon-node-->cli
     validator-->cli
-    light-client-->cli
 
     click api "https://github.com/ChainSafe/lodestar/tree/unstable/packages/api"
-    click light-client "https://github.com/ChainSafe/lodestar/tree/unstable/packages/light-client"
-    click prover "https://github.com/ChainSafe/lodestar/tree/unstable/packages/prover"
     click logger "https://github.com/ChainSafe/lodestar/tree/unstable/packages/logger"
     click reqresp "https://github.com/ChainSafe/lodestar/tree/unstable/packages/reqresp"
     click cli "https://github.com/ChainSafe/lodestar/tree/unstable/packages/cli"
@@ -133,7 +114,7 @@ graph TD
     click utils "https://github.com/ChainSafe/lodestar/tree/unstable/packages/utils"
     click config "https://github.com/ChainSafe/lodestar/tree/unstable/packages/config"
     click ssz "https://github.com/ChainSafe/ssz"
-    click blst "https://github.com/ChainSafe/blst-ts"
+    click lodestar-z "https://github.com/ChainSafe/lodestar-z"
     click discv5 "https://github.com/ChainSafe/discv5"
     click libp2p "https://github.com/libp2p/js-libp2p"
     click libp2p-gossipsub "https://github.com/ChainSafe/js-libp2p-gossipsub"
@@ -169,18 +150,10 @@ Below is a brief summary of each package in alphabetical order.
 
 [@lodestar/db](https://github.com/ChainSafe/lodestar/tree/unstable/packages/db) is where all persistent data about the beacon node is stored. Any package that needs to read or write persistent beacon node data depends on `@lodestar/db`.
 
-### `@lodestar/flare`
-
-[@lodestar/flare](https://github.com/ChainSafe/lodestar/tree/unstable/packages/flare) is a command tool used for easily triggering non-standard actions and debugging for researchers, developers and testers. Use with care.
-
 ### `@lodestar/fork-choice`
 
 [@lodestar/fork-choice](https://github.com/ChainSafe/lodestar/tree/unstable/packages/fork-choice) holds the methods for reading/writing the fork choice DAG. The `@lodestar/beacon-node` package is the sole consumer of this package because the beacon node itself is what controls when the fork choice DAG is updated.
 For a good explanation on how the fork choice itself works, see the [annotated fork choice spec](https://github.com/ethereum/annotated-spec/blob/master/phase0/fork-choice.md). This is an annotated version of the [Ethereum Consensus fork choice spec](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/fork-choice.md) which `@lodestar/fork-choice` is based on.
-
-### `@lodestar/light-client`
-
-[@lodestar/light-client](https://github.com/ChainSafe/lodestar/tree/unstable/packages/light-client) is our light client designed to interact with the Ethereum blockchain in a trust-minimized matter via the sync committee and the [light-client protocol](https://github.com/ethereum/consensus-specs/tree/v1.4.0/specs/altair/light-client).
 
 ### `@lodestar/logger`
 
@@ -189,10 +162,6 @@ For a good explanation on how the fork choice itself works, see the [annotated f
 ### `@lodestar/params`
 
 [@lodestar/params](https://github.com/ChainSafe/lodestar/tree/unstable/packages/params) contains the parameters for configuring an Ethereum Consensus network. For example, the [mainnet params](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#configuration).
-
-### `@lodestar/prover`
-
-[@lodestar/prover](https://github.com/ChainSafe/lodestar/tree/unstable/packages/prover) is a web3 provider and a proxy to enable verification of JSON-RPC calls to the execution client using the [light-client protocol](https://github.com/ethereum/consensus-specs/tree/v1.4.0/specs/altair/light-client).
 
 ### `@lodestar/reqresp`
 
@@ -224,9 +193,9 @@ For a good explanation on how the fork choice itself works, see the [annotated f
 
 Below is a brief summary, listed alphabetically, of each of our main external dependencies managed externally from our monorepo.
 
-### `@chainsafe/blst-ts`
+### `@chainsafe/lodestar-z`
 
-[@chainsafe/blst-ts`](https://github.com/ChainSafe/blst-ts) is our TypeScript wrapper for [@supranational/blst](https://github.com/supranational/blst) native bindings, a highly performant BLS12-381 signature library.
+[`@chainsafe/lodestar-z`](https://github.com/ChainSafe/lodestar-z) provides Lodestar's Zig implementations, including BLS12-381 signature verification backed by [supranational/blst](https://github.com/supranational/blst).
 
 ### `@chainsafe/discv5`
 

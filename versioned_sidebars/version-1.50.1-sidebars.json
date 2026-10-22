@@ -24,9 +24,11 @@
             "run/beacon-management/starting-a-node",
             "run/beacon-management/beacon-cli",
             "run/beacon-management/data-retention",
+            "run/beacon-management/fast-confirmation",
             "run/beacon-management/networking",
             "run/beacon-management/mev-and-builder-integration",
-            "run/beacon-management/syncing"
+            "run/beacon-management/syncing",
+            "run/beacon-management/historical-fork-support"
           ]
         },
         {
@@ -66,11 +68,10 @@
           "label": "Light Client",
           "items": [
             {
-              "type": "doc",
-              "label": "Getting Started",
-              "id": "libraries/lightclient-prover/lightclient"
-            },
-            "libraries/lightclient-prover/lightclient-cli"
+              "type": "link",
+              "label": "Documentation",
+              "href": "https://github.com/ChainSafe/lodestar-prover/tree/main/packages/light-client"
+            }
           ]
         },
         {
@@ -78,9 +79,9 @@
           "label": "Prover",
           "items": [
             {
-              "type": "doc",
-              "label": "Getting Started",
-              "id": "libraries/lightclient-prover/prover"
+              "type": "link",
+              "label": "Documentation",
+              "href": "https://github.com/ChainSafe/lodestar-prover/tree/main/packages/prover"
             }
           ]
         }

@@ -86,21 +86,11 @@ Libp2p operates at the lower levels of the OSI model, particularly at the Transp
 
 ### QUIC Transport
 
-Lodestar supports [QUIC](https://datatracker.ietf.org/doc/html/rfc9000) as a transport alongside TCP. QUIC is a UDP-based transport that provides built-in encryption (TLS 1.3), multiplexed streams, and faster connection establishment compared to TCP. QUIC is disabled by default and can be enabled with the `--quic` flag. When enabled, Lodestar will prefer QUIC when dialing peers that advertise QUIC support.
+Lodestar supports [QUIC](https://datatracker.ietf.org/doc/html/rfc9000) as a transport alongside TCP. QUIC is a UDP-based transport that provides built-in encryption (TLS 1.3), multiplexed streams, and faster connection establishment compared to TCP. QUIC is enabled by default and Lodestar will prefer QUIC when dialing peers that advertise QUIC support. The node's ENR automatically includes QUIC port information so other nodes can discover and connect via QUIC. The ENR fields can be overridden with `--enr.quic` and `--enr.quic6`.
 
-#### Enabling QUIC
+## Port Configuration
 
-To enable QUIC transport:
-
-```bash
-lodestar beacon --quic
-```
-
-When QUIC is enabled, the node will listen on an additional UDP port and advertise QUIC support in its ENR.
-
-#### Port Configuration
-
-With QUIC enabled, Lodestar uses three ports for P2P networking:
+Lodestar uses three ports for P2P networking:
 
 | Port              | Protocol | Default                 | Purpose                   |
 | ----------------- | -------- | ----------------------- | ------------------------- |
@@ -112,9 +102,9 @@ Note that `--discoveryPort` and `--quicPort` are both UDP but must use different
 
 For IPv6 dual-stack, equivalent flags are available: `--port6`, `--discoveryPort6`, and `--quicPort6`.
 
-#### ENR Advertisement
+By default, Lodestar listens on IPv4 and also on IPv6 when the host has a global IPv6 address. Use either `--listenAddress` for IPv4 only or `--listenAddress6` for IPv6 only.
 
-When QUIC is enabled, the node's ENR automatically includes QUIC port information so that other nodes can discover and connect via QUIC. The ENR fields can be overridden with `--enr.quic` and `--enr.quic6`.
+IPv6 ENR fields are cleared when no IPv6 listener is configured so peers don't try to connect over IPv6. This cleanup is skipped if any of `--enr.ip6`, `--enr.udp6`, `--enr.tcp6`, or `--enr.quic6` is set. Use `--nat` when advertising a non-local address.
 
 ## Firewall Management
 
@@ -124,7 +114,7 @@ Ports that must be opened:
 
 - 30303/TCP+UDP - Execution layer P2P communication port
 - 9000/TCP+UDP - Beacon node P2P communication (TCP transport + discv5 discovery)
-- 9001/UDP - Beacon node QUIC transport (only if `--quic` is enabled)
+- 9001/UDP - Beacon node QUIC transport
 
 Ports that must be protected:
 

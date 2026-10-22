@@ -36,7 +36,7 @@ Name of the Ethereum Consensus chain network to join
 
 type: `string`
 
-choices: "mainnet", "gnosis", "sepolia", "hoodi", "chiado", "ephemery", "dev"
+choices: "mainnet", "gnosis", "sepolia", "hoodi", "plataberget", "chiado", "ephemery", "dev"
 
 default: `"mainnet"`
 
@@ -55,6 +55,16 @@ type: `string`
 RC file to supplement command line args, accepted formats: .yml, .yaml, .json
 
 type: `string`
+
+example: Options can be written as nested maps or dotted keys
+
+```yaml
+network: hoodi
+logLevel: debug
+metrics:
+  enabled: true
+  port: 8008
+```
 
 
 
@@ -119,6 +129,16 @@ type: `boolean`
 Ignore the checkpoint sync state failing the weak subjectivity check. This is relevant in testnets where the weak subjectivity period is too small for even few epochs of non finalization causing last finalized to be out of range. This flag is not recommended for mainnet use.
 
 type: `boolean`
+
+
+
+#### `--dataColumnDir`
+
+Data column flat file directory
+
+type: `string`
+
+default: `"$dataDir/data_columns"`
 
 
 
@@ -278,11 +298,41 @@ default: `false`
 
 
 
-#### `--serveHistoricalState`
+#### `--graffitiAppend`
 
-Enable regenerating finalized state to serve historical data. Fetching this data is expensive and may affect validator performance.
+Append CL/EL client info to graffiti supplied by validator client when space allows
 
 type: `boolean`
+
+default: `true`
+
+
+
+#### `--serveHistoricalState`
+
+Regenerate finalized beacon states on demand and serve them via the REST API (e.g. `/eth/v2/debug/beacon/states/{state_id}`). Does not backfill historical data, only states the node already has (since genesis sync or `--checkpointState`) can be regenerated. Regeneration cost depends on `--chain.archiveStateEpochFrequency` and may affect validator performance.
+
+type: `boolean`
+
+
+
+#### `--chain.dedupePayloads`
+
+Archive finalized Gloas execution payload envelopes in header form and rebuild transactions, withdrawals and block access lists from the execution client when serving them. Serving then depends on the execution client still holding the block access list. Set to false to keep full envelopes on disk.
+
+type: `boolean`
+
+default: `true`
+
+
+
+#### `--chain.fastConfirmation`
+
+Enable Fast Confirmation Rule for faster block confirmation
+
+type: `boolean`
+
+default: `false`
 
 
 
@@ -306,7 +356,7 @@ type: `number`
 
 #### `--chain.pruneHistory`
 
-Prune historical blocks and state
+Continually prune finalized blocks and execution payload envelopes older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. This is useful to minimize disk usage when the node does not need to serve historical data. Initial pruning may be slow on first startup with an existing large database.
 
 type: `boolean`
 
@@ -352,6 +402,18 @@ default: `2000`
 
 
 
+#### `--execution.engineApi`
+
+Engine API transport. 'auto' negotiates REST with SSZ for a single execution URL and uses JSON-RPC for multiple URLs or unsupported features. 'ssz' requires a single REST-capable execution URL without JSON-RPC fallback. 'json-rpc' always uses JSON-RPC
+
+type: `string`
+
+choices: "auto", "ssz", "json-rpc"
+
+default: `"auto"`
+
+
+
 #### `--execution.engineMock`
 
 Set the execution engine to mock mode (development only)
@@ -378,7 +440,7 @@ type: `string`
 
 #### `--builder`
 
-Enable external builder
+Enable external builder. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client
 
 type: `boolean`
 
@@ -386,7 +448,7 @@ type: `boolean`
 
 #### `--builder.url`
 
-Url hosting the builder API
+Url hosting the builder API. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client
 
 type: `string`
 
@@ -406,7 +468,7 @@ default: `12000`
 
 #### `--builder.faultInspectionWindow`
 
-Window to inspect missed slots for enabling/disabling builder circuit breaker
+Window used to inspect missed slots (pre-gloas) or calculate the canonical EMPTY block rate (post-gloas) for enabling/disabling the builder circuit breaker
 
 type: `number`
 
@@ -414,7 +476,7 @@ type: `number`
 
 #### `--builder.allowedFaults`
 
-Number of missed slots allowed in the `faultInspectionWindow` for builder circuit
+Number of missed slots allowed within `faultInspectionWindow` before ignoring the external builder (pre-gloas). Post-gloas, sets the tolerated rate of canonical EMPTY blocks, defined as `allowedFaults` out of `faultInspectionWindow` and applied to canonical blocks in the window
 
 type: `number`
 
@@ -502,7 +564,7 @@ The UDP port that discovery will listen on. Defaults to `port`
 
 type: `number`
 
-default: ``port``
+default: `port`
 
 
 
@@ -512,7 +574,7 @@ The UDP port that QUIC will listen on. Defaults to `port` + 1
 
 type: `number`
 
-default: ``port` + 1`
+default: `port + 1`
 
 
 
@@ -522,7 +584,7 @@ The IPv6 address to listen for p2p UDP and TCP connections
 
 type: `string`
 
-default: `"::"`
+default: `":: if the host has a global IPv6 address"`
 
 
 
@@ -542,7 +604,7 @@ The UDP port that discovery will listen on. Defaults to `port6`
 
 type: `number`
 
-default: ``port6``
+default: `port6`
 
 
 
@@ -552,7 +614,7 @@ The UDP port that QUIC will listen on. Defaults to `port6` + 1
 
 type: `number`
 
-default: ``port6` + 1`
+default: `port6 + 1`
 
 
 
@@ -601,6 +663,8 @@ default: `false`
 Enable QUIC transport
 
 type: `boolean`
+
+default: `true`
 
 
 

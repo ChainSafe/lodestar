@@ -56,7 +56,7 @@ Name of the Ethereum Consensus chain network to join
 
 type: `string`
 
-choices: "mainnet", "gnosis", "sepolia", "hoodi", "chiado", "ephemery", "dev"
+choices: "mainnet", "gnosis", "sepolia", "hoodi", "plataberget", "chiado", "ephemery", "dev"
 
 default: `"mainnet"`
 
@@ -75,6 +75,16 @@ type: `string`
 RC file to supplement command line args, accepted formats: .yml, .yaml, .json
 
 type: `string`
+
+example: Options can be written as nested maps or dotted keys
+
+```yaml
+network: hoodi
+logLevel: debug
+metrics:
+  enabled: true
+  port: 8008
+```
 
 
 
@@ -246,11 +256,11 @@ type: `boolean`
 
 #### `--defaultGasLimit`
 
-Suggested gas limit to the engine/builder for building execution payloads. Only used post merge.
+Override the gas limit preference sent to the engine/builder. If unset, the network GAS_LIMIT_SCHEDULE is evaluated for each duty epoch from Gloas, with the current default used before Gloas or its first entry.
 
 type: `number`
 
-default: `60000000`
+default: `GAS_LIMIT_SCHEDULE from Gloas (current default: 60000000)`
 
 
 
@@ -264,7 +274,7 @@ type: `boolean`
 
 #### `--builder.selection`
 
-Builder block selection strategy `default`, `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`
+Builder block selection strategy `default`, `maxprofit`, `builderalways`, `executionalways`, or `executiononly`
 
 type: `string`
 
@@ -279,6 +289,42 @@ Percentage multiplier the block producing beacon node must apply to boost (&gt;1
 type: `string`
 
 default: `"100"`
+
+
+
+#### `--builder.minBid`
+
+Minimum counted total payment in Gwei accepted from a builder bid. The total is the bid value plus its execution payment up to the configured cap. Only used post-Gloas
+
+type: `string`
+
+default: `"0"`
+
+
+
+#### `--builder.urls`
+
+URL(s) of external builders to request execution payload bids from. Auth data agreed with a builder may be appended as a hex fragment, e.g. https://builder.example.com#0x0123, otherwise the hostname of the URL is used. Only used post-Gloas
+
+type: `string[]`
+
+
+
+#### `--builder.maxExecutionPayment`
+
+Maximum execution layer payment in Gwei counted toward a builder bid. A value of 0 means only trustless payments via the builder's staked collateral count toward the bid. Values above 0 require `--allowDangerousTrustedPayments`. Only used post-Gloas
+
+type: `string`
+
+default: `"0"`
+
+
+
+#### `--allowDangerousTrustedPayments`
+
+Allow configuring a builder max execution payment above 0. Trusted execution layer payments are only backed by the builder's promise to pay, not by its staked collateral, a builder that fails to pay cannot be penalized in protocol
+
+type: `boolean`
 
 
 
@@ -299,6 +345,16 @@ Request fetching local block in blinded format for produceBlockV3
 type: `boolean`
 
 default: `false`
+
+
+
+#### `--payloadLocal`
+
+Request keeping the execution payload (envelope and blobs) local to the beacon node during post-Gloas block production. Reduces bandwidth but the envelope must be published via the same beacon node that produced the block
+
+type: `boolean`
+
+default: `true if a single beacon node is configured, otherwise false`
 
 
 
@@ -347,6 +403,14 @@ Preferred wire format for HTTP responses from beacon node. Can be one of `json` 
 type: `string`
 
 default: `"ssz"`
+
+
+
+#### `--http.requestTimeout`
+
+Timeout in milliseconds for HTTP requests to the beacon node
+
+type: `number`
 
 
 
@@ -627,6 +691,14 @@ type: `string[]`
 Skip confirmation prompt
 
 type: `boolean`
+
+
+
+#### `--saveExitsPath`
+
+Write signed voluntary exit messages to a folder instead of publishing to the beacon node
+
+type: `string`
 
 
 

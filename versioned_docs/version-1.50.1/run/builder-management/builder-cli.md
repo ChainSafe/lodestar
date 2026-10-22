@@ -2,25 +2,27 @@
 title: CLI Reference
 ---
 
-# `lightclient` CLI Command
+# `builder` CLI Command
 
 
 
-Run lightclient
+Run a builder client
 
 
 
 ## Examples
 
-Run lightclient with hoodi network
+### Base `builder` command
+
+Run builder client
 
 ```sh
-./lodestar lightclient --network hoodi
+./lodestar builder
 ```
 
 
 
-## `lightclient` Options
+## `builder` Options
 
 #### `--dataDir`
 
@@ -36,7 +38,7 @@ Name of the Ethereum Consensus chain network to join
 
 type: `string`
 
-choices: "mainnet", "gnosis", "sepolia", "hoodi", "chiado", "ephemery", "dev"
+choices: "mainnet", "gnosis", "sepolia", "hoodi", "plataberget", "chiado", "ephemery", "dev"
 
 default: `"mainnet"`
 
@@ -55,6 +57,16 @@ type: `string`
 RC file to supplement command line args, accepted formats: .yml, .yaml, .json
 
 type: `string`
+
+example: Options can be written as nested maps or dotted keys
+
+```yaml
+network: hoodi
+logLevel: debug
+metrics:
+  enabled: true
+  port: 8008
+```
 
 
 
@@ -116,9 +128,19 @@ default: `5`
 
 
 
-#### `--beaconApiUrl`
+#### `--beaconNodeUrl`
 
-Url to a beacon node that support lightclient API
+Url to a trusted beacon node
+
+type: `string`
+
+default: `"http://127.0.0.1:9596"`
+
+
+
+#### `--keystore`
+
+Path to a keystore file
 
 required: true
 
@@ -126,11 +148,69 @@ type: `string`
 
 
 
-#### `--checkpointRoot`
+#### `--keystorePassword`
 
-Checkpoint root hex string to sync the lightclient from, start with 0x
+Path to a file with password to decrypt the keystore from 'keystore' option
 
 required: true
 
 type: `string`
+
+
+
+#### `--builderPubkey`
+
+Builder's expected public key based on the keystore from 'keystore' option
+
+type: `string`
+
+
+
+#### `--executionFeeRecipient`
+
+Execution address for receiving the payload rewards
+
+required: true
+
+type: `string`
+
+
+
+#### `--requestTimeout`
+
+Timeout in milliseconds for HTTP requests to the beacon node
+
+type: `number`
+
+default: `10000`
+
+
+
+#### `--metrics`
+
+Enable the Prometheus metrics HTTP server
+
+type: `boolean`
+
+default: `false`
+
+
+
+#### `--metrics.port`
+
+Listen TCP port for the Prometheus metrics HTTP server
+
+type: `number`
+
+default: `5065`
+
+
+
+#### `--metrics.address`
+
+Listen address for the Prometheus metrics HTTP server
+
+type: `string`
+
+default: `"127.0.0.1"`
 
