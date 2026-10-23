@@ -525,9 +525,11 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
             ) catch unreachable;
             recordSegment(.rewards_and_penalties, @as(u64, @intCast(time.since(io, rewards_start).nanoseconds)));
 
-            const eth1_start = time.start(io);
-            state_transition.processEth1DataReset(fork, fork_state, cache) catch unreachable;
-            recordSegment(.eth1_data_reset, @as(u64, @intCast(time.since(io, eth1_start).nanoseconds)));
+            if (comptime fork.lt(.heze)) {
+                const eth1_start = time.start(io);
+                state_transition.processEth1DataReset(fork, fork_state, cache) catch unreachable;
+                recordSegment(.eth1_data_reset, @as(u64, @intCast(time.since(io, eth1_start).nanoseconds)));
+            }
 
             if (comptime fork.gte(.electra)) {
                 const pending_deposits_start = time.start(io);
@@ -790,9 +792,11 @@ fn runBenchmark(
         .epoch_transition_cache = &epoch_transition_cache,
     }, .{ .hooks = hooks });
 
-    try bench.addParam("eth1_data_reset", &ProcessEth1DataResetBench(fork){
-        .epoch_transition_cache = &epoch_transition_cache,
-    }, .{ .hooks = hooks });
+    if (comptime fork.lt(.heze)) {
+        try bench.addParam("eth1_data_reset", &ProcessEth1DataResetBench(fork){
+            .epoch_transition_cache = &epoch_transition_cache,
+        }, .{ .hooks = hooks });
+    }
 
     if (comptime fork.gte(.electra)) {
         try bench.addParam("pending_deposits", &ProcessPendingDepositsBench(fork){

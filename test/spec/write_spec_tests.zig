@@ -12,6 +12,7 @@ const supported_forks = [_]ForkSeq{
     .electra,
     .fulu,
     .gloas,
+    .heze,
 };
 
 const supported_test_runners = [_]RunnerKind{

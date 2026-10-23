@@ -12,6 +12,7 @@ test "fork - ForkSeq.name" {
     try std.testing.expectEqualSlices(u8, "electra", ForkSeq.electra.name());
     try std.testing.expectEqualSlices(u8, "fulu", ForkSeq.fulu.name());
     try std.testing.expectEqualSlices(u8, "gloas", ForkSeq.gloas.name());
+    try std.testing.expectEqualSlices(u8, "heze", ForkSeq.heze.name());
 }
 
 test "fork - ForkSeq.fromName" {
@@ -23,4 +24,5 @@ test "fork - ForkSeq.fromName" {
     try std.testing.expectEqual(ForkSeq.electra, ForkSeq.fromName("electra"));
     try std.testing.expectEqual(ForkSeq.fulu, ForkSeq.fromName("fulu"));
     try std.testing.expectEqual(ForkSeq.gloas, ForkSeq.fromName("gloas"));
+    try std.testing.expectEqual(ForkSeq.heze, ForkSeq.fromName("heze"));
 }

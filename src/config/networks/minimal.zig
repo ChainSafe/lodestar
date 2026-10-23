@@ -39,6 +39,10 @@ pub const chain_config = ChainConfig{
     .GLOAS_FORK_EPOCH = std.math.maxInt(u64),
     .HEZE_FORK_VERSION = b(4, "0x08000001"),
     .HEZE_FORK_EPOCH = std.math.maxInt(u64),
+    .INCLUSION_LIST_DUE_BPS = 6667,
+    .MAX_REQUEST_INCLUSION_LIST = 16,
+    .MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS = 1,
+    .MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST = 8192,
 
     // Time parameters
     .SECONDS_PER_SLOT = 6,

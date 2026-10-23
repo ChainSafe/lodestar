@@ -64,6 +64,10 @@ export interface ExecutionPayloadBid {
   executionRequestsRoot: Uint8Array;
 }
 
+export interface HezeExecutionPayloadBid extends ExecutionPayloadBid {
+  inclusionListBits: {uint8Array: Uint8Array; bitLen: number};
+}
+
 export interface Builder {
   pubkey: Uint8Array;
   version: number;
@@ -135,6 +139,7 @@ export enum ForkName {
   electra = "electra",
   fulu = "fulu",
   gloas = "gloas",
+  heze = "heze",
 }
 
 export enum ForkSeq {
@@ -146,6 +151,7 @@ export enum ForkSeq {
   electra = 5,
   fulu = 6,
   gloas = 7,
+  heze = 8,
 }
 
 interface SyncCommittee {
@@ -267,6 +273,7 @@ export declare class BeaconStateView {
   epoch: number;
   genesisTime: number;
   genesisValidatorsRoot: Uint8Array;
+  /** Throws on Heze and later, where legacy deposit fields are removed. */
   eth1Data: Eth1Data;
   latestBlockHeader: BeaconBlockHeader;
   previousJustifiedCheckpoint: Checkpoint;
@@ -294,7 +301,7 @@ export declare class BeaconStateView {
   // Gloas fields throw when called on an earlier fork.
   latestBlockHash: Uint8Array;
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
-  latestExecutionPayloadBid: ExecutionPayloadBid;
+  latestExecutionPayloadBid: ExecutionPayloadBid | HezeExecutionPayloadBid;
   payloadExpectedWithdrawals: Withdrawal[];
   builderPendingPayments: BuilderPendingPayment[];
   builderPendingWithdrawals: BuilderPendingWithdrawal[];
@@ -302,6 +309,7 @@ export declare class BeaconStateView {
   canBuilderCoverBid(builderIndex: number, bidAmount: number): boolean;
   getEpochPTCs(epoch: number): Uint32Array[];
   getPayloadTimelinessCommittee(slot: number): Uint32Array;
+  getInclusionListCommittee(slot: number): Uint32Array;
   getIndicesInPayloadTimelinessCommittee(validatorIndex: number, slot: number): number[];
   /** Clone this view and apply serialized Gloas ExecutionRequests from the full parent. */
   withParentPayloadApplied(executionRequestsBytes: Uint8Array): BeaconStateView;

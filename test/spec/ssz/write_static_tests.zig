@@ -49,6 +49,7 @@ pub fn main(init: std.process.Init) !void {
         "electra",
         "fulu",
         "gloas",
+        "heze",
     };
 
     for (supported_forks) |fork| {
@@ -133,7 +134,7 @@ pub fn main(init: std.process.Init) !void {
 }
 
 fn unsupportedPartialColumnType(fork: []const u8, type_name: []const u8) bool {
-    if (!std.mem.eql(u8, fork, "fulu") and !std.mem.eql(u8, fork, "gloas")) return false;
+    if (!std.mem.eql(u8, fork, "fulu") and !std.mem.eql(u8, fork, "gloas") and !std.mem.eql(u8, fork, "heze")) return false;
     if (std.mem.eql(u8, fork, "fulu") and std.mem.eql(u8, type_name, "PartialDataColumnHeader")) return true;
     const unsupported = [_][]const u8{
         "PartialDataColumnGroupID",

@@ -155,7 +155,7 @@ pub fn processBlock(
         time.durationSeconds(time.since(io, timer)),
     );
     timer = time.start(io);
-    try processEth1Data(fork, state, body.eth1Data());
+    if (comptime fork.lt(.heze)) try processEth1Data(fork, state, body.eth1Data());
     try metrics.state_transition.process_block_step.observe(
         .{ .step = .processEth1Data },
         time.durationSeconds(time.since(io, timer)),

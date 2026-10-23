@@ -156,3 +156,7 @@ pub const canBuilderCoverBid = @import("utils/gloas.zig").canBuilderCoverBid;
 pub const getPayloadTimelinessCommittee = @import("utils/gloas.zig").getPayloadTimelinessCommittee;
 
 pub const upgradeStateToGloas = @import("slot/upgrade_state_to_gloas.zig").upgradeStateToGloas;
+pub const upgradeStateToHeze = @import("slot/upgrade_state_to_heze.zig").upgradeStateToHeze;
+pub const getInclusionListCommittee = @import("utils/inclusion_list.zig").getInclusionListCommittee;
+pub const getIndicesInInclusionListCommittee = @import("utils/inclusion_list.zig").getIndicesInInclusionListCommittee;
+pub const getInclusionListSigningRoot = @import("signature_sets/inclusion_list.zig").getInclusionListSigningRoot;

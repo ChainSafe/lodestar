@@ -188,7 +188,7 @@ pub const AnyExecutionPayloadHeader = union(enum) {
         return switch (fork_seq) {
             .bellatrix => .{ .bellatrix = ct.bellatrix.ExecutionPayloadHeader.default_value },
             .capella => .{ .capella = ct.capella.ExecutionPayloadHeader.default_value },
-            .deneb, .electra, .fulu, .gloas => .{ .deneb = ct.deneb.ExecutionPayloadHeader.default_value },
+            .deneb, .electra, .fulu, .gloas, .heze => .{ .deneb = ct.deneb.ExecutionPayloadHeader.default_value },
             else => error.UnexpectedForkSeq,
         };
     }

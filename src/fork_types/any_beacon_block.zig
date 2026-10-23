@@ -49,6 +49,7 @@ pub const AnySignedBeaconBlock = union(enum) {
     full_fulu: *ct.fulu.SignedBeaconBlock.Type,
     blinded_fulu: *ct.fulu.SignedBlindedBeaconBlock.Type,
     full_gloas: *ct.gloas.SignedBeaconBlock.Type,
+    full_heze: *ct.heze.SignedBeaconBlock.Type,
 
     pub fn deserialize(allocator: std.mem.Allocator, block_type: BlockType, fork_seq: ForkSeq, bytes: []const u8) !AnySignedBeaconBlock {
         switch (fork_seq) {
@@ -164,6 +165,15 @@ pub const AnySignedBeaconBlock = union(enum) {
                 );
                 return .{ .full_gloas = signed_block };
             },
+            .heze => {
+                if (block_type != .full) return error.InvalidBlockTypeForFork;
+                const signed_block = try deserializeSignedBlock(
+                    ct.heze.SignedBeaconBlock,
+                    allocator,
+                    bytes,
+                );
+                return .{ .full_heze = signed_block };
+            },
         }
     }
 
@@ -219,6 +229,10 @@ pub const AnySignedBeaconBlock = union(enum) {
             },
             .full_gloas => |signed_block| {
                 ct.gloas.SignedBeaconBlock.deinit(allocator, signed_block);
+                allocator.destroy(signed_block);
+            },
+            .full_heze => |signed_block| {
+                ct.heze.SignedBeaconBlock.deinit(allocator, signed_block);
                 allocator.destroy(signed_block);
             },
         }
@@ -304,12 +318,18 @@ pub const AnySignedBeaconBlock = union(enum) {
                 _ = ct.gloas.SignedBeaconBlock.serializeIntoBytes(signed_block, out);
                 return out;
             },
+            .full_heze => |signed_block| {
+                const out = try allocator.alloc(u8, ct.heze.SignedBeaconBlock.serializedSize(signed_block));
+                errdefer allocator.free(out);
+                _ = ct.heze.SignedBeaconBlock.serializeIntoBytes(signed_block, out);
+                return out;
+            },
         }
     }
 
     pub fn blockType(self: *const AnySignedBeaconBlock) BlockType {
         return switch (self.*) {
-            .phase0, .altair, .full_bellatrix, .full_capella, .full_deneb, .full_electra, .full_fulu, .full_gloas => .full,
+            .phase0, .altair, .full_bellatrix, .full_capella, .full_deneb, .full_electra, .full_fulu, .full_gloas, .full_heze => .full,
             .blinded_bellatrix, .blinded_capella, .blinded_deneb, .blinded_electra, .blinded_fulu => .blinded,
         };
     }
@@ -324,6 +344,7 @@ pub const AnySignedBeaconBlock = union(enum) {
             .full_electra, .blinded_electra => .electra,
             .full_fulu, .blinded_fulu => .fulu,
             .full_gloas => .gloas,
+            .full_heze => .heze,
         };
     }
 
@@ -360,10 +381,11 @@ pub const AnyBeaconBlock = union(enum) {
     full_fulu: *ct.fulu.BeaconBlock.Type,
     blinded_fulu: *ct.fulu.BlindedBeaconBlock.Type,
     full_gloas: *ct.gloas.BeaconBlock.Type,
+    full_heze: *ct.heze.BeaconBlock.Type,
 
     pub fn blockType(self: *const AnyBeaconBlock) BlockType {
         return switch (self.*) {
-            .phase0, .altair, .full_bellatrix, .full_capella, .full_deneb, .full_electra, .full_fulu, .full_gloas => .full,
+            .phase0, .altair, .full_bellatrix, .full_capella, .full_deneb, .full_electra, .full_fulu, .full_gloas, .full_heze => .full,
             .blinded_bellatrix, .blinded_capella, .blinded_deneb, .blinded_electra, .blinded_fulu => .blinded,
         };
     }
@@ -378,6 +400,7 @@ pub const AnyBeaconBlock = union(enum) {
             .full_electra, .blinded_electra => .electra,
             .full_fulu, .blinded_fulu => .fulu,
             .full_gloas => .gloas,
+            .full_heze => .heze,
         };
     }
 
@@ -419,6 +442,10 @@ pub const AnyBeaconBlock = union(enum) {
                 @ptrCast(self.full_gloas)
             else
                 @compileError("gloas doesn't have blinded blocks (ePBS)"),
+            .heze => if (block_type == .full)
+                @ptrCast(self.full_heze)
+            else
+                @compileError("heze doesn't have blinded blocks (ePBS)"),
         };
     }
 
@@ -437,6 +464,7 @@ pub const AnyBeaconBlock = union(enum) {
             .full_fulu => |block| try ct.fulu.BeaconBlock.hashTreeRoot(allocator, block, out),
             .blinded_fulu => |block| try ct.fulu.BlindedBeaconBlock.hashTreeRoot(allocator, block, out),
             .full_gloas => |block| try ct.gloas.BeaconBlock.hashTreeRoot(allocator, block, out),
+            .full_heze => |block| try ct.heze.BeaconBlock.hashTreeRoot(allocator, block, out),
         }
     }
 
@@ -491,10 +519,11 @@ pub const AnyBeaconBlockBody = union(enum) {
     full_fulu: *ct.fulu.BeaconBlockBody.Type,
     blinded_fulu: *ct.fulu.BlindedBeaconBlockBody.Type,
     full_gloas: *ct.gloas.BeaconBlockBody.Type,
+    full_heze: *ct.heze.BeaconBlockBody.Type,
 
     pub fn blockType(self: *const AnyBeaconBlockBody) BlockType {
         return switch (self.*) {
-            .phase0, .altair, .full_bellatrix, .full_capella, .full_deneb, .full_electra, .full_fulu, .full_gloas => .full,
+            .phase0, .altair, .full_bellatrix, .full_capella, .full_deneb, .full_electra, .full_fulu, .full_gloas, .full_heze => .full,
             .blinded_bellatrix, .blinded_capella, .blinded_deneb, .blinded_electra, .blinded_fulu => .blinded,
         };
     }
@@ -509,6 +538,7 @@ pub const AnyBeaconBlockBody = union(enum) {
             .full_electra, .blinded_electra => .electra,
             .full_fulu, .blinded_fulu => .fulu,
             .full_gloas => .gloas,
+            .full_heze => .heze,
         };
     }
 
@@ -544,6 +574,10 @@ pub const AnyBeaconBlockBody = union(enum) {
                 @ptrCast(self.full_gloas)
             else
                 @compileError("gloas doesn't have blinded blocks (ePBS)"),
+            .heze => if (block_type == .full)
+                @ptrCast(self.full_heze)
+            else
+                @compileError("heze doesn't have blinded blocks (ePBS)"),
         };
     }
 
@@ -562,6 +596,7 @@ pub const AnyBeaconBlockBody = union(enum) {
             .full_fulu => |body| try ct.fulu.BeaconBlockBody.hashTreeRoot(allocator, body, out),
             .blinded_fulu => |body| try ct.fulu.BlindedBeaconBlockBody.hashTreeRoot(allocator, body, out),
             .full_gloas => |body| try ct.gloas.BeaconBlockBody.hashTreeRoot(allocator, body, out),
+            .full_heze => |body| try ct.heze.BeaconBlockBody.hashTreeRoot(allocator, body, out),
         };
     }
 
@@ -580,8 +615,9 @@ pub const AnyBeaconBlockBody = union(enum) {
         };
     }
 
-    pub fn eth1Data(self: *const AnyBeaconBlockBody) *const ct.phase0.Eth1Data.Type {
+    pub fn eth1Data(self: *const AnyBeaconBlockBody) !*const ct.phase0.Eth1Data.Type {
         return switch (self.*) {
+            .full_heze => error.InvalidAtFork,
             inline else => |body| &body.eth1_data,
         };
     }
@@ -602,7 +638,7 @@ pub const AnyBeaconBlockBody = union(enum) {
         return switch (self.*) {
             inline .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb => |body| .{ .phase0 = body.attester_slashings },
             inline .full_electra, .blinded_electra, .full_fulu, .blinded_fulu => |body| .{ .electra = body.attester_slashings },
-            .full_gloas => |body| .{ .gloas = body.attester_slashings },
+            inline .full_gloas, .full_heze => |body| .{ .gloas = body.attester_slashings },
         };
     }
 
@@ -610,12 +646,13 @@ pub const AnyBeaconBlockBody = union(enum) {
         return switch (self.*) {
             inline .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb => |body| .{ .phase0 = body.attestations },
             inline .full_electra, .blinded_electra, .full_fulu, .blinded_fulu => |body| .{ .electra = body.attestations },
-            .full_gloas => |body| .{ .gloas = body.attestations },
+            inline .full_gloas, .full_heze => |body| .{ .gloas = body.attestations },
         };
     }
 
-    pub fn deposits(self: *const AnyBeaconBlockBody) []Deposit {
+    pub fn deposits(self: *const AnyBeaconBlockBody) ![]Deposit {
         return switch (self.*) {
+            .full_heze => error.InvalidAtFork,
             inline else => |body| body.deposits.items,
         };
     }
@@ -671,7 +708,7 @@ pub const AnyBeaconBlockBody = union(enum) {
     // Gloas (ePBS): blob_kzg_commitments moved to ExecutionPayloadBid
     pub fn blobKzgCommitments(self: *const AnyBeaconBlockBody) !*const ct.deneb.BlobKzgCommitments.Type {
         return switch (self.*) {
-            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_gloas => error.InvalidFork,
+            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_gloas, .full_heze => error.InvalidFork,
             inline else => |body| &body.blob_kzg_commitments,
         };
     }
@@ -680,28 +717,28 @@ pub const AnyBeaconBlockBody = union(enum) {
     // Gloas (ePBS): execution_requests moved to ExecutionPayloadEnvelope
     pub fn executionRequests(self: *const AnyBeaconBlockBody) !*const ct.electra.ExecutionRequests.Type {
         return switch (self.*) {
-            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb, .full_gloas => error.InvalidFork,
+            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb, .full_gloas, .full_heze => error.InvalidFork,
             inline else => |body| &body.execution_requests,
         };
     }
 
     pub fn depositRequests(self: *const AnyBeaconBlockBody) ![]DepositRequest {
         return switch (self.*) {
-            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb, .full_gloas => error.InvalidFork,
+            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb, .full_gloas, .full_heze => error.InvalidFork,
             inline else => |body| body.execution_requests.deposits.items,
         };
     }
 
     pub fn withdrawalRequests(self: *const AnyBeaconBlockBody) ![]WithdrawalRequest {
         return switch (self.*) {
-            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb, .full_gloas => error.InvalidFork,
+            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb, .full_gloas, .full_heze => error.InvalidFork,
             inline else => |body| body.execution_requests.withdrawals.items,
         };
     }
 
     pub fn consolidationRequests(self: *const AnyBeaconBlockBody) ![]ConsolidationRequest {
         return switch (self.*) {
-            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb, .full_gloas => error.InvalidFork,
+            .phase0, .altair, .full_bellatrix, .blinded_bellatrix, .full_capella, .blinded_capella, .full_deneb, .blinded_deneb, .full_gloas, .full_heze => error.InvalidFork,
             inline else => |body| body.execution_requests.consolidations.items,
         };
     }
@@ -709,14 +746,14 @@ pub const AnyBeaconBlockBody = union(enum) {
     // gloas fields (ePBS)
     pub fn signedExecutionPayloadBidBlockHash(self: *const AnyBeaconBlockBody) !*const [32]u8 {
         return switch (self.*) {
-            .full_gloas => |body| &body.signed_execution_payload_bid.message.block_hash,
+            inline .full_gloas, .full_heze => |body| &body.signed_execution_payload_bid.message.block_hash,
             else => error.InvalidFork,
         };
     }
 
     pub fn signedExecutionPayloadBidParentBlockHash(self: *const AnyBeaconBlockBody) !*const [32]u8 {
         return switch (self.*) {
-            .full_gloas => |body| &body.signed_execution_payload_bid.message.parent_block_hash,
+            inline .full_gloas, .full_heze => |body| &body.signed_execution_payload_bid.message.parent_block_hash,
             else => error.InvalidFork,
         };
     }

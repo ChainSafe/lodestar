@@ -14,6 +14,7 @@ pub const ForkSeq = enum(u8) {
     electra = 5,
     fulu = 6,
     gloas = 7,
+    heze = 8,
 
     /// Total number of fork variants.
     pub const count: u8 = @intCast(@typeInfo(ForkSeq).@"enum".fields.len);

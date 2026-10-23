@@ -327,6 +327,16 @@ pub fn getConfig(config: ChainConfig, fork: ForkSeq, fork_epoch: Epoch) ChainCon
             .FULU_FORK_EPOCH = 0,
             .GLOAS_FORK_EPOCH = fork_epoch,
         }),
+        .heze => return config.merge(.{
+            .ALTAIR_FORK_EPOCH = 0,
+            .BELLATRIX_FORK_EPOCH = 0,
+            .CAPELLA_FORK_EPOCH = 0,
+            .DENEB_FORK_EPOCH = 0,
+            .ELECTRA_FORK_EPOCH = 0,
+            .FULU_FORK_EPOCH = 0,
+            .GLOAS_FORK_EPOCH = 0,
+            .HEZE_FORK_EPOCH = fork_epoch,
+        }),
     }
 }
 

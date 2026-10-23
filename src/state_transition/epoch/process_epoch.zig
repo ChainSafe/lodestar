@@ -67,7 +67,7 @@ pub fn processEpoch(
     try processRewardsAndPenalties(fork, config, epoch_cache, state, cache, slashing_penalties);
     try observeEpochTransitionStep(.{ .step = .process_rewards_and_penalties }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
 
-    try processEth1DataReset(fork, state, cache);
+    if (comptime fork.lt(.heze)) try processEth1DataReset(fork, state, cache);
 
     if (comptime fork.gte(.electra)) {
         timer = time.start(io);

@@ -7,6 +7,25 @@ const ct = @import("consensus_types");
 const BeaconState = @import("./beacon_state.zig").BeaconState;
 const AnyBeaconState = @import("any_beacon_state.zig").AnyBeaconState;
 
+test "Heze state wrappers reject removed legacy fields" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer pool.deinit();
+    var state = try AnyBeaconState.fromValue(allocator, &pool, .heze, &ct.heze.BeaconState.default_value);
+    defer state.deinit();
+    try std.testing.expectError(error.InvalidAtFork, state.eth1Data());
+    try std.testing.expectError(error.InvalidAtFork, state.eth1DataVotes());
+    try std.testing.expectError(error.InvalidAtFork, state.eth1DepositIndex());
+    try std.testing.expectError(error.InvalidAtFork, state.depositRequestsStartIndex());
+    try std.testing.expectError(error.InvalidAtFork, state.resetEth1DataVotes());
+    try std.testing.expectError(error.InvalidAtFork, state.setDepositRequestsStartIndex(0));
+    const typed = state.castToFork(.heze);
+    try std.testing.expectError(error.InvalidAtFork, typed.eth1Data());
+    try std.testing.expectError(error.InvalidAtFork, typed.eth1DataVotes());
+    try std.testing.expectError(error.InvalidAtFork, typed.eth1DepositIndex());
+    try std.testing.expectError(error.InvalidAtFork, typed.depositRequestsStartIndex());
+}
+
 fn expectListRoot(comptime List: type, value: *const List.Type, actual: *const [32]u8) !void {
     var expected: [32]u8 = undefined;
     try List.hashTreeRoot(std.testing.allocator, value, &expected);

@@ -6,6 +6,37 @@ const expect = std.testing.expect;
 const ct = @import("consensus_types");
 const AnyBeaconBlock = @import("any_beacon_block.zig").AnyBeaconBlock;
 
+test "Heze block wrappers preserve bid fields and reject legacy accessors" {
+    const allocator = std.testing.allocator;
+    var value = ct.heze.SignedBeaconBlock.default_value;
+    value.message.slot = 17;
+    value.message.body.signed_execution_payload_bid.message.block_hash = @splat(3);
+    try value.message.body.signed_execution_payload_bid.message.inclusion_list_bits.set(15, true);
+    const bytes = try allocator.alloc(u8, ct.heze.SignedBeaconBlock.serializedSize(&value));
+    defer allocator.free(bytes);
+    _ = ct.heze.SignedBeaconBlock.serializeIntoBytes(&value, bytes);
+
+    var signed = try AnySignedBeaconBlock.deserialize(allocator, .full, .heze, bytes);
+    defer signed.deinit(allocator);
+    try std.testing.expectEqual(.heze, signed.forkSeq());
+    try std.testing.expectEqual(.full, signed.blockType());
+    const serialized = try signed.serialize(allocator);
+    defer allocator.free(serialized);
+    try std.testing.expectEqualSlices(u8, bytes, serialized);
+    const block = signed.beaconBlock();
+    try std.testing.expectEqual(17, block.slot());
+    var expected: [32]u8 = undefined;
+    var actual: [32]u8 = undefined;
+    try ct.heze.BeaconBlock.hashTreeRoot(allocator, &value.message, &expected);
+    try block.hashTreeRoot(allocator, &actual);
+    try std.testing.expectEqualSlices(u8, &expected, &actual);
+    const body = block.beaconBlockBody();
+    try std.testing.expectEqualSlices(u8, &value.message.body.signed_execution_payload_bid.message.block_hash, try body.signedExecutionPayloadBidBlockHash());
+    try std.testing.expectError(error.InvalidAtFork, body.eth1Data());
+    try std.testing.expectError(error.InvalidAtFork, body.deposits());
+    try std.testing.expectError(error.InvalidBlockTypeForFork, AnySignedBeaconBlock.deserialize(allocator, .blinded, .heze, bytes));
+}
+
 fn testBlockSanity(Block: type) !void {
     const allocator = std.testing.allocator;
 
@@ -41,14 +72,14 @@ fn testBlockSanity(Block: type) !void {
     try expect(!std.mem.eql(u8, &[_]u8{0} ** 32, &out));
 
     try std.testing.expectEqualSlices(u8, &[_]u8{1} ** 96, block_body.randaoReveal());
-    const eth1_data = block_body.eth1Data();
+    const eth1_data = try block_body.eth1Data();
     try expect(eth1_data.deposit_count == 0);
     try std.testing.expectEqualSlices(u8, &[_]u8{0} ** 32, block_body.graffiti());
     try expect(block_body.proposerSlashings().len == 0);
     try expect(block_body.attesterSlashings().length() == 0);
     try expect(block_body.attestations().length() == 1);
     try expect(block_body.attestations().items().electra[0].data.slot == 12345);
-    try expect(block_body.deposits().len == 0);
+    try expect((try block_body.deposits()).len == 0);
     try expect(block_body.voluntaryExits().len == 0);
 
     // altair

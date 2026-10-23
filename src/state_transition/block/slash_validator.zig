@@ -64,14 +64,14 @@ pub fn slashValidator(
         .phase0 => preset.MIN_SLASHING_PENALTY_QUOTIENT,
         .altair => preset.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
         .bellatrix, .capella, .deneb => preset.MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX,
-        .electra, .fulu, .gloas => preset.MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA,
+        .electra, .fulu, .gloas, .heze => preset.MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA,
     };
 
     try decreaseBalance(fork, state, slashed_index, @divFloor(effective_balance, min_slashing_penalty_quotient));
 
     // apply proposer and whistleblower rewards
     const whistleblower_reward = switch (fork) {
-        .electra, .fulu, .gloas => @divFloor(effective_balance, preset.WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA),
+        .electra, .fulu, .gloas, .heze => @divFloor(effective_balance, preset.WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA),
         else => @divFloor(effective_balance, preset.WHISTLEBLOWER_REWARD_QUOTIENT),
     };
 

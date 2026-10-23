@@ -24,6 +24,9 @@ importers:
       '@chainsafe/biomejs-config':
         specifier: ^1.0.0
         version: 1.0.0(@biomejs/biome@2.3.11)
+      '@chainsafe/ssz':
+        specifier: 1.8.1
+        version: 1.8.1
       '@lodestar/config':
         specifier: 1.50.0
         version: 1.50.0

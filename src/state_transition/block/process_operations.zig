@@ -52,11 +52,9 @@ pub fn processOperations(
         }
     }
 
-    // verify that outstanding deposits are processed up to the maximum number of deposits.
-    // Fulu removes support for the former (Eth1 bridge) deposit mechanism: `body.deposits` must be empty.
-    const max_deposits: u64 = if (comptime fork.gte(.fulu)) 0 else try getEth1DepositCount(fork, state, null);
-    if (body.inner.deposits.items.len != max_deposits) {
-        return error.InvalidDepositCount;
+    if (comptime fork.lt(.heze)) {
+        const max_deposits: u64 = if (comptime fork.gte(.fulu)) 0 else try getEth1DepositCount(fork, state, null);
+        if (body.inner.deposits.items.len != max_deposits) return error.InvalidDepositCount;
     }
 
     const current_epoch = epoch_cache.epoch;
@@ -104,7 +102,7 @@ pub fn processOperations(
         );
     }
 
-    {
+    if (comptime fork.lt(.heze)) {
         const timer = time.start(io);
         for (body.inner.deposits.items) |*deposit| {
             try processDeposit(fork, io, config, epoch_cache, state, deposit);

@@ -47,6 +47,7 @@ pub const DomainCache = struct {
 
     /// Precompute all domains for all forks and domain types.
     pub fn init(forks_ascending_epoch_order: [ForkSeq.count]ForkInfo, genesis_validators_root: [32]u8) DomainCache {
+        @setEvalBranchQuota(2_000_000);
         var domain_cache = DomainCache{
             .inner = undefined,
         };
@@ -140,6 +141,14 @@ pub fn init(chain_config: ChainConfig, genesis_validator_root: Root) BeaconConfi
         .prev_fork_seq = ForkSeq.fulu,
     };
 
+    const heze = ForkInfo{
+        .fork_seq = .heze,
+        .epoch = chain_config.HEZE_FORK_EPOCH,
+        .version = chain_config.HEZE_FORK_VERSION,
+        .prev_version = chain_config.GLOAS_FORK_VERSION,
+        .prev_fork_seq = .gloas,
+    };
+
     const forks_ascending_epoch_order = [ForkSeq.count]ForkInfo{
         phase0,
         altair,
@@ -149,8 +158,10 @@ pub fn init(chain_config: ChainConfig, genesis_validator_root: Root) BeaconConfi
         electra,
         fulu,
         gloas,
+        heze,
     };
     const forks_descending_epoch_order = [ForkSeq.count]ForkInfo{
+        heze,
         gloas,
         fulu,
         electra,
@@ -223,7 +234,7 @@ pub fn getMaxBlobsPerBlock(self: *const BeaconConfig, epoch: Epoch) u64 {
     return switch (fork) {
         .deneb => self.chain.MAX_BLOBS_PER_BLOCK,
         .electra => self.chain.MAX_BLOBS_PER_BLOCK_ELECTRA,
-        .fulu, .gloas => {
+        .fulu, .gloas, .heze => {
             for (0..self.chain.BLOB_SCHEDULE.len) |i| {
                 const schedule = self.chain.BLOB_SCHEDULE[self.chain.BLOB_SCHEDULE.len - i - 1];
                 if (epoch >= schedule.EPOCH) return schedule.MAX_BLOBS_PER_BLOCK;
@@ -244,16 +255,13 @@ pub fn getMaxRequestBlobSidecars(self: *const BeaconConfig, fork: ForkSeq) u64 {
 /// Convert basis points to milliseconds into the slot.
 ///
 /// Integer rounding via `(x + 5000) / 10000`.
-pub fn getSlotComponentDurationMs(self: *const BeaconConfig, basis_points: u64) u64 {
-    return (basis_points * self.chain.SLOT_DURATION_MS + 5000) / 10000;
+pub fn getSlotComponentDurationMs(self: *const BeaconConfig, fork: ForkSeq, basis_points: u64) u64 {
+    return (basis_points * self.getSlotDurationMs(fork) + 5000) / 10000;
 }
 
 /// Return the proposer reorg cutoff in milliseconds.
-///
-/// The fork parameter is currently unused — the cutoff is fork-independent.
-/// It exists for forward-compatibility should a future fork change the cutoff.
-pub fn getProposerReorgCutoffMs(self: *const BeaconConfig, _: ForkSeq) u64 {
-    return self.getSlotComponentDurationMs(self.chain.PROPOSER_REORG_CUTOFF_BPS);
+pub fn getProposerReorgCutoffMs(self: *const BeaconConfig, fork: ForkSeq) u64 {
+    return self.getSlotComponentDurationMs(fork, self.chain.PROPOSER_REORG_CUTOFF_BPS);
 }
 
 /// Return the attestation due time in milliseconds for the given fork.
@@ -262,9 +270,17 @@ pub fn getProposerReorgCutoffMs(self: *const BeaconConfig, _: ForkSeq) u64 {
 /// (shorter window to accommodate the ePBS payload reveal phase).
 pub fn getAttestationDueMs(self: *const BeaconConfig, fork: ForkSeq) u64 {
     if (fork.gte(.gloas)) {
-        return self.getSlotComponentDurationMs(self.chain.ATTESTATION_DUE_BPS_GLOAS);
+        return self.getSlotComponentDurationMs(fork, self.chain.ATTESTATION_DUE_BPS_GLOAS);
     }
-    return self.getSlotComponentDurationMs(self.chain.ATTESTATION_DUE_BPS);
+    return self.getSlotComponentDurationMs(fork, self.chain.ATTESTATION_DUE_BPS);
+}
+
+pub fn getSlotDurationMs(self: *const BeaconConfig, fork: ForkSeq) u64 {
+    return if (fork.gte(.heze)) self.chain.SLOT_DURATION_MS_HEZE else self.chain.SLOT_DURATION_MS;
+}
+
+pub fn getInclusionListDueMs(self: *const BeaconConfig, fork: ForkSeq) u64 {
+    return self.getSlotComponentDurationMs(fork, self.chain.INCLUSION_LIST_DUE_BPS);
 }
 
 /// Compute the signature domain for a message.
@@ -310,11 +326,6 @@ fn computeForkDataRoot(current_version: Version, genesis_validators_root: Root, 
     ct.phase0.ForkData.hashTreeRoot(&fork_data, out) catch unreachable;
 }
 
-test "getDomain" {
-    const root = [_]u8{0} ** 32;
-    var beacon_config = BeaconConfig.init(@import("./networks/mainnet.zig").chain_config, root);
-
-    const domain = try beacon_config.getDomain(100, DOMAIN_VOLUNTARY_EXIT, null);
-    const domain2 = try beacon_config.getDomain(100, DOMAIN_VOLUNTARY_EXIT, null);
-    try std.testing.expectEqualSlices(u8, domain, domain2);
+test {
+    _ = @import("beacon_config_test.zig");
 }

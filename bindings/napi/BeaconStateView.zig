@@ -930,7 +930,7 @@ pub fn isExecutionEnabled(self: *BeaconStateView, block: js.Value) !js.Boolean {
     if (fork_seq.lt(.bellatrix)) return js.Boolean.from(false);
 
     const merge_complete: bool = switch (fork_seq) {
-        inline .bellatrix, .capella, .deneb, .electra, .fulu, .gloas => |f| st.isMergeTransitionComplete(f, cached_state.state.castToFork(f)),
+        inline .bellatrix, .capella, .deneb, .electra, .fulu, .gloas, .heze => |f| st.isMergeTransitionComplete(f, cached_state.state.castToFork(f)),
         else => unreachable,
     };
     if (merge_complete) return js.Boolean.from(true);
@@ -1617,15 +1617,17 @@ pub fn getShufflingAtEpoch(self: *BeaconStateView, epoch_arg: js.Number) !js.Val
 fn gloasFieldValue(self: *BeaconStateView, comptime field: []const u8) !napi.Value {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const state = cached_state.state.tryCastToFork(.gloas) catch {
-        return (try throwNull("INVALID_FORK", comptime snakeToCamel(field) ++ " is not available before Gloas")).val;
+    return switch (cached_state.state.*) {
+        inline .gloas, .heze => |state, f| blk: {
+            const ST = fork_types.ForkTypes(f).BeaconState.getFieldType(field);
+            var value = ST.default_value;
+            defer if (comptime @hasDecl(ST, "deinit")) ST.deinit(cached_state.allocator, &value);
+            var view = try state.getReadonly(field);
+            try view.toValue(cached_state.allocator, &value);
+            break :blk sszValueToNapiValue(js.env(), ST, &value);
+        },
+        else => (try throwNull("INVALID_FORK", comptime snakeToCamel(field) ++ " is not available before Gloas")).val,
     };
-    const ST = ct.gloas.BeaconState.getFieldType(field);
-    var value = ST.default_value;
-    defer if (comptime @hasDecl(ST, "deinit")) ST.deinit(cached_state.allocator, &value);
-    var view = try state.inner.getReadonly(field);
-    try view.toValue(cached_state.allocator, &value);
-    return sszValueToNapiValue(js.env(), ST, &value);
 }
 
 pub fn latestBlockHash(self: *BeaconStateView) !js.Uint8Array {
@@ -1656,8 +1658,10 @@ pub fn getBuilder(self: *BeaconStateView, index_arg: js.Number) !js.Value {
     const cached_state = try self.acquireState();
     defer self.finishState();
     const index = index_arg.toU64Exact() catch return error.InvalidBuilderIndex;
-    const state = try cached_state.state.tryCastToFork(.gloas);
-    var builders = try state.inner.getReadonly("builders");
+    var builders = switch (cached_state.state.*) {
+        inline .gloas, .heze => |state| try state.getReadonly("builders"),
+        else => return error.InvalidAtFork,
+    };
     var view = try builders.getReadonly(index);
     var value: ct.gloas.Builder.Type = undefined;
     try view.toValue(cached_state.allocator, &value);
@@ -1669,20 +1673,33 @@ pub fn canBuilderCoverBid(self: *BeaconStateView, builder_index: js.Number, bid_
     defer self.finishState();
     const index = builder_index.toU64Exact() catch return error.InvalidBuilderIndex;
     const amount = bid_amount.toU64Exact() catch return error.InvalidBidAmount;
-    const state = try cached_state.state.tryCastToFork(.gloas);
-    return js.Boolean.from(try st.canBuilderCoverBid(.gloas, state, index, amount));
+    return switch (cached_state.state.forkSeq()) {
+        inline .gloas, .heze => |f| js.Boolean.from(try st.canBuilderCoverBid(f, cached_state.state.castToFork(f), index, amount)),
+        else => error.InvalidAtFork,
+    };
 }
 
 fn readPayloadTimelinessCommittee(cached_state: *CachedBeaconState, slot_value: u64, out: *[preset.PTC_SIZE]u64) !void {
-    const state = try cached_state.state.tryCastToFork(.gloas);
     const epoch_value = st.computeEpochAtSlot(slot_value);
     const current_epoch = cached_state.epoch_cache.epoch;
     if (epoch_value < cached_state.config.chain.GLOAS_FORK_EPOCH) return error.EpochBeforeGloas;
     if (epoch_value + 1 < current_epoch or epoch_value > current_epoch + preset.MIN_SEED_LOOKAHEAD) return error.EpochOutOfRange;
     const epoch_offset = epoch_value + 1 - current_epoch;
-    var window = try state.inner.getReadonly("ptc_window");
+    var window = switch (cached_state.state.*) {
+        inline .gloas, .heze => |state| try state.getReadonly("ptc_window"),
+        else => return error.InvalidAtFork,
+    };
     var committee = try window.getReadonly(epoch_offset * preset.SLOTS_PER_EPOCH + slot_value % preset.SLOTS_PER_EPOCH);
     try committee.toValue(cached_state.allocator, out);
+}
+
+pub fn getInclusionListCommittee(self: *BeaconStateView, slot_arg: js.Number) !js.Uint32Array {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const slot_value = slot_arg.toU64Exact() catch return error.InvalidSlot;
+    const shuffling = cached_state.epoch_cache.getShufflingAtEpochOrNull(st.computeEpochAtSlot(slot_value)) orelse return error.ShufflingNotAvailable;
+    const committee = try st.getInclusionListCommittee(shuffling, slot_value);
+    return js_types.wrap(js.Uint32Array, try numberSliceToNapiValue(js.env(), u64, &committee, .{ .typed_array = .uint32 }));
 }
 
 pub fn getPayloadTimelinessCommittee(self: *BeaconStateView, slot_arg: js.Number) !js.Uint32Array {
@@ -1733,7 +1750,7 @@ pub fn getIndicesInPayloadTimelinessCommittee(self: *BeaconStateView, validator_
 pub fn withParentPayloadApplied(self: *BeaconStateView, execution_requests_bytes: js.Uint8Array) !BeaconStateView {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    _ = try cached_state.state.tryCastToFork(.gloas);
+    if (cached_state.state.forkSeq().lt(.gloas)) return error.InvalidAtFork;
     const allocator = cached_state.allocator;
     var requests = ct.gloas.ExecutionRequests.default_value;
     defer ct.gloas.ExecutionRequests.deinit(allocator, &requests);
@@ -1743,7 +1760,10 @@ pub fn withParentPayloadApplied(self: *BeaconStateView, execution_requests_bytes
         post_state.deinit();
         allocator.destroy(post_state);
     }
-    try st.applyParentExecutionPayload(.gloas, allocator, js.io(), post_state.config, post_state.epoch_cache, post_state.state.castToFork(.gloas), &requests);
+    switch (post_state.state.forkSeq()) {
+        inline .gloas, .heze => |f| try st.applyParentExecutionPayload(f, allocator, js.io(), post_state.config, post_state.epoch_cache, post_state.state.castToFork(f), &requests),
+        else => unreachable,
+    }
     try post_state.state.commit();
     return .{
         .cached_state = post_state,
@@ -2036,7 +2056,7 @@ pub fn getExpectedWithdrawals(self: *BeaconStateView) !js.Value {
     defer withdrawal_balances.deinit();
 
     switch (fork_seq) {
-        inline .capella, .deneb, .electra, .fulu, .gloas => |f| {
+        inline .capella, .deneb, .electra, .fulu, .gloas, .heze => |f| {
             try st.getExpectedWithdrawals(
                 f,
                 cached_state.epoch_cache,

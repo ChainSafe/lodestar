@@ -22,6 +22,7 @@ const deneb = types.deneb;
 const electra = types.electra;
 const fulu = types.fulu;
 const gloas = types.gloas;
+const heze = types.heze;
 
 pub const BlsSetting = enum {
     default,
@@ -48,6 +49,7 @@ pub fn TestCaseUtils(comptime fork: ForkSeq) type {
                 .electra => .deneb,
                 .fulu => .electra,
                 .gloas => .fulu,
+                .heze => .gloas,
                 else => unreachable,
             };
         }
@@ -422,6 +424,16 @@ pub fn loadSignedBeaconBlock(allocator: std.mem.Allocator, fork: ForkSeq, dir: s
                 .full_gloas = out,
             };
         },
+        .heze => blk: {
+            const out = try allocator.create(heze.SignedBeaconBlock.Type);
+            errdefer allocator.destroy(out);
+            out.* = heze.SignedBeaconBlock.default_value;
+            errdefer heze.SignedBeaconBlock.deinit(allocator, out);
+            try loadSszSnappyValue(types.heze.SignedBeaconBlock, allocator, dir, file_name, out);
+            break :blk AnySignedBeaconBlock{
+                .full_heze = out,
+            };
+        },
     };
 }
 
@@ -478,6 +490,10 @@ pub fn deinitSignedBeaconBlock(signed_block: AnySignedBeaconBlock, allocator: st
         },
         .full_gloas => |b| {
             gloas.SignedBeaconBlock.deinit(allocator, @constCast(b));
+            allocator.destroy(b);
+        },
+        .full_heze => |b| {
+            heze.SignedBeaconBlock.deinit(allocator, @constCast(b));
             allocator.destroy(b);
         },
     }
@@ -539,6 +555,7 @@ pub fn expectEqualBeaconStates(expected: *AnyBeaconState, actual: *AnyBeaconStat
             .electra => try Debug.printDiff(types.electra.BeaconState, .electra, expected, actual),
             .fulu => try Debug.printDiff(types.fulu.BeaconState, .fulu, expected, actual),
             .gloas => try Debug.printDiff(types.gloas.BeaconState, .gloas, expected, actual),
+            .heze => try Debug.printDiff(types.heze.BeaconState, .heze, expected, actual),
         }
         return error.NotEqual;
     }

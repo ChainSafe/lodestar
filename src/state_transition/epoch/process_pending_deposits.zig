@@ -142,6 +142,9 @@ fn applyPendingDeposit(
     const is_validator_known = try isValidatorKnown(fork, state, validator_index);
 
     if (!is_validator_known) {
+        if (comptime fork.gte(.heze)) {
+            if (withdrawal_credentials[0] == @import("constants").BLS_WITHDRAWAL_PREFIX) return;
+        }
         // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
         if (validateDepositSignature(config, pubkey, withdrawal_credentials, amount, signature)) {
             try addValidatorToRegistry(fork, io, epoch_cache, state, pubkey, withdrawal_credentials, amount);
