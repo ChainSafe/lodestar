@@ -1,7 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
+import {CachedBeaconStatePreEip8453, EpochTransitionCache} from "../types.js";
 import {computeEpochAtSlot, getBlockRoot} from "../util/index.js";
 
 /**
@@ -10,7 +10,7 @@ import {computeEpochAtSlot, getBlockRoot} from "../util/index.js";
  * PERF: Very low (constant) cost. Persist small objects to the tree.
  */
 export function processJustificationAndFinalization(
-  state: CachedBeaconStateAllForks,
+  state: CachedBeaconStatePreEip8453,
   cache: EpochTransitionCache
 ): void {
   // Initial FFG checkpoint values have a `0x00` stub for `root`.
@@ -30,7 +30,7 @@ export function processJustificationAndFinalization(
  * Updates `state` checkpoints based on previous and current target balance
  */
 export function weighJustificationAndFinalization(
-  state: CachedBeaconStateAllForks,
+  state: CachedBeaconStatePreEip8453,
   totalActiveBalance: number,
   previousEpochTargetBalance: number,
   currentEpochTargetBalance: number

@@ -86,12 +86,14 @@ export type {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
+  CachedBeaconStateEip8453,
   CachedBeaconStateElectra,
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
   CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
+  CachedBeaconStatePreEip8453,
   CachedBeaconStatePreHeze,
 } from "./types.js";
 export * from "./util/index.js";

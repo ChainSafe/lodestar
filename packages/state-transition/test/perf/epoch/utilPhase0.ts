@@ -1,5 +1,6 @@
 import {AttesterFlags, toAttesterFlags} from "../../../src/index.js";
 import {CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/types.js";
+import {getFinalizedEpoch} from "../../../src/util/finality.js";
 
 /**
  * Generate an incomplete EpochTransitionCache to simulate any network condition relevant to getAttestationDeltas
@@ -26,7 +27,7 @@ export function generateBalanceDeltasEpochTransitionCache(
       targetStakeByIncrement: vc - 1,
       headStakeByIncrement: vc - 1,
     },
-    prevEpoch: isInInactivityLeak ? state.finalizedCheckpoint.epoch - 500 : state.finalizedCheckpoint.epoch,
+    prevEpoch: isInInactivityLeak ? getFinalizedEpoch(state) - 500 : getFinalizedEpoch(state),
   };
 
   return cache as EpochTransitionCache;

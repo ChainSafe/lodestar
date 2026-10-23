@@ -1,6 +1,8 @@
-import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateGloas, EpochTransitionCache} from "../types.js";
+import {CachedBeaconStateEip8453, CachedBeaconStateGloas, EpochTransitionCache} from "../types.js";
+import {computePtcEip8453} from "../util/eip8453.js";
+import {computeStartSlotAtEpoch} from "../util/epoch.js";
 import {computeEpochShuffling} from "../util/epochShuffling.js";
 import {computePayloadTimelinessCommitteesForEpoch} from "../util/seed.js";
 
@@ -18,13 +20,23 @@ export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTran
     cache.nextShuffling ?? computeEpochShuffling(state, cache.nextShufflingActiveIndices, nextEpoch);
   cache.nextShuffling = nextEpochShuffling;
 
-  const newNextPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
-    state,
-    nextEpoch,
-    nextEpochShuffling.committees,
-    nextEpochShuffling.shuffling,
-    state.epochCtx.effectiveBalanceIncrements
-  );
+  const newNextPayloadTimelinessCommittees =
+    state.config.getForkSeq(state.slot) >= ForkSeq.eip8453
+      ? // [Modified in EIP8453] compute_ptc samples the active validators directly, shuffled by the slot seed
+        Array.from({length: SLOTS_PER_EPOCH}, (_, i) =>
+          computePtcEip8453(
+            state as unknown as CachedBeaconStateEip8453,
+            computeStartSlotAtEpoch(nextEpoch) + i,
+            nextEpochShuffling.activeIndices
+          )
+        )
+      : computePayloadTimelinessCommitteesForEpoch(
+          state,
+          nextEpoch,
+          nextEpochShuffling.committees,
+          nextEpochShuffling.shuffling,
+          state.epochCtx.effectiveBalanceIncrements
+        );
 
   // Stash for finalProcessEpoch to shift into epoch cache
   cache.nextEpochPayloadTimelinessCommittees = newNextPayloadTimelinessCommittees;

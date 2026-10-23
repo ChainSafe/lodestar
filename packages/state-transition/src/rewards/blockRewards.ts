@@ -1,8 +1,10 @@
 import {BeaconConfig} from "@lodestar/config";
 import {
   ForkName,
+  ForkPreEip8453,
   WHISTLEBLOWER_REWARD_QUOTIENT,
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
+  isForkPostEip8453,
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -15,7 +17,7 @@ import {
   CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "../cache/stateCache.js";
-import {getAttesterSlashableIndices} from "../util/attestation.js";
+import {getAttesterSlashableIndices, getIntersectingIndices} from "../util/attestation.js";
 
 type SubRewardValue = number; // All reward values should be integer
 
@@ -148,15 +150,32 @@ function computeBlockAttesterSlashingReward(
 ): SubRewardValue {
   let attesterSlashingReward = 0;
 
-  for (const attesterSlashing of block.body.attesterSlashings) {
-    for (const offendingAttesterIndex of getAttesterSlashableIndices(attesterSlashing)) {
-      const offendingAttesterBalance = preState.validators.getReadonly(offendingAttesterIndex).effectiveBalance;
-      const whistleblowerRewardQuotient = isForkPostElectra(fork)
-        ? WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
-        : WHISTLEBLOWER_REWARD_QUOTIENT;
-
-      attesterSlashingReward += Math.floor(offendingAttesterBalance / whistleblowerRewardQuotient);
+  const offendingAttesterIndices: number[] = [];
+  if (isForkPostEip8453(fork)) {
+    const body = (block as BeaconBlock<ForkName.eip8453>).body;
+    for (const attesterSlashing of body.attesterSlashings) {
+      offendingAttesterIndices.push(
+        ...getIntersectingIndices(
+          attesterSlashing.attestation1.attestingIndices,
+          attesterSlashing.attestation2.attestingIndices
+        )
+      );
     }
+    for (const attesterSlashing of body.legacyAttesterSlashings) {
+      offendingAttesterIndices.push(...getAttesterSlashableIndices(attesterSlashing));
+    }
+  } else {
+    for (const attesterSlashing of (block as BeaconBlock<ForkPreEip8453>).body.attesterSlashings) {
+      offendingAttesterIndices.push(...getAttesterSlashableIndices(attesterSlashing));
+    }
+  }
+  for (const offendingAttesterIndex of offendingAttesterIndices) {
+    const offendingAttesterBalance = preState.validators.getReadonly(offendingAttesterIndex).effectiveBalance;
+    const whistleblowerRewardQuotient = isForkPostElectra(fork)
+      ? WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
+      : WHISTLEBLOWER_REWARD_QUOTIENT;
+
+    attesterSlashingReward += Math.floor(offendingAttesterBalance / whistleblowerRewardQuotient);
   }
 
   return attesterSlashingReward;

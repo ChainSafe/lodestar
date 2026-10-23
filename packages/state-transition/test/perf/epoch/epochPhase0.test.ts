@@ -14,6 +14,7 @@ import {processSlashingsReset} from "../../../src/epoch/processSlashingsReset.js
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
+  CachedBeaconStatePreEip8453,
   beforeProcessEpoch,
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
@@ -89,7 +90,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   bench({
     id: `${stateId} - phase0 processJustificationAndFinalization`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processJustificationAndFinalization(state, cache.value),
+    fn: (state) => processJustificationAndFinalization(state as CachedBeaconStatePreEip8453, cache.value),
   });
 
   // Very expensive 976.40 ms/op good target to optimize

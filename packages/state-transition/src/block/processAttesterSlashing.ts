@@ -1,8 +1,14 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
-import {AttesterSlashing, Slot} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
-import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
+import {ForkPreEip8453, ForkSeq} from "@lodestar/params";
+import {AttesterSlashing, Slot, ValidatorIndex, eip8453} from "@lodestar/types";
+import {CachedBeaconStateAllForks, CachedBeaconStateEip8453} from "../types.js";
+import {isSlashableAttestationDataEip8453, isValidIndexedAttestationBigintEip8453} from "../util/eip8453.js";
+import {
+  getAttesterSlashableIndices,
+  getIntersectingIndices,
+  isSlashableAttestationData,
+  isSlashableValidator,
+} from "../util/index.js";
 import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
 import {slashValidator} from "./slashValidator.js";
 
@@ -18,11 +24,72 @@ export function processAttesterSlashing(
   attesterSlashing: AttesterSlashing,
   verifySignatures = true
 ): void {
-  const {epochCtx} = state;
+  if (fork >= ForkSeq.eip8453) {
+    processAttesterSlashingEip8453(
+      state as CachedBeaconStateEip8453,
+      attesterSlashing as eip8453.AttesterSlashing,
+      verifySignatures
+    );
+    return;
+  }
+  assertValidAttesterSlashing(
+    state.config,
+    state.slot,
+    state.validators.length,
+    attesterSlashing as AttesterSlashing<ForkPreEip8453>,
+    verifySignatures
+  );
+  slashIntersectingIndices(
+    fork,
+    state,
+    getAttesterSlashableIndices(attesterSlashing as AttesterSlashing<ForkPreEip8453>)
+  );
+}
+
+/**
+ * Spec: process_attester_slashing with the finality gadget slashing rules, `is_slashable_attestation_data`
+ * [Modified in EIP8453] and `is_valid_indexed_attestation` [Modified in EIP8453].
+ */
+export function processAttesterSlashingEip8453(
+  state: CachedBeaconStateEip8453,
+  attesterSlashing: eip8453.AttesterSlashing,
+  verifySignatures = true
+): void {
+  const {attestation1, attestation2} = attesterSlashing;
+  if (!isSlashableAttestationDataEip8453(attestation1.data, attestation2.data)) {
+    throw new Error("AttesterSlashing is not slashable");
+  }
+  for (const [i, attestation] of [attestation1, attestation2].entries()) {
+    if (!isValidIndexedAttestationBigintEip8453(state, attestation, verifySignatures)) {
+      throw new Error(`AttesterSlashing attestation${i} is invalid`);
+    }
+  }
+  slashIntersectingIndices(
+    ForkSeq.eip8453,
+    state,
+    getIntersectingIndices(attestation1.attestingIndices, attestation2.attestingIndices)
+  );
+}
+
+/**
+ * Spec: process_legacy_attester_slashing, slashings of Casper FFG attestations made before EIP8453.
+ * `is_slashable_legacy_attestation_data` and `is_valid_legacy_indexed_attestation` are the Heze rules.
+ */
+export function processLegacyAttesterSlashing(
+  state: CachedBeaconStateEip8453,
+  attesterSlashing: AttesterSlashing<ForkPreEip8453>,
+  verifySignatures = true
+): void {
   assertValidAttesterSlashing(state.config, state.slot, state.validators.length, attesterSlashing, verifySignatures);
+  slashIntersectingIndices(ForkSeq.eip8453, state, getAttesterSlashableIndices(attesterSlashing));
+}
 
-  const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
-
+function slashIntersectingIndices(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  intersectingIndices: ValidatorIndex[]
+): void {
+  const {epochCtx} = state;
   let slashedAny = false;
   const validators = state.validators; // Get the validators sub tree once for all indices
   // Spec requires to sort indexes beforehand
@@ -42,7 +109,7 @@ export function assertValidAttesterSlashing(
   config: BeaconConfig,
   stateSlot: Slot,
   validatorsLen: number,
-  attesterSlashing: AttesterSlashing,
+  attesterSlashing: AttesterSlashing<ForkPreEip8453>,
   verifySignatures = true
 ): void {
   const attestation1 = attesterSlashing.attestation1;

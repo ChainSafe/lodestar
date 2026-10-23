@@ -10,14 +10,16 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateCapella,
+  CachedBeaconStateEip8453,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
+  CachedBeaconStatePreEip8453,
   CachedBeaconStatePreHeze,
   EpochTransitionCache,
 } from "../types.js";
-import {processBuilderPendingPayments} from "./processBuilderPendingPayments.js";
+import {processBuilderPendingPayments, processBuilderPendingPaymentsEip8453} from "./processBuilderPendingPayments.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
@@ -62,6 +64,12 @@ export {
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
+export {
+  processInactivityUpdatesEip8453,
+  processParticipationFlagUpdatesEip8453,
+  processRewardsEip8453,
+  processRound,
+} from "./processRound.js";
 
 const maxValidatorsPerStateSlashing = SLOTS_PER_EPOCH * MAX_ATTESTER_SLASHINGS * MAX_VALIDATORS_PER_COMMITTEE;
 const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BALANCE);
@@ -86,6 +94,7 @@ export enum EpochTransitionStep {
   processProposerLookahead = "processProposerLookahead",
   processPtcWindow = "processPtcWindow",
   processBuilderPendingPayments = "processBuilderPendingPayments",
+  processRound = "processRound",
 }
 
 export function processEpoch(
@@ -102,15 +111,19 @@ export function processEpoch(
     throw new Error("Lodestar does not support this network, parameters don't fit number value inside state.slashings");
   }
 
-  {
+  // [Modified in EIP8453] justification, finalization, inactivity, rewards and participation flags moved to the
+  // finality gadget (process_height_events in blocks and process_round at round boundaries)
+  const isEip8453 = fork >= ForkSeq.eip8453;
+
+  if (!isEip8453) {
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processJustificationAndFinalization,
     });
-    processJustificationAndFinalization(state, cache);
+    processJustificationAndFinalization(state as CachedBeaconStatePreEip8453, cache);
     timer?.();
   }
 
-  if (fork >= ForkSeq.altair) {
+  if (fork >= ForkSeq.altair && !isEip8453) {
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processInactivityUpdates});
     processInactivityUpdates(state as CachedBeaconStateAltair, cache);
     timer?.();
@@ -128,17 +141,26 @@ export function processEpoch(
   }
 
   // accumulate slashing penalties and only update balances once in processRewardsAndPenalties()
-  let slashingPenalties: number[];
-  {
+  if (isEip8453) {
+    // No epoch rewards and penalties, so slashing penalties are applied directly
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processSlashings});
-    slashingPenalties = processSlashings(state, cache, false);
+    processSlashings(state, cache, true);
     timer?.();
-  }
+  } else {
+    let slashingPenalties: number[];
+    {
+      const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processSlashings});
+      slashingPenalties = processSlashings(state, cache, false);
+      timer?.();
+    }
 
-  {
-    const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRewardsAndPenalties});
-    processRewardsAndPenalties(state, cache, slashingPenalties);
-    timer?.();
+    {
+      const timer = metrics?.epochTransitionStepTime.startTimer({
+        step: EpochTransitionStep.processRewardsAndPenalties,
+      });
+      processRewardsAndPenalties(state, cache, slashingPenalties);
+      timer?.();
+    }
   }
 
   if (fork < ForkSeq.heze) {
@@ -168,7 +190,11 @@ export function processEpoch(
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processBuilderPendingPayments,
     });
-    processBuilderPendingPayments(state as CachedBeaconStateGloas);
+    if (isEip8453) {
+      processBuilderPendingPaymentsEip8453(state as CachedBeaconStateEip8453);
+    } else {
+      processBuilderPendingPayments(state as CachedBeaconStateGloas);
+    }
     timer?.();
   }
 
@@ -193,7 +219,7 @@ export function processEpoch(
   if (fork === ForkSeq.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {
-    {
+    if (!isEip8453) {
       const timer = metrics?.epochTransitionStepTime.startTimer({
         step: EpochTransitionStep.processParticipationFlagUpdates,
       });

@@ -6,6 +6,7 @@ import {
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
+  ForkPreEip8453,
   ForkSeq,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
@@ -516,7 +517,8 @@ export class EpochCache {
     let previousTargetUnslashedBalanceIncrements = 0;
     let currentTargetUnslashedBalanceIncrements = 0;
 
-    if (config.getForkSeq(state.slot) >= ForkSeq.altair) {
+    const forkSeq = config.getForkSeq(state.slot);
+    if (forkSeq >= ForkSeq.altair && forkSeq < ForkSeq.eip8453) {
       const {previousEpochParticipation, currentEpochParticipation} = state as BeaconStateAltair;
       previousTargetUnslashedBalanceIncrements = sumTargetUnslashedBalanceIncrements(
         previousEpochParticipation.getAll(),
@@ -894,7 +896,7 @@ export class EpochCache {
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
-  getIndexedAttestation(fork: ForkSeq, attestation: Attestation): IndexedAttestation {
+  getIndexedAttestation(fork: ForkSeq, attestation: Attestation<ForkPreEip8453>): IndexedAttestation<ForkPreEip8453> {
     const shuffling = this.getShufflingAtSlot(attestation.data.slot);
     return getIndexedAttestation(shuffling, fork, attestation);
   }
@@ -902,7 +904,7 @@ export class EpochCache {
   /**
    * Return indices of validators who attestested in `attestation`
    */
-  getAttestingIndices(fork: ForkSeq, attestation: Attestation): number[] {
+  getAttestingIndices(fork: ForkSeq, attestation: Attestation<ForkPreEip8453>): number[] {
     const shuffling = this.getShufflingAtSlot(attestation.data.slot);
     return getAttestingIndices(shuffling, fork, attestation);
   }

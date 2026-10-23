@@ -1,7 +1,7 @@
 import {ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {beforeProcessEpoch} from "../cache/epochTransitionCache.js";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStatePreEip8453} from "../types.js";
 import {
   processJustificationAndFinalization,
   weighJustificationAndFinalization,
@@ -12,11 +12,13 @@ import {
  *   - For phase0, we need to create the cache through beforeProcessEpoch
  *   - For other forks, use the progressive balances inside EpochCache
  */
-export function computeUnrealizedCheckpoints(state: CachedBeaconStateAllForks): {
+export function computeUnrealizedCheckpoints(stateAllForks: CachedBeaconStateAllForks): {
   justifiedCheckpoint: phase0.Checkpoint;
   finalizedCheckpoint: phase0.Checkpoint;
 } {
-  let stateRealizedCheckpoints: CachedBeaconStateAllForks;
+  // Casper FFG checkpoints only exist before EIP8453; the finality gadget tracks height checkpoints instead
+  const state = stateAllForks as CachedBeaconStatePreEip8453;
+  let stateRealizedCheckpoints: CachedBeaconStatePreEip8453;
 
   // For phase0, we need to create the cache through beforeProcessEpoch
   if (state.config.getForkSeq(state.slot) === ForkSeq.phase0) {

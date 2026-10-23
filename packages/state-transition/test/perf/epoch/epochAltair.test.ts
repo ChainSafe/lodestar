@@ -16,6 +16,7 @@ import {processSyncCommitteeUpdates} from "../../../src/epoch/processSyncCommitt
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStatePreEip8453,
   beforeProcessEpoch,
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
@@ -102,7 +103,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   bench({
     id: `${stateId} - altair processJustificationAndFinalization`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processJustificationAndFinalization(state, cache.value),
+    fn: (state) => processJustificationAndFinalization(state as CachedBeaconStatePreEip8453, cache.value),
   });
 
   bench({

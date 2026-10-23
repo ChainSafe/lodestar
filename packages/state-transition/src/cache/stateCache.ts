@@ -9,12 +9,14 @@ import {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
+  BeaconStateEip8453,
   BeaconStateElectra,
   BeaconStateExecutions,
   BeaconStateFulu,
   BeaconStateGloas,
   BeaconStateHeze,
   BeaconStatePhase0,
+  BeaconStatePreEip8453,
   BeaconStatePreHeze,
 } from "./types.js";
 
@@ -140,10 +142,12 @@ export type CachedBeaconStateElectra = CachedBeaconState<BeaconStateElectra>;
 export type CachedBeaconStateFulu = CachedBeaconState<BeaconStateFulu>;
 export type CachedBeaconStateGloas = CachedBeaconState<BeaconStateGloas>;
 export type CachedBeaconStateHeze = CachedBeaconState<BeaconStateHeze>;
+export type CachedBeaconStateEip8453 = CachedBeaconState<BeaconStateEip8453>;
 
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
 export type CachedBeaconStatePreHeze = CachedBeaconState<BeaconStatePreHeze>;
+export type CachedBeaconStatePreEip8453 = CachedBeaconState<BeaconStatePreEip8453>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance
  * TODO ELECTRA: rename this to createFinalizedCachedBeaconState() as it's intended for finalized state only

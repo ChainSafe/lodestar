@@ -20,6 +20,7 @@ import {ZERO_HASH} from "../constants/index.js";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStateEip8453,
   CachedBeaconStateElectra,
   CachedBeaconStatePreHeze,
 } from "../types.js";
@@ -147,9 +148,20 @@ export function addValidatorToRegistry(
 
     stateAltair.inactivityScores.push(0);
 
-    // add participation caches
-    stateAltair.previousEpochParticipation.push(0);
-    stateAltair.currentEpochParticipation.push(0);
+    if (fork >= ForkSeq.eip8453) {
+      // [New in EIP8453] round and height participation, including the retained pending justifications
+      const stateEip8453 = state as CachedBeaconStateEip8453;
+      stateEip8453.roundParticipation.push(0);
+      stateEip8453.targetParticipation.push(false);
+      stateEip8453.progressParticipation.push(false);
+      for (let i = 0; i < stateEip8453.pendingFinality.length; i++) {
+        stateEip8453.pendingFinality.get(i).participation.push(false);
+      }
+    } else {
+      // add participation caches
+      stateAltair.previousEpochParticipation.push(0);
+      stateAltair.currentEpochParticipation.push(0);
+    }
   }
 
   state.balances.push(amount);

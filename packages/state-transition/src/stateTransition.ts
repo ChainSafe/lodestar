@@ -1,11 +1,11 @@
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_ROUND} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
 import {ProcessBlockOpts} from "./block/types.js";
 import {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
-import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
+import {EpochTransitionStep, processEpoch, processRound} from "./epoch/index.js";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
 import {
@@ -14,6 +14,7 @@ import {
   upgradeStateToBellatrix,
   upgradeStateToCapella,
   upgradeStateToDeneb,
+  upgradeStateToEip8453,
   upgradeStateToElectra,
   upgradeStateToGloas,
   upgradeStateToHeze,
@@ -25,9 +26,11 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
+  CachedBeaconStateEip8453,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -218,6 +221,13 @@ function processSlotsWithTransientCache(
     const fork = postState.config.getForkSeq(postState.slot);
     processSlot(fork, postState);
 
+    // [New in EIP8453] process the round on the start slot of the next round, before the epoch
+    if (fork >= ForkSeq.eip8453 && (postState.slot + 1) % SLOTS_PER_ROUND === 0) {
+      const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRound});
+      processRound(postState as CachedBeaconStateEip8453);
+      timer?.();
+    }
+
     // Process epoch on the first slot of the next epoch
     // We use `fork` because at fork boundary we don't want to process
     // "next fork" epoch before upgrading state
@@ -283,6 +293,9 @@ function processSlotsWithTransientCache(
       }
       if (stateEpoch === config.HEZE_FORK_EPOCH) {
         postState = upgradeStateToHeze(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;
+      }
+      if (stateEpoch === config.EIP8453_FORK_EPOCH) {
+        postState = upgradeStateToEip8453(postState as CachedBeaconStateHeze) as CachedBeaconStateAllForks;
       }
 
       {

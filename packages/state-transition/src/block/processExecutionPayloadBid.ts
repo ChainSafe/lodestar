@@ -10,6 +10,7 @@ import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
 import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
+import {getFinalizedEpoch} from "../util/finality.js";
 import {canBuilderCoverBid, isActiveBuilder} from "../util/gloas.js";
 import {
   createSingleSignatureSetFromComponents,
@@ -40,7 +41,7 @@ export function processExecutionPayloadBid(
     const builder = state.builders.getReadonly(builderIndex);
 
     // Verify that the builder is active
-    if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
+    if (!isActiveBuilder(builder, getFinalizedEpoch(state))) {
       throw Error(`Invalid execution payload bid: builder ${builderIndex} is not active`);
     }
 

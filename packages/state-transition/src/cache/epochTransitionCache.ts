@@ -420,6 +420,8 @@ export function beforeProcessEpoch(
       FLAG_CURR_TARGET_ATTESTER,
       FLAG_CURR_HEAD_ATTESTER
     );
+  } else if (forkSeq >= ForkSeq.eip8453) {
+    // [Modified in EIP8453] epoch participation is gone, rewards and inactivity are settled per round
   } else {
     previousEpochParticipation.length = (state as CachedBeaconStateAltair).previousEpochParticipation.length;
     (state as CachedBeaconStateAltair).previousEpochParticipation.getAll(previousEpochParticipation);
@@ -464,7 +466,7 @@ export function beforeProcessEpoch(
     }
   }
 
-  if (forkSeq >= ForkSeq.altair) {
+  if (forkSeq >= ForkSeq.altair && forkSeq < ForkSeq.eip8453) {
     const currentTargetMismatch = epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake;
     const previousTargetMismatch = epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake;
     if (currentTargetMismatch) {

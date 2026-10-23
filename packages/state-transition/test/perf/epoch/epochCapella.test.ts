@@ -16,6 +16,7 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateCapella,
+  CachedBeaconStatePreEip8453,
   beforeProcessEpoch,
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
@@ -81,7 +82,7 @@ function benchmarkCapellaEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks
   bench({
     id: `${stateId} - capella processJustificationAndFinalization`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processJustificationAndFinalization(state, cache.value),
+    fn: (state) => processJustificationAndFinalization(state as CachedBeaconStatePreEip8453, cache.value),
   });
 
   bench({

@@ -5,6 +5,7 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  CachedBeaconStateEip8453,
   CachedBeaconStateGloas,
   CachedBeaconStatePreHeze,
 } from "../types.js";
@@ -15,6 +16,7 @@ import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processExecutionPayloadBid} from "./processExecutionPayloadBid.js";
+import {processHeightEvents} from "./processHeightEvents.js";
 import {processOperations} from "./processOperations.js";
 import {processParentExecutionPayload} from "./processParentExecutionPayload.js";
 import {processPayloadAttestation} from "./processPayloadAttestation.js";
@@ -24,6 +26,9 @@ import {processWithdrawals} from "./processWithdrawals.js";
 import {BlockProcessStep, ProcessBlockOpts, ProposerRewardType} from "./types.js";
 
 // Spec tests
+export {processAttestationsEip8453} from "./processAttestationsEip8453.js";
+export {processHeadVote} from "./processHeadVote.js";
+export {advanceHeight, processHeightEvents} from "./processHeightEvents.js";
 export {
   processBlockHeader,
   processExecutionPayload,
@@ -133,6 +138,13 @@ export function processBlock(
   if (fork >= ForkSeq.altair) {
     const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processSyncAggregate});
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
+    timer?.();
+  }
+
+  if (fork >= ForkSeq.eip8453) {
+    // [New in EIP8453] the height events of a block are processed once, after all of its attestations
+    const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processHeightEvents});
+    processHeightEvents(state as CachedBeaconStateEip8453);
     timer?.();
   }
 
