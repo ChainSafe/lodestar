@@ -16,7 +16,6 @@ describe("createChainConfig", () => {
 
 describe("getSlotComponentDurationMs", () => {
   it.each([
-    // 3333 and 6667 bps do not divide a 12 s slot evenly, the spec rounds half up
     {slotDurationMs: 12_000, basisPoints: 3333, expected: 4000},
     {slotDurationMs: 12_000, basisPoints: 6667, expected: 8000},
     {slotDurationMs: 12_000, basisPoints: 1667, expected: 2000},
