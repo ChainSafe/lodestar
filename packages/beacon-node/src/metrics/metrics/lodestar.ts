@@ -48,6 +48,27 @@ type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "worker
 type BlsBufferFlushReason = "size" | "timeout";
 type BlsVerificationCallOperation = "batch" | "single" | "fallback" | "same_message";
 
+// Edges approximate slot-component deadlines expressed in basis points of the slot, e.g. 0.25
+// (ATTESTATION_DUE_BPS_GLOAS), 0.333 (ATTESTATION_DUE_BPS), 0.667 (PREPARE_NEXT_SLOT_BPS). Exact
+// deadline outcomes are counted separately against the configured deadline, not read off buckets.
+const ARRIVAL_SLOT_FRACTION_BUCKETS = [
+  0.01, 0.02, 0.042, 0.083, 0.167, 0.25, 0.333, 0.417, 0.5, 0.583, 0.667, 0.75, 0.833, 1, 1.25, 1.5, 2,
+];
+// Signed: negative means the deadline had already passed when the work completed
+const SIGNED_MARGIN_SLOT_FRACTION_BUCKETS = [
+  -0.5, -0.25, -0.167, -0.083, -0.042, 0, 0.042, 0.083, 0.125, 0.167, 0.25, 0.333, 0.5,
+];
+
+export type SlotPosition = "epoch_end" | "other";
+
+type DeadlineMissedTask = "block_become_head" | "prepare_next_slot" | "prepare_next_slot_completion";
+
+/** Execution statuses a payload envelope can be imported with; INVALID never reaches import */
+export type ImportedPayloadStatus =
+  | ExecutionPayloadStatus.VALID
+  | ExecutionPayloadStatus.SYNCING
+  | ExecutionPayloadStatus.ACCEPTED;
+
 /**
  * Extra Lodestar custom metrics
  */
@@ -935,6 +956,12 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block processed",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+      arrivalSlotFraction: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_block_arrival_slot_fraction",
+        help: "Time elapsed between block slot start and block received, as a fraction of the block slot's duration",
+        labelNames: ["source"],
+        buckets: ARRIVAL_SLOT_FRACTION_BUCKETS,
+      }),
 
       gossipValidation: {
         recvToValidation: register.histogram({
@@ -1155,9 +1182,10 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block becomes head",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
-      setHeadAfterCutoff: register.gauge({
-        name: "lodestar_import_block_set_head_after_cutoff_total",
-        help: "Total times an imported block is set as head after ATTESTATION_DUE_BPS of the slot",
+      becomeHeadSlotFraction: register.histogram({
+        name: "lodestar_import_block_become_head_slot_fraction",
+        help: "Time elapsed between head slot start and the block becoming head, as a fraction of the head slot's duration",
+        buckets: ARRIVAL_SLOT_FRACTION_BUCKETS,
       }),
       lateCanonicalBlock: register.counter<{reason: LateCanonicalBlockReason}>({
         name: "lodestar_import_block_late_canonical_total",
@@ -1186,6 +1214,21 @@ export function createLodestarMetrics(
         help: "Time elapsed between slot time and the time execution payload envelope is imported (added to fork choice)",
         labelNames: ["source"],
         buckets: [1, 2, 3, 6, 9, 12],
+      }),
+      elapsedSlotFraction: register.histogram<{status: ImportedPayloadStatus}>({
+        name: "lodestar_import_payload_elapsed_slot_fraction",
+        help: "Time from the payload slot start to envelope import as a fraction of that slot's duration, by execution status. Samples only payloads of the current or previous clock slot",
+        labelNames: ["status"],
+        buckets: ARRIVAL_SLOT_FRACTION_BUCKETS,
+      }),
+      deadlineMissed: register.counter<{status: ImportedPayloadStatus}>({
+        name: "lodestar_import_payload_deadline_missed_total",
+        help: "Payload imports completed after the payload due point, by execution status. Same population as lodestar_import_payload_elapsed_slot_fraction",
+        labelNames: ["status"],
+      }),
+      beyondWindow: register.counter({
+        name: "lodestar_import_payload_beyond_window_total",
+        help: "Payload imports for slots older than the previous clock slot, excluded from the slot fraction samples",
       }),
       columnsBySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
         name: "lodestar_import_payload_columns_by_source_total",
@@ -1915,6 +1958,31 @@ export function createLodestarMetrics(
         help: "Duration of state transition in regen.getState",
         labelNames: ["caller"],
         buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+    },
+
+    // Slot-relative timing: each observation is divided by the slot duration of the fork that
+    // applies to the measured slot, so values are comparable across networks and across a
+    // slot-duration change (EIP-8198). Fraction buckets stay fixed; seconds metrics are kept.
+    slotTiming: {
+      slotDurationSeconds: register.gauge({
+        name: "lodestar_slot_duration_seconds",
+        help: "Slot duration in seconds of the fork at the current clock slot",
+      }),
+      prepareNextSlotLeadMargin: register.histogram<{slot_position: SlotPosition}>({
+        name: "lodestar_prepare_next_slot_lead_margin_slot_fraction",
+        help: "Signed fraction of the scheduling slot left between prepareNextSlot completion and the next slot start (negative = completed late). Covers state regen, state hashing and awaited payload preparation, not the builder-deposit pre-verify",
+        labelNames: ["slot_position"],
+        buckets: SIGNED_MARGIN_SLOT_FRACTION_BUCKETS,
+      }),
+      deadlineMissed: register.counter<{task: DeadlineMissedTask}>({
+        name: "lodestar_deadline_missed_total",
+        help: "Completions after the slot-relative deadline of a task: block_become_head after attestation due, prepare_next_slot after the next slot start, prepare_next_slot_completion after payload attestation due. Each task's population matches its slot fraction histogram or eligible completions counter",
+        labelNames: ["task"],
+      }),
+      prepareNextSlotPtcEligibleCompletions: register.counter({
+        name: "lodestar_prepare_next_slot_ptc_eligible_completions_total",
+        help: "Successful epoch-end prepareNextSlot completions in a Gloas or later slot, the population of deadline_missed{deadline=payload_attestation_due,task=prepare_next_slot_completion}",
       }),
     },
 

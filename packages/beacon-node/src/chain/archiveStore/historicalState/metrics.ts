@@ -36,6 +36,11 @@ export function createHistoricalStateTransitionMetrics(
       // Epoch transitions are 100ms on very fast clients, and average 800ms on heavy networks
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5, 3, 10],
     }),
+    epochTransitionSlotFraction: metricsRegister.histogram({
+      name: "lodestar_historical_state_stfn_epoch_transition_slot_fraction",
+      help: "Epoch transition duration as a fraction of the duration of the slot the transition enters",
+      buckets: [0.05, 0.1, 0.15, 0.2, 0.25, 0.333, 0.5, 0.75, 1, 1.5],
+    }),
     epochTransitionCommitTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_epoch_transition_commit_seconds",
       help: "Time to call commit after process a single epoch transition in seconds",
