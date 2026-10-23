@@ -693,7 +693,20 @@ export class ForkChoice implements IForkChoice {
     }
 
     // findHead returns the ProtoNode representing the head
-    const head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
+    let head: ProtoNode;
+    try {
+      head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
+    } catch (e) {
+      // A poisoned tree never recovers, shut the node down instead of failing every head computation
+      if (
+        e instanceof ProtoArrayError &&
+        (e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE ||
+          e.type.code === ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS)
+      ) {
+        this.irrecoverableError = e;
+      }
+      throw e;
+    }
 
     this.head = head;
     return this.head;
@@ -1588,13 +1601,14 @@ export class ForkChoice implements IForkChoice {
    * justified's status as well as validate the terminal conditions if terminal block
    * becomes valid
    */
-  validateLatestHash(execResponse: LVHExecResponse): void {
+  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean {
     try {
-      this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
+      return this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot, opts);
     } catch (e) {
       if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE) {
         this.irrecoverableError = e;
       }
+      return false;
     }
   }
 

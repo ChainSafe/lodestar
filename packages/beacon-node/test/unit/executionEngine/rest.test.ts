@@ -143,7 +143,7 @@ describe("ExecutionEngine / rest", () => {
       const engine = createEngine();
       sszResponse.body = ForkchoiceUpdateResponse.serialize({payloadStatus: validStatus, payloadId: []});
 
-      const payloadId = await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hashHex, hashHex, hashHex);
+      const {payloadId} = await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hashHex, hashHex, hashHex);
 
       expect(payloadId).toBeNull();
       expect(lastRequest("/engine/v1/capabilities").method).toBe("GET");
@@ -406,7 +406,7 @@ describe("ExecutionEngine / rest", () => {
         payloadId: [fromHex(payloadIdHex)],
       });
 
-      const payloadId = await engine.notifyForkchoiceUpdate(ForkName.deneb, hashHex, hashHex, hashHex, attributes);
+      const {payloadId} = await engine.notifyForkchoiceUpdate(ForkName.deneb, hashHex, hashHex, hashHex, attributes);
 
       expect(payloadId).toBe(payloadIdHex);
       const req = lastRequest("/engine/v1/forkchoice");

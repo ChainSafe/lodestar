@@ -1366,6 +1366,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                   // Errors might indicate an issue with our node or the connected EL client
                   logLevel = LogLevel.error;
                   break;
+                case PayloadErrorCode.BLOCK_EXECUTION_INVALID:
+                  logLevel = LogLevel.warn;
+                  break;
                 // INVALID_SIGNATURE should not happen, signature is verified during gossip validation
                 case PayloadErrorCode.INVALID_SIGNATURE:
                 case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:

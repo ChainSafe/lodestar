@@ -72,13 +72,19 @@ import {
 } from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
-import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {
+  ExecutionPayloadStatus,
+  IExecutionBuilder,
+  IExecutionEngine,
+  PayloadAttributes,
+  PayloadId,
+} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
-import {CommonBlockBody} from "../interface.js";
+import {CommonBlockBody, IBeaconChain} from "../interface.js";
 import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
@@ -747,6 +753,7 @@ export async function prepareExecutionPayload(
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
     inclusionListStore: InclusionListStore;
+    onForkchoiceUpdated: IBeaconChain["onForkchoiceUpdated"];
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -805,7 +812,7 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
+    const result = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
       toRootHex(parentBlockHash),
       safeBlockHash,
@@ -819,6 +826,11 @@ export async function prepareExecutionPayload(
           feeRecipient: suggestedFeeRecipient,
         })
     );
+    chain.onForkchoiceUpdated(toRootHex(parentBlockRoot), toRootHex(parentBlockHash), result);
+    if (result.payloadStatus.status === ExecutionPayloadStatus.INVALID) {
+      throw Error(`Invalid prepare payload, validationError=${result.payloadStatus.validationError ?? ""}`);
+    }
+    payloadId = result.payloadId;
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 

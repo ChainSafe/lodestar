@@ -32,6 +32,11 @@ export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
         name: "beacon_fork_choice_changed_head_total",
         help: "Count of occasions fork choice has found a new head",
       }),
+      executionInvalidations: register.gauge<{source: string}>({
+        name: "beacon_fork_choice_execution_invalidations_total",
+        help: "Count of execution engine INVALID verdicts applied to fork choice, by verdict source",
+        labelNames: ["source"],
+      }),
       reorg: register.gauge({
         name: "beacon_fork_choice_reorg_total",
         help: "Count of occasions fork choice has switched to a different chain",

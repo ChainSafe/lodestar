@@ -34,6 +34,7 @@ export enum PayloadErrorCode {
   EXECUTION_ENGINE_INVALID = "PAYLOAD_ERROR_EXECUTION_ENGINE_INVALID",
   EXECUTION_ENGINE_ERROR = "PAYLOAD_ERROR_EXECUTION_ENGINE_ERROR",
   BLOCK_NOT_IN_FORK_CHOICE = "PAYLOAD_ERROR_BLOCK_NOT_IN_FORK_CHOICE",
+  BLOCK_EXECUTION_INVALID = "PAYLOAD_ERROR_BLOCK_EXECUTION_INVALID",
   MISS_BLOCK_STATE = "PAYLOAD_ERROR_MISS_BLOCK_STATE",
   ENVELOPE_VERIFICATION_ERROR = "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR",
   INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
@@ -52,6 +53,10 @@ export type PayloadErrorType =
     }
   | {
       code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE;
+      blockRootHex: string;
+    }
+  | {
+      code: PayloadErrorCode.BLOCK_EXECUTION_INVALID;
       blockRootHex: string;
     }
   | {
@@ -137,6 +142,13 @@ export async function importExecutionPayload(
   if (!protoBlock) {
     throw new PayloadError(payloadInput, {
       code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE,
+      blockRootHex,
+    });
+  }
+  // The payload chain this block builds on was invalidated, a VALID verdict here would contradict it
+  if (protoBlock.executionStatus === ExecutionStatus.Invalid) {
+    throw new PayloadError(payloadInput, {
+      code: PayloadErrorCode.BLOCK_EXECUTION_INVALID,
       blockRootHex,
     });
   }
@@ -332,11 +344,14 @@ export async function importExecutionPayload(
   if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
-    this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
-      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-        this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
-      }
-    });
+    this.executionEngine
+      .notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash)
+      .then((result) => this.onForkchoiceUpdated(blockRootHex, blockHashHex, result))
+      .catch((e) => {
+        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+          this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
+        }
+      });
   }
 
   // 8. Record metrics for payload envelope and column sources
