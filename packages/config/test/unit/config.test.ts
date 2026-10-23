@@ -16,11 +16,13 @@ describe("createChainConfig", () => {
 
 describe("getSlotComponentDurationMs", () => {
   it.each([
-    // 3333 and 6667 bps do not divide a 12 s slot evenly, the spec floors the result
-    {slotDurationMs: 12_000, basisPoints: 3333, expected: 3999},
+    // 3333 and 6667 bps do not divide a 12 s slot evenly, the spec rounds half up
+    {slotDurationMs: 12_000, basisPoints: 3333, expected: 4000},
     {slotDurationMs: 12_000, basisPoints: 6667, expected: 8000},
     {slotDurationMs: 12_000, basisPoints: 1667, expected: 2000},
     {slotDurationMs: 12_000, basisPoints: 2500, expected: 3000},
+    {slotDurationMs: 6_000, basisPoints: 3333, expected: 2000},
+    {slotDurationMs: 6_000, basisPoints: 6667, expected: 4000},
     // every mainnet basis-point value is exact at a 10 s slot
     {slotDurationMs: 10_000, basisPoints: 3333, expected: 3333},
     {slotDurationMs: 10_000, basisPoints: 1667, expected: 1667},

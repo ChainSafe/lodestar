@@ -265,8 +265,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
 
     getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number {
-      // Floor division as in the spec, https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/phase0/fork-choice.md#get_slot_component_duration_ms
-      return Math.floor((basisPoints * this.getSlotDurationMs(fork)) / BASIS_POINTS);
+      // Round half up as in the spec, https://github.com/ethereum/consensus-specs/pull/5756
+      return Math.floor((basisPoints * this.getSlotDurationMs(fork) + BASIS_POINTS / 2) / BASIS_POINTS);
     },
   };
 }
