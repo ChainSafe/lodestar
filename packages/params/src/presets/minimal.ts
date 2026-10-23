@@ -160,4 +160,22 @@ export const minimalPreset: BeaconPreset = {
   INCLUSION_LIST_COMMITTEE_SIZE: 16, // 2**4
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: 196934,
   MAX_SIGNED_INCLUSION_LIST_SIZE: 41112,
+
+  // EIP8453
+  // Spec: presets/minimal/eip8453.yaml (ethereum/consensus-specs decoupled-consensus branch)
+  PENDING_FINALITY_WINDOW: 4, // 2**2
+  // [customized]
+  SLOTS_PER_ROUND: 4, // 2**2
+  // [customized]
+  ATTESTATION_COMMITTEES_PER_ROUND: 8, // 2**3
+  // [customized]
+  MAX_VALIDATORS_PER_AGGREGATE: 512, // 2**9
+  // [customized]
+  HEAD_VOTE_COMMITTEE_SIZE: 16, // 2**4
+  // [customized]
+  ROUND_REWARD_FACTOR: 32, // 2**5
+  // [customized]
+  MIN_ROUNDS_TO_INACTIVITY_LEAK: 8, // 2**3
+  EJECTION_INACTIVITY_SCORE: 65536, // 2**16
+  MAX_HEAD_VOTES: 8, // 2**3
 };

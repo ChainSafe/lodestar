@@ -127,6 +127,16 @@ export const {
   INCLUSION_LIST_COMMITTEE_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
   MAX_SIGNED_INCLUSION_LIST_SIZE,
+
+  PENDING_FINALITY_WINDOW,
+  SLOTS_PER_ROUND,
+  ATTESTATION_COMMITTEES_PER_ROUND,
+  MAX_VALIDATORS_PER_AGGREGATE,
+  HEAD_VOTE_COMMITTEE_SIZE,
+  ROUND_REWARD_FACTOR,
+  MIN_ROUNDS_TO_INACTIVITY_LEAK,
+  EJECTION_INACTIVITY_SCORE,
+  MAX_HEAD_VOTES,
 } = activePreset;
 
 ////////////
@@ -174,6 +184,10 @@ export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
 export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
+// EIP8453
+export const DOMAIN_HEAD_VOTE = Uint8Array.from([18, 0, 0, 0]);
+export const DOMAIN_HEAD_VOTE_COMMITTEE = Uint8Array.from([19, 0, 0, 0]);
+export const DOMAIN_FINALITY_ATTESTER = Uint8Array.from([20, 0, 0, 0]);
 
 // Application specific domains
 
@@ -205,6 +219,22 @@ export const WEIGHT_DENOMINATOR = 64;
 // altair misc
 
 export const PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT];
+
+// EIP8453 participation flag indices
+export const PROGRESS_FLAG_INDEX = 0;
+export const FINALITY_FLAG_INDEX = 1;
+
+// EIP8453 incentivization weights. The progress flag takes the Altair source and target weights, the finality
+// flag takes the head weight, so the sum still equals WEIGHT_DENOMINATOR.
+export const PROGRESS_WEIGHT = 40;
+export const FINALITY_WEIGHT = 14;
+export const PARTICIPATION_FLAG_WEIGHTS_EIP8453 = [PROGRESS_WEIGHT, FINALITY_WEIGHT];
+
+// EIP8453 misc
+export const GENESIS_ROUND = 0;
+export const TIMEOUT_DELAY_SLOTS = SLOTS_PER_ROUND;
+// ssz.eip8453.BeaconState.getPathInfo(['finalizedCheckpoint', 'root']).gindex
+export const FINALIZED_ROOT_GINDEX_EIP8453 = 5943;
 
 // phase0 validator
 

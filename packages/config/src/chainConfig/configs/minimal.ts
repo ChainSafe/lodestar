@@ -56,6 +56,9 @@ export const chainConfig: ChainConfig = {
   // HEZE
   HEZE_FORK_VERSION: b("0x08000001"),
   HEZE_FORK_EPOCH: Infinity,
+  // EIP8453
+  EIP8453_FORK_VERSION: b("0xe8453001"),
+  EIP8453_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------

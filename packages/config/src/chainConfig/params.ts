@@ -105,6 +105,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
   const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
   const hezeForkRelevant = localConfig.HEZE_FORK_EPOCH < Infinity;
+  const eip8453ForkRelevant = localConfig.EIP8453_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -149,6 +150,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // heze
     HEZE_FORK_VERSION: hezeForkRelevant,
     HEZE_FORK_EPOCH: hezeForkRelevant,
+    // eip8453
+    EIP8453_FORK_VERSION: eip8453ForkRelevant,
+    EIP8453_FORK_EPOCH: eip8453ForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: false, // Deprecated
@@ -348,6 +352,17 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: false,
     MAX_SIGNED_INCLUSION_LIST_SIZE: false,
+
+    // EIP8453
+    PENDING_FINALITY_WINDOW: eip8453ForkRelevant,
+    SLOTS_PER_ROUND: eip8453ForkRelevant,
+    ATTESTATION_COMMITTEES_PER_ROUND: eip8453ForkRelevant,
+    MAX_VALIDATORS_PER_AGGREGATE: eip8453ForkRelevant,
+    HEAD_VOTE_COMMITTEE_SIZE: eip8453ForkRelevant,
+    ROUND_REWARD_FACTOR: eip8453ForkRelevant,
+    MIN_ROUNDS_TO_INACTIVITY_LEAK: eip8453ForkRelevant,
+    EJECTION_INACTIVITY_SCORE: eip8453ForkRelevant,
+    MAX_HEAD_VOTES: eip8453ForkRelevant,
 
     // FastConfirmationRule
     CONFIRMATION_BYZANTINE_THRESHOLD: false,
