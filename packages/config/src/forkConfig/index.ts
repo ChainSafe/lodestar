@@ -265,7 +265,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
 
     getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number {
-      return Math.floor((basisPoints * this.getSlotDurationMs(fork) + BASIS_POINTS / 2) / BASIS_POINTS);
+      return Math.round((basisPoints * this.getSlotDurationMs(fork)) / BASIS_POINTS);
     },
   };
 }
