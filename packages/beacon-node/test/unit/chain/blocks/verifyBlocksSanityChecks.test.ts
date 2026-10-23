@@ -38,13 +38,10 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     clock = new ClockStopped(currentSlot);
     modules = {
       config,
-      getBlockHexDefaultStatus: chain.getBlockHexDefaultStatus.bind(chain),
-      getBlockHexAndBlockHash: chain.getBlockHexAndBlockHash.bind(chain),
+      beaconEngine: {chainView: chain.chainView},
       clock,
       opts: {} as IChainOptions,
       blacklistedBlocks: new Map(),
-      getFinalizedCheckpoint: chain.getFinalizedCheckpoint.bind(chain),
-      hasBlockHex: chain.hasBlockHex.bind(chain),
     };
     // On first call, parentRoot is known
     forkChoice.getBlockHexDefaultStatus.mockReturnValue({} as ProtoBlock);
@@ -118,7 +115,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     // allBlocks[0] = Genesis, not submitted
     // allBlocks[1] = OK
     // allBlocks[2] = OK
-    Object.assign(modules, getChainView([blocks[0]]));
+    modules.beaconEngine.chainView = getChainView([blocks[0]]);
     clock.setSlot(3);
 
     const {relevantBlocks, parentSlots} = verifyBlocksSanityChecks(modules, blocksToProcess, null, {
@@ -138,7 +135,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     // allBlocks[1] = ALREADY_KNOWN
     // allBlocks[2] = OK
     // allBlocks[3] = OK
-    Object.assign(modules, getChainView([blocks[0], blocks[1]]));
+    modules.beaconEngine.chainView = getChainView([blocks[0], blocks[1]]);
     clock.setSlot(4);
 
     const {relevantBlocks} = verifyBlocksSanityChecks(modules, blocksToProcess, null, {
@@ -158,7 +155,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     // allBlocks[1] = WOULD_REVERT_FINALIZED_SLOT + ALREADY_KNOWN
     // allBlocks[2] = OK
     // allBlocks[3] = OK
-    Object.assign(modules, getChainView([blocks[0], blocks[1]], finalizedEpoch));
+    modules.beaconEngine.chainView = getChainView([blocks[0], blocks[1]], finalizedEpoch);
     clock.setSlot(finalizedSlot + 4);
 
     const {relevantBlocks} = verifyBlocksSanityChecks(modules, blocksToProcess, null, {

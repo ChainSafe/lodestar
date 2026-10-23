@@ -9,13 +9,12 @@ import {nextEventLoop} from "../../../../src/util/eventLoop.js";
 
 vi.mock("../../../../src/chain/archiveStore/utils/archiveBlocks.js", () => ({archiveBlocks: vi.fn()}));
 
-describe("ArchiveStore ChainView pruning", () => {
+describe("ArchiveStore finalization ordering", () => {
   it("keeps each queued checkpoint paired with its pulled block snapshot", async () => {
     const controller = new AbortController();
     const emitter = new ChainEventEmitter();
     const firstArchive = defer<void>();
     const completeFinalization = vi.fn().mockResolvedValue(0);
-    const pruneChainView = vi.fn();
     const logger = {verbose: vi.fn(), error: vi.fn()};
     const snapshots = [1, 2].map((epoch): FinalizedCheckpointSnapshot & {rootHex: string} => {
       const root = new Uint8Array(32).fill(epoch);
@@ -41,7 +40,6 @@ describe("ArchiveStore ChainView pruning", () => {
           clock: {currentEpoch: 2},
           opts: {},
           beaconEngine: {completeFinalization},
-          pruneChainView,
         },
         db: {},
         logger,
@@ -62,9 +60,9 @@ describe("ArchiveStore ChainView pruning", () => {
       emitter.emit(ChainEvent.forkChoiceFinalized, snapshots[1]);
       await nextEventLoop();
       expect(archiveBlocks).toHaveBeenCalledOnce();
-      expect(pruneChainView).not.toHaveBeenCalled();
+      expect(completeFinalization).not.toHaveBeenCalled();
       firstArchive.resolve();
-      await vi.waitFor(() => expect(pruneChainView).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(completeFinalization).toHaveBeenCalledTimes(2));
       for (const [index, snapshot] of snapshots.entries()) {
         expect(vi.mocked(archiveBlocks).mock.calls[index][3], `snapshot for epoch ${snapshot.epoch}`).toBe(
           snapshot.blockSnapshot
@@ -96,7 +94,6 @@ describe("ArchiveStore ChainView pruning", () => {
     const completion = defer<number>();
     const archival = defer<void>();
     const completeFinalization = vi.fn(() => completion.promise);
-    const pruneChainView = vi.fn();
     const logger = {verbose: vi.fn(), error: vi.fn()};
     vi.mocked(archiveBlocks).mockReset().mockReturnValue(archival.promise);
     new ArchiveStore(
@@ -107,7 +104,6 @@ describe("ArchiveStore ChainView pruning", () => {
           getHead: () => ({slot: 32}),
           opts: {},
           beaconEngine: {completeFinalization},
-          pruneChainView,
         },
         db: {},
         logger,
@@ -127,24 +123,23 @@ describe("ArchiveStore ChainView pruning", () => {
       await vi.waitFor(() => expect(archiveBlocks).toHaveBeenCalledOnce());
       expect(vi.mocked(archiveBlocks).mock.calls[0][3]).toBe(finalized.blockSnapshot);
       expect(completeFinalization).not.toHaveBeenCalled();
-      expect(pruneChainView).not.toHaveBeenCalled();
       if (fail === "archive") {
         archival.reject(new Error("envelope migration failed"));
         await vi.waitFor(() => expect(logger.error).toHaveBeenCalled());
         expect(completeFinalization).not.toHaveBeenCalled();
-        expect(pruneChainView).not.toHaveBeenCalled();
         return;
       }
       archival.resolve();
-      await vi.waitFor(() => expect(completeFinalization).toHaveBeenCalledWith(checkpoint));
-      expect(pruneChainView).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(completeFinalization).toHaveBeenCalledExactlyOnceWith(checkpoint));
       if (fail === "finalization") {
         completion.reject(new Error("archive failed"));
         await vi.waitFor(() => expect(logger.error).toHaveBeenCalled());
-        expect(pruneChainView).not.toHaveBeenCalled();
       } else {
         completion.resolve(0);
-        await vi.waitFor(() => expect(pruneChainView).toHaveBeenCalledExactlyOnceWith(checkpoint));
+        await vi.waitFor(() =>
+          expect(logger.verbose).toHaveBeenCalledWith("Finish processing finalized checkpoint", expect.anything())
+        );
+        expect(logger.error).not.toHaveBeenCalled();
       }
     } finally {
       controller.abort();

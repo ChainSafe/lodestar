@@ -11,6 +11,7 @@ import {NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lo
 import {ssz} from "@lodestar/types";
 import {fromAsync, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
+import type {IChainView} from "../../../../src/chain/chainView/interface.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {encodeArchivedHeaderEnvelope} from "../../../../src/db/repositories/index.js";
@@ -94,6 +95,11 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       beaconEngine: {
         getFinalizedBlockRootBySlot: (slot: number) => db.blockArchive.getRootBySlot(slot),
         getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range serving must not load blocks")),
+        chainView: {
+          getFinalizedBlock: () => ({slot: headSlot - SLOTS_PER_EPOCH}),
+          getHead: () => ({blockRoot: "0x" + "00".repeat(32), payloadStatus: PayloadStatus.FULL}),
+          getAllAncestorBlocks: () => [],
+        },
       },
       custodyConfig: {custodyColumns: [0, 1], custodyColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS).fill(1)},
       earliestAvailableSlot: 0,
@@ -102,10 +108,6 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       metrics: null,
       getSerializedDataColumnSidecars: (slot: number, root: string, indices: number[]) =>
         BeaconChain.prototype.getSerializedDataColumnSidecars.call(fallbackChain, slot, root, indices),
-
-      getFinalizedBlock: () => ({slot: headSlot - SLOTS_PER_EPOCH}),
-      getHead: () => ({blockRoot: "0x" + "00".repeat(32), payloadStatus: PayloadStatus.FULL}),
-      getAllAncestorBlocks: () => [],
     } as unknown as IBeaconChain;
   }
 
@@ -168,10 +170,10 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
     await db.init();
     const chain = makeChain();
     if (source === "fork choice") {
-      vi.spyOn(chain, "getAllAncestorBlocks").mockReturnValue([
+      vi.spyOn(chain.beaconEngine.chainView, "getAllAncestorBlocks").mockReturnValue([
         {slot: 11, blockRoot: "0x" + "11".repeat(32), payloadStatus: PayloadStatus.FULL},
         {slot: 9, blockRoot: "0x" + "09".repeat(32), payloadStatus: PayloadStatus.FULL},
-      ] as ReturnType<IBeaconChain["getAllAncestorBlocks"]>);
+      ] as ReturnType<IChainView["getAllAncestorBlocks"]>);
     } else {
       await writeColumns(9, "flat");
     }

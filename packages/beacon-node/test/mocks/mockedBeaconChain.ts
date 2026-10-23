@@ -13,6 +13,7 @@ import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
+import {ChainView} from "../../src/chain/chainView/chainView.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
@@ -45,7 +46,8 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   // The facade narrows `beaconEngine` to `IBeaconEngine`, but the flat mock doubles as the concrete
   // engine (`chain.beaconEngine = chain`), so tests invoke the `this: BeaconEngineCore` phantom validators
   // and reach engine internals (regen/bls/getHeadState) through it. Keep the concrete type here.
-  beaconEngine: BeaconEngineCore;
+  beaconEngine: BeaconEngineCore & {chainView: MockedChainView};
+  chainView: MockedChainView;
   produceBlockWrapper: Mock<BeaconEngineCore["produceBlockWrapper"]>;
   forkChoice: MockedForkChoice;
   // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
@@ -96,18 +98,17 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
 /** Wrap the flat core mock with the real main-thread engine for chain processing tests. */
 export function withBeaconEngineFacade(chain: MockedBeaconChain): BeaconChain {
   const emitter = new ChainEventEmitter();
-  return Object.assign(Object.create(chain) as BeaconChain, {
+  const beaconEngine = new BeaconEngine({
+    logger: chain.logger,
+    core: chain.beaconEngine,
+    config: chain.config,
     emitter,
-    beaconEngine: new BeaconEngine({
-      logger: chain.logger,
-      core: chain.beaconEngine,
-      config: chain.config,
-      emitter,
-      clock: chain.clock,
-      serializedCache: chain.serializedCache,
-      beaconEngineWorker: chain.opts.beaconEngineWorker,
-    }),
+    clock: chain.clock,
+    serializedCache: chain.serializedCache,
+    beaconEngineWorker: chain.opts.beaconEngineWorker,
   });
+  Object.assign(beaconEngine, {chainView: chain.chainView});
+  return Object.assign(Object.create(chain) as BeaconChain, {emitter, beaconEngine});
 }
 
 vi.mock("@lodestar/fork-choice", async (importActual) => {
@@ -441,6 +442,12 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   }
   vi.spyOn(chain.proposerPreferencesPool, "get");
   chain.beaconEngine.prepareBeaconCommitteeSubnets = vi.fn().mockResolvedValue(undefined);
+  // ChainView reads forward to the mocked fork choice; writes are no-ops.
+  const chainView = {
+    addBlocks: () => ({stateUpdated: false, justified: null}),
+    applyFinalizedCheckpoint: () => false,
+    prune: () => {},
+  } as unknown as Record<string, unknown>;
   for (const [name, forkChoiceName] of Object.entries({
     isDescendant: "isDescendant",
     getHead: "getHead",
@@ -464,15 +471,17 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     getBlockSummariesByParentRoot: "getBlockSummariesByParentRoot",
     getAllAncestorBlocks: "getAllAncestorBlocks",
   })) {
-    (chain as unknown as Record<string, unknown>)[name] = (...args: unknown[]) => {
+    chainView[name] = (...args: unknown[]) => {
       const fn = (chain.forkChoice as unknown as Record<string, (...args: unknown[]) => unknown>)[forkChoiceName];
       return fn.apply(chain.forkChoice, args);
     };
   }
+  chain.chainView = chainView as unknown as MockedChainView;
   return chain;
 }
 
 export type MockedForkChoice = Mocked<ForkChoice>;
+export type MockedChainView = ChainView;
 
 export function getMockedForkChoice(): MockedForkChoice {
   // ForkChoice package is mocked globally

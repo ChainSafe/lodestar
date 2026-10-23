@@ -33,6 +33,7 @@ import {
 } from "../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/types.js";
+import {IChainView} from "../../chain/chainView/interface.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {SeenPayloadEnvelopeInput} from "../../chain/seenCache/seenPayloadEnvelopeInput.js";
@@ -87,7 +88,9 @@ export type DownloadByRangeResponses = {
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   config: ChainForkConfig;
-  chain: Pick<IBeaconChain, "serializedCache" | "getFinalizedCheckpoint" | "hasBlockHex">;
+  chain: Pick<IBeaconChain, "serializedCache"> & {
+    beaconEngine: {chainView: Pick<IChainView, "getFinalizedCheckpoint" | "hasBlockHex">};
+  };
   network: INetwork;
   logger: Logger;
   peerIdStr: string;
@@ -400,10 +403,10 @@ export async function downloadByRange({
   });
 
   // Reuse the roots computed during response validation, without repopulating persisted blocks.
-  const finalizedSlot = computeStartSlotAtEpoch(chain.getFinalizedCheckpoint().epoch);
+  const finalizedSlot = computeStartSlotAtEpoch(chain.beaconEngine.chainView.getFinalizedCheckpoint().epoch);
   for (const {block, blockRoot, bytes} of result.result.responses.validatedBlocks ?? []) {
     const rootHex = toRootHex(blockRoot);
-    if (block.message.slot > finalizedSlot && !chain.hasBlockHex(rootHex)) {
+    if (block.message.slot > finalizedSlot && !chain.beaconEngine.chainView.hasBlockHex(rootHex)) {
       // Source: unstable@708700cdf6 network/reqresp/utils/collectSequentialBlocksInRange.ts.
       // [beacon-engine] Retain original response bytes after validation for engine verification and persistence.
       chain.serializedCache.set(block, bytes);

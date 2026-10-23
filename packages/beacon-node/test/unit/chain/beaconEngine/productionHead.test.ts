@@ -14,7 +14,7 @@ import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js"
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {BeaconEngineErrorCode} from "../../../../src/chain/beaconEngine/interface.js";
 import {ChainView} from "../../../../src/chain/chainView/chainView.js";
-import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {BlockType, ProduceResult} from "../../../../src/chain/produceBlock/index.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -80,11 +80,14 @@ async function setup(fork: ForkName.bellatrix | ForkName.gloas) {
   });
   const emitter = new ChainEventEmitter();
   const engine = new BeaconEngine({core, config, clock, emitter, logger, serializedCache: new SerializedCache()});
-  const view = new ChainView(await engine.getChainViewSnapshot());
+  engine.chainView = new ChainView(await core.getChainViewSnapshot());
+  const view = engine.chainView;
   const onView = vi.fn();
-  emitter.on(ChainEvent.chainViewBlocksAdded, (blocks, state) => {
-    view.addBlocks(blocks, state);
+  const addBlocks = view.addBlocks.bind(view);
+  vi.spyOn(view, "addBlocks").mockImplementation((blocks, state) => {
+    const update = addBlocks(blocks, state);
     onView();
+    return update;
   });
   const onHead = vi.fn();
   emitter.on(routes.events.EventType.head, onHead);

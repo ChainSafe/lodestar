@@ -62,7 +62,7 @@ export async function importBlock(
   // [beacon-engine] moved: BeaconEngine applies the import response before emitting head/reorg events.
   if (this.config.getForkSeq(blockSlot) >= ForkSeq.gloas) {
     callInNextEventLoop(() => {
-      const parent = this.getBlockHexDefaultStatus(r.newHead.parentRoot);
+      const parent = this.beaconEngine.chainView.getBlockHexDefaultStatus(r.newHead.parentRoot);
       if (parent) this.seenPayloadEnvelopeInputCache.pruneBelowParent(parent);
     });
   }

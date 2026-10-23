@@ -1,5 +1,6 @@
 import {ForkPostGloas} from "@lodestar/params";
 import {Root, Slot, gloas, phase0} from "@lodestar/types";
+import {ChainViewSnapshot} from "../chainView/interface.js";
 
 export type AnchorSummary = {
   slot: Slot;
@@ -17,3 +18,5 @@ export type EngineBootstrap = AnchorSummary & {
   finalizedCheckpoint: phase0.Checkpoint;
   gloasAnchor: {fork: ForkPostGloas; proposerIndex: number; bid: gloas.ExecutionPayloadBid} | null;
 };
+
+export type EngineBootstrapWithChainView = EngineBootstrap & {chainViewSnapshot: ChainViewSnapshot};

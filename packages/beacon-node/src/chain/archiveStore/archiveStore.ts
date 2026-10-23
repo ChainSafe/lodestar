@@ -123,8 +123,8 @@ export class ArchiveStore {
   };
 
   /**
-   * The facade orchestrates finalization because blocks, envelopes, states and fork choice belong to BeaconEngine,
-   * while columns and ChainView belong to BeaconChain. Keep these steps awaited in the checkpoint queue:
+   * The facade orchestrates finalization because blocks, envelopes, states, fork choice and ChainView belong to
+   * BeaconEngine, while columns belong to BeaconChain. Keep these steps awaited in the checkpoint queue:
    * finish archival and cleanup before pruning fork choice and ChainView. The detailed cross-owner ordering
    * is documented in beaconEngine/processFinalizedCheckpoint.ts.
    */
@@ -161,10 +161,8 @@ export class ArchiveStore {
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 
-      // Prune fork choice and ChainView last. completeFinalization first awaits state archival, then prunes
-      // fork choice; await its success before removing the corresponding metadata from ChainView.
+      // Prune fork choice and ChainView last, after archival and cleanup above succeed.
       const prunedBlockCount = await this.chain.beaconEngine.completeFinalization(finalized);
-      this.chain.pruneChainView(finalized);
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,

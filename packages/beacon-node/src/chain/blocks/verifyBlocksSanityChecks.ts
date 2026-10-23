@@ -23,10 +23,13 @@ import {ImportBlockOpts} from "./types.js";
  *   - Not already known
  */
 export function verifyBlocksSanityChecks(
-  chain: Pick<
-    IChainView,
-    "getFinalizedCheckpoint" | "hasBlockHex" | "getBlockHexDefaultStatus" | "getBlockHexAndBlockHash"
-  > & {
+  chain: {
+    beaconEngine: {
+      chainView: Pick<
+        IChainView,
+        "getFinalizedCheckpoint" | "hasBlockHex" | "getBlockHexDefaultStatus" | "getBlockHexAndBlockHash"
+      >;
+    };
     clock: IClock;
     config: ChainForkConfig;
     opts: IChainOptions;
@@ -78,7 +81,7 @@ export function verifyBlocksSanityChecks(
 
     // Not finalized slot
     // IGNORE if `partiallyVerifiedBlock.ignoreIfFinalized`
-    const finalizedSlot = computeStartSlotAtEpoch(chain.getFinalizedCheckpoint().epoch);
+    const finalizedSlot = computeStartSlotAtEpoch(chain.beaconEngine.chainView.getFinalizedCheckpoint().epoch);
     if (blockSlot <= finalizedSlot) {
       if (opts.ignoreIfFinalized) {
         continue;
@@ -94,7 +97,7 @@ export function verifyBlocksSanityChecks(
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toRootHex(block.message.parentRoot);
-      const parentBlockDefaultStatus = chain.getBlockHexDefaultStatus(parentRoot);
+      const parentBlockDefaultStatus = chain.beaconEngine.chainView.getBlockHexDefaultStatus(parentRoot);
       if (!parentBlockDefaultStatus) {
         throw new BlockError(block, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
       }
@@ -102,7 +105,10 @@ export function verifyBlocksSanityChecks(
       parentBlock = parentBlockDefaultStatus;
       if (isGloasBeaconBlock(block.message)) {
         const parentBlockHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-        const parentBlockWithPayload = chain.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
+        const parentBlockWithPayload = chain.beaconEngine.chainView.getBlockHexAndBlockHash(
+          parentRoot,
+          parentBlockHash
+        );
         if (!parentBlockWithPayload) {
           // Checkpoint sync: parent's FULL variant may not be in fork-choice yet because the
           // anchor block is initialized with PENDING+EMPTY only. The parent's payload arrives
@@ -132,7 +138,7 @@ export function verifyBlocksSanityChecks(
 
     // Not already known
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
-    if (chain.hasBlockHex(blockHash)) {
+    if (chain.beaconEngine.chainView.hasBlockHex(blockHash)) {
       if (opts.ignoreIfKnown) {
         continue;
       }

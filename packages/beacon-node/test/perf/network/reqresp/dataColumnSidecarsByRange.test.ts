@@ -270,7 +270,7 @@ async function* legacyFinalizedRange(
   }
 
   const finalized = db.dataColumnSidecarArchive;
-  const finalizedSlot = chain.getFinalizedBlock().slot;
+  const finalizedSlot = chain.beaconEngine.chainView.getFinalizedBlock().slot;
   const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
   const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
   assert(endSlot <= archiveMaxSlot, "legacy benchmark supports wholly archived requests only");

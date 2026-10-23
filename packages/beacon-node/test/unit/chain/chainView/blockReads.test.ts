@@ -28,12 +28,14 @@ describe("BeaconChain serialized block reads", () => {
     getBinaryEntryByRoot.mockResolvedValue(null);
     chain = Object.assign(Object.create(BeaconChain.prototype) as BeaconChain, {
       config,
-      chainView: new ChainView({
-        blocks: [anchor, head],
-        head,
-        justified: checkpoint,
-        finalized: checkpoint,
-      }),
+      beaconEngine: {
+        chainView: new ChainView({
+          blocks: [anchor, head],
+          head,
+          justified: checkpoint,
+          finalized: checkpoint,
+        }),
+      },
       seenBlockInputCache: {get: vi.fn(() => ({hasBlock: () => true, getBlock: () => block, slot: 1}))},
       serializedCache: new SerializedCache(),
       db: {block: {getBinary}, blockArchive: {getBinaryEntryByRoot}},
@@ -66,7 +68,7 @@ describe("BeaconChain serialized block reads", () => {
   it.each([false, true])(
     "retains stored-block fallback when ChainView has pruned metadata (archived=%s)",
     async (archived) => {
-      vi.spyOn(chain, "getBlockHexDefaultStatus").mockReturnValue(null);
+      vi.spyOn(chain.beaconEngine.chainView, "getBlockHexDefaultStatus").mockReturnValue(null);
       if (archived) getBinaryEntryByRoot.mockResolvedValue({key: 1, value: bytes});
       else getBinary.mockResolvedValue(bytes);
       expect(await chain.getSerializedBlockByRoot(fromHex(blockRoot))).toEqual({

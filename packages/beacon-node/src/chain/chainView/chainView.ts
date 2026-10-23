@@ -8,6 +8,12 @@ export enum ChainViewErrorCode {
   UNKNOWN_BLOCK = "CHAIN_VIEW_UNKNOWN_BLOCK",
 }
 
+export type ChainViewUpdate = {
+  stateUpdated: boolean;
+  /** Set when the justified checkpoint changed */
+  justified: CheckpointWithHex | null;
+};
+
 export class ChainViewError extends LodestarError<{code: ChainViewErrorCode.UNKNOWN_BLOCK; root: RootHex}> {}
 
 /** Replicated imported-block metadata. Canonical ancestry is derived from the shared head. */
@@ -21,15 +27,11 @@ export class ChainView implements IChainView {
     snapshot: ChainViewSnapshot,
     private readonly logger?: Logger
   ) {
-    this.state = structuredClone({
-      head: snapshot.head,
-      justified: snapshot.justified,
-      finalized: snapshot.finalized,
-    });
+    this.state = {head: snapshot.head, justified: snapshot.justified, finalized: snapshot.finalized};
     this.mergeBlocks(snapshot.blocks);
   }
 
-  addBlocks(blocks: ChainViewBlock[], state?: ChainViewState): void {
+  addBlocks(blocks: ChainViewBlock[], state?: ChainViewState): ChainViewUpdate {
     if (
       state &&
       (state.finalized.epoch !== this.state.finalized.epoch || state.finalized.rootHex !== this.state.finalized.rootHex)
@@ -37,19 +39,23 @@ export class ChainView implements IChainView {
       this.finalizedDescendants.clear();
     }
     this.mergeBlocks(blocks);
-    if (state) {
-      this.state = structuredClone({head: state.head, justified: state.justified, finalized: state.finalized});
-    }
+    if (!state) return {stateUpdated: false, justified: null};
+    const previousJustified = this.state.justified;
+    this.state = {head: state.head, justified: state.justified, finalized: state.finalized};
+    const justifiedChanged =
+      state.justified.epoch !== previousJustified.epoch || state.justified.rootHex !== previousJustified.rootHex;
+    return {stateUpdated: true, justified: justifiedChanged ? this.getJustifiedCheckpoint() : null};
   }
 
-  applyFinalizedCheckpoint(checkpoint: CheckpointWithHex): void {
-    if (checkpoint.epoch <= this.state.finalized.epoch) return;
+  /** Returns true if the finalized checkpoint advanced */
+  applyFinalizedCheckpoint(checkpoint: CheckpointWithHex): boolean {
+    if (checkpoint.epoch <= this.state.finalized.epoch) return false;
     this.finalizedDescendants.clear();
-    this.state.finalized = {
-      epoch: checkpoint.epoch,
-      root: Uint8Array.from(checkpoint.root),
-      rootHex: checkpoint.rootHex,
+    this.state = {
+      ...this.state,
+      finalized: {epoch: checkpoint.epoch, root: checkpoint.root, rootHex: checkpoint.rootHex},
     };
+    return true;
   }
 
   prune(finalized: CheckpointWithHex): void {
@@ -66,7 +72,7 @@ export class ChainView implements IChainView {
       if (!retained.has(root)) this.blocks.delete(root);
     }
     this.finalizedDescendants.clear();
-    this.prunedCheckpoint = structuredClone(finalized);
+    this.prunedCheckpoint = finalized;
     this.logger?.debug("Pruned ChainView", {
       finalizedEpoch: finalized.epoch,
       finalizedRoot: finalized.rootHex,
@@ -76,16 +82,16 @@ export class ChainView implements IChainView {
   }
 
   getHead(): ChainViewBlock {
-    return {...this.state.head};
+    return this.state.head;
   }
   getHeadRoot(): RootHex {
     return this.state.head.blockRoot;
   }
   getFinalizedCheckpoint(): CheckpointWithHex {
-    return structuredClone(this.state.finalized);
+    return this.state.finalized;
   }
   getJustifiedCheckpoint(): CheckpointWithHex {
-    return structuredClone(this.state.justified);
+    return this.state.justified;
   }
   getFinalizedBlock(): ChainViewBlock {
     return this.requireBlock(this.state.finalized.rootHex);
@@ -116,14 +122,14 @@ export class ChainView implements IChainView {
 
   getBlockHex(root: RootHex, status: PayloadStatus): ChainViewBlock | null {
     const block = this.blocks.get(root)?.[status];
-    return block && this.isFinalizedDescendant(block) ? {...block} : null;
+    return block && this.isFinalizedDescendant(block) ? block : null;
   }
 
   getBlockHexAndBlockHash(root: RootHex, hash: RootHex): ChainViewBlock | null {
     const variants = this.blocks.get(root);
     for (const status of [PayloadStatus.FULL, PayloadStatus.EMPTY]) {
       const block = variants?.[status];
-      if (block?.executionPayloadBlockHash === hash) return {...block};
+      if (block?.executionPayloadBlockHash === hash) return block;
     }
     return null;
   }
@@ -131,7 +137,7 @@ export class ChainView implements IChainView {
   getCanonicalProtoBlockAtSlot(slot: Slot): ChainViewBlock | null {
     if (slot === this.state.head.slot) return this.getHead();
     for (const block of this.iterateAncestorBlocks(this.state.head.blockRoot, this.state.head.payloadStatus)) {
-      if (block.slot === slot) return {...block};
+      if (block.slot === slot) return block;
       if (block.slot < slot) break;
     }
     return null;
@@ -140,7 +146,7 @@ export class ChainView implements IChainView {
   getCanonicalBlockClosestLteSlot(slot: Slot): ChainViewBlock | null {
     if (slot >= this.state.head.slot) return this.getHead();
     for (const block of this.iterateAncestorBlocks(this.state.head.blockRoot, this.state.head.payloadStatus)) {
-      if (block.slot <= slot) return {...block};
+      if (block.slot <= slot) return block;
     }
     return null;
   }
@@ -149,7 +155,7 @@ export class ChainView implements IChainView {
     const rootHex = toRootHex(root);
     if (rootHex === this.state.head.blockRoot) return this.getHead();
     for (const block of this.iterateAncestorBlocks(this.state.head.blockRoot, this.state.head.payloadStatus)) {
-      if (block.blockRoot === rootHex) return {...block};
+      if (block.blockRoot === rootHex) return block;
     }
     return null;
   }
@@ -180,9 +186,9 @@ export class ChainView implements IChainView {
   }
 
   getAllAncestorBlocks(root: RootHex, status: PayloadStatus): ChainViewBlock[] {
-    return Array.from(this.iterateAncestorBlocks(root, status))
-      .filter((block) => block.payloadStatus !== PayloadStatus.PENDING)
-      .map((block) => ({...block}));
+    return Array.from(this.iterateAncestorBlocks(root, status)).filter(
+      (block) => block.payloadStatus !== PayloadStatus.PENDING
+    );
   }
 
   private *iterateAncestorBlocks(root: RootHex, status: PayloadStatus): IterableIterator<ChainViewBlock> {
@@ -238,7 +244,7 @@ export class ChainView implements IChainView {
         variants = {};
         this.blocks.set(block.blockRoot, variants);
       }
-      variants[block.payloadStatus] = {...block};
+      variants[block.payloadStatus] = block;
       if (block.payloadStatus === PayloadStatus.PENDING) {
         // Gloas block import creates PENDING and EMPTY with identical structural metadata.
         variants[PayloadStatus.EMPTY] ??= {...block, payloadStatus: PayloadStatus.EMPTY};
@@ -247,7 +253,7 @@ export class ChainView implements IChainView {
   }
 
   private getBlocks(): ChainViewBlock[] {
-    return Array.from(this.blocks.values()).flatMap((variants) => Object.values(variants).map((block) => ({...block})));
+    return Array.from(this.blocks.values()).flatMap((variants) => Object.values(variants));
   }
 
   private requireBlock(root: RootHex): ChainViewBlock {

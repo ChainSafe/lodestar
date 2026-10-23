@@ -1,7 +1,6 @@
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -27,7 +26,6 @@ import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {ReconstructMissPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {BlockRootSlot} from "../util/sszBytes.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
 import {ProposerPreparationData} from "./beaconProposerCache.js";
@@ -35,7 +33,6 @@ import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
-import {IChainView} from "./chainView/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {IChainOptions} from "./options.js";
@@ -61,8 +58,7 @@ export enum FindHeadFnName {
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
  */
-export interface IBeaconChain extends IChainView {
-  pruneChainView(finalized: CheckpointWithHex): void;
+export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   earliestAvailableSlot: Slot;
@@ -123,10 +119,6 @@ export interface IBeaconChain extends IChainView {
    * Get local serialized block by root (bytes-first), does not fetch from the network
    */
   getSerializedBlockByRoot(root: Uint8Array): Promise<{block: Uint8Array; slot: Slot} | null>;
-  getCanonicalBlockRootSlotsByRange(
-    startSlot: Slot,
-    endSlot: Slot
-  ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
   getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
@@ -137,7 +129,6 @@ export interface IBeaconChain extends IChainView {
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
   getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
-  getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
   getSerializedExecutionPayloadEnvelopes(
     requests: {blockSlot: Slot; blockRootHex: RootHex}[],
     onMiss?: ReconstructMissPolicy

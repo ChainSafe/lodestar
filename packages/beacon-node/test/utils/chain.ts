@@ -45,11 +45,9 @@ export async function initializeTestChain(opts: IChainOptions, modules: TestChai
     });
     if (modules.pruneHotDbOnInit) await modules.db.pruneHotDb();
     const anchor = await beaconEngine.initializeFromAnchor();
-    const chainViewSnapshot = await beaconEngine.getChainViewSnapshot();
     return {
       ...dependencies,
       anchor,
-      chainViewSnapshot,
       earliestAvailableSlot,
       builderApiClient: opts.beaconEngineWorker ? undefined : dependencies.beaconEngineCore.builderApiClient,
     };

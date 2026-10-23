@@ -10,7 +10,7 @@ export async function* onBlobSidecarsByRoot(
   requestBody: BlobSidecarsByRootRequest,
   chain: IBeaconChain
 ): AsyncIterable<ResponseOutgoing> {
-  const finalizedSlot = chain.getFinalizedBlock().slot;
+  const finalizedSlot = chain.beaconEngine.chainView.getFinalizedBlock().slot;
 
   // Spec: [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
   const currentEpoch = chain.clock.currentEpoch;
@@ -27,7 +27,7 @@ export async function* onBlobSidecarsByRoot(
   for (const blobIdentifier of requestBody) {
     const {blockRoot, index} = blobIdentifier;
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.getBlockHexDefaultStatus(blockRootHex);
+    const block = chain.beaconEngine.chainView.getBlockHexDefaultStatus(blockRootHex);
 
     // NOTE: Only support non-finalized blocks.
     // SPEC: Clients MUST support requesting blocks and sidecars since the latest finalized epoch.

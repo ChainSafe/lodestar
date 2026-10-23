@@ -61,8 +61,8 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         }
       }
 
-      const headInfo = chain.getHead();
-      const finalizedCheckpoint = chain.getFinalizedCheckpoint();
+      const headInfo = chain.beaconEngine.chainView.getHead();
+      const finalizedCheckpoint = chain.beaconEngine.chainView.getFinalizedCheckpoint();
       const finalizedEpoch = finalizedCheckpoint.epoch;
       const finalizedRoot = finalizedCheckpoint.root;
       const headSlot = headInfo.slot;

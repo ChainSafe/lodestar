@@ -67,14 +67,14 @@ describe("facade execution payload envelope serving", () => {
     chain.getSerializedExecutionPayloadEnvelopes = vi.fn(
       BeaconChain.prototype.getSerializedExecutionPayloadEnvelopes.bind(chain)
     );
-    chain.getFinalizedBlock = vi.fn().mockReturnValue({...protoBlock, slot: 0});
-    chain.getHead = vi.fn().mockReturnValue(protoBlock);
-    chain.getAllAncestorBlocks = vi.fn().mockReturnValue([protoBlock]);
+    chain.beaconEngine.chainView.getFinalizedBlock = vi.fn().mockReturnValue({...protoBlock, slot: 0});
+    chain.beaconEngine.chainView.getHead = vi.fn().mockReturnValue(protoBlock);
+    chain.beaconEngine.chainView.getAllAncestorBlocks = vi.fn().mockReturnValue([protoBlock]);
     chain.getSerializedExecutionPayloadEnvelope = vi.fn(
       BeaconChain.prototype.getSerializedExecutionPayloadEnvelope.bind(chain)
     );
     chain.getExecutionPayloadEnvelope = vi.fn(BeaconChain.prototype.getExecutionPayloadEnvelope.bind(chain));
-    chain.getBlockHexDefaultStatus = vi.fn().mockReturnValue(protoBlock);
+    chain.beaconEngine.chainView.getBlockHexDefaultStatus = vi.fn().mockReturnValue(protoBlock);
   });
 
   afterEach(async () => {
@@ -99,7 +99,9 @@ describe("facade execution payload envelope serving", () => {
     );
     expect(await db.executionPayloadEnvelope.get(root)).toBeNull();
 
-    chain.getFullBlockRootSlotsByRange = vi.fn().mockReturnValue({finalizedSlot: 1, nonFinalized: [{slot: 1, root}]});
+    chain.beaconEngine.chainView.getFullBlockRootSlotsByRange = vi
+      .fn()
+      .mockReturnValue({finalizedSlot: 1, nonFinalized: [{slot: 1, root}]});
     expect(
       (await fromAsync(onExecutionPayloadEnvelopesByRange({startSlot: 1, count: 1}, chain, db, peerId, "test"))).map(
         (r) => r.data
@@ -166,7 +168,7 @@ describe("facade execution payload envelope serving", () => {
     expect(await db.executionPayloadEnvelope.get(root)).toBeNull();
     expect(await db.executionPayloadEnvelope.get(orphanRoot)).toBeNull();
 
-    chain.getFinalizedBlock = vi.fn().mockReturnValue({...protoBlock, slot: 2});
+    chain.beaconEngine.chainView.getFinalizedBlock = vi.fn().mockReturnValue({...protoBlock, slot: 2});
     expect(
       (await fromAsync(onExecutionPayloadEnvelopesByRange({startSlot: 0, count: 2}, chain, db, peerId, "test"))).map(
         (r) => Uint8Array.from(r.data)

@@ -3,7 +3,7 @@ import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {EFFECTIVE_BALANCE_INCREMENT, type ForkPostFulu, type ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {
@@ -38,7 +38,7 @@ import {callInNextEventLoop} from "../util/eventLoop.js";
 import {ReconstructMissPolicy, isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../util/execution.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
+import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
 import {EngineBootstrap} from "./beaconEngine/initialization.js";
@@ -53,8 +53,6 @@ import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
-import {ChainView} from "./chainView/chainView.js";
-import {ChainViewBlock, ChainViewSnapshot, ChainViewState} from "./chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -106,7 +104,6 @@ export type BeaconChainModules = {
   builderApiClient?: BuilderApiClient;
   builderApiClientOpts?: BuilderApiClientOpts;
   anchor: EngineBootstrap;
-  chainViewSnapshot: ChainViewSnapshot;
   earliestAvailableSlot: Slot;
   clock: IClock;
   emitter: ChainEventEmitter;
@@ -130,7 +127,6 @@ export class BeaconChain implements IBeaconChain {
 
   // Facade-local verification for pre-Gloas sidecars and builder request authentication in worker mode.
   readonly bls: IBlsVerifier;
-  private readonly chainView: ChainView;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly reprocessController: ReprocessController;
@@ -232,8 +228,6 @@ export class BeaconChain implements IBeaconChain {
         // Register preference-authenticated URLs in the engine before its pre-slot connection checks.
         beaconEngine.registerAuthenticatedBuilder(url)
       );
-    this.chainView = new ChainView(modules.chainViewSnapshot, logger);
-
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
 
     this._earliestAvailableSlot = modules.earliestAvailableSlot;
@@ -251,7 +245,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
       clock,
-      chainView: this,
+      chainView: beaconEngine.chainView,
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
@@ -279,9 +273,6 @@ export class BeaconChain implements IBeaconChain {
 
     this.clock = clock;
     this.emitter = emitter;
-    this.emitter.on(ChainEvent.chainViewBlocksAdded, this.onChainViewBlocksAdded);
-    // Finalization consumers read ChainView even when no head update preceded the checkpoint pull.
-    this.emitter.prependListener(ChainEvent.forkChoiceFinalized, this.onChainViewFinalized);
     this.emitter.on(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.on(ChainEvent.fatalError, this.onEngineFatalError);
     if (!modules.builderApiClient) this.emitter.on(ChainEvent.builderRegistered, this.onBuilderRegistered);
@@ -336,6 +327,7 @@ export class BeaconChain implements IBeaconChain {
 
     if (metrics) {
       metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
+      metrics.headSlot.addCollect(() => metrics.headSlot.set(this.beaconEngine.chainView.getHead().slot));
     }
 
     clock.addListener(ClockEvent.slot, this.clockSlotListener);
@@ -359,8 +351,6 @@ export class BeaconChain implements IBeaconChain {
     // Engine owns teardown of its resources (historical-state regen + BLS pool).
     await this.beaconEngine.close();
     await this.bls.close();
-    this.emitter.off(ChainEvent.chainViewBlocksAdded, this.onChainViewBlocksAdded);
-    this.emitter.off(ChainEvent.forkChoiceFinalized, this.onChainViewFinalized);
     this.emitter.off(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.off(ChainEvent.fatalError, this.onEngineFatalError);
     this.emitter.off(ChainEvent.builderRegistered, this.onBuilderRegistered);
@@ -374,109 +364,19 @@ export class BeaconChain implements IBeaconChain {
     this.abortController.abort();
   }
 
-  pruneChainView(finalized: CheckpointWithHex): void {
-    this.chainView.prune(finalized);
-  }
-
-  getHead(): ChainViewBlock {
-    return this.chainView.getHead();
-  }
-
-  getHeadRoot(): RootHex {
-    return this.chainView.getHeadRoot();
-  }
-
-  getFinalizedCheckpoint(): CheckpointWithHex {
-    return this.chainView.getFinalizedCheckpoint();
-  }
-
-  getJustifiedCheckpoint(): CheckpointWithHex {
-    return this.chainView.getJustifiedCheckpoint();
-  }
-
-  getFinalizedBlock(): ChainViewBlock {
-    return this.chainView.getFinalizedBlock();
-  }
-
-  getJustifiedBlock(): ChainViewBlock {
-    return this.chainView.getJustifiedBlock();
-  }
-
-  hasBlock(root: Root): boolean {
-    return this.chainView.hasBlock(root);
-  }
-
-  hasBlockHex(root: RootHex): boolean {
-    return this.chainView.hasBlockHex(root);
-  }
-
-  hasBlockHexUnsafe(root: RootHex): boolean {
-    return this.chainView.hasBlockHexUnsafe(root);
-  }
-
-  hasPayloadHexUnsafe(root: RootHex): boolean {
-    return this.chainView.hasPayloadHexUnsafe(root);
-  }
-
-  getBlockDefaultStatus(root: Root): ChainViewBlock | null {
-    return this.chainView.getBlockDefaultStatus(root);
-  }
-
-  getBlockHexDefaultStatus(root: RootHex): ChainViewBlock | null {
-    return this.chainView.getBlockHexDefaultStatus(root);
-  }
-
-  getBlockHex(root: RootHex, status: PayloadStatus): ChainViewBlock | null {
-    return this.chainView.getBlockHex(root, status);
-  }
-
-  getBlockHexAndBlockHash(root: RootHex, hash: RootHex): ChainViewBlock | null {
-    return this.chainView.getBlockHexAndBlockHash(root, hash);
-  }
-
-  getCanonicalProtoBlockAtSlot(slot: Slot): ChainViewBlock | null {
-    return this.chainView.getCanonicalProtoBlockAtSlot(slot);
-  }
-
-  getCanonicalBlockClosestLteSlot(slot: Slot): ChainViewBlock | null {
-    return this.chainView.getCanonicalBlockClosestLteSlot(slot);
-  }
-
-  getCanonicalBlockByRoot(root: Root): ChainViewBlock | null {
-    return this.chainView.getCanonicalBlockByRoot(root);
-  }
-
-  getBlockSummariesAtSlot(slot: Slot): ChainViewBlock[] {
-    return this.chainView.getBlockSummariesAtSlot(slot);
-  }
-
-  getBlockSummariesByParentRoot(root: RootHex): ChainViewBlock[] {
-    return this.chainView.getBlockSummariesByParentRoot(root);
-  }
-
-  isDescendant(
-    root: RootHex,
-    status: PayloadStatus,
-    descendantRoot: RootHex,
-    descendantStatus: PayloadStatus
-  ): boolean {
-    return this.chainView.isDescendant(root, status, descendantRoot, descendantStatus);
-  }
-
-  getAllAncestorBlocks(root: RootHex, status: PayloadStatus): ChainViewBlock[] {
-    return this.chainView.getAllAncestorBlocks(root, status);
-  }
-
   seenBlock(blockRoot: RootHex): boolean {
     return (
       this.seenBlockInputCache.hasBlock(blockRoot) ||
       this.seenBlockInputCache.isValidatingBlock(blockRoot) ||
-      this.hasBlockHexUnsafe(blockRoot)
+      this.beaconEngine.chainView.hasBlockHexUnsafe(blockRoot)
     );
   }
 
   seenPayloadEnvelope(blockRoot: RootHex): boolean {
-    return this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) || this.hasPayloadHexUnsafe(blockRoot);
+    return (
+      this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) ||
+      this.beaconEngine.chainView.hasPayloadHexUnsafe(blockRoot)
+    );
   }
 
   beaconEngineRegenCanAcceptWork(): boolean {
@@ -513,7 +413,7 @@ export class BeaconChain implements IBeaconChain {
    */
   async getSerializedBlockByRoot(root: Uint8Array): Promise<{block: Uint8Array; slot: Slot} | null> {
     const rootHex = toRootHex(root);
-    const protoBlock = this.getBlockHexDefaultStatus(rootHex);
+    const protoBlock = this.beaconEngine.chainView.getBlockHexDefaultStatus(rootHex);
     if (protoBlock) {
       // Block found in ChainView.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -538,13 +438,6 @@ export class BeaconChain implements IBeaconChain {
     }
     const cold = await this.db.blockArchive.getBinaryEntryByRoot(root);
     return cold && {block: cold.value, slot: cold.key};
-  }
-
-  getCanonicalBlockRootSlotsByRange(
-    startSlot: Slot,
-    endSlot: Slot
-  ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
-    return this.chainView.getCanonicalBlockRootSlotsByRange(startSlot, endSlot);
   }
 
   async getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null> {
@@ -659,11 +552,6 @@ export class BeaconChain implements IBeaconChain {
     }
 
     return out;
-  }
-
-  /** Engine passthrough: thin ByRange serving refs (fork choice read engine-side). */
-  getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
-    return this.chainView.getFullBlockRootSlotsByRange(startSlot, endSlot);
   }
 
   async getExecutionPayloadEnvelope(
@@ -833,8 +721,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getStatus(): Status {
-    const head = this.getHead();
-    const finalizedCheckpoint = this.getFinalizedCheckpoint();
+    const head = this.beaconEngine.chainView.getHead();
+    const finalizedCheckpoint = this.beaconEngine.chainView.getFinalizedCheckpoint();
     const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
     return {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
@@ -859,27 +747,6 @@ export class BeaconChain implements IBeaconChain {
   private onEngineFatalError = (error: Error): void => {
     this.processShutdownCallback(error);
   };
-
-  private onChainViewBlocksAdded = (blocks: ChainViewBlock[], state?: ChainViewState): void => {
-    const previousJustified = state ? this.getJustifiedCheckpoint() : undefined;
-    this.chainView.addBlocks(blocks, state);
-    if (previousJustified) this.onChainViewStateUpdated(previousJustified);
-  };
-
-  private onChainViewFinalized = (checkpoint: CheckpointWithHex): void => {
-    const previousFinalized = this.getFinalizedCheckpoint();
-    this.chainView.applyFinalizedCheckpoint(checkpoint);
-    if (checkpoint.epoch > previousFinalized.epoch) this.emitter.emit(ChainEvent.updateStatus);
-  };
-
-  private onChainViewStateUpdated(previousJustified: CheckpointWithHex): void {
-    this.metrics?.headSlot.set(this.chainView.getHead().slot);
-    const justified = this.getJustifiedCheckpoint();
-    if (justified.epoch !== previousJustified.epoch || justified.rootHex !== previousJustified.rootHex) {
-      this.emitter.emit(ChainEvent.forkChoiceJustified, justified);
-    }
-    this.emitter.emit(ChainEvent.updateStatus);
-  }
 
   /**
    * Returns Promise that resolves either on block found or once 1 slot passes.
@@ -965,7 +832,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Clock slot", {slot});
 
     // CRITICAL UPDATE
-    this.beaconEngine.onSlot(slot, this.chainView.getHead()).catch((e) => {
+    this.beaconEngine.onSlot(slot).catch((e) => {
       this.logger.error("Error processing beacon engine slot", {slot}, e);
     });
     this.metrics?.clockSlot.set(slot);
@@ -1016,7 +883,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (discoveredNewValidators) {
-      const finalizedCheckpoint = this.getFinalizedCheckpoint();
+      const finalizedCheckpoint = this.beaconEngine.chainView.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }
   }
@@ -1026,7 +893,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (hasNewValidators) {
-      const finalizedCheckpoint = this.getFinalizedCheckpoint();
+      const finalizedCheckpoint = this.beaconEngine.chainView.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }
   }

@@ -37,7 +37,10 @@ export async function* onBeaconBlocksByRange(
   // Only canonical slot and root references cross from ChainView.
   // Blocks incl. the finalized block are migrated to the archive at finalization, so the archive loop
   // serves up to AND INCLUDING finalizedSlot and the non-finalized refs start above it.
-  const {finalizedSlot, nonFinalized} = chain.getCanonicalBlockRootSlotsByRange(startSlot, endSlot);
+  const {finalizedSlot, nonFinalized} = chain.beaconEngine.chainView.getCanonicalBlockRootSlotsByRange(
+    startSlot,
+    endSlot
+  );
   const archiveMaxSlot = finalizedSlot;
 
   // Finalized range of blocks

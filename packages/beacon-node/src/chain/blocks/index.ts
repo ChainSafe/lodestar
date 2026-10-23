@@ -205,7 +205,8 @@ async function importPayloadEnvelopesOfKnownBlocks(
     return {orphaned: [], skipped: false};
   }
 
-  const head = this.getHead();
+  const {chainView} = this.beaconEngine;
+  const head = chainView.getHead();
   const currentEpoch = this.clock.currentEpoch;
   const payloadInputs: PayloadEnvelopeInput[] = [];
   const orphaned: OrphanedPayloadEnvelope[] = [];
@@ -213,15 +214,15 @@ async function importPayloadEnvelopesOfKnownBlocks(
     const {blockRootHex, slot} = payloadInput;
     if (
       !payloadInput.hasPayloadEnvelope() ||
-      !this.hasBlockHex(blockRootHex) ||
-      this.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null
+      !chainView.hasBlockHex(blockRootHex) ||
+      chainView.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null
     ) {
       continue;
     }
     if (
       head.blockRoot !== blockRootHex &&
       !importsBlockAttestations(opts, computeEpochAtSlot(slot), currentEpoch) &&
-      this.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
+      chainView.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
     ) {
       // never validated, see processBlocks()
       this.seenPayloadEnvelopeInputCache.remove(blockRootHex);
@@ -247,7 +248,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
     await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validSignature: false});
   }
   // the new FULL variants are not seen by the head cached from the last block import
-  await this.beaconEngine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock, this.getHead());
+  await this.beaconEngine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
   return result;
 }

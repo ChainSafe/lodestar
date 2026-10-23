@@ -22,7 +22,7 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const id = resolveStateId(chain, stateId, chain, sync);
+      const id = resolveStateId(chain.beaconEngine.chainView, stateId, chain, sync);
       const res = await chain.beaconEngine.getStateProof(id, descriptor);
       if (!res) {
         throw new ApiError(404, `State not found for id '${stateId}'`);

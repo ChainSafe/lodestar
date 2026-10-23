@@ -360,7 +360,7 @@ export function getValidatorApi(
       // when a validator is configured with multiple beacon node urls, this beaconBlockRoot may come from another beacon node
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
-      if (!chain.hasBlock(beaconBlockRoot)) {
+      if (!chain.beaconEngine.chainView.hasBlock(beaconBlockRoot)) {
         const rootHex = toRootHex(beaconBlockRoot);
         network.searchUnknownBlock({slot, root: rootHex}, BlockInputSource.api);
         // The engine checks existence and eligibility after the wait.

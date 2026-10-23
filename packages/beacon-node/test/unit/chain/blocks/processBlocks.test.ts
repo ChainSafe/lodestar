@@ -385,10 +385,7 @@ describe("chain / blocks / processBlocks", () => {
         validSignature: false,
       });
       expect(chain.seenPayloadEnvelopeInputCache.remove).not.toHaveBeenCalled();
-      expect(chain.recomputeForkChoiceHead).toHaveBeenCalledExactlyOnceWith(
-        ForkchoiceCaller.importBlock,
-        chain.getHead()
-      );
+      expect(chain.recomputeForkChoiceHead).toHaveBeenCalledExactlyOnceWith(ForkchoiceCaller.importBlock);
       expect(result).toEqual({orphaned: [], skipped: false});
     }
   });

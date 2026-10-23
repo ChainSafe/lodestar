@@ -32,7 +32,11 @@ describe("onBeaconBlocksByRange", () => {
     const chain = {
       config,
       earliestAvailableSlot: 0,
-      getCanonicalBlockRootSlotsByRange: () => ({finalizedSlot: 12, nonFinalized: []}),
+      beaconEngine: {
+        chainView: {
+          getCanonicalBlockRootSlotsByRange: () => ({finalizedSlot: 12, nonFinalized: []}),
+        },
+      },
     } as unknown as IBeaconChain;
 
     const responses = await Array.fromAsync(

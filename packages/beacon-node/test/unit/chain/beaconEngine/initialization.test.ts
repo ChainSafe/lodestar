@@ -24,7 +24,7 @@ import {HistoricalStateRegen} from "../../../../src/chain/archiveStore/historica
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
-import {AnchorSummary, EngineBootstrap} from "../../../../src/chain/beaconEngine/initialization.js";
+import {AnchorSummary, EngineBootstrapWithChainView} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconEngineCoreModules} from "../../../../src/chain/beaconEngine/interface.js";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
@@ -35,6 +35,7 @@ import {
 import {PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
+import {ChainView} from "../../../../src/chain/chainView/chainView.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import * as lightClient from "../../../../src/chain/lightClient/index.js";
@@ -1052,7 +1053,7 @@ describe("bytes-based engine startup", () => {
     const result = await startup;
     if (result.err !== null) throw result.err;
     const beaconChain = result.result;
-    expect(beaconChain.getHead()).toEqual(snapshot.head);
+    expect(beaconChain.beaconEngine.chainView.getHead()).toEqual(snapshot.head);
     expect(getChainViewSnapshot).toHaveBeenCalledOnce();
 
     clock.emit(ClockEvent.slot, clock.currentSlot);
@@ -1076,19 +1077,19 @@ describe("bytes-based engine startup", () => {
     vi.spyOn(core, "onSlot").mockReturnValue({headUpdate: true, finalizedCheckpointChanged: false});
     vi.spyOn(core, "getHeadSnapshot").mockReturnValue({...snapshot, head: toChainViewBlockBytes(head)});
     const onUpdate = vi.fn(() => {
-      expect(beaconChain.getHead()).toEqual(toChainViewBlock(head));
+      expect(beaconChain.beaconEngine.chainView.getHead()).toEqual(toChainViewBlock(head));
       expect(toRootHex(beaconChain.getStatus().headRoot)).toBe(head.blockRoot);
     });
-    beaconChain.emitter.on(ChainEvent.chainViewBlocksAdded, onUpdate);
+    beaconChain.emitter.on(ChainEvent.updateStatus, onUpdate);
 
-    await beaconChain.beaconEngine.onSlot(head.slot, beaconChain.getHead());
+    await beaconChain.beaconEngine.onSlot(head.slot);
 
     expect(onUpdate).toHaveBeenCalledOnce();
     expect(await metrics.register.getSingleMetricAsString("beacon_head_slot")).toContain(
       `beacon_head_slot ${head.slot}`
     );
     await beaconChain.close();
-    await beaconChain.beaconEngine.onSlot(head.slot + 1, beaconChain.getHead());
+    await beaconChain.beaconEngine.onSlot(head.slot + 1);
     expect(onUpdate).toHaveBeenCalledOnce();
   });
 
@@ -1143,9 +1144,9 @@ describe("bytes-based engine startup", () => {
     const onJustified = vi.fn();
     const onStatus = vi.fn(() => beaconChain.getStatus());
     const onHead = vi.fn(() => ({
-      head: beaconChain.getHead(),
-      justified: beaconChain.getJustifiedCheckpoint(),
-      block: beaconChain.getBlockHexDefaultStatus(block.blockRoot),
+      head: beaconChain.beaconEngine.chainView.getHead(),
+      justified: beaconChain.beaconEngine.chainView.getJustifiedCheckpoint(),
+      block: beaconChain.beaconEngine.chainView.getBlockHexDefaultStatus(block.blockRoot),
     }));
     beaconChain.emitter.on(ChainEvent.forkChoiceJustified, onJustified);
     beaconChain.emitter.on(ChainEvent.updateStatus, onStatus);
@@ -1171,7 +1172,7 @@ describe("bytes-based engine startup", () => {
     chain = await createBeaconChain(opts, modules);
     const beaconChain = chain;
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
-    const head = beaconChain.getHead();
+    const head = beaconChain.beaconEngine.chainView.getHead();
     vi.spyOn(core, "onSlot").mockReturnValue({headUpdate: false, finalizedCheckpointChanged: true});
     vi.spyOn(core, "getFinalizedCheckpointSnapshot").mockReturnValue({
       epoch: 1,
@@ -1188,8 +1189,8 @@ describe("bytes-based engine startup", () => {
     vi.spyOn(beaconChain.beaconEngine, "pruneOnFinalized").mockResolvedValue(undefined);
     const onStatus = vi.fn(() => beaconChain.getStatus());
     beaconChain.emitter.on(ChainEvent.updateStatus, onStatus);
-    await beaconChain.beaconEngine.onSlot(SLOTS_PER_EPOCH, head);
-    expect(beaconChain.getHead()).toEqual(head);
+    await beaconChain.beaconEngine.onSlot(SLOTS_PER_EPOCH);
+    expect(beaconChain.beaconEngine.chainView.getHead()).toEqual(head);
     expect(onStatus).toHaveBeenCalledOnce();
     expect(onStatus.mock.results[0].value).toMatchObject({
       headRoot: fromHex(head.blockRoot),
@@ -1197,7 +1198,7 @@ describe("bytes-based engine startup", () => {
       finalizedEpoch: 1,
       finalizedRoot: fromHex(head.blockRoot),
     });
-    await beaconChain.beaconEngine.onSlot(SLOTS_PER_EPOCH + 1, head);
+    await beaconChain.beaconEngine.onSlot(SLOTS_PER_EPOCH + 1);
     expect(onStatus).toHaveBeenCalledOnce();
   });
 
@@ -1374,13 +1375,13 @@ describe("bytes-based engine startup", () => {
     vi.useFakeTimers();
     const halfSlot = config.SLOT_DURATION_MS / 2;
 
-    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1, dependencies.chainViewSnapshot.head);
+    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
     await vi.advanceTimersByTimeAsync(halfSlot - 1);
     expect(monitorEpoch).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(monitorEpoch).toHaveBeenCalledExactlyOnceWith(beaconEngine.getHeadState());
 
-    await dependencies.beaconEngine.onSlot(2 * SLOTS_PER_EPOCH - 1, dependencies.chainViewSnapshot.head);
+    await dependencies.beaconEngine.onSlot(2 * SLOTS_PER_EPOCH - 1);
     expect(vi.getTimerCount()).toBe(1);
     await dependencies.beaconEngine.close();
     expect(vi.getTimerCount()).toBe(0);
@@ -1398,7 +1399,7 @@ describe("bytes-based engine startup", () => {
     expect(await beaconEngine.getMonitoredValidatorIndices()).toEqual([1]);
     expect(await beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
     vi.useFakeTimers();
-    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1, dependencies.chainViewSnapshot.head);
+    await dependencies.beaconEngine.onSlot(SLOTS_PER_EPOCH - 1);
     expect(vi.getTimerCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
     expect(monitorEpoch).not.toHaveBeenCalled();
@@ -1419,14 +1420,15 @@ describe("bytes-based engine startup", () => {
       const root = Buffer.alloc(32, 1);
       const rootHex = toRootHex(root);
       const hash = Buffer.alloc(32, 2);
+      const anchorHead = dependencies.beaconEngine.chainView.getHead();
       const pendingBlock = {
-        ...dependencies.chainViewSnapshot.head,
+        ...anchorHead,
         slot: 1,
         blockRoot: rootHex,
-        parentRoot: dependencies.chainViewSnapshot.head.blockRoot,
+        parentRoot: anchorHead.blockRoot,
         payloadStatus: PayloadStatus.PENDING,
       };
-      dependencies.chainViewSnapshot.blocks.push(pendingBlock, {...pendingBlock, payloadStatus: PayloadStatus.EMPTY});
+      (dependencies.beaconEngine.chainView as ChainView).addBlocks([pendingBlock]);
       chain = new BeaconChain(options, dependencies);
       const activeChain = chain;
       const core = getBeaconEngineCore(activeChain.beaconEngine);
@@ -1469,12 +1471,18 @@ describe("bytes-based engine startup", () => {
       input.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 1});
       const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
       const order: string[] = [];
-      const onBlocks = vi.fn(() => order.push("view"));
+      const chainView = activeChain.beaconEngine.chainView as ChainView;
+      const addBlocks = chainView.addBlocks.bind(chainView);
+      const onBlocks = vi.spyOn(chainView, "addBlocks").mockImplementation((blocks, state) => {
+        order.push("view");
+        return addBlocks(blocks, state);
+      });
       const imported = vi.fn(() => {
-        expect(activeChain.getBlockHex(rootHex, PayloadStatus.FULL)?.executionPayloadBlockHash).toBe(toRootHex(hash));
+        expect(
+          activeChain.beaconEngine.chainView.getBlockHex(rootHex, PayloadStatus.FULL)?.executionPayloadBlockHash
+        ).toBe(toRootHex(hash));
         order.push("event");
       });
-      activeChain.emitter.on(ChainEvent.chainViewBlocksAdded, onBlocks);
       activeChain.emitter.on(routes.events.EventType.executionPayload, imported);
       clock.setSlot(64);
       const importing = activeChain.beaconEngine.importExecutionPayload(
@@ -1483,7 +1491,7 @@ describe("bytes-based engine startup", () => {
         stateTransition.DataAvailabilityStatus.Available,
         {validSignature: true}
       );
-      expect(activeChain.hasPayloadHexUnsafe(rootHex)).toBe(false);
+      expect(activeChain.beaconEngine.chainView.hasPayloadHexUnsafe(rootHex)).toBe(false);
       expect(imported).not.toHaveBeenCalled();
       pending.resolve(structuredClone(response));
       expect(await importing).toEqual({executionOptimistic: true});
@@ -1748,7 +1756,7 @@ describe("bytes-based engine startup", () => {
     modules.anchorStateBytes = state.serialize();
     modules.isAnchorStateFinalized = false;
     modules.clock = new ClockStopped(1);
-    let bootstrap: EngineBootstrap | undefined;
+    let bootstrap: EngineBootstrapWithChainView | undefined;
     const initialize = BeaconEngineCore.prototype.initializeFromAnchor;
     vi.spyOn(BeaconEngineCore.prototype, "initializeFromAnchor").mockImplementation(async function (
       this: BeaconEngineCore

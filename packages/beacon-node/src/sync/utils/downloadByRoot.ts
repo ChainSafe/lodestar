@@ -359,8 +359,8 @@ export async function fetchAndValidateBlock({
   const rootHex = toRootHex(receivedRoot);
   if (
     chain &&
-    block.message.slot > computeStartSlotAtEpoch(chain.getFinalizedCheckpoint().epoch) &&
-    !chain.hasBlockHex(rootHex)
+    block.message.slot > computeStartSlotAtEpoch(chain.beaconEngine.chainView.getFinalizedCheckpoint().epoch) &&
+    !chain.beaconEngine.chainView.hasBlockHex(rootHex)
   ) {
     // Source: unstable@708700cdf6 network/reqresp/utils/collect.ts#collectMaxResponseTypedWithBytes.
     // [beacon-engine] Retain original response bytes after validation for engine verification and persistence.

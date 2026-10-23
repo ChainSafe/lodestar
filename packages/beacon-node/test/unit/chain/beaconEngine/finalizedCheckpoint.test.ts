@@ -65,9 +65,8 @@ async function setup() {
     serializedCache: new SerializedCache(),
     logger,
   });
-  const view = new ChainView(await engine.getChainViewSnapshot());
-  emitter.on(ChainEvent.chainViewBlocksAdded, (blocks, state) => view.addBlocks(blocks, state));
-  emitter.prependListener(ChainEvent.forkChoiceFinalized, (checkpoint) => view.applyFinalizedCheckpoint(checkpoint));
+  engine.chainView = new ChainView(await core.getChainViewSnapshot());
+  const view = engine.chainView;
   const onFinalized = vi.fn();
   emitter.on(ChainEvent.forkChoiceFinalized, (cp) => {
     expect(view.getFinalizedCheckpoint().rootHex).toBe(cp.rootHex);
@@ -153,7 +152,11 @@ describe("finalized checkpoint pull", () => {
     });
     const pull = vi.spyOn(core, "getFinalizedCheckpointSnapshot");
     const observed: string[] = [];
-    emitter.on(ChainEvent.chainViewBlocksAdded, () => observed.push("view"));
+    const addBlocks = view.addBlocks.bind(view);
+    vi.spyOn(view, "addBlocks").mockImplementation((blocks, state) => {
+      observed.push("view");
+      return addBlocks(blocks, state);
+    });
     for (const event of [
       routes.events.EventType.head,
       routes.events.EventType.headV2,
@@ -187,7 +190,7 @@ describe("finalized checkpoint pull", () => {
     expect(onFinalized).toHaveBeenCalledOnce();
     expect(pull).toHaveBeenCalledOnce();
 
-    await engine.onSlot(SLOTS_PER_EPOCH + 1, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH + 1);
     expect(pull).toHaveBeenCalledOnce();
     expect(view.getHead()).toEqual(toChainViewBlock(forkChoice.getHead()));
 
@@ -259,13 +262,13 @@ describe("finalized checkpoint pull", () => {
   });
 
   it("does not pull or publish on an unchanged slot", async () => {
-    const {core, engine, events, emitter, view} = await setup();
+    const {core, engine, events, emitter} = await setup();
     const onSlot = vi.spyOn(core, "onSlot");
     const headPull = vi.spyOn(core, "getHeadSnapshot");
     const finalizedPull = vi.spyOn(core, "getFinalizedCheckpointSnapshot");
     const coreEmit = vi.spyOn(events, "emit");
     const emit = vi.spyOn(emitter, "emit");
-    await engine.onSlot(1, view.getHead());
+    await engine.onSlot(1);
     expect(onSlot).toHaveReturnedWith({headUpdate: false, finalizedCheckpointChanged: false});
     expect(headPull).not.toHaveBeenCalled();
     expect(finalizedPull).not.toHaveBeenCalled();
@@ -297,14 +300,18 @@ describe("finalized checkpoint pull", () => {
     const finalizedPull = vi.spyOn(core, "getFinalizedCheckpointSnapshot");
     const coreEmit = vi.spyOn(events, "emit");
     const observed: string[] = [];
-    emitter.on(ChainEvent.chainViewBlocksAdded, () => observed.push("view"));
+    const addBlocks = view.addBlocks.bind(view);
+    vi.spyOn(view, "addBlocks").mockImplementation((blocks, state) => {
+      observed.push("view");
+      return addBlocks(blocks, state);
+    });
     for (const event of [routes.events.EventType.head, routes.events.EventType.headV2]) {
       emitter.on(event, () => {
         expect(view.getHead(), `head visible during ${event}`).toEqual(toChainViewBlock(forkChoice.getHead()));
         observed.push(event);
       });
     }
-    await engine.onSlot(SLOTS_PER_EPOCH, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH);
     expect(onSlot).toHaveReturnedWith({headUpdate: true, finalizedCheckpointChanged: false});
     expect(headPull).toHaveBeenCalledExactlyOnceWith({
       blockRoot: fromHex(previous.blockRoot),
@@ -341,7 +348,7 @@ describe("finalized checkpoint pull", () => {
         nonAncestors: [orphan],
       });
     });
-    await engine.onSlot(SLOTS_PER_EPOCH, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH);
     expect(onSlot).toHaveReturnedWith({headUpdate: true, finalizedCheckpointChanged: true});
     expect(coreEmit).not.toHaveBeenCalled();
     expect(pull).toHaveBeenCalledExactlyOnceWith();
@@ -359,9 +366,9 @@ describe("finalized checkpoint pull", () => {
         nonCanonical: [summarize({...block, blockRoot: toRootHex(Buffer.alloc(32, 99))})],
       },
     });
-    await engine.onSlot(SLOTS_PER_EPOCH + 1, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH + 1);
     block.executionStatus = ExecutionStatus.Valid;
-    await engine.onSlot(SLOTS_PER_EPOCH + 2, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH + 2);
     expect(pull).toHaveBeenCalledOnce();
   });
 
@@ -374,7 +381,7 @@ describe("finalized checkpoint pull", () => {
       forkChoice.getFinalizedCheckpoint.mockReturnValue({...forkChoice.getFinalizedCheckpoint(), epoch: 1});
     });
     const onSlot = vi.spyOn(core, "onSlot");
-    await engine.onSlot(SLOTS_PER_EPOCH, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH);
     expect(onSlot).toHaveReturnedWith({headUpdate: false, finalizedCheckpointChanged: true});
     expect(headPull).not.toHaveBeenCalled();
     expect(finalizedPull).toHaveBeenCalledExactlyOnceWith();
@@ -394,7 +401,7 @@ describe("finalized checkpoint pull", () => {
     });
     const onHead = vi.fn();
     emitter.on(routes.events.EventType.headV2, onHead);
-    await engine.onSlot(1, view.getHead());
+    await engine.onSlot(1);
     expect(view.getHead().payloadStatus).toBe(PayloadStatus.EMPTY);
     expect(onHead).not.toHaveBeenCalled();
     expect(logger.debug).toHaveBeenCalled();
@@ -402,7 +409,7 @@ describe("finalized checkpoint pull", () => {
   });
 
   it("emits each pulled checkpoint as soon as its data is available", async () => {
-    const {core, engine, onFinalized, finalize, view} = await setup();
+    const {core, engine, onFinalized, finalize} = await setup();
     finalize(1);
     vi.spyOn(core, "onSlot").mockReturnValue({headUpdate: true, finalizedCheckpointChanged: true});
     const checkpoint = core.getFinalizedCheckpointSnapshot();
@@ -410,8 +417,8 @@ describe("finalized checkpoint pull", () => {
     const pull = vi.fn<() => FinalizedCheckpointSnapshot<Root> | Promise<FinalizedCheckpointSnapshot<Root>>>();
     pull.mockReturnValueOnce(pending.promise).mockReturnValue(checkpoint);
     Object.assign(core, {getFinalizedCheckpointSnapshot: pull});
-    await engine.onSlot(SLOTS_PER_EPOCH, view.getHead());
-    await engine.onSlot(SLOTS_PER_EPOCH + 1, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH);
+    await engine.onSlot(SLOTS_PER_EPOCH + 1);
     expect(pull).toHaveBeenCalledTimes(2);
     expect(onFinalized).toHaveBeenCalledOnce();
     const expected = onFinalized.mock.calls[0][0];
@@ -422,7 +429,7 @@ describe("finalized checkpoint pull", () => {
   });
 
   it("logs a failed pull and can process the next finalized checkpoint", async () => {
-    const {core, engine, forkChoice, onFinalized, logger, finalize, view} = await setup();
+    const {core, engine, forkChoice, onFinalized, logger, finalize} = await setup();
     forkChoice.updateTime.mockImplementationOnce(() => {
       finalize(1);
     });
@@ -430,29 +437,29 @@ describe("finalized checkpoint pull", () => {
     vi.spyOn(core, "getFinalizedCheckpointSnapshot").mockImplementationOnce(() => {
       throw failure;
     });
-    await engine.onSlot(SLOTS_PER_EPOCH, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH);
     expect(logger.error).toHaveBeenCalledExactlyOnceWith("Error pulling finalized checkpoint", {}, failure);
     expect(onFinalized).not.toHaveBeenCalled();
     forkChoice.updateTime.mockImplementationOnce(() => {
       finalize(2);
     });
-    await engine.onSlot(2 * SLOTS_PER_EPOCH, view.getHead());
+    await engine.onSlot(2 * SLOTS_PER_EPOCH);
     expect(onFinalized).toHaveBeenCalledOnce();
   });
 
   it("discards a pending finalization pull after close", async () => {
-    const {core, engine, forkChoice, onFinalized, finalize, view} = await setup();
+    const {core, engine, forkChoice, onFinalized, finalize} = await setup();
     forkChoice.updateTime.mockImplementationOnce(() => {
       finalize(1);
     });
     const pending = defer<FinalizedCheckpointSnapshot<Root>>();
     const pull = vi.fn(() => pending.promise);
     Object.assign(core, {getFinalizedCheckpointSnapshot: pull});
-    await engine.onSlot(SLOTS_PER_EPOCH, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH);
     await engine.close();
     pending.resolve(BeaconEngineCore.prototype.getFinalizedCheckpointSnapshot.call(core));
     await pending.promise;
-    await engine.onSlot(SLOTS_PER_EPOCH + 1, view.getHead());
+    await engine.onSlot(SLOTS_PER_EPOCH + 1);
     expect(pull).toHaveBeenCalledOnce();
     expect(onFinalized).not.toHaveBeenCalled();
   });
@@ -467,7 +474,7 @@ describe("finalized checkpoint pull", () => {
     const pull = vi.fn(() => pending.promise);
     Object.assign(core, {getHeadSnapshot: pull});
     const emit = vi.spyOn(emitter, "emit");
-    const processing = engine.onSlot(1, view.getHead());
+    const processing = engine.onSlot(1);
     await Promise.resolve();
     expect(pull).toHaveBeenCalledOnce();
     await engine.close();
@@ -480,6 +487,25 @@ describe("finalized checkpoint pull", () => {
     await processing;
     expect(view.getHead()).toEqual(previous);
     expect(emit).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])("prunes ChainView only after core completes finalization (success=%s)", async (success) => {
+    const {core, engine, view} = await setup();
+    const checkpoint = view.getFinalizedCheckpoint();
+    const completion = defer<number>();
+    vi.spyOn(core, "completeFinalization").mockReturnValue(completion.promise);
+    const prune = vi.spyOn(view, "prune").mockImplementation(() => {});
+    const completing = engine.completeFinalization(checkpoint);
+    expect(prune).not.toHaveBeenCalled();
+    if (success) {
+      completion.resolve(3);
+      expect(await completing).toBe(3);
+      expect(prune).toHaveBeenCalledExactlyOnceWith(checkpoint);
+    } else {
+      completion.reject(new Error("archive failed"));
+      await expect(completing).rejects.toThrow("archive failed");
+      expect(prune).not.toHaveBeenCalled();
+    }
   });
 
   it("uses fork-choice archival traversal across Gloas variants and pruning", async () => {

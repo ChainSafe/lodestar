@@ -111,7 +111,7 @@ export class BeaconSync implements IBeaconSync {
     }
 
     // TODO - beacon engine: may pull the full head from BeaconEngine with head execution status
-    const head = this.chain.getHead();
+    const head = this.chain.beaconEngine.chainView.getHead();
 
     switch (this.state) {
       case SyncState.SyncingFinalized:
@@ -148,7 +148,7 @@ export class BeaconSync implements IBeaconSync {
 
   get state(): SyncState {
     const currentSlot = this.chain.clock.currentSlot;
-    const headSlot = this.chain.getHead().slot;
+    const headSlot = this.chain.beaconEngine.chainView.getHead().slot;
 
     if (
       // Consider node synced IF
@@ -196,7 +196,12 @@ export class BeaconSync implements IBeaconSync {
    */
   private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const localStatus = this.chain.getStatus();
-    const syncType = getPeerSyncType(localStatus, data.status, this.chain, this.slotImportTolerance);
+    const syncType = getPeerSyncType(
+      localStatus,
+      data.status,
+      this.chain.beaconEngine.chainView,
+      this.slotImportTolerance
+    );
     this.logger.verbose("Peer sync type classified", {
       peer: data.peer,
       syncType,
@@ -266,7 +271,7 @@ export class BeaconSync implements IBeaconSync {
 
     // If we stopped being synced and fallen significantly behind, stop gossip
     else if (state !== SyncState.Synced) {
-      const syncDiff = this.chain.clock.currentSlot - this.chain.getHead().slot;
+      const syncDiff = this.chain.clock.currentSlot - this.chain.beaconEngine.chainView.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {
         // Same debounce as gossip: transient blips keep the rule running, only a real gap pauses it
         this.chain.beaconEngine.pauseFastConfirmation().catch((e) => {

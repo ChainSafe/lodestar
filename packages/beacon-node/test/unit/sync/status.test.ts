@@ -37,8 +37,9 @@ describe("BeaconSync.getSyncStatus", () => {
       emitter: new ChainEventEmitter(),
       serializedCache: new SerializedCache(),
     });
+    Object.assign(beaconEngine, {chainView: {getHead: () => head}});
     sync = Object.assign(Object.create(BeaconSync.prototype) as BeaconSync, {
-      chain: {clock, executionEngine, getHead: () => head, beaconEngine},
+      chain: {clock, executionEngine, beaconEngine},
       opts: {},
       slotImportTolerance: 32,
       network: {getConnectedPeerCount: () => 1},

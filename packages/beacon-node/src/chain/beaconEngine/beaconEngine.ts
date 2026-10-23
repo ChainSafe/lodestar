@@ -49,7 +49,8 @@ import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
 import {SignedBlockRoot, computeSignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {ChainViewBlock, ChainViewSnapshot} from "../chainView/interface.js";
+import {ChainView} from "../chainView/chainView.js";
+import {ChainViewBlock, ChainViewState} from "../chainView/interface.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockError} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
@@ -111,6 +112,8 @@ export class BeaconEngine implements IBeaconEngine {
   private readonly beaconEngineWorker: boolean;
   private readonly logger?: Logger;
   private closed = false;
+  /** Set by initializeFromAnchor() */
+  chainView!: ChainView;
 
   constructor({
     core,
@@ -162,7 +165,7 @@ export class BeaconEngine implements IBeaconEngine {
     );
     if (this.closed) return;
     const head = fromChainViewBlockBytes(snapshot.head);
-    this.emitter.emit(ChainEvent.chainViewBlocksAdded, [head], {
+    this.updateChainView([head], {
       head,
       justified: {...snapshot.justified, rootHex: toRootHex(snapshot.justified.root)},
       finalized: {...snapshot.finalized, rootHex: toRootHex(snapshot.finalized.root)},
@@ -181,18 +184,27 @@ export class BeaconEngine implements IBeaconEngine {
         blockRoot: toRootHex(blockRoot),
         payloadStatus,
       });
-      this.emitter.emit(ChainEvent.forkChoiceFinalized, {
+      const checkpointSnapshot = {
         ...snapshot,
         rootHex: toRootHex(snapshot.root),
         blockSnapshot: {
           canonical: snapshot.blockSnapshot.canonical.map(toSummary),
           nonCanonical: snapshot.blockSnapshot.nonCanonical.map(toSummary),
         },
-      });
+      };
+      // Finalization consumers read ChainView, so apply the checkpoint before emitting.
+      if (this.chainView.applyFinalizedCheckpoint(checkpointSnapshot)) this.emitter.emit(ChainEvent.updateStatus);
+      this.emitter.emit(ChainEvent.forkChoiceFinalized, checkpointSnapshot);
     } catch (e) {
       this.logger?.error("Error pulling finalized checkpoint", {}, e as Error);
     }
   };
+
+  private updateChainView(blocks: ChainViewBlock[], state?: ChainViewState): void {
+    const {stateUpdated, justified} = this.chainView.addBlocks(blocks, state);
+    if (justified) this.emitter.emit(ChainEvent.forkChoiceJustified, justified);
+    if (stateUpdated) this.emitter.emit(ChainEvent.updateStatus);
+  }
 
   private readonly onEarliestAvailableSlotUpdated = (slot: Slot): void => {
     this.emitter.emit(ChainEvent.earliestAvailableSlotUpdated, slot);
@@ -274,12 +286,10 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.persistAnchorState();
   }
 
-  initializeFromAnchor(): Promise<EngineBootstrap> {
-    return this.core.initializeFromAnchor();
-  }
-
-  getChainViewSnapshot(): Promise<ChainViewSnapshot> {
-    return this.core.getChainViewSnapshot();
+  async initializeFromAnchor(): Promise<EngineBootstrap> {
+    const {chainViewSnapshot, ...bootstrap} = await this.core.initializeFromAnchor();
+    this.chainView = new ChainView(chainViewSnapshot, this.logger);
+    return bootstrap;
   }
 
   getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData> {
@@ -414,11 +424,8 @@ export class BeaconEngine implements IBeaconEngine {
       : this.core.submitBlindedBlockNoResponse({data: signedBlindedBlock, bytes: signedBlindedBlockBytes});
   }
 
-  async prepareForNextSlot(
-    clockSlot: Slot,
-    opts: PrepareNextSlotOpts,
-    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
-  ): Promise<PrepareNextSlotResponse> {
+  async prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {
+    const previousHead = this.chainView.getHead();
     const response = await this.core.prepareForNextSlot(clockSlot, opts);
     if (response.headUpdate) await this.onHeadUpdated(previousHead);
     return response;
@@ -1172,10 +1179,8 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.validatorSeenAtEpoch(index, epoch);
   }
 
-  async recomputeForkChoiceHead(
-    caller: ForkchoiceCaller,
-    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
-  ): Promise<void> {
+  async recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<void> {
+    const previousHead = this.chainView.getHead();
     const {headUpdate} = await this.core.recomputeForkChoiceHead(caller);
     if (headUpdate) await this.onHeadUpdated(previousHead);
   }
@@ -1279,7 +1284,7 @@ export class BeaconEngine implements IBeaconEngine {
     const block = fromChainViewBlockBytes(res.result.block);
     const newHead = fromChainViewBlockBytes(res.result.newHead);
     if (!this.closed) {
-      this.emitter.emit(ChainEvent.chainViewBlocksAdded, [block, newHead], {
+      this.updateChainView([block, newHead], {
         head: newHead,
         justified: {...justified, rootHex: toRootHex(justified.root)},
         finalized: {...finalized, rootHex: toRootHex(finalized.root)},
@@ -1305,7 +1310,8 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.discardVerifiedBlocks(signedBlockRoots);
   }
 
-  async onSlot(slot: Slot, previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">): Promise<void> {
+  async onSlot(slot: Slot): Promise<void> {
+    const previousHead = this.chainView.getHead();
     const {headUpdate, finalizedCheckpointChanged} = await this.core.onSlot(slot);
     if (this.closed) return;
     if (headUpdate) await this.onHeadUpdated(previousHead);
@@ -1336,7 +1342,7 @@ export class BeaconEngine implements IBeaconEngine {
     }
     const {block, executionOptimistic} = res.result;
     if (this.closed) return {executionOptimistic};
-    this.emitter.emit(ChainEvent.chainViewBlocksAdded, [fromChainViewBlockBytes(block)]);
+    this.updateChainView([fromChainViewBlockBytes(block)]);
 
     // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.
     const envelope = payloadInput.getPayloadEnvelope().message;
@@ -1372,8 +1378,11 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.deleteNonCanonicalBlocks(roots);
   }
 
-  completeFinalization(finalized: CheckpointWithHex): Promise<number> {
-    return this.core.completeFinalization(finalized);
+  async completeFinalization(finalized: CheckpointWithHex): Promise<number> {
+    const prunedBlockCount = await this.core.completeFinalization(finalized);
+    // Only drop ChainView metadata once core has archived state and pruned fork choice
+    this.chainView.prune(finalized);
+    return prunedBlockCount;
   }
 
   getEarliestArchivedBlockSlot(): Promise<Slot | null> {

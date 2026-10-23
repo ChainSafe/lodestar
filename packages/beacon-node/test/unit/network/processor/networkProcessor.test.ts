@@ -56,12 +56,16 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     const chain = {
       clock: new ClockStopped(clockSlot),
       emitter,
-      hasBlockHexUnsafe: vi.fn().mockReturnValue(false),
-      hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-      getBlockHexAndBlockHash: vi.fn().mockReturnValue(undefined),
-      getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
       seenBlock: vi.fn().mockReturnValue(false),
       seenPayloadEnvelope: vi.fn().mockReturnValue(false),
+      beaconEngine: {
+        chainView: {
+          hasBlockHexUnsafe: vi.fn().mockReturnValue(false),
+          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+          getBlockHexAndBlockHash: vi.fn().mockReturnValue(undefined),
+          getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
+        },
+      },
     } as unknown as IBeaconChain;
 
     const modules = {

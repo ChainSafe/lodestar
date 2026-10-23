@@ -80,7 +80,7 @@ describe("PrepareNextSlot scheduler", () => {
       chainStub.emitter.on(routes.events.EventType.payloadAttributes, vi.fn());
       await vi.advanceTimersByTimeAsync(1);
       expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
-      expect(prepare).toHaveBeenCalledWith(clockSlot, {produceSSEPayloadAttributes: true}, chainStub.getHead());
+      expect(prepare).toHaveBeenCalledWith(clockSlot, {produceSSEPayloadAttributes: true});
       await preparing;
     }
   );
@@ -204,11 +204,7 @@ describe("PrepareNextSlot scheduler", () => {
 
       expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
       expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
-      expect(prepare).toHaveBeenCalledWith(
-        prepareSlot - 1,
-        {produceSSEPayloadAttributes: hasListener},
-        chainStub.getHead()
-      );
+      expect(prepare).toHaveBeenCalledWith(prepareSlot - 1, {produceSSEPayloadAttributes: hasListener});
       expect(listenerCount).toHaveBeenCalledExactlyOnceWith(routes.events.EventType.payloadAttributes);
       expect(updateBuilderStatus).toHaveBeenCalledTimes(hasProposer ? 1 : 0);
       expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledTimes(2);

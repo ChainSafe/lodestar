@@ -19,7 +19,6 @@ export type TestBeaconEngineModules = Omit<
   BeaconChainModules,
   | "beaconEngine"
   | "anchor"
-  | "chainViewSnapshot"
   | "earliestAvailableSlot"
   | "clock"
   | "emitter"
@@ -39,10 +38,7 @@ export type TestBeaconEngineModules = Omit<
 export function createTestBeaconEngine(
   opts: IChainOptions,
   modules: TestBeaconEngineModules
-): Omit<
-  BeaconChainModules,
-  "anchor" | "chainViewSnapshot" | "builderApiClient" | "beaconEngine" | "earliestAvailableSlot"
-> & {
+): Omit<BeaconChainModules, "anchor" | "builderApiClient" | "beaconEngine" | "earliestAvailableSlot"> & {
   beaconEngine: BeaconEngine;
   beaconEngineCore: BeaconEngineCore;
   abortController: AbortController;

@@ -29,7 +29,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
     if (seenRoots.has(rootHex)) continue;
     seenRoots.add(rootHex);
 
-    const block = chain.getBlockHexDefaultStatus(rootHex);
+    const block = chain.beaconEngine.chainView.getBlockHexDefaultStatus(rootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
     const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(root);
 

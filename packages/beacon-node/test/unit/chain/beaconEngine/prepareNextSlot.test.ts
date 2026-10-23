@@ -13,7 +13,7 @@ import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js
 import {BeaconEngineErrorCode} from "../../../../src/chain/beaconEngine/interface.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {ChainView} from "../../../../src/chain/chainView/chainView.js";
-import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {PREPARE_NEXT_SLOT_BPS, PrepareNextSlotScheduler} from "../../../../src/chain/prepareNextSlot.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -76,11 +76,14 @@ async function setup() {
   });
   const emitter = new ChainEventEmitter();
   const engine = new BeaconEngine({core, config, clock, emitter, logger, serializedCache: new SerializedCache()});
-  const view = new ChainView(await engine.getChainViewSnapshot());
+  engine.chainView = new ChainView(await core.getChainViewSnapshot());
+  const view = engine.chainView;
   const order: string[] = [];
-  emitter.on(ChainEvent.chainViewBlocksAdded, (blocks, state) => {
-    view.addBlocks(blocks, state);
+  const addBlocks = view.addBlocks.bind(view);
+  vi.spyOn(view, "addBlocks").mockImplementation((blocks, state) => {
+    const update = addBlocks(blocks, state);
     order.push("view");
+    return update;
   });
   for (const event of [routes.events.EventType.head, routes.events.EventType.headV2]) {
     emitter.on(event, () => order.push(event));
@@ -123,7 +126,7 @@ describe("next-slot preparation head pull", () => {
       }
       return {head};
     });
-    const response = await engine.prepareForNextSlot(clockSlot, opts, view.getHead());
+    const response = await engine.prepareForNextSlot(clockSlot, opts);
     expect(response).toEqual({ok: true, data: null, headUpdate: change !== "unchanged"});
     expect(view.getHead()).toEqual(toChainViewBlock(head));
     expect(view.getJustifiedCheckpoint()).toEqual(structuredClone(forkChoice.getJustifiedCheckpoint()));
@@ -144,7 +147,7 @@ describe("next-slot preparation head pull", () => {
 
   it("refreshes the head when preparation skips after recomputing it", async () => {
     const {engine, view, next, regen, coreEmit} = await setup();
-    expect(await engine.prepareForNextSlot(3 * SLOTS_PER_EPOCH - 1, opts, view.getHead())).toEqual({
+    expect(await engine.prepareForNextSlot(3 * SLOTS_PER_EPOCH - 1, opts)).toEqual({
       ok: true,
       data: null,
       headUpdate: true,
@@ -159,7 +162,7 @@ describe("next-slot preparation head pull", () => {
     async (error) => {
       const {engine, view, next, regen, coreEmit, order} = await setup();
       regen.getBlockSlotState.mockRejectedValueOnce(error);
-      const response = await engine.prepareForNextSlot(clockSlot, opts, view.getHead());
+      const response = await engine.prepareForNextSlot(clockSlot, opts);
       expect(response).toEqual({
         ok: false,
         code: error instanceof ErrorAborted ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
@@ -188,7 +191,7 @@ describe("next-slot preparation head pull", () => {
       if (fail) throw new Error("prediction failed");
       return {head: proposerHead};
     });
-    expect(await engine.prepareForNextSlot(clockSlot, opts, view.getHead())).toEqual(
+    expect(await engine.prepareForNextSlot(clockSlot, opts)).toEqual(
       fail
         ? {
             ok: false,
@@ -239,7 +242,7 @@ describe("next-slot preparation head pull", () => {
     const {engine, view, regen, preparedState, previous, headPull, order, coreEmit} = await setup();
     const pending = defer<typeof preparedState>();
     regen.getBlockSlotState.mockReturnValueOnce(pending.promise);
-    const preparing = engine.prepareForNextSlot(clockSlot, opts, view.getHead());
+    const preparing = engine.prepareForNextSlot(clockSlot, opts);
     expect(regen.getBlockSlotState).toHaveBeenCalledOnce();
     expect(order).toEqual([]);
     await engine.close();

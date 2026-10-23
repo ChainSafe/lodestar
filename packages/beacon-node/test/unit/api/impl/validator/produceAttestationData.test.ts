@@ -59,10 +59,10 @@ describe("api - validator - produceAttestationData", () => {
       slot: 0,
       currentJustifiedCheckpoint: source,
     } as IBeaconStateView);
-    vi.spyOn(modules.chain, "getHead").mockImplementation(() => {
+    vi.spyOn(modules.chain.beaconEngine.chainView, "getHead").mockImplementation(() => {
       throw Error("Stale ChainView head");
     });
-    vi.spyOn(modules.chain, "getBlockDefaultStatus").mockImplementation(() => {
+    vi.spyOn(modules.chain.beaconEngine.chainView, "getBlockDefaultStatus").mockImplementation(() => {
       throw Error("Stale ChainView block");
     });
 
@@ -80,7 +80,7 @@ describe("api - validator - produceAttestationData", () => {
     const head = generateProtoBlock({executionStatus: ExecutionStatus.Syncing});
     modules.forkChoice.hasBlock.mockReturnValue(true);
     modules.forkChoice.getBlockDefaultStatus.mockReturnValue(head);
-    vi.spyOn(modules.chain, "getBlockDefaultStatus").mockReturnValue(
+    vi.spyOn(modules.chain.beaconEngine.chainView, "getBlockDefaultStatus").mockReturnValue(
       generateProtoBlock({executionStatus: ExecutionStatus.Valid})
     );
     api = getValidatorApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
@@ -120,7 +120,7 @@ describe("api - validator - produceAttestationData", () => {
         slot: 0,
         blockRoot: ZERO_HASH_HEX,
       } as ProtoBlock);
-      vi.spyOn(modules.chain, "getCanonicalProtoBlockAtSlot").mockImplementation(() => {
+      vi.spyOn(modules.chain.beaconEngine.chainView, "getCanonicalProtoBlockAtSlot").mockImplementation(() => {
         throw Error("Stale ChainView canonical block");
       });
       vi.mocked(modules.chain.clock.secFromSlot).mockReturnValue(

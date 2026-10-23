@@ -55,7 +55,7 @@ import {PayloadEnvelopeInputSource, SourceMeta} from "../blocks/payloadEnvelopeI
 import {SignedBlockRoot} from "../blocks/signedBlockRoot.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
-import {ChainViewBlock, ChainViewSnapshot} from "../chainView/interface.js";
+import {ChainViewBlock, ChainViewSnapshot, IChainView} from "../chainView/interface.js";
 import {BlockErrorCode} from "../errors/blockError.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {InsertOutcome} from "../opPools/types.js";
@@ -69,7 +69,7 @@ import {ValidatorMonitorAttestation, ValidatorMonitorBlock, ValidatorMonitorOpts
 import {ChainReorg, HeadUpdate} from "./events.js";
 import {GossipBlockResult} from "./gossipValidation/block.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
-import {AnchorSummary, EngineBootstrap} from "./initialization.js";
+import {AnchorSummary, EngineBootstrap, EngineBootstrapWithChainView} from "./initialization.js";
 import {IBeaconEngineOptions} from "./options.js";
 import {BlockFailure, PayloadFailure} from "./processingResult.js";
 import type {ProduceBlindedBlockOrBlockContentsRes} from "./produceEngineOrBuilderBlock.js";
@@ -355,25 +355,22 @@ export interface IBeaconEngine
     | "getBlockHeaders"
     | "getBlockRoot"
     | "isHeadOptimistic"
+    | "initializeFromAnchor"
+    | "getChainViewSnapshot"
   > {
+  readonly chainView: IChainView;
+  initializeFromAnchor(): Promise<EngineBootstrap>;
   validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
   validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
   pauseFastConfirmation(): Promise<void>;
   resumeFastConfirmation(): Promise<void>;
-  recomputeForkChoiceHead(
-    caller: ForkchoiceCaller,
-    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
-  ): Promise<void>;
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<void>;
   discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void>;
-  onSlot(slot: Slot, previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">): Promise<void>;
+  onSlot(slot: Slot): Promise<void>;
   onEpoch(epoch: Epoch): Promise<void>;
-  prepareForNextSlot(
-    clockSlot: Slot,
-    opts: PrepareNextSlotOpts,
-    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
-  ): Promise<PrepareNextSlotResponse>;
+  prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse>;
   getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null>;
   isHeadOptimistic(): Promise<boolean>;
   getBlockRoot(blockId: routes.beacon.BlockId): Promise<BlockRootResponse>;
@@ -535,7 +532,7 @@ export interface IBeaconEngine
 export interface IBeaconEngineCore {
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
   persistAnchorState(): Promise<void>;
-  initializeFromAnchor(): Promise<EngineBootstrap>;
+  initializeFromAnchor(): Promise<EngineBootstrapWithChainView>;
   getChainViewSnapshot(): Promise<ChainViewSnapshot>;
   /** Include head-event metadata only when a previous ChainView head is supplied. */
   getHeadSnapshot(previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot;

@@ -44,7 +44,7 @@ export async function getBlockResponse(
   chain: IBeaconChain,
   blockId: routes.beacon.BlockId
 ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
-  const rootOrSlot = resolveBlockId(chain, blockId);
+  const rootOrSlot = resolveBlockId(chain.beaconEngine.chainView, blockId);
 
   const res =
     typeof rootOrSlot === "string"

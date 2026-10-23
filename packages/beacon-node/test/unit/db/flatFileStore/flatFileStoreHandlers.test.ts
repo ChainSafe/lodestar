@@ -180,6 +180,16 @@ describe("FlatFileStore reqresp handler integration", () => {
           getSerializedUnfinalizedBlockByRoot: db.block.getBinary,
           getFinalizedBlockSlotByRoot: blockArchive.getSlotByRoot,
           getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range reads must use the root index")),
+          chainView: {
+            getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
+            getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
+            getBlockHexDefaultStatus: vi.fn().mockReturnValue(opts.forkChoiceBlockByRoot ?? null),
+            getAllAncestorBlocks: () =>
+              (opts.headChain ?? []).map((block) => ({
+                ...block,
+                payloadStatus: block.payloadStatus ?? PayloadStatus.FULL,
+              })),
+          },
         },
         custodyConfig: {
           custodyColumns: opts.custodyColumns,
@@ -199,15 +209,6 @@ describe("FlatFileStore reqresp handler integration", () => {
           opts.getSerializedDataColumnSidecars ??
           ((slot: number, root: string, indices: number[]) =>
             BeaconChain.prototype.getSerializedDataColumnSidecars.call(fallbackChain, slot, root, indices)),
-
-        getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-        getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
-        getBlockHexDefaultStatus: vi.fn().mockReturnValue(opts.forkChoiceBlockByRoot ?? null),
-        getAllAncestorBlocks: () =>
-          (opts.headChain ?? []).map((block) => ({
-            ...block,
-            payloadStatus: block.payloadStatus ?? PayloadStatus.FULL,
-          })),
       } as unknown as IBeaconChain;
 
       return {chain, db};

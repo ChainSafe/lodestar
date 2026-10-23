@@ -106,7 +106,7 @@ export function getRangeSyncTarget(
   remote: Status,
   chain: IBeaconChain
 ): {syncType: RangeSyncType; startEpoch: Slot; target: ChainTarget} {
-  const chainView = chain;
+  const {chainView} = chain.beaconEngine;
 
   // finalized sync
   if (remote.finalizedEpoch > local.finalizedEpoch && !chainView.hasBlock(remote.finalizedRoot)) {

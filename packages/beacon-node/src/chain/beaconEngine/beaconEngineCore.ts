@@ -292,7 +292,7 @@ import {
 import {GossipValidationResult, fromResult} from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
 import {importExecutionPayload, importExecutionPayloadBytes} from "./importExecutionPayload.js";
-import {AnchorSummary, EngineBootstrap} from "./initialization.js";
+import {AnchorSummary, EngineBootstrap, EngineBootstrapWithChainView} from "./initialization.js";
 import type {
   ApiBlockId,
   ApiStateId,
@@ -648,7 +648,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
   }
 
-  async initializeFromAnchor(): Promise<EngineBootstrap> {
+  async initializeFromAnchor(): Promise<EngineBootstrapWithChainView> {
     this.assertStartupPhase("prepared");
     const anchorState = this.anchorState;
     if (!anchorState) throw new LodestarError({code: "ANCHOR_STATE_MISSING"});
@@ -675,10 +675,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
               }
             : null,
       };
+      const chainViewSnapshot = await this.getChainViewSnapshot();
       this.anchorState = undefined;
       this.anchorStateBytes = undefined;
       this.startupPhase = "ready";
-      return structuredClone(bootstrap);
+      return {...bootstrap, chainViewSnapshot};
     } catch (e) {
       this.startupPhase = "failed";
       throw e;

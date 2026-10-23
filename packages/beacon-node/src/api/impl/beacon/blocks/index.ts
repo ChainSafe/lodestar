@@ -199,7 +199,7 @@ export function getBeaconBlockApi({
     const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
-    if (chain.hasBlockHex(blockRoot)) {
+    if (chain.beaconEngine.chainView.hasBlockHex(blockRoot)) {
       // Block was already imported, e.g. published again by the validator client or received via gossip
       chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
       return;
@@ -252,7 +252,7 @@ export function getBeaconBlockApi({
       case routes.beacon.BroadcastValidation.consensus: {
         // check if this beacon node produced the block else run validations
         if (!blockLocallyProduced) {
-          const parentBlock = chain.getBlockDefaultStatus(signedBlock.message.parentRoot);
+          const parentBlock = chain.beaconEngine.chainView.getBlockDefaultStatus(signedBlock.message.parentRoot);
           if (parentBlock === null) {
             chain.emitter.emit(ChainEvent.blockUnknownParent, {
               blockInput: blockForImport,
@@ -638,7 +638,7 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
       }
 
-      let block = chain.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+      let block = chain.beaconEngine.chainView.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
       if (block === null) {
         // Only wait if the envelope is for the current slot
         if (chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
@@ -647,7 +647,7 @@ export function getBeaconBlockApi({
             slot,
           });
           await chain.waitForBlock(slot, blockRootHex);
-          block = chain.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+          block = chain.beaconEngine.chainView.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
         }
         if (block === null) {
           throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);

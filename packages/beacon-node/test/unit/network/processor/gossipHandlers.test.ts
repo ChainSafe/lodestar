@@ -91,14 +91,18 @@ describe("getGossipHandlers", () => {
       });
       const serializedCache = new SerializedCache();
       const chain = {
-        hasBlockHex,
         serializedCache,
         opts: {},
         clock: new ClockStopped(1),
         custodyConfig: {sampledColumns: [], custodyColumns: []},
         seenBlockInputCache: {getByBlock},
         seenPayloadEnvelopeInputCache: {add: addPayloadInput},
-        beaconEngine: {validateGossipBlock: validateEngineBlock},
+        beaconEngine: {
+          validateGossipBlock: validateEngineBlock,
+          chainView: {
+            hasBlockHex,
+          },
+        },
       } as unknown as IBeaconChain;
       const handlers = getGossipHandlers({
         chain,
@@ -150,7 +154,6 @@ describe("getGossipHandlers", () => {
       const remove = vi.fn();
       const serializedCache = new SerializedCache();
       const chain = {
-        hasBlockHex: () => false,
         serializedCache,
         opts: {},
         clock: new ClockStopped(0),
@@ -165,6 +168,9 @@ describe("getGossipHandlers", () => {
           validateGossipBlock: vi
             .fn()
             .mockResolvedValue({err: {status, code}, shouldProcessRepeatProposalBlock: false}),
+          chainView: {
+            hasBlockHex: () => false,
+          },
         },
       } as unknown as IBeaconChain;
       const handlers = getGossipHandlers({
@@ -242,7 +248,6 @@ describe("getGossipHandlers", () => {
         : {code, parentRoot};
     const chain = {
       opts: {},
-      hasBlockHex: () => false,
       serializedCache,
       clock,
       emitter,
@@ -258,6 +263,9 @@ describe("getGossipHandlers", () => {
           blockErrorType,
           shouldProcessRepeatProposalBlock: false,
         } satisfies GossipBlockResult),
+        chainView: {
+          hasBlockHex: () => false,
+        },
       },
     } as unknown as IBeaconChain;
     const handlers = getGossipHandlers({
@@ -494,7 +502,6 @@ async function runBeaconBlockProcessingError(
   const core = {reportPeer: vi.fn()} as Pick<INetworkCore, "reportPeer">;
   const chain = {
     opts: {},
-    hasBlockHex: vi.fn().mockReturnValue(false),
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
@@ -508,6 +515,9 @@ async function runBeaconBlockProcessingError(
         )),
         shouldProcessRepeatProposalBlock: false,
       }),
+      chainView: {
+        hasBlockHex: vi.fn().mockReturnValue(false),
+      },
     },
     seenBlockInputCache: {
       getByBlock: vi.fn().mockReturnValue(blockInput),
@@ -590,7 +600,6 @@ async function runBeaconBlockRepeatProposal(
   };
   const chain = {
     opts: {},
-    hasBlockHex: vi.fn().mockReturnValue(false),
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
@@ -607,6 +616,9 @@ async function runBeaconBlockRepeatProposal(
         blockErrorType,
         shouldProcessRepeatProposalBlock: !reject && recorded && parentKnown,
       } satisfies GossipBlockResult),
+      chainView: {
+        hasBlockHex: vi.fn().mockReturnValue(false),
+      },
     },
     seenBlockInputCache: {
       getByBlock,

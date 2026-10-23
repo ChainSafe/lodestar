@@ -1,11 +1,11 @@
 /**
- * Finalization spans two owners: BeaconEngineCore owns fork choice, blocks, envelopes and state archival;
- * BeaconChain owns data columns and ChainView. Its ArchiveStore facade must coordinate their work in order:
+ * Finalization spans two owners: BeaconEngine owns fork choice, ChainView, blocks, envelopes and state archival;
+ * BeaconChain owns data columns. Its ArchiveStore facade must coordinate their work in order:
  * 1. Archive canonical blocks, sidecars and envelopes, then optionally persist orphaned blocks.
  * 2. Clean up noncanonical data (columns before their blocks), expired sidecars and light-client data,
  *    then prune history if enabled.
  * 3. Call completeFinalization to finish state archival before pruning the engine's fork choice.
- * 4. Only after that resolves, prune BeaconChain's ChainView.
+ * 4. Only after that resolves, BeaconEngine prunes its ChainView.
  *
  * Core supplies the facade's archival selection in the finalized-checkpoint snapshot. Fork choice remains
  * available for engine migration and state archival until they succeed, so failures leave metadata for a
@@ -204,7 +204,7 @@ export async function deleteNonCanonicalBlocks(this: BeaconEngineCore, roots: Ui
  * Source: unstable@0edec865c8 chain/archiveStore/archiveStore.ts#ArchiveStore.processFinalizedCheckpoint
  * (onFinalizedCheckpoint, maybeArchiveState, then forkChoice.prune).
  * [beacon-engine] ArchiveStore must await archival and cleanup on both owners before calling this.
- * State archival below is the last dependency on the unpruned fork choice. The facade prunes ChainView only
+ * State archival below is the last dependency on the unpruned fork choice. BeaconEngine prunes ChainView only
  * after this resolves; do not move fork-choice pruning into the earlier block or envelope migration steps.
  */
 export async function completeFinalization(

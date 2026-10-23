@@ -26,9 +26,9 @@ describe("downloaded block cache admission", () => {
         const rootHex = toRootHex(root);
         const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
         const getFinalizedCheckpoint = vi
-          .spyOn(chain, "getFinalizedCheckpoint")
+          .spyOn(chain.beaconEngine.chainView, "getFinalizedCheckpoint")
           .mockReturnValue({epoch: 0, root, rootHex});
-        const hasBlockHex = vi.spyOn(chain, "hasBlockHex").mockReturnValue(false);
+        const hasBlockHex = vi.spyOn(chain.beaconEngine.chainView, "hasBlockHex").mockReturnValue(false);
         const hashTreeRoot = vi.spyOn(ssz.phase0.BeaconBlock, "hashTreeRoot");
         const deserialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "deserialize");
         const serialize = vi.spyOn(ssz.phase0.SignedBeaconBlock, "serialize");
