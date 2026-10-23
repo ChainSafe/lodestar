@@ -424,6 +424,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
     emitter: new ChainEventEmitter(),
     logger,
     processExecutionPayload: vi.fn().mockRejectedValue(new PayloadError(payloadInput, errorType)),
+    seenPayloadEnvelope: vi.fn().mockReturnValue(false),
     seenPayloadEnvelopeInputCache: {
       get: vi.fn().mockReturnValue(payloadInput),
       removeInvalid,
