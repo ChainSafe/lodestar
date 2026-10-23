@@ -108,6 +108,7 @@ export async function importBlock(
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+  const prevJustifiedEpoch = this.forkChoice.getJustifiedCheckpoint().epoch;
 
   const receiveDelaySec =
     fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
@@ -552,6 +553,9 @@ export async function importBlock(
 
   const justified = this.forkChoice.getJustifiedCheckpoint();
   const finalized = this.forkChoice.getFinalizedCheckpoint();
+  const justifiedCheckpointChanged = justified.epoch > prevJustifiedEpoch;
+  const finalizedCheckpointChanged = currFinalizedEpoch !== prevFinalizedEpoch;
+  if (justifiedCheckpointChanged || finalizedCheckpointChanged) this.forkChoiceVersion++;
 
   // [beacon-engine] deviation: return detached metadata before facade-side event delivery.
   return {
@@ -570,7 +574,9 @@ export async function importBlock(
         }
       : null,
     reorg,
-    finalizedCheckpointChanged: currFinalizedEpoch !== prevFinalizedEpoch,
+    justifiedCheckpointChanged,
+    finalizedCheckpointChanged,
+    version: this.forkChoiceVersion,
   };
 }
 

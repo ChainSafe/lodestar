@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest";
 import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {ChainView} from "../../../../src/chain/chainView/chainView.js";
+import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {zeroProtoBlock} from "../../../utils/state.js";
 
 function setup() {
@@ -33,7 +33,7 @@ describe("ChainView startup snapshot", () => {
   it("preserves every payload variant", async () => {
     const {core, anchor, pending, empty, full} = setup();
     const snapshot = await core.getChainViewSnapshot();
-    const view = new ChainView(snapshot);
+    const view = new ReplicateChainView(snapshot);
     expect(snapshot.blocks.map(({blockRoot, payloadStatus}) => [blockRoot, payloadStatus])).toEqual([
       [anchor.blockRoot, anchor.payloadStatus],
       [pending.blockRoot, PayloadStatus.PENDING],

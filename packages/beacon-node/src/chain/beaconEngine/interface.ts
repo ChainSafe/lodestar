@@ -178,13 +178,16 @@ export type ImportBlockResponse = {
   /** Head updates are common during block import, so return the data here to avoid another Core round trip. */
   headUpdate: HeadUpdate<Root> | null;
   reorg: ChainReorg<Root> | null;
+  justifiedCheckpointChanged: boolean;
   /** Finalization is infrequent; the facade pulls its larger block snapshot only when the checkpoint changes. */
   finalizedCheckpointChanged: boolean;
+  version: number;
 };
 
 export type OnSlotResponse = {
-  /** Refresh head metadata when the head or justified checkpoint changes. */
+  /** Head root or payload status changed */
   headUpdate: boolean;
+  justifiedCheckpointChanged: boolean;
   finalizedCheckpointChanged: boolean;
 };
 
@@ -192,6 +195,7 @@ export type HeadSnapshot = {
   head: ChainViewBlock<Root>;
   justified: phase0.Checkpoint;
   finalized: phase0.Checkpoint;
+  version: number;
   headUpdate: HeadUpdate<Root> | null;
 };
 

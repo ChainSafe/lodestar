@@ -13,7 +13,7 @@ import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
-import {ChainView} from "../../src/chain/chainView/chainView.js";
+import {IChainView} from "../../src/chain/chainView/interface.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
@@ -313,6 +313,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         canAcceptWork: vi.fn().mockReturnValue(true),
       },
       emitter: new BeaconEngineEventBus(),
+      forkChoiceVersion: 0,
     };
   });
 
@@ -345,6 +346,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   // stay as mock fns above so tests can control head selection.
   for (const name of [
     "reportIrrecoverableError",
+    "isHeadChanged",
     "getLightClientServer",
     "getLightClientBootstrap",
     "getLightClientUpdate",
@@ -481,7 +483,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
 }
 
 export type MockedForkChoice = Mocked<ForkChoice>;
-export type MockedChainView = ChainView;
+export type MockedChainView = IChainView;
 
 export function getMockedForkChoice(): MockedForkChoice {
   // ForkChoice package is mocked globally

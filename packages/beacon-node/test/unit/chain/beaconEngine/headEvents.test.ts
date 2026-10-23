@@ -8,7 +8,7 @@ import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
-import {ChainView} from "../../../../src/chain/chainView/chainView.js";
+import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
@@ -38,7 +38,7 @@ describe("BeaconEngine head notifications", () => {
   let engine: BeaconEngine;
   let emitter: ChainEventEmitter;
   let events: BeaconEngineEventBus;
-  let view: ChainView;
+  let view: ReplicateChainView;
   let order: string[];
   const onHead = vi.fn();
   const onHeadV2 = vi.fn();
@@ -100,12 +100,13 @@ describe("BeaconEngine head notifications", () => {
       clock: new ClockStopped(0),
       serializedCache: new SerializedCache(),
       logger: core.logger,
+      beaconEngineWorker: true,
     });
-    engine.chainView = new ChainView(await core.getChainViewSnapshot());
-    view = engine.chainView;
+    view = new ReplicateChainView(await core.getChainViewSnapshot());
+    engine.chainView = view;
     const addBlocks = view.addBlocks.bind(view);
-    vi.spyOn(view, "addBlocks").mockImplementation((blocks, state) => {
-      const update = addBlocks(blocks, state);
+    vi.spyOn(view, "addBlocks").mockImplementation((blocks, state, version) => {
+      const update = addBlocks(blocks, state, version);
       order.push("view");
       return update;
     });
@@ -185,20 +186,15 @@ describe("BeaconEngine head notifications", () => {
     expect(getDependentRoot).not.toHaveBeenCalled();
   });
 
-  it.each(["epoch", "root"])("refreshes a justified checkpoint %s change without head events", async (change) => {
+  it("does not report justified changes, which head recomputation cannot cause", async () => {
     next = {...previous};
     const checkpoint = core.forkChoice.getJustifiedCheckpoint();
-    const justified =
-      change === "epoch" ? {...checkpoint, epoch: 1} : {...checkpoint, root: fromHex(root(6)), rootHex: root(6)};
-    vi.spyOn(core.forkChoice, "getJustifiedCheckpoint").mockReturnValueOnce(checkpoint).mockReturnValue(justified);
-    const coreEmit = vi.spyOn(events, "emit");
+    vi.spyOn(core.forkChoice, "getJustifiedCheckpoint").mockReturnValue({...checkpoint, epoch: 1});
+    const headPull = vi.spyOn(core, "getHeadSnapshot");
     await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
-    expect(view.getJustifiedCheckpoint()).toEqual(justified);
-    expect(view.getHead()).toEqual(toChainViewBlock(previous));
-    expect(order).toEqual(["view"]);
-    expect(coreEmit).not.toHaveBeenCalled();
-    expect(getDependentRoot).not.toHaveBeenCalled();
+    expect(order).toEqual([]);
+    expect(headPull).not.toHaveBeenCalled();
   });
 
   it("returns a synchronous change flag without publishing from Core", () => {

@@ -4,7 +4,7 @@ import {Root, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
-import {ChainView} from "../../../../src/chain/chainView/chainView.js";
+import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
@@ -29,11 +29,12 @@ describe("BeaconChain serialized block reads", () => {
     chain = Object.assign(Object.create(BeaconChain.prototype) as BeaconChain, {
       config,
       beaconEngine: {
-        chainView: new ChainView({
+        chainView: new ReplicateChainView({
           blocks: [anchor, head],
           head,
           justified: checkpoint,
           finalized: checkpoint,
+          version: 0,
         }),
       },
       seenBlockInputCache: {get: vi.fn(() => ({hasBlock: () => true, getBlock: () => block, slot: 1}))},

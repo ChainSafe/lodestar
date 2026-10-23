@@ -19,9 +19,15 @@ export type ChainViewState = {
 
 export type ChainViewSnapshot = ChainViewState & {
   blocks: ChainViewBlock[];
+  version: number;
 };
 
 export interface IChainView {
+  /**
+   * Core fork-choice version this view reflects. A response with an older version was built before state the
+   * view already shows, so its head state and head/reorg events are outdated.
+   */
+  readonly version: number;
   getHead(): ChainViewBlock;
   getHeadRoot(): RootHex;
   getFinalizedCheckpoint(): CheckpointWithHex;
@@ -48,4 +54,10 @@ export interface IChainView {
     endSlot: Slot
   ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
   getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
+
+  // Only implemented by views that replicate fork choice (worker mode)
+  /** Sets `version` when given */
+  addBlocks?(blocks: ChainViewBlock[], state?: ChainViewState, version?: number): void;
+  applyFinalizedCheckpoint?(checkpoint: CheckpointWithHex): void;
+  prune?(finalized: CheckpointWithHex): void;
 }

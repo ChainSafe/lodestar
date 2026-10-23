@@ -35,7 +35,7 @@ import {
 import {PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
-import {ChainView} from "../../../../src/chain/chainView/chainView.js";
+import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import * as lightClient from "../../../../src/chain/lightClient/index.js";
@@ -1053,7 +1053,7 @@ describe("bytes-based engine startup", () => {
     const result = await startup;
     if (result.err !== null) throw result.err;
     const beaconChain = result.result;
-    expect(beaconChain.beaconEngine.chainView.getHead()).toEqual(snapshot.head);
+    expect(beaconChain.beaconEngine.chainView.getHead().blockRoot).toBe(snapshot.head.blockRoot);
     expect(getChainViewSnapshot).toHaveBeenCalledOnce();
 
     clock.emit(ClockEvent.slot, clock.currentSlot);
@@ -1063,8 +1063,10 @@ describe("bytes-based engine startup", () => {
   it("applies a view update once before downstream chain listeners read the head", async () => {
     const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.metrics = metrics;
-    const dependencies = await initializeTestChain(opts, modules);
-    const beaconChain = new BeaconChain(opts, dependencies);
+    // Core responses are mocked, so only the worker-mode replica reflects them
+    const workerOpts = {...opts, beaconEngineWorker: true};
+    const dependencies = await initializeTestChain(workerOpts, modules);
+    const beaconChain = new BeaconChain(workerOpts, dependencies);
     chain = beaconChain;
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
     const snapshot = core.getHeadSnapshot();
@@ -1074,8 +1076,28 @@ describe("bytes-based engine startup", () => {
       parentRoot: toRootHex(snapshot.head.blockRoot),
       blockRoot: toRootHex(Buffer.alloc(32, 1)),
     };
-    vi.spyOn(core, "onSlot").mockReturnValue({headUpdate: true, finalizedCheckpointChanged: false});
-    vi.spyOn(core, "getHeadSnapshot").mockReturnValue({...snapshot, head: toChainViewBlockBytes(head)});
+    vi.spyOn(core, "onSlot").mockReturnValue({
+      headUpdate: true,
+      justifiedCheckpointChanged: false,
+      finalizedCheckpointChanged: false,
+    });
+    const headBytes = toChainViewBlockBytes(head);
+    vi.spyOn(core, "getHeadSnapshot").mockReturnValue({
+      ...snapshot,
+      head: headBytes,
+      version: snapshot.version + 1,
+      headUpdate: {
+        slot: head.slot,
+        blockRoot: headBytes.blockRoot,
+        stateRoot: headBytes.stateRoot,
+        payloadStatus: head.payloadStatus,
+        headRootChanged: true,
+        epochTransition: false,
+        previousDutyDependentRoot: snapshot.head.blockRoot,
+        currentDutyDependentRoot: snapshot.head.blockRoot,
+        executionOptimistic: false,
+      },
+    });
     const onUpdate = vi.fn(() => {
       expect(beaconChain.beaconEngine.chainView.getHead()).toEqual(toChainViewBlock(head));
       expect(toRootHex(beaconChain.getStatus().headRoot)).toBe(head.blockRoot);
@@ -1096,7 +1118,8 @@ describe("bytes-based engine startup", () => {
   it("merges imported blocks and checkpoints before head events", async () => {
     const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.metrics = metrics;
-    chain = await createBeaconChain(opts, modules);
+    // Core responses are mocked, so only the worker-mode replica reflects them
+    chain = await createBeaconChain({...opts, beaconEngineWorker: true}, modules);
     const beaconChain = chain;
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
     const previousHead = core.forkChoice.getHead();
@@ -1115,7 +1138,9 @@ describe("bytes-based engine startup", () => {
         newHead: summary,
         justified: {epoch: justified.epoch, root: justified.root},
         finalized: core.forkChoice.getFinalizedCheckpoint(),
+        justifiedCheckpointChanged: true,
         finalizedCheckpointChanged: false,
+        version: core.forkChoiceVersion + 1,
         executionOptimistic: false,
         headUpdate: {
           slot: block.slot,
@@ -1164,16 +1189,30 @@ describe("bytes-based engine startup", () => {
     expect(await metrics.register.getSingleMetricAsString("beacon_head_slot")).toContain(
       `beacon_head_slot ${block.slot}`
     );
+    // Core reports each checkpoint change once; a later import without changes emits nothing
+    const importResponse = await vi.mocked(core.importBlock).mock.results[0].value;
+    if (importResponse.err !== null) throw importResponse.err;
+    vi.mocked(core.importBlock).mockResolvedValueOnce({
+      err: null,
+      result: {...importResponse.result, headUpdate: null, justifiedCheckpointChanged: false},
+    });
     await beaconChain.beaconEngine.importBlock(input, stateTransition.DataAvailabilityStatus.PreData, {});
     expect(onJustified).toHaveBeenCalledOnce();
+    expect(onStatus).toHaveBeenCalledOnce();
   });
 
   it("refreshes network status when a pulled checkpoint finalizes without a head change", async () => {
-    chain = await createBeaconChain(opts, modules);
+    // Core responses are mocked, so only the worker-mode replica reflects them
+    chain = await createBeaconChain({...opts, beaconEngineWorker: true}, modules);
     const beaconChain = chain;
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
     const head = beaconChain.beaconEngine.chainView.getHead();
-    vi.spyOn(core, "onSlot").mockReturnValue({headUpdate: false, finalizedCheckpointChanged: true});
+    // Core reports a finalized change once; the next slot runs the real onSlot
+    vi.spyOn(core, "onSlot").mockReturnValueOnce({
+      headUpdate: false,
+      justifiedCheckpointChanged: false,
+      finalizedCheckpointChanged: true,
+    });
     vi.spyOn(core, "getFinalizedCheckpointSnapshot").mockReturnValue({
       epoch: 1,
       root: fromHex(head.blockRoot),
@@ -1428,7 +1467,9 @@ describe("bytes-based engine startup", () => {
         parentRoot: anchorHead.blockRoot,
         payloadStatus: PayloadStatus.PENDING,
       };
-      (dependencies.beaconEngine.chainView as ChainView).addBlocks([pendingBlock]);
+      // Core responses are mocked: only the worker-mode replica reflects them
+      const replica = beaconEngineWorker ? (dependencies.beaconEngine.chainView as ReplicateChainView) : undefined;
+      replica?.addBlocks([pendingBlock]);
       chain = new BeaconChain(options, dependencies);
       const activeChain = chain;
       const core = getBeaconEngineCore(activeChain.beaconEngine);
@@ -1471,16 +1512,19 @@ describe("bytes-based engine startup", () => {
       input.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 1});
       const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
       const order: string[] = [];
-      const chainView = activeChain.beaconEngine.chainView as ChainView;
-      const addBlocks = chainView.addBlocks.bind(chainView);
-      const onBlocks = vi.spyOn(chainView, "addBlocks").mockImplementation((blocks, state) => {
-        order.push("view");
-        return addBlocks(blocks, state);
-      });
+      let viewUpdates = 0;
+      if (replica) {
+        const addBlocks = replica.addBlocks.bind(replica);
+        vi.spyOn(replica, "addBlocks").mockImplementation((blocks, state, version) => {
+          viewUpdates++;
+          order.push("view");
+          return addBlocks(blocks, state, version);
+        });
+      }
       const imported = vi.fn(() => {
-        expect(
-          activeChain.beaconEngine.chainView.getBlockHex(rootHex, PayloadStatus.FULL)?.executionPayloadBlockHash
-        ).toBe(toRootHex(hash));
+        if (replica) {
+          expect(replica.getBlockHex(rootHex, PayloadStatus.FULL)?.executionPayloadBlockHash).toBe(toRootHex(hash));
+        }
         order.push("event");
       });
       activeChain.emitter.on(routes.events.EventType.executionPayload, imported);
@@ -1496,7 +1540,7 @@ describe("bytes-based engine startup", () => {
       pending.resolve(structuredClone(response));
       expect(await importing).toEqual({executionOptimistic: true});
       order.push("resolved");
-      expect(order).toEqual(["view", "event", "resolved"]);
+      expect(order).toEqual(replica ? ["view", "event", "resolved"] : ["event", "resolved"]);
       expect(imported).toHaveBeenCalledExactlyOnceWith({
         slot: 1,
         blockRoot: rootHex,
@@ -1513,7 +1557,7 @@ describe("bytes-based engine startup", () => {
         stateTransition.DataAvailabilityStatus.Available,
         {validSignature: true}
       );
-      expect(onBlocks).toHaveBeenCalledTimes(2);
+      expect(viewUpdates).toBe(replica ? 2 : 0);
       expect(imported).toHaveBeenCalledOnce();
 
       coreImport.mockResolvedValueOnce({err: {type: {code: PayloadErrorCode.INVALID_SIGNATURE}, message: "invalid"}});
@@ -1527,7 +1571,7 @@ describe("bytes-based engine startup", () => {
           }
         )
       ).rejects.toMatchObject({type: {code: PayloadErrorCode.INVALID_SIGNATURE}});
-      expect(onBlocks).toHaveBeenCalledTimes(2);
+      expect(viewUpdates).toBe(replica ? 2 : 0);
       expect(imported).toHaveBeenCalledOnce();
 
       clock.setSlot(64);
@@ -1543,7 +1587,7 @@ describe("bytes-based engine startup", () => {
       chain = undefined;
       afterClose.resolve(response);
       expect(await importingAtClose).toEqual({executionOptimistic: true});
-      expect(onBlocks).toHaveBeenCalledTimes(2);
+      expect(viewUpdates).toBe(replica ? 2 : 0);
       expect(imported).toHaveBeenCalledOnce();
     }
   );

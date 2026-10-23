@@ -374,6 +374,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   readonly checkpointBalancesCache = new CheckpointBalancesCache();
   readonly emitter = new BeaconEngineEventBus();
   private reportedIrrecoverableError?: Error;
+  /** Bumped on every head, justified or finalized change; lets views and responses be ordered */
+  forkChoiceVersion = 0;
 
   async getChainViewSnapshot(): Promise<ChainViewSnapshot> {
     return {
@@ -381,6 +383,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       head: toChainViewBlock(this.forkChoice.getHead()),
       justified: this.forkChoice.getJustifiedCheckpoint(),
       finalized: this.forkChoice.getFinalizedCheckpoint(),
+      version: this.forkChoiceVersion,
     };
   }
 
@@ -395,6 +398,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       head: toChainViewBlockBytes(head),
       justified: {epoch: justified.epoch, root: fromHex(justified.rootHex)},
       finalized: {epoch: finalized.epoch, root: fromHex(finalized.rootHex)},
+      version: this.forkChoiceVersion,
       headUpdate: headUpdate
         ? {
             ...headUpdate,
@@ -870,16 +874,10 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         this.config.getSlotComponentDurationMs(this.config.getForkName(slot), HALF_SLOT_BPS)
       );
     }
-    const head = this.forkChoice.getHead();
-    const justified = this.forkChoice.getJustifiedCheckpoint();
-    return {
-      headUpdate:
-        head.blockRoot !== previousHead.blockRoot ||
-        head.payloadStatus !== previousHead.payloadStatus ||
-        justified.epoch !== previousJustified.epoch ||
-        justified.rootHex !== previousJustified.rootHex,
-      finalizedCheckpointChanged: this.forkChoice.getFinalizedCheckpoint().epoch !== previousFinalizedEpoch,
-    };
+    const finalizedCheckpointChanged = this.forkChoice.getFinalizedCheckpoint().epoch !== previousFinalizedEpoch;
+    const justifiedCheckpointChanged = this.forkChoice.getJustifiedCheckpoint().epoch > previousJustified.epoch;
+    if (finalizedCheckpointChanged || justifiedCheckpointChanged) this.forkChoiceVersion++;
+    return {headUpdate: this.isHeadChanged(previousHead), justifiedCheckpointChanged, finalizedCheckpointChanged};
   }
 
   onEpoch(epoch: Epoch): void {
@@ -1411,7 +1409,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   /** Runs inside BeaconEngineCore. Single V3 production entry and plain-data error boundary. */
   async produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse> {
     const previousHead = this.forkChoice.getHead();
-    const previousJustified = this.forkChoice.getJustifiedCheckpoint();
     let response: ProduceBlockResponse;
     try {
       const {slot, randaoReveal, graffiti, builderBoostFactor, ...opts} = request;
@@ -1447,13 +1444,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         };
       }
     }
-    const head = this.forkChoice.getHead();
-    const justified = this.forkChoice.getJustifiedCheckpoint();
-    response.headUpdate =
-      head.blockRoot !== previousHead.blockRoot ||
-      head.payloadStatus !== previousHead.payloadStatus ||
-      justified.epoch !== previousJustified.epoch ||
-      justified.rootHex !== previousJustified.rootHex;
+    response.headUpdate = this.isHeadChanged(previousHead);
     return response;
   }
 
@@ -1525,7 +1516,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   /** Runs inside BeaconEngineCore. Single Gloas V4 production entry and plain-data error boundary. */
   async produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response> {
     const previousHead = this.forkChoice.getHead();
-    const previousJustified = this.forkChoice.getJustifiedCheckpoint();
     let response: ProduceBlockV4Response;
     try {
       response = {ok: true, data: await produceBlockV4.call(this, request), headUpdate: false};
@@ -1556,13 +1546,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         };
       }
     }
-    const head = this.forkChoice.getHead();
-    const justified = this.forkChoice.getJustifiedCheckpoint();
-    response.headUpdate =
-      head.blockRoot !== previousHead.blockRoot ||
-      head.payloadStatus !== previousHead.payloadStatus ||
-      justified.epoch !== previousJustified.epoch ||
-      justified.rootHex !== previousJustified.rootHex;
+    response.headUpdate = this.isHeadChanged(previousHead);
     return response;
   }
 
@@ -1598,7 +1582,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   /** Prepare consensus state, builder status, EL payload and requested payload attributes for the next slot. */
   async prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {
     const previousHead = this.forkChoice.getHead();
-    const previousJustified = this.forkChoice.getJustifiedCheckpoint();
     let response: PrepareNextSlotResponse;
     try {
       response = {ok: true, data: await prepareForNextSlot.call(this, clockSlot, opts), headUpdate: false};
@@ -1611,13 +1594,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
         payload: {message: e instanceof Error ? e.message : String(e)},
       };
     }
-    const head = this.forkChoice.getHead();
-    const justified = this.forkChoice.getJustifiedCheckpoint();
-    response.headUpdate =
-      head.blockRoot !== previousHead.blockRoot ||
-      head.payloadStatus !== previousHead.payloadStatus ||
-      justified.epoch !== previousJustified.epoch ||
-      justified.rootHex !== previousJustified.rootHex;
+    response.headUpdate = this.isHeadChanged(previousHead);
     return response;
   }
 
@@ -1632,16 +1609,8 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
     try {
       const prevHead = this.forkChoice.getHead();
-      const previousJustified = this.forkChoice.getJustifiedCheckpoint();
-      const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
-      const justified = this.forkChoice.getJustifiedCheckpoint();
-      return {
-        headUpdate:
-          head.blockRoot !== prevHead.blockRoot ||
-          head.payloadStatus !== prevHead.payloadStatus ||
-          justified.epoch !== previousJustified.epoch ||
-          justified.rootHex !== previousJustified.rootHex,
-      };
+      this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead});
+      return {headUpdate: this.isHeadChanged(prevHead)};
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
@@ -3337,6 +3306,14 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>> {
     return getBuilderPendingWithdrawals.call(this, id, returnBytes);
+  }
+
+  /** Also bumps `forkChoiceVersion` on a change, so every head change is versioned */
+  isHeadChanged(prevHead: Pick<ProtoBlock, "blockRoot" | "payloadStatus">): boolean {
+    const head = this.forkChoice.getHead();
+    const changed = head.blockRoot !== prevHead.blockRoot || head.payloadStatus !== prevHead.payloadStatus;
+    if (changed) this.forkChoiceVersion++;
+    return changed;
   }
 
   getHeadUpdate(prevHead: Pick<ProtoBlock, "blockRoot" | "payloadStatus">, head: ProtoBlock): HeadUpdate | null {

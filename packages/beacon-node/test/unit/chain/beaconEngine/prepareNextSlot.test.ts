@@ -12,7 +12,7 @@ import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js"
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {BeaconEngineErrorCode} from "../../../../src/chain/beaconEngine/interface.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
-import {ChainView} from "../../../../src/chain/chainView/chainView.js";
+import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {PREPARE_NEXT_SLOT_BPS, PrepareNextSlotScheduler} from "../../../../src/chain/prepareNextSlot.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
@@ -75,13 +75,21 @@ async function setup() {
     close: vi.fn().mockResolvedValue(undefined),
   });
   const emitter = new ChainEventEmitter();
-  const engine = new BeaconEngine({core, config, clock, emitter, logger, serializedCache: new SerializedCache()});
-  engine.chainView = new ChainView(await core.getChainViewSnapshot());
-  const view = engine.chainView;
+  const engine = new BeaconEngine({
+    core,
+    config,
+    clock,
+    emitter,
+    logger,
+    serializedCache: new SerializedCache(),
+    beaconEngineWorker: true,
+  });
+  const view = new ReplicateChainView(await core.getChainViewSnapshot());
+  engine.chainView = view;
   const order: string[] = [];
   const addBlocks = view.addBlocks.bind(view);
-  vi.spyOn(view, "addBlocks").mockImplementation((blocks, state) => {
-    const update = addBlocks(blocks, state);
+  vi.spyOn(view, "addBlocks").mockImplementation((blocks, state, version) => {
+    const update = addBlocks(blocks, state, version);
     order.push("view");
     return update;
   });
@@ -115,15 +123,13 @@ describe("next-slot preparation head pull", () => {
     vi.useRealTimers();
   });
 
-  it.each(["root", "payload", "justified", "unchanged"])("returns and pulls a %s update", async (change) => {
+  // updateAndGetHead() never moves checkpoints, so preparation only reports head changes
+  it.each(["root", "payload", "unchanged"])("returns and pulls a %s update", async (change) => {
     const {engine, view, forkChoice, previous, next, order, coreEmit, headPull} = await setup();
     const head =
       change === "root" ? next : change === "payload" ? {...previous, payloadStatus: PayloadStatus.EMPTY} : previous;
     forkChoice.updateAndGetHead.mockImplementation(() => {
       forkChoice.getHead.mockReturnValue(head);
-      if (change === "justified") {
-        forkChoice.getJustifiedCheckpoint.mockReturnValue({...forkChoice.getJustifiedCheckpoint(), epoch: 1});
-      }
       return {head};
     });
     const response = await engine.prepareForNextSlot(clockSlot, opts);

@@ -635,6 +635,11 @@ describe("BeaconEngineCore block execution verification", () => {
         root: Buffer.alloc(32),
         rootHex: toRootHex(Buffer.alloc(32)),
       });
+      chain.forkChoice.getJustifiedCheckpoint = vi.fn().mockReturnValue({
+        epoch: 0,
+        root: Buffer.alloc(32),
+        rootHex: toRootHex(Buffer.alloc(32)),
+      });
       const reachedForkChoice = new Error("reached fork choice after persistence");
       chain.forkChoice.onBlock = vi.fn(() => {
         throw reachedForkChoice;

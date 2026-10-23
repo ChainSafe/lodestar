@@ -3,8 +3,8 @@ import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toRootHex} from "@lodestar/utils";
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
-import {ChainView} from "../../../../src/chain/chainView/chainView.js";
 import {ChainViewBlock, ChainViewSnapshot} from "../../../../src/chain/chainView/interface.js";
+import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {zeroProtoBlock} from "../../../utils/state.js";
 
 const root = (n: number) => toRootHex(Buffer.alloc(32, n));
@@ -19,6 +19,7 @@ function snapshot(blocks: ChainViewBlock[], head = blocks.at(-1)): ChainViewSnap
     head,
     justified: checkpoint(1),
     finalized: checkpoint(1),
+    version: 0,
   };
 }
 function update(initial: ChainViewSnapshot, changes: Partial<ChainViewSnapshot>): ChainViewSnapshot {
@@ -30,7 +31,7 @@ describe("ChainView", () => {
     const a = block(1, 0, 0);
     const b = block(2, SLOTS_PER_EPOCH - 1, 1);
     const initial = snapshot([a]);
-    const view = new ChainView(initial);
+    const view = new ReplicateChainView(initial);
     view.addBlocks([b], {head: b, justified: checkpoint(2, 1), finalized: checkpoint(2, 1)});
     expect(view.getHead()).toEqual(b);
     expect(view.getFinalizedBlock()).toEqual(b);
@@ -43,7 +44,7 @@ describe("ChainView", () => {
     const empty = {...pending, payloadStatus: PayloadStatus.EMPTY};
     const full = {...pending, payloadStatus: PayloadStatus.FULL, executionPayloadBlockHash: root(3)};
     const initial = snapshot([a]);
-    const view = new ChainView(initial);
+    const view = new ReplicateChainView(initial);
     view.addBlocks([pending], {head: empty, justified: initial.justified, finalized: initial.finalized});
     expect(view.getBlockHex(pending.blockRoot, PayloadStatus.PENDING)).toEqual(pending);
     expect(view.getBlockHex(pending.blockRoot, PayloadStatus.EMPTY)).toEqual(empty);
@@ -65,7 +66,7 @@ describe("ChainView", () => {
     const b = block(2, 2, 1);
     const c = block(3, SLOTS_PER_EPOCH - 1, 2);
     const initial = snapshot([a, b, c], c);
-    const view = new ChainView(initial);
+    const view = new ReplicateChainView(initial);
     view.applyFinalizedCheckpoint(checkpoint(3, 1));
     view.prune(checkpoint(3, 1));
     view.addBlocks([b]);
@@ -79,7 +80,7 @@ describe("ChainView", () => {
     const c = block(3, 4, 2);
     const d = block(4, 3, 1);
     const initial = snapshot([a, b, c, d], c);
-    const view = new ChainView(initial);
+    const view = new ReplicateChainView(initial);
     expect(view.getCanonicalProtoBlockAtSlot(3)).toBeNull();
     expect(view.getCanonicalBlockClosestLteSlot(3)?.blockRoot).toBe(b.blockRoot);
     const captured = view.getCanonicalBlockRootSlotsByRange(1, 5);
@@ -99,7 +100,7 @@ describe("ChainView", () => {
       const canonical = block(3, SLOTS_PER_EPOCH + 2, 2);
       const orphan = block(4, SLOTS_PER_EPOCH + 3, 1);
       const initial = snapshot([a, finalized, canonical, orphan], canonical);
-      const view = new ChainView(initial);
+      const view = new ReplicateChainView(initial);
       expect(view.hasBlockHex(orphan.blockRoot)).toBe(true);
       const finalization = update(initial, {finalized: checkpoint(2, 1), justified: checkpoint(2, 1)});
       if (checkpointOnly) {
@@ -140,7 +141,7 @@ describe("ChainView", () => {
       executionPayloadBlockHash: root(10),
     });
     const initial = snapshot([a, pending, empty, full, child]);
-    const view = new ChainView(initial);
+    const view = new ReplicateChainView(initial);
     expect(view.hasPayloadHexUnsafe(pending.blockRoot)).toBe(true);
     expect(view.getBlockHexDefaultStatus(pending.blockRoot)?.payloadStatus).toBe(PayloadStatus.PENDING);
     expect(view.getAllAncestorBlocks(child.blockRoot, child.payloadStatus).map((b) => b.payloadStatus)).toEqual([
@@ -172,7 +173,7 @@ describe("ChainView", () => {
     const a = block(1, 0, 0);
     const pending = block(2, 1, 1, {payloadStatus: PayloadStatus.PENDING});
     const initial = snapshot([a, pending]);
-    const view = new ChainView(initial);
+    const view = new ReplicateChainView(initial);
     const full = {...pending, payloadStatus: PayloadStatus.FULL};
     const next = update(initial, {blocks: [full], head: full});
     view.addBlocks(next.blocks, next);
@@ -188,7 +189,7 @@ describe("ChainView", () => {
     const empty = {...pending, payloadStatus: PayloadStatus.EMPTY};
     const full = {...pending, payloadStatus: PayloadStatus.FULL};
     const initial = snapshot([a, pending, empty, full], full);
-    const view = new ChainView(initial);
+    const view = new ReplicateChainView(initial);
     const finalization = update(initial, {finalized: checkpoint(2, 1), justified: checkpoint(2, 1)});
     view.addBlocks(finalization.blocks, finalization);
     view.prune(finalization.finalized);
@@ -210,7 +211,7 @@ describe("ChainView", () => {
     const c = block(3, 2 * SLOTS_PER_EPOCH - 1, 2);
     const d = block(4, 2 * SLOTS_PER_EPOCH + 1, 3);
     const initial = snapshot([a, b, c, d]);
-    const view = new ChainView(initial);
+    const view = new ReplicateChainView(initial);
     view.addBlocks([], {...initial, finalized: checkpoint(3, 2), justified: checkpoint(3, 2)});
     view.prune(checkpoint(2, 1));
     expect(view.hasBlockHexUnsafe(b.blockRoot)).toBe(true);

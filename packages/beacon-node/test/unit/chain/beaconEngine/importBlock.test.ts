@@ -48,6 +48,11 @@ describe("BeaconEngine block persistence", () => {
       root: Buffer.alloc(32),
       rootHex: toRootHex(Buffer.alloc(32)),
     });
+    chain.forkChoice.getJustifiedCheckpoint = vi.fn().mockReturnValue({
+      epoch: 0,
+      root: Buffer.alloc(32),
+      rootHex: toRootHex(Buffer.alloc(32)),
+    });
     chain.forkChoice.onBlock = vi.fn(() => {
       throw reachedForkChoice;
     });
@@ -113,8 +118,10 @@ describe("BeaconEngine block persistence", () => {
       });
       chain.forkChoice.onBlock.mockImplementation(() => {
         chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({...checkpoint, epoch: 1});
+        chain.forkChoice.getJustifiedCheckpoint = vi.fn().mockReturnValue({...checkpoint, epoch: 2});
         return summary;
       });
+      const versionBefore = chain.beaconEngine.forkChoiceVersion;
       chain.beaconEngine.verifiedBlocks.set(importedSignedRootHex, {
         ...bundle,
         block: imported,
@@ -138,7 +145,9 @@ describe("BeaconEngine block persistence", () => {
         expect(response.headUpdate).toBeNull();
         expect(response.reorg).toBeNull();
       }
+      expect(response.justifiedCheckpointChanged).toBe(true);
       expect(response.finalizedCheckpointChanged).toBe(true);
+      expect(response.version).toBeGreaterThan(versionBefore);
       expect(response.finalized).toEqual({epoch: 1, root: new Uint8Array(32)});
       expect(structuredClone(response)).toEqual(response);
       expect(response.block).not.toHaveProperty("executionStatus");

@@ -13,7 +13,7 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {BeaconEngineErrorCode} from "../../../../src/chain/beaconEngine/interface.js";
-import {ChainView} from "../../../../src/chain/chainView/chainView.js";
+import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {BlockType, ProduceResult} from "../../../../src/chain/produceBlock/index.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
@@ -79,13 +79,21 @@ async function setup(fork: ForkName.bellatrix | ForkName.gloas) {
     close: vi.fn().mockResolvedValue(undefined),
   });
   const emitter = new ChainEventEmitter();
-  const engine = new BeaconEngine({core, config, clock, emitter, logger, serializedCache: new SerializedCache()});
-  engine.chainView = new ChainView(await core.getChainViewSnapshot());
-  const view = engine.chainView;
+  const engine = new BeaconEngine({
+    core,
+    config,
+    clock,
+    emitter,
+    logger,
+    serializedCache: new SerializedCache(),
+    beaconEngineWorker: true,
+  });
+  const view = new ReplicateChainView(await core.getChainViewSnapshot());
+  engine.chainView = view;
   const onView = vi.fn();
   const addBlocks = view.addBlocks.bind(view);
-  vi.spyOn(view, "addBlocks").mockImplementation((blocks, state) => {
-    const update = addBlocks(blocks, state);
+  vi.spyOn(view, "addBlocks").mockImplementation((blocks, state, version) => {
+    const update = addBlocks(blocks, state, version);
     onView();
     return update;
   });
@@ -123,49 +131,37 @@ async function setup(fork: ForkName.bellatrix | ForkName.gloas) {
 }
 
 describe.each([ForkName.bellatrix, ForkName.gloas] as const)("%s production head pull", (fork) => {
-  it.each(["root", "payload", "justified epoch", "justified root", "unchanged"])(
-    "refreshes a %s change without publishing head events",
-    async (change) => {
-      const {produce, view, forkChoice, previous, next, produceBlockWrapper, coreEmit, headPull, onView, onHead} =
-        await setup(fork);
-      const head =
-        change === "root" ? next : change === "payload" ? {...previous, payloadStatus: PayloadStatus.EMPTY} : previous;
-      forkChoice.updateAndGetHead.mockImplementation(() => {
-        forkChoice.getHead.mockReturnValue(head);
-        const checkpoint = forkChoice.getJustifiedCheckpoint();
-        if (change === "justified epoch") {
-          forkChoice.getJustifiedCheckpoint.mockReturnValue({...checkpoint, epoch: 1});
-        } else if (change === "justified root") {
-          forkChoice.getJustifiedCheckpoint.mockReturnValue({
-            ...checkpoint,
-            root: fromHex(next.blockRoot),
-            rootHex: next.blockRoot,
-          });
-        }
-        return {head: previous};
-      });
+  // updateAndGetHead() never moves checkpoints, so production only reports head changes
+  it.each(["root", "payload", "unchanged"])("refreshes a %s change without publishing head events", async (change) => {
+    const {produce, view, forkChoice, previous, next, produceBlockWrapper, coreEmit, headPull, onView, onHead} =
+      await setup(fork);
+    const head =
+      change === "root" ? next : change === "payload" ? {...previous, payloadStatus: PayloadStatus.EMPTY} : previous;
+    forkChoice.updateAndGetHead.mockImplementation(() => {
+      forkChoice.getHead.mockReturnValue(head);
+      return {head: previous};
+    });
 
-      expect(await produce()).toMatchObject({ok: true, headUpdate: change !== "unchanged"});
-      expect(forkChoice.updateAndGetHead).toHaveBeenCalledExactlyOnceWith({
-        mode: UpdateHeadOpt.GetProposerHead,
-        slot: 2,
-        secFromSlot: 0,
-      });
-      expect(produceBlockWrapper.mock.calls[0][1].parentBlock).toBe(previous);
-      expect(view.getHead()).toEqual(toChainViewBlock(head));
-      expect(view.getJustifiedCheckpoint()).toEqual(forkChoice.getJustifiedCheckpoint());
-      expect(coreEmit).not.toHaveBeenCalled();
-      expect(onHead).not.toHaveBeenCalled();
-      expect(forkChoice.getDependentRoot).not.toHaveBeenCalled();
-      if (change === "unchanged") {
-        expect(headPull).not.toHaveBeenCalled();
-        expect(onView).not.toHaveBeenCalled();
-      } else {
-        expect(headPull).toHaveBeenCalledExactlyOnceWith(undefined);
-        expect(onView).toHaveBeenCalledOnce();
-      }
+    expect(await produce()).toMatchObject({ok: true, headUpdate: change !== "unchanged"});
+    expect(forkChoice.updateAndGetHead).toHaveBeenCalledExactlyOnceWith({
+      mode: UpdateHeadOpt.GetProposerHead,
+      slot: 2,
+      secFromSlot: 0,
+    });
+    expect(produceBlockWrapper.mock.calls[0][1].parentBlock).toBe(previous);
+    expect(view.getHead()).toEqual(toChainViewBlock(head));
+    expect(view.getJustifiedCheckpoint()).toEqual(forkChoice.getJustifiedCheckpoint());
+    expect(coreEmit).not.toHaveBeenCalled();
+    expect(onHead).not.toHaveBeenCalled();
+    expect(forkChoice.getDependentRoot).not.toHaveBeenCalled();
+    if (change === "unchanged") {
+      expect(headPull).not.toHaveBeenCalled();
+      expect(onView).not.toHaveBeenCalled();
+    } else {
+      expect(headPull).toHaveBeenCalledExactlyOnceWith(undefined);
+      expect(onView).toHaveBeenCalledOnce();
     }
-  );
+  });
 
   it.each(["selection", "production"])("refreshes the canonical head before returning a %s failure", async (stage) => {
     const {produce, view, forkChoice, next, produceBlockWrapper, headPull, coreEmit, onHead} = await setup(fork);

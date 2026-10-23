@@ -40,7 +40,9 @@ describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngi
     executionOptimistic: false,
     headUpdate: null,
     reorg: null,
+    justifiedCheckpointChanged: false,
     finalizedCheckpointChanged: false,
+    version: 0,
   };
   let chain: ReturnType<typeof getMockedBeaconChain>;
   let engineImport: ReturnType<typeof defer<ImportBlockResponse>>;

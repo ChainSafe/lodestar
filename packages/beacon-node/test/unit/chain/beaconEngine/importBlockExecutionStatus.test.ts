@@ -23,6 +23,7 @@ describe("chain / blocks / importBlock", () => {
     const forkChoice = {
       getTime: vi.fn().mockReturnValue(1),
       getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
+      getJustifiedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
       // The parent's default (PENDING) variant is VALID, only the payload variant may differ
       getBlockHexDefaultStatus: vi.fn().mockReturnValue({executionStatus: ExecutionStatus.Valid} as ProtoBlock),
       getBlockHexAndBlockHash: vi.fn().mockReturnValue(parentVariant),

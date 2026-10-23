@@ -1,37 +1,34 @@
 import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Root, RootHex, Slot} from "@lodestar/types";
-import {LodestarError, Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {ChainViewBlock, ChainViewSnapshot, ChainViewState, IChainView} from "./interface.js";
+import {getCanonicalBlockRootSlotsByRange, getFullBlockRootSlotsByRange} from "./utils.js";
 
 export enum ChainViewErrorCode {
   UNKNOWN_BLOCK = "CHAIN_VIEW_UNKNOWN_BLOCK",
 }
 
-export type ChainViewUpdate = {
-  stateUpdated: boolean;
-  /** Set when the justified checkpoint changed */
-  justified: CheckpointWithHex | null;
-};
-
 export class ChainViewError extends LodestarError<{code: ChainViewErrorCode.UNKNOWN_BLOCK; root: RootHex}> {}
 
 /** Replicated imported-block metadata. Canonical ancestry is derived from the shared head. */
-export class ChainView implements IChainView {
+export class ReplicateChainView implements IChainView {
   private readonly blocks = new Map<RootHex, Partial<Record<PayloadStatus, ChainViewBlock>>>();
   private state: ChainViewState;
   private prunedCheckpoint?: CheckpointWithHex;
   private readonly finalizedDescendants = new Map<RootHex, boolean>();
+  version: number;
 
   constructor(
     snapshot: ChainViewSnapshot,
     private readonly logger?: Logger
   ) {
     this.state = {head: snapshot.head, justified: snapshot.justified, finalized: snapshot.finalized};
+    this.version = snapshot.version;
     this.mergeBlocks(snapshot.blocks);
   }
 
-  addBlocks(blocks: ChainViewBlock[], state?: ChainViewState): ChainViewUpdate {
+  addBlocks(blocks: ChainViewBlock[], state?: ChainViewState, version?: number): void {
     if (
       state &&
       (state.finalized.epoch !== this.state.finalized.epoch || state.finalized.rootHex !== this.state.finalized.rootHex)
@@ -39,23 +36,17 @@ export class ChainView implements IChainView {
       this.finalizedDescendants.clear();
     }
     this.mergeBlocks(blocks);
-    if (!state) return {stateUpdated: false, justified: null};
-    const previousJustified = this.state.justified;
-    this.state = {head: state.head, justified: state.justified, finalized: state.finalized};
-    const justifiedChanged =
-      state.justified.epoch !== previousJustified.epoch || state.justified.rootHex !== previousJustified.rootHex;
-    return {stateUpdated: true, justified: justifiedChanged ? this.getJustifiedCheckpoint() : null};
+    if (state) this.state = {head: state.head, justified: state.justified, finalized: state.finalized};
+    if (version !== undefined && version > this.version) this.version = version;
   }
 
-  /** Returns true if the finalized checkpoint advanced */
-  applyFinalizedCheckpoint(checkpoint: CheckpointWithHex): boolean {
-    if (checkpoint.epoch <= this.state.finalized.epoch) return false;
+  applyFinalizedCheckpoint(checkpoint: CheckpointWithHex): void {
+    if (checkpoint.epoch <= this.state.finalized.epoch) return;
     this.finalizedDescendants.clear();
     this.state = {
       ...this.state,
       finalized: {epoch: checkpoint.epoch, root: checkpoint.root, rootHex: checkpoint.rootHex},
     };
-    return true;
   }
 
   prune(finalized: CheckpointWithHex): void {
@@ -205,28 +196,11 @@ export class ChainView implements IChainView {
   }
 
   getCanonicalBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot) {
-    const finalizedSlot = computeStartSlotAtEpoch(this.state.finalized.epoch);
-    const nonFinalized = this.getAllAncestorBlocks(this.state.head.blockRoot, this.state.head.payloadStatus)
-      .filter((block) => block.slot > finalizedSlot && block.slot >= startSlot && block.slot < endSlot)
-      .reverse()
-      .map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
-    return {finalizedSlot, nonFinalized};
+    return getCanonicalBlockRootSlotsByRange(this, startSlot, endSlot);
   }
 
   getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot) {
-    // The finalized block's envelope remains hot until the next archive run.
-    const finalizedSlot = this.getFinalizedBlock().slot;
-    const nonFinalized = this.getAllAncestorBlocks(this.state.head.blockRoot, this.state.head.payloadStatus)
-      .filter(
-        (block) =>
-          block.slot >= finalizedSlot &&
-          block.slot >= startSlot &&
-          block.slot < endSlot &&
-          block.payloadStatus === PayloadStatus.FULL
-      )
-      .reverse()
-      .map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
-    return {finalizedSlot, nonFinalized};
+    return getFullBlockRootSlotsByRange(this, startSlot, endSlot);
   }
 
   private mergeBlocks(blocks: ChainViewBlock[]): void {
