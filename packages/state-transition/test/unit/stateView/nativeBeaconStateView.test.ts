@@ -43,7 +43,7 @@ describe("NativeBeaconStateView", () => {
       balance: MAX_EFFECTIVE_BALANCE,
     });
     state.balances = state.validators.map(() => MAX_EFFECTIVE_BALANCE);
-    if ("inactivityScores" in state) {
+    if ("inactivityScores" in state && "previousEpochParticipation" in state) {
       state.inactivityScores = state.validators.map(() => 0);
       state.previousEpochParticipation = state.validators.map(() => 0);
       state.currentEpochParticipation = state.validators.map(() => 0);

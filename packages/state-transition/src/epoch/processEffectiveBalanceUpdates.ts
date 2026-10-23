@@ -79,7 +79,7 @@ export function processEffectiveBalanceUpdates(
 
       // TODO: describe issue. Compute progressive target balances
       // Must update target balances for consistency, see comments below
-      if (forkSeq >= ForkSeq.altair) {
+      if (forkSeq >= ForkSeq.altair && forkSeq < ForkSeq.eip8453) {
         const deltaEffectiveBalanceIncrement = newEffectiveBalanceIncrement - effectiveBalanceIncrement;
         const {previousEpochParticipation, currentEpochParticipation} = state as BeaconStateAltair;
 

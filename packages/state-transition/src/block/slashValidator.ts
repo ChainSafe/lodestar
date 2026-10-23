@@ -81,7 +81,8 @@ export function slashValidator(
 
   // TODO: describe issue. Compute progressive target balances
   // if a validator is slashed, lookup their participation and remove from the cumulative values
-  if (fork >= ForkSeq.altair) {
+  // EIP8453 removes the epoch participation lists and the progressive target balances with them
+  if (fork >= ForkSeq.altair && fork < ForkSeq.eip8453) {
     const {previousEpochParticipation, currentEpochParticipation} = state as CachedBeaconStateAltair;
 
     if ((previousEpochParticipation.get(slashedIndex) & TIMELY_TARGET) === TIMELY_TARGET) {

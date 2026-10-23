@@ -10,6 +10,7 @@ export * from "./clock.js";
 export * from "./computeAnchorCheckpoint.js";
 export * from "./deposit.js";
 export * from "./domain.js";
+export * from "./eip8453.js";
 export * from "./electra.js";
 export * from "./epoch.js";
 export * from "./epochShuffling.js";

@@ -40,6 +40,7 @@ import {
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreEip8453,
   CachedBeaconStatePreHeze,
   createCachedBeaconState,
   isStateValidatorsNodesPopulated,
@@ -161,15 +162,15 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get previousJustifiedCheckpoint(): Checkpoint {
-    return this.cachedState.previousJustifiedCheckpoint;
+    return (this.cachedState as CachedBeaconStatePreEip8453).previousJustifiedCheckpoint;
   }
 
   get currentJustifiedCheckpoint(): Checkpoint {
-    return this.cachedState.currentJustifiedCheckpoint;
+    return (this.cachedState as CachedBeaconStatePreEip8453).currentJustifiedCheckpoint;
   }
 
   get finalizedCheckpoint(): Checkpoint {
-    return this.cachedState.finalizedCheckpoint;
+    return (this.cachedState as CachedBeaconStatePreEip8453).finalizedCheckpoint;
   }
 
   getBlockRootAtSlot(slot: Slot): Root {

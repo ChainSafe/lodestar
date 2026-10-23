@@ -7,6 +7,7 @@ import {
   FAR_FUTURE_EPOCH,
   ForkName,
   ForkPostAltair,
+  ForkPreEip8453,
   ForkSeq,
   MAX_EFFECTIVE_BALANCE,
   PARTICIPATION_FLAG_WEIGHTS,
@@ -29,7 +30,7 @@ const validatorCount = 16;
 const TIMELY_ALL_FLAGS = 0b111;
 
 type StateOpts = {
-  fork: ForkPostAltair;
+  fork: ForkPostAltair & ForkPreEip8453;
   /** Epoch whose end slot the state is at, the transition out of it pays the previous epoch */
   epoch: number;
   /** Validators with index below this count attest with all flags, the rest miss every flag */

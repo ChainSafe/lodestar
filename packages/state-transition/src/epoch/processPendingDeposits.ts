@@ -11,6 +11,7 @@ import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
+import {getFinalizedEpoch} from "../util/finality.js";
 import {getActivationChurnLimit, getActivationExitChurnLimit} from "../util/validator.js";
 
 /**
@@ -32,7 +33,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   let nextDepositIndex = 0;
   const depositsToPostpone = [];
   let isChurnLimitReached = false;
-  const finalizedSlot = computeStartSlotAtEpoch(state.finalizedCheckpoint.epoch);
+  const finalizedSlot = computeStartSlotAtEpoch(getFinalizedEpoch(state));
 
   let startIndex = 0;
   // TODO: is this a good number?
@@ -132,7 +133,7 @@ function applyPendingDeposit(
     }
     // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
     if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
-      addValidatorToRegistry(ForkSeq.electra, state, pubkey, withdrawalCredentials, amount);
+      addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
       const newValidatorIndex = state.validators.length - 1;
       cache.isCompoundingValidatorArr[newValidatorIndex] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
       // set balance, so that the next deposit of same pubkey will increase the balance correctly

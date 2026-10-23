@@ -1,5 +1,6 @@
 import {gloas} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
+import {getFinalizedEpoch} from "../util/finality.js";
 import {getPendingBalanceToWithdrawForBuilder, initiateBuilderExit, isActiveBuilder} from "../util/gloas.js";
 import {IndexedBuilderState} from "./indexedBuilderState.js";
 
@@ -21,7 +22,7 @@ export function processBuilderExitRequest(indexedState: IndexedBuilderState, req
 
   const builder = state.builders.getReadonly(builderIndex);
 
-  if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
+  if (!isActiveBuilder(builder, getFinalizedEpoch(state))) {
     return;
   }
   if (!byteArrayEquals(builder.executionAddress, request.sourceAddress)) {

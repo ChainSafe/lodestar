@@ -22,6 +22,7 @@ export enum BlockProcessStep {
   processOperations = "processOperations",
   processSyncAggregate = "processSyncAggregate",
   processBlobKzgCommitments = "processBlobKzgCommitments",
+  processHeightEvents = "processHeightEvents",
 }
 
 /**
@@ -38,4 +39,5 @@ export enum ProcessOperationsStep {
   processWithdrawalRequest = "processWithdrawalRequest",
   processConsolidationRequest = "processConsolidationRequest",
   processPayloadAttestation = "processPayloadAttestation",
+  processHeadVote = "processHeadVote",
 }

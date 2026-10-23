@@ -1,9 +1,21 @@
-import {MIN_EPOCHS_TO_INACTIVITY_PENALTY} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {ForkSeq, MIN_EPOCHS_TO_INACTIVITY_PENALTY} from "@lodestar/params";
+import {Epoch} from "@lodestar/types";
+import {CachedBeaconStateAllForks, CachedBeaconStateEip8453, CachedBeaconStatePreEip8453} from "../types.js";
+import {computeEpochAtSlot} from "./epoch.js";
+
+/**
+ * The epoch of the last finalized block. Before EIP8453 it is `state.finalized_checkpoint.epoch`; from EIP8453
+ * the finalized checkpoint is a height checkpoint and the spec reads `compute_epoch_at_slot(state.finalized_slot)`.
+ */
+export function getFinalizedEpoch(state: CachedBeaconStateAllForks): Epoch {
+  return state.config.getForkSeq(state.slot) >= ForkSeq.eip8453
+    ? computeEpochAtSlot((state as CachedBeaconStateEip8453).finalizedSlot)
+    : (state as CachedBeaconStatePreEip8453).finalizedCheckpoint.epoch;
+}
 
 export function getFinalityDelay(state: CachedBeaconStateAllForks): number {
   // previousEpoch = epoch - 1
-  return state.epochCtx.epoch - 1 - state.finalizedCheckpoint.epoch;
+  return state.epochCtx.epoch - 1 - getFinalizedEpoch(state);
 }
 
 /**

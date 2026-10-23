@@ -1,7 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
 import {initiateValidatorExit} from "../block/index.js";
 import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
-import {computeActivationExitEpoch} from "../util/index.js";
+import {computeActivationExitEpoch, getFinalizedEpoch} from "../util/index.js";
 
 /**
  * Update validator registry for validators that activate + exit
@@ -41,7 +41,7 @@ export function processRegistryUpdates(
     validators.get(index).activationEligibilityEpoch = epochCtx.epoch + 1;
   }
 
-  const finalityEpoch = state.finalizedCheckpoint.epoch;
+  const finalityEpoch = getFinalizedEpoch(state);
   // this avoids an array allocation compared to `slice(0, epochCtx.activationChurnLimit)`
   const len =
     fork < ForkSeq.electra
