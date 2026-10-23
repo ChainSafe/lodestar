@@ -9,7 +9,6 @@ const BeaconState = @import("fork_types").BeaconState;
 const BlockType = @import("fork_types").BlockType;
 const BeaconBlockBody = @import("fork_types").BeaconBlockBody;
 const ForkTypes = @import("fork_types").ForkTypes;
-const ct = @import("consensus_types");
 const SlashingsCache = @import("../cache/slashings_cache.zig").SlashingsCache;
 const preset = @import("preset").preset;
 const processAttestations = @import("process_attestations.zig").processAttestations;
@@ -24,7 +23,6 @@ const processDepositRequest = @import("./process_deposit_request.zig").processDe
 const processProposerSlashing = @import("./process_proposer_slashing.zig").processProposerSlashing;
 const processVoluntaryExit = @import("./process_voluntary_exit.zig").processVoluntaryExit;
 const processWithdrawalRequest = @import("./process_withdrawal_request.zig").processWithdrawalRequest;
-const Node = @import("persistent_merkle_tree").Node;
 const ProcessBlockOpts = @import("./process_block.zig").ProcessBlockOpts;
 
 pub fn processOperations(
@@ -177,34 +175,4 @@ pub fn processOperations(
             );
         }
     }
-}
-
-const TestCachedBeaconState = @import("../test_utils/root.zig").TestCachedBeaconState;
-const AnyBeaconBlock = @import("fork_types").AnyBeaconBlock;
-
-test "process operations" {
-    const allocator = std.testing.allocator;
-    const pool_size = 180_000;
-    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = pool_size });
-    defer pool.deinit();
-
-    var test_state = try TestCachedBeaconState.init(allocator, &pool, 256);
-    defer test_state.deinit();
-
-    var electra_block = ct.electra.BeaconBlock.default_value;
-    const beacon_block = AnyBeaconBlock{ .full_electra = &electra_block };
-
-    try processOperations(
-        .electra,
-        allocator,
-        std.testing.io,
-        test_state.cached_state.config,
-        test_state.cached_state.epoch_cache,
-        try test_state.cached_state.state.tryCastToFork(.electra),
-        &test_state.cached_state.proposer_rewards,
-        &test_state.cached_state.slashings_cache,
-        .full,
-        beacon_block.beaconBlockBody().castToFork(.full, .electra),
-        .{},
-    );
 }

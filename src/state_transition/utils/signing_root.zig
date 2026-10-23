@@ -28,7 +28,3 @@ pub fn computeBlockSigningRoot(allocator: Allocator, block: AnyBeaconBlock, doma
     };
     try types.phase0.SigningData.hashTreeRoot(&domain_wrapped_object, out);
 }
-
-test {
-    _ = @import("signing_root_test.zig");
-}

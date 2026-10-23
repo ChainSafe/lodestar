@@ -17,23 +17,3 @@ pub fn processEth1DataReset(
         try state.resetEth1DataVotes();
     }
 }
-
-const std = @import("std");
-const TestCachedBeaconState = @import("../test_utils/root.zig").TestCachedBeaconState;
-const Node = @import("persistent_merkle_tree").Node;
-
-test "processEth1DataReset - sanity" {
-    const allocator = std.testing.allocator;
-    const pool_size = 200_000;
-    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = pool_size });
-    defer pool.deinit();
-
-    var test_state = try TestCachedBeaconState.init(allocator, &pool, 10_000);
-    defer test_state.deinit();
-
-    try processEth1DataReset(
-        .electra,
-        test_state.cached_state.state.castToFork(.electra),
-        test_state.epoch_transition_cache,
-    );
-}

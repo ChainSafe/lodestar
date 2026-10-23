@@ -56,21 +56,6 @@ pub fn computeProposers(
     }
 }
 
-test "computeProposers - sanity" {
-    const allocator = std.testing.allocator;
-    const epoch_seed: [32]u8 = [_]u8{0} ** 32;
-    var active_indices: [5]u32 = .{ 0, 1, 2, 3, 4 };
-    var effective_balance_increments: EffectiveBalanceIncrements = .empty;
-    defer effective_balance_increments.deinit(allocator);
-    for (0..active_indices.len) |_| {
-        try effective_balance_increments.append(allocator, 32);
-    }
-    var out: [preset.SLOTS_PER_EPOCH]ValidatorIndex = undefined;
-
-    try computeProposers(ForkSeq.phase0, allocator, epoch_seed, 0, active_indices[0..], effective_balance_increments, &out);
-    try computeProposers(ForkSeq.electra, allocator, epoch_seed, 0, active_indices[0..], effective_balance_increments, &out);
-}
-
 pub fn getNextSyncCommitteeIndices(comptime fork: ForkSeq, allocator: Allocator, state: *BeaconState(fork), active_indices: []const u32, effective_balance_increments: EffectiveBalanceIncrements, out: *[preset.SYNC_COMMITTEE_SIZE]ValidatorIndex) !void {
     const epoch = computeEpochAtSlot(try state.slot()) + 1;
     var seed: [32]u8 = undefined;

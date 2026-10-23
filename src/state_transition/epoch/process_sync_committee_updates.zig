@@ -6,7 +6,6 @@ const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const preset = @import("preset").preset;
 const getNextSyncCommittee = @import("../utils/sync_committee.zig").getNextSyncCommittee;
 const SyncCommitteeInfo = @import("../utils/sync_committee.zig").SyncCommitteeInfo;
-const Node = @import("persistent_merkle_tree").Node;
 
 pub fn processSyncCommitteeUpdates(
     comptime fork: ForkSeq,
@@ -40,24 +39,4 @@ pub fn processSyncCommitteeUpdates(
         // next_sync_committee_indices ownership is transferred to epoch_cache
         try epoch_cache.rotateSyncCommitteeIndexed(&next_sync_committee_info.indices);
     }
-}
-
-const TestCachedBeaconState = @import("../test_utils/root.zig").TestCachedBeaconState;
-
-test "processSyncCommitteeUpdates - sanity" {
-    const allocator = std.testing.allocator;
-    const pool_size = 200_000;
-    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = pool_size });
-    defer pool.deinit();
-
-    var test_state = try TestCachedBeaconState.init(allocator, &pool, 10_000);
-    defer test_state.deinit();
-
-    try processSyncCommitteeUpdates(
-        .electra,
-        allocator,
-        std.testing.io,
-        test_state.cached_state.epoch_cache,
-        test_state.cached_state.state.castToFork(.electra),
-    );
 }

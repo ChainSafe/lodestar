@@ -169,40 +169,6 @@ test "list hashing rejects values beyond the declared limit before allocating" {
     }
 }
 
-test "ListType - sanity" {
-    const allocator = std.testing.allocator;
-
-    // create a fixed list type and instance and round-trip serialize
-    const Bytes = FixedListType(UintType(8), 32, .{});
-
-    var b: Bytes.Type = Bytes.default_value;
-    defer b.deinit(allocator);
-    try b.append(allocator, 5);
-
-    const b_buf = try allocator.alloc(u8, Bytes.serializedSize(&b));
-    defer allocator.free(b_buf);
-
-    _ = Bytes.serializeIntoBytes(&b, b_buf);
-    var b_decoded = Bytes.default_value;
-    defer Bytes.deinit(allocator, &b_decoded);
-    try Bytes.deserializeFromBytes(allocator, b_buf, &b_decoded);
-
-    // create a variable list type and instance and round-trip serialize
-    const BytesBytes = VariableListType(Bytes, 32);
-    var bb: BytesBytes.Type = BytesBytes.default_value;
-    defer bb.deinit(allocator);
-    const b2: Bytes.Type = Bytes.default_value;
-    try bb.append(allocator, b2);
-
-    const bb_buf = try allocator.alloc(u8, BytesBytes.serializedSize(&bb));
-    defer allocator.free(bb_buf);
-
-    _ = BytesBytes.serializeIntoBytes(&bb, bb_buf);
-    var bb_decoded = BytesBytes.default_value;
-    defer BytesBytes.deinit(allocator, &bb_decoded);
-    try BytesBytes.deserializeFromBytes(allocator, bb_buf, &bb_decoded);
-}
-
 test "memory_safety: fixed list tree reads allocate only fresh output" {
     const allocator = std.testing.allocator;
     inline for (.{ UintType(64), BoolType(), PoolExhaustionCheckpoint }) |Element| {

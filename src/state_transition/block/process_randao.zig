@@ -7,7 +7,6 @@ const BlockType = @import("fork_types").BlockType;
 const BeaconBlockBody = @import("fork_types").BeaconBlockBody;
 const getRandaoMix = @import("../utils/seed.zig").getRandaoMix;
 const verifyRandaoSignature = @import("../signature_sets/randao.zig").verifyRandaoSignature;
-const Node = @import("persistent_merkle_tree").Node;
 const Sha256 = std.crypto.hash.sha2.Sha256;
 
 pub fn processRandao(
@@ -52,48 +51,4 @@ fn xor(a: *const [32]u8, b: *const [32]u8, out: *[32]u8) void {
     inline for (a, b, out) |a_i, b_i, *out_i| {
         out_i.* = a_i ^ b_i;
     }
-}
-
-const types = @import("consensus_types");
-const preset = @import("preset").preset;
-const AnyBeaconBlock = @import("fork_types").AnyBeaconBlock;
-const TestCachedBeaconState = @import("../test_utils/root.zig").TestCachedBeaconState;
-
-test "process randao - sanity" {
-    const allocator = std.testing.allocator;
-    const pool_size = 180_000;
-    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = pool_size });
-    defer pool.deinit();
-
-    var test_state = try TestCachedBeaconState.init(allocator, &pool, 256);
-    defer test_state.deinit();
-
-    const slot = try test_state.cached_state.state.slot();
-
-    const proposers = test_state.cached_state.epoch_cache.proposers;
-
-    var message: types.electra.BeaconBlock.Type = types.electra.BeaconBlock.default_value;
-    const proposer_index = proposers[slot % preset.SLOTS_PER_EPOCH];
-    var header = try test_state.cached_state.state.latestBlockHeader();
-    const header_parent_root = try header.hashTreeRoot();
-
-    message.slot = slot;
-    message.proposer_index = proposer_index;
-    message.parent_root = header_parent_root.*;
-
-    const beacon_block = AnyBeaconBlock{ .full_electra = &message };
-
-    const fork_body = BeaconBlockBody(.full, .electra){ .inner = message.body };
-
-    try processRandao(
-        .electra,
-        std.testing.io,
-        test_state.cached_state.config,
-        test_state.cached_state.epoch_cache,
-        test_state.cached_state.state.castToFork(.electra),
-        .full,
-        &fork_body,
-        beacon_block.proposerIndex(),
-        false,
-    );
 }

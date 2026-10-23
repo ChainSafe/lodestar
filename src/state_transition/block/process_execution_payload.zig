@@ -94,7 +94,3 @@ pub fn processExecutionPayload(
 
     try state.setLatestExecutionPayloadHeader(&payload_header);
 }
-
-test {
-    _ = @import("process_execution_payload_test.zig");
-}

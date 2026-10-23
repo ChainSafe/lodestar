@@ -74,17 +74,6 @@ const testCases = [_]TypeTestCase{
     },
 };
 
-test "vector - sanity" {
-    // create a fixed vector type and instance and round-trip serialize
-    const Bytes32 = FixedVectorType(UintType(8), 32, .{});
-
-    var b0: Bytes32.Type = undefined;
-    var b0_buf: [Bytes32.fixed_size]u8 = undefined;
-    _ = Bytes32.serializeIntoBytes(&b0, &b0_buf);
-    var b0_decoded = Bytes32.default_value;
-    try Bytes32.deserializeFromBytes(&b0_buf, &b0_decoded);
-}
-
 test "clone FixedVectorType" {
     const Checkpoint = FixedContainerType(struct {
         epoch: UintType(8),

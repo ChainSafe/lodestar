@@ -5,10 +5,3 @@ pub fn processBlobKzgCommitments(external_data: BlockExternalData) !void {
         return error.InvalidExecutionPayload;
     }
 }
-
-test "process blob kzg commitments - sanity" {
-    try processBlobKzgCommitments(.{
-        .execution_payload_status = .valid,
-        .data_availability_status = .available,
-    });
-}

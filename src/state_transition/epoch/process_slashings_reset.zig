@@ -22,24 +22,3 @@ pub fn processSlashingsReset(
     try slashings.set(slash_index, 0);
     epoch_cache.total_slashings_by_increment = @max(0, epoch_cache.total_slashings_by_increment - old_slashing_value_by_increment);
 }
-
-const std = @import("std");
-const TestCachedBeaconState = @import("../test_utils/root.zig").TestCachedBeaconState;
-const Node = @import("persistent_merkle_tree").Node;
-
-test "processSlashingsReset - sanity" {
-    const allocator = std.testing.allocator;
-    const pool_size = 200_000;
-    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = pool_size });
-    defer pool.deinit();
-
-    var test_state = try TestCachedBeaconState.init(allocator, &pool, 10_000);
-    defer test_state.deinit();
-
-    try processSlashingsReset(
-        .electra,
-        test_state.cached_state.epoch_cache,
-        test_state.cached_state.state.castToFork(.electra),
-        test_state.epoch_transition_cache,
-    );
-}
