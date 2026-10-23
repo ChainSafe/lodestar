@@ -1,5 +1,5 @@
 import {NativeRequestProtocolId, NetworkFork} from "@chainsafe/lodestar-z/network";
-import {ForkName, isForkPostGloas} from "@lodestar/params";
+import {ForkName, isForkPostHeze} from "@lodestar/params";
 import {ReqRespMethod} from "../../reqresp/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 
@@ -13,6 +13,8 @@ const applicationProtocols = [
   {method: ReqRespMethod.BeaconBlocksByRange, version: 2},
   {method: ReqRespMethod.BeaconBlocksByRoot, version: 2},
   {method: ReqRespMethod.BeaconBlocksByHead, version: 1},
+  {method: ReqRespMethod.ExecutionPayloadEnvelopesByRange, version: 1},
+  {method: ReqRespMethod.ExecutionPayloadEnvelopesByRoot, version: 1},
   {method: ReqRespMethod.BlobSidecarsByRange, version: 1},
   {method: ReqRespMethod.BlobSidecarsByRoot, version: 1},
   {method: ReqRespMethod.DataColumnSidecarsByRange, version: 1},
@@ -34,7 +36,7 @@ export const nativeProtocols: ReadonlyMap<string, NativeProtocol> = new Map(
 );
 
 export function nativeFork(fork: ForkName): NetworkFork {
-  if (isForkPostGloas(fork))
+  if (isForkPostHeze(fork))
     throw new NativeNetworkError({
       code: NativeNetworkErrorCode.CONFIGURATION,
       resource: `Unsupported native fork ${fork}`,

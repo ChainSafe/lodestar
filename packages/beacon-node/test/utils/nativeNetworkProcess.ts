@@ -6,9 +6,10 @@ import {setTimeout as delay} from "node:timers/promises";
 import {fileURLToPath} from "node:url";
 import {deserialize, serialize} from "node:v8";
 import {BeaconConfig, ChainConfig} from "@lodestar/config";
-import {SignedBeaconBlock, phase0} from "@lodestar/types";
+import {SignedBeaconBlock, gloas, phase0, ssz} from "@lodestar/types";
 import {NativeBackendOptions} from "../../src/network/core/native/options.js";
 import {INetwork} from "../../src/network/interface.js";
+import {getSignedBlockTypeFromBytes} from "../../src/util/multifork.js";
 
 export type PeerConfiguration = {
   chain: ChainConfig;
@@ -26,7 +27,10 @@ export type PeerCommand =
   | {method: "connectToPeer"; args: [string, string[]]}
   | {method: "sendBeaconBlocksByRoot"; args: [string, Uint8Array[]]}
   | {method: "publishProposerSlashing"; args: [phase0.ProposerSlashing]}
-  | {method: "putBlock"; args: [number, SignedBeaconBlock]}
+  | {method: "sendExecutionPayloadEnvelopesByRoot"; args: [string, Uint8Array[]]}
+  | {method: "sendExecutionPayloadEnvelopesByRange"; args: [string, gloas.ExecutionPayloadEnvelopesByRangeRequest]}
+  | {method: "putEnvelope"; args: [Uint8Array, Uint8Array]}
+  | {method: "putBlock"; args: [number, Uint8Array]}
   | {method: "hasSeenProposerSlashing"; args: [number]};
 
 export async function nativeNetworkProcess(
@@ -121,15 +125,39 @@ export async function nativeNetworkProcess(
         connectToPeer: (peer: string, addresses: string[]) =>
           call<void>({method: "connectToPeer", args: [peer, addresses]}),
         subscribeGossipCoreTopics: () => call<void>({method: "subscribeGossipCoreTopics", args: []}),
-        sendBeaconBlocksByRoot: (peer: string, roots: Uint8Array[]) =>
-          call<SignedBeaconBlock[]>({method: "sendBeaconBlocksByRoot", args: [peer, roots]}),
+        sendBeaconBlocksByRoot: async (peer: string, roots: Uint8Array[]) =>
+          (await call<Uint8Array[]>({method: "sendBeaconBlocksByRoot", args: [peer, roots]})).map((bytes) =>
+            getSignedBlockTypeFromBytes(config, bytes).deserialize(bytes)
+          ),
+        sendExecutionPayloadEnvelopesByRoot: async (peer: string, roots: Uint8Array[]) =>
+          (await call<Uint8Array[]>({method: "sendExecutionPayloadEnvelopesByRoot", args: [peer, roots]})).map(
+            (bytes) => ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(bytes)
+          ),
+        sendExecutionPayloadEnvelopesByRange: async (
+          peer: string,
+          request: gloas.ExecutionPayloadEnvelopesByRangeRequest
+        ) =>
+          (await call<Uint8Array[]>({method: "sendExecutionPayloadEnvelopesByRange", args: [peer, request]})).map(
+            (bytes) => ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(bytes)
+          ),
         publishProposerSlashing: (slashing: phase0.ProposerSlashing) =>
           call<number>({method: "publishProposerSlashing", args: [slashing]}),
         scrapeMetrics: () => call<string>({method: "scrapeMetrics", args: []}),
       },
       db: {
+        executionPayloadEnvelope: {
+          put: (root: Uint8Array, envelope: gloas.SignedExecutionPayloadEnvelope) =>
+            call<void>({
+              method: "putEnvelope",
+              args: [root, ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)],
+            }),
+        },
         blockArchive: {
-          put: (slot: number, block: SignedBeaconBlock) => call<void>({method: "putBlock", args: [slot, block]}),
+          put: (slot: number, block: SignedBeaconBlock) =>
+            call<void>({
+              method: "putBlock",
+              args: [slot, config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block)],
+            }),
         },
       },
       chain: {

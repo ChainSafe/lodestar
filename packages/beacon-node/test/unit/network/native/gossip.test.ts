@@ -106,7 +106,15 @@ describe("native gossip host", () => {
 
   it("reports the executor's readiness as ordinary capacity and answers dependency checks in one call", async () => {
     const node = await fixture();
-    const checks = [1, 2].map((id) => ({root: new Uint8Array(32), slot: 1n, peerId: node.message(id).peerId, topic}));
+    const checks = [1, 2].map((id) => ({
+      root: new Uint8Array(32),
+      slot: 1n,
+      peerId: node.message(id).peerId,
+      topic,
+      kind: "voluntary_exit" as const,
+      payloadPresent: false,
+      parentBlockHash: null,
+    }));
     expect(node.gossip.ready()).toBe(true);
     node.processor.ready.mockReturnValue(false);
     expect(node.gossip.ready()).toBe(false);

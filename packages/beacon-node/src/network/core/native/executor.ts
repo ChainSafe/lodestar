@@ -18,7 +18,7 @@ export class NativeGossipExecutor {
   private readonly validate;
   private readonly validateBatch;
   private stopped = false;
-  private readonly searches = new Map<number, Map<string, Set<PeerIdStr>>>();
+  private readonly searches = new Map<number, Map<string, {peers: Set<PeerIdStr>; payloadSlotEmitted: boolean}>>();
 
   constructor(
     private readonly modules: NetworkProcessorModules,
@@ -32,24 +32,53 @@ export class NativeGossipExecutor {
     this.validateBatch = getGossipValidatorBatchFn(handlers, modules, onFatalPeer);
     gossip.attach(this);
     modules.chain.emitter.on(routes.events.EventType.block, this.onBlock);
+    modules.chain.emitter.on(routes.events.EventType.executionPayload, this.onPayload);
   }
 
-  /** Whether each check's block is known; an unknown one starts a search. */
   check(checks: readonly DependencyCheck[]): boolean[] {
-    const roots = new Map<string, {available: boolean; peers: Set<PeerIdStr>}>();
-    return checks.map((check) => {
-      const root = `0x${Buffer.from(check.root).toString("hex")}`;
-      let entry = roots.get(root);
-      if (entry === undefined) {
-        entry = {available: this.modules.chain.forkChoice.hasBlockHexUnsafe(root), peers: new Set()};
-        roots.set(root, entry);
+    const blocks = new Map<string, boolean>();
+    return checks.map((check) => this.checkDependency(check, blocks));
+  }
+
+  private checkDependency(check: DependencyCheck, blocks: Map<string, boolean>): boolean {
+    const {forkChoice} = this.modules.chain;
+    const root = `0x${Buffer.from(check.root).toString("hex")}`;
+    const slotRoot = {slot: Number(check.slot), root};
+    const source = BlockInputSource.network_processor;
+    let blockKnown = blocks.get(root);
+    if (blockKnown === undefined) {
+      blockKnown = forkChoice.hasBlockHexUnsafe(root);
+      blocks.set(root, blockKnown);
+    }
+    if (!blockKnown) this.searchUnknownBlock(slotRoot, source, check.peerId);
+    if (check.kind === GossipType.beacon_block || check.kind === GossipType.execution_payload_bid) {
+      if (check.parentBlockHash !== null) {
+        const hash = `0x${Buffer.from(check.parentBlockHash).toString("hex")}`;
+        if (!forkChoice.getBlockHexAndBlockHash(root, hash)) {
+          const parent = forkChoice.getBlockHexDefaultStatus(root);
+          if (parent?.executionPayloadBlockHash && parent.executionPayloadBlockHash !== hash) {
+            this.searchUnknownEnvelope(slotRoot, source, check.peerId);
+            return check.kind === GossipType.beacon_block;
+          }
+        }
       }
-      if (!entry.available && !entry.peers.has(check.peerId)) {
-        entry.peers.add(check.peerId);
-        this.searchUnknownBlock({slot: Number(check.slot), root}, BlockInputSource.network_processor, check.peerId);
-      }
-      return entry.available;
-    });
+      return check.kind === GossipType.beacon_block || blockKnown;
+    }
+    if (
+      (check.kind === GossipType.beacon_attestation || check.kind === GossipType.beacon_aggregate_and_proof) &&
+      check.payloadPresent &&
+      !forkChoice.hasPayloadHexUnsafe(root)
+    ) {
+      this.searchUnknownEnvelope(slotRoot, source, check.peerId);
+      return false;
+    }
+    if (
+      (check.kind === GossipType.data_column_sidecar ||
+        (check.kind === GossipType.payload_attestation_message && check.payloadPresent)) &&
+      !forkChoice.hasPayloadHexUnsafe(root)
+    )
+      this.searchUnknownEnvelope(slotRoot, source, undefined, true);
+    return blockKnown;
   }
 
   /** Whether the chain takes validation work now. */
@@ -81,9 +110,9 @@ export class NativeGossipExecutor {
       : [await this.validate(infos[0])];
   }
 
-  observe(messages: PendingGossipsubMessage[]): void {
-    for (const message of messages) {
-      if (message.startProcessUnixSec === null) continue;
+  observe(messages: PendingGossipsubMessage[], results: readonly TopicValidatorResult[]): void {
+    for (const [index, message] of messages.entries()) {
+      if (message.startProcessUnixSec === null || results[index] !== TopicValidatorResult.Accept) continue;
       this.modules.metrics?.gossipValidationQueue.jobTime.observe(
         {topic: message.topic.type},
         Math.max(0, Date.now() / 1000 - message.startProcessUnixSec) / messages.length
@@ -93,25 +122,7 @@ export class NativeGossipExecutor {
 
   searchUnknownBlock({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
     if (this.stopped || this.modules.chain.seenBlock(root)) return;
-    const currentSlot = this.modules.chain.clock.currentSlot;
-    if (slot < currentSlot - 2 || slot > currentSlot + 1) return;
-    for (const tracked of this.searches.keys()) if (tracked < currentSlot - 2) this.searches.delete(tracked);
-    let roots = this.searches.get(slot);
-    const peers = roots?.get(root);
-    if (peers?.has(peer ?? "") || (peers?.size ?? 0) >= MAX_PEERS_PER_ROOT) return;
-    if (!peers) {
-      if ((roots?.size ?? 0) >= MAX_SEARCHED_ROOTS_PER_SLOT) return;
-      // Leave search room for the other mesh peers even before an unknown root can be validated.
-      let fromPeer = 0;
-      for (const sources of roots?.values() ?? []) if (sources.has(peer ?? "")) fromPeer++;
-      if (peer !== undefined && fromPeer >= 4) return;
-    }
-    if (!roots) {
-      roots = new Map();
-      this.searches.set(slot, roots);
-    }
-    if (peers) peers.add(peer ?? "");
-    else roots.set(root, new Set([peer ?? ""]));
+    if (!this.reserveSearch(slot, root, "block", peer)) return;
     this.modules.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
   }
 
@@ -122,13 +133,50 @@ export class NativeGossipExecutor {
     slotIsPayloadSlot = false
   ): void {
     if (this.stopped || this.modules.chain.seenPayloadEnvelope(root)) return;
+    if (!this.reserveSearch(slot, root, "payload", peer, slotIsPayloadSlot)) return;
     if (slotIsPayloadSlot)
       this.modules.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {rootHex: root, slot, peer, source});
     else this.modules.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, peer, source});
   }
 
+  private reserveSearch(
+    slot: number,
+    root: string,
+    target: "block" | "payload",
+    peer?: PeerIdStr,
+    payloadSlot = false
+  ): boolean {
+    const currentSlot = this.modules.chain.clock.currentSlot;
+    if (!Number.isSafeInteger(slot) || slot < currentSlot - 2 || slot > currentSlot + 1) return false;
+    for (const tracked of this.searches.keys()) if (tracked < currentSlot - 2) this.searches.delete(tracked);
+    let roots = this.searches.get(slot);
+    const key = `${target}:${root}`;
+    const entry = roots?.get(key);
+    const peers = entry?.peers;
+    const needsPayloadSlot = payloadSlot && !entry?.payloadSlotEmitted;
+    if (!needsPayloadSlot && (peers?.has(peer ?? "") || (peers?.size ?? 0) >= MAX_PEERS_PER_ROOT)) return false;
+    if (!entry) {
+      if ((roots?.size ?? 0) >= MAX_SEARCHED_ROOTS_PER_SLOT) return false;
+      let fromPeer = 0;
+      for (const sources of roots?.values() ?? []) if (sources.peers.has(peer ?? "")) fromPeer++;
+      if (peer !== undefined && fromPeer >= 4) return false;
+    }
+    if (!roots) {
+      roots = new Map();
+      this.searches.set(slot, roots);
+    }
+    if (entry) {
+      if (entry.peers.size < MAX_PEERS_PER_ROOT) entry.peers.add(peer ?? "");
+      entry.payloadSlotEmitted ||= payloadSlot;
+    } else roots.set(key, {peers: new Set([peer ?? ""]), payloadSlotEmitted: payloadSlot});
+    return true;
+  }
+
   private readonly onBlock = ({block}: {block: string}): void => {
     this.gossip.notifyBlock(Buffer.from(block.slice(2), "hex"));
+  };
+  private readonly onPayload = ({blockRoot}: {blockRoot: string}): void => {
+    this.gossip.notifyBlock(Buffer.from(blockRoot.slice(2), "hex"));
   };
   subscribeCapacity(wake: () => void): () => void {
     const {emitter} = this.modules.chain;
@@ -154,6 +202,7 @@ export class NativeGossipExecutor {
     if (this.stopped) return;
     this.stopped = true;
     this.modules.chain.emitter.off(routes.events.EventType.block, this.onBlock);
+    this.modules.chain.emitter.off(routes.events.EventType.executionPayload, this.onPayload);
     this.dropAllJobs();
   }
 }

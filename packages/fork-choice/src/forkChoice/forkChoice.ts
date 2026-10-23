@@ -86,8 +86,8 @@ export enum UpdateHeadOpt {
 
 export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetCanonicalHead}
-  | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
-  | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
+  | {mode: UpdateHeadOpt.GetProposerHead; msFromSlot: number; slot: Slot}
+  | {mode: UpdateHeadOpt.GetPredictedProposerHead; msFromSlot: number; slot: Slot};
 
 // the initial vote epoch for all validators
 const INIT_VOTE_SLOT: Slot = 0;
@@ -315,13 +315,13 @@ export class ForkChoice implements IForkChoice {
     const canonicalHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
-        return {head: this.predictProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot)};
+        return {head: this.predictProposerHead(canonicalHeadBlock, opt.msFromSlot, opt.slot)};
       case UpdateHeadOpt.GetProposerHead: {
         const {
           proposerHead: head,
           isHeadTimely,
           notReorgedReason,
-        } = this.getProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot);
+        } = this.getProposerHead(canonicalHeadBlock, opt.msFromSlot, opt.slot);
         return {head, isHeadTimely, notReorgedReason};
       }
       case UpdateHeadOpt.GetCanonicalHead:
@@ -338,7 +338,7 @@ export class ForkChoice implements IForkChoice {
   // Note when proposer boost reorg is disabled, it always returns false
   shouldOverrideForkChoiceUpdate(
     headBlock: ProtoBlock,
-    secFromSlot: number,
+    msFromSlot: number,
     currentSlot: Slot
   ): ShouldOverrideForkChoiceUpdateResult {
     if (headBlock === null) {
@@ -369,7 +369,7 @@ export class ForkChoice implements IForkChoice {
 
     const currentTimeOk =
       headBlock.slot === currentSlot ||
-      (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot, currentSlot));
+      (proposalSlot === currentSlot && this.isProposingOnTime(msFromSlot, currentSlot));
 
     // Mirror the proposer equivocation branch of getProposerHead(). The head slot's attestations are
     // still queued at this point so the head is assumed weak, same as for the regular branch below.
@@ -455,7 +455,7 @@ export class ForkChoice implements IForkChoice {
    * By calling this function, we assume we are the proposer of next slot
    *
    */
-  predictProposerHead(headBlock: ProtoBlock, secFromSlot: number, currentSlot: Slot): ProtoBlock {
+  predictProposerHead(headBlock: ProtoBlock, msFromSlot: number, currentSlot: Slot): ProtoBlock {
     const {proposerBoost, proposerBoostReorg} = this.opts ?? {};
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!proposerBoost || !proposerBoostReorg) {
@@ -468,7 +468,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     const blockRoot = headBlock.blockRoot;
-    const result = this.shouldOverrideForkChoiceUpdate(headBlock, secFromSlot, currentSlot);
+    const result = this.shouldOverrideForkChoiceUpdate(headBlock, msFromSlot, currentSlot);
 
     if (result.shouldOverrideFcu) {
       this.logger?.verbose("Current head is weak. Predicting next block to be built on parent of head.", {
@@ -499,7 +499,7 @@ export class ForkChoice implements IForkChoice {
    */
   getProposerHead(
     headBlock: ProtoBlock,
-    secFromSlot: number,
+    msFromSlot: number,
     slot: Slot
   ): {proposerHead: ProtoBlock; isHeadTimely: boolean; notReorgedReason?: NotReorgedReason} {
     const isHeadTimely = headBlock.timeliness;
@@ -556,7 +556,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Only re-org if we are proposing on-time
-    if (!this.isProposingOnTime(secFromSlot, slot)) {
+    if (!this.isProposingOnTime(msFromSlot, slot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.NotProposingOnTime};
     }
 
@@ -757,8 +757,8 @@ export class ForkChoice implements IForkChoice {
   onBlock(
     block: BeaconBlock,
     state: IBeaconStateView,
-    receiveDelaySec: number,
-    importDelaySec: number,
+    receiveDelayMs: number,
+    importDelayMs: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
@@ -830,7 +830,7 @@ export class ForkChoice implements IForkChoice {
     // Decide whether this block should receive proposer boost, and whether the block is timely.
     // The store field `this.proposerBoostRoot` and `updateCheckpoints()` are mutated only after
     // `protoArray.onBlock()` succeeds
-    const isTimely = this.isBlockReceivedTimely(block, receiveDelaySec);
+    const isTimely = this.isBlockReceivedTimely(block, receiveDelayMs);
     const isProposerBoostBlock =
       this.opts?.proposerBoost === true &&
       isTimely &&
@@ -901,8 +901,8 @@ export class ForkChoice implements IForkChoice {
       targetRoot: toRootHex(targetRoot),
       stateRoot: toRootHex(block.stateRoot),
       timeliness: isTimely,
-      ptcTimeliness: this.isBlockPtcTimely(block, receiveDelaySec),
-      importedTimely: this.isBlockImportedTimely(block, importDelaySec),
+      ptcTimeliness: this.isBlockPtcTimely(block, receiveDelayMs),
+      importedTimely: this.isBlockImportedTimely(block, importDelayMs),
       proposerIndex: block.proposerIndex,
 
       justifiedEpoch: stateJustifiedEpoch,
@@ -1432,7 +1432,9 @@ export class ForkChoice implements IForkChoice {
    *
    * `ancestors` is the raw walk and includes the previous finalized block as its last element —
    * callers that don't want the boundary should slice it off themselves.
-   * Post-gloas for each block root, it returns exactly one variant of it.
+   * For Gloas parent blocks, `ancestors` contains the selected EMPTY or FULL variant.
+   * The other variant, if present in the traversed range, goes into `nonAncestors` with the same root.
+   * Exclude roots present in `ancestors` before pruning by block root.
    */
   getAllAncestorAndNonAncestorBlocks(
     blockRoot: RootHex,
@@ -1775,9 +1777,9 @@ export class ForkChoice implements IForkChoice {
    * Return true if the block is timely for the current slot.
    * Child class can overwrite this for testing purpose.
    */
-  protected isBlockReceivedTimely(block: BeaconBlock, blockDelaySec: number): boolean {
+  protected isBlockReceivedTimely(block: BeaconBlock, blockDelayMs: number): boolean {
     const fork = this.config.getForkName(block.slot);
-    const isBeforeLateBlockCutoff = blockDelaySec * 1000 < this.config.getAttestationDueMs(fork);
+    const isBeforeLateBlockCutoff = blockDelayMs < this.config.getAttestationDueMs(fork);
     return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
   }
 
@@ -1791,12 +1793,12 @@ export class ForkChoice implements IForkChoice {
    *
    * Child class can overwrite this for testing purpose.
    */
-  protected isBlockPtcTimely(block: BeaconBlock, blockDelaySec: number): boolean {
+  protected isBlockPtcTimely(block: BeaconBlock, blockDelayMs: number): boolean {
     const ptcThresholdMs = this.config.getSlotComponentDurationMs(
       this.config.getForkName(block.slot),
       this.config.PAYLOAD_ATTESTATION_DUE_BPS
     );
-    return this.fcStore.currentSlot === block.slot && blockDelaySec * 1000 < ptcThresholdMs;
+    return this.fcStore.currentSlot === block.slot && blockDelayMs < ptcThresholdMs;
   }
 
   /**
@@ -1804,9 +1806,9 @@ export class ForkChoice implements IForkChoice {
    * block was imported in a timely manner for its own slot.
    * This is not part of the spec, we use this to determine late canonical blocks.
    */
-  protected isBlockImportedTimely(block: BeaconBlock, importDelaySec: number): boolean {
+  protected isBlockImportedTimely(block: BeaconBlock, importDelayMs: number): boolean {
     const fork = this.config.getForkName(block.slot);
-    const isBeforeLateBlockCutoff = importDelaySec * 1000 < this.config.getAttestationDueMs(fork);
+    const isBeforeLateBlockCutoff = importDelayMs < this.config.getAttestationDueMs(fork);
     return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
   }
 
@@ -1891,10 +1893,10 @@ export class ForkChoice implements IForkChoice {
   /**
    * https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
    */
-  private isProposingOnTime(secFromSlot: number, slot: Slot): boolean {
+  private isProposingOnTime(msFromSlot: number, slot: Slot): boolean {
     const fork = this.config.getForkName(slot);
     const proposerReorgCutoff = this.config.getProposerReorgCutoffMs(fork);
-    return secFromSlot * 1000 <= proposerReorgCutoff;
+    return msFromSlot <= proposerReorgCutoff;
   }
 
   private getPreMergeExecStatus(executionStatus: BlockExecutionStatus): ExecutionStatus.PreMerge {

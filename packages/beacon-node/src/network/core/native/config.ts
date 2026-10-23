@@ -31,6 +31,10 @@ export const kinds: readonly NativeTopicKind[] = [
   "bls_to_execution_change",
   "blob_sidecar",
   "data_column_sidecar",
+  "execution_payload",
+  "payload_attestation_message",
+  "execution_payload_bid",
+  "proposer_preferences",
 ];
 
 export function nativeStatus(status: Status): NetworkStatusUpdate {

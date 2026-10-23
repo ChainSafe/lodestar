@@ -2,6 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {describe, expect, it, vi} from "vitest";
+import type {DependencyCheck} from "@chainsafe/lodestar-z/network";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -66,7 +67,7 @@ function fixture(metrics: Metrics | null = null, stubbed = true) {
   const chain = {
     ...base,
     clock: new ClockStopped(64),
-    forkChoice: {...base.forkChoice, hasBlockHexUnsafe: vi.fn(() => false)},
+    forkChoice: {...base.forkChoice, hasBlockHexUnsafe: vi.fn(() => false), hasPayloadHexUnsafe: vi.fn(() => false)},
     seenBlock: () => false,
     seenBlockProposers: new SeenBlockProposers(),
     blsThreadPoolCanAcceptWork: vi.fn(() => true),
@@ -182,7 +183,7 @@ describe("native gossip host execution", () => {
       held.resolve();
       const results = await execution;
       expect(results).toEqual([TopicValidatorResult.Accept]);
-      expect(() => f.executor.observe(messages)).toThrow("completion metric failed");
+      expect(() => f.executor.observe(messages, results)).toThrow("completion metric failed");
       expect(results).toEqual([TopicValidatorResult.Accept]);
     } finally {
       held.resolve();
@@ -192,7 +193,7 @@ describe("native gossip host execution", () => {
     }
   });
 
-  it("records completed work for accepted, rejected and ignored messages in a mixed batch", async () => {
+  it("records completed work only for accepted messages in a mixed batch", async () => {
     const metrics = createMetricsTest();
     const observed = vi.spyOn(metrics.gossipValidationQueue.jobTime, "observe");
     const now = vi.spyOn(Date, "now").mockReturnValue(1000);
@@ -208,14 +209,14 @@ describe("native gossip host execution", () => {
       expect(results).toEqual([TopicValidatorResult.Accept, TopicValidatorResult.Reject, TopicValidatorResult.Ignore]);
       expect(observed).not.toHaveBeenCalled();
       now.mockReturnValue(1300);
-      f.executor.observe(messages);
-      expect(observed).toHaveBeenCalledTimes(3);
+      f.executor.observe(messages, results);
+      expect(observed).toHaveBeenCalledOnce();
       for (const [labels, duration] of observed.mock.calls) {
         expect(labels).toEqual({topic: GossipType.beacon_attestation});
         expect(duration).toBeCloseTo(0.1);
       }
-      f.executor.observe([message("never started")]);
-      expect(observed).toHaveBeenCalledTimes(3);
+      f.executor.observe([message("never started")], [TopicValidatorResult.Accept]);
+      expect(observed).toHaveBeenCalledOnce();
     } finally {
       f.executor.stop();
       now.mockRestore();
@@ -233,6 +234,9 @@ describe("native gossip host execution", () => {
       slot: 64n,
       peerId: peerIdFromPublicKey(key.publicKey).toString(),
       topic: "test",
+      kind: GossipType.beacon_attestation as const,
+      payloadPresent: false,
+      parentBlockHash: null,
     };
     const search = vi.fn();
     const envelopeSearch = vi.fn();
@@ -272,6 +276,9 @@ describe("native gossip host execution", () => {
       slot: 64n,
       peerId,
       topic: "test",
+      kind: GossipType.beacon_attestation as const,
+      payloadPresent: false,
+      parentBlockHash: null,
     }));
     try {
       expect(f.executor.check([...checks, ...checks])).toEqual(Array(20).fill(false));
@@ -406,6 +413,9 @@ describe("native gossip recovery through BlockInputSync", () => {
           slot: 64n,
           peerId: peer,
           topic: "test",
+          kind: GossipType.beacon_attestation as const,
+          payloadPresent: false,
+          parentBlockHash: null,
         }))
       );
       const peerless = {slot: 64, root: toRootHex(roots[101])};
@@ -464,6 +474,9 @@ describe("native gossip recovery through BlockInputSync", () => {
           slot: 65n,
           peerId: preferred,
           topic: "test",
+          kind: GossipType.beacon_attestation as const,
+          payloadPresent: false,
+          parentBlockHash: null,
         },
       ]);
       expect(envelope).not.toHaveBeenCalled();
@@ -519,4 +532,149 @@ it("uses each delivery's reporter for individual and batched validation failures
   } finally {
     f.executor.stop();
   }
+});
+
+describe("native Gloas gossip dependencies", () => {
+  function check(kind: DependencyCheck["kind"], payloadPresent = false): DependencyCheck {
+    return {
+      kind,
+      payloadPresent,
+      root: new Uint8Array(32).fill(7),
+      slot: 64n,
+      peerId: "peer",
+      topic: "test",
+      parentBlockHash: null,
+    };
+  }
+
+  it.each([GossipType.beacon_attestation, GossipType.beacon_aggregate_and_proof] as const)(
+    "waits for a payload voted available by %s and wakes on its import",
+    (kind) => {
+      const f = fixture();
+      const search = vi.fn();
+      const hasPayload = f.chain.forkChoice.hasPayloadHexUnsafe.mockReturnValue(false);
+      f.chain.forkChoice.hasBlockHexUnsafe.mockReturnValue(true);
+      f.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRoot, search);
+      try {
+        expect(f.executor.check([check(kind, false), check(kind, true)])).toEqual([true, false]);
+        expect(search).toHaveBeenCalledOnce();
+        expect(search.mock.calls[0][0].peer).toBe("peer");
+        hasPayload.mockReturnValue(true);
+        f.chain.emitter.emit(routes.events.EventType.executionPayload, {
+          blockRoot: toRootHex(check(kind).root),
+          slot: 64,
+          executionOptimistic: false,
+          builderIndex: 0,
+          blockHash: ZERO_HASH_HEX,
+        });
+        expect(f.gossip.notifyBlock).toHaveBeenCalledWith(Buffer.from(check(kind).root));
+        expect(f.executor.check([check(kind, true)])).toEqual([true]);
+        f.executor.stop();
+        expect(f.chain.emitter.listenerCount(routes.events.EventType.executionPayload)).toBe(0);
+      } finally {
+        f.executor.stop();
+      }
+    }
+  );
+
+  it.each([GossipType.data_column_sidecar, GossipType.payload_attestation_message] as const)(
+    "recovers payloads for %s without awaiting them or blaming its sender",
+    (kind) => {
+      const f = fixture();
+      const search = vi.fn();
+      f.chain.forkChoice.hasPayloadHexUnsafe.mockReturnValue(false);
+      f.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRootSlot, search);
+      try {
+        expect(f.executor.check([check(kind, true)])).toEqual([false]);
+        expect(search).toHaveBeenCalledWith(expect.objectContaining({peer: undefined, slot: 64}));
+        f.chain.forkChoice.hasBlockHexUnsafe.mockReturnValue(true);
+        expect(f.executor.check([check(kind, true)])).toEqual([true]);
+        expect(search).toHaveBeenCalledOnce();
+      } finally {
+        f.executor.stop();
+      }
+    }
+  );
+
+  it("waits for envelope blocks and bid parents while blocks bypass dependency queues", () => {
+    const f = fixture();
+    try {
+      expect(
+        f.executor.check([check("execution_payload"), check("execution_payload_bid"), check("beacon_block")])
+      ).toEqual([false, false, true]);
+      f.chain.forkChoice.hasBlockHexUnsafe.mockReturnValue(true);
+      expect(f.executor.check([check("execution_payload")])).toEqual([true]);
+    } finally {
+      f.executor.stop();
+    }
+  });
+
+  it("recovers a bid's full parent without requiring current-head compatibility", () => {
+    const f = fixture();
+    const search = vi.fn();
+    const parentBlockHash = new Uint8Array(32).fill(9);
+    vi.spyOn(f.chain.forkChoice, "getBlockHexAndBlockHash").mockReturnValue(null);
+    vi.spyOn(f.chain.forkChoice, "getBlockHexDefaultStatus").mockReturnValue({
+      executionPayloadBlockHash: ZERO_HASH_HEX,
+    } as ProtoBlock);
+    f.chain.forkChoice.hasBlockHexUnsafe.mockReturnValue(true);
+    f.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRoot, search);
+    try {
+      expect(
+        f.executor.check([
+          {...check("execution_payload_bid"), parentBlockHash},
+          {...check("beacon_block"), parentBlockHash},
+        ])
+      ).toEqual([false, true]);
+      expect(search).toHaveBeenCalledOnce();
+    } finally {
+      f.executor.stop();
+    }
+  });
+
+  it("forwards a payload slot after an earlier slotless search from the same source", () => {
+    const f = fixture();
+    const slotless = vi.fn();
+    const slotted = vi.fn();
+    f.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRoot, slotless);
+    f.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRootSlot, slotted);
+    const item = {slot: 64, root: toRootHex(check(GossipType.execution_payload).root)};
+    try {
+      f.executor.searchUnknownEnvelope(item, BlockInputSource.network_processor);
+      f.executor.searchUnknownEnvelope(item, BlockInputSource.network_processor, undefined, true);
+      f.executor.searchUnknownEnvelope(item, BlockInputSource.network_processor, undefined, true);
+      expect(slotless).toHaveBeenCalledOnce();
+      expect(slotted).toHaveBeenCalledExactlyOnceWith({
+        rootHex: item.root,
+        slot: 64,
+        peer: undefined,
+        source: BlockInputSource.network_processor,
+      });
+    } finally {
+      f.executor.stop();
+    }
+  });
+
+  it("bounds combined block and payload recovery and ignores stale or distant slots", () => {
+    const f = fixture();
+    const blocks = vi.fn();
+    const payloads = vi.fn();
+    f.chain.emitter.on(ChainEvent.unknownBlockRoot, blocks);
+    f.chain.emitter.on(ChainEvent.unknownEnvelopeBlockRoot, payloads);
+    try {
+      for (let i = 0; i < 100; i++) {
+        const root = {slot: 64, root: toRootHex(new Uint8Array(32).fill(i))};
+        f.executor.searchUnknownBlock(root, BlockInputSource.gossip, "peer");
+        f.executor.searchUnknownEnvelope(root, BlockInputSource.gossip, "peer");
+      }
+      expect(blocks.mock.calls.length + payloads.mock.calls.length).toBe(4);
+      for (const slot of [61, 66, Number.MAX_SAFE_INTEGER + 1])
+        f.executor.searchUnknownEnvelope({slot, root: ZERO_HASH_HEX}, BlockInputSource.gossip, "honest");
+      expect(payloads).toHaveBeenCalledTimes(2);
+      f.executor.searchUnknownEnvelope({slot: 64, root: ZERO_HASH_HEX}, BlockInputSource.gossip, "honest");
+      expect(payloads).toHaveBeenCalledTimes(3);
+    } finally {
+      f.executor.stop();
+    }
+  });
 });

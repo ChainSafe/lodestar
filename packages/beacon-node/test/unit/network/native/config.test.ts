@@ -63,7 +63,10 @@ describe("native configuration boundary", () => {
 
   it.each([0, 1, 1_000_000])("rejects an active unsupported fork at epoch %s before startup", async (epoch) => {
     const {key} = await fixture();
-    const scheduled = createBeaconConfig({...config, GLOAS_FORK_EPOCH: epoch}, config.genesisValidatorsRoot);
+    const scheduled = createBeaconConfig(
+      {...config, GLOAS_FORK_EPOCH: 0, HEZE_FORK_EPOCH: epoch},
+      config.genesisValidatorsRoot
+    );
     expect(() =>
       createSettlingNetwork(
         createNativeConfig(

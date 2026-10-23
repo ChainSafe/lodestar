@@ -49,6 +49,69 @@ async function nativeRuntimeReleased(): Promise<void> {
 
 describe("native Lodestar integration", () => {
   beforeEach(nativeRuntimeReleased);
+  it.each(["native", "libp2p"] as const)(
+    "exchanges Gloas payload envelopes with a %s peer",
+    async (backend) => {
+      const config = createBeaconConfig({...fuluConfig(), GLOAS_FORK_EPOCH: 0}, new Uint8Array(32));
+      const left = await nativeNetworkFixture(config);
+      let right: Awaited<ReturnType<typeof nativeNetworkProcess>> | undefined;
+      try {
+        right = await nativeNetworkProcess(config, left.chain.clock.genesisTime, backend);
+        const remote = await right.network.getNetworkIdentity();
+        await left.network.connectToPeer(remote.peerId, remote.p2pAddresses);
+        const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+        block.message.proposerIndex = 1;
+        const root = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+        const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+        envelope.message.beaconBlockRoot = root;
+        const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        await left.db.blockArchive.put(0, block);
+        await right.db.blockArchive.put(0, block);
+        await left.db.executionPayloadEnvelope.put(root, envelope);
+        await right.db.executionPayloadEnvelope.put(root, envelope);
+        const receivedRight = await left.network.sendExecutionPayloadEnvelopesByRoot(remote.peerId, [root, root]);
+        const receivedLeft = await right.network.sendExecutionPayloadEnvelopesByRoot(left.network.peerId.toString(), [
+          root,
+          root,
+        ]);
+        expect(receivedRight.map((value) => ssz.gloas.SignedExecutionPayloadEnvelope.serialize(value))).toEqual([
+          bytes,
+        ]);
+        expect(receivedLeft.map((value) => ssz.gloas.SignedExecutionPayloadEnvelope.serialize(value))).toEqual([bytes]);
+        expect(
+          await left.network.sendExecutionPayloadEnvelopesByRange(remote.peerId, {startSlot: 1, count: 1})
+        ).toEqual([]);
+        expect(
+          await right.network.sendExecutionPayloadEnvelopesByRange(left.network.peerId.toString(), {
+            startSlot: 1,
+            count: 1,
+          })
+        ).toEqual([]);
+        await Promise.all([left.network.subscribeGossipCoreTopics(), right.network.subscribeGossipCoreTopics()]);
+        await vi.waitFor(
+          async () => {
+            const metrics = await left.network.scrapeMetrics();
+            for (const kind of [
+              "execution_payload",
+              "payload_attestation_message",
+              "execution_payload_bid",
+              "proposer_preferences",
+            ]) {
+              expect(metrics).toMatch(
+                new RegExp(`gossipsub_topic_peer_count\\{topicStr="/eth2/[0-9a-f]{8}/${kind}/ssz_snappy"\\} 1\\n`)
+              );
+            }
+          },
+          {timeout: 5000}
+        );
+      } finally {
+        const results = await Promise.allSettled([right?.close(), left.close()]);
+        expect(results.filter((result) => result.status === "rejected")).toEqual([]);
+      }
+    },
+    30000
+  );
+
   it("combines beacon and native metrics without duplicate families", async () => {
     const node = await nativeNetworkFixture(fuluConfig());
     try {
@@ -239,7 +302,8 @@ describe("native Lodestar integration", () => {
           DENEB_FORK_EPOCH: 0,
           ELECTRA_FORK_EPOCH: 0,
           FULU_FORK_EPOCH: unsupported ? 0 : 1,
-          GLOAS_FORK_EPOCH: unsupported ? 1 : Infinity,
+          GLOAS_FORK_EPOCH: unsupported ? 0 : Infinity,
+          HEZE_FORK_EPOCH: unsupported ? 1 : Infinity,
           BLOB_SCHEDULE: [],
         },
         new Uint8Array(32)

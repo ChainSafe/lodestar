@@ -256,6 +256,12 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
+  if (options.chain.nativeStateTransition && config.HEZE_FORK_EPOCH !== Infinity) {
+    throw Error(
+      `--chain.nativeStateTransition does not support Heze, which is scheduled at epoch ${config.HEZE_FORK_EPOCH}`
+    );
+  }
+
   return {config, options, beaconPaths, network, version, commit, privateKey, logger};
 }
 

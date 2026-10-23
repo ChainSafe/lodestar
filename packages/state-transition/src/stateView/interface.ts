@@ -1,3 +1,4 @@
+import type {BeaconStateView as NativeBinding} from "@chainsafe/lodestar-z";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {
@@ -358,38 +359,38 @@ export type IBeaconStateViewNative = Omit<
   | "proposerLookahead"
   | "stateTransition"
   | "withParentPayloadApplied"
-> & {
-  pendingDeposits: Uint8Array;
-  /** Older native addons expose indices only through currentSyncCommitteeIndexed. */
-  readonly currentSyncCommitteeValidatorIndices?: Uint32Array;
-  pendingPartialWithdrawals: Uint8Array;
-  pendingConsolidations: Uint8Array;
-  proposerLookahead: Uint32Array;
-  // UintBn64 lowers to number across the FFI boundary; the wrapper lifts it back to bigint
-  eth1Data: phase0.Eth1Data;
-  executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
-  computeBlockRewards(
-    signedBlockBytes: Uint8Array,
-    isBlinded: boolean,
-    proposerRewards?: RewardCache
-  ): rewards.BlockRewards;
-  computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): rewards.AttestationsRewards;
-  computeSyncCommitteeRewards(
-    block: BeaconBlock,
-    validatorIds: (ValidatorIndex | string)[]
-  ): rewards.SyncCommitteeRewards;
-  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
-  getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
-  getIndicesInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number[];
-  loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
-  stateTransition(
-    signedBlockBytes: Uint8Array,
-    isBlinded: boolean,
-    options?: StateTransitionOpts
-  ): IBeaconStateViewNative;
-  processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}): IBeaconStateViewNative;
-  withParentPayloadApplied(executionRequestsBytes: Uint8Array): IBeaconStateViewNative;
-};
+> &
+  Pick<NativeBinding, "builderPendingPayments" | "builderPendingWithdrawals" | "getPayloadTimelinessCommittee"> & {
+    pendingDeposits: Uint8Array;
+    /** Older native addons expose indices only through currentSyncCommitteeIndexed. */
+    readonly currentSyncCommitteeValidatorIndices?: Uint32Array;
+    pendingPartialWithdrawals: Uint8Array;
+    pendingConsolidations: Uint8Array;
+    proposerLookahead: Uint32Array;
+    // UintBn64 lowers to number across the FFI boundary; the wrapper lifts it back to bigint
+    eth1Data: phase0.Eth1Data;
+    executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+    computeBlockRewards(
+      signedBlockBytes: Uint8Array,
+      isBlinded: boolean,
+      proposerRewards?: RewardCache
+    ): rewards.BlockRewards;
+    computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): rewards.AttestationsRewards;
+    computeSyncCommitteeRewards(
+      block: BeaconBlock,
+      validatorIds: (ValidatorIndex | string)[]
+    ): rewards.SyncCommitteeRewards;
+    getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
+    getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
+    loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
+    stateTransition(
+      signedBlockBytes: Uint8Array,
+      isBlinded: boolean,
+      options?: StateTransitionOpts
+    ): IBeaconStateViewNative;
+    processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}): IBeaconStateViewNative;
+    withParentPayloadApplied(executionRequestsBytes: Uint8Array): IBeaconStateViewNative;
+  };
 
 export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {
   return isForkPostAltair(state.forkName);

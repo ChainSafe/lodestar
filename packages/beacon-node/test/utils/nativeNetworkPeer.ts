@@ -4,6 +4,8 @@ import {setTimeout as delay} from "node:timers/promises";
 import {deserialize, serialize} from "node:v8";
 import {test} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
+import {ssz} from "@lodestar/types";
+import {getSignedBlockTypeFromBytes} from "../../src/util/multifork.js";
 import {nativeNetworkFixture} from "./nativeNetwork.js";
 import type {PeerCommand, PeerConfiguration} from "./nativeNetworkProcess.js";
 
@@ -43,7 +45,9 @@ test.skipIf(!peerDirectory)(
             value = await node.network.subscribeGossipCoreTopics();
             break;
           case "sendBeaconBlocksByRoot":
-            value = await node.network.sendBeaconBlocksByRoot(args[0], args[1]);
+            value = (await node.network.sendBeaconBlocksByRoot(args[0], args[1])).map((block) =>
+              node.chain.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block)
+            );
             break;
           case "publishProposerSlashing":
             value = await node.network.publishProposerSlashing(args[0]);
@@ -51,8 +55,24 @@ test.skipIf(!peerDirectory)(
           case "scrapeMetrics":
             value = await node.network.scrapeMetrics();
             break;
+          case "sendExecutionPayloadEnvelopesByRoot":
+            value = (await node.network.sendExecutionPayloadEnvelopesByRoot(args[0], args[1])).map((envelope) =>
+              ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)
+            );
+            break;
+          case "sendExecutionPayloadEnvelopesByRange":
+            value = (await node.network.sendExecutionPayloadEnvelopesByRange(args[0], args[1])).map((envelope) =>
+              ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)
+            );
+            break;
+          case "putEnvelope":
+            await node.db.executionPayloadEnvelope.putBinary(args[0], args[1]);
+            break;
           case "putBlock":
-            value = await node.db.blockArchive.put(args[0], args[1]);
+            value = await node.db.blockArchive.put(
+              args[0],
+              getSignedBlockTypeFromBytes(node.chain.config, args[1]).deserialize(args[1])
+            );
             break;
           case "hasSeenProposerSlashing":
             value = node.chain.opPool.hasSeenProposerSlashing(args[0]);

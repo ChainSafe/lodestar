@@ -270,7 +270,9 @@ describe("request source reads", () => {
         } as unknown as LightClientServer;
         const chain = {...makeChain(db), lightClientServer: server};
         const [bootstrap] = await Array.fromAsync(onLightClientBootstrap(root, chain));
-        expect(types.LightClientBootstrap.deserialize(bootstrap.data)).toEqual(await server.getBootstrap(root));
+        expect(Uint8Array.from(bootstrap.data)).toEqual(
+          types.LightClientBootstrap.serialize(await server.getBootstrap(root))
+        );
         expect((await db.syncCommitteeWitness.getBinary(root))?.[0]).toBe(
           fork === ForkName.electra || fork === ForkName.fulu ? 1 : 0
         );

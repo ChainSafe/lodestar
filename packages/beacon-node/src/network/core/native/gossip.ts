@@ -72,7 +72,7 @@ export class NativeGossip {
     const messages = job.messages.map((message) => this.prepare(message));
     const results = await processor.execute(messages, job.grouped);
     try {
-      processor.observe(messages);
+      processor.observe(messages, results);
     } catch (error) {
       this.onError(error);
     }

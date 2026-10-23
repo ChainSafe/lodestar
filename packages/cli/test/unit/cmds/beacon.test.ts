@@ -19,6 +19,23 @@ describe("cmds / beacon / args handler", () => {
   // Make tests faster skipping a network call
   process.env.SKIP_FETCH_NETWORK_BOOTNODES = "true";
 
+  it("accepts Gloas and rejects Heze for the native state view", async () => {
+    const paramsFile = path.join(testFilesDir, "native_fork_config.yaml");
+    fs.writeFileSync(
+      paramsFile,
+      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: Infinity}))
+    );
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).resolves.toBeDefined();
+    fs.writeFileSync(
+      paramsFile,
+      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: 200}))
+    );
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).rejects.toThrow(
+      "--chain.nativeStateTransition does not support Heze"
+    );
+    await expect(runBeaconHandlerInit({paramsFile})).resolves.toBeDefined();
+  });
+
   it("Merge bootnodes from file and CLI arg", async () => {
     const enr1 =
       "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA";

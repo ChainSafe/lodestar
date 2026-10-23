@@ -1,4 +1,5 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
@@ -7,6 +8,7 @@ import {signedBeaconBlockToBlinded} from "@lodestar/state-transition";
 import {capella, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {
   BlockInputColumns,
   BlockInputPreData,
@@ -61,7 +63,7 @@ describe("api - beacon - publishBlockV2", () => {
         new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot})
       );
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -91,7 +93,7 @@ describe("api - beacon - publishBlockV2", () => {
       );
       modules.chain.forkChoice.hasBlockHex.mockReturnValue(true);
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -124,7 +126,7 @@ describe("api - beacon - publishBlockV2", () => {
         .fn()
         .mockRejectedValue(new BlockError(signedBlock, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot}));
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -157,7 +159,7 @@ describe("api - beacon - publishBlockV2", () => {
       modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
       vi.mocked(validateGossipBlock).mockRejectedValueOnce(error);
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -202,7 +204,7 @@ describe("api - beacon - publishBlockV2", () => {
         ssz.phase0.SignedBeaconBlockHeader.defaultValue()
       );
 
-      const api = getBeaconBlockApi(modules);
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishBlockV2({
           signedBlockContents: {signedBlock},
@@ -237,7 +239,7 @@ describe("api - beacon - publishBlockV2", () => {
         vi.spyOn(modules.chain.blockProductionCache, "has").mockReturnValue(true);
         modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
 
-        const api = getBeaconBlockApi(modules);
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
         await api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation});
 
         expect(modules.chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
@@ -273,7 +275,7 @@ describe("api - beacon - publishBlockV2", () => {
         modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(generateProtoBlock({slot: 0}));
         modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
 
-        const api = getBeaconBlockApi(modules);
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
         await api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation});
 
         expect(verifyBlocksInEpoch).toHaveBeenCalledOnce();
@@ -312,7 +314,7 @@ describe("api - beacon - publishBlockV2", () => {
     modules.network.publishBeaconBlock = vi.fn();
     modules.network.publishDataColumnSidecar = vi.fn().mockResolvedValue({sentPeers: 1, alreadyPublished: false});
 
-    const api = getBeaconBlockApi(modules);
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
     await expect(
       api.publishBlockV2({
         signedBlockContents: {signedBlock: block, blobs, kzgProofs},
@@ -352,7 +354,9 @@ describe("api - beacon - publish block size cap", () => {
     signedBlock.message.slot = 1;
     const empty = ssz.capella.SignedBeaconBlock.value_serializedSize(signedBlock);
     // A transaction adds its 4-byte offset and its bytes
-    signedBlock.message.body.executionPayload.transactions = [new Uint8Array(size - empty - 4)];
+    signedBlock.message.body.executionPayload.transactions = SerializedList.fromArray([
+      new Uint8Array(size - empty - 4),
+    ]);
     expect(ssz.capella.SignedBeaconBlock.value_serializedSize(signedBlock)).toBe(size);
     return signedBlock;
   }
@@ -391,7 +395,7 @@ describe("api - beacon - publish block size cap", () => {
   it.each(sizes)("handles a full block %s the limit", async (_, size, accepted) => {
     const signedBlock = blockOfSize(size);
     importInput(signedBlock);
-    const api = getBeaconBlockApi(modules);
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
     await expectOutcome(
       api.publishBlockV2({
         signedBlockContents: {signedBlock},
@@ -414,7 +418,7 @@ describe("api - beacon - publish block size cap", () => {
       fork: ForkName.capella,
       executionPayload: signedBlock.message.body.executionPayload,
     } as ProduceFullBellatrix);
-    const api = getBeaconBlockApi(modules);
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
     await expectOutcome(
       api.publishBlindedBlockV2({signedBlindedBlock, broadcastValidation: routes.beacon.BroadcastValidation.none}),
       accepted,
@@ -427,7 +431,7 @@ describe("api - beacon - publish block size cap", () => {
     importInput(signedBlock);
     const submitBlindedBlock = vi.fn().mockResolvedValue({signedBlock});
     Object.defineProperty(modules.chain, "executionBuilder", {value: {submitBlindedBlock}});
-    const api = getBeaconBlockApi(modules);
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
     await expectOutcome(
       api.publishBlindedBlockV2({
         signedBlindedBlock: signedBeaconBlockToBlinded(config, signedBlock),
