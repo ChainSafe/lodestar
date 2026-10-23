@@ -470,7 +470,7 @@ fn getCommitteeIndicesFromListShuffle(
 
     var cached_hash_input = [_]u8{0} ** (SEED_SIZE + 8);
     @memcpy(cached_hash_input[0..SEED_SIZE], seed);
-    var cached_hash: [Sha256.digest_length]u8 = undefined;
+    var cached_hash: [sha256.digest_length]u8 = undefined;
 
     var i: u32 = 0;
     var count: usize = 0;
@@ -479,7 +479,7 @@ fn getCommitteeIndicesFromListShuffle(
 
         if (i % 16 == 0) {
             std.mem.writeInt(u32, cached_hash_input[SEED_SIZE..][0..4], i / 16, .little);
-            Sha256.hash(&cached_hash_input, &cached_hash, .{});
+            sha256.hash(&cached_hash_input, &cached_hash);
         }
         const random_value: i64 = std.mem.readInt(u16, cached_hash[(i % 16) * 2 ..][0..2], .little);
         if (candidate_index >= effective_balance_increments.len) {
