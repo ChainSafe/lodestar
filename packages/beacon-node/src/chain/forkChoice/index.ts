@@ -92,14 +92,7 @@ export function initializeForkChoiceFromFinalizedState(
 ): ForkChoice {
   const {blockHeader, checkpoint} = state.computeAnchorCheckpoint();
   const finalizedCheckpoint = {...checkpoint};
-  const justifiedCheckpoint = {
-    ...checkpoint,
-    // If not genesis epoch, justified checkpoint epoch must be set to finalized checkpoint epoch + 1
-    // So that we don't allow the chain to initially justify with a block that isn't also finalizing the anchor state.
-    // If that happens, we will create an invalid head state,
-    // with the head not matching the fork choice justified and finalized epochs.
-    epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
-  };
+  const justifiedCheckpoint = {...checkpoint};
 
   const justifiedBalances = state.getEffectiveBalanceIncrementsZeroInactive();
 
