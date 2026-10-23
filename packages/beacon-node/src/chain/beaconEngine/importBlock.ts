@@ -54,7 +54,7 @@ import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
 import {toChainViewBlockBytes} from "./chainView.js";
-import {BeaconEngineEvent, ChainReorg} from "./events.js";
+import {BeaconEngineCoreEvent, ChainReorg} from "./events.js";
 import {ImportBlockResponse} from "./interface.js";
 
 export type VerifiedBlockBundle = {
@@ -509,7 +509,7 @@ export async function importBlock(
     const cp = getCheckpointFromState(checkpointState);
     this.regen.addCheckpointState(cp, checkpointState);
     // consumers should not mutate state ever
-    this.emitter.emit(BeaconEngineEvent.checkpoint, cp);
+    this.engineEmitter.emit(BeaconEngineCoreEvent.checkpoint, cp);
 
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 

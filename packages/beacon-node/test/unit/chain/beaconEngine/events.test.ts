@@ -104,9 +104,7 @@ describe("BeaconEngine event forwarding", () => {
     const coreListener = vi.fn();
     events.on(BeaconEngineEvent.fastConfirmation, coreListener);
 
-    events.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, slot);
     events.emit(BeaconEngineEvent.fatalError, Error("core failed"));
-    events.emit(BeaconEngineEvent.builderRegistered, "https://builder.example.com");
     events.emit(BeaconEngineEvent.proposerSlashingProduced, ssz.phase0.ProposerSlashing.defaultValue());
     events.emit(BeaconEngineEvent.fastConfirmation, {block: root, slot, currentSlot: slot});
     events.emit(BeaconEngineEvent.lightClientOptimisticUpdate, {

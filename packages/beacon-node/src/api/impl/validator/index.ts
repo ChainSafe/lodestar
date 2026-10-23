@@ -281,6 +281,8 @@ export function getValidatorApi(
         builderConfig,
       });
       const {data, meta, produceResult, executionPayloadSource} = unwrapProductionResult(result);
+      // The engine authenticated the winning builder while bidding; publication only submits to registered builders
+      if (meta.builderUrl !== undefined) chain.builderApiClient.registerAuthenticatedBuilder(meta.builderUrl);
       if (chain.opts.persistProducedPayloadEnvelopes && "executionPayloadEnvelope" in data) {
         chain.persistExecutionPayloadEnvelope(data.executionPayloadEnvelope);
       }

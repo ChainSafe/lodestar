@@ -7,12 +7,14 @@ import type {SerializedLightClientData} from "./interface.js";
 // TODO - beacon engine: apply pull model, ie core should not emit events with data
 export enum BeaconEngineEvent {
   fatalError = "fatalError",
-  builderRegistered = "builderRegistered",
-  earliestAvailableSlotUpdated = "earliestAvailableSlotUpdated",
   proposerSlashingProduced = "proposerSlashingProduced",
   fastConfirmation = "fastConfirmation",
   lightClientOptimisticUpdate = "lightClientOptimisticUpdate",
   lightClientFinalityUpdate = "lightClientFinalityUpdate",
+}
+
+/** Core-internal events, never forwarded to BeaconEngine */
+export enum BeaconEngineCoreEvent {
   checkpoint = "checkpoint",
 }
 
@@ -42,14 +44,11 @@ export type ChainReorg<TRoot = RootHex> = {
 export type FastConfirmation = {block: RootHex; slot: Slot; currentSlot: Slot};
 
 export type BeaconEngineEventData = {
-  [BeaconEngineEvent.earliestAvailableSlotUpdated]: Slot;
   [BeaconEngineEvent.fatalError]: Error;
-  [BeaconEngineEvent.builderRegistered]: string;
   [BeaconEngineEvent.proposerSlashingProduced]: phase0.ProposerSlashing;
   [BeaconEngineEvent.fastConfirmation]: FastConfirmation;
   [BeaconEngineEvent.lightClientOptimisticUpdate]: SerializedLightClientData;
   [BeaconEngineEvent.lightClientFinalityUpdate]: SerializedLightClientData;
-  [BeaconEngineEvent.checkpoint]: phase0.Checkpoint;
 };
 
 export type IBeaconEngineEventBus = StrictEventEmitter<
@@ -57,3 +56,9 @@ export type IBeaconEngineEventBus = StrictEventEmitter<
   {[K in BeaconEngineEvent]: (data: BeaconEngineEventData[K]) => void}
 >;
 export class BeaconEngineEventBus extends (EventEmitter as {new (): IBeaconEngineEventBus}) {}
+
+export type IBeaconEngineCoreEventBus = StrictEventEmitter<
+  EventEmitter,
+  {[BeaconEngineCoreEvent.checkpoint]: (cp: phase0.Checkpoint) => void}
+>;
+export class BeaconEngineCoreEventBus extends (EventEmitter as {new (): IBeaconEngineCoreEventBus}) {}

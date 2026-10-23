@@ -136,9 +136,7 @@ export class BeaconEngine implements IBeaconEngine {
     this.beaconEngineWorker = beaconEngineWorker;
     this.logger = logger;
     // TODO - beacon engine: in worker mode, post core notifications to a main-thread event bus.
-    this.core.emitter.on(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.core.emitter.on(BeaconEngineEvent.fatalError, this.onFatalError);
-    this.core.emitter.on(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
     this.core.emitter.on(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
     this.core.emitter.on(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
     this.core.emitter.on(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
@@ -158,9 +156,7 @@ export class BeaconEngine implements IBeaconEngine {
     try {
       await this.core.close();
     } finally {
-      this.core.emitter.off(BeaconEngineEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
       this.core.emitter.off(BeaconEngineEvent.fatalError, this.onFatalError);
-      this.core.emitter.off(BeaconEngineEvent.builderRegistered, this.onBuilderRegistered);
       this.core.emitter.off(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
       this.core.emitter.off(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
       this.core.emitter.off(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
@@ -245,15 +241,6 @@ export class BeaconEngine implements IBeaconEngine {
     }
     return !stale;
   }
-
-  private readonly onEarliestAvailableSlotUpdated = (slot: Slot): void => {
-    this.emitter.emit(ChainEvent.earliestAvailableSlotUpdated, slot);
-  };
-
-  private readonly onBuilderRegistered = (url: string): void => {
-    // Worker transport must deliver registration before resolving production, so publication can use the URL.
-    this.emitter.emit(ChainEvent.builderRegistered, url);
-  };
 
   private readonly onFatalError = (error: Error): void => {
     this.emitter.emit(ChainEvent.fatalError, error);

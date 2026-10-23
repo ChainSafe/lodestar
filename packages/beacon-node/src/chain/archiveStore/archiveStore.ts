@@ -79,7 +79,7 @@ export class ArchiveStore {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
       // Block, state and envelope DB writes are engine-owned; prune through the engine.
-      await callFnWhenAwait(
+      const blockCutoffSlot = await callFnWhenAwait(
         this.chain.beaconEngine.pruneHistory(
           this.opts.anchorState.finalizedCheckpoint.epoch,
           this.chain.clock.currentEpoch
@@ -88,6 +88,7 @@ export class ArchiveStore {
         30_000,
         this.signal
       );
+      this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
     }
   }
 

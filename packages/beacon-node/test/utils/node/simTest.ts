@@ -11,7 +11,7 @@ import {
 import {BeaconBlock, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, mapValues, toRootHex} from "@lodestar/utils";
-import {BeaconEngineEvent} from "../../../src/chain/beaconEngine/events.js";
+import {BeaconEngineCoreEvent} from "../../../src/chain/beaconEngine/events.js";
 import {HeadEventData} from "../../../src/chain/index.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {BeaconNode} from "../../../src/index.js";
@@ -87,11 +87,11 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   }
 
   bn.chain.emitter.on(routes.events.EventType.head, onHead);
-  getBeaconEngineCore(bn.chain.beaconEngine).emitter.on(BeaconEngineEvent.checkpoint, onCheckpoint);
+  getBeaconEngineCore(bn.chain.beaconEngine).engineEmitter.on(BeaconEngineCoreEvent.checkpoint, onCheckpoint);
 
   return function stop() {
     bn.chain.emitter.off(routes.events.EventType.head, onHead);
-    getBeaconEngineCore(bn.chain.beaconEngine).emitter.off(BeaconEngineEvent.checkpoint, onCheckpoint);
+    getBeaconEngineCore(bn.chain.beaconEngine).engineEmitter.off(BeaconEngineCoreEvent.checkpoint, onCheckpoint);
 
     // Write report
     console.log("\nEnd of sim test report\n");

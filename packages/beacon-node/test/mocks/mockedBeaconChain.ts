@@ -8,7 +8,7 @@ import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../src/chain/beaconEngine/beaconEngineCore.js";
-import {BeaconEngineEventBus} from "../../src/chain/beaconEngine/events.js";
+import {BeaconEngineCoreEventBus, BeaconEngineEventBus} from "../../src/chain/beaconEngine/events.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
@@ -241,6 +241,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
         submitBuilderPreferences: vi.fn(),
         submitSignedBeaconBlock: vi.fn(),
+        registerAuthenticatedBuilder: vi.fn(),
         checkStatus: vi.fn().mockResolvedValue(undefined),
       },
       opPool: new OpPool(config as BeaconConfig),
@@ -313,6 +314,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         canAcceptWork: vi.fn().mockReturnValue(true),
       },
       emitter: new BeaconEngineEventBus(),
+      engineEmitter: new BeaconEngineCoreEventBus(),
       forkChoiceVersion: 0,
     };
   });

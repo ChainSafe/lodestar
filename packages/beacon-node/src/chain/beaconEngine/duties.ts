@@ -35,7 +35,7 @@ import {ZERO_HASH} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {CheckpointHex} from "../stateCache/types.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
-import {BeaconEngineEvent} from "./events.js";
+import {BeaconEngineCoreEvent} from "./events.js";
 import {BeaconEngineErrorCode, ProductionError, ProductionResponse} from "./interface.js";
 
 type GetHeadStateAtEpoch = (epoch: Epoch, regenCaller: RegenCaller) => Promise<IBeaconStateView>;
@@ -273,13 +273,13 @@ async function waitForCheckpointState(
       listener = (eventCp) => {
         resolve(ssz.phase0.Checkpoint.equals(eventCp, cp));
       };
-      this.emitter.once(BeaconEngineEvent.checkpoint, listener);
+      this.engineEmitter.once(BeaconEngineCoreEvent.checkpoint, listener);
     }),
     sleep(timeoutMs),
   ]);
 
   if (listener != null) {
-    this.emitter.off(BeaconEngineEvent.checkpoint, listener);
+    this.engineEmitter.off(BeaconEngineCoreEvent.checkpoint, listener);
   }
 
   if (foundCPState === true) {

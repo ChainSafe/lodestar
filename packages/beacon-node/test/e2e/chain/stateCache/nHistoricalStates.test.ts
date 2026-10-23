@@ -6,7 +6,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
-import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
+import {BeaconEngineCoreEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {ReorgEventData} from "../../../../src/chain/emitter.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
 import {ReorgedForkChoice} from "../../../mocks/fork-choice/reorg.js";
@@ -366,8 +366,8 @@ describe("regen/reload states with n-historical states configuration", () => {
       const checkpoints = await Promise.all(
         [reorgedBn, followupBn].map((bn) =>
           waitForEvent<phase0.Checkpoint>(
-            getBeaconEngineCore(bn.chain.beaconEngine).emitter,
-            BeaconEngineEvent.checkpoint,
+            getBeaconEngineCore(bn.chain.beaconEngine).engineEmitter,
+            BeaconEngineCoreEvent.checkpoint,
             (cpSlot + genesisSlotsDelay + 1) * SLOT_DURATION_MS,
             (cp) => cp.epoch === cpEpoch
           )
@@ -405,8 +405,8 @@ describe("regen/reload states with n-historical states configuration", () => {
       const checkpoints2 = await Promise.all(
         [reorgedBn, followupBn].map((bn) =>
           waitForEvent<phase0.Checkpoint>(
-            getBeaconEngineCore(bn.chain.beaconEngine).emitter,
-            BeaconEngineEvent.checkpoint,
+            getBeaconEngineCore(bn.chain.beaconEngine).engineEmitter,
+            BeaconEngineCoreEvent.checkpoint,
             240000,
             (cp) => cp.epoch === 4
           )

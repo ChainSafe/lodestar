@@ -17,9 +17,7 @@ import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelop
  * - Checkpointing: the chain processes epoch boundaries
  */
 export enum ChainEvent {
-  earliestAvailableSlotUpdated = "earliestAvailableSlotUpdated",
   fatalError = "fatalError",
-  builderRegistered = "builderRegistered",
   /**
    * This event signals that the fork choice store has been updated.
    *
@@ -104,9 +102,7 @@ export type ChainEventData = {
 };
 
 export type IChainEvents = ApiEvents & {
-  [ChainEvent.earliestAvailableSlotUpdated]: (slot: Slot) => void;
   [ChainEvent.fatalError]: (error: Error) => void;
-  [ChainEvent.builderRegistered]: (url: string) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: FinalizedCheckpointSnapshot & {rootHex: RootHex}) => void;

@@ -6,7 +6,7 @@ import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconStateView, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
+import {BeaconEngineCoreEvent, BeaconEngineCoreEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {RegenCaller} from "../../../../src/chain/regen/interface.js";
 import {processSlotsToNearestCheckpoint} from "../../../../src/chain/regen/regen.js";
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/fifoBlockStateCache.js";
@@ -101,11 +101,11 @@ describe("regen", () => {
       // no state is persisted at the  beginning
       expect(fileApisBuffer.size).toEqual(0);
 
-      const emitter = new BeaconEngineEventBus();
+      const emitter = new BeaconEngineCoreEventBus();
       const onCheckpoint = vi.fn((checkpoint: phase0.Checkpoint) => {
         expect(cache.get({epoch: checkpoint.epoch, rootHex: toRootHex(checkpoint.root)})?.slot).toBe(startSlotEpoch22);
       });
-      emitter.on(BeaconEngineEvent.checkpoint, onCheckpoint);
+      emitter.on(BeaconEngineCoreEvent.checkpoint, onCheckpoint);
       const modules = {
         config,
         checkpointStateCache: cache,

@@ -973,6 +973,8 @@ describe("bytes-based engine startup", () => {
         new Uint8Array(32),
         new Uint8Array(48)
       );
+      // produceBlockV4 registers the winning meta.builderUrl
+      chain.builderApiClient.registerAuthenticatedBuilder(bidUrl);
       await chain.builderApiClient.submitSignedBeaconBlock(bidUrl, {data: ssz.gloas.SignedBeaconBlock.defaultValue()});
       expect(chainBls).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
       expect(engineBls).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 2);
@@ -1002,24 +1004,8 @@ describe("bytes-based engine startup", () => {
       expect(beaconEngineWorker ? engineText : facadeText).not.toContain(preferenceMetric);
       expect(beaconEngineWorker ? engineText : facadeText).not.toContain(blockMetric);
       await chain.close();
-      expect(core.emitter.listenerCount(BeaconEngineEvent.builderRegistered)).toBe(0);
-      expect(chain.emitter.listenerCount(ChainEvent.builderRegistered)).toBe(0);
     }
   );
-
-  it("starts with the persisted serving floor and advances it monotonically from engine events", async () => {
-    const dependencies = await initializeTestChain(opts, modules);
-    chain = new BeaconChain(opts, {...dependencies, earliestAvailableSlot: 10});
-    if (!engine) throw Error("Expected initialized engine");
-    expect(chain.earliestAvailableSlot).toBe(10);
-    engine.emitter.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 20);
-    engine.emitter.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 15);
-    expect(chain.earliestAvailableSlot).toBe(20);
-    await chain.close();
-    engine.emitter.emit(BeaconEngineEvent.earliestAvailableSlotUpdated, 30);
-    chain.emitter.emit(ChainEvent.earliestAvailableSlotUpdated, 40);
-    expect(chain.earliestAvailableSlot).toBe(20);
-  });
 
   it("waits for the startup snapshot before constructing the chain and forwarding clock ticks", async () => {
     const snapshotTaken = defer<Awaited<ReturnType<BeaconEngineCore["getChainViewSnapshot"]>>>();

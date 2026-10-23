@@ -8,7 +8,7 @@ import {fromHex, toRootHex} from "@lodestar/utils";
 import {SYNC_TOLERANCE_EPOCHS} from "../../../../../../src/api/impl/utils.js";
 import {getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
-import {BeaconEngineEvent} from "../../../../../../src/chain/beaconEngine/events.js";
+import {BeaconEngineCoreEvent} from "../../../../../../src/chain/beaconEngine/events.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
 import {SyncState} from "../../../../../../src/sync/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
@@ -110,15 +110,18 @@ describe("get proposers api impl", () => {
     const core = modules.chain.beaconEngine;
     modules.chain.regen.getCheckpointStateSync.mockReturnValue(null);
     const result = core.getProposerDuties(nextEpoch + 1, {currentEpoch, checkpointWaitTimeoutMs: 1000}, true);
-    expect(core.emitter.listenerCount(BeaconEngineEvent.checkpoint)).toBe(1);
+    expect(core.engineEmitter.listenerCount(BeaconEngineCoreEvent.checkpoint)).toBe(1);
 
     modules.chain.regen.getCheckpointStateSync.mockReturnValue(new BeaconStateView(cachedState));
-    core.emitter.emit(BeaconEngineEvent.checkpoint, {epoch: nextEpoch, root: fromHex(zeroProtoBlock.blockRoot)});
+    core.engineEmitter.emit(BeaconEngineCoreEvent.checkpoint, {
+      epoch: nextEpoch,
+      root: fromHex(zeroProtoBlock.blockRoot),
+    });
 
     expect((await result).data.map((duty) => duty.slot)).toEqual(
       Array.from({length: SLOTS_PER_EPOCH}, (_, i) => (nextEpoch + 1) * SLOTS_PER_EPOCH + i)
     );
-    expect(core.emitter.listenerCount(BeaconEngineEvent.checkpoint)).toBe(0);
+    expect(core.engineEmitter.listenerCount(BeaconEngineCoreEvent.checkpoint)).toBe(0);
   });
 
   it("should raise error if node head is behind", async () => {

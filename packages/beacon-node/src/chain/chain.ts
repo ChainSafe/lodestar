@@ -273,9 +273,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.clock = clock;
     this.emitter = emitter;
-    this.emitter.on(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.on(ChainEvent.fatalError, this.onEngineFatalError);
-    if (!modules.builderApiClient) this.emitter.on(ChainEvent.builderRegistered, this.onBuilderRegistered);
 
     this.getBlobsTracker = new GetBlobsTracker({
       logger,
@@ -336,10 +334,6 @@ export class BeaconChain implements IBeaconChain {
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
   }
 
-  private onEarliestAvailableSlotUpdated = (slot: Slot): void => {
-    this.earliestAvailableSlot = Math.max(this.earliestAvailableSlot, slot);
-  };
-
   async init(): Promise<void> {
     await this.archiveStore.init();
     await this.loadFromDisk();
@@ -351,9 +345,7 @@ export class BeaconChain implements IBeaconChain {
     // Engine owns teardown of its resources (historical-state regen + BLS pool).
     await this.beaconEngine.close();
     await this.bls.close();
-    this.emitter.off(ChainEvent.earliestAvailableSlotUpdated, this.onEarliestAvailableSlotUpdated);
     this.emitter.off(ChainEvent.fatalError, this.onEngineFatalError);
-    this.emitter.off(ChainEvent.builderRegistered, this.onBuilderRegistered);
 
     // Since we don't persist unfinalized fork-choice,
     // we can abort any ongoing unfinalized block writes.
@@ -739,10 +731,6 @@ export class BeaconChain implements IBeaconChain {
       earliestAvailableSlot: this._earliestAvailableSlot,
     };
   }
-
-  private onBuilderRegistered = (url: string): void => {
-    this.builderApiClient.registerAuthenticatedBuilder(url);
-  };
 
   private onEngineFatalError = (error: Error): void => {
     this.processShutdownCallback(error);

@@ -226,7 +226,13 @@ import {
   produceAttestationData,
   produceSyncCommitteeContribution,
 } from "./duties.js";
-import {BeaconEngineEvent, BeaconEngineEventBus, HeadUpdate} from "./events.js";
+import {
+  BeaconEngineCoreEvent,
+  BeaconEngineCoreEventBus,
+  BeaconEngineEvent,
+  BeaconEngineEventBus,
+  HeadUpdate,
+} from "./events.js";
 import {
   validateApiAggregateAndProof,
   validateApiAttestation,
@@ -373,6 +379,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   checkpointStateCache!: CheckpointStateCache;
   readonly checkpointBalancesCache = new CheckpointBalancesCache();
   readonly emitter = new BeaconEngineEventBus();
+  readonly engineEmitter = new BeaconEngineCoreEventBus();
   private reportedIrrecoverableError?: Error;
   /** Bumped on every head, justified or finalized change; lets views and responses be ordered */
   forkChoiceVersion = 0;
@@ -808,7 +815,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       metrics,
       validatorMonitor: this.validatorMonitor,
       logger,
-      emitter: this.emitter,
+      emitter: this.engineEmitter,
       signal,
     });
 
@@ -820,7 +827,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
 
     this.signal.addEventListener("abort", this.onValidatorMonitorAbort, {once: true});
-    this.emitter.on(BeaconEngineEvent.checkpoint, this.checkpointListener);
+    this.engineEmitter.on(BeaconEngineCoreEvent.checkpoint, this.checkpointListener);
 
     this.builderCircuitBreaker = new BuilderCircuitBreaker(this.opts, {
       forkChoice: this.forkChoice,
@@ -833,10 +840,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
       this.clock,
       this.bls,
       this.metrics,
-      this.logger,
-      (url) => {
-        this.emitter.emit(BeaconEngineEvent.builderRegistered, url);
-      }
+      this.logger
     );
   }
 
@@ -2796,7 +2800,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.signal.removeEventListener("abort", this.onValidatorMonitorAbort);
     await this.pendingPersistence?.catch(() => {});
     this.pendingPersistence = undefined;
-    this.emitter?.off(BeaconEngineEvent.checkpoint, this.checkpointListener);
+    this.engineEmitter.off(BeaconEngineCoreEvent.checkpoint, this.checkpointListener);
     try {
       await this.historicalStateRegen?.close();
       await this.bls?.close();

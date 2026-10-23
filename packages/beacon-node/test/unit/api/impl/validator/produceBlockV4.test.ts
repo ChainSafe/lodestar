@@ -314,6 +314,7 @@ describe("api/validator - produceBlockV4", () => {
     // The bid block commits to the builder API bid since its boosted total (2) beats the p2p bid (1)
     expect(produceFull).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
     expect(block).toEqual(bidBlock);
+    expect(modules.chain.builderApiClient.registerAuthenticatedBuilder).toHaveBeenCalledExactlyOnceWith(builderUrl);
   });
 
   it("counts a builder API bid's execution payment only up to its entry cap", async () => {
