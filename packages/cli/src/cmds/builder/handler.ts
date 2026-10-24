@@ -6,9 +6,8 @@ import {
   collectNodeJSMetrics,
   defaultExecutionEngineHttpOpts,
   getHttpMetricsServer,
-  initializeExecutionEngine,
 } from "@lodestar/beacon-node";
-import {Builder, EnginePayloadResult, EnginePayloadSource, getMetrics} from "@lodestar/builder";
+import {Builder, EnginePayloadSource, getMetrics} from "@lodestar/builder";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
@@ -22,6 +21,7 @@ import {
   parseLoggerArgs,
 } from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
+import {createPayloadSourceEngine} from "./engine.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs, builderMetricsDefaultOptions} from "./options.js";
 
@@ -89,41 +89,20 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     throw Error("Exactly one execution client url is required");
   }
   const executionUrl = args["execution.urls"][0];
-  const engine = initializeExecutionEngine(
-    {
-      mode: "http",
-      urls: [executionUrl],
-      timeout: args["execution.timeout"] ?? defaultExecutionEngineHttpOpts.timeout,
-      retries: args["execution.retries"],
-      retryDelay: args["execution.retryDelay"],
-      jwtSecretHex: args["execution.jwtSecret"]
-        ? extractJwtHexSecret(fs.readFileSync(args["execution.jwtSecret"], "utf-8").trim())
-        : undefined,
-      version,
-      commit,
-    },
-    {signal: abortController.signal, logger}
-  );
-  const payloadSource = new EnginePayloadSource(toPrintableUrl(executionUrl), {
-    notifyForkchoiceUpdate: async (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) => {
-      try {
-        return await engine.notifyForkchoiceUpdate(
-          fork,
-          headBlockHash,
-          safeBlockHash,
-          finalizedBlockHash,
-          payloadAttributes
-        );
-      } catch (e) {
-        // Only retry while the execution client is syncing, it has not imported the parent payload yet.
-        // The engine interface does not expose the fcU status, this matches the error thrown for the SYNCING status
-        // in ExecutionEngineHttp.notifyForkchoiceUpdate until a typed error is added to the beacon node
-        if (e instanceof Error && e.message === "Execution Layer Syncing") return null;
-        throw e;
-      }
-    },
-    getPayload: async (fork, payloadId) => (await engine.getPayload(fork, payloadId)) as EnginePayloadResult,
+  const engine = createPayloadSourceEngine({
+    url: executionUrl,
+    timeout: args["execution.timeout"] ?? defaultExecutionEngineHttpOpts.timeout,
+    retries: args["execution.retries"],
+    retryDelay: args["execution.retryDelay"],
+    jwtSecret: args["execution.jwtSecret"]
+      ? fromHex(extractJwtHexSecret(fs.readFileSync(args["execution.jwtSecret"], "utf-8").trim()))
+      : undefined,
+    version,
+    commit,
+    signal: abortController.signal,
+    logger,
   });
+  const payloadSource = new EnginePayloadSource(toPrintableUrl(executionUrl), engine);
 
   const builder = await Builder.init({
     keypair,

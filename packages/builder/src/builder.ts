@@ -1,9 +1,8 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
-import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
@@ -22,12 +21,6 @@ import {PayloadSource} from "./services/payloadSource.js";
 import {PayloadStore} from "./services/payloadStore.js";
 import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
 import {Revealer} from "./services/revealer.js";
-
-// Payments of won bids are assumed to be reflected in the builder balance after this many slots.
-// The payment is queued as a builder withdrawal at the epoch transition after the bid epoch and only debited once that
-// withdrawal is processed, so with a backlog of withdrawals the ledger releases the reservation before the balance drops.
-// Reconciling against the pending payments and pending withdrawals of the state is a follow-up.
-const PAYMENT_SETTLEMENT_SLOTS = 3 * SLOTS_PER_EPOCH;
 
 export type BuilderModules = {
   opts: BuilderOptions;
@@ -83,6 +76,7 @@ export class Builder {
   private readonly ledger: BidLedger;
   private readonly bidder: Bidder;
   private readonly revealer: Revealer;
+  private connectionGeneration = 0;
 
   constructor({
     opts,
@@ -128,6 +122,14 @@ export class Builder {
   }
 
   static async init(opts: BuilderOptions): Promise<Builder> {
+    opts.abortController.signal.throwIfAborted();
+    for (const [option, value] of [
+      ["bidding.deadlineBps", opts.bidding.deadlineBps],
+      ["reveal.cutoffBps", opts.reveal.cutoffBps ?? opts.config.PAYLOAD_ATTESTATION_DUE_BPS],
+    ] as const) {
+      if (!Number.isSafeInteger(value) || value <= 0 || value >= 10_000)
+        throw new LodestarError({code: "BUILDER_ERROR_INVALID_OPTIONS", option, value});
+    }
     const {api, logger} = opts;
     const genesis = await waitForGenesis(api, logger, opts.abortController.signal);
     logger.info("Genesis fetched from the beacon node", {
@@ -155,13 +157,18 @@ export class Builder {
       config
     );
 
+    opts.abortController.signal.throwIfAborted();
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
     await builderStatusTracker.poll(clock.getCurrentEpoch());
-    const blockObserver = new BlockObserver(config, logger, api);
+    opts.abortController.signal.throwIfAborted();
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
 
     const payloadStore = new PayloadStore();
     const ledger = new BidLedger();
+    const blockObserver = new BlockObserver(config, logger, api, {
+      builderIndex: index,
+      hasBidForSlot: (slot) => ledger.getBidsForSlot(slot).length > 0,
+    });
     const signal = opts.abortController.signal;
 
     const bidder = new Bidder(
@@ -170,11 +177,8 @@ export class Builder {
         logger,
         clock,
         api,
-        orchestrator: new PayloadOrchestrator(
-          opts.payloadSource,
-          {getPayloadTimeout: opts.bidding.getPayloadTimeout},
-          signal
-        ),
+        createOrchestrator: (signal) =>
+          new PayloadOrchestrator(opts.payloadSource, {getPayloadTimeout: opts.bidding.getPayloadTimeout}, signal),
         payloadStore,
         ledger,
         policy: new ProportionalBidPolicy(opts.bidding),
@@ -229,7 +233,6 @@ export class Builder {
   private async onSlot(slot: number): Promise<void> {
     this.payloadStore.prune(slot);
     this.proposerPreferencesTracker.prune(slot);
-    this.ledger.settlePaymentsBefore(slot - PAYMENT_SETTLEMENT_SLOTS);
     this.ledger.prune(slot);
   }
 
@@ -253,10 +256,16 @@ export class Builder {
         onOpen: () => {
           void this.fetchProposerPreferences(api);
         },
+        onDisconnect: () => {
+          this.connectionGeneration++;
+          this.bidder.invalidateInputs();
+        },
         onError: (error) => {
           if (!signal.aborted) this.logger.error("Failed to receive builder event", {topics: topics.join(",")}, error);
         },
         onClose: () => {
+          this.connectionGeneration++;
+          this.bidder.invalidateInputs();
           if (signal.aborted) {
             this.logger.verbose("Closed builder event stream", {topics: topics.join(",")});
           } else {
@@ -281,9 +290,11 @@ export class Builder {
    */
   private async fetchProposerPreferences(api: ApiClient): Promise<void> {
     const signal = this.controller.signal;
+    const generation = this.connectionGeneration;
 
     try {
       const preferences = (await api.beacon.getProposerPreferences({}, {signal})).value();
+      if (signal.aborted || generation !== this.connectionGeneration) return;
       for (const signedProposerPreferences of preferences) {
         // Does not replace preferences already received from the event stream
         this.proposerPreferencesTracker.onProposerPreferences(signedProposerPreferences);
@@ -297,6 +308,13 @@ export class Builder {
           error instanceof Error ? error : Error(String(error))
         );
       }
+      return;
+    }
+    try {
+      await this.bidder.onPreferences();
+    } catch (error) {
+      if (!signal.aborted && !isErrorAborted(error))
+        this.logger.error("Failed to resume bidding after preference recovery", {}, error as Error);
     }
   }
 
@@ -311,6 +329,7 @@ export class Builder {
           break;
         case routes.events.EventType.proposerPreferences:
           this.proposerPreferencesTracker.onProposerPreferences(event.message.data);
+          await this.bidder.onPreferences();
           break;
         case routes.events.EventType.payloadAttributes:
           await this.bidder.onPayloadAttributes(event.message);
