@@ -226,7 +226,7 @@ describe("BidLedger", () => {
     expect(ledger.recordBid({...bid, slot: bid.slot + 1}).slot).toBe(bid.slot + 1);
   });
 
-  it("settles payments of bids won before a slot", () => {
+  it("retains old wins until the exact payment is settled", () => {
     const ledger = new BidLedger();
     const settled = submittedBid();
     const unsettled = {...submittedBid(), slot: settled.slot + 1};
@@ -236,10 +236,12 @@ describe("BidLedger", () => {
     ledger.recordWin(unsettled, root(7));
     expect(ledger.getUnsettledValueGwei(0)).toBe(settled.valueGwei + unsettled.valueGwei);
 
-    ledger.settlePaymentsBefore(unsettled.slot);
+    ledger.prune(unsettled.slot + 3 * SLOTS_PER_EPOCH + 1);
+    expect(ledger.getUnsettledValueGwei(0)).toBe(settled.valueGwei + unsettled.valueGwei);
+    ledger.recordPaymentSettled(settled);
 
     expect(ledger.getUnsettledValueGwei(0)).toBe(unsettled.valueGwei);
-    expect(ledger.prune(unsettled.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(2);
+    expect(ledger.prune(unsettled.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(1);
     expect(ledger.getBidsForSlot(unsettled.slot)).toHaveLength(1);
   });
 

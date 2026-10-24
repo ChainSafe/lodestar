@@ -2,6 +2,7 @@ import {fastify} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {Logger} from "@lodestar/logger";
 import {BYTES_PER_FIELD_ELEMENT, CELLS_PER_EXT_BLOB, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {
@@ -183,6 +184,33 @@ describe("ExecutionEngine / http", () => {
 
     expect(reqJsonRpcPayload).toMatchObject({method: "engine_forkchoiceUpdatedV5"});
     expect(result).toBeNull();
+  });
+
+  it("preserves Heze inclusion list transactions in forkchoice updates", async () => {
+    const hash = toHex(new Uint8Array(32));
+    const attributes = {
+      ...ssz.gloas.PayloadAttributes.defaultValue(),
+      inclusionListTransactions: ssz.bellatrix.Transactions.fromJson(["0x0102"]),
+    };
+    returnValue = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: {payloadStatus: {status: "VALID", latestValidHash: hash, validationError: null}, payloadId: "0x01"},
+    };
+
+    await executionEngine.notifyForkchoiceUpdate(ForkName.heze, hash, hash, hash, attributes);
+
+    expect(reqJsonRpcPayload).toMatchObject({
+      method: "engine_forkchoiceUpdatedV5",
+      params: [expect.any(Object), expect.objectContaining({inclusionListTransactions: ["0x0102"]})],
+    });
+  });
+
+  it("fetches inclusion lists through the shared request queue", async () => {
+    returnValue = {jsonrpc: "2.0", id: 67, result: ["0x0102", "0x03"]};
+
+    expect(ssz.bellatrix.Transactions.toJson(await executionEngine.getInclusionList())).toEqual(["0x0102", "0x03"]);
+    expect(reqJsonRpcPayload).toEqual({jsonrpc: "2.0", method: "engine_getInclusionListV1", params: []});
   });
 
   it("getPayloadBodiesByHashV2", async () => {
