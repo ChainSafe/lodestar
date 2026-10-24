@@ -67,11 +67,8 @@ export function createBiddingModules({
       logger,
       clock,
       api,
-      orchestrator: new PayloadOrchestrator(
-        payloadSource,
-        {getPayloadTimeout: biddingOptions.getPayloadTimeout},
-        signal
-      ),
+      createOrchestrator: (signal) =>
+        new PayloadOrchestrator(payloadSource, {getPayloadTimeout: biddingOptions.getPayloadTimeout}, signal),
       payloadStore,
       ledger,
       policy: new ProportionalBidPolicy(biddingOptions),

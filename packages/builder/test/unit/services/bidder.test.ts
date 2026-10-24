@@ -3,11 +3,12 @@ import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
-import {BuilderStatus, ssz} from "@lodestar/types";
+import {BuilderStatus, gloas, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {Bidder, PayloadAttributesEvent} from "../../../src/services/bidder.js";
+import {Bidder} from "../../../src/services/bidder.js";
 import {BidLedger} from "../../../src/services/bidLedger.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
+import {BuiltPayload} from "../../../src/services/payloadSource.js";
 import {PayloadStore} from "../../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
@@ -91,7 +92,7 @@ describe("Bidder", () => {
     proposerPreferencesTracker.onProposerPreferences(preferences);
   }
 
-  function payloadAttributesEvent(): PayloadAttributesEvent {
+  function payloadAttributesEvent(): {version: ForkName.gloas; data: gloas.SSEPayloadAttributes} {
     const data = ssz.gloas.SSEPayloadAttributes.defaultValue();
     data.proposalSlot = slot;
     data.parentBlockRoot = parentBlockRoot;
@@ -99,6 +100,8 @@ describe("Bidder", () => {
     data.safeBlockHash = Buffer.alloc(32, 2);
     data.finalizedBlockHash = Buffer.alloc(32, 3);
     data.payloadAttributes.prevRandao = prevRandao;
+    data.payloadAttributes.slotNumber = slot;
+    data.payloadAttributes.parentBeaconBlockRoot = parentBlockRoot;
     data.payloadAttributes.targetGasLimit = 30_000_000n;
     return {version: ForkName.gloas, data};
   }
@@ -207,5 +210,114 @@ describe("Bidder", () => {
     await vi.advanceTimersByTimeAsync(msToDeadline);
     await retry;
     expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+  });
+
+  it("wakes a pending build when preferences arrive", async () => {
+    const {bidder} = createBidder();
+    await bidder.onPayloadAttributes(payloadAttributesEvent());
+    addProposerPreferences();
+    const resumed = bidder.onPreferences();
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await resumed;
+    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+  });
+
+  it.each(["slot", "parent"] as const)("rejects inconsistent %s attributes before building", async (field) => {
+    addProposerPreferences();
+    const {bidder} = createBidder();
+    const event = payloadAttributesEvent();
+    if (field === "slot") event.data.payloadAttributes.slotNumber++;
+    else event.data.payloadAttributes.parentBeaconBlockRoot = Buffer.alloc(32, 99);
+    await bidder.onPayloadAttributes(event);
+    expect(payloadSource.prepare).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledOnce();
+  });
+
+  it.each(["parent", "fork", "value"] as const)(
+    "rejects a mismatched payload %s before retaining or signing",
+    async (field) => {
+      addProposerPreferences();
+      const {bidder} = createBidder();
+      const payload: BuiltPayload = {
+        ...mockBuiltPayload({slot, parentHash: parentBlockHash, prevRandao}),
+        fork: ForkName.gloas,
+      };
+      if (field === "parent") payload.executionPayload.parentHash = Buffer.alloc(32, 99);
+      else if (field === "fork") payload.fork = ForkName.heze;
+      else payload.executionPayloadValue = (BigInt(Number.MAX_SAFE_INTEGER) + 1n) * 1_000_000_000n;
+      payloadSource.getPayload.mockResolvedValue(payload);
+      const bidding = bidder.onPayloadAttributes(payloadAttributesEvent());
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+      expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+      expect(payloadStore.has(toRootHex(payload.executionPayload.blockHash))).toBe(false);
+      expect(logger.error).toHaveBeenCalledOnce();
+    }
+  );
+
+  it("rejects an unsafe Builder balance", async () => {
+    addProposerPreferences();
+    const {bidder} = createBidder(() => ({status: "active", balance: Number.MAX_SAFE_INTEGER + 1}));
+    const bidding = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await bidding;
+    expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledOnce();
+  });
+
+  it("drops pending inputs after a disconnect", async () => {
+    const {bidder} = createBidder();
+    await bidder.onPayloadAttributes(payloadAttributesEvent());
+    bidder.invalidateInputs();
+    addProposerPreferences();
+    await bidder.onPreferences();
+    expect(payloadSource.prepare).not.toHaveBeenCalled();
+  });
+
+  it("cancels an obsolete generation without cancelling a fresh attempt", async () => {
+    addProposerPreferences();
+    const {bidder} = createBidder();
+    const obsolete = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(1);
+    const oldSignal = payloadSource.prepare.mock.calls[0][1];
+    bidder.invalidateInputs();
+    expect(oldSignal.aborted).toBe(true);
+    const current = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await Promise.all([obsolete, current]);
+    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the dependent root for distinct parent branches within an epoch", async () => {
+    addProposerPreferences();
+    const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+    preferences.message.proposalSlot = slot;
+    preferences.message.dependentRoot = Buffer.alloc(32, 8);
+    preferences.message.targetGasLimit = 50_000_000n;
+    proposerPreferencesTracker.onProposerPreferences(preferences);
+    api.validator.getProposerDutiesV2
+      .mockResolvedValueOnce(mockApiResponse({data: [], meta: {executionOptimistic: false, dependentRoot}}))
+      .mockResolvedValueOnce(
+        mockApiResponse({
+          data: [],
+          meta: {
+            executionOptimistic: false,
+            dependentRoot: toRootHex(preferences.message.dependentRoot),
+          },
+        })
+      );
+    const {bidder} = createBidder();
+    const other = payloadAttributesEvent();
+    other.data.parentBlockRoot = Buffer.alloc(32, 9);
+    other.data.payloadAttributes.parentBeaconBlockRoot = other.data.parentBlockRoot;
+    const attempts = [bidder.onPayloadAttributes(payloadAttributesEvent()), bidder.onPayloadAttributes(other)];
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await Promise.all(attempts);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+    expect(payloadSource.prepare.mock.calls.map(([request]) => request.payloadAttributes.targetGasLimit)).toEqual([
+      60_000_000n,
+      50_000_000n,
+    ]);
   });
 });

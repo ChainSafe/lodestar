@@ -1,10 +1,10 @@
-import {beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {TimeoutError, toRootHex} from "@lodestar/utils";
 import {BidLedger} from "../../../src/services/bidLedger.js";
 import {ObservedBlock} from "../../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
@@ -28,13 +28,16 @@ describe("Revealer", () => {
   let payloadStore: PayloadStore;
   let ledger: BidLedger;
   let revealer: Revealer;
+  let controller: AbortController;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     api = getApiClientStub();
     api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
     logger = getMockedLogger();
     clock = new ClockMock();
     payloadStore = new PayloadStore();
+    controller = new AbortController();
     const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
     ({ledger, revealer} = createBiddingModules({
       api,
@@ -48,9 +51,14 @@ describe("Revealer", () => {
       proposerPreferencesTracker: new ProposerPreferencesTracker(),
       payloadStore,
       payloadSource: getPayloadSourceStub(),
-      signal: new AbortController().signal,
+      signal: controller.signal,
       index: builderIndex,
     }));
+  });
+
+  afterEach(() => {
+    controller.abort();
+    vi.useRealTimers();
   });
 
   /** Block that selected a bid for a payload, optionally recorded as our bid and retained */
@@ -153,5 +161,58 @@ describe("Revealer", () => {
 
     await expect(revealer.onBlock(observed)).rejects.toThrow();
     expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+  });
+
+  it("reveals an early block instead of discarding it", async () => {
+    const observed = selectedBlock();
+    vi.spyOn(clock, "msFromSlot").mockReturnValue(-200);
+    await revealer.onBlock(observed);
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+  });
+
+  it("retries the same envelope within the reveal window", async () => {
+    const observed = selectedBlock();
+    api.beacon.publishExecutionPayloadEnvelope.mockRejectedValueOnce(new TimeoutError("request"));
+    const publishing = revealer.onBlock(observed);
+    await vi.advanceTimersByTimeAsync(100);
+    await publishing;
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
+    const [first, second] = api.beacon.publishExecutionPayloadEnvelope.mock.calls;
+    expect(second[0]).toEqual(first[0]);
+    expect(ledger.getUnsettledValueGwei(0)).toBe(5);
+  });
+
+  it("does not retry permanent errors", async () => {
+    const observed = selectedBlock();
+    const error = new Error("invalid envelope");
+    api.beacon.publishExecutionPayloadEnvelope.mockRejectedValue(error);
+    await expect(revealer.onBlock(observed)).rejects.toBe(error);
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+  });
+
+  it("stops retry backoff on shutdown without releasing the win", async () => {
+    const observed = selectedBlock();
+    api.beacon.publishExecutionPayloadEnvelope.mockRejectedValue(new TimeoutError("request"));
+    const result = expect(revealer.onBlock(observed)).rejects.toThrow();
+    await vi.advanceTimersByTimeAsync(1);
+    controller.abort();
+    await result;
+    await vi.advanceTimersByTimeAsync(200);
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+    expect(ledger.getUnsettledValueGwei(0)).toBe(5);
+  });
+
+  it("does not send another retry after the cutoff", async () => {
+    const observed = selectedBlock();
+    const cutoff = config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS);
+    const fromSlot = vi.spyOn(clock, "msFromSlot").mockReturnValue(cutoff - 50);
+    api.beacon.publishExecutionPayloadEnvelope.mockRejectedValue(new TimeoutError("request"));
+    const publishing = revealer.onBlock(observed);
+    await vi.advanceTimersByTimeAsync(1);
+    fromSlot.mockReturnValue(cutoff);
+    await vi.advanceTimersByTimeAsync(50);
+    await publishing;
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+    expect(ledger.getUnsettledValueGwei(0)).toBe(5);
   });
 });
