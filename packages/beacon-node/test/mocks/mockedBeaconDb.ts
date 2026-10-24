@@ -96,10 +96,12 @@ vi.mock("../../src/db/index.js", async (importActual) => {
   };
 });
 
+const mockedDbLogger = testLogger();
+
 export function getMockedBeaconDb(): MockedBeaconDb {
   return new BeaconDb(minimalConfig, {} as Db, {
     dataColumnDir: "data_columns",
-    logger: testLogger(),
+    logger: mockedDbLogger,
   }) as MockedBeaconDb;
 }
 

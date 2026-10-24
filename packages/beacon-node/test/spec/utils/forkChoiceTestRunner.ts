@@ -88,6 +88,11 @@ const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 const PAYLOAD_ATTESTATION_MESSAGE_FILE_NAME = "^(payload_attestation_message)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
+// Created once, not per test case: every `testLogger()` registers a process `uncaughtException` listener
+// through winston and every `getMockedBeaconDb()` registers ~90 `vi.fn()` mocks in vitest's global mock
+// registry. Neither is ever released, which OOMs the single worker running the 10k-case comptest suite.
+const executionEngineLogger = testLogger("executionEngine");
+const mockedDb = getMockedBeaconDb();
 
 export const forkChoiceTestRunner =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
@@ -115,7 +120,7 @@ export const forkChoiceTestRunner =
         const controller = new AbortController();
         const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
           signal: controller.signal,
-          logger: testLogger("executionEngine"),
+          logger: executionEngineLogger,
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
@@ -152,7 +157,7 @@ export const forkChoiceTestRunner =
             privateKey: await generateKeyPair("secp256k1"),
             config: beaconConfig,
             pubkeyCache,
-            db: getMockedBeaconDb(),
+            db: mockedDb,
             dataDir: ".",
             dbName: ",",
             logger,
