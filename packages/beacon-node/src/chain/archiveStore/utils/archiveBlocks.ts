@@ -57,6 +57,17 @@ async function persistOrphanedBlock(
 }
 
 /**
+ * Oldest epoch for which data column sidecars are kept
+ */
+export function getDataColumnSidecarsMinEpoch(
+  config: ChainForkConfig,
+  currentEpoch: Epoch,
+  archiveDataEpochs?: number
+): Epoch {
+  return Math.min(getBlobDataRetentionStartEpoch(config, currentEpoch), currentEpoch - (archiveDataEpochs ?? 0));
+}
+
+/**
  * Archives finalized blocks from active bucket to archive bucket.
  *
  * Only archive blocks on the same chain to the finalized checkpoint.
@@ -132,7 +143,9 @@ export async function archiveBlocks(
       slotRange: prettyPrintIndices(migratedSlots),
     });
 
-    if (finalizedPostDeneb) {
+    // Blob sidecars only exist for pre-fulu blocks, the oldest block is the previous finalized block
+    const oldestSlot = finalizedCanonicalBlockRoots.at(-1)?.slot ?? 0;
+    if (finalizedPostDeneb && oldestSlot < computeStartSlotAtEpoch(config.FULU_FORK_EPOCH)) {
       const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
         config,
         db,
@@ -243,9 +256,10 @@ export async function archiveBlocks(
       const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs ?? 0);
       const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
-        const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
+        // No blob sidecars are stored after fulu, once all of them are pruned the next prunes are no-ops
+        const blobsPruneEpoch = Math.min(blobSidecarsMinEpoch, config.FULU_FORK_EPOCH);
+        const slotsToDelete = await db.blobSidecarsArchive.pruneBefore(computeStartSlotAtEpoch(blobsPruneEpoch));
         if (slotsToDelete.length > 0) {
-          await db.blobSidecarsArchive.batchDelete(slotsToDelete);
           logger.verbose(`blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`, logCtx);
         } else {
           logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`, logCtx);
@@ -260,10 +274,7 @@ export async function archiveBlocks(
   // Keep only `[min(compute_blob_data_retention_start_epoch(current_epoch), current_epoch - archiveDataEpochs)]`
   if (finalizedPostFulu) {
     if (archiveDataEpochs !== Infinity) {
-      const dataColumnSidecarsMinEpoch = Math.min(
-        getBlobDataRetentionStartEpoch(config, currentEpoch),
-        currentEpoch - (archiveDataEpochs ?? 0)
-      );
+      const dataColumnSidecarsMinEpoch = getDataColumnSidecarsMinEpoch(config, currentEpoch, archiveDataEpochs);
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
         const columnsPruneSlot = computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch);
         const prunedColumnSlots = await db.dataColumns.pruneBefore(columnsPruneSlot);
