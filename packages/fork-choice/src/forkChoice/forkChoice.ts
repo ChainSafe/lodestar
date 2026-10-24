@@ -849,13 +849,16 @@ export class ForkChoice implements IForkChoice {
     const blockEpoch = computeEpochAtSlot(slot);
 
     // same logic to compute_pulled_up_tip in the spec, making it inline because of reusing variables
-    // If the parent checkpoints are already at the same epoch as the block being imported,
-    // it's impossible for the unrealized checkpoints to differ from the parent's. This
-    // holds true because:
+    // If the block has no slashings and the parent checkpoints are already at the same epoch as the
+    // block being imported, it's impossible for the unrealized checkpoints to differ from the parent's.
+    // This holds true because:
     //
     // 1. A child block cannot have lower FFG checkpoints than its parent.
     // 2. A block in epoch `N` cannot contain attestations which would justify an epoch higher than `N`.
     // 3. A block in epoch `N` cannot contain attestations which would finalize an epoch higher than `N - 1`.
+    //
+    // Slashings are excluded because they can reduce the unslashed target balance of the child state
+    // and therefore lower its unrealized checkpoints.
     //
     // This is an optimization. It should reduce the amount of times we run
     // `process_justification_and_finalization` by approximately 1/3rd when the chain is
@@ -864,6 +867,8 @@ export class ForkChoice implements IForkChoice {
     let unrealizedFinalizedCheckpoint: CheckpointWithHex;
     if (this.opts?.computeUnrealized) {
       if (
+        block.body.proposerSlashings.length === 0 &&
+        block.body.attesterSlashings.length === 0 &&
         parentBlock.unrealizedJustifiedEpoch === blockEpoch &&
         parentBlock.unrealizedFinalizedEpoch + 1 >= blockEpoch
       ) {
