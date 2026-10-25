@@ -39,15 +39,18 @@ ENV PATH=/opt/zig:$PATH
 WORKDIR /src
 COPY . .
 
-# ReleaseFast, as in CI: Debug's sanitize_c emits __ubsan_handle_* calls into
-# blst's C objects that afl-cc cannot resolve. The cache mount only speeds up
-# rebuilds; nothing in it reaches the image.
+# ReleaseSafe keeps Zig's safety checks (bounds, overflow, unreachable), so
+# those bugs panic and AFL++ records them; under ReleaseFast they pass silently
+# unless they happen to segfault. Not Debug: its sanitize_c emits
+# __ubsan_handle_* calls into blst's C objects that afl-cc cannot resolve. The
+# cache mount only speeds up rebuilds; nothing in it reaches the image.
 #
 # -Dcpu=baseline: Zig otherwise targets the build machine's CPU, so an image
 # built on a runner with AVX-512 dies with SIGILL on hosts without it, and
 # every such fault is recorded as a crash.
+ARG OPTIMIZE=ReleaseSafe
 RUN --mount=type=cache,target=/root/.cache/zig \
-    cd test/fuzz && zig build -Doptimize=ReleaseFast -Dcpu=baseline --prefix /out
+    cd test/fuzz && zig build -Doptimize=${OPTIMIZE} -Dcpu=baseline --prefix /out
 
 # --- runtime: the instrumented binaries, afl-fuzz and the seed corpora only.
 # Ubuntu's afl++ package pulls in two clang toolchains (~1.2 GB) that running

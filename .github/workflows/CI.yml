@@ -418,12 +418,13 @@ jobs:
             llvm-config-18 --version
           fi
       - name: Build fuzz harnesses
-        # Build in ReleaseFast so Zig 0.16's Debug `sanitize_c = .full`
-        # doesn't emit `__ubsan_handle_*` calls into blst's C objects that
-        # `afl-cc` can't resolve without `libubsan`. Fuzzers want throughput
-        # anyway; devs can still use `zig build` in Debug locally.
+        # ReleaseSafe, as Dockerfile.fuzz: the harnesses' asserts and Zig's
+        # bounds/overflow checks must stay compiled in, or fuzzing cannot see
+        # those bugs. Not Debug: Zig 0.16's `sanitize_c = .full` emits
+        # `__ubsan_handle_*` calls into blst's C objects that `afl-cc` can't
+        # resolve without `libubsan`.
         run: |
-          cd test/fuzz && zig build -Doptimize=ReleaseFast
+          cd test/fuzz && zig build -Doptimize=ReleaseSafe
 
   bindings-test:
     name: bindings - test
