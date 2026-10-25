@@ -111,13 +111,18 @@ describe("cmds / beacon / args handler", () => {
     expect(network).toBe(networkName);
   });
 
-  it("allows native state transition with Gloas scheduled", async () => {
+  it("accepts native Gloas and rejects a scheduled unsupported Heze fork", async () => {
     const paramsFile = path.join(testFilesDir, "gloas_config.yaml");
     fs.writeFileSync(paramsFile, JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100})));
 
-    const result = await runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true});
-    expect(result.config.GLOAS_FORK_EPOCH).toBe(100);
-    expect(result.options.chain.nativeStateTransition).toBe(true);
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).resolves.toBeDefined();
+    fs.writeFileSync(
+      paramsFile,
+      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: 200}))
+    );
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).rejects.toThrow(
+      "--chain.nativeStateTransition does not support Heze"
+    );
     await expect(runBeaconHandlerInit({paramsFile})).resolves.toBeDefined();
     await expect(runBeaconHandlerInit({"chain.nativeStateTransition": true})).resolves.toBeDefined();
   });

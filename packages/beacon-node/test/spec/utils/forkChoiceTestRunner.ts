@@ -88,6 +88,8 @@ const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 const PAYLOAD_ATTESTATION_MESSAGE_FILE_NAME = "^(payload_attestation_message)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
+const executionEngineLogger = testLogger("executionEngine");
+const mockedDb = getMockedBeaconDb();
 
 export const forkChoiceTestRunner =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
@@ -115,7 +117,7 @@ export const forkChoiceTestRunner =
         const controller = new AbortController();
         const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
           signal: controller.signal,
-          logger: testLogger("executionEngine"),
+          logger: executionEngineLogger,
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
@@ -152,7 +154,7 @@ export const forkChoiceTestRunner =
             privateKey: await generateKeyPair("secp256k1"),
             config: beaconConfig,
             pubkeyCache,
-            db: getMockedBeaconDb(),
+            db: mockedDb,
             dataDir: ".",
             dbName: ",",
             logger,
