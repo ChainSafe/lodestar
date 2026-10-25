@@ -11,6 +11,9 @@
 - **Follow existing patterns** before introducing new abstractions
 - **Structured logging** with specific error codes (not generic `Error`)
 - **Incremental commits** after review starts — do not force push unless maintainer requests it
+- **Native integration pin:** on `integration/all`, keep the `@chainsafe/lodestar-z` catalog entry and
+  lockfile in sync with the latest tested, pushed native network commit. Validate the installed
+  dependency rather than a local link.
 - **Communication style:** DO NOT use `—`. Keep communication succinct and human-friendly. NO AI SLOP VERBOSITY.
 
 ## Project overview
