@@ -53,12 +53,6 @@ describe("native configuration boundary", () => {
     });
     expect(node.create({maxGossipTopicConcurrency: 12}).gossipPolicy).toEqual({topicConcurrency: 12});
     expect(node.create({native: {receiveBudgetBytes: 1024 ** 3}}).resources.receiveBudgetBytes).toBe(1024 ** 3);
-    expect(application.xray).toBeUndefined();
-    expect(node.create({xrayAddress: "/tmp/xray.sock"}).xray).toEqual({
-      address: "/tmp/xray.sock",
-      waitForAttach: false,
-    });
-    expect(node.create({xrayAddress: "/tmp/xray.sock", xrayWaitForAttach: true}).xray?.waitForAttach).toBe(true);
   });
 
   it.each([0, 1, 1_000_000])("rejects an active unsupported fork at epoch %s before startup", async (epoch) => {

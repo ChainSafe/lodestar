@@ -1,12 +1,6 @@
 import {BLSPubkey, Epoch} from "@lodestar/types";
 import {defer, toPubkeyHex} from "@lodestar/utils";
-import {LodestarValidatorDatabaseController} from "../../types.js";
-import {
-  DistanceStoreRepository,
-  MinMaxSurround,
-  SurroundAttestationError,
-  SurroundAttestationErrorCode,
-} from "../minMaxSurround/index.js";
+import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround/index.js";
 import {SlashingProtectionAttestation} from "../types.js";
 import {ZERO_ROOT, isEqualNonZeroRoot, isEqualRoot, minEpoch} from "../utils.js";
 import {AttestationByTargetRepository} from "./attestationByTargetRepository.js";
@@ -19,18 +13,25 @@ export {
   InvalidAttestationErrorCode,
 };
 
+enum SafeStatus {
+  SAME_DATA = "SAFE_STATUS_SAME_DATA",
+  OK = "SAFE_STATUS_OK",
+}
+
 export class SlashingProtectionAttestationService {
-  private readonly attestationByTarget: AttestationByTargetRepository;
-  private readonly attestationLowerBound: AttestationLowerBoundRepository;
-  private readonly distanceStore: DistanceStoreRepository;
-  private readonly minMaxSurround: MinMaxSurround;
+  private attestationByTarget: AttestationByTargetRepository;
+  private attestationLowerBound: AttestationLowerBoundRepository;
+  private minMaxSurround: MinMaxSurround;
   private readonly pendingAttestations = new Map<string, Promise<void>>();
 
-  constructor(private readonly db: LodestarValidatorDatabaseController) {
-    this.attestationByTarget = new AttestationByTargetRepository(db);
-    this.attestationLowerBound = new AttestationLowerBoundRepository(db);
-    this.distanceStore = new DistanceStoreRepository(db);
-    this.minMaxSurround = new MinMaxSurround(this.distanceStore);
+  constructor(
+    signedAttestationDb: AttestationByTargetRepository,
+    attestationLowerBound: AttestationLowerBoundRepository,
+    minMaxSurround: MinMaxSurround
+  ) {
+    this.attestationByTarget = signedAttestationDb;
+    this.attestationLowerBound = attestationLowerBound;
+    this.minMaxSurround = minMaxSurround;
   }
 
   /**
@@ -44,25 +45,28 @@ export class SlashingProtectionAttestationService {
     this.pendingAttestations.set(pubkeyHex, promise);
 
     try {
-      if (previous !== undefined) await previous;
-      const safeAttestation = await this.checkAttestation(pubKey, attestation);
-      // Rebuild spans on repeat signing to repair records persisted by older, non-atomic writers.
-      await this.insertAttestation(pubKey, safeAttestation);
+      if (previous !== undefined) {
+        await previous;
+      }
+      const safeStatus = await this.checkAttestation(pubKey, attestation);
+
+      if (safeStatus !== SafeStatus.SAME_DATA) {
+        await this.insertAttestation(pubKey, attestation);
+      }
     } finally {
       resolve();
-      if (this.pendingAttestations.get(pubkeyHex) === promise) this.pendingAttestations.delete(pubkeyHex);
+      if (this.pendingAttestations.get(pubkeyHex) === promise) {
+        this.pendingAttestations.delete(pubkeyHex);
+      }
     }
 
     // TODO: Implement safe clean-up of stored attestations
   }
 
   /**
-   * Check an attestation from `pubKey` for slash safety, returning the stored data on a same-root retry.
+   * Check an attestation from `pubKey` for slash safety.
    */
-  async checkAttestation(
-    pubKey: BLSPubkey,
-    attestation: SlashingProtectionAttestation
-  ): Promise<SlashingProtectionAttestation> {
+  async checkAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<SafeStatus> {
     // Although it's not required to avoid slashing, we disallow attestations
     // which are obviously invalid by virtue of their source epoch exceeding their target.
     if (attestation.sourceEpoch > attestation.targetEpoch) {
@@ -82,7 +86,7 @@ export class SlashingProtectionAttestationService {
     if (sameTargetAtt) {
       // Interchange format allows for attestations without signing_root, then assume root is equal
       if (isEqualNonZeroRoot(sameTargetAtt.signingRoot, attestation.signingRoot)) {
-        return sameTargetAtt;
+        return SafeStatus.SAME_DATA;
       }
       throw new InvalidAttestationError({
         code: InvalidAttestationErrorCode.DOUBLE_VOTE,
@@ -153,7 +157,7 @@ export class SlashingProtectionAttestationService {
       }
     }
 
-    return attestation;
+    return SafeStatus.OK;
   }
 
   /**
@@ -162,14 +166,8 @@ export class SlashingProtectionAttestationService {
    * so that the check isn't invalidated by a concurrent mutation
    */
   async insertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
-    const spans = await this.minMaxSurround.prepareAttestation(pubKey, attestation);
-    await this.db.batch(
-      [
-        ...this.attestationByTarget.putOperations(pubKey, [attestation]),
-        ...this.distanceStore.putOperations(pubKey, spans),
-      ],
-      {sync: true}
-    );
+    await this.attestationByTarget.set(pubKey, [attestation]);
+    await this.minMaxSurround.insertAttestation(pubKey, attestation);
   }
 
   /**
@@ -189,7 +187,9 @@ export class SlashingProtectionAttestationService {
     this.pendingAttestations.set(pubkeyHex, promise);
 
     try {
-      if (previous !== undefined) await previous;
+      if (previous !== undefined) {
+        await previous;
+      }
       // Min-max surround misses a surround vote beyond its lookback, require the highest target attestation to
       // have the highest source epoch as `checkAttestation` relies on it
       let latestAtt = await this.attestationByTarget.getLatest(pubkey);
@@ -230,22 +230,24 @@ export class SlashingProtectionAttestationService {
           });
         }
       }
-      const spans = await this.minMaxSurround.prepareAttestations(pubkey, attestations);
-      const batch = [
-        ...this.attestationByTarget.putOperations(pubkey, Array.from(attestationsByTarget.values())),
-        ...this.distanceStore.putOperations(pubkey, spans),
-      ];
+      await this.attestationByTarget.set(pubkey, Array.from(attestationsByTarget.values()));
+
+      // Pre-compute spans for all attestations
+      for (const attestation of attestations) {
+        await this.minMaxSurround.insertAttestation(pubkey, attestation);
+      }
 
       // Pre-compute and store lower-bound
       const minSourceEpoch = minEpoch(attestations.map((attestation) => attestation.sourceEpoch));
       const minTargetEpoch = minEpoch(attestations.map((attestation) => attestation.targetEpoch));
       if (minSourceEpoch != null && minTargetEpoch != null) {
-        batch.push(this.attestationLowerBound.putOperation(pubkey, {minSourceEpoch, minTargetEpoch}));
+        await this.attestationLowerBound.set(pubkey, {minSourceEpoch, minTargetEpoch});
       }
-      await this.db.batch(batch, {sync: true});
     } finally {
       resolve();
-      if (this.pendingAttestations.get(pubkeyHex) === promise) this.pendingAttestations.delete(pubkeyHex);
+      if (this.pendingAttestations.get(pubkeyHex) === promise) {
+        this.pendingAttestations.delete(pubkeyHex);
+      }
     }
   }
 

@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, DbBatch, DbReqOpts, FilterOptions, KeyValue, Repository} from "@lodestar/db";
+import {Db, DbBatch, FilterOptions, KeyValue, Repository} from "@lodestar/db";
 import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {bytesToInt, fromHex, intToBytes} from "@lodestar/utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
@@ -224,10 +224,10 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     return slot !== null ? this.get(slot) : null;
   }
 
-  async getBinaryEntryByRoot(root: Root, opts?: DbReqOpts): Promise<KeyValue<Slot, Uint8Array> | null> {
-    const slot = await this.getSlotByRoot(root, opts);
+  async getBinaryEntryByRoot(root: Root): Promise<KeyValue<Slot, Uint8Array> | null> {
+    const slot = await this.getSlotByRoot(root);
     if (slot === null) return null;
-    const value = await this.getBinary(slot, opts);
+    const value = await this.getBinary(slot);
     return value === null ? null : {key: slot, value};
   }
 
@@ -236,12 +236,12 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     return slot !== null ? this.get(slot) : null;
   }
 
-  async getRootBySlot(slot: Slot, opts?: DbReqOpts): Promise<Root | null> {
-    return this.db.get(getSlotIndexKey(slot), {bucketId: getBucketNameByValue(Bucket.index_mainChain), ...opts});
+  async getRootBySlot(slot: Slot): Promise<Root | null> {
+    return this.db.get(getSlotIndexKey(slot), {bucketId: getBucketNameByValue(Bucket.index_mainChain)});
   }
 
-  async getSlotByRoot(root: Root, opts?: DbReqOpts): Promise<Slot | null> {
-    return this.parseSlot(await getRootIndex(this.db, root, opts));
+  async getSlotByRoot(root: Root): Promise<Slot | null> {
+    return this.parseSlot(await getRootIndex(this.db, root));
   }
 
   async getSlotByParentRoot(root: Root): Promise<Slot | null> {

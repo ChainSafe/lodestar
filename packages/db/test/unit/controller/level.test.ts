@@ -1,7 +1,6 @@
 import {execSync} from "node:child_process";
 import os from "node:os";
-import {ClassicLevel} from "classic-level";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {LevelDbController} from "../../../src/index.js";
 
@@ -14,27 +13,8 @@ describe("LevelDB controller", () => {
   });
 
   afterEach(async () => {
-    vi.restoreAllMocks();
     await db.close();
     await LevelDbController.destroy(dbLocation);
-  });
-
-  it("forwards durability for every write operation", async () => {
-    const put = vi.spyOn(ClassicLevel.prototype, "put");
-    const del = vi.spyOn(ClassicLevel.prototype, "del");
-    const batch = vi.spyOn(ClassicLevel.prototype, "batch");
-    const key = Uint8Array.of(1);
-    const value = Uint8Array.of(2);
-    await db.put(key, value, {sync: true});
-    expect(put).toHaveBeenCalledExactlyOnceWith(key, value, {sync: true});
-    await db.delete(key, {sync: true});
-    expect(del).toHaveBeenCalledExactlyOnceWith(key, {sync: true});
-    await db.batchPut([{key, value}], {sync: true});
-    await db.batchDelete([key], {sync: true});
-    await db.batch([{type: "put", key, value}], {sync: true});
-    expect(batch).toHaveBeenNthCalledWith(1, [{type: "put", key, value}], {sync: true});
-    expect(batch).toHaveBeenNthCalledWith(2, [{type: "del", key}], {sync: true});
-    expect(batch).toHaveBeenNthCalledWith(3, [{type: "put", key, value}], {sync: true});
   });
 
   it("test get not found", async () => {

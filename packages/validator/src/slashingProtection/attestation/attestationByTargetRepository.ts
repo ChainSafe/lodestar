@@ -1,5 +1,5 @@
 import {ContainerType, Type} from "@chainsafe/ssz";
-import {DB_PREFIX_LENGTH, DbBatch, DbReqOpts, encodeKey, uintLen} from "@lodestar/db";
+import {DB_PREFIX_LENGTH, DbReqOpts, encodeKey, uintLen} from "@lodestar/db";
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {bytesToInt, intToBytes} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../../buckets.js";
@@ -58,16 +58,14 @@ export class AttestationByTargetRepository {
     return att && this.type.deserialize(att);
   }
 
-  putOperations(pubkey: BLSPubkey, atts: SlashingProtectionAttestation[]): DbBatch<Uint8Array, Uint8Array> {
-    return atts.map((att) => ({
-      type: "put",
-      key: this.encodeKey(pubkey, att.targetEpoch),
-      value: this.type.serialize(att),
-    }));
-  }
-
   async set(pubkey: BLSPubkey, atts: SlashingProtectionAttestation[]): Promise<void> {
-    await this.db.batch(this.putOperations(pubkey, atts), {...this.dbReqOpts, sync: true});
+    await this.db.batchPut(
+      atts.map((att) => ({
+        key: this.encodeKey(pubkey, att.targetEpoch),
+        value: this.type.serialize(att),
+      })),
+      this.dbReqOpts
+    );
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {

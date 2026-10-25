@@ -56,7 +56,7 @@ export class BlockBySlotRepository {
         key: this.encodeKey(pubkey, block.slot),
         value: this.type.serialize(block),
       })),
-      {...this.dbReqOpts, sync: true}
+      this.dbReqOpts
     );
   }
 

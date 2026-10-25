@@ -50,7 +50,6 @@ export function quicFirstAddressSorter(a: Address, b: Address): -1 | 0 | 1 {
 }
 
 export type NodeJsLibp2pOpts = {
-  start?: boolean;
   peerStoreDir?: string;
   disablePeerDiscovery?: boolean;
   metrics?: boolean;
@@ -143,7 +142,6 @@ export async function createNodeJsLibp2p(
   }
 
   return createLibp2p({
-    start: nodeJsLibp2pOpts.start,
     privateKey,
     nodeInfo: {
       name: "lodestar",

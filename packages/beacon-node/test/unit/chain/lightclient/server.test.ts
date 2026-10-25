@@ -266,5 +266,5 @@ it("does not leave a committee read outstanding when bootstrap loading fails", a
     }
   );
   await expect(server.getBootstrap(new Uint8Array(32))).rejects.toBe(failure);
-  expect(get).toHaveBeenCalledExactlyOnceWith(currentRoot, {fillCache: false});
+  expect(get).toHaveBeenCalledExactlyOnceWith(currentRoot);
 });

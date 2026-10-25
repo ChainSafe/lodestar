@@ -62,16 +62,14 @@ export class LegacyDataColumnStore implements IDataColumnStore {
     if (indices.length === 0) return [];
 
     const root = fromHex(blockRoot);
-    const result = await this.legacyHot.getManyBinary(root, indices, {fillCache: false});
+    const result = await this.legacyHot.getManyBinary(root, indices);
 
     const missingPositions = getMissingPositions(result);
-    if (missingPositions.length === 0 || (await this.blockArchive.getSlotByRoot(root, {fillCache: false})) !== slot)
-      return result;
+    if (missingPositions.length === 0 || (await this.blockArchive.getSlotByRoot(root)) !== slot) return result;
 
     const archivedSidecars = await this.legacyArchive.getManyBinary(
       slot,
-      missingPositions.map((position) => indices[position]),
-      {fillCache: false}
+      missingPositions.map((position) => indices[position])
     );
     fillMissing(result, missingPositions, archivedSidecars);
     return result;

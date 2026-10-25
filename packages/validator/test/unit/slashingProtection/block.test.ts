@@ -11,8 +11,8 @@ import {testLogger} from "../../utils/logger.js";
 
 describe("SlashingProtection overlapping block proposal checks", () => {
   const pubkey = ssz.BLSPubkey.defaultValue();
-  const block = {slot: 32, signingRoot: Buffer.alloc(32).fill(1)};
-  const conflict = {slot: 32, signingRoot: Buffer.alloc(32).fill(2)};
+  const block = {slot: 32, signingRoot: Buffer.alloc(32, 1)};
+  const conflict = {slot: 32, signingRoot: Buffer.alloc(32, 2)};
   let dbLocation: string;
   let db: LevelDbController;
   let slashingProtection: SlashingProtection;
@@ -29,14 +29,6 @@ describe("SlashingProtection overlapping block proposal checks", () => {
     vi.restoreAllMocks();
     await db.close();
     fs.rmSync(dbLocation, {recursive: true, force: true});
-  });
-
-  it("persists both new and repeated proposals synchronously", async () => {
-    const batch = vi.spyOn(db, "batchPut");
-    await slashingProtection.checkAndInsertBlockProposal(pubkey, block);
-    await slashingProtection.checkAndInsertBlockProposal(pubkey, block);
-    expect(batch).toHaveBeenCalledTimes(2);
-    for (const [, options] of batch.mock.calls) expect(options).toMatchObject({sync: true});
   });
 
   it("rejects conflicting proposals when checks for the same public key bytes overlap", async () => {

@@ -65,22 +65,18 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     return this.type.hashTreeRoot(value) as I;
   }
 
-  protected readOptions(opts?: DbReqOpts): DbReqOpts {
-    return opts ? {...opts, ...this.dbReqOpts} : this.dbReqOpts;
-  }
-
-  async get(prefix: P, id: I, opts?: DbReqOpts): Promise<T | null> {
+  async get(prefix: P, id: I): Promise<T | null> {
     const key = this.wrapKey(this.encodeKeyRaw(prefix, id));
-    const v = await this.db.get(key, this.readOptions(opts));
+    const v = await this.db.get(key, this.dbReqOpts);
     return v ? this.decodeValue(v) : null;
   }
 
-  async getMany(prefix: P, ids: I[], opts?: DbReqOpts): Promise<(T | undefined)[]> {
+  async getMany(prefix: P, ids: I[]): Promise<(T | undefined)[]> {
     const keys = [];
     for (const id of ids) {
       keys.push(this.wrapKey(this.encodeKeyRaw(prefix, id)));
     }
-    const values = await this.db.getMany(keys, this.readOptions(opts));
+    const values = await this.db.getMany(keys, this.dbReqOpts);
 
     const result = [];
     for (const value of values) {
@@ -90,17 +86,17 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     return result;
   }
 
-  async getManyBinary(prefix: P, ids: I[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]> {
+  async getManyBinary(prefix: P, ids: I[]): Promise<(Uint8Array | undefined)[]> {
     const keys = [];
     for (const id of ids) {
       keys.push(this.wrapKey(this.encodeKeyRaw(prefix, id)));
     }
-    return await this.db.getMany(keys, this.readOptions(opts));
+    return await this.db.getMany(keys, this.dbReqOpts);
   }
 
-  async getBinary(prefix: P, id: I, opts?: DbReqOpts): Promise<Uint8Array | null> {
+  async getBinary(prefix: P, id: I): Promise<Uint8Array | null> {
     const key = this.wrapKey(this.encodeKeyRaw(prefix, id));
-    return await this.db.get(key, this.readOptions(opts));
+    return await this.db.get(key, this.dbReqOpts);
   }
 
   async put(prefix: P, item: T): Promise<void> {
@@ -291,7 +287,6 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       optsBuff.lt = this.maxKey;
     }
 
-    if (opts?.fillCache !== undefined) optsBuff.fillCache = opts.fillCache;
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 

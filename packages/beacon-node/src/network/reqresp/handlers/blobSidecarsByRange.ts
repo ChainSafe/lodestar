@@ -30,7 +30,6 @@ export async function* onBlobSidecarsByRange(
   if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
-      fillCache: false,
       limit: count,
       gte: startSlot,
       lt: Math.min(endSlot, archiveMaxSlot + 1),
@@ -51,7 +50,7 @@ export async function* onBlobSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot), {fillCache: false});
+        const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
         if (!blobSideCarsBytesWrapped) {
           // Handle the same to onBeaconBlocksByRange
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);

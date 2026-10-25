@@ -69,7 +69,7 @@ export async function* onDataColumnSidecarsByRange(
   )) {
     const dataColumnSidecars =
       block.blockRoot === null
-        ? await db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns, {fillCache: false})
+        ? await db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns)
         : await chain.getSerializedDataColumnSidecars(block.slot, block.blockRoot, availableColumns);
 
     if (block.blockRoot === null && dataColumnSidecars.every((sidecar) => sidecar === undefined)) continue;
@@ -140,7 +140,7 @@ async function* resolveCanonicalDataColumnBlocks(
     let blockRoot = recentRoots.get(slot);
     if (blockRoot === null) continue;
     if (blockRoot === undefined) {
-      const root = await db.blockArchive.getRootBySlot(slot, {fillCache: false});
+      const root = await db.blockArchive.getRootBySlot(slot);
       blockRoot = root === null ? null : toRootHex(root);
     }
     if (blockRoot === null && (db.lastLegacyArchiveSlot === null || slot > db.lastLegacyArchiveSlot)) continue;
@@ -197,9 +197,9 @@ async function hasExecutionPayloadEnvelope(
 ): Promise<boolean> {
   if (blockRoot !== null) {
     if (chain.seenPayloadEnvelopeInputCache.hasPayload(blockRoot)) return true;
-    if ((await db.executionPayloadEnvelope.getBinary(fromHex(blockRoot), {fillCache: false})) !== null) return true;
+    if ((await db.executionPayloadEnvelope.getBinary(fromHex(blockRoot))) !== null) return true;
   }
-  return (await db.executionPayloadEnvelopeArchive.getBinary(slot, {fillCache: false})) !== null;
+  return (await db.executionPayloadEnvelopeArchive.getBinary(slot)) !== null;
 }
 
 export function validateDataColumnSidecarsByRangeRequest(

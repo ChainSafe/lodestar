@@ -231,7 +231,6 @@ export function createNativeConfig(
   const listeners = nativeListeners(opts.localMultiaddrs, true);
   const application: Omit<NativeApplicationConfig, "logLevel"> = {
     traceGossip: opts.native?.traceGossip,
-    ...(opts.xrayAddress ? {xray: {address: opts.xrayAddress, waitForAttach: opts.xrayWaitForAttach ?? false}} : {}),
     transport: {
       initialCongestionWindowPackets: opts.native?.initialCongestionWindowPackets,
       receiveDatagramsPerTurn: opts.native?.receiveDatagramsPerTurn,

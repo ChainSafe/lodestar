@@ -302,9 +302,6 @@ importers:
       '@multiformats/multiaddr':
         specifier: ^13.0.1
         version: 13.0.3
-      '@xray/probe':
-        specifier: file:../../.xray/probe-983ccc7.tgz
-        version: file:.xray/probe-983ccc7.tgz(@libp2p/interface@3.4.0)
       datastore-core:
         specifier: ^12.0.1
         version: 12.0.1
@@ -1097,9 +1094,6 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [win32]
-
-  '@bufbuild/protobuf@2.16.0':
-    resolution: {integrity: sha512-FWa0sPlqYGJgpTs6OxBRcL/AW4JT0OIO+W1ajerluoTVh8CV0B7XM1qsNCRgnkSCkRCgOICKHRQlY17jrsm0+Q==}
 
   '@chainsafe/as-chacha20poly1305@0.1.0':
     resolution: {integrity: sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==}
@@ -3054,13 +3048,6 @@ packages:
 
   '@vitest/utils@4.0.7':
     resolution: {integrity: sha512-HNrg9CM/Z4ZWB6RuExhuC6FPmLipiShKVMnT9JlQvfhwR47JatWLChA6mtZqVHqypE6p/z6ofcjbyWpM7YLxPQ==}
-
-  '@xray/probe@file:.xray/probe-983ccc7.tgz':
-    resolution: {integrity: sha512-ht4GYwHeg+8mY1LxhevpCeR30WG5VFbHuOLs2sv1SoJ5Y5uTrbJzN5CdebkKZZzhalIGfaoPkmvv17YMyKAuZw==}
-    version: 0.1.0
-    engines: {node: '>=22'}
-    peerDependencies:
-      '@libp2p/interface': ^3.3.0
 
   abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}
@@ -6563,8 +6550,6 @@ snapshots:
   '@biomejs/cli-win32-x64@2.2.2':
     optional: true
 
-  '@bufbuild/protobuf@2.16.0': {}
-
   '@chainsafe/as-chacha20poly1305@0.1.0': {}
 
   '@chainsafe/as-sha256@1.2.5': {}
@@ -8698,11 +8683,6 @@ snapshots:
     dependencies:
       '@vitest/pretty-format': 4.0.7
       tinyrainbow: 3.0.3
-
-  '@xray/probe@file:.xray/probe-983ccc7.tgz(@libp2p/interface@3.4.0)':
-    dependencies:
-      '@bufbuild/protobuf': 2.16.0
-      '@libp2p/interface': 3.4.0
 
   abbrev@1.1.1: {}
 

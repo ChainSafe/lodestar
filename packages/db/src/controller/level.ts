@@ -94,7 +94,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     try {
       this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
       this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
-      return (await this.db.get(key, {fillCache: opts?.fillCache})) as Uint8Array | null;
+      return (await this.db.get(key)) as Uint8Array | null;
     } catch (e) {
       if ((e as LevelDbError).code === "LEVEL_NOT_FOUND") {
         return null;
@@ -112,48 +112,42 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]> {
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
-    return await this.db.getMany(keys, {fillCache: opts?.fillCache});
+    return await this.db.getMany(keys);
   }
 
   put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
 
-    return this.db.put(key, value, {sync: opts?.sync});
+    return this.db.put(key, value);
   }
 
   delete(key: Uint8Array, opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
 
-    return this.db.del(key, {sync: opts?.sync});
+    return this.db.del(key);
   }
 
   batchPut(items: KeyValue<Uint8Array, Uint8Array>[], opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, items.length);
 
-    return this.db.batch(
-      items.map((item) => ({type: "put", key: item.key, value: item.value})),
-      {sync: opts?.sync}
-    );
+    return this.db.batch(items.map((item) => ({type: "put", key: item.key, value: item.value})));
   }
 
   batchDelete(keys: Uint8Array[], opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
 
-    return this.db.batch(
-      keys.map((key) => ({type: "del", key: key})),
-      {sync: opts?.sync}
-    );
+    return this.db.batch(keys.map((key) => ({type: "del", key: key})));
   }
 
   batch(batch: DbBatch<Uint8Array, Uint8Array>, opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, batch.length);
 
-    return this.db.batch(batch, {sync: opts?.sync});
+    return this.db.batch(batch);
   }
 
   keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {

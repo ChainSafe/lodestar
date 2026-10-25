@@ -8,8 +8,6 @@ export type DatabaseOptions = {
 };
 
 export interface FilterOptions<K> {
-  /** False keeps the blocks this read loads out of the LevelDB block cache. */
-  fillCache?: boolean;
   gt?: K;
   gte?: K;
   lt?: K;
@@ -21,10 +19,6 @@ export interface FilterOptions<K> {
 }
 
 export type DbReqOpts = {
-  /** Persist writes to durable storage before resolving. */
-  sync?: boolean;
-  /** False keeps the blocks this read loads out of the LevelDB block cache. */
-  fillCache?: boolean;
   /** For metrics */
   bucketId?: string;
 };

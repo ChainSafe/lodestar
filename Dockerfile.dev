@@ -29,7 +29,6 @@ RUN corepack enable
 # Copy dependency manifests first for optimal layer caching.
 # Only changes to package.json or lockfile will invalidate the install layer,
 # source code changes will only invalidate the build layer.
-COPY .xray .xray
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY packages/api/package.json packages/api/

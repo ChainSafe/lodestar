@@ -922,7 +922,7 @@ export class BeaconChain implements IBeaconChain {
           slot: blockInput.slot,
         };
       }
-      const data = await this.db.block.getBinary(fromHex(root), {fillCache: false});
+      const data = await this.db.block.getBinary(fromHex(root));
       if (data) {
         const slot = getSlotFromSignedBeaconBlockSerialized(data);
         if (slot === null) throw new Error(`Invalid block data stored in DB for root: ${root}`);
@@ -932,7 +932,7 @@ export class BeaconChain implements IBeaconChain {
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
-    const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root), {fillCache: false});
+    const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root));
     return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
   }
 
@@ -965,13 +965,11 @@ export class BeaconChain implements IBeaconChain {
       }
       return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
     }
-    const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex), {
-      fillCache: false,
-    });
+    const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex));
     if (unfinalizedBlobSidecarsWrapper) {
       return unfinalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
     }
-    const finalizedBlobSidecarsWrapper = await this.db.blobSidecarsArchive.getBinary(blockSlot, {fillCache: false});
+    const finalizedBlobSidecarsWrapper = await this.db.blobSidecarsArchive.getBinary(blockSlot);
     if (finalizedBlobSidecarsWrapper) {
       return finalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
     }

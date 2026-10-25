@@ -1,5 +1,5 @@
 import {ContainerType, Type} from "@chainsafe/ssz";
-import {DbBatchOperation, DbReqOpts, encodeKey} from "@lodestar/db";
+import {DbReqOpts, encodeKey} from "@lodestar/db";
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../../buckets.js";
 import {LodestarValidatorDatabaseController} from "../../types.js";
@@ -34,8 +34,8 @@ export class AttestationLowerBoundRepository {
     return att && this.type.deserialize(att);
   }
 
-  putOperation(pubkey: BLSPubkey, value: SlashingProtectionLowerBound): DbBatchOperation<Uint8Array, Uint8Array> {
-    return {type: "put", key: this.encodeKey(pubkey), value: this.type.serialize(value)};
+  async set(pubkey: BLSPubkey, value: SlashingProtectionLowerBound): Promise<void> {
+    await this.db.put(this.encodeKey(pubkey), this.type.serialize(value), this.dbReqOpts);
   }
 
   private encodeKey(pubkey: BLSPubkey): Uint8Array {

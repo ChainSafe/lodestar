@@ -68,12 +68,8 @@ export abstract class BinaryRepository<I extends Id> {
     return key.slice(BUCKET_LENGTH) as I;
   }
 
-  protected readOptions(opts?: DbReqOpts): DbReqOpts {
-    return opts ? {...opts, ...this.dbReqOpts} : this.dbReqOpts;
-  }
-
-  async getBinary(id: I, opts?: DbReqOpts): Promise<Uint8Array | null> {
-    const value = await this.db.get(this.encodeKey(id), this.readOptions(opts));
+  async getBinary(id: I): Promise<Uint8Array | null> {
+    const value = await this.db.get(this.encodeKey(id), this.dbReqOpts);
     if (!value) return null;
     return value;
   }
@@ -168,7 +164,6 @@ export abstract class BinaryRepository<I extends Id> {
       optsBuff.gte = this.minKey;
     }
 
-    if (opts?.fillCache !== undefined) optsBuff.fillCache = opts.fillCache;
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
@@ -204,8 +199,8 @@ export abstract class Repository<I extends Id, T> extends BinaryRepository<I> {
     return this.type.deserialize(data);
   }
 
-  async get(id: I, opts?: DbReqOpts): Promise<T | null> {
-    const value = await this.db.get(this.encodeKey(id), this.readOptions(opts));
+  async get(id: I): Promise<T | null> {
+    const value = await this.db.get(this.encodeKey(id), this.dbReqOpts);
     if (!value) return null;
     return this.decodeValue(value);
   }
