@@ -82,7 +82,11 @@ export async function createNodeJsLibp2p(
   const quicEnabled = networkOpts.quic ?? defaultNetworkOptions.quic;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
-  const datastore = peerStoreDir ? new Eth2PeerDataStore(peerStoreDir) : undefined;
+  let datastore: undefined | Eth2PeerDataStore = undefined;
+  if (peerStoreDir) {
+    datastore = new Eth2PeerDataStore(peerStoreDir);
+    await datastore.open();
+  }
 
   const peerDiscovery = [];
   if (!disablePeerDiscovery) {

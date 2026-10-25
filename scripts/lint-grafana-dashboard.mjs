@@ -273,16 +273,9 @@ export function readGrafanaDashboard(filepath) {
  * @param {Dashboard} json
  */
 export function writeGrafanaDashboard(filepath, json) {
-  fs.writeFileSync(filepath, formatGrafanaDashboard(json));
-}
-
-/**
- * @param {Dashboard} json
- * @returns {string}
- */
-export function formatGrafanaDashboard(json) {
   // Add new line
-  return JSON.stringify(json, null, 2) + "\n";
+  const jsonStrOut = JSON.stringify(json, null, 2) + "\n";
+  fs.writeFileSync(filepath, jsonStrOut);
 }
 
 /**
@@ -352,7 +345,6 @@ function assertPanels(panels) {
           if (target.expr.includes("delta(")) {
             throw Error(`promql function 'delta' is not allowed, use 'rate' instead: ${target.expr}`);
           }
-
           // increase() is allowed for rare-event counters (eg. fast confirmation reorgs/fallbacks/restarts)
           // where a per-window event count reads clearer than the near-zero per-second value rate would show.
           // if (target.expr.includes("increase(")) {

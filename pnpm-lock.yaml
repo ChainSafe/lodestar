@@ -317,9 +317,6 @@ importers:
       interface-datastore:
         specifier: ^10.0.1
         version: 10.0.1
-      interface-store:
-        specifier: ^8.0.0
-        version: 8.0.0
       jwt-simple:
         specifier: 0.5.6
         version: 0.5.6
@@ -4830,8 +4827,8 @@ packages:
       encoding:
         optional: true
 
-  node-gyp-build@4.8.4:
-    resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
+  node-gyp-build@4.5.0:
+    resolution: {integrity: sha512-2iGbaQBV+ITgCz76ZEjmhUKAKVf7xfY1sRl4UiKQspfZMH2h06SyhNsnSVy50cwkFQDGLyif6m/6uFXHkOZ6rg==}
     hasBin: true
 
   node-gyp@12.1.0:
@@ -9089,14 +9086,14 @@ snapshots:
       catering: 2.1.1
       module-error: 1.0.2
       napi-macros: 2.2.2
-      node-gyp-build: 4.8.4
+      node-gyp-build: 4.5.0
 
   classic-level@3.0.0:
     dependencies:
       abstract-level: 3.1.1
       module-error: 1.0.2
       napi-macros: 2.2.2
-      node-gyp-build: 4.8.4
+      node-gyp-build: 4.5.0
 
   clean-stack@2.2.0: {}
 
@@ -10728,7 +10725,7 @@ snapshots:
     optionalDependencies:
       encoding: 0.1.13
 
-  node-gyp-build@4.8.4: {}
+  node-gyp-build@4.5.0: {}
 
   node-gyp@12.1.0:
     dependencies:

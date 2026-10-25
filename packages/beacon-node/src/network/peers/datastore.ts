@@ -1,15 +1,15 @@
-import {AbortOptions, Startable} from "@libp2p/interface";
+import {AbortOptions} from "@libp2p/interface";
 import {BaseDatastore} from "datastore-core";
 import {LevelDatastore} from "datastore-level";
-import {Datastore, Key, KeyQuery, Pair, Query} from "interface-datastore";
-import {NotFoundError} from "interface-store";
+import {Key, KeyQuery, Pair, Query} from "interface-datastore";
 
 type MemoryItem = {
   lastAccessedMs: number;
   data: Uint8Array;
 };
 
-type PeerDatastore = Datastore & {open(): Promise<void>; close(): Promise<void>};
+// biome-ignore lint/suspicious/noExplicitAny: used below (copied from upstream)
+type AwaitGenerator<T, TReturn = any, TNext = any> = Generator<T, TReturn, TNext> | AsyncGenerator<T, TReturn, TNext>;
 
 /**
  * Before libp2p 0.35, peerstore stays in memory and periodically write to db after n dirty items
@@ -24,8 +24,8 @@ type PeerDatastore = Datastore & {open(): Promise<void>; close(): Promise<void>}
  *     -  update memory datastore, only update db datastore if there are at least threshold dirty items
  *     -  Update lastAccessedMs
  */
-export class Eth2PeerDataStore extends BaseDatastore implements Startable {
-  private dbDatastore: PeerDatastore;
+export class Eth2PeerDataStore extends BaseDatastore {
+  private dbDatastore: LevelDatastore;
   private memoryDatastore: Map<string, MemoryItem>;
   /** Same to PersistentPeerStore of the old libp2p implementation */
   private dirtyItems = new Set<string>();
@@ -35,7 +35,7 @@ export class Eth2PeerDataStore extends BaseDatastore implements Startable {
   private maxMemoryItems: number;
 
   constructor(
-    dbDatastore: PeerDatastore | string,
+    dbDatastore: LevelDatastore | string,
     {threshold = 5, maxMemoryItems = 50}: {threshold?: number | undefined; maxMemoryItems?: number | undefined} = {}
   ) {
     super();
@@ -57,33 +57,8 @@ export class Eth2PeerDataStore extends BaseDatastore implements Startable {
     return this.dbDatastore.open();
   }
 
-  // Components may read during start and write during stop, so use the surrounding lifecycle phases.
-  beforeStart(): Promise<void> {
-    return this.open();
-  }
-  start(): void {}
-  stop(): void {}
-  afterStop(): Promise<void> {
-    return this.close();
-  }
-
   async close(): Promise<void> {
-    const errors: unknown[] = [];
-    try {
-      if (this.dirtyItems.size > 0) await this._commitData();
-    } catch (error) {
-      errors.push(error);
-    }
-    try {
-      await this.dbDatastore.close();
-    } catch (error) {
-      errors.push(error);
-    } finally {
-      this.dirtyItems.clear();
-      this.memoryDatastore.clear();
-    }
-    if (errors.length === 1) throw errors[0];
-    if (errors.length > 1) throw new AggregateError(errors, "Peer datastore close failed");
+    return this.dbDatastore.close();
   }
 
   async put(key: Key, val: Uint8Array, _options?: AbortOptions): Promise<Key> {
@@ -119,6 +94,7 @@ export class Eth2PeerDataStore extends BaseDatastore implements Startable {
    * Check memory datastore - update lastAccessedMs, then db datastore
    * If found in db datastore then update back the memory datastore
    * This throws error if not found
+   * see https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8edb31590ec0bc/src/index.js#L102
    */
   async get(key: Key, options?: AbortOptions): Promise<Uint8Array> {
     const keyStr = key.toString();
@@ -140,7 +116,9 @@ export class Eth2PeerDataStore extends BaseDatastore implements Startable {
     try {
       await this.get(key, options);
     } catch (err) {
-      if (err instanceof NotFoundError) return false;
+      // this is the same to how js-datastore-level handles notFound error
+      // https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8edb31590ec0bc/src/index.js#L121
+      if ((err as {notFound: boolean}).notFound) return false;
       throw err;
     }
     return true;
@@ -151,25 +129,21 @@ export class Eth2PeerDataStore extends BaseDatastore implements Startable {
     await this.dbDatastore.delete(key, options);
   }
 
-  async *_all(q: Query, options?: AbortOptions): AsyncGenerator<Pair> {
+  async *_all(q: Query, options?: AbortOptions): AwaitGenerator<Pair> {
     for (const [key, value] of this.memoryDatastore.entries()) {
       yield {
         key: new Key(key),
         value: value.data,
       };
     }
-    for await (const pair of this.dbDatastore.query({prefix: q.prefix}, options)) {
-      if (!this.memoryDatastore.has(pair.key.toString())) yield pair;
-    }
+    yield* this.dbDatastore.query(q, options);
   }
 
-  async *_allKeys(q: KeyQuery, options?: AbortOptions): AsyncGenerator<Key> {
+  async *_allKeys(q: KeyQuery, options?: AbortOptions): AwaitGenerator<Key> {
     for (const key of this.memoryDatastore.keys()) {
       yield new Key(key);
     }
-    for await (const key of this.dbDatastore.queryKeys({prefix: q.prefix}, options)) {
-      if (!this.memoryDatastore.has(key.toString())) yield key;
-    }
+    yield* this.dbDatastore.queryKeys(q, options);
   }
 
   private async _addDirtyItem(keyStr: string): Promise<void> {

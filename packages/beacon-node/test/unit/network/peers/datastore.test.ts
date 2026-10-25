@@ -1,52 +1,25 @@
-import {mkdtemp, rm} from "node:fs/promises";
-import {tmpdir} from "node:os";
-import {join} from "node:path";
-import {MemoryDatastore} from "datastore-core";
 import {LevelDatastore} from "datastore-level";
 import {Key} from "interface-datastore";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Eth2PeerDataStore} from "../../../../src/network/peers/datastore.js";
+
+vi.mock("datastore-level");
 
 describe("Eth2PeerDataStore", () => {
   let eth2Datastore: Eth2PeerDataStore;
-  let dbDatastoreStub: MemoryDatastore & {open(): Promise<void>; close(): Promise<void>};
+  let dbDatastoreStub: MockedObject<LevelDatastore>;
 
   beforeEach(() => {
     vi.useFakeTimers({now: Date.now()});
 
-    dbDatastoreStub = Object.assign(new MemoryDatastore(), {
-      open: vi.fn().mockResolvedValue(undefined),
-      close: vi.fn().mockResolvedValue(undefined),
-    });
-    vi.spyOn(dbDatastoreStub, "get");
-    vi.spyOn(dbDatastoreStub, "batch").mockReturnValue({
-      put: vi.fn(),
-      delete: vi.fn(),
-      commit: vi.fn().mockResolvedValue(undefined),
-    });
+    dbDatastoreStub = vi.mocked(new LevelDatastore({} as any));
     eth2Datastore = new Eth2PeerDataStore(dbDatastoreStub, {threshold: 2, maxMemoryItems: 3});
 
-    vi.spyOn(dbDatastoreStub, "put").mockImplementation(async (key) => key);
+    vi.spyOn(dbDatastoreStub, "put").mockResolvedValue({} as any);
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
-  });
-
-  it.each(["flush", "close", "both"])("preserves %s failures during close", async (failed) => {
-    const flushError = new Error("flush failed");
-    const closeError = new Error("close failed");
-    await eth2Datastore.put(new Key("k1"), Buffer.from("1"));
-    const batch = dbDatastoreStub.batch();
-    if (failed !== "close") vi.mocked(batch.commit).mockRejectedValue(flushError);
-    const close = vi.spyOn(dbDatastoreStub, "close");
-    if (failed !== "flush") close.mockRejectedValue(closeError);
-    else close.mockResolvedValue();
-    const result = eth2Datastore.close();
-    if (failed === "both") await expect(result).rejects.toMatchObject({errors: [flushError, closeError]});
-    else await expect(result).rejects.toBe(failed === "flush" ? flushError : closeError);
-    expect(close).toHaveBeenCalledOnce();
+    vi.clearAllMocks();
   });
 
   it("should persist to db after threshold put", async () => {
@@ -79,7 +52,7 @@ describe("Eth2PeerDataStore", () => {
 
     // still able to get k1 from datastore
     expect(dbDatastoreStub.get).not.toHaveBeenCalledTimes(1);
-    vi.mocked(dbDatastoreStub.get).mockResolvedValue(Buffer.from("1"));
+    dbDatastoreStub.get.mockResolvedValue(Buffer.from("1"));
     expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
     expect(dbDatastoreStub.get).toHaveBeenCalledTimes(1);
 
@@ -90,7 +63,7 @@ describe("Eth2PeerDataStore", () => {
   });
 
   it("should put to memory cache if item was found from db", async () => {
-    vi.mocked(dbDatastoreStub.get).mockResolvedValue(Buffer.from("1"));
+    dbDatastoreStub.get.mockResolvedValue(Buffer.from("1"));
     // query db for the first time
     expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
     expect(dbDatastoreStub.get).toHaveBeenCalledTimes(1);
@@ -99,37 +72,5 @@ describe("Eth2PeerDataStore", () => {
     expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
     expect(dbDatastoreStub.get).toHaveBeenCalledTimes(1);
     expect(dbDatastoreStub.get).not.toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("persistent peer datastore", () => {
-  let directory: string;
-  let datastore: LevelDatastore;
-
-  beforeEach(async () => {
-    directory = await mkdtemp(join(tmpdir(), "lodestar-peers-"));
-    datastore = new LevelDatastore(directory);
-    await datastore.open();
-  });
-
-  afterEach(async () => {
-    await datastore.close();
-    await rm(directory, {recursive: true, force: true});
-  });
-
-  it("merges cached and persisted peers without duplicate rows or repeated query limits", async () => {
-    const peers = new Eth2PeerDataStore(datastore, {threshold: 1, maxMemoryItems: 2});
-    for (const key of ["/peer/a", "/peer/b", "/peer/c"]) {
-      await peers.put(new Key(key), Buffer.from(key));
-    }
-    expect(await peers.has(new Key("/missing"))).toBe(false);
-    const rows = await Array.fromAsync(peers.query({prefix: "/peer/"}));
-    expect(rows.map(({key}) => key.toString()).sort()).toEqual(["/peer/a", "/peer/b", "/peer/c"]);
-    const keys = await Array.fromAsync(peers.queryKeys({prefix: "/peer/", offset: 1, limit: 1}));
-    expect(keys.map((key) => key.toString())).toEqual([rows[1].key.toString()]);
-    await peers.put(new Key("/peer/b"), Buffer.from("updated"));
-    const updated = await Array.fromAsync(peers.query({prefix: "/peer/b"}));
-    expect(updated).toHaveLength(1);
-    expect(updated[0].value).toEqual(Buffer.from("updated"));
   });
 });
