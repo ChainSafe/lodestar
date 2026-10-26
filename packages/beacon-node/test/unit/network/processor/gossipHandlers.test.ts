@@ -272,6 +272,12 @@ describe("getGossipHandlers", () => {
     expect(core.reportPeer).not.toHaveBeenCalled();
   });
 
+  it("does not report the gossip peer when block data is unavailable", async () => {
+    const {core} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.DATA_UNAVAILABLE);
+
+    expect(core.reportPeer).not.toHaveBeenCalled();
+  });
+
   it("reports the gossip peer when block processing gets a definitive execution INVALID verdict", async () => {
     const {core, peerIdStr} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.EXECUTION_ENGINE_INVALID);
 
@@ -371,6 +377,12 @@ describe("getGossipHandlers", () => {
     expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
   });
 
+  it("keeps the cached envelope when payload data is unavailable", async () => {
+    const {removeInvalid} = await runExecutionPayloadProcessingError({code: PayloadErrorCode.DATA_UNAVAILABLE});
+
+    expect(removeInvalid).not.toHaveBeenCalled();
+  });
+
   it("keeps the cached envelope when payload processing hits an execution engine error", async () => {
     const {removeInvalid} = await runExecutionPayloadProcessingError({
       code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
@@ -465,7 +477,10 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
 
 async function runBeaconBlockProcessingError(
   config: BeaconConfig,
-  code: BlockErrorCode.EXECUTION_ENGINE_ERROR | BlockErrorCode.EXECUTION_ENGINE_INVALID
+  code:
+    | BlockErrorCode.EXECUTION_ENGINE_ERROR
+    | BlockErrorCode.EXECUTION_ENGINE_INVALID
+    | BlockErrorCode.DATA_UNAVAILABLE
 ): Promise<{
   core: Pick<INetworkCore, "reportPeer">;
   peerIdStr: PeerIdStr;
@@ -688,8 +703,15 @@ async function runBeaconBlockRepeatProposal(
 
 function getExecutionBlockError(
   signedBlock: SignedBeaconBlock<typeof ForkName.deneb>,
-  code: BlockErrorCode.EXECUTION_ENGINE_ERROR | BlockErrorCode.EXECUTION_ENGINE_INVALID
+  code:
+    | BlockErrorCode.EXECUTION_ENGINE_ERROR
+    | BlockErrorCode.EXECUTION_ENGINE_INVALID
+    | BlockErrorCode.DATA_UNAVAILABLE
 ): BlockError {
+  if (code === BlockErrorCode.DATA_UNAVAILABLE) {
+    return new BlockError(signedBlock, {code});
+  }
+
   if (code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
     return new BlockError(signedBlock, {
       code,

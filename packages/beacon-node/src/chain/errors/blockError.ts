@@ -72,6 +72,8 @@ export enum BlockErrorCode {
    * whoever served the block MAY be downscored. Mirrors PayloadErrorCode.EXECUTION_ENGINE_INVALID.
    */
   EXECUTION_ENGINE_INVALID = "BLOCK_ERROR_EXECUTION_INVALID",
+  /** The blob or column data did not arrive within the availability wait */
+  DATA_UNAVAILABLE = "BLOCK_ERROR_DATA_UNAVAILABLE",
   /** Block contains too many kzg commitments */
   TOO_MANY_KZG_COMMITMENTS = "BLOCK_ERROR_TOO_MANY_KZG_COMMITMENTS",
   /** Bid parent block root does not match block parent root */
@@ -146,6 +148,7 @@ export type BlockErrorType =
       execStatus: ExecutionPayloadStatus.INVALID;
       errorMessage: string;
     }
+  | {code: BlockErrorCode.DATA_UNAVAILABLE}
   | {
       code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS;
       slot: Slot;
