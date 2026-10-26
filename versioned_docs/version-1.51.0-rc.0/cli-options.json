@@ -1,0 +1,1716 @@
+{
+  "schemaVersion": 1,
+  "commands": {
+    "beacon": [
+      {
+        "name": "dataDir",
+        "description": "Lodestar root data directory",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "network",
+        "description": "Name of the Ethereum Consensus chain network to join",
+        "type": "string",
+        "default": "\"mainnet\"",
+        "choices": [
+          "chiado",
+          "dev",
+          "ephemery",
+          "gnosis",
+          "hoodi",
+          "mainnet",
+          "plataberget",
+          "sepolia"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "paramsFile",
+        "description": "Network configuration file",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "rcConfig",
+        "description": "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "supernode",
+        "description": "Subscribe to and custody all data column sidecar subnets",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "semiSupernode",
+        "description": "Subscribe to and custody half of the data column sidecar subnets to support blob reconstruction, enabling more efficient data availability with lower bandwidth and storage requirements compared to a supernode.",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "genesisStateFile",
+        "description": "Path or URL to download a genesis state file in ssz-encoded format",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "checkpointSyncUrl",
+        "description": "Server url hosting Beacon Node APIs to fetch weak subjectivity state. Fetch latest finalized by default, else set --wssCheckpoint",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "checkpointState",
+        "description": "File path or url to finalized checkpoint state to start syncing from",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "wssCheckpoint",
+        "description": "Start beacon node off a state at the provided weak subjectivity checkpoint, to be supplied in <blockRoot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "forceCheckpointSync",
+        "description": "Force syncing from checkpoint state even if db state is within weak subjectivity period. This helps to avoid long sync times after node has been offline for a while.",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "ignoreWeakSubjectivityCheck",
+        "description": "Ignore the checkpoint sync state failing the weak subjectivity check. This is relevant in testnets where the weak subjectivity period is too small for even few epochs of non finalization causing last finalized to be out of range. This flag is not recommended for mainnet use.",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "dataColumnDir",
+        "description": "Data column flat file directory",
+        "type": "string",
+        "default": "\"$dataDir/data_columns\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "persistNetworkIdentity",
+        "description": "Whether to reuse the same peer-id across restarts. Validator custody requires custody group count to persist relative to a given ENR. Setting to false will reset ENR and validator custody requirements on restarts.",
+        "type": "boolean",
+        "default": "true",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "private",
+        "description": "Do not send implementation details over p2p identify protocol, and in builder and execution engine requests",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "validatorMonitorLogs",
+        "description": "Log validator monitor events as info.",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "disableLightClientServer",
+        "description": "Disable light client server.",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logLevel",
+        "description": "Logging verbosity level for emitting logs to terminal",
+        "type": "string",
+        "default": "\"info\"",
+        "choices": [
+          "debug",
+          "error",
+          "info",
+          "trace",
+          "verbose",
+          "warn"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logFile",
+        "description": "Path to output all logs to a persistent log file, use 'none' to disable",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logFileLevel",
+        "description": "Logging verbosity level for emitting logs to file",
+        "type": "string",
+        "default": "\"debug\"",
+        "choices": [
+          "debug",
+          "error",
+          "info",
+          "trace",
+          "verbose",
+          "warn"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logFileDailyRotate",
+        "description": "Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation",
+        "type": "number",
+        "default": "5",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "rest",
+        "description": "Enable/disable HTTP API",
+        "type": "boolean",
+        "default": "true",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "rest.namespace",
+        "description": "Pick namespaces to expose for HTTP API. Set to 'all' (or '*') to enable all namespaces",
+        "type": "string[]",
+        "default": "[\"beacon\",\"config\",\"debug\",\"events\",\"node\",\"validator\",\"lightclient\"]",
+        "choices": [
+          "*",
+          "all",
+          "beacon",
+          "config",
+          "debug",
+          "events",
+          "lightclient",
+          "lodestar",
+          "node",
+          "proof",
+          "validator"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "rest.cors",
+        "description": "Configures the Access-Control-Allow-Origin CORS header for HTTP API. Use 'all' to allow all origins",
+        "type": "string",
+        "default": "\"*\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "rest.address",
+        "description": "Set host for HTTP API",
+        "type": "string",
+        "default": "\"127.0.0.1\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "rest.port",
+        "description": "Set port for HTTP API",
+        "type": "number",
+        "default": "9596",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "rest.swaggerUI",
+        "description": "Enable Swagger UI for API exploration at http://{address}:{port}/documentation",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "suggestedFeeRecipient",
+        "description": "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling `produceBlock`.",
+        "type": "string",
+        "default": "\"0x0000000000000000000000000000000000000000\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "emitPayloadAttributes",
+        "description": "Flag to SSE emit execution `payloadAttributes` before every slot",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "graffitiAppend",
+        "description": "Append CL/EL client info to graffiti supplied by validator client when space allows",
+        "type": "boolean",
+        "default": "true",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "serveHistoricalState",
+        "description": "Regenerate finalized beacon states on demand and serve them via the REST API (e.g. `/eth/v2/debug/beacon/states/{state_id}`). Does not backfill historical data, only states the node already has (since genesis sync or `--checkpointState`) can be regenerated. Regeneration cost depends on `--chain.archiveStateEpochFrequency` and may affect validator performance.",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "chain.dedupePayloads",
+        "description": "Archive finalized Gloas execution payload envelopes in header form and rebuild transactions, withdrawals and block access lists from the execution client when serving them. Serving then depends on the execution client still holding the block access list. Set to false to keep full envelopes on disk.",
+        "type": "boolean",
+        "default": "true",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "chain.fastConfirmation",
+        "description": "Enable Fast Confirmation Rule for faster block confirmation",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "chain.archiveStateEpochFrequency",
+        "description": "Minimum number of epochs between archived states",
+        "type": "number",
+        "default": "1024",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "chain.archiveDataEpochs",
+        "description": "Number of epochs to retain finalized data columns (minimum of the MIN_BLOB_DATA_RETENTION_MS window)",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [
+          "chain.archiveBlobEpochs"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "chain.pruneHistory",
+        "description": "Continually prune finalized blocks and execution payload envelopes older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. This is useful to minimize disk usage when the node does not need to serve historical data. Initial pruning may be slow on first startup with an existing large database.",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.urls",
+        "description": "Urls to execution client engine API",
+        "type": "string[]",
+        "default": "[ \"http://localhost:8551\" ]",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.timeout",
+        "description": "Timeout in milliseconds for execution engine API HTTP client",
+        "type": "number",
+        "default": "12000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.retries",
+        "description": "Number of retries when calling execution engine API",
+        "type": "number",
+        "default": "2",
+        "choices": [],
+        "aliases": [
+          "execution.retryAttempts"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.retryDelay",
+        "description": "Delay time in milliseconds between retries when retrying calls to the execution engine API",
+        "type": "number",
+        "default": "2000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.engineApi",
+        "description": "Engine API transport. 'auto' negotiates REST with SSZ for a single execution URL and uses JSON-RPC for multiple URLs or unsupported features. 'ssz' requires a single REST-capable execution URL without JSON-RPC fallback. 'json-rpc' always uses JSON-RPC",
+        "type": "string",
+        "default": "\"auto\"",
+        "choices": [
+          "auto",
+          "json-rpc",
+          "ssz"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.engineMock",
+        "description": "Set the execution engine to mock mode (development only)",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "jwtSecret",
+        "description": "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "jwtId",
+        "description": "An optional identifier to be set in the id field of the claims included in jwt tokens used for authentication with EL client's rpc server hosting engine apis",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder",
+        "description": "Enable external builder. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder.url",
+        "description": "Url hosting the builder API. Pre-Gloas only, deprecated post-Gloas where builders are configured on the validator client",
+        "type": "string",
+        "default": "\"http://localhost:8661\"",
+        "choices": [],
+        "aliases": [
+          "builder.urls"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder.timeout",
+        "description": "Timeout in milliseconds for builder API HTTP client",
+        "type": "number",
+        "default": "12000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder.faultInspectionWindow",
+        "description": "Window used to inspect missed slots (pre-gloas) or calculate the canonical EMPTY block rate (post-gloas) for enabling/disabling the builder circuit breaker",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder.allowedFaults",
+        "description": "Number of missed slots allowed within `faultInspectionWindow` before ignoring the external builder (pre-gloas). Post-gloas, sets the tolerated rate of canonical EMPTY blocks, defined as `allowedFaults` out of `faultInspectionWindow` and applied to canonical blocks in the window",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "metrics",
+        "description": "Enable the Prometheus metrics HTTP server",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "metrics.port",
+        "description": "Listen TCP port for the Prometheus metrics HTTP server",
+        "type": "number",
+        "default": "8008",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "metrics.address",
+        "description": "Listen address for the Prometheus metrics HTTP server",
+        "type": "string",
+        "default": "\"127.0.0.1\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "monitoring.endpoint",
+        "description": "Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in)",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "monitoring.interval",
+        "description": "Interval in milliseconds between sending client stats to the remote service",
+        "type": "number",
+        "default": "60000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "discv5",
+        "description": "Enable discv5",
+        "type": "boolean",
+        "default": "true",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "listenAddress",
+        "description": "The IPv4 address to listen for p2p UDP and TCP connections",
+        "type": "string",
+        "default": "\"0.0.0.0\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "port",
+        "description": "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort flag.",
+        "type": "number",
+        "default": "9000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "discoveryPort",
+        "description": "The UDP port that discovery will listen on. Defaults to `port`",
+        "type": "number",
+        "default": "port",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "quicPort",
+        "description": "The UDP port that QUIC will listen on. Defaults to `port` + 1",
+        "type": "number",
+        "default": "port + 1",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "listenAddress6",
+        "description": "The IPv6 address to listen for p2p UDP and TCP connections",
+        "type": "string",
+        "default": "\":: if the host has a global IPv6 address\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "port6",
+        "description": "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort6 flag.",
+        "type": "number",
+        "default": "9000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "discoveryPort6",
+        "description": "The UDP port that discovery will listen on. Defaults to `port6`",
+        "type": "number",
+        "default": "port6",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "quicPort6",
+        "description": "The UDP port that QUIC will listen on. Defaults to `port6` + 1",
+        "type": "number",
+        "default": "port6 + 1",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "bootnodes",
+        "description": "Bootnodes for discv5 discovery",
+        "type": "string[]",
+        "default": "[]",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "targetPeers",
+        "description": "The target connected peers. Above this number peers will be disconnected",
+        "type": "number",
+        "default": "200",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "subscribeAllSubnets",
+        "description": "Subscribe to all subnets regardless of validator count",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "disablePeerScoring",
+        "description": "Disable peer scoring, used for testing on devnets",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "quic",
+        "description": "Enable QUIC transport",
+        "type": "boolean",
+        "default": "true",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "mdns",
+        "description": "Enable mdns local peer discovery",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "directPeers",
+        "description": "Direct peers for GossipSub mesh. These peers maintain permanent connections without GRAFT/PRUNE. Supports multiaddr with peer ID (e.g., `/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...`) or ENR (e.g., `enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...`). Both peers must configure each other as direct peers for the feature to work properly.",
+        "type": "string[]",
+        "default": "[]",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "enr.ip",
+        "description": "Override ENR IP entry",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "enr.tcp",
+        "description": "Override ENR TCP entry",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "enr.udp",
+        "description": "Override ENR UDP entry",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "enr.quic",
+        "description": "Override ENR QUIC entry",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "enr.ip6",
+        "description": "Override ENR IPv6 entry",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "enr.tcp6",
+        "description": "Override ENR (IPv6-specific) TCP entry",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "enr.udp6",
+        "description": "Override ENR (IPv6-specific) UDP entry",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "enr.quic6",
+        "description": "Override ENR (IPv6-specific) QUIC entry",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "nat",
+        "description": "Allow configuration of non-local addresses",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      }
+    ],
+    "validator": [
+      {
+        "name": "dataDir",
+        "description": "Lodestar root data directory",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "network",
+        "description": "Name of the Ethereum Consensus chain network to join",
+        "type": "string",
+        "default": "\"mainnet\"",
+        "choices": [
+          "chiado",
+          "dev",
+          "ephemery",
+          "gnosis",
+          "hoodi",
+          "mainnet",
+          "plataberget",
+          "sepolia"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "paramsFile",
+        "description": "Network configuration file",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "rcConfig",
+        "description": "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "supernode",
+        "description": "Subscribe to and custody all data column sidecar subnets",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "semiSupernode",
+        "description": "Subscribe to and custody half of the data column sidecar subnets to support blob reconstruction, enabling more efficient data availability with lower bandwidth and storage requirements compared to a supernode.",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logLevel",
+        "description": "Logging verbosity level for emitting logs to terminal",
+        "type": "string",
+        "default": "\"info\"",
+        "choices": [
+          "debug",
+          "error",
+          "info",
+          "trace",
+          "verbose",
+          "warn"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logFile",
+        "description": "Path to output all logs to a persistent log file, use 'none' to disable",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logFileLevel",
+        "description": "Logging verbosity level for emitting logs to file",
+        "type": "string",
+        "default": "\"debug\"",
+        "choices": [
+          "debug",
+          "error",
+          "info",
+          "trace",
+          "verbose",
+          "warn"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logFileDailyRotate",
+        "description": "Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation",
+        "type": "number",
+        "default": "5",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "keymanager",
+        "description": "Enable key manager API server",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "keymanager.auth",
+        "description": "Enable token bearer authentication for key manager API server",
+        "type": "boolean",
+        "default": "true",
+        "choices": [],
+        "aliases": [
+          "keymanager.authEnabled"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "keymanager.tokenFile",
+        "description": "Path to file containing bearer token used for key manager API authentication",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [
+          "tokenFile"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "keymanager.port",
+        "description": "Set port for key manager API",
+        "type": "number",
+        "default": "5062",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "keymanager.address",
+        "description": "Set host for key manager API",
+        "type": "string",
+        "default": "\"127.0.0.1\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "keymanager.cors",
+        "description": "Configures the Access-Control-Allow-Origin CORS header for key manager API. Use 'all' to allow all origins",
+        "type": "string",
+        "default": "\"*\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "beaconNodes",
+        "description": "Addresses to connect to BeaconNode",
+        "type": "string[]",
+        "default": "[ \"http://127.0.0.1:9596\" ]",
+        "choices": [],
+        "aliases": [
+          "server"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "force",
+        "description": "Open validators even if there's a lockfile. Use with caution",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "graffiti",
+        "description": "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "proposerSettingsFile",
+        "description": "A yaml file to specify detailed default and per validator public key customized proposer configs. PS: This feature and its format is in alpha and subject to change",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "suggestedFeeRecipient",
+        "description": "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or key manager API. Only used post merge.",
+        "type": "string",
+        "default": "\"0x0000000000000000000000000000000000000000\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "strictFeeRecipientCheck",
+        "description": "Enable strict checking of the validator's `feeRecipient` with the one returned by engine",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "defaultGasLimit",
+        "description": "Override the gas limit preference sent to the engine/builder. If unset, the network GAS_LIMIT_SCHEDULE is evaluated for each duty epoch from Gloas, with the current default used before Gloas or its first entry.",
+        "type": "number",
+        "default": "GAS_LIMIT_SCHEDULE from Gloas (current default: 60000000)",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder",
+        "description": "An alias for `--builder.selection default` for the builder flow, ignored if `--builder.selection` is explicitly provided",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder.selection",
+        "description": "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `executionalways`, or `executiononly`",
+        "type": "string",
+        "default": "\"executiononly\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder.boostFactor",
+        "description": "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
+        "type": "string",
+        "default": "\"100\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder.minBid",
+        "description": "Minimum counted total payment in Gwei accepted from a builder bid. The total is the bid value plus its execution payment up to the configured cap. Only used post-Gloas",
+        "type": "string",
+        "default": "\"0\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder.urls",
+        "description": "URL(s) of external builders to request execution payload bids from. Auth data agreed with a builder may be appended as a hex fragment, e.g. https://builder.example.com#0x0123, otherwise the hostname of the URL is used. Only used post-Gloas",
+        "type": "string[]",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "builder.maxExecutionPayment",
+        "description": "Maximum execution layer payment in Gwei counted toward a builder bid. A value of 0 means only trustless payments via the builder's staked collateral count toward the bid. Values above 0 require `--allowDangerousTrustedPayments`. Only used post-Gloas",
+        "type": "string",
+        "default": "\"0\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "allowDangerousTrustedPayments",
+        "description": "Allow configuring a builder max execution payment above 0. Trusted execution layer payments are only backed by the builder's promise to pay, not by its staked collateral, a builder that fails to pay cannot be penalized in protocol",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "broadcastValidation",
+        "description": "Validations to be run by beacon node for the signed block prior to publishing",
+        "type": "string",
+        "default": "\"gossip\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "blindedLocal",
+        "description": "Request fetching local block in blinded format for produceBlockV3",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "payloadLocal",
+        "description": "Request keeping the execution payload (envelope and blobs) local to the beacon node during post-Gloas block production. Reduces bandwidth but the envelope must be published via the same beacon node that produced the block",
+        "type": "boolean",
+        "default": "true if a single beacon node is configured, otherwise false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "importKeystores",
+        "description": "Path(s) to a directory or single file path to validator keystores, i.e. Launchpad validators",
+        "type": "string[]",
+        "default": "[ \"./keystores/*.json\" ]",
+        "choices": [],
+        "aliases": [
+          "keystore"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "importKeystoresPassword",
+        "description": "Path to a file with password to decrypt all keystores from `importKeystores` option",
+        "type": "string",
+        "default": "\"./password.txt\"",
+        "choices": [],
+        "aliases": [
+          "passphraseFile"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "doppelgangerProtection",
+        "description": "Enables Doppelganger protection",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [
+          "doppelgangerProtectionEnabled"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "http.requestWireFormat",
+        "description": "Wire format to use in HTTP requests to beacon node. Can be one of `json` or `ssz`",
+        "type": "string",
+        "default": "\"json\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "http.responseWireFormat",
+        "description": "Preferred wire format for HTTP responses from beacon node. Can be one of `json` or `ssz`",
+        "type": "string",
+        "default": "\"ssz\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "http.requestTimeout",
+        "description": "Timeout in milliseconds for HTTP requests to the beacon node",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "externalSigner.urls",
+        "description": "URL(s) to connect to external signing server(s)",
+        "type": "string[]",
+        "default": null,
+        "choices": [],
+        "aliases": [
+          "externalSigner.url"
+        ],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "externalSigner.pubkeys",
+        "description": "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
+        "type": "string[]",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "externalSigner.fetch",
+        "description": "Fetch the list of public keys to validate from external signer(s). Cannot be used in combination with `--externalSigner.pubkeys`",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "externalSigner.fetchInterval",
+        "description": "Interval in milliseconds between fetching the list of public keys from external signer(s), once per epoch by default",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "distributed",
+        "description": "Enables specific features required to run as part of a distributed validator cluster",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "metrics",
+        "description": "Enable the Prometheus metrics HTTP server",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "metrics.port",
+        "description": "Listen TCP port for the Prometheus metrics HTTP server",
+        "type": "number",
+        "default": "5064",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "metrics.address",
+        "description": "Listen address for the Prometheus metrics HTTP server",
+        "type": "string",
+        "default": "\"127.0.0.1\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "monitoring.endpoint",
+        "description": "Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in)",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "monitoring.interval",
+        "description": "Interval in milliseconds between sending client stats to the remote service",
+        "type": "number",
+        "default": "60000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      }
+    ],
+    "builder": [
+      {
+        "name": "dataDir",
+        "description": "Lodestar root data directory",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "network",
+        "description": "Name of the Ethereum Consensus chain network to join",
+        "type": "string",
+        "default": "\"mainnet\"",
+        "choices": [
+          "chiado",
+          "dev",
+          "ephemery",
+          "gnosis",
+          "hoodi",
+          "mainnet",
+          "plataberget",
+          "sepolia"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "paramsFile",
+        "description": "Network configuration file",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "rcConfig",
+        "description": "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "supernode",
+        "description": "Subscribe to and custody all data column sidecar subnets",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "semiSupernode",
+        "description": "Subscribe to and custody half of the data column sidecar subnets to support blob reconstruction, enabling more efficient data availability with lower bandwidth and storage requirements compared to a supernode.",
+        "type": "boolean",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logLevel",
+        "description": "Logging verbosity level for emitting logs to terminal",
+        "type": "string",
+        "default": "\"info\"",
+        "choices": [
+          "debug",
+          "error",
+          "info",
+          "trace",
+          "verbose",
+          "warn"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logFile",
+        "description": "Path to output all logs to a persistent log file, use 'none' to disable",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logFileLevel",
+        "description": "Logging verbosity level for emitting logs to file",
+        "type": "string",
+        "default": "\"debug\"",
+        "choices": [
+          "debug",
+          "error",
+          "info",
+          "trace",
+          "verbose",
+          "warn"
+        ],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "logFileDailyRotate",
+        "description": "Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation",
+        "type": "number",
+        "default": "5",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "beaconNodeUrl",
+        "description": "URL of the beacon node. It must run with `--emitPayloadAttributes` to emit payload attributes for every slot",
+        "type": "string",
+        "default": "\"http://127.0.0.1:9596\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "keystore",
+        "description": "Path to a keystore file",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": true,
+        "deprecated": false
+      },
+      {
+        "name": "keystorePassword",
+        "description": "Path to a file with password to decrypt the keystore from 'keystore' option",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": true,
+        "deprecated": false
+      },
+      {
+        "name": "builderPubkey",
+        "description": "Builder's expected public key based on the keystore from 'keystore' option",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "executionFeeRecipient",
+        "description": "Execution address for receiving the payload rewards",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": true,
+        "deprecated": false
+      },
+      {
+        "name": "requestTimeout",
+        "description": "Timeout in milliseconds for HTTP requests to the beacon node",
+        "type": "number",
+        "default": "10000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.urls",
+        "description": "Url to the execution client engine API that builds the payloads. The execution client must be kept in sync by a beacon node",
+        "type": "string[]",
+        "default": "[ \"http://localhost:8551\" ]",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.timeout",
+        "description": "Timeout in milliseconds for execution engine API HTTP client",
+        "type": "number",
+        "default": "12000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.retries",
+        "description": "Number of retries when calling execution engine API",
+        "type": "number",
+        "default": "2",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.retryDelay",
+        "description": "Delay time in milliseconds between retries when retrying calls to the execution engine API",
+        "type": "number",
+        "default": "2000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "execution.jwtSecret",
+        "description": "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
+        "type": "string",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "bidding.shareBps",
+        "description": "Share of the payload value offered to the proposer, in basis points",
+        "type": "number",
+        "default": "10000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "bidding.fixedCostGwei",
+        "description": "Fixed amount in gwei deducted from the proposer share of every bid",
+        "type": "number",
+        "default": "0",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "bidding.minValueGwei",
+        "description": "Never bid below this value in gwei",
+        "type": "number",
+        "default": "0",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "bidding.maxValueGwei",
+        "description": "Never bid above this value in gwei",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "bidding.deadlineBps",
+        "description": "Point within the slot before the proposal slot at which the payload is retrieved and the bid is published, in basis points",
+        "type": "number",
+        "default": "9500",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "bidding.getPayloadTimeout",
+        "description": "Timeout in milliseconds for retrieving the payload from the execution client at the bid deadline",
+        "type": "number",
+        "default": "1000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "bidding.minOperatingBalanceGwei",
+        "description": "Do not bid while the builder balance is below this value in gwei",
+        "type": "number",
+        "default": "1000000000",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "reveal.cutoffBps",
+        "description": "Do not reveal the payload if the block committing to our bid arrives after this point within its slot, in basis points. Defaults to PAYLOAD_ATTESTATION_DUE_BPS of the network",
+        "type": "number",
+        "default": null,
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "metrics",
+        "description": "Enable the Prometheus metrics HTTP server",
+        "type": "boolean",
+        "default": "false",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "metrics.port",
+        "description": "Listen TCP port for the Prometheus metrics HTTP server",
+        "type": "number",
+        "default": "5065",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      },
+      {
+        "name": "metrics.address",
+        "description": "Listen address for the Prometheus metrics HTTP server",
+        "type": "string",
+        "default": "\"127.0.0.1\"",
+        "choices": [],
+        "aliases": [],
+        "required": false,
+        "deprecated": false
+      }
+    ]
+  }
+}
