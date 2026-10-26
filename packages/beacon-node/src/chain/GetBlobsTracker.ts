@@ -121,8 +121,6 @@ export class GetBlobsTracker {
     }
     timer?.();
 
-    // We don't care about the outcome of this call,
-    // just that it has been triggered for this block root.
     this.activeReconstructions.add(input.blockRootHex);
     this.blobsAndProofsBuffers[freeIndex].inUse = true;
     const logCtx = {slot: input.slot, root: input.blockRootHex};
