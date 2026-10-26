@@ -34,6 +34,7 @@ describe("committee indices", () => {
   for (const listSize of [16_384, 250_000, 1_000_000]) {
     const seed = deterministicBenchmarkSeed(`committee-indices:${listSize}`);
     const activeIndices = getInputArray(listSize);
+    const syncBalanceIncrements = new Uint16Array(listSize).fill(32);
     const effectiveBalanceIncrements = new Uint16Array(listSize);
     for (let i = 0; i < listSize; i++) {
       effectiveBalanceIncrements[i] = 32 + 32 * (i % 64);
@@ -43,9 +44,9 @@ describe("committee indices", () => {
 
     bench({
       fn: () => {
-        shuffleReference.naiveComputeSyncCommitteeIndicesElectra(seed, activeIndices, effectiveBalanceIncrements);
+        shuffleReference.naiveComputeSyncCommitteeIndicesElectra(seed, activeIndices, syncBalanceIncrements);
       },
-      id: `JS  - computeSyncCommitteeIndicesElectra - ${listSize} indices`,
+      id: `JS  - computeSyncCommitteeIndicesElectra - ${listSize} indices - 32 ETH`,
     });
 
     bench({
@@ -53,7 +54,7 @@ describe("committee indices", () => {
         shuffle.computeSyncCommitteeIndices(
           seed,
           activeIndices,
-          effectiveBalanceIncrements,
+          syncBalanceIncrements,
           2,
           SYNC_COMMITTEE_SIZE,
           MAX_EFFECTIVE_BALANCE_ELECTRA,
@@ -61,7 +62,7 @@ describe("committee indices", () => {
           SHUFFLE_ROUND_COUNT
         );
       },
-      id: `zig - computeSyncCommitteeIndices - ${listSize} indices`,
+      id: `zig - computeSyncCommitteeIndices - ${listSize} indices - 32 ETH`,
     });
 
     bench({
