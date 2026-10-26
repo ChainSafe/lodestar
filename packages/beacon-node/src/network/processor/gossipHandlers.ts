@@ -715,10 +715,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       .catch((e) => {
         // Adjust verbosity based on error type
         let logLevel: LogLevel;
-        let errorLabel: BlockErrorCode | "DATA_AVAILABILITY_TIMEOUT" | "NOT_BLOCK_ERROR";
 
         if (e instanceof BlockError) {
-          errorLabel = e.type.code;
           switch (e.type.code) {
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
             // PARENT_BLOCK_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
@@ -742,14 +740,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           }
         } else if (e instanceof TimeoutError) {
           // Data did not arrive in the availability wait, BlockInputSync keeps pulling it and retries the import
-          errorLabel = "DATA_AVAILABILITY_TIMEOUT";
           logLevel = LogLevel.debug;
         } else {
           // Any unexpected error
-          errorLabel = "NOT_BLOCK_ERROR";
           logLevel = LogLevel.error;
         }
-        metrics?.gossipBlock.processBlockErrors.inc({error: errorLabel});
+        metrics?.gossipBlock.processBlockErrors.inc({
+          error:
+            e instanceof BlockError
+              ? e.type.code
+              : e instanceof TimeoutError
+                ? "DATA_AVAILABILITY_TIMEOUT"
+                : "NOT_BLOCK_ERROR",
+        });
         logger[logLevel]("Error processing block", {slot, root: blockInput.blockRootHex, peer: peerIdStr}, e as Error);
         // TODO(fulu): Revisit when we prune block inputs
         chain.seenBlockInputCache.prune(blockInput.blockRootHex);
@@ -1357,10 +1360,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
             // Adjust verbosity based on error type
             let logLevel: LogLevel;
-            let errorLabel: PayloadErrorCode | "DATA_AVAILABILITY_TIMEOUT" | "NOT_PAYLOAD_ERROR";
 
             if (e instanceof PayloadError) {
-              errorLabel = e.type.code;
               switch (e.type.code) {
                 // BLOCK_NOT_IN_FORK_CHOICE should not happen, validateGossipExecutionPayloadEnvelope above
                 // already verified the block is in fork choice
@@ -1384,14 +1385,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               }
             } else if (e instanceof TimeoutError) {
               // Columns did not arrive in the availability wait, BlockInputSync keeps pulling and retries the import
-              errorLabel = "DATA_AVAILABILITY_TIMEOUT";
               logLevel = LogLevel.debug;
             } else {
               // Any unexpected error
-              errorLabel = "NOT_PAYLOAD_ERROR";
               logLevel = LogLevel.error;
             }
-            metrics?.gossipExecutionPayloadEnvelope.processPayloadErrors.inc({error: errorLabel});
+            metrics?.gossipExecutionPayloadEnvelope.processPayloadErrors.inc({
+              error:
+                e instanceof PayloadError
+                  ? e.type.code
+                  : e instanceof TimeoutError
+                    ? "DATA_AVAILABILITY_TIMEOUT"
+                    : "NOT_PAYLOAD_ERROR",
+            });
             chain.logger[logLevel](
               "Error processing execution payload from gossip",
               {slot, root: blockRootHex, peer: peerIdStr},
