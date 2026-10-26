@@ -811,8 +811,8 @@
     ]
   },
   "timezone": "utc",
-  "title": "Lodestar native network",
-  "uid": "lodestar-native-network",
+  "title": "Lodestar - native network",
+  "uid": "lodestar_native_network",
   "version": 1,
   "weekStart": "monday",
   "description": "Native network health, traffic, request failures and resource pressure. Select an instance with Filters."
