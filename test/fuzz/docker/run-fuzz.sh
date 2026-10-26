@@ -57,7 +57,9 @@ write_status() {
     fi
     awk -F' *: *' '
         $1 == "execs_done"    { print "execs_total", $2 }
-        $1 == "execs_per_sec" { print "execs_per_second", $2 }
+        # Not execs_per_sec: after a resume AFL++ restores run_time but resets
+        # execs_done, so that average reads near zero for days.
+        $1 == "execs_ps_last_min" { print "execs_per_second", $2 }
         $1 == "corpus_count"  { print "corpus_entries", $2 }
         $1 == "edges_found"   { print "coverage", $2 }
         $1 == "saved_crashes" { print "crashes_total", $2 }
@@ -70,7 +72,7 @@ report() {
     s="$OUT/default/fuzzer_stats"
     [ -f "$s" ] || { echo "STATS starting"; return; }
     awk -F' *: *' '
-        $1 ~ /^(run_time|execs_done|execs_per_sec|corpus_count|edges_found|saved_crashes|saved_hangs)$/ {
+        $1 ~ /^(run_time|execs_done|execs_ps_last_min|corpus_count|edges_found|saved_crashes|saved_hangs)$/ {
             printf "%s=%s ", $1, $2 }
         END { print "" }' "$s" | sed 's/^/STATS /'
 }
