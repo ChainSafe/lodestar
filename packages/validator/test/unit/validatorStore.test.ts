@@ -3,13 +3,15 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {DOMAIN_BUILDER_REQUEST_AUTH, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {getConfig} from "@lodestar/config/test-utils";
+import {DOMAIN_BEACON_PROPOSER, DOMAIN_BUILDER_REQUEST_AUTH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ZERO_HASH, computeDomain, computeEpochAtSlot, computeSigningRoot} from "@lodestar/state-transition";
 import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
 import {InvalidBlockErrorCode} from "../../src/slashingProtection/index.js";
-import {getApiClientStub} from "../utils/apiStub.js";
+import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
 import {getMockedLogger} from "../utils/logger.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
 
@@ -286,6 +288,32 @@ describe("ValidatorStore", () => {
     ).resolves.toBeDefined();
   });
 
+  it("Should not sign an aggregate for a validator that is not doppelganger safe", async () => {
+    const slot = 2 * SLOTS_PER_EPOCH + 1;
+    const duty: routes.validator.AttesterDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: 0,
+      committeeIndex: 0,
+      committeeLength: 1,
+      committeesAtSlot: 1,
+      validatorCommitteeIndex: 0,
+      slot,
+    };
+    const aggregate = ssz.phase0.Attestation.defaultValue();
+    aggregate.data = {
+      ...ssz.phase0.AttestationData.defaultValue(),
+      slot,
+      target: {epoch: computeEpochAtSlot(slot), root: ZERO_HASH},
+    };
+    const selectionProof = new Uint8Array(96);
+
+    await expect(validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)).resolves.toBeDefined();
+    vi.spyOn(validatorStore, "isDoppelgangerSafe").mockReturnValue(false);
+    await expect(validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)).rejects.toThrow(
+      "Doppelganger state"
+    );
+  });
+
   it("Should reject builder request auth data with invalid length", async () => {
     await expect(validatorStore.signBuilderRequestAuth(pubkeys[0], new Uint8Array(0), 10)).rejects.toThrow();
     await expect(validatorStore.signBuilderRequestAuth(pubkeys[0], new Uint8Array(4097), 10)).rejects.toThrow();
@@ -379,6 +407,43 @@ describe("ValidatorStore", () => {
     // Per-key builders replace the default entries
     store.setBuilderConfig(pubkey, {builders: []});
     expect(store.getResolvedBuilderEntries(pubkey)).toEqual([]);
+  });
+
+  it("Should remove a signer whose validator index is known", async () => {
+    const pubkeyHex = toHexString(pubkeys[0]);
+    api.beacon.postStateValidators.mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            index: 0,
+            balance: 32e9,
+            status: "active_ongoing",
+            validator: {...ssz.phase0.Validator.defaultValue(), pubkey: pubkeys[0]},
+          },
+        ],
+        meta: {executionOptimistic: false, finalized: false},
+      })
+    );
+    await validatorStore.pollValidatorIndices();
+    expect(validatorStore.getPubkeyOfIndex(0)).toBe(pubkeyHex);
+
+    expect(validatorStore.removeSigner(pubkeyHex)).toBe(true);
+    expect(validatorStore.hasVotingPubkey(pubkeyHex)).toBe(false);
+    expect(validatorStore.getPubkeyOfIndex(0)).toBeUndefined();
+  });
+
+  it("signs a Heze block over the fork-specific block root", async () => {
+    const hezeChainConfig = getConfig(ForkName.heze);
+    const config = createBeaconConfig(hezeChainConfig, Buffer.alloc(32, 0xdd));
+    const store = await initValidatorStore(secretKeys, api, hezeChainConfig);
+    const block = ssz.heze.BeaconBlock.defaultValue();
+    block.slot = 32;
+    block.body.graffiti.fill(1);
+    const signedBlock = await store.signBlock(pubkeys[0], block, block.slot);
+    const domain = config.getDomain(block.slot, DOMAIN_BEACON_PROPOSER);
+    const signingRoot = computeSigningRoot(ssz.heze.BeaconBlock, block, domain);
+    expect(signedBlock.signature).toEqual(secretKeys[0].sign(signingRoot).toBytes());
+    expect(signedBlock.message).toEqual(block);
   });
 });
 

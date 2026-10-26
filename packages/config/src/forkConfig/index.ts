@@ -12,6 +12,7 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
@@ -226,37 +227,45 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getAttestationDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS);
     },
     getAggregateDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS);
     },
     getSyncMessageDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.SYNC_MESSAGE_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.SYNC_MESSAGE_DUE_BPS);
     },
     getSyncContributionDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.CONTRIBUTION_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.CONTRIBUTION_DUE_BPS);
     },
-    getProposerReorgCutoffMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.PROPOSER_REORG_CUTOFF_BPS);
+    getProposerReorgCutoffMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.PROPOSER_REORG_CUTOFF_BPS);
     },
-    getPayloadDueMs(): number {
-      return this.getSlotComponentDurationMs(config.PAYLOAD_DUE_BPS);
+    getPayloadDueMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.PAYLOAD_DUE_BPS);
     },
 
-    getSlotComponentDurationMs(basisPoints: number): number {
-      return Math.round((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
+    getInclusionListDueMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.INCLUSION_LIST_DUE_BPS);
+    },
+
+    getSlotDurationMs(fork: ForkName): number {
+      return isForkPostHeze(fork) ? config.SLOT_DURATION_MS_HEZE : config.SLOT_DURATION_MS;
+    },
+
+    getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number {
+      return Math.round((basisPoints * this.getSlotDurationMs(fork)) / BASIS_POINTS);
     },
   };
 }

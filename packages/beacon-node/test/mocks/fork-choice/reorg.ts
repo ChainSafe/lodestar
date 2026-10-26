@@ -58,7 +58,7 @@ export class ReorgedForkChoice extends ForkChoice {
    */
   getProposerHead(
     headBlock: ProtoBlock,
-    secFromSlot: number,
+    msFromSlot: number,
     slot: Slot
   ): {proposerHead: ProtoBlock; isHeadTimely: boolean; notReorgedReason?: NotReorgedReason} {
     if (this.reorgedSlot !== undefined && this._fcStore.currentSlot === this.reorgedSlot + 1) {
@@ -67,21 +67,21 @@ export class ReorgedForkChoice extends ForkChoice {
         return {proposerHead: commonAncestor, isHeadTimely: true};
       }
     }
-    return super.getProposerHead(headBlock, secFromSlot, slot);
+    return super.getProposerHead(headBlock, msFromSlot, slot);
   }
 
   /**
    * Tell `PrepareNextSlotScheduler` to anticipate the upcoming reorg so the execution
    * layer pre-builds the right payload for slot `reorgedSlot+1`.
    */
-  predictProposerHead(headBlock: ProtoBlock, secFromSlot: number, currentSlot: Slot): ProtoBlock {
+  predictProposerHead(headBlock: ProtoBlock, msFromSlot: number, currentSlot: Slot): ProtoBlock {
     if (currentSlot === this.reorgedSlot) {
       const commonAncestor = this.getCommonAncestorBlock();
       if (commonAncestor !== undefined) {
         return commonAncestor;
       }
     }
-    return super.predictProposerHead(headBlock, secFromSlot, currentSlot);
+    return super.predictProposerHead(headBlock, msFromSlot, currentSlot);
   }
 
   /**

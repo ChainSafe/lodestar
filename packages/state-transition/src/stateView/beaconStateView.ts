@@ -40,6 +40,7 @@ import {
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
   createCachedBeaconState,
   isStateValidatorsNodesPopulated,
 } from "../cache/stateCache.js";
@@ -83,6 +84,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   // phase0
   private cachedFork: Fork | null = null;
   private cachedLatestBlockHeader: phase0.BeaconBlockHeader | null = null;
+  private cachedEffectiveBalanceIncrementsZeroInactive: EffectiveBalanceIncrements | null = null;
   // altair
   private cachedCurrentSyncCommittee: SyncCommittee | null = null;
   private cachedNextSyncCommittee: SyncCommittee | null = null;
@@ -145,7 +147,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get eth1Data(): phase0.Eth1Data {
-    return this.cachedState.eth1Data;
+    if (this.forkSeq >= ForkSeq.heze) {
+      throw new Error("eth1Data was removed from the beacon state in Heze");
+    }
+    return (this.cachedState as CachedBeaconStatePreHeze).eth1Data;
   }
 
   get latestBlockHeader(): phase0.BeaconBlockHeader {
@@ -611,6 +616,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedState.epochCtx.currentSyncCommitteeIndexed;
   }
 
+  get currentSyncCommitteeValidatorIndices(): Uint32Array {
+    return this.cachedState.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
+  }
+
   get syncProposerReward(): number {
     return this.cachedState.epochCtx.syncProposerReward;
   }
@@ -630,7 +639,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {
-    return getEffectiveBalanceIncrementsZeroInactive(this.cachedState);
+    if (this.cachedEffectiveBalanceIncrementsZeroInactive === null) {
+      this.cachedEffectiveBalanceIncrementsZeroInactive = getEffectiveBalanceIncrementsZeroInactive(this.cachedState);
+    }
+    return this.cachedEffectiveBalanceIncrementsZeroInactive;
   }
 
   getBalance(index: number): number {

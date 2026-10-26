@@ -195,6 +195,39 @@ describe("SyncCommitteeDutiesService", () => {
     } as typeof dutiesByIndexByPeriodObj);
   });
 
+  it("Should keep duties of other validators if a selection proof fails", async () => {
+    const slot = 1;
+    const duties: routes.validator.SyncDuty[] = [0, 1].map((i) => ({
+      pubkey: pubkeys[i],
+      validatorIndex: indices[i],
+      validatorSyncCommitteeIndices: [7],
+    }));
+    api.validator.getSyncCommitteeDuties.mockResolvedValue(
+      mockApiResponse({data: duties, meta: {executionOptimistic: false}})
+    );
+    api.validator.prepareSyncCommitteeSubnets.mockResolvedValue(mockApiResponse({}));
+    vi.spyOn(validatorStore, "signSyncCommitteeSelectionProof").mockImplementation(async (pubkey) => {
+      if (pubkey === toHexString(pubkeys[0])) throw Error("Remote signer error");
+      return new Uint8Array(96);
+    });
+
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new SyncCommitteeDutiesService(
+      altair0Config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      null
+    );
+
+    await clock.tickEpochFns(0, controller.signal);
+
+    expect((await dutiesService.getDutiesAtSlot(slot)).map(({duty}) => duty)).toEqual([toSyncDutySubnet(duties[1])]);
+  });
+
   it("Should remove signer from sync committee duties", async () => {
     // Reply with some duties
     const duty1: routes.validator.SyncDuty = {
