@@ -62,10 +62,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libpython3.12t64 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /usr/bin/afl-fuzz /usr/bin/afl-showmap /usr/bin/afl-tmin /usr/bin/afl-whatsup /usr/local/bin/
+# afl-cmin (a POSIX sh + awk script) drives afl-showmap for minimize.sh.
+COPY --from=build /usr/bin/afl-fuzz /usr/bin/afl-showmap /usr/bin/afl-tmin /usr/bin/afl-whatsup /usr/bin/afl-cmin /usr/local/bin/
 COPY --from=build /out/bin/ /opt/fuzz/bin/
 COPY test/fuzz/corpus/ /opt/fuzz/corpus/
-COPY test/fuzz/docker/run-fuzz.sh /opt/fuzz/run-fuzz.sh
+COPY test/fuzz/docker/run-fuzz.sh test/fuzz/docker/minimize.sh test/fuzz/docker/lib.sh /opt/fuzz/
 
 # The harness starts AFL++'s fork server itself (deferred mode, pkg/afl++/afl.c).
 # afl-fuzz sets this for such targets; setting it here lets a target also run
@@ -77,6 +78,7 @@ ARG REVISION=unknown
 LABEL org.opencontainers.image.source="https://github.com/ChainSafe/lodestar-z" \
       org.opencontainers.image.title="lodestar-z-fuzz" \
       org.opencontainers.image.description="AFL++ fuzz targets for lodestar-z" \
-      org.opencontainers.image.revision="${REVISION}"
+      org.opencontainers.image.revision="${REVISION}" \
+      org.chainsafe.fuzz.minimize="/opt/fuzz/minimize.sh"
 
 ENTRYPOINT ["/opt/fuzz/run-fuzz.sh"]

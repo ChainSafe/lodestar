@@ -16,31 +16,20 @@
 # volume on /fuzz works for local runs (see test/fuzz/README.md).
 set -u
 
-: "${FUZZ_TARGET:?FUZZ_TARGET is required, e.g. ssz-basic -- see /opt/fuzz/bin}"
-FUZZ_PROJECT="${FUZZ_PROJECT:-lodestar-z}"
-FUZZ_STATE="${FUZZ_STATE:-/fuzz/state}"
-FUZZ_FAILURES="${FUZZ_FAILURES:-/fuzz/failures}"
-FUZZ_METRICS="${FUZZ_METRICS:-/fuzz/metrics}"
-TMPDIR="${TMPDIR:-/tmp}"
+. /opt/fuzz/lib.sh
+
 # afl-fuzz rewrites fuzzer_stats once a minute; reporting faster repeats stale numbers.
 STATS_INTERVAL="${STATS_INTERVAL:-60}"
 
-# The fuzz platform's target names allow hyphens but not underscores, so
-# `ssz-basic` and `ssz_basic` both select the ssz_basic harness and corpus.
-HARNESS=$(printf '%s' "$FUZZ_TARGET" | tr '-' '_')
-BIN="/opt/fuzz/bin/fuzz-$HARNESS"
-OUT="$FUZZ_STATE/afl"
-
-if [ ! -x "$BIN" ]; then
-    echo "FATAL unknown FUZZ_TARGET '$FUZZ_TARGET'; available:" $(ls /opt/fuzz/bin | sed 's/^fuzz-//; s/_/-/g')
-    exit 2
-fi
 mkdir -p "$FUZZ_STATE" "$FUZZ_FAILURES" "$FUZZ_METRICS" "$TMPDIR"
+restore_corpus
 
-# Seeds, best first: the minimised corpus, the hand-made one, else one byte.
-# Only used to start a campaign; a restart resumes from $OUT (AFL_AUTORESUME).
+# Seeds, best first: this campaign's own minimized corpus (minimize.sh), the
+# repo's minimised one, the hand-made one, else one byte. Only used to start a
+# campaign; a restart resumes from $OUT (AFL_AUTORESUME), which minimize.sh
+# discards so the next start uses the corpus it produced.
 SEEDS=""
-for d in "/opt/fuzz/corpus/$HARNESS-cmin" "/opt/fuzz/corpus/$HARNESS-initial"; do
+for d in "$CORPUS" "/opt/fuzz/corpus/$HARNESS-cmin" "/opt/fuzz/corpus/$HARNESS-initial"; do
     if [ -d "$d" ] && [ -n "$(ls -A "$d")" ]; then SEEDS="$d"; break; fi
 done
 if [ -z "$SEEDS" ]; then
@@ -53,17 +42,6 @@ export AFL_NO_UI=1            # plain log output, not the curses screen
 export AFL_SKIP_CPUFREQ=1     # a container cannot see or set the CPU governor
 export AFL_NO_AFFINITY=1      # the scheduler's cpuset already pins the task
 export AFL_AUTORESUME=1       # resume from $OUT after any restart
-
-sync_findings() {  # kind, afl dir, prefix
-    for f in "$OUT/default/$2"/id:*; do
-        [ -e "$f" ] || continue
-        h=$(sha256sum "$f" | cut -c1-16)
-        if [ ! -e "$FUZZ_FAILURES/$3-$h" ]; then
-            cp "$f" "$FUZZ_FAILURES/$3-$h"
-            echo "NEW_$1 file=$3-$h afl_id=$(basename "$f")"
-        fi
-    done
-}
 
 # Map fuzzer_stats onto the platform's status fields. Written to a temporary
 # file and renamed, so the platform never reads half a file.

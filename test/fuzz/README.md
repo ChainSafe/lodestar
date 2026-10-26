@@ -196,7 +196,7 @@ rename the output files to replace colons with underscores before committing:
 
 `Dockerfile.fuzz` (repository root) packages **every target** into one image,
 `ghcr.io/chainsafe/lodestar-z-fuzz`, for the ChainSafe fuzz platform. The
-image contains the instrumented binaries, `afl-fuzz` and the seed corpora; the
+image contains the instrumented binaries, `afl-fuzz`, `afl-cmin` and the seed corpora; the
 Zig and LLVM toolchain stays in the build stage. `FUZZ_TARGET` picks the
 target a container runs.
 
@@ -265,8 +265,40 @@ the AFL++ state in `$FUZZ_STATE` after any restart, and:
   size, crashes — which the platform turns into metrics and uses to detect a
   hung campaign.
 
+A campaign's state lives in `$FUZZ_STATE`: `corpus/`, the minimized corpus,
+and `afl/`, AFL++'s working directory. A new campaign starts from `corpus/`
+when it exists, else from the repository's seeds.
+
 Targets without a seed corpus (`ssz_nested_opaque_proof`,
 `ssz_opaque_roundtrip` today) start from a single zero byte and log a warning.
+
+### Minimizing
+
+The image names its minimize command in a label, which the platform requires:
+
+```sh
+docker inspect -f '{{ index .Config.Labels "org.chainsafe.fuzz.minimize" }}' <image>
+# /opt/fuzz/minimize.sh
+```
+
+The platform runs it on a schedule while the campaign is stopped, with the
+campaign's environment and volume. [`docker/minimize.sh`](docker/minimize.sh):
+
+1. copies any crash or hang not yet in `$FUZZ_FAILURES`;
+2. runs `afl-cmin` over the campaign's queue, the previous `corpus/` and the
+   committed seeds, so coverage never drops below what the repository has;
+3. swaps the result into `corpus/` and deletes `afl/`, which also drops
+   `plot_data` and the stats that grow for as long as a campaign runs. The next
+   start fuzzes from `corpus/`.
+
+It exits 0 when done or when there is nothing to minimize. On failure the
+state is left as it was, and it is safe to kill at any point. Locally, against
+a stopped campaign's volume:
+
+```sh
+docker run --rm -e FUZZ_TARGET=ssz_basic -v /tmp/fuzz:/fuzz \
+  --entrypoint /opt/fuzz/minimize.sh lodestar-z-fuzz
+```
 
 ### Locally
 

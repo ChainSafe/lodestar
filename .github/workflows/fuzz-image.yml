@@ -126,6 +126,31 @@ jobs:
           awk '$1 == "execs_total" && $2 > 0 { ok = 1 } END { exit !ok }' /tmp/fz/metrics/status
           docker stop -t 30 smoke
 
+      # The platform runs the command in the org.chainsafe.fuzz.minimize label on
+      # the stopped campaign's volume, under the same restrictions; the next start
+      # must fuzz from the corpus it produced.
+      - name: The minimize command shrinks the corpus and the next start uses it
+        run: |
+          cmd=$(docker inspect -f '{{ index .Config.Labels "org.chainsafe.fuzz.minimize" }}' lodestar-z-fuzz:ci)
+          test -n "$cmd"
+          run() {
+            docker run --rm --user 60001:60001 --read-only --cap-drop all \
+              --security-opt no-new-privileges --network none --init --pids-limit 4096 \
+              -e FUZZ_PROJECT=lodestar-z -e FUZZ_TARGET=ssz-basic \
+              -e FUZZ_STATE=/fuzz/state -e FUZZ_ARTIFACTS=/fuzz/artifacts \
+              -e FUZZ_FAILURES=/fuzz/failures -e FUZZ_METRICS=/fuzz/metrics -e TMPDIR=/local \
+              -v /tmp/fz/state:/fuzz/state -v /tmp/fz/artifacts:/fuzz/artifacts \
+              -v /tmp/fz/failures:/fuzz/failures -v /tmp/fz/metrics:/fuzz/metrics \
+              -v /tmp/fz/local:/local "$@"
+          }
+          run --entrypoint "$cmd" lodestar-z-fuzz:ci
+          sudo test -n "$(sudo ls -A /tmp/fz/state/corpus)"
+          ! sudo test -e /tmp/fz/state/afl
+          run --name restarted -d lodestar-z-fuzz:ci
+          sleep 15
+          docker logs restarted 2>&1 | grep '^START .* seeds=/fuzz/state/corpus '
+          docker stop -t 30 restarted
+
       # Hand the tested image itself to the publish job, so what is published is
       # exactly what passed above -- no second build.
       - name: Save the tested image
