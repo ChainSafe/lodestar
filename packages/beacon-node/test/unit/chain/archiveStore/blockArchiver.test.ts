@@ -40,6 +40,7 @@ describe("block archiver task", () => {
     vi.spyOn(dbStub.block, "batchDelete");
     vi.spyOn(dbStub.dataColumnSidecarArchive, "putManyBinary");
     vi.spyOn(dbStub.dataColumnSidecar, "deleteMany");
+    vi.spyOn(dbStub.blobSidecarsArchive, "keys").mockResolvedValue([]);
     vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
   });
 
