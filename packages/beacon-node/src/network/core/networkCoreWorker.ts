@@ -142,6 +142,7 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   unsubscribeGossipCoreTopics: () => core.unsubscribeGossipCoreTopics(),
 
   // sendReqRespRequest - handled via events with AsyncIterableBridgeHandler
+  watchRequestCapacity: (token) => core.watchRequestCapacity(token),
   publishGossip: (topic, data, opts) => core.publishGossip(topic, data, opts),
 
   setTargetGroupCount: (count) => core.setTargetGroupCount(count),

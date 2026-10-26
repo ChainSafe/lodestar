@@ -28,6 +28,7 @@ import {PeerAction, PeerRpcScoreStore, PeerScoreStats} from "../peers/index.js";
 import {PeerManager} from "../peers/peerManager.js";
 import {PeersData} from "../peers/peersData.js";
 import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
+import {RequestCapacityError} from "../reqresp/requestCapacity.js";
 import {GetReqRespHandlerFn, OutgoingRequestArgs} from "../reqresp/types.js";
 import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
@@ -371,6 +372,9 @@ export class NetworkCore implements INetworkCore {
     return this.forkBoundariesByEpoch.size > 0;
   }
 
+  async watchRequestCapacity(_token: string): Promise<boolean> {
+    throw new RequestCapacityError({code: "INVALID_REQUEST_CAPACITY_TOKEN"});
+  }
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming> {
     const peerId = peerIdFromString(data.peerId);
     return this.reqResp.sendRequestWithoutEncoding(peerId, data.method, data.versions, data.requestData);

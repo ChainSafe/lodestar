@@ -15,10 +15,16 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it("maps native admission refusal to local request rate limiting", async () => {
+it.each([
+  [
+    {reason: "local_capacity", capacityToken: "capacity-token"},
+    {code: RequestErrorCode.REQUEST_LOCAL_CAPACITY, capacityToken: "capacity-token"},
+  ],
+  [{reason: "too_many_requests"}, {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}],
+])("preserves the scope of native admission refusal %j", async (refusal, mapped) => {
   const key = await generateKeyPair("secp256k1");
   const request = vi.fn(() => {
-    throw Object.assign(new Error("full"), {code: "NetworkRequestRejected", reason: "slots_exhausted"});
+    throw Object.assign(new Error("full"), {code: "NetworkRequestRejected", ...refusal});
   });
   expect(() =>
     outgoingNativeRequest(
@@ -31,7 +37,34 @@ it("maps native admission refusal to local request rate limiting", async () => {
       },
       vi.fn()
     )
-  ).toThrow(expect.objectContaining({type: {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}}));
+  ).toThrow(expect.objectContaining({type: mapped}));
+});
+
+it("preserves an asynchronous capacity refusal without reporting the peer", async () => {
+  const failure = Object.assign(new Error("full"), {
+    code: "NetworkRequestRejected",
+    reason: "local_capacity",
+    capacityToken: "capacity-token",
+  });
+  const report = vi.fn();
+  const response: AsyncIterableIterator<NativeResponseChunk> = {
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    next: () => Promise.reject(failure),
+  };
+  const iterator = outgoingNativeRequest(
+    {request: () => response},
+    {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
+    report
+  );
+  await expect(iterator.next()).rejects.toMatchObject({
+    type: {
+      code: RequestErrorCode.REQUEST_LOCAL_CAPACITY,
+      capacityToken: "capacity-token",
+    },
+  });
+  expect(report).not.toHaveBeenCalled();
 });
 
 it("maps a native empty single-chunk response to EMPTY_RESPONSE", async () => {
@@ -169,7 +202,7 @@ it.each([
   else expect(report).toHaveBeenCalledExactlyOnceWith(action, code);
 });
 
-it.each(["invalid_request", "invalid_request_options", "protocol_disabled", "slots_exhausted"])(
+it.each(["invalid_request", "invalid_request_options", "protocol_disabled", "local_capacity"])(
   "does not penalize a peer for local admission refusal: %s",
   (reason) => {
     const report = vi.fn();
@@ -177,7 +210,11 @@ it.each(["invalid_request", "invalid_request_options", "protocol_disabled", "slo
       outgoingNativeRequest(
         {
           request: () => {
-            throw Object.assign(new Error(reason), {code: "NetworkRequestRejected", reason});
+            throw Object.assign(new Error(reason), {
+              code: "NetworkRequestRejected",
+              reason,
+              capacityToken: "capacity-token",
+            });
           },
         },
         {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},

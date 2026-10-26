@@ -8,8 +8,10 @@ function structuredClone<T>(value: T): T {
 }
 
 describe("ThreadBoundaryError", () => {
-  it("should clone RequestError through thread boundary", () => {
-    const requestError = new RequestError({code: RequestErrorCode.RESP_TIMEOUT});
+  it.each([
+    new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
+    new RequestError({code: RequestErrorCode.REQUEST_LOCAL_CAPACITY, capacityToken: "capacity-token"}),
+  ])("should clone RequestError through thread boundary: %s", (requestError) => {
     const threadBoundaryError = toThreadBoundaryError(requestError);
     const clonedError = structuredClone(threadBoundaryError);
     expect(clonedError.error).toBeNull();

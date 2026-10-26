@@ -30,6 +30,7 @@ export enum RequestErrorCode {
   REQUEST_RATE_LIMITED = "REQUEST_ERROR_RATE_LIMITED",
   /** Request self rate limited */
   REQUEST_SELF_RATE_LIMITED = "REQUEST_ERROR_SELF_RATE_LIMITED",
+  REQUEST_LOCAL_CAPACITY = "REQUEST_ERROR_LOCAL_CAPACITY",
   /** Response rate limited */
   RESP_RATE_LIMITED = "RESPONSE_ERROR_RATE_LIMITED",
   /** For malformed SSZ (metadata) responses */
@@ -50,6 +51,7 @@ export type RequestErrorType =
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED}
   | {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED; rateLimitedUntilMs?: number}
+  | {code: RequestErrorCode.REQUEST_LOCAL_CAPACITY; capacityToken: string}
   | {code: RequestErrorCode.RESP_RATE_LIMITED; rateLimitedUntilMs: number}
   | {code: RequestErrorCode.SSZ_OVER_MAX_SIZE};
 

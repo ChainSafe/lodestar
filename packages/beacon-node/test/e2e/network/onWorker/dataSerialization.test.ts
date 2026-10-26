@@ -76,6 +76,7 @@ describe("data serialization through worker boundary", () => {
 
   // Defining tests in this notation ensures that any event data is tested and probably safe to send
   const networkEventData = filterByUsedEvents<NetworkEventData>(networkEventDirection, {
+    [NetworkEvent.requestCapacityChanged]: null,
     [NetworkEvent.peerConnected]: {peer, status: statusZero, custodyColumns: [1, 2, 3, 4], clientAgent: "CLIENT_AGENT"},
     [NetworkEvent.peerDisconnected]: {peer},
     [NetworkEvent.reqRespRequest]: {
@@ -116,6 +117,7 @@ describe("data serialization through worker boundary", () => {
     prepareBeaconCommitteeSubnets: [[committeeSubscription]],
     prepareSyncCommitteeSubnets: [[committeeSubscription]],
     getNetworkIdentity: [],
+    watchRequestCapacity: ["capacity-token"],
     subscribeGossipCoreTopics: [],
     unsubscribeGossipCoreTopics: [],
     connectToPeer: [peerId, ["/ip4/1.2.3.4/tcp/13000"]],
@@ -162,6 +164,7 @@ describe("data serialization through worker boundary", () => {
   const workerApiReturnType: {[K in keyof NetworkWorkerApi]: Resolves<ReturnType<NetworkWorkerApi[K]>>} = {
     prepareBeaconCommitteeSubnets: null,
     prepareSyncCommitteeSubnets: null,
+    watchRequestCapacity: false,
     getNetworkIdentity: {
       peerId,
       enr: "test-enr",

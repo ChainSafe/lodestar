@@ -65,6 +65,7 @@ import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
+import {RequestCapacity, RequestCapacityOptions} from "./reqresp/requestCapacity.js";
 import {
   GetReqRespHandlerFn,
   ResponseIncoming,
@@ -132,6 +133,7 @@ export class Network implements INetwork {
   // TODO: Review
   private readonly networkProcessor: NetworkProcessor | NativeGossipExecutor;
   private readonly core: INetworkCore;
+  private readonly requestCapacity: RequestCapacity;
   private readonly aggregatorTracker: AggregatorTracker;
 
   private subscribedToCoreTopics = false;
@@ -149,6 +151,8 @@ export class Network implements INetwork {
     this.events = modules.networkEventBus;
     this.networkProcessor = modules.networkProcessor;
     this.core = modules.core;
+    this.requestCapacity = new RequestCapacity((token) => this.core.watchRequestCapacity(token));
+    this.events.on(NetworkEvent.requestCapacityChanged, this.requestCapacity.changed);
     this.aggregatorTracker = modules.aggregatorTracker;
 
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
@@ -295,6 +299,8 @@ export class Network implements INetwork {
 
   private async closeInternal(): Promise<void> {
     this.controller.abort();
+    this.requestCapacity.close();
+    this.events.off(NetworkEvent.requestCapacityChanged, this.requestCapacity.changed);
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -802,6 +808,10 @@ export class Network implements INetwork {
     } catch (error) {
       this.logger.debug("Failed to report invalid response", {peerId}, error as Error);
     }
+  }
+
+  waitForRequestCapacity(token: string, options: RequestCapacityOptions): Promise<void> {
+    return this.requestCapacity.wait(token, options);
   }
 
   private sendReqRespRequest<Req>(

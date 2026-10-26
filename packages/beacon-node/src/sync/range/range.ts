@@ -405,6 +405,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         {
           processChainSegment: this.processChainSegment,
           downloadByRange: this.downloadByRange,
+          waitForRequestCapacity: (token, options) => this.network.waitForRequestCapacity(token, options),
           reportPeer: this.reportPeer,
           getConnectedPeerSyncMeta: this.getConnectedPeerSyncMeta,
           pruneBlockInputs: this.pruneBlockInputs,

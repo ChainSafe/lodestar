@@ -50,6 +50,7 @@ import {
 import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {getRateLimitedUntilMs} from "./utils/rateLimit.js";
+import {RequestCapacityPause, getRequestCapacityToken} from "./utils/requestCapacity.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -127,6 +128,7 @@ export class BlockInputSync {
   private subscribedToNetworkEvents = false;
   private peerBalancer: UnknownBlockPeerBalancer;
   private rateLimitBackoffTimeout: NodeJS.Timeout | undefined;
+  private readonly requestCapacity: RequestCapacityPause;
   /**
    * Search unknown payload starting at PAYLOAD_DUE_BPS.
    */
@@ -143,6 +145,11 @@ export class BlockInputSync {
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
     this.peerBalancer = new UnknownBlockPeerBalancer();
+    this.requestCapacity = new RequestCapacityPause(
+      (token, options) => this.network.waitForRequestCapacity(token, options),
+      () => this.triggerUnknownBlockSearch(),
+      (error) => this.logger.debug("Block input sync capacity wait ended", {}, error)
+    );
 
     if (metrics) {
       metrics.blockInputSync.pendingBlocks.addCollect(() =>
@@ -196,6 +203,7 @@ export class BlockInputSync {
   }
 
   unsubscribeFromNetwork(): void {
+    this.requestCapacity.cancel();
     this.logger.verbose("BlockInputSync disabled.");
     this.clearRateLimitBackoffTimer();
     this.chain.clock.off(ClockEvent.slot, this.startPayloadPollAtSlot);
@@ -1015,6 +1023,7 @@ export class BlockInputSync {
   }
 
   private async downloadBlock(block: BlockInputSyncCacheItem): Promise<void> {
+    if (this.requestCapacity.blocked) return;
     if (block.status !== PendingBlockInputStatus.pending) {
       return;
     }
@@ -1094,6 +1103,14 @@ export class BlockInputSync {
         this.onUnknownBlockRoot({rootHex: pending.blockInput.parentRootHex, source: BlockInputSource.byRoot});
       }
     } else {
+      const capacityToken = getRequestCapacityToken(res.err);
+      if (capacityToken !== null) {
+        const pendingBlock = this.pendingBlocks.get(rootHex);
+        if (pendingBlock?.status === PendingBlockInputStatus.fetching)
+          pendingBlock.status = PendingBlockInputStatus.pending;
+        if (this.subscribedToNetworkEvents) this.requestCapacity.pause(capacityToken);
+        return;
+      }
       if (res.err instanceof UnknownBlockRateLimitedError) {
         const pendingBlock = this.pendingBlocks.get(rootHex);
         if (pendingBlock) {
@@ -1329,6 +1346,7 @@ export class BlockInputSync {
   }
 
   private async downloadPayload(payload: PayloadSyncCacheItem): Promise<void> {
+    if (this.requestCapacity.blocked) return;
     if (isPendingPayloadEnvelope(payload)) {
       await this.reconcilePayloadEnvelope(payload);
       return;
@@ -1384,6 +1402,13 @@ export class BlockInputSync {
         );
         await this.processPayload(pendingPayload);
       }
+      return;
+    }
+
+    const capacityToken = getRequestCapacityToken(res.err);
+    if (capacityToken !== null) {
+      if (!isPendingPayloadEnvelope(payload)) payload.status = PendingPayloadInputStatus.pending;
+      if (this.subscribedToNetworkEvents) this.requestCapacity.pause(capacityToken);
       return;
     }
 
@@ -1647,6 +1672,7 @@ export class BlockInputSync {
         cacheItem = pendingPayload;
         payloadInput = pendingPayload.payloadInput;
       } catch (e) {
+        if (getRequestCapacityToken(e) !== null) throw e;
         this.logger.debug(
           "Error downloading payload in BlockInputSync.fetchPayloadInput",
           {slot, rootHex, attempt: i, peer: peerId, peerClient},
@@ -1835,6 +1861,7 @@ export class BlockInputSync {
           // TODO: penalize peer?
         }
       } catch (e) {
+        if (getRequestCapacityToken(e) !== null) throw e;
         this.logger.debug(
           "Error downloading in BlockInputSync.fetchBlockInput",
           {slot, rootHex, attempt: i, peer: peerId, peerClient},

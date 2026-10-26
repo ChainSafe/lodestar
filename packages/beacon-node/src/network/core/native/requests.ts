@@ -28,7 +28,10 @@ function requestError(error: unknown): unknown {
   if (!(error instanceof Error) || !("code" in error)) return error;
   const native = error as NativeRequestError;
   if (native.code === "NetworkRequestRejected") {
-    if (["too_many_requests", "slots_exhausted", "negotiation_table_full"].includes(native.reason)) {
+    if (native.reason === "local_capacity") {
+      return new RequestError({code: RequestErrorCode.REQUEST_LOCAL_CAPACITY, capacityToken: native.capacityToken});
+    }
+    if (native.reason === "too_many_requests") {
       return new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
     }
     return new RequestError({code: RequestErrorCode.REQUEST_ERROR, error});

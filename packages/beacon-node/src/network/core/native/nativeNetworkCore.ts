@@ -5,6 +5,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
+import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
 import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
@@ -128,6 +129,7 @@ export class NativeNetworkCore implements INetworkCore {
 
   /** Delivered work goes to the adapter's consumers; once it closes, the binding only settles. */
   private readonly host: NativeHost = {
+    requestCapacityChanged: () => this.modules.events.emit(NetworkEvent.requestCapacityChanged, null),
     capacity: () => ({
       gossipValidation: this.gossip.ready() ? "ready" : "backpressured",
       incomingRequestSlots: this.network.limits.incomingCapacity,
@@ -243,6 +245,9 @@ export class NativeNetworkCore implements INetworkCore {
   }
   async getDirectPeers(): Promise<string[]> {
     return this.network.getDirectPeers();
+  }
+  async watchRequestCapacity(token: string): Promise<boolean> {
+    return this.network.watchRequestCapacity(token);
   }
   sendReqRespRequest(data: OutgoingRequestArgs) {
     return outgoingNativeRequest(this.network, data, (action, reason, origin) => {
