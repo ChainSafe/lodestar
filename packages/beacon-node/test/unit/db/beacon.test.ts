@@ -182,26 +182,6 @@ describe("archive repositories pruneBefore", () => {
     await rm(tmpDir, {recursive: true, force: true});
   });
 
-  it("prunes blob sidecars from where the previous prune ended", async () => {
-    for (const slot of [1, 2, 3, 4, 5]) {
-      await db.blobSidecarsArchive.put(slot, {blockRoot: Buffer.alloc(32, slot), slot, blobSidecars: []});
-    }
-    const compactRange = vi.spyOn(controller, "compactRange");
-    const keys = vi.spyOn(db.blobSidecarsArchive, "keys");
-
-    await expect(db.blobSidecarsArchive.pruneBefore(3)).resolves.toEqual([1, 2]);
-    await expect(db.blobSidecarsArchive.pruneBefore(3)).resolves.toEqual([]);
-    await expect(db.blobSidecarsArchive.pruneBefore(5)).resolves.toEqual([3, 4]);
-
-    expect(compactRange).toHaveBeenCalledOnce();
-    expect(compactRange).toHaveBeenCalledWith(
-      encodeKey(Bucket.deneb_blobSidecarsArchive, Buffer.alloc(0)),
-      db.blobSidecarsArchive.encodeKey(3)
-    );
-    expect(keys.mock.calls).toEqual([[{gte: undefined, lt: 3}], [{gte: 3, lt: 5}]]);
-    expect(await db.blobSidecarsArchive.keys()).toEqual([5]);
-  });
-
   it("prunes legacy data columns from where the previous prune ended", async () => {
     for (const slot of [1, 2, 3, 4, 5]) {
       for (const index of [0, 1]) {

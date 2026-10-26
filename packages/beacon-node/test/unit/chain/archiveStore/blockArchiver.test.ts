@@ -40,7 +40,6 @@ describe("block archiver task", () => {
     vi.spyOn(dbStub.block, "batchDelete");
     vi.spyOn(dbStub.dataColumnSidecarArchive, "putManyBinary");
     vi.spyOn(dbStub.dataColumnSidecar, "deleteMany");
-    vi.spyOn(dbStub.blobSidecarsArchive, "pruneBefore").mockResolvedValue([]);
     vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
   });
 
@@ -533,53 +532,6 @@ describe("block archiver task", () => {
           expect.objectContaining({slot: columnsPruneSlot})
         );
       }
-    }
-  );
-
-  it.each([
-    {oldestSlot: 63, currentEpoch: 3, migrated: true, pruneSlot: 32},
-    {oldestSlot: 64, currentEpoch: 10, migrated: false, pruneSlot: 64},
-  ])(
-    "should only migrate and prune pre-fulu blobs, oldest slot $oldestSlot",
-    async ({oldestSlot, currentEpoch, migrated, pruneSlot}) => {
-      const config = createChainForkConfig({
-        ...defaultConfig,
-        DENEB_FORK_EPOCH: 0,
-        FULU_FORK_EPOCH: 2,
-        MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 2,
-      });
-      const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(ssz.fulu.SignedBeaconBlock.defaultValue());
-      vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
-      dbStub.blobSidecars.getBinary = vi.fn().mockResolvedValue(null);
-      dbStub.blobSidecars.batchDelete = vi.fn().mockResolvedValue(undefined);
-      const canonicalBlocks = [oldestSlot + 2, oldestSlot + 1, oldestSlot].map((slot) =>
-        generateProtoBlock({slot, blockRoot: toHexString(Buffer.alloc(32, slot)), payloadStatus: PayloadStatus.FULL})
-      );
-      vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
-        ancestors: canonicalBlocks,
-        nonAncestors: [],
-      });
-
-      await archiveBlocks(
-        config,
-        dbStub,
-        forkChoiceStub,
-        lightclientServer,
-        logger,
-        {epoch: 3, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
-        currentEpoch,
-        null,
-        false
-      );
-
-      if (migrated) {
-        expect(dbStub.blobSidecars.getBinary).toHaveBeenCalledWith(fromHexString(canonicalBlocks[2].blockRoot));
-        expect(dbStub.blobSidecars.batchDelete).toHaveBeenCalled();
-      } else {
-        expect(dbStub.blobSidecars.getBinary).not.toHaveBeenCalled();
-        expect(dbStub.blobSidecars.batchDelete).not.toHaveBeenCalled();
-      }
-      expect(dbStub.blobSidecarsArchive.pruneBefore).toHaveBeenCalledWith(pruneSlot);
     }
   );
 

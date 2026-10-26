@@ -1,6 +1,5 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
-import {KeyValue} from "@lodestar/db";
 import {
   CheckpointWithHex,
   ExecutionStatus,
@@ -25,7 +24,6 @@ import {LightClientServer} from "../../lightClient/index.js";
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
 // TODO: Review after merge since the size of blocks will increase significantly
 const BLOCK_BATCH_SIZE = 256;
-const BLOB_SIDECAR_BATCH_SIZE = 32;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
 
@@ -98,7 +96,6 @@ export async function archiveBlocks(
     forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(finalizedCheckpoint.rootHex);
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
-  const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
   const finalizedPostFulu = finalizedCheckpoint.epoch >= config.FULU_FORK_EPOCH;
   const finalizedPostGloas = finalizedCheckpoint.epoch >= config.GLOAS_FORK_EPOCH;
 
@@ -142,19 +139,6 @@ export async function archiveBlocks(
       migratedEntries: migratedSlots.length,
       slotRange: prettyPrintIndices(migratedSlots),
     });
-
-    // Blob sidecars only exist for pre-fulu blocks, the oldest block is the previous finalized block
-    const oldestSlot = finalizedCanonicalBlockRoots.at(-1)?.slot ?? 0;
-    if (finalizedPostDeneb && oldestSlot < computeStartSlotAtEpoch(config.FULU_FORK_EPOCH)) {
-      const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
-        config,
-        db,
-        logger,
-        finalizedCanonicalBlockRoots,
-        currentEpoch
-      );
-      logger.verbose("Migrated blobSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
-    }
 
     if (finalizedPostGloas) {
       const migratedSlots = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
@@ -210,11 +194,6 @@ export async function archiveBlocks(
       });
     }
 
-    if (finalizedPostDeneb) {
-      await db.blobSidecars.batchDelete(orphanedPayloadRoots);
-      logger.verbose("Deleted non canonical blobSidecars from hot DB", orphanedPayloadLogCtx);
-    }
-
     if (finalizedPostGloas) {
       await db.executionPayloadEnvelope.batchDelete(orphanedPayloadRoots);
       logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", orphanedPayloadLogCtx);
@@ -246,28 +225,6 @@ export async function archiveBlocks(
       count: orphanedBlocks.length,
       slotRange: prettyPrintIndices(orphanedBlocks.map((block) => block.slot).sort((a, b) => a - b)),
     });
-  }
-
-  // Delete expired blobs
-  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs)]`
-  // if archiveDataEpochs set to Infinity do not prune`
-  if (finalizedPostDeneb) {
-    if (archiveDataEpochs !== Infinity) {
-      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs ?? 0);
-      const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
-      if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
-        // No blob sidecars are stored after fulu, once all of them are pruned the next prunes are no-ops
-        const blobsPruneEpoch = Math.min(blobSidecarsMinEpoch, config.FULU_FORK_EPOCH);
-        const slotsToDelete = await db.blobSidecarsArchive.pruneBefore(computeStartSlotAtEpoch(blobsPruneEpoch));
-        if (slotsToDelete.length > 0) {
-          logger.verbose(`blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`, logCtx);
-        } else {
-          logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`, logCtx);
-        }
-      }
-    } else {
-      logger.verbose("blobSidecars pruning skipped: archiveDataEpochs set to Infinity", logCtx);
-    }
   }
 
   // Delete expired data column sidecars
@@ -360,67 +317,6 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, logger: Logger, block
   }
   // Ancestor walk is newest to oldest; sort ascending so `prettyPrintIndices` renders cleanly.
   return migratedSlots.sort((a, b) => a - b);
-}
-
-/**
- * Migrate blobSidecars from hot db to cold db.
- * @returns true if we do that, false if block is out of range data.
- */
-async function migrateBlobSidecarsFromHotToColdDb(
-  config: ChainForkConfig,
-  db: IBeaconDb,
-  logger: Logger,
-  blocks: BlockRootSlot[],
-  currentEpoch: Epoch
-): Promise<number> {
-  let migratedWrappedBlobSidecars = 0;
-  for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
-    const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
-    const canonicalBlocks = blocks.slice(i, toIdx);
-
-    // processCanonicalBlocks
-    if (canonicalBlocks.length === 0) break;
-
-    // load Buffer instead of ssz deserialized to improve performance
-    const canonicalBlobSidecarsEntries: KeyValue<Slot, Uint8Array>[] = (
-      await Promise.all(
-        canonicalBlocks
-          .filter((block) => {
-            const blockSlot = block.slot;
-            const blockEpoch = computeEpochAtSlot(blockSlot);
-            const forkSeq = config.getForkSeq(blockSlot);
-            return (
-              forkSeq >= ForkSeq.deneb &&
-              forkSeq < ForkSeq.fulu &&
-              // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
-              blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-            );
-          })
-          .map(async (block): Promise<KeyValue<Slot, Uint8Array> | null> => {
-            // The ancestor walk includes the boundary (previous finalized) block; on first
-            // finalization that boundary is the anchor which has no blob sidecars in hot db.
-            // Treat a null hot-db entry as "nothing to migrate" rather than an error.
-            const bytes = await db.blobSidecars.getBinary(block.root);
-            if (!bytes) {
-              logger.debug("BlobSidecars in forkchoice but missing in hot db, could be already archived", {
-                slot: block.slot,
-                root: toRootHex(block.root),
-              });
-              return null;
-            }
-            return {key: block.slot, value: bytes};
-          })
-      )
-    ).filter((e): e is KeyValue<Slot, Uint8Array> => e !== null);
-
-    await Promise.all([
-      db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
-      db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
-    ]);
-    migratedWrappedBlobSidecars += canonicalBlobSidecarsEntries.length;
-  }
-
-  return migratedWrappedBlobSidecars;
 }
 
 /**
