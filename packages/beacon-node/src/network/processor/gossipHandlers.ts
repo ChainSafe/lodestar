@@ -705,8 +705,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
           // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
           // which is all the information we need so there is no reason to delay until execution payload arrives
-          // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
-          // (for example later in the slot). Do not couple retries to incoming gossip columns.
           // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
           // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
           chain.getBlobsTracker.triggerGetBlobs(payloadInput);
