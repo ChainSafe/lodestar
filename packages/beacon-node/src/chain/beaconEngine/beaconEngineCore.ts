@@ -984,7 +984,6 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
-      // Do not emit head event here, when proposing we rely on the one emitted when importing our own block
       const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetProposerHead,
         secFromSlot,

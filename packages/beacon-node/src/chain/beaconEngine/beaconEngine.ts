@@ -165,24 +165,21 @@ export class BeaconEngine implements IBeaconEngine {
 
   /**
    * `previousHead` must be read before the core call: ForkChoiceChainView already shows the new head afterwards.
-   * Without it no head events are emitted, as for block production.
    */
   private readonly onForkChoiceChanged = async (
     changes: ForkChoiceChanges,
-    previousHead?: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
+    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
   ): Promise<void> => {
     if (this.closed || (!changes.headUpdate && !changes.justifiedCheckpointChanged)) return;
-    const wantHeadEvents = previousHead !== undefined && changes.headUpdate;
     let headUpdate: HeadUpdate<Root> | null = null;
-    if (this.chainView.onChainViewUpdate || wantHeadEvents) {
+    if (this.chainView.onChainViewUpdate || changes.headUpdate) {
       const snapshot = await this.core.getHeadSnapshot(
-        wantHeadEvents
+        changes.headUpdate
           ? {blockRoot: fromHex(previousHead.blockRoot), payloadStatus: previousHead.payloadStatus}
           : undefined
       );
-      if (this.closed) return;
       const head = fromChainViewBlockBytes(snapshot.head);
-      const isCurrent =
+      const shouldEmitHeadUpdate =
         this.chainView.onChainViewUpdate?.({
           blocks: [head],
           state: {
@@ -192,7 +189,7 @@ export class BeaconEngine implements IBeaconEngine {
           },
           version: snapshot.version,
         }) ?? true;
-      if (isCurrent) headUpdate = snapshot.headUpdate;
+      if (shouldEmitHeadUpdate) headUpdate = snapshot.headUpdate;
     }
     // Still honored when stale: the newer state already applied contains the change and its own flag may be false
     if (changes.justifiedCheckpointChanged) {
@@ -378,14 +375,16 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   async produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse> {
+    const previousHead = this.chainView.getHead();
     const response = await this.core.produceBlock(request);
-    await this.onForkChoiceChanged({headUpdate: response.headUpdate, justifiedCheckpointChanged: false});
+    await this.onForkChoiceChanged({headUpdate: response.headUpdate, justifiedCheckpointChanged: false}, previousHead);
     return response;
   }
 
   async produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response> {
+    const previousHead = this.chainView.getHead();
     const response = await this.core.produceBlockV4(request);
-    await this.onForkChoiceChanged({headUpdate: response.headUpdate, justifiedCheckpointChanged: false});
+    await this.onForkChoiceChanged({headUpdate: response.headUpdate, justifiedCheckpointChanged: false}, previousHead);
     return response;
   }
 

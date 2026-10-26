@@ -13,6 +13,7 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {BeaconEngineErrorCode} from "../../../../src/chain/beaconEngine/interface.js";
+import {ForkChoiceChainView} from "../../../../src/chain/chainView/forkChoiceChainView.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {BlockType, ProduceResult} from "../../../../src/chain/produceBlock/index.js";
@@ -21,7 +22,7 @@ import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
-async function setup(fork: ForkName.bellatrix | ForkName.gloas) {
+async function setup(fork: ForkName.bellatrix | ForkName.gloas, beaconEngineWorker: boolean) {
   const config = createBeaconConfig(getConfig(fork), new Uint8Array(32));
   const clock = new ClockStopped(2);
   const previous = generateProtoBlock({
@@ -86,20 +87,35 @@ async function setup(fork: ForkName.bellatrix | ForkName.gloas) {
     emitter,
     logger,
     serializedCache: new SerializedCache(),
-    beaconEngineWorker: true,
+    beaconEngineWorker,
   });
-  const view = new ReplicateChainView(await core.getChainViewSnapshot());
+  const view = beaconEngineWorker
+    ? new ReplicateChainView(await core.getChainViewSnapshot())
+    : new ForkChoiceChainView(core);
   engine.chainView = view;
+  const order: string[] = [];
   const onView = vi.fn();
-  const onChainViewUpdate = view.onChainViewUpdate.bind(view);
-  vi.spyOn(view, "onChainViewUpdate").mockImplementation((changes) => {
-    const update = onChainViewUpdate(changes);
-    onView();
-    return update;
-  });
+  if (view instanceof ReplicateChainView) {
+    const onChainViewUpdate = view.onChainViewUpdate.bind(view);
+    vi.spyOn(view, "onChainViewUpdate").mockImplementation((changes) => {
+      const update = onChainViewUpdate(changes);
+      order.push("view");
+      onView();
+      return update;
+    });
+  }
   const onHead = vi.fn();
-  emitter.on(routes.events.EventType.head, onHead);
-  emitter.on(routes.events.EventType.headV2, onHead);
+  emitter.on(routes.events.EventType.head, (event) => {
+    expect(view.getHead().blockRoot).toBe(event.block);
+    order.push("head");
+    onHead(event);
+  });
+  emitter.on(routes.events.EventType.headV2, (event) => {
+    expect(view.getHead().blockRoot).toBe(event.data.block);
+    expect(event.data.payloadStatus).toBe(view.getHead().payloadStatus === PayloadStatus.FULL ? "full" : "empty");
+    order.push("head_v2");
+    onHead(event);
+  });
   const coreEmit = vi.spyOn(events, "emit");
   const headPull = vi.spyOn(core, "getHeadSnapshot");
   const request = {
@@ -127,14 +143,20 @@ async function setup(fork: ForkName.bellatrix | ForkName.gloas) {
     headPull,
     onView,
     onHead,
+    order,
   };
 }
 
-describe.each([ForkName.bellatrix, ForkName.gloas] as const)("%s production head pull", (fork) => {
+describe.each([
+  [ForkName.bellatrix, false],
+  [ForkName.bellatrix, true],
+  [ForkName.gloas, false],
+  [ForkName.gloas, true],
+] as const)("%s production head pull (worker=%s)", (fork, beaconEngineWorker) => {
   // updateAndGetHead() never moves checkpoints, so production only reports head changes
-  it.each(["root", "payload", "unchanged"])("refreshes a %s change without publishing head events", async (change) => {
-    const {produce, view, forkChoice, previous, next, produceBlockWrapper, coreEmit, headPull, onView, onHead} =
-      await setup(fork);
+  it.each(["root", "payload", "unchanged"])("publishes a %s change after updating the view", async (change) => {
+    const {produce, view, forkChoice, previous, next, produceBlockWrapper, coreEmit, headPull, onView, onHead, order} =
+      await setup(fork, beaconEngineWorker);
     const head =
       change === "root" ? next : change === "payload" ? {...previous, payloadStatus: PayloadStatus.EMPTY} : previous;
     forkChoice.updateAndGetHead.mockImplementation(() => {
@@ -149,22 +171,38 @@ describe.each([ForkName.bellatrix, ForkName.gloas] as const)("%s production head
       secFromSlot: 0,
     });
     expect(produceBlockWrapper.mock.calls[0][1].parentBlock).toBe(previous);
-    expect(view.getHead()).toEqual(toChainViewBlock(head));
+    expect(view.getHead()).toEqual(beaconEngineWorker ? toChainViewBlock(head) : head);
     expect(view.getJustifiedCheckpoint()).toEqual(forkChoice.getJustifiedCheckpoint());
     expect(coreEmit).not.toHaveBeenCalled();
-    expect(onHead).not.toHaveBeenCalled();
-    expect(forkChoice.getDependentRoot).not.toHaveBeenCalled();
     if (change === "unchanged") {
       expect(headPull).not.toHaveBeenCalled();
       expect(onView).not.toHaveBeenCalled();
+      expect(onHead).not.toHaveBeenCalled();
+      expect(forkChoice.getDependentRoot).not.toHaveBeenCalled();
+      expect(order).toEqual([]);
     } else {
-      expect(headPull).toHaveBeenCalledExactlyOnceWith(undefined);
-      expect(onView).toHaveBeenCalledOnce();
+      expect(headPull).toHaveBeenCalledExactlyOnceWith({
+        blockRoot: fromHex(previous.blockRoot),
+        payloadStatus: previous.payloadStatus,
+      });
+      expect(onView).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
+      expect(onHead).toHaveBeenCalledTimes(change === "root" ? 2 : 1);
+      expect(onHead).toHaveBeenCalledWith(
+        expect.objectContaining({data: expect.objectContaining({block: head.blockRoot})})
+      );
+      expect(order).toEqual([
+        ...(beaconEngineWorker ? ["view"] : []),
+        ...(change === "root" ? ["head"] : []),
+        "head_v2",
+      ]);
     }
   });
 
   it.each(["selection", "production"])("refreshes the canonical head before returning a %s failure", async (stage) => {
-    const {produce, view, forkChoice, next, produceBlockWrapper, headPull, coreEmit, onHead} = await setup(fork);
+    const {produce, view, forkChoice, next, produceBlockWrapper, headPull, coreEmit, onHead, order} = await setup(
+      fork,
+      beaconEngineWorker
+    );
     if (stage === "selection") {
       forkChoice.updateAndGetHead.mockImplementation(() => {
         forkChoice.getHead.mockReturnValue(next);
@@ -182,14 +220,16 @@ describe.each([ForkName.bellatrix, ForkName.gloas] as const)("%s production head
       headUpdate: true,
       code: stage === "selection" ? BeaconEngineErrorCode.API_ERROR : BeaconEngineErrorCode.INTERNAL,
     });
-    expect(view.getHead()).toEqual(toChainViewBlock(next));
+    expect(view.getHead()).toEqual(beaconEngineWorker ? toChainViewBlock(next) : next);
     expect(headPull).toHaveBeenCalledOnce();
     expect(coreEmit).not.toHaveBeenCalled();
-    expect(onHead).not.toHaveBeenCalled();
+    expect(onHead).toHaveBeenCalledTimes(2);
+    expect(onHead).toHaveBeenCalledWith(expect.objectContaining({block: next.blockRoot}));
+    expect(order).toEqual([...(beaconEngineWorker ? ["view"] : []), "head", "head_v2"]);
   });
 
   it("does not pull when validation fails before proposer selection", async () => {
-    const {produce, request, forkChoice, headPull, onView, onHead} = await setup(fork);
+    const {produce, request, forkChoice, headPull, onView, onHead} = await setup(fork, beaconEngineWorker);
     request.builderBoostFactor = MAX_BUILDER_BOOST_FACTOR + 1n;
     request.builderConfig.builderBoostFactor = MAX_BUILDER_BOOST_FACTOR + 1n;
     expect(await produce()).toMatchObject({ok: false, code: BeaconEngineErrorCode.API_ERROR, headUpdate: false});
@@ -200,7 +240,10 @@ describe.each([ForkName.bellatrix, ForkName.gloas] as const)("%s production head
   });
 
   it("does not pull or emit when pending production finishes after close", async () => {
-    const {engine, produce, produced, produceBlockWrapper, headPull, onView, onHead} = await setup(fork);
+    const {engine, produce, produced, produceBlockWrapper, headPull, onView, onHead} = await setup(
+      fork,
+      beaconEngineWorker
+    );
     const pending = defer<void>();
     produceBlockWrapper.mockImplementation(async (_type, attrs) => {
       await attrs.commonBlockBodyPromise;

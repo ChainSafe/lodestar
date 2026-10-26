@@ -578,7 +578,7 @@ describe("finalized checkpoint pull", () => {
     expect(onFinalized).not.toHaveBeenCalled();
   });
 
-  it("discards a pending head pull after close", async () => {
+  it("applies a pending head pull and emits its update after close", async () => {
     const {core, engine, forkChoice, view, emitter} = await setup();
     const previous = view.getHead();
     forkChoice.updateTime.mockImplementationOnce(() => {
@@ -599,8 +599,11 @@ describe("finalized checkpoint pull", () => {
       })
     );
     await processing;
-    expect(view.getHead()).toEqual(previous);
-    expect(emit).not.toHaveBeenCalled();
+    expect(view.getHead()).toEqual({...previous, payloadStatus: PayloadStatus.EMPTY});
+    expect(emit).toHaveBeenCalledExactlyOnceWith(
+      routes.events.EventType.headV2,
+      expect.objectContaining({data: expect.objectContaining({block: previous.blockRoot, payloadStatus: "empty"})})
+    );
   });
 
   it.each([true, false])("prunes ChainView only after core completes finalization (success=%s)", async (success) => {
