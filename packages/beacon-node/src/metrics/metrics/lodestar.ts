@@ -1960,7 +1960,7 @@ export function createLodestarMetrics(
       }),
       builderPubkeys: register.gauge({
         name: "lodestar_builder_deposit_preverify_builder_pubkeys",
-        help: "Distinct builder pubkeys tracked this window (validator deposits for these are pre-verified)",
+        help: "Distinct pubkeys of invalid builder deposits tracked this window (validator deposits for these are pre-verified)",
       }),
       validSignatures: register.counter<{type: "builder" | "validator"}>({
         name: "lodestar_builder_deposit_preverify_valid_signatures_total",

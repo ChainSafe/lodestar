@@ -39,7 +39,7 @@ export type PreVerifyBuilderDepositsResult = {
   scannedPendingDeposits: number;
   /** Cumulative deposits verified & cached so far this window (cache size, pass + fail). */
   totalCachedDeposits: number;
-  /** Distinct builder pubkeys tracked so far this window. */
+  /** Distinct pubkeys of invalid builder deposits tracked so far this window. */
   totalBuilderPubkeys: number;
   /** Current `state.pendingDeposits.length` — the full backlog. */
   pendingDepositsCount: number;
@@ -49,10 +49,11 @@ export type PreVerifyBuilderDepositsResult = {
  * Scanner driven by `prepareForNextSlot` over the `GLOAS_PREVERIFY_WINDOW_EPOCHS` epochs before
  * GLOAS_FORK_EPOCH. Walks `state.pendingDeposits` (as struct values via getAllReadonlyValues) and
  * queues, for signature verification, the deposits the fork transition will check on its hot path:
- *   - builder-prefix deposits (for onboarding); records each builder pubkey on the cache, and
- *   - validator deposits sharing a builder pubkey (the set `hasPendingValidator` walks at the fork),
- *     but only until one is found valid — `hasPendingValidator` stops at the first valid signature, so
- *     the cache marks the pubkey and the scanner skips that pubkey's remaining validator deposits.
+ *   - builder-prefix deposits (for onboarding), and
+ *   - validator deposits sharing the pubkey of an invalid builder deposit with no validator (the only
+ *     set `hasPendingValidator` walks at the fork), but only until one is found valid —
+ *     `hasPendingValidator` stops at the first valid signature, so the cache marks the pubkey and the
+ *     scanner skips that pubkey's remaining validator deposits.
  *
  * Bounded by two knobs: at most `maxBuilderDeposits` new deposits are queued per call, and the chunk
  * verification is **time-boxed** to `maxDurationMs`.
@@ -76,15 +77,11 @@ export function preVerifyBuilderDepositsPreGloas(
     if (cache.isVerified(deposit)) continue; // already verified in an earlier tick
 
     if (isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
-      // Record the builder pubkey so validator deposits sharing it get pre-verified — this or a
-      // later tick, since those validator deposits precede the builder deposit in the queue. A cached
-      // builder deposit already added its pubkey, so it's safe to skip via the `continue` above.
-      cache.addBuilderPubkey(toPubkeyHex(deposit.pubkey));
       queue.push(deposit);
     } else {
-      // Validator deposit — pre-verify only if it shares a builder pubkey (the set hasPendingValidator
-      // walks at the fork) AND we haven't already cached a valid validator deposit for that pubkey.
-      // this is the same logic to hasPendingValidator.
+      // Validator deposit — pre-verify only if it shares the pubkey of an invalid builder deposit
+      // (marked below once verified, picked up this or a later tick) AND we haven't already cached a
+      // valid validator deposit for that pubkey. This is the same logic as hasPendingValidator.
       const pubkeyHex = toPubkeyHex(deposit.pubkey);
       if (cache.isBuilderPubkey(pubkeyHex) && !cache.hasValidValidatorDeposit(pubkeyHex)) {
         queue.push(deposit);
@@ -132,6 +129,12 @@ export function preVerifyBuilderDepositsPreGloas(
         }
       } else if (isBuilder) {
         invalidBuilderSignaturesCount++;
+        // Only an invalid builder deposit without a validator makes the fork walk the same-pubkey
+        // validator deposits, so only then are they worth pre-verifying
+        const validatorIndex = state.epochCtx.getValidatorIndex(chunk[j].pubkey);
+        if (validatorIndex === null || validatorIndex >= state.validators.length) {
+          cache.addBuilderPubkey(toPubkeyHex(chunk[j].pubkey));
+        }
       } else {
         invalidValidatorSignaturesCount++;
       }
