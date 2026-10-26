@@ -29,7 +29,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, toHex, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, TimeoutError, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlockInput,
   BlockInputColumns,
@@ -718,11 +718,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
         if (e instanceof BlockError) {
           switch (e.type.code) {
-            case BlockErrorCode.DATA_UNAVAILABLE: {
-              // Error is quite frequent and not critical
-              logLevel = LogLevel.debug;
-              break;
-            }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
             // PARENT_BLOCK_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
             case BlockErrorCode.ALREADY_KNOWN:
@@ -743,11 +738,21 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               // Misbehaving peer, but could highlight an issue in another client
               logLevel = LogLevel.warn;
           }
+        } else if (e instanceof TimeoutError) {
+          // Data did not arrive in the availability wait, BlockInputSync keeps pulling it and retries the import
+          logLevel = LogLevel.debug;
         } else {
           // Any unexpected error
           logLevel = LogLevel.error;
         }
-        metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
+        metrics?.gossipBlock.processBlockErrors.inc({
+          error:
+            e instanceof BlockError
+              ? e.type.code
+              : e instanceof TimeoutError
+                ? "DATA_AVAILABILITY_TIMEOUT"
+                : "NOT_BLOCK_ERROR",
+        });
         logger[logLevel]("Error processing block", {slot, root: blockInput.blockRootHex, peer: peerIdStr}, e as Error);
         // TODO(fulu): Revisit when we prune block inputs
         chain.seenBlockInputCache.prune(blockInput.blockRootHex);
@@ -1378,12 +1383,20 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                   logLevel = LogLevel.warn;
                   break;
               }
+            } else if (e instanceof TimeoutError) {
+              // Columns did not arrive in the availability wait, BlockInputSync keeps pulling and retries the import
+              logLevel = LogLevel.debug;
             } else {
               // Any unexpected error
               logLevel = LogLevel.error;
             }
             metrics?.gossipExecutionPayloadEnvelope.processPayloadErrors.inc({
-              error: e instanceof PayloadError ? e.type.code : "NOT_PAYLOAD_ERROR",
+              error:
+                e instanceof PayloadError
+                  ? e.type.code
+                  : e instanceof TimeoutError
+                    ? "DATA_AVAILABILITY_TIMEOUT"
+                    : "NOT_PAYLOAD_ERROR",
             });
             chain.logger[logLevel](
               "Error processing execution payload from gossip",

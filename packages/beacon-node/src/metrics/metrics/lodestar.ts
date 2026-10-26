@@ -1021,7 +1021,7 @@ export function createLodestarMetrics(
         buckets: [0, 1, 2, 4, 8, 16, 32],
       }),
 
-      processBlockErrors: register.gauge<{error: BlockErrorCode | "NOT_BLOCK_ERROR"}>({
+      processBlockErrors: register.gauge<{error: BlockErrorCode | "DATA_AVAILABILITY_TIMEOUT" | "NOT_BLOCK_ERROR"}>({
         name: "lodestar_gossip_block_process_block_errors",
         help: "Count of errors, by error type, while processing blocks",
         labelNames: ["error"],
@@ -1057,7 +1057,9 @@ export function createLodestarMetrics(
         labelNames: ["source"],
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
-      processPayloadErrors: register.gauge<{error: PayloadErrorCode | "NOT_PAYLOAD_ERROR"}>({
+      processPayloadErrors: register.gauge<{
+        error: PayloadErrorCode | "DATA_AVAILABILITY_TIMEOUT" | "NOT_PAYLOAD_ERROR";
+      }>({
         name: "lodestar_gossip_execution_payload_envelope_process_payload_errors",
         help: "Count of errors, by error type, while processing execution payload envelopes",
         labelNames: ["error"],
