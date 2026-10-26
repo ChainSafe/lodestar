@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.2.0](https://github.com/ChainSafe/lodestar-z/compare/v2.1.0...v2.2.0) (2026-10-26)
+
+
+### Features
+
+* add basic heze support ([#799](https://github.com/ChainSafe/lodestar-z/issues/799)) ([5cbf8db](https://github.com/ChainSafe/lodestar-z/commit/5cbf8db38b07660cfac1105b12b9390683596140))
+
+
+### Bug Fixes
+
+* build fuzz harnesses in ReleaseSafe ([#805](https://github.com/ChainSafe/lodestar-z/issues/805)) ([5d6fd73](https://github.com/ChainSafe/lodestar-z/commit/5d6fd73c206f4343f8b02a435049a65320f12730))
+* use sha256 wrapper in sync committee rotation ([#802](https://github.com/ChainSafe/lodestar-z/issues/802)) ([9989f29](https://github.com/ChainSafe/lodestar-z/commit/9989f297805a81291c1bed653869f2294272e7be))
+
+
+### Performance Improvements
+
+* select shuffle sha256 at runtime ([#774](https://github.com/ChainSafe/lodestar-z/issues/774)) ([4167cfe](https://github.com/ChainSafe/lodestar-z/commit/4167cfeae2eca69a1c9e2ec2e3fb8813708f56c7))
+* speed up sync committee rotation ([#778](https://github.com/ChainSafe/lodestar-z/issues/778)) ([78da4e7](https://github.com/ChainSafe/lodestar-z/commit/78da4e7b9512eb8df1eaf37de089d5dde2616583))
+
 ## [2.1.0](https://github.com/ChainSafe/lodestar-z/compare/v2.0.0...v2.1.0) (2026-10-20)
 
 
