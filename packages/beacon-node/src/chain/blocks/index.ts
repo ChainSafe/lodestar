@@ -147,7 +147,7 @@ export async function processBlocks(
         proposerBalanceDelta: proposerBalanceDeltas[i],
         indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+        seenTimestampSec: opts.seenTimestampSec ?? Date.now() / 1000,
       });
     }
 
