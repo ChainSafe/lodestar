@@ -35,14 +35,25 @@ function withInvalidSignature(deposit: electra.PendingDeposit): electra.PendingD
 }
 
 /** Build a Fulu state whose pendingDeposits contains exactly `deposits` (in order). */
-function buildFuluStateWithPendingDeposits(deposits: electra.PendingDeposit[]): CachedBeaconStateFulu {
+function buildFuluStateWithPendingDeposits(
+  deposits: electra.PendingDeposit[],
+  validatorPubkeys: Uint8Array[] = []
+): CachedBeaconStateFulu {
   const stateView = ssz.fulu.BeaconState.defaultViewDU();
+  for (const pubkey of validatorPubkeys) {
+    const validator = ssz.phase0.Validator.defaultValue();
+    validator.pubkey = pubkey;
+    validator.effectiveBalance = 32_000_000_000;
+    stateView.validators.push(ssz.phase0.Validator.toViewDU(validator));
+    stateView.balances.push(32_000_000_000);
+  }
   for (const deposit of deposits) {
     stateView.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(deposit));
   }
+  stateView.commit();
   const state = createCachedBeaconStateTest(stateView, chainConfig, {
     skipSyncCommitteeCache: true,
-    skipSyncPubkeys: true,
+    skipSyncPubkeys: validatorPubkeys.length === 0,
   });
   state.commit();
   return state as CachedBeaconStateFulu;
@@ -67,7 +78,7 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
       invalidValidatorSignaturesCount: 0,
       scannedPendingDeposits: 4,
       totalCachedDeposits: 3,
-      totalBuilderPubkeys: 3,
+      totalBuilderPubkeys: 1,
       pendingDepositsCount: 4,
     });
     // builder deposits cached by validity
@@ -132,8 +143,8 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
     expect(second.totalCachedDeposits).toBe(total);
   });
 
-  it("pre-verifies validator deposits sharing a builder pubkey (discovered one tick, verified the next)", () => {
-    const [builder] = generateBuilderPendingDeposits(beaconConfig, 1, 6000);
+  it("pre-verifies validator deposits sharing an invalid builder deposit's pubkey (discovered one tick, verified the next)", () => {
+    const builder = withInvalidSignature(generateBuilderPendingDeposits(beaconConfig, 1, 6000)[0]);
     // a validator (0x00) deposit for the SAME pubkey as the builder deposit, with an invalid sig
     const validatorForBuilder: electra.PendingDeposit = {
       pubkey: builder.pubkey,
@@ -147,11 +158,11 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
     const cache = state.epochCtx.builderDepositSignatureCache;
     const [dValidator, dBuilder] = state.pendingDeposits.getAllReadonlyValues();
 
-    // tick 1: discovers the builder pubkey and verifies the builder deposit; the validator deposit
+    // tick 1: verifies the builder deposit (invalid) and marks its pubkey; the validator deposit
     // was scanned before the builder deposit, so it isn't queued yet.
     const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
-    expect(first.validBuilderSignaturesCount).toBe(1);
-    expect(cache.getSignatureValidity(dBuilder)).toBe(true);
+    expect(first.invalidBuilderSignaturesCount).toBe(1);
+    expect(cache.getSignatureValidity(dBuilder)).toBe(false);
     expect(cache.isBuilderPubkey(toPubkeyHex(builder.pubkey))).toBe(true);
     expect(cache.getSignatureValidity(dValidator)).toBeNull(); // not verified yet
 
@@ -162,32 +173,82 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
   });
 
   it("stops pre-verifying a builder pubkey's validator deposits once one is cached valid", () => {
-    const [builder] = generateBuilderPendingDeposits(beaconConfig, 1, 7000);
+    const builder = withInvalidSignature(generateBuilderPendingDeposits(beaconConfig, 1, 7000)[0]);
     // two validator (0x00) deposits for the SAME pubkey as the builder deposit; both validly signed.
     // Distinct amounts make them distinct deposit value objects (distinct cache keys).
     const validatorValid = generateValidatorPendingDeposit(beaconConfig, 7000, 32_000_000_000);
     const validatorSecond = generateValidatorPendingDeposit(beaconConfig, 7000, 31_000_000_000);
 
-    // builder deposit first so its pubkey is registered on the same pass. cap = 2 queues only
-    // [builder, validatorValid] on tick 1, leaving validatorSecond until after the pubkey is marked.
     const state = buildFuluStateWithPendingDeposits([builder, validatorValid, validatorSecond]);
     const cache = state.epochCtx.builderDepositSignatureCache;
     const [, dValid, dSecond] = state.pendingDeposits.getAllReadonlyValues();
 
-    // tick 1 (cap 2): verify builder + first validator deposit → pubkey marked as having a valid
-    // validator deposit; the scan breaks on the cap before reaching validatorSecond.
-    const first = preVerifyBuilderDepositsPreGloas(state, 2, NO_TIME_LIMIT_MS);
-    expect(first.validBuilderSignaturesCount).toBe(1);
-    expect(first.validValidatorSignaturesCount).toBe(1);
+    // tick 1: verifies the builder deposit (invalid) and marks its pubkey; the validator deposits
+    // are not queued yet since the pubkey is only marked after verification.
+    const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
+    expect(first.invalidBuilderSignaturesCount).toBe(1);
+    expect(first.validValidatorSignaturesCount).toBe(0);
+
+    // tick 2 (cap 1): verifies only validatorValid → pubkey marked as having a valid validator deposit
+    const second = preVerifyBuilderDepositsPreGloas(state, 1, NO_TIME_LIMIT_MS);
+    expect(second.validValidatorSignaturesCount).toBe(1);
     expect(cache.getSignatureValidity(dValid)).toBe(true);
     expect(cache.hasValidValidatorDeposit(toPubkeyHex(builder.pubkey))).toBe(true);
 
-    // tick 2: validatorSecond shares the pubkey, but a valid validator deposit is already cached, so
+    // tick 3: validatorSecond shares the pubkey, but a valid validator deposit is already cached, so
     // it is never queued/verified — mirroring hasPendingValidator's first-valid short-circuit.
-    const second = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
-    expect(second.validValidatorSignaturesCount).toBe(0);
-    expect(second.invalidValidatorSignaturesCount).toBe(0);
+    const third = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
+    expect(third.validValidatorSignaturesCount).toBe(0);
+    expect(third.invalidValidatorSignaturesCount).toBe(0);
     expect(cache.getSignatureValidity(dSecond)).toBeNull(); // skipped, never verified
     expect(cache.isVerified(dSecond)).toBe(false);
+  });
+
+  it("does not pre-verify validator deposits sharing a valid builder deposit's pubkey", () => {
+    const [builder] = generateBuilderPendingDeposits(beaconConfig, 1, 8000);
+    const validatorForBuilder: electra.PendingDeposit = {
+      pubkey: builder.pubkey,
+      withdrawalCredentials: Buffer.alloc(32),
+      amount: 32_000_000_000,
+      signature: Buffer.alloc(96),
+      slot: GENESIS_SLOT,
+    };
+    const state = buildFuluStateWithPendingDeposits([validatorForBuilder, builder]);
+    const cache = state.epochCtx.builderDepositSignatureCache;
+    const [dValidator] = state.pendingDeposits.getAllReadonlyValues();
+
+    const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
+    expect(first.validBuilderSignaturesCount).toBe(1);
+    // a valid builder deposit registers the builder at the fork without consulting hasPendingValidator
+    expect(cache.isBuilderPubkey(toPubkeyHex(builder.pubkey))).toBe(false);
+
+    const second = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
+    expect(second.validValidatorSignaturesCount + second.invalidValidatorSignaturesCount).toBe(0);
+    expect(cache.isVerified(dValidator)).toBe(false);
+    expect(second.totalBuilderPubkeys).toBe(0);
+  });
+
+  it("does not pre-verify validator deposits for an invalid builder deposit on an existing validator's pubkey", () => {
+    const builder = withInvalidSignature(generateBuilderPendingDeposits(beaconConfig, 1, 9000)[0]);
+    const validatorForBuilder: electra.PendingDeposit = {
+      pubkey: builder.pubkey,
+      withdrawalCredentials: Buffer.alloc(32),
+      amount: 32_000_000_000,
+      signature: Buffer.alloc(96),
+      slot: GENESIS_SLOT,
+    };
+    // the pubkey already has a validator, so the fork keeps the invalid builder deposit as a top-up
+    // without walking the same-pubkey validator deposits
+    const state = buildFuluStateWithPendingDeposits([validatorForBuilder, builder], [builder.pubkey]);
+    const cache = state.epochCtx.builderDepositSignatureCache;
+    const [dValidator] = state.pendingDeposits.getAllReadonlyValues();
+
+    const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
+    expect(first.invalidBuilderSignaturesCount).toBe(1);
+    expect(cache.isBuilderPubkey(toPubkeyHex(builder.pubkey))).toBe(false);
+
+    const second = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
+    expect(second.validValidatorSignaturesCount + second.invalidValidatorSignaturesCount).toBe(0);
+    expect(cache.isVerified(dValidator)).toBe(false);
   });
 });
