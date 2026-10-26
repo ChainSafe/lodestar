@@ -158,7 +158,7 @@ export class BeaconDb implements IBeaconDb {
     await this.db.compactRange(start, end);
     await this.db.batchDelete(sentinels);
     await this.db.compactRange(start, end);
-    this.logger.info("Compacted legacy data columns", {
+    this.logger.verbose("Compacted legacy data columns", {
       durationMs: Date.now() - startTime,
       sizeBytes: await this.db.approximateSize(start, end),
     });
