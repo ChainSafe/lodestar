@@ -1,4 +1,5 @@
 import {afterEach, describe, expect, it} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
@@ -44,7 +45,10 @@ describe("KZG", () => {
     const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
     const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
     for (const commitment of kzgCommitments) {
-      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+      signedBeaconBlock.message.body.executionPayload.transactions = SerializedList.fromArray([
+        ...signedBeaconBlock.message.body.executionPayload.transactions,
+        transactionForKzgCommitment(commitment),
+      ]);
       signedBeaconBlock.message.body.blobKzgCommitments.push(commitment);
     }
 

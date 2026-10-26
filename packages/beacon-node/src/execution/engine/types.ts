@@ -1,4 +1,4 @@
-import {Type} from "@chainsafe/ssz";
+import {SerializedList, Type} from "@chainsafe/ssz";
 import {
   BUILDER_DEPOSIT_REQUEST_TYPE,
   BUILDER_EXIT_REQUEST_TYPE,
@@ -178,7 +178,7 @@ export type ExecutionPayloadBodyRpc = {
 };
 
 export type ExecutionPayloadBody = {
-  transactions: bellatrix.Transaction[];
+  transactions: bellatrix.Transactions;
   withdrawals: capella.Withdrawals | null;
 };
 
@@ -308,7 +308,7 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
     extraData: bytesToData(data.extraData),
     baseFeePerGas: numToQuantity(data.baseFeePerGas),
     blockHash: bytesToData(data.blockHash),
-    transactions: data.transactions.map((tran) => bytesToData(tran)),
+    transactions: Array.from(data.transactions, (tran) => bytesToData(tran)),
   };
 
   // Capella adds withdrawals to the ExecutionPayload
@@ -392,7 +392,7 @@ export function parseExecutionPayload(
     extraData: dataToBytes(data.extraData, null),
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+    transactions: SerializedList.fromArray(data.transactions.map((tran) => dataToBytes(tran, null))),
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
@@ -466,11 +466,11 @@ export function serializeBeaconBlockRoot(data: Root): DATA {
 }
 
 export function serializeInclusionList(data: bellatrix.Transactions): InclusionListRpc {
-  return data.map((transaction) => bytesToData(transaction));
+  return Array.from(data, (transaction) => bytesToData(transaction));
 }
 
 export function deserializeInclusionList(data: InclusionListRpc): bellatrix.Transactions {
-  return data.map((transaction) => dataToBytes(transaction, null));
+  return SerializedList.fromArray(data.map((transaction) => dataToBytes(transaction, null)));
 }
 
 export function deserializePayloadAttributes(data: PayloadAttributesRpc): PayloadAttributes {
@@ -662,7 +662,7 @@ export function deserializeExecutionRequests(fork: ForkName, serialized: Executi
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
   return data
     ? {
-        transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+        transactions: SerializedList.fromArray(data.transactions.map((tran) => dataToBytes(tran, null))),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
       }
     : null;
@@ -685,7 +685,7 @@ export function serializeExecutionPayloadBodyV2(data: ExecutionPayloadBodyV2 | n
 export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null): ExecutionPayloadBodyRpc | null {
   return data
     ? {
-        transactions: data.transactions.map((tran) => bytesToData(tran)),
+        transactions: Array.from(data.transactions, (tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
       }
     : null;

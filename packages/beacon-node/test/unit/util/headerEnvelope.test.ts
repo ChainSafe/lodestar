@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {ContainerType, Type} from "@chainsafe/ssz";
+import {ContainerType, SerializedList, Type} from "@chainsafe/ssz";
 import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
@@ -67,7 +67,7 @@ describe("headerEnvelope", () => {
   it("header envelope size is independent of body size", () => {
     const envelope = generateSignedExecutionPayloadEnvelope(8);
     const p = envelope.message.payload;
-    p.transactions = Array.from({length: 180}, (_, i) => new Uint8Array(1078).fill(i & 0xff));
+    p.transactions = SerializedList.fromArray(Array.from({length: 180}, (_, i) => new Uint8Array(1078).fill(i & 0xff)));
     p.blockAccessList = new Uint8Array(70 * 1024).fill(0xab);
 
     const full = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope).length;
@@ -116,7 +116,7 @@ describe("headerEnvelope", () => {
   });
 
   it.each<[keyof ExecutionPayloadBodies, Partial<ExecutionPayloadBodies>]>([
-    ["transactions", {transactions: [Uint8Array.from([9, 9, 9])]}],
+    ["transactions", {transactions: SerializedList.fromArray([Uint8Array.from([9, 9, 9])])}],
     ["withdrawals", {withdrawals: [{index: 9, validatorIndex: 9, address: new Uint8Array(20).fill(0x11), amount: 1n}]}],
     ["blockAccessList", {blockAccessList: Uint8Array.from([0xff])}],
   ])("throws BODY_ROOT_MISMATCH naming %s when the EL-served body differs from the original", (field, override) => {

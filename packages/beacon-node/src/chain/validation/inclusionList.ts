@@ -31,7 +31,10 @@ export async function validateGossipInclusionList(
   signedInclusionList: heze.SignedInclusionList
 ): Promise<InclusionListValidationResult> {
   const {slot, validatorIndex, transactions, dependentRoot} = signedInclusionList.message;
-  const totalBytes = transactions.reduce((total, transaction) => total + transaction.byteLength, 0);
+  let totalBytes = 0;
+  for (let i = 0; i < transactions.length; i++) {
+    totalBytes += transactions.getSize(i);
+  }
 
   // A pre-heze slot has no inclusion list committee to validate against
   if (!isForkPostHeze(chain.config.getForkName(slot))) {
@@ -75,7 +78,13 @@ export async function validateGossipInclusionList(
   }
 
   // [REJECT] Every transaction in message.transactions is non-empty
-  const emptyTransactionIndex = transactions.findIndex((transaction) => transaction.byteLength === 0);
+  let emptyTransactionIndex = -1;
+  for (let i = 0; i < transactions.length; i++) {
+    if (transactions.getSize(i) === 0) {
+      emptyTransactionIndex = i;
+      break;
+    }
+  }
   if (emptyTransactionIndex !== -1) {
     throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.EMPTY_TRANSACTION,
