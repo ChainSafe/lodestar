@@ -50,6 +50,7 @@ async function fixture() {
     connected,
     disconnected,
     disconnect,
+    events,
     peers,
     drain(...events: NativePeerObservation[]) {
       peers.deliver(events);
@@ -58,6 +59,56 @@ async function fixture() {
 }
 
 describe("native peer projection", () => {
+  it("propagates a listener failure after recording the peer and stops the remaining observations", async () => {
+    const node = await fixture();
+    const failure = new Error("peer consumer failed");
+    const laterListener = vi.fn();
+    node.events.on(NetworkEvent.peerConnected, laterListener);
+    node.connected.mockImplementationOnce(() => {
+      throw failure;
+    });
+    const other = {...node.state, identity: "another-peer", connection: {index: 1, generation: 1}};
+    try {
+      expect(() => node.drain({type: "ready", state: node.state}, {type: "ready", state: other})).toThrow(failure);
+      expect(node.peers.connected()).toEqual([node.state.identity]);
+      expect(laterListener).not.toHaveBeenCalled();
+
+      node.drain({type: "updated", state: structuredClone(node.state)});
+      expect(node.connected).toHaveBeenCalledOnce();
+      expect(laterListener).not.toHaveBeenCalled();
+    } finally {
+      node.peers.close();
+    }
+  });
+
+  it("propagates a disconnect listener failure after removing the peer", async () => {
+    const node = await fixture();
+    const failure = new Error("peer removal failed");
+    const laterListener = vi.fn();
+    node.events.on(NetworkEvent.peerDisconnected, laterListener);
+    node.disconnected.mockImplementationOnce(() => {
+      throw failure;
+    });
+    const closed: NativePeerObservation = {
+      type: "closed",
+      identity: node.state.identity,
+      connection: {index: 0, generation: 17},
+      reason: "host",
+    };
+    try {
+      node.drain({type: "ready", state: node.state});
+      expect(() => node.drain(closed)).toThrow(failure);
+      expect(node.peers.connected()).toEqual([]);
+      expect(laterListener).not.toHaveBeenCalled();
+
+      node.drain(closed);
+      expect(node.disconnected).toHaveBeenCalledOnce();
+      expect(laterListener).not.toHaveBeenCalled();
+    } finally {
+      node.peers.close();
+    }
+  });
+
   it("skips unrelated updates while preserving status, custody and client updates", async () => {
     const node = await fixture();
     let state = node.state;
