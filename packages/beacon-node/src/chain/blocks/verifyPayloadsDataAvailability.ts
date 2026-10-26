@@ -9,7 +9,7 @@ export const PAYLOAD_DATA_AVAILABILITY_TIMEOUT = 12_000;
 /**
  * Verifies that all payload envelope inputs have their data columns available.
  * - Waits a max of PAYLOAD_DATA_AVAILABILITY_TIMEOUT for all data to be available
- * - Returns the time at which all data was available
+ * - Returns the time at which all data was available, in Unix milliseconds
  * - Returns the data availability status for each payload input
  */
 export async function verifyPayloadsDataAvailability(
@@ -27,7 +27,8 @@ export async function verifyPayloadsDataAvailability(
   }
   await Promise.all(promises);
 
-  const availableTime = Math.max(0, Math.max(...payloadInputs.map((payloadInput) => payloadInput.getTimeComplete())));
+  const availableTime =
+    Math.max(0, Math.max(...payloadInputs.map((payloadInput) => payloadInput.getTimeComplete()))) * 1000;
   const dataAvailabilityStatuses: DataAvailabilityStatus[] = payloadInputs.map((payloadInput) => {
     if (payloadInput.daOutOfRange) {
       return DataAvailabilityStatus.OutOfRange;
