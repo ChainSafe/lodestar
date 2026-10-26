@@ -72,15 +72,31 @@ jobs:
           cache-from: type=gha,scope=fuzz-image
           cache-to: type=gha,scope=fuzz-image,mode=max
 
-      - name: Every target runs its first seed without crashing
+      # A new campaign starts from these seeds, so one that crashes or hangs is
+      # recorded as a failure by every fresh campaign. A target without seeds
+      # starts from a single zero byte, so that is replayed instead.
+      - name: Every target replays all its seeds without crashing
         run: |
           docker run --rm --entrypoint sh lodestar-z-fuzz:ci -c '
             rc=0
             for bin in /opt/fuzz/bin/fuzz-*; do
               t=${bin#/opt/fuzz/bin/fuzz-}
-              seed=$(ls -d /opt/fuzz/corpus/$t-cmin/* /opt/fuzz/corpus/$t-initial/* 2>/dev/null | head -1)
-              if [ -n "$seed" ]; then "$bin" < "$seed"; else printf "\000" | "$bin"; fi \
-                && echo "ok   $t" || { echo "FAIL $t (exit $?)"; rc=1; }
+              n=0
+              bad=0
+              set -- /opt/fuzz/corpus/$t-cmin/* /opt/fuzz/corpus/$t-initial/*
+              for seed in "$@"; do [ -f "$seed" ] && n=$((n + 1)); done
+              if [ "$n" -eq 0 ]; then printf "\000" > /tmp/zero; set -- /tmp/zero; fi
+              for seed in "$@"; do
+                [ -f "$seed" ] || continue
+                timeout 10 "$bin" < "$seed" > /dev/null 2> /tmp/err && continue
+                code=$?
+                echo "FAIL $t ${seed#/opt/fuzz/corpus/} (exit $code)"
+                tail -n 3 /tmp/err
+                bad=$((bad + 1))
+                # A hang usually hangs on every seed; 10 s each adds up.
+                if [ "$code" -eq 124 ]; then break; fi
+              done
+              if [ "$bad" -eq 0 ]; then echo "ok   $t ($n seeds)"; else rc=1; fi
             done
             exit $rc'
 
