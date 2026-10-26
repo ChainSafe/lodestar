@@ -1,7 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ErrorAborted, FetchError, TimeoutError, toHex} from "@lodestar/utils";
 import {getBuilderStatus, resolveBuilderIdentity} from "../../src/identity.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "./utils/apiStub.js";
@@ -21,7 +20,6 @@ describe("Identity", () => {
   const version = PAYLOAD_BUILDER_VERSION;
   // ClockMock reports currentEpoch=0, use GLOAS_FORK_EPOCH=0 so tests query the beacon node without waiting for the fork
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
-  const epochPollMs = clock.msToSlot(computeStartSlotAtEpoch(1));
 
   let abortController: AbortController;
 
@@ -154,8 +152,8 @@ describe("Identity", () => {
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
 
-    // Does not re-poll before the next epoch boundary
-    await vi.advanceTimersByTimeAsync(epochPollMs - 1);
+    // Does not re-poll before the next slot
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(1) - 1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
     await vi.advanceTimersByTimeAsync(1);
@@ -202,11 +200,16 @@ describe("Identity", () => {
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, forkClock, forkConfig);
 
     // Pre-fork: the builder waits without querying the beacon node
-    await vi.advanceTimersByTimeAsync(epochPollMs - 1);
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(SLOTS_PER_EPOCH));
     expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
 
-    // Gloas fork reached: the builder queries the beacon node and resolves
+    // Gloas fork reached at slot 0, the builder still waits for the head state to go through the epoch transition
     forkClock.currentSlot = SLOTS_PER_EPOCH;
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(1) - 1);
+    expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
+
+    // Second slot of the fork epoch: the builder queries the beacon node and resolves
+    forkClock.currentSlot = SLOTS_PER_EPOCH + 1;
     await vi.advanceTimersByTimeAsync(1);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(1);

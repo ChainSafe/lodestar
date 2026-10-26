@@ -1,3 +1,4 @@
+import {SerializedList} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
   ExecutionStatus,
@@ -206,7 +207,7 @@ export async function importExecutionPayload(
     }
     inclusionListTransactions =
       dependentRoot === null
-        ? []
+        ? SerializedList.empty()
         : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
   }
 
@@ -382,6 +383,6 @@ export async function processExecutionPayload(
   signal: AbortSignal,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
-  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], signal);
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(this.config, [payloadInput], signal);
   await importExecutionPayload.call(this, payloadInput, dataAvailabilityStatuses[0], opts);
 }
