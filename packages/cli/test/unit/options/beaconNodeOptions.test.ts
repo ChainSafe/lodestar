@@ -233,6 +233,30 @@ describe("options / beaconNodeOptions", () => {
 });
 
 describe("options / network / tcp and quic flags", () => {
+  it.each([
+    [{"network.gossipsubD": 9}, "gossipsubD=8"],
+    [{"network.gossipsubDLow": 7}, "gossipsubDLow=6"],
+    [{"network.gossipsubDHigh": 13}, "gossipsubDHigh=12"],
+    [{"network.rateLimitMultiplier": 2}, "rateLimitMultiplier=1"],
+    [{disablePeerScoring: true}, "disablePeerScoring=false"],
+    [{mdns: true}, "mdns=false"],
+    [{"network.connectToDiscv5Bootnodes": true}, "connectToDiscv5Bootnodes=false"],
+    [{"network.gossipsubAwaitHandler": true}, "gossipsubAwaitHandler=false"],
+    [{"network.discv5FirstQueryDelayMs": 0}, "omit discv5FirstQueryDelayMs"],
+    [{"network.maxPeers": 257}, "maxPeers=257"],
+    [{"network.maxPeers": 200, targetPeers: 200}, "targetPeers=200"],
+  ] satisfies [NetworkArgs, string][])("names unsupported native settings %j", (args, message) => {
+    expect(() => parseNetworkArgs({"network.backend": "native", tcp: false, ...args})).toThrow(message);
+    expect(() => parseNetworkArgs(args)).not.toThrow();
+  });
+
+  it.each([true, false])("accepts native networking independently of useWorker=%s", (useWorker) => {
+    expect(parseNetworkArgs({"network.backend": "native", tcp: false, "network.useWorker": useWorker})).toMatchObject({
+      backend: "native",
+      useWorker,
+    });
+  });
+
   it("keeps stock default and selects native explicitly", () => {
     expect(parseNetworkArgs({}).backend).toBe("libp2p");
     expect(parseNetworkArgs({"network.backend": "native", tcp: false, listenAddress: "127.0.0.1"})).toMatchObject({
@@ -244,7 +268,7 @@ describe("options / network / tcp and quic flags", () => {
     {"network.backend": "native", listenAddress: "127.0.0.1"},
     {"network.backend": "native", tcp: false, quic: false},
   ] satisfies NetworkArgs[])("rejects unsupported native listeners %o", (args) => {
-    expect(() => parseNetworkArgs(args)).toThrow("Native networking requires");
+    expect(() => parseNetworkArgs(args)).toThrow("native backend requires");
   });
   it("accepts native dual-stack listeners with independent ports", () => {
     const result = parseNetworkArgs({

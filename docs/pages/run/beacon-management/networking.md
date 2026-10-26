@@ -30,6 +30,12 @@ Some of the important Lodestar flags related to networking are:
 - [`--nat`](./beacon-cli#--nat)
 - [`--private`](./beacon-cli#--private)
 
+## Native backend options
+
+Select the native backend with `--network.backend=native --tcp=false`. It requires QUIC. Option compatibility, including transport selection, gossip mesh settings, and peer limits, is checked during argument parsing, before the database opens or chain state loads. Errors name the setting and its accepted value; programmatic callers receive the same validation when initializing a beacon node or network.
+
+`--network.useWorker` controls whether the libp2p backend runs in a JavaScript worker. The native backend always uses its own network thread, regardless of this flag. Setting it to `false` does not move native networking onto the JavaScript thread.
+
 ## Peer Discovery (Discv5)
 
 In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overridden via the cli flag [`--bootnodes`](./beacon-cli#--bootnodes), to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.

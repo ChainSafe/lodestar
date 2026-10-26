@@ -1,4 +1,4 @@
-import {NativeBackendOptions} from "./core/native/options.js";
+import {NativeBackendOptions, validateNativeOptions} from "./core/native/options.js";
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
 import {PeerManagerOpts, PeerRpcScoreOpts} from "./peers/index.js";
 import {NetworkProcessorOpts} from "./processor/index.js";
@@ -29,6 +29,7 @@ export interface NetworkOptions
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
   private?: boolean;
+  /** Runs libp2p in a JavaScript worker. Native networking always uses its own network thread. */
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
@@ -89,3 +90,8 @@ export const defaultNetworkOptions: NetworkOptions = {
   // libp2p-mplex default (5) is too low and can cause frequent connection resets.
   disconnectThreshold: 50,
 };
+
+/** Validates backend-specific settings without starting services or accessing chain state. */
+export function validateNetworkOptions(opts: NetworkOptions): void {
+  if (opts.backend === "native") validateNativeOptions(opts);
+}

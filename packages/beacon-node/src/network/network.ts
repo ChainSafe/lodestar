@@ -59,7 +59,7 @@ import {
   stringifyGossipTopic,
 } from "./gossip/topic.js";
 import {INetwork} from "./interface.js";
-import {NetworkOptions} from "./options.js";
+import {NetworkOptions, validateNetworkOptions} from "./options.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
@@ -180,6 +180,7 @@ export class Network implements INetwork {
     getReqRespHandler,
     processShutdownCallback,
   }: NetworkInitModules): Promise<Network> {
+    validateNetworkOptions(opts);
     const events = new NetworkEventBus();
     const aggregatorTracker = new AggregatorTracker();
 

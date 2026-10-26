@@ -10,11 +10,12 @@ import {
   NetworkStatusUpdate,
 } from "@chainsafe/lodestar-z/network";
 import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {Status} from "@lodestar/types";
 import {NetworkOptions} from "../../options.js";
 import {NativePeerAddress, parseNativeEndpoint, parseNativePeerAddress} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
+import {validateNativeOptions} from "./options.js";
 
 export const UINT64_MAX = 18446744073709551615n;
 export const kinds: readonly NativeTopicKind[] = [
@@ -158,50 +159,13 @@ function nativeListeners(addresses: readonly string[], quic: boolean): IpEndpoin
   return endpoints;
 }
 
-function validateOptions(opts: NetworkOptions, config: BeaconConfig): void {
-  if (opts.tcp !== false || opts.quic === false) {
-    throw new NativeNetworkError({
-      code: NativeNetworkErrorCode.CONFIGURATION,
-      resource: "native backend requires TCP disabled and QUIC enabled",
-    });
-  }
-  const unsupported =
-    opts.mdns ||
-    opts.connectToDiscv5Bootnodes ||
-    opts.gossipsubAwaitHandler ||
-    opts.disablePeerScoring ||
-    (opts.rateLimitMultiplier !== undefined && opts.rateLimitMultiplier !== 1) ||
-    (opts.protocolPrefix !== undefined && opts.protocolPrefix !== "/eth2/beacon_chain/req") ||
-    (opts.gossipsubD !== undefined && opts.gossipsubD !== 8) ||
-    (opts.gossipsubDLow !== undefined && opts.gossipsubDLow !== 6) ||
-    (opts.gossipsubDHigh !== undefined && opts.gossipsubDHigh !== 12) ||
-    opts.discv5FirstQueryDelayMs !== undefined;
-  if (unsupported)
-    throw new NativeNetworkError({
-      code: NativeNetworkErrorCode.CONFIGURATION,
-      resource: "unsupported native network option",
-    });
-  if (opts.dialTimeoutMs !== undefined || opts.requestTimeoutMs !== undefined || opts.respTimeoutMs !== undefined)
-    throw new NativeNetworkError({
-      code: NativeNetworkErrorCode.CONFIGURATION,
-      resource: "native control RPC timeout overrides",
-    });
-  nativeInteger(opts.maxPeers, "max peers", 256, 2);
-  nativeInteger(opts.targetPeers, "target peers", opts.maxPeers - 1, 1);
-  nativeInteger(opts.targetGroupPeers, "target group peers", opts.maxPeers, 1);
-  nativeInteger(opts.slotsToSubscribeBeforeAggregatorDuty, "aggregator lookahead", 2 * SLOTS_PER_EPOCH);
+function validateChainConfig(config: BeaconConfig): void {
   nativeInteger(config.SUBNETS_PER_NODE, "long lived subnets", ATTESTATION_SUBNET_COUNT, 1);
   nativeInteger(config.EPOCHS_PER_SUBNET_SUBSCRIPTION, "subnet subscription epochs", Number.MAX_SAFE_INTEGER, 1);
   nativeInteger(config.DATA_COLUMN_SIDECAR_SUBNET_COUNT, "column subnets", 128, 1);
   nativeInteger(config.BLOB_SIDECAR_SUBNET_COUNT, "blob subnets", 128, 1);
   nativeInteger(config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA, "electra blob subnets", 128, 1);
   nativeInteger(config.forkBoundariesAscendingEpochOrder.length, "fork boundaries", 64, 1);
-  nativeInteger(
-    opts.directPeers?.length ?? 0,
-    "direct peers",
-    opts.targetPeers - Math.max(1, Math.floor(opts.targetPeers / 4))
-  );
-  nativeInteger(opts.bootMultiaddrs?.length ?? 0, "bootstrap peers", 64);
 }
 
 export function createNativeConfig(
@@ -218,7 +182,8 @@ export function createNativeConfig(
   directPeers: NativePeerAddress[];
   bootPeers: NativePeerAddress[];
 } {
-  validateOptions(opts, config);
+  validateNativeOptions(opts);
+  validateChainConfig(config);
   const directPeers = (opts.directPeers ?? []).map(parseNativePeerAddress);
   const bootPeers = (opts.bootMultiaddrs ?? []).map((address) => {
     if (typeof address !== "string" || address.length > 256 || !address.startsWith("/"))

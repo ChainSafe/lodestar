@@ -3,6 +3,7 @@ import os from "node:os";
 import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {validateNetworkOptions} from "@lodestar/beacon-node/network";
 import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "../../util/index.js";
 
@@ -128,14 +129,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const quic = args.quic ?? defaultOptions.network.quic;
   const tcp = args.tcp ?? defaultOptions.network.tcp;
 
-  if (args["network.backend"] === "native" && (tcp || !quic)) {
-    throw new YargsError("Native networking requires --tcp=false and QUIC");
-  }
-
-  if (!quic && !tcp) {
-    throw new YargsError("Cannot disable both TCP and QUIC transports");
-  }
-
   // validate ip, ip6, ports
   const muArgs = {
     listenAddress: listenAddress ? `/ip4/${listenAddress}` : undefined,
@@ -188,9 +181,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 
   const targetPeers = args.targetPeers;
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
-  if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
-    throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
-  }
   // Set discv5 opts to null to disable only if explicitly disabled
   const enableDiscv5 = args.discv5 ?? true;
 
@@ -212,7 +202,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     receiveDatagramsPerTurn: args["network.native.receiveDatagramsPerTurn"],
   };
 
-  return {
+  const opts: IBeaconNodeOptions["network"] = {
     discv5: enableDiscv5
       ? {
           config: {},
@@ -253,6 +243,19 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
     directPeers: args.directPeers,
   };
+  try {
+    validateNetworkOptions(opts);
+  } catch (error) {
+    if (error instanceof Error) throw new YargsError(error.message);
+    throw error;
+  }
+  if (!quic && !tcp) {
+    throw new YargsError("Cannot disable both TCP and QUIC transports");
+  }
+  if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
+    throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
+  }
+  return opts;
 }
 
 export const options: CliCommandOptions<NetworkArgs> = {
@@ -558,6 +561,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "boolean",
     hidden: true,
     group: "network",
+    description: "Run libp2p in a JavaScript worker. Native networking always uses its own network thread",
   },
 
   "network.maxYoungGenerationSizeMb": {
