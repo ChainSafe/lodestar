@@ -1466,12 +1466,6 @@ export class BlockInputSync {
           pendingPayload.status = PendingPayloadInputStatus.downloaded;
           break;
 
-        // The input is complete here, the error comes from a shared in-flight import started before the data arrived
-        case PayloadErrorCode.DATA_UNAVAILABLE:
-          this.logger.debug("Payload data unavailable while processing payload from unknown sync", logCtx, res.err);
-          pendingPayload.status = PendingPayloadInputStatus.downloaded;
-          break;
-
         // The invalid envelope is evicted from the seen cache in the cases below, otherwise the next
         // attempt would reuse it instead of fetching another envelope from peers
         case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
