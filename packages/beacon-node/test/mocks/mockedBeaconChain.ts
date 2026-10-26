@@ -448,7 +448,6 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   chain.beaconEngine.prepareBeaconCommitteeSubnets = vi.fn().mockResolvedValue(undefined);
   // ChainView reads forward to the mocked fork choice; writes are no-ops.
   const chainView = {
-    addBlocks: () => ({stateUpdated: false, justified: null}),
     applyFinalizedCheckpoint: () => false,
     prune: () => {},
   } as unknown as Record<string, unknown>;

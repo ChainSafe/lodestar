@@ -2,7 +2,7 @@ import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Root, RootHex, Slot} from "@lodestar/types";
 import {LodestarError, Logger, toRootHex} from "@lodestar/utils";
-import {ChainViewBlock, ChainViewSnapshot, ChainViewState, IChainView} from "./interface.js";
+import {ChainViewBlock, ChainViewSnapshot, ChainViewState, ChainViewUpdate, IChainView} from "./interface.js";
 import {getCanonicalBlockRootSlotsByRange, getFullBlockRootSlotsByRange} from "./utils.js";
 
 export enum ChainViewErrorCode {
@@ -28,7 +28,11 @@ export class ReplicateChainView implements IChainView {
     this.mergeBlocks(snapshot.blocks);
   }
 
-  addBlocks(blocks: ChainViewBlock[], state?: ChainViewState, version?: number): void {
+  onChainViewUpdate(update: ChainViewUpdate): boolean {
+    const {blocks, version} = update;
+    const stale = version !== undefined && version < this.version;
+    // Blocks are additive; a stale state must not roll the replica back
+    const state = stale ? undefined : update.state;
     if (
       state &&
       (state.finalized.epoch !== this.state.finalized.epoch || state.finalized.rootHex !== this.state.finalized.rootHex)
@@ -38,6 +42,7 @@ export class ReplicateChainView implements IChainView {
     this.mergeBlocks(blocks);
     if (state) this.state = {head: state.head, justified: state.justified, finalized: state.finalized};
     if (version !== undefined && version > this.version) this.version = version;
+    return !stale;
   }
 
   applyFinalizedCheckpoint(checkpoint: CheckpointWithHex): void {

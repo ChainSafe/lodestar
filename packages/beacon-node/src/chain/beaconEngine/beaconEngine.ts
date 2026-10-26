@@ -50,7 +50,7 @@ import {SignedBlockRoot, computeSignedBlockRoot} from "../blocks/signedBlockRoot
 import {ImportBlockOpts} from "../blocks/types.js";
 import {SegmentExecStatus} from "../blocks/verifyBlocksExecutionPayloads.js";
 import {ForkChoiceChainView} from "../chainView/forkChoiceChainView.js";
-import {ChainViewBlock, ChainViewState, IChainView} from "../chainView/interface.js";
+import {ChainViewBlock, IChainView} from "../chainView/interface.js";
 import {ReplicateChainView} from "../chainView/replicateChainView.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockError} from "../errors/index.js";
@@ -95,7 +95,6 @@ import {blockErrorFromFailure} from "./processingResult.js";
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
 type ForkChoiceChanges = {headUpdate: boolean; justifiedCheckpointChanged: boolean};
-type ChainViewUpdate = {blocks: ChainViewBlock[]; state?: ChainViewState; version?: number};
 
 export type BeaconEngineModules = {
   core: BeaconEngineCore;
@@ -174,28 +173,32 @@ export class BeaconEngine implements IBeaconEngine {
   ): Promise<void> => {
     if (this.closed || (!changes.headUpdate && !changes.justifiedCheckpointChanged)) return;
     const wantHeadEvents = previousHead !== undefined && changes.headUpdate;
-    // Main thread: ChainView already reads the new fork choice state, only head events need the pull
-    if (!this.beaconEngineWorker && !wantHeadEvents) {
-      this.updateChainView(changes);
-      return;
+    let headUpdate: HeadUpdate<Root> | null = null;
+    if (this.chainView.onChainViewUpdate || wantHeadEvents) {
+      const snapshot = await this.core.getHeadSnapshot(
+        wantHeadEvents
+          ? {blockRoot: fromHex(previousHead.blockRoot), payloadStatus: previousHead.payloadStatus}
+          : undefined
+      );
+      if (this.closed) return;
+      const head = fromChainViewBlockBytes(snapshot.head);
+      const isCurrent =
+        this.chainView.onChainViewUpdate?.({
+          blocks: [head],
+          state: {
+            head,
+            justified: {...snapshot.justified, rootHex: toRootHex(snapshot.justified.root)},
+            finalized: {...snapshot.finalized, rootHex: toRootHex(snapshot.finalized.root)},
+          },
+          version: snapshot.version,
+        }) ?? true;
+      if (isCurrent) headUpdate = snapshot.headUpdate;
     }
-    const snapshot = await this.core.getHeadSnapshot(
-      wantHeadEvents
-        ? {blockRoot: fromHex(previousHead.blockRoot), payloadStatus: previousHead.payloadStatus}
-        : undefined
-    );
-    if (this.closed) return;
-    const head = fromChainViewBlockBytes(snapshot.head);
-    const applied = this.updateChainView(changes, {
-      blocks: [head],
-      state: {
-        head,
-        justified: {...snapshot.justified, rootHex: toRootHex(snapshot.justified.root)},
-        finalized: {...snapshot.finalized, rootHex: toRootHex(snapshot.finalized.root)},
-      },
-      version: snapshot.version,
-    });
-    if (applied && snapshot.headUpdate) this.emitHeadUpdate(snapshot.headUpdate);
+    // Still honored when stale: the newer state already applied contains the change and its own flag may be false
+    if (changes.justifiedCheckpointChanged) {
+      this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
+    }
+    if (headUpdate) this.emitHeadUpdate(headUpdate);
   };
 
   private readonly onNewFinalizedCheckpoint = async (): Promise<void> => {
@@ -225,22 +228,6 @@ export class BeaconEngine implements IBeaconEngine {
       this.logger?.error("Error pulling finalized checkpoint", {}, e as Error);
     }
   };
-
-  /** Returns false for a stale response; the caller must then skip its head/reorg events */
-  private updateChainView(changes: ForkChoiceChanges, update?: ChainViewUpdate): boolean {
-    // Main thread: ChainView reads the in-process fork choice, so there is nothing to apply and nothing is stale
-    let stale = false;
-    if (this.beaconEngineWorker && update) {
-      stale = update.version !== undefined && update.version < this.chainView.version;
-      // Blocks are additive; a stale state must not roll the replica back
-      this.chainView.addBlocks?.(update.blocks, stale ? undefined : update.state, update.version);
-    }
-    // Still honored when stale: the newer state already applied contains the change and its own flag may be false
-    if (changes.justifiedCheckpointChanged) {
-      this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
-    }
-    return !stale;
-  }
 
   private readonly onFatalError = (error: Error): void => {
     this.emitter.emit(ChainEvent.fatalError, error);
@@ -1316,9 +1303,8 @@ export class BeaconEngine implements IBeaconEngine {
     const block = fromChainViewBlockBytes(res.result.block);
     const newHead = fromChainViewBlockBytes(res.result.newHead);
     if (!this.closed) {
-      const applied = this.updateChainView(
-        {headUpdate: headUpdate !== null, justifiedCheckpointChanged},
-        {
+      const isCurrent =
+        this.chainView.onChainViewUpdate?.({
           blocks: [block, newHead],
           state: {
             head: newHead,
@@ -1326,13 +1312,15 @@ export class BeaconEngine implements IBeaconEngine {
             finalized: {...finalized, rootHex: toRootHex(finalized.root)},
           },
           version,
-        }
-      );
+        }) ?? true;
+      if (justifiedCheckpointChanged) {
+        this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
+      }
       if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
-      if (applied && headUpdate) {
+      if (isCurrent && headUpdate) {
         this.emitHeadUpdate(headUpdate);
       }
-      if (applied && reorg) {
+      if (isCurrent && reorg) {
         this.emitter.emit(routes.events.EventType.chainReorg, {
           ...reorg,
           newHeadBlock: toRootHex(reorg.newHeadBlock),
@@ -1381,7 +1369,7 @@ export class BeaconEngine implements IBeaconEngine {
     }
     const {block, executionOptimistic} = res.result;
     if (this.closed) return {executionOptimistic};
-    if (this.beaconEngineWorker) this.chainView.addBlocks?.([fromChainViewBlockBytes(block)]);
+    this.chainView.onChainViewUpdate?.({blocks: [fromChainViewBlockBytes(block)]});
 
     // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.
     const envelope = payloadInput.getPayloadEnvelope().message;

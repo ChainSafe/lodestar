@@ -91,9 +91,9 @@ async function setup(fork: ForkName.bellatrix | ForkName.gloas) {
   const view = new ReplicateChainView(await core.getChainViewSnapshot());
   engine.chainView = view;
   const onView = vi.fn();
-  const addBlocks = view.addBlocks.bind(view);
-  vi.spyOn(view, "addBlocks").mockImplementation((blocks, state, version) => {
-    const update = addBlocks(blocks, state, version);
+  const onChainViewUpdate = view.onChainViewUpdate.bind(view);
+  vi.spyOn(view, "onChainViewUpdate").mockImplementation((changes) => {
+    const update = onChainViewUpdate(changes);
     onView();
     return update;
   });

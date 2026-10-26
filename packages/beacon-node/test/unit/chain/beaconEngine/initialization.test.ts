@@ -1455,7 +1455,7 @@ describe("bytes-based engine startup", () => {
       };
       // Core responses are mocked: only the worker-mode replica reflects them
       const replica = beaconEngineWorker ? (dependencies.beaconEngine.chainView as ReplicateChainView) : undefined;
-      replica?.addBlocks([pendingBlock]);
+      replica?.onChainViewUpdate({blocks: [pendingBlock]});
       chain = new BeaconChain(options, dependencies);
       const activeChain = chain;
       const core = getBeaconEngineCore(activeChain.beaconEngine);
@@ -1500,11 +1500,11 @@ describe("bytes-based engine startup", () => {
       const order: string[] = [];
       let viewUpdates = 0;
       if (replica) {
-        const addBlocks = replica.addBlocks.bind(replica);
-        vi.spyOn(replica, "addBlocks").mockImplementation((blocks, state, version) => {
+        const onChainViewUpdate = replica.onChainViewUpdate.bind(replica);
+        vi.spyOn(replica, "onChainViewUpdate").mockImplementation((changes) => {
           viewUpdates++;
           order.push("view");
-          return addBlocks(blocks, state, version);
+          return onChainViewUpdate(changes);
         });
       }
       const imported = vi.fn(() => {
