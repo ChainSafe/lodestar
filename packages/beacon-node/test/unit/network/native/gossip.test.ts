@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
-import {describe, expect, it, vi} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {GossipJob, GossipMessage, NativeNetwork} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
@@ -15,6 +15,8 @@ import {defaultNetworkOptions} from "../../../../src/network/options.js";
 import {PendingGossipsubMessage} from "../../../../src/network/processor/types.js";
 import {isPublishDuplicateError} from "../../../../src/network/util.js";
 
+afterEach(() => vi.restoreAllMocks());
+
 const config = createBeaconConfig({ALTAIR_FORK_EPOCH: Infinity}, new Uint8Array(32));
 const topic = stringifyGossipTopic(config, {
   type: GossipType.voluntary_exit,
@@ -24,6 +26,8 @@ const topic = stringifyGossipTopic(config, {
 async function fixture(attach = true) {
   const peer = await generateKeyPair("secp256k1");
   const network = {
+    limits: {peerCapacity: 64, incomingCapacity: 32, publicationMaxWaitMs: 12000},
+    waitForPublicationCapacity: vi.fn<NativeNetwork["waitForPublicationCapacity"]>(),
     publish: vi.fn<NativeNetwork["publish"]>(async () => ({
       queued: 1,
       selected: 1,
@@ -191,6 +195,7 @@ describe("native gossip host", () => {
       flood: true,
       allowZeroPeers: true,
       ignoreDuplicate: true,
+      maxQueueMs: expect.any(Number),
     });
     node.network.publish.mockRejectedValueOnce(
       Object.assign(new Error("duplicate"), {code: "NetworkGossipPublishFailed", reason: "duplicate"})
@@ -206,6 +211,81 @@ describe("native gossip host", () => {
     node.network.publish.mockRejectedValueOnce(failure);
     await expect(node.gossip.publish(topic, new Uint8Array(112))).rejects.toBe(failure);
     expect(node.network.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for admission and carries the original deadline into the queue", async () => {
+    const node = await fixture();
+    let now = 1000;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    const released = defer<void>();
+    node.network.publish.mockRejectedValueOnce(
+      Object.assign(new Error("full"), {
+        code: "NetworkGossipPublishFailed",
+        reason: "admission_full",
+        capacityToken: "slots",
+      })
+    );
+    node.network.waitForPublicationCapacity.mockReturnValueOnce(released.promise);
+    const data = new Uint8Array(112);
+    const published = node.gossip.publish(topic, data);
+    await Promise.resolve();
+    expect(node.network.publish).toHaveBeenCalledOnce();
+    expect(node.network.waitForPublicationCapacity).toHaveBeenCalledWith("slots", {
+      signal: expect.any(AbortSignal),
+      timeoutMs: 12000,
+    });
+    now += 5000;
+    released.resolve();
+    expect(await published).toBe(1);
+    expect(node.network.publish).toHaveBeenLastCalledWith(topic, data, expect.objectContaining({maxQueueMs: 7000}));
+    expect(node.network.publish).toHaveBeenCalledTimes(2);
+    node.gossip.close();
+  });
+
+  it("does not resubmit when capacity arrives after the original deadline", async () => {
+    const node = await fixture();
+    let now = 1000;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    node.network.publish.mockRejectedValueOnce(
+      Object.assign(new Error("full"), {
+        code: "NetworkGossipPublishFailed",
+        reason: "admission_full",
+        capacityToken: "slots",
+      })
+    );
+    node.network.waitForPublicationCapacity.mockImplementationOnce(async () => {
+      now += 12000;
+    });
+    await expect(node.gossip.publish(topic, new Uint8Array(112))).rejects.toMatchObject({reason: "expired"});
+    expect(node.network.publish).toHaveBeenCalledOnce();
+    node.gossip.close();
+  });
+
+  it("cancels capacity waits on close without cancelling an admitted publication", async () => {
+    const node = await fixture();
+    const admitted = defer<Awaited<ReturnType<NativeNetwork["publish"]>>>();
+    node.network.publish.mockReturnValueOnce(admitted.promise).mockRejectedValueOnce(
+      Object.assign(new Error("full"), {
+        code: "NetworkGossipPublishFailed",
+        reason: "admission_full",
+        capacityToken: "slots",
+      })
+    );
+    node.network.waitForPublicationCapacity.mockImplementationOnce(
+      (_token, {signal}) =>
+        new Promise((_, reject) => {
+          signal.addEventListener("abort", () => reject(new Error("cancelled")), {once: true});
+        })
+    );
+    const publishing = node.gossip.publish(topic, new Uint8Array(112));
+    const waiting = node.gossip.publish(topic, new Uint8Array(112));
+    const cancelled = expect(waiting).rejects.toThrow("cancelled");
+    await Promise.resolve();
+    node.gossip.close();
+    await cancelled;
+    admitted.resolve({queued: 1, selected: 1, pressured: 0, unavailable: 0, duplicate: false});
+    expect(await publishing).toBe(1);
+    expect(node.network.publish).toHaveBeenCalledTimes(2);
   });
 
   it("does not retry protocol resource exhaustion or a completed publication under peer pressure", async () => {

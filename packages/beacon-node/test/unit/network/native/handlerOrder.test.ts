@@ -1,6 +1,6 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {GossipJob, GossipMessage, NativeTopicKind} from "@chainsafe/lodestar-z/network";
+import {GossipJob, GossipMessage, NativeNetwork, NativeTopicKind} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -78,7 +78,14 @@ function fixture() {
     aggregatorTracker: new AggregatorTracker(),
     core: {reportPeer: vi.fn()} as unknown as INetworkCore,
   };
-  const network = {publish: vi.fn(), blockImported: vi.fn(), dropQueuedGossip: vi.fn(), reportPeer: vi.fn()};
+  const network = {
+    publish: vi.fn(),
+    blockImported: vi.fn(),
+    dropQueuedGossip: vi.fn(),
+    reportPeer: vi.fn(),
+    limits: {peerCapacity: 64, incomingCapacity: 32, publicationMaxWaitMs: 12000},
+    waitForPublicationCapacity: vi.fn<NativeNetwork["waitForPublicationCapacity"]>(),
+  };
   const gossip = new NativeGossip(network, config, defaultNetworkOptions, vi.fn(), new NativePeerReports(network));
   const executor = new NativeGossipExecutor(modules, {}, gossip);
   return {order, chain, modules, gossip, executor};

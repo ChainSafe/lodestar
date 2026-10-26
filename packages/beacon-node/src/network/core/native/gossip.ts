@@ -1,3 +1,5 @@
+import {setMaxListeners} from "node:events";
+import {setImmediate as yieldToIO} from "node:timers/promises";
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {DependencyCheck, GossipJob, GossipMessage, NativeNetwork, Verdict} from "@chainsafe/lodestar-z/network";
@@ -19,16 +21,22 @@ const verdicts: Record<TopicValidatorResult, Verdict> = {
 
 export class NativeGossip {
   private closed = false;
+  private readonly publicationAbort = new AbortController();
   private processor: GossipExecutor | undefined;
   private capacityWake: (() => void) | undefined;
   private unsubscribeCapacity: (() => void) | undefined;
   constructor(
-    private readonly network: Pick<NativeNetwork, "publish" | "blockImported" | "dropQueuedGossip">,
+    private readonly network: Pick<
+      NativeNetwork,
+      "publish" | "waitForPublicationCapacity" | "limits" | "blockImported" | "dropQueuedGossip"
+    >,
     private readonly config: BeaconConfig,
     private readonly opts: NetworkOptions,
     private readonly onError: (error: unknown) => void,
     private readonly reports: Pick<NativePeerReports, "forGossip">
-  ) {}
+  ) {
+    setMaxListeners(0, this.publicationAbort.signal);
+  }
   attach(processor: GossipExecutor): void {
     if (this.closed || this.processor)
       throw new NativeNetworkError({
@@ -111,22 +119,48 @@ export class NativeGossip {
       ignoreDuplicate: opts?.ignoreDuplicatePublishError ?? false,
       flood: opts?.floodPublish ?? !this.opts.disableFloodPublish,
     };
+    const deadline = performance.now() + this.network.limits.publicationMaxWaitMs;
+    for (;;) {
+      if (this.closed)
+        throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "gossip publication"});
+      const maxQueueMs = Math.floor(deadline - performance.now());
+      if (maxQueueMs < 1) throw publicationExpired();
+      try {
+        return (await this.network.publish(topic, data, {...options, maxQueueMs})).queued;
+      } catch (error) {
+        if (!(error instanceof Error) || !("code" in error) || error.code !== "NetworkGossipPublishFailed") throw error;
+        if (!("reason" in error)) throw error;
+        if (error.reason === "duplicate") throw new Error("PublishError.Duplicate", {cause: error});
+        if (error.reason !== "admission_full" || !("capacityToken" in error) || typeof error.capacityToken !== "string")
+          throw error;
+        await this.waitForPublication(error.capacityToken, deadline);
+      }
+    }
+  }
+
+  private async waitForPublication(token: string, deadline: number): Promise<void> {
+    const timeoutMs = Math.floor(deadline - performance.now());
+    if (timeoutMs < 1) throw publicationExpired();
     try {
-      return (await this.network.publish(topic, data, options)).queued;
+      await this.network.waitForPublicationCapacity(token, {signal: this.publicationAbort.signal, timeoutMs});
     } catch (error) {
-      if (
-        error instanceof Error &&
-        "code" in error &&
-        error.code === "NetworkGossipPublishFailed" &&
-        "reason" in error &&
-        error.reason === "duplicate"
-      )
-        throw new Error("PublishError.Duplicate", {cause: error});
+      if (error instanceof Error && "code" in error && error.code === "NetworkPublicationCapacityTimeout")
+        throw publicationExpired();
       throw error;
     }
+    // A changed revision may already be stale. Let settlements and other host work run before retrying.
+    await yieldToIO();
   }
 
   close(): void {
     this.closed = true;
+    this.publicationAbort.abort();
   }
+}
+
+function publicationExpired(): Error {
+  return Object.assign(new Error("Native gossip publication expired"), {
+    code: "NetworkGossipPublishFailed",
+    reason: "expired",
+  });
 }

@@ -10,7 +10,7 @@ import {getApiTestModules} from "../../../../../utils/api.js";
 vi.mock("../../../../../../src/chain/validation/syncCommittee.js");
 
 describe("api - beacon - submitPoolSyncCommitteeSignatures", () => {
-  it("retains submission capacity until every subnet settles after one fails", async () => {
+  it("starts every subnet publication and preserves indexed failures", async () => {
     const modules = getApiTestModules();
     const state = {
       forkName: ForkName.altair,
@@ -34,8 +34,8 @@ describe("api - beacon - submitPoolSyncCommitteeSignatures", () => {
     const result = expect(submitted).rejects.toMatchObject({failures: [{index: 0, message: failure.message}]});
     try {
       await yieldToIO();
-      expect(validateApiSyncCommittee).toHaveBeenCalledTimes(32);
-      expect(publish).toHaveBeenCalledTimes(32 * SYNC_COMMITTEE_SUBNET_COUNT);
+      expect(validateApiSyncCommittee).toHaveBeenCalledTimes(33);
+      expect(publish).toHaveBeenCalledTimes(33 * SYNC_COMMITTEE_SUBNET_COUNT);
     } finally {
       pending.resolve(1);
       await result;

@@ -501,12 +501,7 @@ export class Network implements INetwork {
     if (publishChanges.length === 0) {
       throw Error("No capella+ fork active yet to publish blsToExecutionChange");
     }
-    try {
-      return await Promise.any(publishChanges);
-    } finally {
-      // Bulk admission must remain occupied until every fork publication settles.
-      await Promise.allSettled(publishChanges);
-    }
+    return Promise.any(publishChanges);
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {

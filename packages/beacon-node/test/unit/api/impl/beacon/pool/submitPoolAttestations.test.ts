@@ -88,15 +88,15 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     expect(modules.network.publishBeaconAttestation).toHaveBeenCalledWith(attestation, subnet);
   });
 
-  it("shares publication capacity between simultaneous validator-client batches", async () => {
+  it("does not impose a publication limit on concurrent API validation", async () => {
     const publication = defer<number>();
     modules.network.publishBeaconAttestation = vi.fn().mockReturnValue(publication.promise);
     const signedAttestations = Array.from({length: 300}, () => ssz.electra.SingleAttestation.defaultValue());
     const submitted = Promise.all(Array.from({length: 4}, () => api.submitPoolAttestationsV2({signedAttestations})));
     try {
       await Promise.resolve();
-      expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledTimes(32);
-      expect(modules.network.publishBeaconAttestation).toHaveBeenCalledTimes(32);
+      expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledTimes(1200);
+      expect(modules.network.publishBeaconAttestation).toHaveBeenCalledTimes(1200);
     } finally {
       publication.resolve(1);
       await submitted;
@@ -105,15 +105,25 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     expect(modules.network.publishBeaconAttestation).toHaveBeenCalledTimes(1200);
   });
 
-  it("reports native admission failure without retrying or revalidating the attestation", async () => {
+  it("waits for native publication capacity without revalidating the attestation", async () => {
     const publish = vi
       .fn()
       .mockRejectedValueOnce(
-        Object.assign(new Error("full"), {code: "NetworkGossipPublishFailed", reason: "admission_full"})
+        Object.assign(new Error("full"), {
+          code: "NetworkGossipPublishFailed",
+          reason: "admission_full",
+          capacityToken: "slots",
+        })
       )
       .mockResolvedValue({queued: 1, selected: 1, pressured: 0, unavailable: 0, duplicate: false});
     const gossip = new NativeGossip(
-      {publish, blockImported: () => {}, dropQueuedGossip: () => {}},
+      {
+        publish,
+        waitForPublicationCapacity: vi.fn(async () => {}),
+        limits: {peerCapacity: 64, incomingCapacity: 32, publicationMaxWaitMs: 12000},
+        blockImported: () => {},
+        dropQueuedGossip: () => {},
+      },
       createBeaconConfig(config, new Uint8Array(32)),
       defaultNetworkOptions,
       vi.fn(),
@@ -124,10 +134,10 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     try {
       await expect(
         api.submitPoolAttestationsV2({signedAttestations: [ssz.electra.SingleAttestation.defaultValue()]})
-      ).rejects.toMatchObject({failures: [{index: 0, message: "full"}]});
+      ).resolves.toBeUndefined();
       expect(validateGossipFnRetryUnknownRoot).toHaveBeenCalledOnce();
       expect(attestationPool.add).toHaveBeenCalledOnce();
-      expect(publish).toHaveBeenCalledOnce();
+      expect(publish).toHaveBeenCalledTimes(2);
     } finally {
       gossip.close();
     }
