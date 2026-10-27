@@ -55,7 +55,7 @@ export function assertPeerRelevance(
     GENESIS_EPOCH,
     computeEpochAtSlot(Math.max(currentSlot, 0) + FUTURE_SLOT_TOLERANCE) - 2
   );
-  if (remote.finalizedEpoch > maxFinalizedEpoch || remote.finalizedEpoch > computeEpochAtSlot(remote.headSlot)) {
+  if (remote.finalizedEpoch > maxFinalizedEpoch) {
     return {
       code: IrrelevantPeerCode.FINALIZED_EPOCH_TOO_HIGH,
       finalizedEpoch: remote.finalizedEpoch,

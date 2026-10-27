@@ -90,18 +90,6 @@ describe("network / peers / utils / assertPeerRelevance", () => {
       irrelevantType: null,
     },
     {
-      id: "Reject finalized epoch after head epoch",
-      remote: {
-        forkDigest: correctForkDigest,
-        finalizedRoot: differedRoot,
-        finalizedEpoch: 100,
-        headRoot: ZERO_HASH,
-        headSlot: 99 * SLOTS_PER_EPOCH,
-      },
-      currentSlot: 102 * SLOTS_PER_EPOCH,
-      irrelevantType: {code: IrrelevantPeerCode.FINALIZED_EPOCH_TOO_HIGH, finalizedEpoch: 100, maxFinalizedEpoch: 100},
-    },
-    {
       id: "Reject zero finalized root for a non-genesis epoch",
       remote: {
         forkDigest: correctForkDigest,
