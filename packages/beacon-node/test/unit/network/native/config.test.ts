@@ -42,6 +42,28 @@ async function fixture() {
 }
 
 describe("native configuration boundary", () => {
+  it("keeps bootstrap multiaddrs in JavaScript independently of native discovery capacity", async () => {
+    const {key} = await fixture();
+    const peer = SignableENR.createFromPrivateKey(key).peerId.toString();
+    const bootMultiaddrs = Array.from({length: 65}, (_, i) => `/ip4/127.0.0.1/udp/${9000 + i}/quic-v1/p2p/${peer}`);
+    const result = createNativeConfig(
+      {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"], bootMultiaddrs},
+      config,
+      key,
+      0,
+      ssz.fulu.Status.defaultValue(),
+      config.CUSTODY_REQUIREMENT,
+      16
+    );
+    try {
+      expect(result.bootPeers.map(({addresses}) => addresses[0].port)).toEqual(
+        Array.from({length: 65}, (_, i) => 9000 + i)
+      );
+    } finally {
+      result.application.identitySecretKey.fill(0);
+    }
+  });
+
   it("passes sparse native policy and tracing options", async () => {
     const node = await fixture();
     const application = node.create();

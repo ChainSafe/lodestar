@@ -31,7 +31,6 @@ describe("native option validation", () => {
     [{targetGroupPeers: 211}, "targetGroupPeers=211"],
     [{slotsToSubscribeBeforeAggregatorDuty: 2 * SLOTS_PER_EPOCH + 1}, "slotsToSubscribeBeforeAggregatorDuty"],
     [{directPeers: Array.from({length: 151}, () => "unused")}, "directPeers.length=151"],
-    [{bootMultiaddrs: Array.from({length: 65}, () => "unused")}, "bootMultiaddrs.length=65"],
   ] satisfies [Partial<NetworkOptions>, string][])("identifies rejected options %j", (overrides, message) => {
     expect(() => validateNetworkOptions({...options, ...overrides})).toThrow(
       expect.objectContaining({
@@ -68,7 +67,7 @@ describe("native option validation", () => {
       targetGroupPeers: 256,
       slotsToSubscribeBeforeAggregatorDuty: 2 * SLOTS_PER_EPOCH,
       directPeers: Array.from({length: 192}, () => "unused"),
-      bootMultiaddrs: Array.from({length: 64}, () => "unused"),
+      bootMultiaddrs: Array.from({length: 256}, () => "unused"),
     });
     expect(() => validateNetworkOptions(input)).not.toThrow();
     expect(() =>

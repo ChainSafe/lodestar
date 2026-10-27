@@ -78,10 +78,9 @@ export function outgoingNativeRequest(
   data: OutgoingRequestArgs,
   report: (action: PeerAction, reason: string, origin?: NativePeerOrigin) => void
 ): AsyncIterableIterator<ResponseIncoming> {
-  nativeInteger(data.versions.length, "request versions", 3, 1);
   let selected: NativeProtocol | undefined;
   for (const version of data.versions) {
-    nativeInteger(version, "request version", 3, 1);
+    nativeInteger(version, "request version", undefined, 1);
     selected = nativeProtocols.get(`/eth2/beacon_chain/req/${data.method}/${version}/ssz_snappy`);
     if (selected) break;
   }

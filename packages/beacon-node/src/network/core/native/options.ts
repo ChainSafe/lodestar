@@ -63,7 +63,6 @@ export function validateNativeOptions(opts: NetworkOptions): void {
     0,
     opts.targetPeers - Math.max(1, Math.floor(opts.targetPeers / 4))
   );
-  optionInteger("bootMultiaddrs.length", opts.bootMultiaddrs?.length ?? 0, 0, 64);
 }
 
 function optionInteger(name: string, value: number, min: number, max: number): void {

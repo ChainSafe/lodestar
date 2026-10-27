@@ -5,6 +5,7 @@ import {IncomingRequest, NativeNetwork, NativePeerOrigin, NativeResponseChunk} f
 import {createBeaconConfig} from "@lodestar/config";
 import {RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ErrorAborted, defer} from "@lodestar/utils";
+import {NativeNetworkErrorCode} from "../../../../src/network/core/native/errors.js";
 import {outgoingNativeRequest, serveNativeRequest} from "../../../../src/network/core/native/requests.js";
 import {PeerAction} from "../../../../src/network/peers/score/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../../src/network/reqresp/types.js";
@@ -30,6 +31,67 @@ function outgoingRequest(
 afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
+});
+
+it.each([{versions: [2, 2, 2, 2]}, {versions: [9, 8, 7, 6, 5, 4, 3, 2, 1]}])(
+  "selects one supported protocol from the caller's version preferences %j",
+  async ({versions}) => {
+    const response: AsyncIterableIterator<NativeResponseChunk> = {
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+      next: async () => ({done: true, value: undefined}),
+    };
+    const request = vi.fn(() => response);
+    const requestData = new Uint8Array(32);
+    const stream = outgoingRequest(
+      {request},
+      {peerId: "peer", method: ReqRespMethod.BeaconBlocksByRoot, versions, requestData},
+      vi.fn()
+    );
+    await expect(stream.next()).resolves.toMatchObject({done: true});
+    expect(request).toHaveBeenCalledExactlyOnceWith(
+      "peer",
+      "/eth2/beacon_chain/req/beacon_blocks_by_root/2/ssz_snappy",
+      requestData
+    );
+  }
+);
+
+it.each([{versions: []}, {versions: [9, 8, 7, 6]}])(
+  "refuses an unsupported version list %j before native admission",
+  ({versions}) => {
+    const request = vi.fn();
+    expect(() =>
+      outgoingRequest(
+        {request},
+        {peerId: "peer", method: ReqRespMethod.BeaconBlocksByRoot, versions, requestData: new Uint8Array(32)},
+        vi.fn()
+      )
+    ).toThrow(
+      expect.objectContaining({
+        type: {code: NativeNetworkErrorCode.UNAVAILABLE, resource: "protocol beacon_blocks_by_root"},
+      })
+    );
+    expect(request).not.toHaveBeenCalled();
+  }
+);
+
+it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])("rejects malformed protocol version %s", (version) => {
+  const request = vi.fn();
+  expect(() =>
+    outgoingRequest(
+      {request},
+      {
+        peerId: "peer",
+        method: ReqRespMethod.BeaconBlocksByRoot,
+        versions: [version, 2],
+        requestData: new Uint8Array(32),
+      },
+      vi.fn()
+    )
+  ).toThrow(expect.objectContaining({type: {code: NativeNetworkErrorCode.CONFIGURATION, resource: "request version"}}));
+  expect(request).not.toHaveBeenCalled();
 });
 
 it("keeps connection concurrency refusal separate from shared capacity", async () => {
