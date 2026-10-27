@@ -8,10 +8,13 @@ import {ssz, sszTypesFor} from "@lodestar/types";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {GossipValidationResult, accept, fromResult} from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
+import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+
+const engineModes = [BeaconEngineMode.MainThread, BeaconEngineMode.Worker];
 
 function validationCase<T extends object, R>(
   type: Type<T>,
@@ -69,16 +72,36 @@ describe("BeaconEngineCore API bytes", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  function facade(beaconEngineWorker: boolean): BeaconEngine {
+  function facade(beaconEngineMode?: BeaconEngineMode): BeaconEngine {
     return new BeaconEngine({
       core,
       config: core.config,
       clock: core.clock,
       emitter: new ChainEventEmitter(),
       serializedCache: cache,
-      beaconEngineWorker,
+      beaconEngineMode,
     });
   }
+
+  it("rejects native mode before subscribing to core events", () => {
+    const subscribe = vi.spyOn(core.emitter, "on");
+    expect(() => facade(BeaconEngineMode.Native)).toThrowError(
+      expect.objectContaining({type: {code: "BEACON_ENGINE_NATIVE_NOT_IMPLEMENTED"}})
+    );
+    expect(subscribe).not.toHaveBeenCalled();
+  });
+
+  it("uses the object method when the mode is omitted", async () => {
+    const value = ssz.altair.SyncCommitteeMessage.defaultValue();
+    const bytes = ssz.altair.SyncCommitteeMessage.serialize(value);
+    const validate = vi.spyOn(core, "validateApiSyncCommittee").mockResolvedValue(accept({subnets: [0]}));
+    const deserialize = vi.spyOn(ssz.altair.SyncCommitteeMessage, "deserialize");
+
+    await facade().validateApiSyncCommittee(bytes, value);
+
+    expect(validate.mock.calls[0][0]).toBe(value);
+    expect(deserialize).not.toHaveBeenCalled();
+  });
 
   const cases = [
     {
@@ -152,14 +175,14 @@ describe("BeaconEngineCore API bytes", () => {
   ];
 
   describe.each(cases)("$name", ({create}) => {
-    it.each([false, true])("uses objects or bytes with beaconEngineWorker=%s", async (worker) => {
+    it.each(engineModes)("uses objects or bytes with beaconEngineMode=%s", async (beaconEngineMode) => {
       const test = create(core);
       const originalBytes = Uint8Array.from(test.bytes);
-      expect(await test.invokeFacade(facade(worker))).toBe(test.response);
+      expect(await test.invokeFacade(facade(beaconEngineMode))).toBe(test.response);
       expect(test.validate).toHaveBeenCalledOnce();
       expect(test.validate.mock.calls[0][0]).toEqual(test.value);
-      expect(test.validate.mock.calls[0][0] === test.value).toBe(!worker);
-      expect(test.deserialize).toHaveBeenCalledTimes(worker ? 1 : 0);
+      expect(test.validate.mock.calls[0][0] === test.value).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
+      expect(test.deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
       expect(test.serialize).not.toHaveBeenCalled();
       expect(test.bytes).toEqual(originalBytes);
     });
@@ -189,7 +212,7 @@ describe("BeaconEngineCore API bytes", () => {
   });
 
   describe.each([ForkName.phase0, ForkName.electra, ForkName.gloas])("%s proposer verification", (fork) => {
-    it.each([false, true])("uses objects or bytes with beaconEngineWorker=%s", async (worker) => {
+    it.each(engineModes)("uses objects or bytes with beaconEngineMode=%s", async (beaconEngineMode) => {
       Object.defineProperty(core, "config", {value: createBeaconConfig(getConfig(fork), Buffer.alloc(32))});
       const type = sszTypesFor(fork).SignedBeaconBlock;
       const block = type.defaultValue();
@@ -202,10 +225,10 @@ describe("BeaconEngineCore API bytes", () => {
       const originalBytes = Uint8Array.from(bytes);
       const deserialize = vi.spyOn(type, "deserialize");
       const validate = vi.spyOn(core, "verifyAndObserveBlockProposer").mockResolvedValue(undefined);
-      await facade(worker).verifyAndObserveBlockProposer(bytes, block, "0x01");
+      await facade(beaconEngineMode).verifyAndObserveBlockProposer(bytes, block, "0x01");
       expect(validate).toHaveBeenCalledExactlyOnceWith(block, "0x01");
-      expect(validate.mock.calls[0][0] === block).toBe(!worker);
-      expect(deserialize).toHaveBeenCalledTimes(worker ? 1 : 0);
+      expect(validate.mock.calls[0][0] === block).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
+      expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
       expect(bytes).toEqual(originalBytes);
     });
   });
@@ -242,26 +265,26 @@ describe("BeaconEngineCore API bytes", () => {
     expect(bytes).toEqual(originalBytes);
   });
 
-  it.each([false, true])("preserves proposer signature errors with beaconEngineWorker=%s", async (worker) => {
+  it.each(engineModes)("preserves proposer signature errors with beaconEngineMode=%s", async (beaconEngineMode) => {
     const type = core.config.getForkTypes(0).SignedBeaconBlock;
     const block = type.defaultValue();
     const error = new GossipActionError(GossipAction.REJECT, {code: "INVALID_SIGNATURE"});
     vi.spyOn(core, "verifyAndObserveBlockProposer").mockRejectedValue(error);
-    await expect(facade(worker).verifyAndObserveBlockProposer(type.serialize(block), block, "0x01")).rejects.toBe(
-      error
-    );
+    await expect(
+      facade(beaconEngineMode).verifyAndObserveBlockProposer(type.serialize(block), block, "0x01")
+    ).rejects.toBe(error);
   });
 
-  it.each([false, true])("verifies envelope publication with beaconEngineWorker=%s", async (worker) => {
+  it.each(engineModes)("verifies envelope publication with beaconEngineMode=%s", async (beaconEngineMode) => {
     const type = ssz.gloas.SignedExecutionPayloadEnvelope;
     const envelope = type.defaultValue();
     const bytes = type.serialize(envelope);
     const deserialize = vi.spyOn(type, "deserialize");
     const validate = vi.spyOn(core, "verifyEnvelopeForPublish").mockResolvedValue(undefined);
-    await facade(worker).verifyEnvelopeForPublish(bytes, envelope, "0x01");
+    await facade(beaconEngineMode).verifyEnvelopeForPublish(bytes, envelope, "0x01");
     expect(validate).toHaveBeenCalledExactlyOnceWith(envelope, "0x01");
-    expect(validate.mock.calls[0][0] === envelope).toBe(!worker);
-    expect(deserialize).toHaveBeenCalledTimes(worker ? 1 : 0);
+    expect(validate.mock.calls[0][0] === envelope).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
+    expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
   });
 
   it("rejects malformed envelopes before publication checks", async () => {
@@ -270,13 +293,13 @@ describe("BeaconEngineCore API bytes", () => {
     expect(validate).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])("preserves publication API errors with beaconEngineWorker=%s", async (worker) => {
+  it.each(engineModes)("preserves publication API errors with beaconEngineMode=%s", async (beaconEngineMode) => {
     const type = ssz.gloas.SignedExecutionPayloadEnvelope;
     const envelope = type.defaultValue();
     const error = new ApiError(404, "Block not found");
     vi.spyOn(core, "verifyEnvelopeForPublish").mockRejectedValue(error);
-    await expect(facade(worker).verifyEnvelopeForPublish(type.serialize(envelope), envelope, "0x01")).rejects.toBe(
-      error
-    );
+    await expect(
+      facade(beaconEngineMode).verifyEnvelopeForPublish(type.serialize(envelope), envelope, "0x01")
+    ).rejects.toBe(error);
   });
 });

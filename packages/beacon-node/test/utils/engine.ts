@@ -5,6 +5,7 @@ import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {BeaconEngine, BeaconEngineCore, IBeaconEngine} from "../../src/chain/beaconEngine/index.js";
+import {BeaconEngineMode, assertSupportedBeaconEngineMode} from "../../src/chain/beaconEngine/options.js";
 import {BeaconChainModules} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {IChainOptions} from "../../src/chain/options.js";
@@ -43,6 +44,9 @@ export function createTestBeaconEngine(
   beaconEngineCore: BeaconEngineCore;
   abortController: AbortController;
 } {
+  const beaconEngineMode = opts.beaconEngineMode ?? BeaconEngineMode.MainThread;
+  assertSupportedBeaconEngineMode(beaconEngineMode);
+
   const {executionBuilderOpts, ...chainModules} = modules;
   const {
     privateKey,
@@ -82,7 +86,7 @@ export function createTestBeaconEngine(
     executionBuilderOpts,
     builderApiClientOpts,
     opts,
-    ...(opts.beaconEngineWorker
+    ...(beaconEngineMode === BeaconEngineMode.Worker
       ? {
           chainConfigJson: chainConfigToJson(config),
           genesisValidatorsRoot: Uint8Array.from(config.genesisValidatorsRoot),
@@ -94,8 +98,8 @@ export function createTestBeaconEngine(
     dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
     metricsEnabled: metrics !== null,
     genesisTime: metadata.genesisTime,
-    clock: opts.beaconEngineWorker ? undefined : clock,
-    db: opts.beaconEngineWorker ? undefined : db,
+    clock: beaconEngineMode === BeaconEngineMode.Worker ? undefined : clock,
+    db: beaconEngineMode === BeaconEngineMode.Worker ? undefined : db,
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
   });
@@ -106,7 +110,7 @@ export function createTestBeaconEngine(
     emitter,
     clock,
     serializedCache,
-    beaconEngineWorker: opts.beaconEngineWorker,
+    beaconEngineMode,
   });
   return {
     ...chainModules,

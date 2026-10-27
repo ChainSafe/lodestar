@@ -8,6 +8,7 @@ import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
+import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
@@ -100,7 +101,7 @@ describe("BeaconEngine head notifications", () => {
       clock: new ClockStopped(0),
       serializedCache: new SerializedCache(),
       logger: core.logger,
-      beaconEngineWorker: true,
+      beaconEngineMode: BeaconEngineMode.Worker,
     });
     view = new ReplicateChainView(await core.getChainViewSnapshot());
     engine.chainView = view;

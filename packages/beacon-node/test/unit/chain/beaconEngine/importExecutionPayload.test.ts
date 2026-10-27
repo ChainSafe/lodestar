@@ -7,6 +7,7 @@ import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {
   PayloadEnvelopeInput,
@@ -21,6 +22,8 @@ import {QueueError, QueueErrorCode} from "../../../../src/util/queue/index.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {MockedBeaconChain, getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 import {generateState, zeroProtoBlock} from "../../../utils/state.js";
+
+const engineModes = [BeaconEngineMode.MainThread, BeaconEngineMode.Worker];
 
 describe("BeaconEngineCore importExecutionPayload FCU", () => {
   const blockRoot = Buffer.alloc(32, 1);
@@ -115,11 +118,11 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])(
-    "reuses gossip envelope decoding through import with beaconEngineWorker=%s",
-    async (beaconEngineWorker) => {
+  it.each(engineModes)(
+    "reuses gossip envelope decoding through import with beaconEngineMode=%s",
+    async (beaconEngineMode) => {
       const cache = new SerializedCache();
-      chain.opts.beaconEngineWorker = beaconEngineWorker;
+      chain.opts.beaconEngineMode = beaconEngineMode;
       Object.defineProperty(chain, "serializedCache", {value: cache});
       const core: BeaconEngineCore = chain.beaconEngine;
       core.validateGossipExecutionPayloadEnvelopeBytes =
@@ -154,7 +157,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       ).toEqual({executionOptimistic: false});
       expect(serialize).not.toHaveBeenCalled();
       expect(lookup).not.toHaveBeenCalled();
-      expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 2 : 0);
+      expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 2 : 0);
       expect(putEnvelope.mock.calls[0][1]).toBe(envelopeBytes);
     }
   );

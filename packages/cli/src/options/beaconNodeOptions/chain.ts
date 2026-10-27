@@ -1,10 +1,16 @@
-import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {
+  ArchiveMode,
+  BeaconEngineMode,
+  DEFAULT_ARCHIVE_MODE,
+  IBeaconNodeOptions,
+  defaultOptions,
+} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
 import {CircuitBreakerArgs} from "./builder.js";
 
 export type ChainArgs = {
-  "chain.beaconEngineWorker"?: boolean;
+  "chain.beaconEngineMode"?: BeaconEngineMode;
   suggestedFeeRecipient: string;
   graffitiAppend?: boolean;
   serveHistoricalState?: boolean;
@@ -48,7 +54,7 @@ export type ChainArgs = {
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
   return {
-    beaconEngineWorker: args["chain.beaconEngineWorker"] ?? defaultOptions.chain.beaconEngineWorker,
+    beaconEngineMode: args["chain.beaconEngineMode"] ?? defaultOptions.chain.beaconEngineMode,
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,
     serveHistoricalState: args.serveHistoricalState,
@@ -338,11 +344,12 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.beaconEngineWorker": {
+  "chain.beaconEngineMode": {
     hidden: true,
-    description: "Use separate BeaconEngine caches and block decoding (worker thread transport pending)",
-    type: "boolean",
-    default: defaultOptions.chain.beaconEngineWorker,
+    description: "BeaconEngine mode: main-thread, worker (transport pending), native (not implemented)",
+    type: "string",
+    choices: Object.values(BeaconEngineMode),
+    default: defaultOptions.chain.beaconEngineMode,
     group: "chain",
   },
 

@@ -15,6 +15,7 @@ import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconEngine, BeaconEngineCore} from "../chain/beaconEngine/index.js";
 import {AnchorSummary} from "../chain/beaconEngine/initialization.js";
 import {IBeaconEngine} from "../chain/beaconEngine/interface.js";
+import {BeaconEngineMode, assertSupportedBeaconEngineMode} from "../chain/beaconEngine/options.js";
 import {ChainEventEmitter} from "../chain/emitter.js";
 import {BeaconChain, IBeaconChain} from "../chain/index.js";
 import {initBeaconMetrics} from "../chain/initState.js";
@@ -157,6 +158,9 @@ export class BeaconNode {
     stateInitialization,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
+    const beaconEngineMode = opts.chain.beaconEngineMode ?? BeaconEngineMode.MainThread;
+    assertSupportedBeaconEngineMode(beaconEngineMode);
+
     const {config, activeValidatorCount} = stateInitialization;
     const metadata = readBeaconStateBytesMetadata(stateInitialization.stateBytes);
     if (!metadata) throw new LodestarError({code: "ANCHOR_STATE_BYTES_INVALID"});
@@ -238,28 +242,29 @@ export class BeaconNode {
         opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
       isAnchorStateFinalized: stateInitialization.isFinalized,
       opts: opts.chain,
-      ...(opts.chain.beaconEngineWorker
+      ...(beaconEngineMode === BeaconEngineMode.Worker
         ? {
             chainConfigJson: chainConfigToJson(config),
             genesisValidatorsRoot: Uint8Array.from(config.genesisValidatorsRoot),
           }
         : {config}),
-      db: opts.chain.beaconEngineWorker ? undefined : db,
+      db: beaconEngineMode === BeaconEngineMode.Worker ? undefined : db,
       dataDir,
       dbName: opts.db.name,
       dataColumnDir,
-      logging: opts.chain.beaconEngineWorker
-        ? {type: "options", opts: logger.toOpts()}
-        : {
-            type: "injected",
-            logger: chainLogger,
-            executionEngineLogger,
-            validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
-          },
+      logging:
+        beaconEngineMode === BeaconEngineMode.Worker
+          ? {type: "options", opts: logger.toOpts()}
+          : {
+              type: "injected",
+              logger: chainLogger,
+              executionEngineLogger,
+              validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
+            },
       metricsEnabled: metrics !== null,
       genesisTime: metadata.genesisTime,
-      clock: opts.chain.beaconEngineWorker ? undefined : clock,
-      executionEngine: opts.chain.beaconEngineWorker ? undefined : executionEngine,
+      clock: beaconEngineMode === BeaconEngineMode.Worker ? undefined : clock,
+      executionEngine: beaconEngineMode === BeaconEngineMode.Worker ? undefined : executionEngine,
       executionEngineOpts:
         executionEngineOpts.mode === "mock" ? {...executionEngineOpts, config: undefined} : executionEngineOpts,
       executionBuilderOpts: opts.executionBuilder,
@@ -272,7 +277,7 @@ export class BeaconNode {
       emitter,
       clock,
       serializedCache,
-      beaconEngineWorker: opts.chain.beaconEngineWorker,
+      beaconEngineMode,
     });
     await beaconEngineCore.init();
     const {earliestAvailableSlot} = await executeStateInitialization(
@@ -316,7 +321,7 @@ export class BeaconNode {
       earliestAvailableSlot,
       // Share the engine client and its metrics in-process. Worker mode needs a facade-local client,
       // with its own HTTP state, BLS verifier and metrics; only authenticated URL registrations cross owners.
-      builderApiClient: opts.chain.beaconEngineWorker ? undefined : beaconEngineCore.builderApiClient,
+      builderApiClient: beaconEngineMode === BeaconEngineMode.Worker ? undefined : beaconEngineCore.builderApiClient,
       builderApiClientOpts,
     });
 

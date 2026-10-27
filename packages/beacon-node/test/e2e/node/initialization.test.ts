@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import * as stateTransition from "@lodestar/state-transition";
+import {BeaconEngineMode} from "../../../src/chain/beaconEngine/options.js";
 import {Network} from "../../../src/network/index.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 
@@ -15,7 +16,7 @@ describe("beacon node initialization", () => {
       options: {
         api: {rest: {enabled: false}},
         chain: {
-          beaconEngineWorker: false,
+          beaconEngineMode: BeaconEngineMode.MainThread,
           blsVerifyAllMainThread: true,
           disablePrepareNextSlot: true,
         },

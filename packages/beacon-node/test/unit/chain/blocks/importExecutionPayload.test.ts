@@ -3,6 +3,7 @@ import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {payloadFailureFromError} from "../../../../src/chain/beaconEngine/processingResult.js";
 import {PayloadImportError, importExecutionPayload} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {
@@ -13,10 +14,12 @@ import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/paylo
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 
+const engineModes = [BeaconEngineMode.MainThread, BeaconEngineMode.Worker];
+
 describe("payload import error context", () => {
-  it.each([false, true])("attaches the facade input to a payload error (worker: %s)", async (beaconEngineWorker) => {
+  it.each(engineModes)("attaches the facade input to a payload error (worker: %s)", async (beaconEngineMode) => {
     const chain = getMockedBeaconChain();
-    chain.opts.beaconEngineWorker = beaconEngineWorker;
+    chain.opts.beaconEngineMode = beaconEngineMode;
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
     const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
@@ -64,7 +67,7 @@ describe("payload import error context", () => {
     expect("payloadInput" in error).toBe(false);
     const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
     expect(importPayload).toHaveBeenCalledExactlyOnceWith(
-      beaconEngineWorker ? bytes : {data: envelope, bytes},
+      beaconEngineMode === BeaconEngineMode.Worker ? bytes : {data: envelope, bytes},
       DataAvailabilityStatus.Available,
       {validSignature: false, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 0}
     );

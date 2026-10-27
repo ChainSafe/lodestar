@@ -6,6 +6,7 @@ import {ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/chainView.js";
 import {ImportBlockResponse} from "../../../../src/chain/beaconEngine/interface.js";
+import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {blockFailureFromError} from "../../../../src/chain/beaconEngine/processingResult.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerializedCache.js";
@@ -17,7 +18,9 @@ import {ClockStopped} from "../../../mocks/clock.js";
 import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 import {zeroProtoBlock} from "../../../utils/state.js";
 
-describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngineWorker=%s)", (beaconEngineWorker) => {
+const engineModes = [BeaconEngineMode.MainThread, BeaconEngineMode.Worker];
+
+describe.each(engineModes)("BeaconChain serialized bytes lifecycle (beaconEngineMode=%s)", (beaconEngineMode) => {
   const block = ssz.phase0.SignedBeaconBlock.defaultValue();
   const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toRootHex(blockRoot);
@@ -51,7 +54,7 @@ describe.each([false, true])("BeaconChain serialized bytes lifecycle (beaconEngi
 
   beforeEach(() => {
     chain = getMockedBeaconChain();
-    chain.opts.beaconEngineWorker = beaconEngineWorker;
+    chain.opts.beaconEngineMode = beaconEngineMode;
     engineCache = chain.beaconEngine.blockSerializedCache;
     engineImport = defer<ImportBlockResponse>();
     sidecarWrite = defer<void>();

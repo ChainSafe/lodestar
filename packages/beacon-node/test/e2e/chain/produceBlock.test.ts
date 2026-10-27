@@ -22,6 +22,7 @@ import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../src/api/options.js";
 import {ArchiveMode} from "../../../src/chain/archiveStore/interface.js";
+import {BeaconEngineMode} from "../../../src/chain/beaconEngine/options.js";
 import {BeaconChain} from "../../../src/chain/chain.js";
 import {BlockType} from "../../../src/chain/produceBlock/index.js";
 import {BeaconDb} from "../../../src/db/index.js";
@@ -86,7 +87,7 @@ describe("engine block production", () => {
       try {
         chain = await createBeaconChain(
           {
-            beaconEngineWorker: false,
+            beaconEngineMode: BeaconEngineMode.MainThread,
             blsVerifyAllMainThread: true,
             disableArchiveOnCheckpoint: true,
             suggestedFeeRecipient: "0x0000000000000000000000000000000000000001",

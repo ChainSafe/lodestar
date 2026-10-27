@@ -6,6 +6,7 @@ import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, gloas, ssz} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {BeaconEngineMode} from "../chain/beaconEngine/options.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
@@ -1277,7 +1278,9 @@ export class BlockInputSync {
       const envelopeBytes =
         this.chain.serializedCache.get(pendingPayload.envelope) ??
         ssz.gloas.SignedExecutionPayloadEnvelope.serialize(pendingPayload.envelope);
-      if (!this.chain.opts.beaconEngineWorker) this.chain.serializedCache.set(pendingPayload.envelope, envelopeBytes);
+      if ((this.chain.opts.beaconEngineMode ?? BeaconEngineMode.MainThread) === BeaconEngineMode.MainThread) {
+        this.chain.serializedCache.set(pendingPayload.envelope, envelopeBytes);
+      }
       const validationResult = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(
         envelopeBytes,
         pendingPayload.envelope,
@@ -1588,7 +1591,9 @@ export class BlockInputSync {
         if (!payloadInput.hasPayloadEnvelope()) {
           const envelopeBytes =
             this.chain.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
-          if (!this.chain.opts.beaconEngineWorker) this.chain.serializedCache.set(envelope, envelopeBytes);
+          if ((this.chain.opts.beaconEngineMode ?? BeaconEngineMode.MainThread) === BeaconEngineMode.MainThread) {
+            this.chain.serializedCache.set(envelope, envelopeBytes);
+          }
           const res = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(envelopeBytes, envelope, {
             source: PayloadEnvelopeInputSource.byRoot,
             seenTimestampSec: Date.now() / 1000,

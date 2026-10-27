@@ -1,7 +1,9 @@
 import os from "node:os";
 import {describe, expect, it} from "vitest";
-import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import yargs from "yargs";
+import {ArchiveMode, BeaconEngineMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
+import {options as chainOptions} from "../../../src/options/beaconNodeOptions/chain.js";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {
   NetworkArgs,
@@ -11,6 +13,35 @@ import {
 } from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
+  describe("beacon engine mode", () => {
+    function parseMode(args: string[]) {
+      return yargs(args)
+        .parserConfiguration({"dot-notation": false})
+        .option("chain.beaconEngineMode", chainOptions["chain.beaconEngineMode"])
+        .exitProcess(false)
+        .fail((message) => {
+          throw new Error(message);
+        })
+        .parseSync()["chain.beaconEngineMode"];
+    }
+
+    it("defaults to main-thread", () => {
+      expect(parseMode([])).toBe(BeaconEngineMode.MainThread);
+      expect(parseBeaconNodeArgs({} as BeaconNodeArgs).chain?.beaconEngineMode).toBe(BeaconEngineMode.MainThread);
+    });
+
+    it.each(Object.values(BeaconEngineMode))("accepts %s", (mode) => {
+      expect(parseMode(["--chain.beaconEngineMode", mode])).toBe(mode);
+      expect(parseBeaconNodeArgs({"chain.beaconEngineMode": mode} as BeaconNodeArgs).chain?.beaconEngineMode).toBe(
+        mode
+      );
+    });
+
+    it("rejects an unknown mode", () => {
+      expect(() => parseMode(["--chain.beaconEngineMode", "unknown"])).toThrow("Invalid values");
+    });
+  });
+
   it("Should parse BeaconNodeArgs", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
@@ -24,7 +55,7 @@ describe("options / beaconNodeOptions", () => {
       "rest.bodyLimit": 30e6,
       "rest.stacktraces": true,
 
-      "chain.beaconEngineWorker": true,
+      "chain.beaconEngineMode": BeaconEngineMode.Worker,
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
@@ -127,7 +158,7 @@ describe("options / beaconNodeOptions", () => {
         },
       },
       chain: {
-        beaconEngineWorker: true,
+        beaconEngineMode: BeaconEngineMode.Worker,
         blsVerifyAllMultiThread: true,
         blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,

@@ -26,6 +26,7 @@ import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/bea
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrapWithChainView} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconEngineCoreModules} from "../../../../src/chain/beaconEngine/interface.js";
+import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {
@@ -50,6 +51,8 @@ import {defaultExecutionBuilderOpts} from "../../../../src/execution/builder/ind
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
 import * as execution from "../../../../src/execution/index.js";
 import {aggregateMetrics, createMetrics} from "../../../../src/metrics/index.js";
+import {BeaconNode} from "../../../../src/node/nodejs.js";
+import {defaultOptions} from "../../../../src/node/options.js";
 import {initDevState} from "../../../../src/node/utils/state.js";
 import {Clock, ClockEvent} from "../../../../src/util/clock.js";
 import {wrapError} from "../../../../src/util/wrapError.js";
@@ -58,6 +61,8 @@ import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {TestChainModules, createBeaconChain, initializeTestChain} from "../../../utils/chain.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 import {createTestBeaconEngine, getBeaconEngineCore} from "../../../utils/engine.js";
+
+const engineModes = [BeaconEngineMode.MainThread, BeaconEngineMode.Worker];
 
 const executionBuilderApi = vi.hoisted(() => ({
   registerValidator: vi.fn(),
@@ -135,6 +140,45 @@ describe("bytes-based engine startup", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     await closeDb();
+  });
+
+  it("rejects native mode before node services initialize", async () => {
+    const initDb = vi.spyOn(db, "init");
+    const initExecutionEngine = vi.spyOn(execution, "initializeExecutionEngine");
+    const validate = vi.fn();
+    await expect(
+      BeaconNode.init({
+        opts: {...defaultOptions, chain: {...opts, beaconEngineMode: BeaconEngineMode.Native}},
+        pubkeyCache,
+        db,
+        logger: testLogger(),
+        processShutdownCallback: () => {},
+        privateKey: modules.privateKey,
+        dataDir: modules.dataDir,
+        dataColumnDir: path.join(modules.dataDir, "data_columns"),
+        stateInitialization: {
+          stateBytes: modules.anchorStateBytes,
+          activeValidatorCount: 16,
+          config: modules.config,
+          isFinalized: true,
+          shouldPersist: false,
+          validate,
+          initializeEarliestAvailableSlot: async () => 0,
+          log: () => {},
+        },
+      })
+    ).rejects.toMatchObject({type: {code: "BEACON_ENGINE_NATIVE_NOT_IMPLEMENTED"}});
+    expect(initDb).not.toHaveBeenCalled();
+    expect(initExecutionEngine).not.toHaveBeenCalled();
+    expect(validate).not.toHaveBeenCalled();
+  });
+
+  it("rejects native mode before test engine resources initialize", () => {
+    const initExecutionEngine = vi.spyOn(execution, "initializeExecutionEngine");
+    expect(() => createTestBeaconEngine({...opts, beaconEngineMode: BeaconEngineMode.Native}, modules)).toThrowError(
+      expect.objectContaining({type: {code: "BEACON_ENGINE_NATIVE_NOT_IMPLEMENTED"}})
+    );
+    expect(initExecutionEngine).not.toHaveBeenCalled();
   });
 
   describe("database ownership", () => {
@@ -295,7 +339,9 @@ describe("bytes-based engine startup", () => {
         },
         log: () => {},
       };
-      await expect(createBeaconChain({...opts, beaconEngineWorker: true}, modules)).rejects.toBe(error);
+      await expect(createBeaconChain({...opts, beaconEngineMode: BeaconEngineMode.Worker}, modules)).rejects.toBe(
+        error
+      );
       expect(close).toHaveBeenCalledOnce();
       expect(await db.stateArchive.keys()).toEqual([]);
     });
@@ -534,7 +580,7 @@ describe("bytes-based engine startup", () => {
   it("uses a worker-local clock for reads while only forwarded ticks drive maintenance", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
-    chain = await createBeaconChain({...opts, beaconEngineWorker: true}, modules);
+    chain = await createBeaconChain({...opts, beaconEngineMode: BeaconEngineMode.Worker}, modules);
     const core = getBeaconEngineCore(chain.beaconEngine);
     const pruneSlots = vi.spyOn(core.attestationPool, "prune");
     const pruneEpochs = vi.spyOn(core.seenAttesters, "prune");
@@ -562,7 +608,7 @@ describe("bytes-based engine startup", () => {
   it.each(["close", "failed startup"])("stops the worker-local clock after %s", async (shutdown) => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
-    const dependencies = createTestBeaconEngine({...opts, beaconEngineWorker: true}, modules);
+    const dependencies = createTestBeaconEngine({...opts, beaconEngineMode: BeaconEngineMode.Worker}, modules);
     engine = dependencies.beaconEngineCore;
     await engine.init();
     expect(vi.getTimerCount()).toBe(1);
@@ -623,7 +669,7 @@ describe("bytes-based engine startup", () => {
     expect(workerData.executionEngineOpts).not.toHaveProperty("config");
   });
 
-  it.each([false, true])("selects config ownership with beaconEngineWorker=%s", async (beaconEngineWorker) => {
+  it.each(engineModes)("selects config ownership with beaconEngineMode=%s", async (beaconEngineMode) => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     modules.config = createBeaconConfig(
@@ -642,13 +688,15 @@ describe("bytes-based engine startup", () => {
       },
       modules.config.genesisValidatorsRoot
     );
-    chain = await createBeaconChain({...opts, beaconEngineWorker}, modules);
+    chain = await createBeaconChain({...opts, beaconEngineMode}, modules);
     const core = getBeaconEngineCore(chain.beaconEngine);
     const mainConfig = modules.config;
     expect(chain.config).toBe(mainConfig);
     expect(chain.beaconEngine.config).toBe(mainConfig);
-    expect(core.config === mainConfig).toBe(!beaconEngineWorker);
-    expect(core.config.genesisValidatorsRoot === mainConfig.genesisValidatorsRoot).toBe(!beaconEngineWorker);
+    expect(core.config === mainConfig).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
+    expect(core.config.genesisValidatorsRoot === mainConfig.genesisValidatorsRoot).toBe(
+      beaconEngineMode === BeaconEngineMode.MainThread
+    );
     expect(byteArrayEquals(core.config.genesisValidatorsRoot, mainConfig.genesisValidatorsRoot)).toBe(true);
     expect(chainConfigToJson(core.config)).toEqual(chainConfigToJson(mainConfig));
     expect(core.config.HEZE_FORK_EPOCH).toBe(Infinity);
@@ -659,19 +707,21 @@ describe("bytes-based engine startup", () => {
       const domain = core.config.getDomain(slot, DOMAIN_BEACON_PROPOSER);
       const mainDomain = mainConfig.getDomain(slot, DOMAIN_BEACON_PROPOSER);
       expect(domain, `domain at slot ${slot}`).toEqual(mainDomain);
-      expect(domain === mainDomain, `domain ownership at slot ${slot}`).toBe(!beaconEngineWorker);
+      expect(domain === mainDomain, `domain ownership at slot ${slot}`).toBe(
+        beaconEngineMode === BeaconEngineMode.MainThread
+      );
       const digest = mainConfig.forkBoundary2ForkDigest(boundary);
       expect(core.config.forkBoundary2ForkDigest(boundary), `digest at epoch ${boundary.epoch}`).toEqual(digest);
       expect(core.config.forkDigest2ForkBoundary(digest), `digest lookup at epoch ${boundary.epoch}`).toEqual(boundary);
     }
   });
 
-  it.each([false, true])(
-    "keeps SerializedCache on the main thread and decodes Core bytes independently with beaconEngineWorker=%s",
-    async (beaconEngineWorker) => {
+  it.each(engineModes)(
+    "keeps SerializedCache on the main thread and decodes Core bytes independently with beaconEngineMode=%s",
+    async (beaconEngineMode) => {
       vi.useFakeTimers();
       vi.setSystemTime(0);
-      const options = {...opts, beaconEngineWorker};
+      const options = {...opts, beaconEngineMode};
       const dependencies = await initializeTestChain(options, modules);
       chain = new BeaconChain(options, dependencies);
       if (!engine) throw Error("Expected initialized engine");
@@ -684,7 +734,7 @@ describe("bytes-based engine startup", () => {
       const signedBlockRoot = computeSignedBlockRoot(ForkName.phase0, block);
       await engine.validateGossipBlockBytes(
         signedBlockRoot,
-        beaconEngineWorker ? structuredClone(bytes) : bytes,
+        beaconEngineMode === BeaconEngineMode.Worker ? structuredClone(bytes) : bytes,
         ForkName.phase0,
         0
       );
@@ -694,7 +744,12 @@ describe("bytes-based engine startup", () => {
       vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
       await expect(
         engine.verifyBlocksBytes(
-          [{signedBlockRoot, blockBytes: beaconEngineWorker ? structuredClone(bytes) : bytes}],
+          [
+            {
+              signedBlockRoot,
+              blockBytes: beaconEngineMode === BeaconEngineMode.Worker ? structuredClone(bytes) : bytes,
+            },
+          ],
           {}
         )
       ).resolves.toMatchObject({
@@ -720,8 +775,8 @@ describe("bytes-based engine startup", () => {
       await expect(chain.beaconEngine.verifyBlocks([input], {})).rejects.toMatchObject({
         type: {code: "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN"},
       });
-      expect(verifyGossipBlock).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-      expect(verifyBlocks).toHaveBeenCalledTimes(beaconEngineWorker ? 0 : 1);
+      expect(verifyGossipBlock).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+      expect(verifyBlocks).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 0 : 1);
       expect(deserialize).toHaveBeenCalledTimes(1);
 
       expect(engine).not.toHaveProperty("serializedCache");
@@ -732,13 +787,13 @@ describe("bytes-based engine startup", () => {
         .spyOn(voluntaryExitValidation, "validateGossipVoluntaryExit")
         .mockResolvedValue(undefined);
       expect((await chain.beaconEngine.validateGossipVoluntaryExit(exitBytes, exit)).err).toBeNull();
-      expect(deserializeExit).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-      expect(validateExit.mock.calls[0][0] === exit).toBe(!beaconEngineWorker);
+      expect(deserializeExit).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+      expect(validateExit.mock.calls[0][0] === exit).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
       expect(chain.serializedCache.get(block)).toBe(bytes);
     }
   );
 
-  it.each([false, true])("owns the execution builder with beaconEngineWorker=%s", async (beaconEngineWorker) => {
+  it.each(engineModes)("owns the execution builder with beaconEngineMode=%s", async (beaconEngineMode) => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
@@ -748,7 +803,7 @@ describe("bytes-based engine startup", () => {
       timeout: 1234,
       userAgent: "test-execution-builder",
     };
-    chain = await createBeaconChain({...opts, beaconEngineWorker}, modules);
+    chain = await createBeaconChain({...opts, beaconEngineMode}, modules);
     const core = getBeaconEngineCore(chain.beaconEngine);
     const builder = core.executionBuilder;
     if (!builder) throw Error("Expected engine-owned execution builder");
@@ -788,7 +843,7 @@ describe("bytes-based engine startup", () => {
       data: signedBlindedBlock,
       bytes: ssz.electra.SignedBlindedBeaconBlock.serialize(signedBlindedBlock),
     };
-    const requestBytes = beaconEngineWorker ? structuredClone(request.bytes) : request.bytes;
+    const requestBytes = beaconEngineMode === BeaconEngineMode.Worker ? structuredClone(request.bytes) : request.bytes;
     const deserialize = vi.spyOn(ssz.electra.SignedBlindedBeaconBlock, "deserialize");
     const response = ssz.deneb.ExecutionPayloadAndBlobsBundle.defaultValue();
     response.blobsBundle.blobs.push(ssz.deneb.Blob.defaultValue());
@@ -817,8 +872,10 @@ describe("bytes-based engine startup", () => {
         ForkName.electra
       );
       const builderContents = await submitBlindedBlock.mock.results.at(-1)?.value;
-      expect(contents === builderContents, `builder output identity using ${wireFormat}`).toBe(!beaconEngineWorker);
-      if (beaconEngineWorker) {
+      expect(contents === builderContents, `builder output identity using ${wireFormat}`).toBe(
+        beaconEngineMode === BeaconEngineMode.MainThread
+      );
+      if (beaconEngineMode === BeaconEngineMode.Worker) {
         expect(contentsBytes, `serialized contents using ${wireFormat}`).toBe(
           await submitBlindedBlockBytes.mock.results.at(-1)?.value
         );
@@ -840,7 +897,7 @@ describe("bytes-based engine startup", () => {
       const submitted = executionBuilderApi.submitBlindedBlock.mock.lastCall?.[0].signedBlindedBlock;
       expect(submitted.bytes, `original submission bytes using ${wireFormat}`).toBe(requestBytes);
       expect(submitted.data === signedBlindedBlock, `decoded input reuse using ${wireFormat}`).toBe(
-        !beaconEngineWorker
+        beaconEngineMode === BeaconEngineMode.MainThread
       );
       await expect(
         chain.beaconEngine.submitBlindedBlockNoResponse(requestBytes, signedBlindedBlock, ForkName.electra),
@@ -851,9 +908,9 @@ describe("bytes-based engine startup", () => {
         {retries: 2, requestWireFormat: wireFormat}
       );
     }
-    expect(deserialize).toHaveBeenCalledTimes(beaconEngineWorker ? 4 : 0);
-    expect(serializeContents).toHaveBeenCalledTimes(beaconEngineWorker ? 2 : 0);
-    expect(deserializeContents).toHaveBeenCalledTimes(beaconEngineWorker ? 2 : 0);
+    expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 4 : 0);
+    expect(serializeContents).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 2 : 0);
+    expect(deserializeContents).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 2 : 0);
 
     const candidateCacheAccess = vi.fn(() => {
       throw Error("Builder object APIs must not access BlockSerializedCache");
@@ -892,10 +949,12 @@ describe("bytes-based engine startup", () => {
         ForkName.capella
       );
     expect(capellaContents.signedBlock.message.body).toMatchObject({executionPayload: capellaPayload});
-    expect(capellaContents === (await submitBlindedBlock.mock.results.at(-1)?.value)).toBe(!beaconEngineWorker);
-    expect(capellaBytes !== undefined).toBe(beaconEngineWorker);
-    expect(serializeCapella).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-    expect(deserializeCapella).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
+    expect(capellaContents === (await submitBlindedBlock.mock.results.at(-1)?.value)).toBe(
+      beaconEngineMode === BeaconEngineMode.MainThread
+    );
+    expect(capellaBytes !== undefined).toBe(beaconEngineMode === BeaconEngineMode.Worker);
+    expect(serializeCapella).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+    expect(deserializeCapella).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
 
     executionBuilderApi.submitBlindedBlock.mockRejectedValueOnce(error);
     executionBuilderApi.submitBlindedBlockV2.mockRejectedValueOnce(error);
@@ -935,77 +994,74 @@ describe("bytes-based engine startup", () => {
     );
   });
 
-  it.each([false, true])(
-    "wires builder clients and registrations with beaconEngineWorker=%s",
-    async (beaconEngineWorker) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(0);
-      const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
-      modules.metrics = metrics;
-      modules.builderApiClientOpts = {timeout: 1234, userAgent: "test-builder-client"};
-      chain = await createBeaconChain({...opts, beaconEngineWorker}, modules);
-      const core = getBeaconEngineCore(chain.beaconEngine);
-      const engineBls = vi.spyOn(core.bls, "verifySignatureSets").mockResolvedValue(true);
-      const chainBls = vi.spyOn(chain.bls, "verifySignatureSets").mockResolvedValue(true);
-      expect(chain.builderApiClient === core.builderApiClient).toBe(!beaconEngineWorker);
-      expect(chain.clock === core.clock).toBe(!beaconEngineWorker);
+  it.each(engineModes)("wires builder clients and registrations with beaconEngineMode=%s", async (beaconEngineMode) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    modules.metrics = metrics;
+    modules.builderApiClientOpts = {timeout: 1234, userAgent: "test-builder-client"};
+    chain = await createBeaconChain({...opts, beaconEngineMode}, modules);
+    const core = getBeaconEngineCore(chain.beaconEngine);
+    const engineBls = vi.spyOn(core.bls, "verifySignatureSets").mockResolvedValue(true);
+    const chainBls = vi.spyOn(chain.bls, "verifySignatureSets").mockResolvedValue(true);
+    expect(chain.builderApiClient === core.builderApiClient).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
+    expect(chain.clock === core.clock).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
 
-      const preferencesUrl = "https://preferences.builder.example.com";
-      const bidUrl = "https://bid.builder.example.com";
-      const request = ssz.gloas.BuilderPreferencesRequest.defaultValue();
-      request.auth.message.slot = 1;
-      request.auth.message.data = new Uint8Array([1]);
-      await chain.builderApiClient.submitBuilderPreferences(preferencesUrl, new Uint8Array(48), request);
-      await core.builderApiClient.checkStatus();
-      await core.builderApiClient.getExecutionPayloadBids(
-        [
-          {
-            url: new TextEncoder().encode(bidUrl),
-            auth: request.auth,
-            builderPubkeys: [],
-            maxExecutionPayment: 0n,
-            minBid: 0n,
-            builderBoostFactor: 100n,
-          },
-        ],
-        1,
-        new Uint8Array(32),
-        new Uint8Array(32),
-        new Uint8Array(48)
+    const preferencesUrl = "https://preferences.builder.example.com";
+    const bidUrl = "https://bid.builder.example.com";
+    const request = ssz.gloas.BuilderPreferencesRequest.defaultValue();
+    request.auth.message.slot = 1;
+    request.auth.message.data = new Uint8Array([1]);
+    await chain.builderApiClient.submitBuilderPreferences(preferencesUrl, new Uint8Array(48), request);
+    await core.builderApiClient.checkStatus();
+    await core.builderApiClient.getExecutionPayloadBids(
+      [
+        {
+          url: new TextEncoder().encode(bidUrl),
+          auth: request.auth,
+          builderPubkeys: [],
+          maxExecutionPayment: 0n,
+          minBid: 0n,
+          builderBoostFactor: 100n,
+        },
+      ],
+      1,
+      new Uint8Array(32),
+      new Uint8Array(32),
+      new Uint8Array(48)
+    );
+    // produceBlockV4 registers the winning meta.builderUrl
+    chain.builderApiClient.registerAuthenticatedBuilder(bidUrl);
+    await chain.builderApiClient.submitSignedBeaconBlock(bidUrl, {data: ssz.gloas.SignedBeaconBlock.defaultValue()});
+    expect(chainBls).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+    expect(engineBls).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 2);
+
+    const calls = vi.mocked(getClient).mock.calls;
+    expect(calls).toHaveLength(beaconEngineMode === BeaconEngineMode.Worker ? 4 : 2);
+    for (const [clientOpts, clientModules] of calls) {
+      expect(clientOpts, "builder client options").toMatchObject({
+        globalInit: {timeoutMs: 1234, headers: {"User-Agent": "test-builder-client"}},
+      });
+      expect([metrics.builderHttpClient, core.metrics?.builderHttpClient], "builder client metric owner").toContain(
+        clientModules.metrics
       );
-      // produceBlockV4 registers the winning meta.builderUrl
-      chain.builderApiClient.registerAuthenticatedBuilder(bidUrl);
-      await chain.builderApiClient.submitSignedBeaconBlock(bidUrl, {data: ssz.gloas.SignedBeaconBlock.defaultValue()});
-      expect(chainBls).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
-      expect(engineBls).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 2);
-
-      const calls = vi.mocked(getClient).mock.calls;
-      expect(calls).toHaveLength(beaconEngineWorker ? 4 : 2);
-      for (const [clientOpts, clientModules] of calls) {
-        expect(clientOpts, "builder client options").toMatchObject({
-          globalInit: {timeoutMs: 1234, headers: {"User-Agent": "test-builder-client"}},
-        });
-        expect([metrics.builderHttpClient, core.metrics?.builderHttpClient], "builder client metric owner").toContain(
-          clientModules.metrics
-        );
-      }
-      expect(calls.filter(([, clientModules]) => clientModules.metrics === metrics.builderHttpClient)).toHaveLength(
-        beaconEngineWorker ? 2 : 0
-      );
-
-      const engineText = await core.metrics?.register.metrics();
-      const facadeText = await metrics.register.metrics();
-      const preferenceMetric = 'lodestar_builder_api_preferences_forwarded_total{status="success"} 1';
-      const blockMetric = 'lodestar_builder_api_block_submissions_total{status="success"} 1';
-      expect(engineText).toContain('lodestar_builder_api_status_checks_total{status="success"} 1');
-      expect(engineText).toContain("lodestar_builder_api_bid_requests_total 1");
-      expect(beaconEngineWorker ? facadeText : engineText).toContain(preferenceMetric);
-      expect(beaconEngineWorker ? facadeText : engineText).toContain(blockMetric);
-      expect(beaconEngineWorker ? engineText : facadeText).not.toContain(preferenceMetric);
-      expect(beaconEngineWorker ? engineText : facadeText).not.toContain(blockMetric);
-      await chain.close();
     }
-  );
+    expect(calls.filter(([, clientModules]) => clientModules.metrics === metrics.builderHttpClient)).toHaveLength(
+      beaconEngineMode === BeaconEngineMode.Worker ? 2 : 0
+    );
+
+    const engineText = await core.metrics?.register.metrics();
+    const facadeText = await metrics.register.metrics();
+    const preferenceMetric = 'lodestar_builder_api_preferences_forwarded_total{status="success"} 1';
+    const blockMetric = 'lodestar_builder_api_block_submissions_total{status="success"} 1';
+    expect(engineText).toContain('lodestar_builder_api_status_checks_total{status="success"} 1');
+    expect(engineText).toContain("lodestar_builder_api_bid_requests_total 1");
+    expect(beaconEngineMode === BeaconEngineMode.Worker ? facadeText : engineText).toContain(preferenceMetric);
+    expect(beaconEngineMode === BeaconEngineMode.Worker ? facadeText : engineText).toContain(blockMetric);
+    expect(beaconEngineMode === BeaconEngineMode.Worker ? engineText : facadeText).not.toContain(preferenceMetric);
+    expect(beaconEngineMode === BeaconEngineMode.Worker ? engineText : facadeText).not.toContain(blockMetric);
+    await chain.close();
+  });
 
   it("waits for the startup snapshot before constructing the chain and forwarding clock ticks", async () => {
     const snapshotTaken = defer<Awaited<ReturnType<BeaconEngineCore["getChainViewSnapshot"]>>>();
@@ -1050,7 +1106,7 @@ describe("bytes-based engine startup", () => {
     const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.metrics = metrics;
     // Core responses are mocked, so only the worker-mode replica reflects them
-    const workerOpts = {...opts, beaconEngineWorker: true};
+    const workerOpts = {...opts, beaconEngineMode: BeaconEngineMode.Worker};
     const dependencies = await initializeTestChain(workerOpts, modules);
     const beaconChain = new BeaconChain(workerOpts, dependencies);
     chain = beaconChain;
@@ -1105,7 +1161,7 @@ describe("bytes-based engine startup", () => {
     const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.metrics = metrics;
     // Core responses are mocked, so only the worker-mode replica reflects them
-    chain = await createBeaconChain({...opts, beaconEngineWorker: true}, modules);
+    chain = await createBeaconChain({...opts, beaconEngineMode: BeaconEngineMode.Worker}, modules);
     const beaconChain = chain;
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
     const previousHead = core.forkChoice.getHead();
@@ -1189,7 +1245,7 @@ describe("bytes-based engine startup", () => {
 
   it("refreshes network status when a pulled checkpoint finalizes without a head change", async () => {
     // Core responses are mocked, so only the worker-mode replica reflects them
-    chain = await createBeaconChain({...opts, beaconEngineWorker: true}, modules);
+    chain = await createBeaconChain({...opts, beaconEngineMode: BeaconEngineMode.Worker}, modules);
     const beaconChain = chain;
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
     const head = beaconChain.beaconEngine.chainView.getHead();
@@ -1285,12 +1341,12 @@ describe("bytes-based engine startup", () => {
     expect(metrics.register.getSingleMetric("validator_monitor_validators")).toBeUndefined();
   });
 
-  it.each([false, true])("isolates engine metrics with beaconEngineWorker=%s", async (beaconEngineWorker) => {
+  it.each(engineModes)("isolates engine metrics with beaconEngineMode=%s", async (beaconEngineMode) => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     const metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
     modules.metrics = metrics;
-    chain = await createBeaconChain({...opts, beaconEngineWorker}, modules);
+    chain = await createBeaconChain({...opts, beaconEngineMode}, modules);
     const core = getBeaconEngineCore(chain.beaconEngine);
     expect(core.metrics?.register).not.toBe(metrics.register);
     const getHeadState = vi.spyOn(core, "getHeadState");
@@ -1437,10 +1493,10 @@ describe("bytes-based engine startup", () => {
     expect(await dependencies.beaconEngine.scrapeMetrics()).toEqual({metrics: [], extra: ""});
   });
 
-  it.each([false, true])(
-    "applies payload import results before SSE with beaconEngineWorker=%s",
-    async (beaconEngineWorker) => {
-      const options = {...opts, beaconEngineWorker};
+  it.each(engineModes)(
+    "applies payload import results before SSE with beaconEngineMode=%s",
+    async (beaconEngineMode) => {
+      const options = {...opts, beaconEngineMode};
       const dependencies = await initializeTestChain(options, modules);
       const root = Buffer.alloc(32, 1);
       const rootHex = toRootHex(root);
@@ -1454,7 +1510,10 @@ describe("bytes-based engine startup", () => {
         payloadStatus: PayloadStatus.PENDING,
       };
       // Core responses are mocked: only the worker-mode replica reflects them
-      const replica = beaconEngineWorker ? (dependencies.beaconEngine.chainView as ReplicateChainView) : undefined;
+      const replica =
+        beaconEngineMode === BeaconEngineMode.Worker
+          ? (dependencies.beaconEngine.chainView as ReplicateChainView)
+          : undefined;
       replica?.onChainViewUpdate({blocks: [pendingBlock]});
       chain = new BeaconChain(options, dependencies);
       const activeChain = chain;
@@ -1477,7 +1536,10 @@ describe("bytes-based engine startup", () => {
       };
       const pending = defer<typeof response>();
       const coreImport = vi
-        .spyOn(core, beaconEngineWorker ? "importExecutionPayloadBytes" : "importExecutionPayload")
+        .spyOn(
+          core,
+          beaconEngineMode === BeaconEngineMode.Worker ? "importExecutionPayloadBytes" : "importExecutionPayload"
+        )
         .mockReturnValueOnce(pending.promise);
       const block = ssz.gloas.SignedBeaconBlock.defaultValue();
       block.message.slot = 1;

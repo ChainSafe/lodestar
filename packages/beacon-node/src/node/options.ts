@@ -1,5 +1,11 @@
 import {ApiOptions, defaultApiOptions} from "../api/options.js";
-import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
+import {
+  ArchiveMode,
+  BeaconEngineMode,
+  DEFAULT_ARCHIVE_MODE,
+  IChainOptions,
+  defaultChainOptions,
+} from "../chain/options.js";
 import {ValidatorMonitorOpts, defaultValidatorMonitorOpts} from "../chain/validatorMonitor.js";
 import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
 import {
@@ -26,6 +32,7 @@ export {
   defaultExecutionBuilderHttpOpts,
   engineApiModes,
   ArchiveMode,
+  BeaconEngineMode,
   DEFAULT_ARCHIVE_MODE,
 };
 export type {EngineApiMode};

@@ -1,3 +1,4 @@
+import {LodestarError} from "@lodestar/utils";
 import {StatesArchiveOpts} from "../archiveStore/interface.js";
 import {BlsMultiThreadWorkerPoolOptions} from "../bls/index.js";
 import {ForkChoiceOpts} from "../forkChoice/index.js";
@@ -5,6 +6,18 @@ import {LightClientServerOpts} from "../lightClient/index.js";
 import {ShufflingCacheOpts} from "../shufflingCache.js";
 import {FIFOBlockStateCacheOpts} from "../stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCacheOpts} from "../stateCache/persistentCheckpointsCache.js";
+
+export enum BeaconEngineMode {
+  MainThread = "main-thread",
+  Worker = "worker",
+  Native = "native",
+}
+
+export function assertSupportedBeaconEngineMode(mode: BeaconEngineMode): void {
+  if (mode === BeaconEngineMode.Native) {
+    throw new LodestarError({code: "BEACON_ENGINE_NATIVE_NOT_IMPLEMENTED"}, "Native BeaconEngine is not implemented");
+  }
+}
 
 export type PoolOpts = {
   /**

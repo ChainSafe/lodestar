@@ -11,6 +11,7 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {BeaconEngineErrorCode} from "../../../../src/chain/beaconEngine/interface.js";
+import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
@@ -82,7 +83,7 @@ async function setup() {
     emitter,
     logger,
     serializedCache: new SerializedCache(),
-    beaconEngineWorker: true,
+    beaconEngineMode: BeaconEngineMode.Worker,
   });
   const view = new ReplicateChainView(await core.getChainViewSnapshot());
   engine.chainView = view;

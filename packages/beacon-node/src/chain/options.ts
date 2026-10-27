@@ -1,7 +1,7 @@
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
-import {IBeaconEngineOptions} from "./beaconEngine/options.js";
+import {BeaconEngineMode, IBeaconEngineOptions} from "./beaconEngine/options.js";
 import {DEFAULT_MAX_BLOCK_STATES} from "./stateCache/fifoBlockStateCache.js";
 import {
   DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
@@ -9,14 +9,14 @@ import {
 } from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
-export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
+export {ArchiveMode, BeaconEngineMode, DEFAULT_ARCHIVE_MODE};
 
 export type IChainOptions = IBeaconEngineOptions &
   BlockProcessOpts &
   ArchiveStoreOpts &
   ValidatorMonitorOpts & {
-    /** Use separate BeaconEngine resources and message decoding. Worker thread transport is still pending. */
-    beaconEngineWorker?: boolean;
+    /** Worker mode uses separate resources and bytes methods; worker transport and native mode are pending. */
+    beaconEngineMode?: BeaconEngineMode;
     blacklistedBlocks?: string[];
     persistProducedBlocks?: boolean;
     persistProducedPayloadEnvelopes?: boolean;
@@ -52,7 +52,7 @@ export type BlockProcessOpts = {
 };
 
 export const defaultChainOptions: IChainOptions = {
-  beaconEngineWorker: false,
+  beaconEngineMode: BeaconEngineMode.MainThread,
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
   blacklistedBlocks: [],

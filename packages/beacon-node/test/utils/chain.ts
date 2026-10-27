@@ -4,6 +4,7 @@ import {
   readBeaconStateBytesMetadata,
   scanActiveValidatorsFromStateBytes,
 } from "@lodestar/state-transition";
+import {BeaconEngineMode} from "../../src/chain/beaconEngine/options.js";
 import {BeaconChain, BeaconChainModules} from "../../src/chain/chain.js";
 import {IChainOptions} from "../../src/chain/options.js";
 import {StateInitialization} from "../../src/chain/stateInitialization.js";
@@ -49,7 +50,8 @@ export async function initializeTestChain(opts: IChainOptions, modules: TestChai
       ...dependencies,
       anchor,
       earliestAvailableSlot,
-      builderApiClient: opts.beaconEngineWorker ? undefined : dependencies.beaconEngineCore.builderApiClient,
+      builderApiClient:
+        opts.beaconEngineMode === BeaconEngineMode.Worker ? undefined : dependencies.beaconEngineCore.builderApiClient,
     };
   } catch (error) {
     dependencies.abortController.abort();

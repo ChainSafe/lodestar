@@ -15,6 +15,7 @@ import {
   HeadSnapshot,
   ImportBlockResponse,
 } from "../../../../src/chain/beaconEngine/interface.js";
+import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {ForkChoiceChainView} from "../../../../src/chain/chainView/forkChoiceChainView.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
@@ -66,7 +67,7 @@ async function setup() {
     clock: new ClockStopped(0),
     serializedCache: new SerializedCache(),
     logger,
-    beaconEngineWorker: true,
+    beaconEngineMode: BeaconEngineMode.Worker,
   });
   const view = new ReplicateChainView(await core.getChainViewSnapshot());
   engine.chainView = view;
