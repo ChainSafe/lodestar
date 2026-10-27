@@ -130,7 +130,6 @@ export class NativeNetworkCore implements INetworkCore {
   private readonly host: NativeHost = {
     capacity: () => ({
       gossipValidation: this.gossip.ready() ? "ready" : "backpressured",
-      incomingRequestSlots: this.network.limits.incomingCapacity,
     }),
     subscribeCapacity: (wake) => this.gossip.subscribeCapacity(wake),
     validate: (job) => this.gossip.validate(job),
