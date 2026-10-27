@@ -1,5 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import type {NetworkOptions} from "../../options.js";
+import {parseNativePeerAddress} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
 export type NativeBackendOptions = {
@@ -58,8 +59,8 @@ export function validateNativeOptions(opts: NetworkOptions): void {
     2 * SLOTS_PER_EPOCH
   );
   optionInteger(
-    "directPeers.length",
-    opts.directPeers?.length ?? 0,
+    "direct peer identities",
+    new Set(opts.directPeers?.map((address) => parseNativePeerAddress(address).peerId)).size,
     0,
     opts.targetPeers - Math.max(1, Math.floor(opts.targetPeers / 4))
   );
