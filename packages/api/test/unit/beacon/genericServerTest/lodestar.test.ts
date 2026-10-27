@@ -108,5 +108,43 @@ describe("beacon / lodestar", () => {
       expect(resSsz.wireFormat()).toBe(WireFormat.ssz);
       expect(resSsz.value().proof.map((node) => toHexString(node))).toStrictEqual(proofHex);
     });
+
+    it("getHistoricalBlockRootProof", async () => {
+      const proof = Array.from({length: 13}, (_, i) => root(0x10 + i));
+      const data = {
+        slot: 8192 * 3 + 5,
+        blockRoot: root(0x01),
+        historicalSummaryIndex: 3,
+        blockSummaryRoot: root(0x02),
+        proof,
+      };
+      const proofHex = proof.map((node) => toHexString(node));
+      mockApi.getHistoricalBlockRootProof.mockResolvedValue({data, meta: {}});
+
+      const httpClient = new HttpClient({baseUrl});
+      const client = getClient(config, httpClient);
+
+      const resJson = await client.getHistoricalBlockRootProof(
+        {slot: data.slot},
+        {responseWireFormat: WireFormat.json}
+      );
+
+      expect(resJson.ok).toBe(true);
+      expect(resJson.wireFormat()).toBe(WireFormat.json);
+      expect(resJson.json().data).toStrictEqual({
+        slot: String(data.slot),
+        block_root: toHexString(root(0x01)),
+        historical_summary_index: "3",
+        block_summary_root: toHexString(root(0x02)),
+        proof: proofHex,
+      });
+      expect(mockApi.getHistoricalBlockRootProof).toHaveBeenCalledWith({slot: data.slot}, expect.anything());
+
+      const resSsz = await client.getHistoricalBlockRootProof({slot: data.slot}, {responseWireFormat: WireFormat.ssz});
+
+      expect(resSsz.ok, `status ${resSsz.status}: ${resSsz.error()?.message}`).toBe(true);
+      expect(resSsz.wireFormat()).toBe(WireFormat.ssz);
+      expect(resSsz.value().proof.map((node) => toHexString(node))).toStrictEqual(proofHex);
+    });
   });
 });

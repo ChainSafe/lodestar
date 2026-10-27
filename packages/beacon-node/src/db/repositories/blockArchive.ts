@@ -13,6 +13,7 @@ import {
   getRootIndex,
   getRootIndexKey,
   getSlotIndexKey,
+  slotIndexBucketId,
 } from "./blockArchiveIndex.js";
 
 export interface BlockFilterOptions extends FilterOptions<Slot> {
@@ -233,7 +234,29 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   async getRootBySlot(slot: Slot): Promise<Root | null> {
-    return this.db.get(getSlotIndexKey(slot), {bucketId: getBucketNameByValue(Bucket.index_mainChain)});
+    return this.db.get(getSlotIndexKey(slot), {bucketId: slotIndexBucketId});
+  }
+
+  /** Roots of archived blocks with slot in `[fromSlot, toSlot)`, in ascending slot order */
+  async getRootsBySlotRange(fromSlot: Slot, toSlot: Slot): Promise<{slot: Slot; root: Root}[]> {
+    const entries = await this.db.entries({
+      gte: getSlotIndexKey(fromSlot),
+      lt: getSlotIndexKey(toSlot),
+      bucketId: slotIndexBucketId,
+    });
+    return entries.map(({key, value}) => ({slot: this.decodeKey(key), root: value}));
+  }
+
+  /** Root of the latest archived block with slot strictly before `slot` */
+  async getLatestRootBeforeSlot(slot: Slot): Promise<Root | null> {
+    const entries = await this.db.entries({
+      gte: getSlotIndexKey(0),
+      lt: getSlotIndexKey(slot),
+      reverse: true,
+      limit: 1,
+      bucketId: slotIndexBucketId,
+    });
+    return entries[0]?.value ?? null;
   }
 
   async getSlotByRoot(root: Root): Promise<Slot | null> {

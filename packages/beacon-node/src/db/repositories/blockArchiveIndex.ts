@@ -5,6 +5,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export const rootIndexBucketId = getBucketNameByValue(Bucket.index_blockArchiveRootIndex);
 export const parentRootIndexBucketId = getBucketNameByValue(Bucket.index_blockArchiveParentRootIndex);
+export const slotIndexBucketId = getBucketNameByValue(Bucket.index_mainChain);
 
 export async function getRootIndex(db: Db, blockRoot: Root): Promise<Uint8Array | null> {
   return db.get(getRootIndexKey(blockRoot), {bucketId: rootIndexBucketId});
