@@ -45,5 +45,4 @@ overrides:
   sigstore: "4.0.0"
 
 patchedDependencies:
-  "@libp2p/gossipsub@17.1.4": patches/@libp2p__gossipsub@17.1.4.patch
   sigstore@4.0.0: patches/sigstore@4.0.0.patch
