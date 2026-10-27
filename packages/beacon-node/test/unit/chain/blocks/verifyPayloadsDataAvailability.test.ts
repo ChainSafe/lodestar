@@ -3,7 +3,8 @@ import {createChainForkConfig} from "@lodestar/config";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ColumnIndex, SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
-import {TimeoutError, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
+import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {verifyPayloadsDataAvailability} from "../../../../src/chain/blocks/verifyPayloadsDataAvailability.js";
@@ -168,7 +169,8 @@ describe("verifyPayloadsDataAvailability", () => {
 
         await vi.advanceTimersByTimeAsync(1);
         await verifyPromise;
-        expect(outcome).toBeInstanceOf(TimeoutError);
+        expect(outcome).toBeInstanceOf(PayloadError);
+        expect((outcome as PayloadError).type.code).toBe(PayloadErrorCode.DATA_UNAVAILABLE);
       });
     }
   });
