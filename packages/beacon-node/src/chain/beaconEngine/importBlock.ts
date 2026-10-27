@@ -53,9 +53,9 @@ import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
-import {toChainViewBlockBytes} from "./chainView.js";
 import {BeaconEngineCoreEvent, ChainReorg} from "./events.js";
 import {ImportBlockResponse} from "./interface.js";
+import {toChainViewBlockBytes} from "./utils.js";
 
 export type VerifiedBlockBundle = {
   executionStatus: BlockExecutionStatus;

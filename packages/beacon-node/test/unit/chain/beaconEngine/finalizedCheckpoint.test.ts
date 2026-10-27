@@ -6,9 +6,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Root, RootHex, ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
-import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {
   FinalizedCheckpointSnapshot,
@@ -16,6 +14,8 @@ import {
   ImportBlockResponse,
 } from "../../../../src/chain/beaconEngine/interface.js";
 import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
+import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/utils.js";
+import {BeaconEngine} from "../../../../src/chain/beaconEngine.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {ForkChoiceChainView} from "../../../../src/chain/chainView/forkChoiceChainView.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";

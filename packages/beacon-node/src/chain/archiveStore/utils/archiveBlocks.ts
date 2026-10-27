@@ -6,7 +6,8 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChainDb} from "../../../db/index.js";
-import type {FinalizedBlockSnapshot, FinalizedProtoSummary, IBeaconEngine} from "../../beaconEngine/interface.js";
+import type {FinalizedBlockSnapshot, FinalizedProtoSummary} from "../../beaconEngine/interface.js";
+import type {IBeaconEngine} from "../../beaconEngine.js";
 
 const BLOB_SIDECAR_BATCH_SIZE = 32;
 

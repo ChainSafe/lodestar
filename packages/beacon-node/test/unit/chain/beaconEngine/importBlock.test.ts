@@ -7,9 +7,9 @@ import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transitio
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/chainView.js";
 import {VerifiedBlockBundle, importBlock} from "../../../../src/chain/beaconEngine/importBlock.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
+import {toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/utils.js";
 import {BlockInputBlobs, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";

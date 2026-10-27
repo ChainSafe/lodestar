@@ -4,7 +4,7 @@ import {ForkChoice, ForkChoiceStore, PayloadStatus, ProtoArray, ProtoBlock} from
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import type {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
+import {toChainViewBlock} from "../../../../src/chain/beaconEngine/utils.js";
 import {ForkChoiceChainView} from "../../../../src/chain/chainView/forkChoiceChainView.js";
 import {ChainViewBlock, IChainView} from "../../../../src/chain/chainView/interface.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";

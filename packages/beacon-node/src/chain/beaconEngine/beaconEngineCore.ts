@@ -217,7 +217,6 @@ import {
   getStateValidatorIdentities,
   getStateValidators,
 } from "./beaconApis.js";
-import {toChainViewBlock, toChainViewBlockBytes} from "./chainView.js";
 import {
   getAttesterDuties,
   getProposerDuties,
@@ -347,6 +346,7 @@ import {BlockFailure, PayloadFailure, blockFailureFromError, payloadFailureFromE
 import {produceBlockWrapper, produceCommonBlockBody} from "./produceBlock.js";
 import {produceBlockV4, produceEngineOrBuilderBlock} from "./produceEngineOrBuilderBlock.js";
 import {SeenEnginePayloadEnvelopeInput} from "./seenEnginePayloadEnvelopeInput.js";
+import {toChainViewBlock, toChainViewBlockBytes} from "./utils.js";
 import {verifyBlocks, verifyBlocksBytes} from "./verifyBlock.js";
 
 const MAX_VERIFIED_PROPOSER_SIGNATURES = 3 * SLOTS_PER_EPOCH;

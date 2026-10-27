@@ -1,9 +1,9 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {BeaconEngine} from "../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconEngineCore} from "../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEventBus} from "../../../src/chain/beaconEngine/events.js";
+import {BeaconEngine} from "../../../src/chain/beaconEngine.js";
 import {ChainEventEmitter} from "../../../src/chain/emitter.js";
 import {ExecutionEngineState} from "../../../src/execution/engine/interface.js";
 import {RangeSyncStatus} from "../../../src/sync/range/range.js";

@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {Root, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
-import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
+import {toChainViewBlock} from "../../../../src/chain/beaconEngine/utils.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";

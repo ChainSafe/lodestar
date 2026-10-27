@@ -22,11 +22,11 @@ import {getLodestarApi} from "../../../../src/api/impl/lodestar/index.js";
 import {ApiModules} from "../../../../src/api/impl/types.js";
 import {HistoricalStateRegen} from "../../../../src/chain/archiveStore/historicalState/historicalStateRegen.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/chainView.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
 import {AnchorSummary, EngineBootstrapWithChainView} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconEngineCoreModules} from "../../../../src/chain/beaconEngine/interface.js";
 import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
+import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/utils.js";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {

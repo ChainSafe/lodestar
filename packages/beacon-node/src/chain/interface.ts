@@ -27,7 +27,7 @@ import {CustodyConfig} from "../util/dataColumns.js";
 import {ReconstructMissPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
-import {IBeaconEngine} from "./beaconEngine/index.js";
+import type {IBeaconEngine} from "./beaconEngine.js";
 import {ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";

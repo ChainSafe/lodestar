@@ -19,8 +19,8 @@ import {
 } from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {RegenCaller} from "../regen/index.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
-import {toChainViewBlockBytes} from "./chainView.js";
 import {ImportExecutionPayloadOpts, ImportExecutionPayloadResult} from "./interface.js";
+import {toChainViewBlockBytes} from "./utils.js";
 
 function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExecutionStatus {
   switch (status) {

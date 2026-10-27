@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest";
 import {CheckpointWithHex, PayloadStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toRootHex} from "@lodestar/utils";
-import {toChainViewBlock} from "../../../../src/chain/beaconEngine/chainView.js";
+import {toChainViewBlock} from "../../../../src/chain/beaconEngine/utils.js";
 import {ChainViewBlock, ChainViewSnapshot} from "../../../../src/chain/chainView/interface.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {zeroProtoBlock} from "../../../utils/state.js";
