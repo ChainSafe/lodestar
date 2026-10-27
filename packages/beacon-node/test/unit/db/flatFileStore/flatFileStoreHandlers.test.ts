@@ -101,8 +101,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         {
           getManyBinary: opts.getArchived ?? (async (_slot, indices) => indices.map(() => undefined)),
           values: opts.archivedValues ?? (async () => []),
-          keys: vi.fn().mockResolvedValue([]),
-          deleteMany: vi.fn().mockResolvedValue(undefined),
+          pruneBefore: vi.fn().mockResolvedValue([]),
         },
         {getSlotByRoot: opts.getArchivedSlot ?? vi.fn().mockResolvedValue(null)}
       );

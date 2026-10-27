@@ -722,11 +722,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
         if (e instanceof BlockError) {
           switch (e.type.code) {
-            case BlockErrorCode.DATA_UNAVAILABLE: {
-              // Error is quite frequent and not critical
+            case BlockErrorCode.DATA_UNAVAILABLE:
+              // Data did not arrive in time, BlockInputSync keeps pulling it and retries the import
               logLevel = LogLevel.debug;
               break;
-            }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
             // PARENT_BLOCK_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
             case BlockErrorCode.ALREADY_KNOWN:
@@ -1351,6 +1350,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
             if (e instanceof PayloadError) {
               switch (e.type.code) {
+                case PayloadErrorCode.DATA_UNAVAILABLE:
+                  // Columns did not arrive in time, BlockInputSync keeps pulling them and retries the import
+                  logLevel = LogLevel.debug;
+                  break;
                 // BLOCK_NOT_IN_FORK_CHOICE should not happen, validateGossipExecutionPayloadEnvelope above
                 // already verified the block is in fork choice
                 case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:

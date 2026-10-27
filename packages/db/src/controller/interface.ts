@@ -54,6 +54,7 @@ export interface DatabaseController<K, V> {
   batch(batch: DbBatch<K, V>, opts?: DbReqOpts): Promise<void>;
 
   compactRange(start: K, end: K): Promise<void>;
+  approximateSize(start: K, end: K): Promise<number>;
 
   // Iterate over entries
 
