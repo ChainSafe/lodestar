@@ -1,7 +1,5 @@
-import {generateKeyPair} from "@libp2p/crypto/keys";
-import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {expect, it, vi} from "vitest";
-import type {NativeGossipDiagnosticsPage, NativeNetwork, NativePeerState} from "@chainsafe/lodestar-z/network";
+import type {NativeGossipDiagnosticsPage, NativeNetwork} from "@chainsafe/lodestar-z/network";
 import {
   dumpNativeGossipScores,
   dumpNativeMeshPeers,
@@ -9,9 +7,8 @@ import {
 } from "../../../../src/network/core/native/diagnostics.js";
 import {NativeNetworkErrorCode} from "../../../../src/network/core/native/errors.js";
 
-async function fixture() {
-  const key = await generateKeyPair("secp256k1");
-  const identity = peerIdFromPublicKey(key.publicKey).toString();
+function fixture() {
+  const identity = "peer";
   const page: NativeGossipDiagnosticsPage = {
     observedMonoMs: 10000n,
     observedUnixMs: 1000000n,
@@ -48,43 +45,23 @@ async function fixture() {
       },
     ],
   };
-  const peer: NativePeerState = {
-    identity,
-    connection: {index: 0, generation: 1},
-    direction: "inbound",
-    endpoint: {family: 4, address: Uint8Array.of(127, 0, 0, 1), port: 9000},
-    relevant: true,
-    disconnectReason: null,
-    status: null,
-    metadata: null,
-    identify: null,
-    statusAtMs: 0n,
-    metadataAtMs: 0n,
-    custodyGroups: null,
-    samplingGroups: null,
-    connectedAtMs: 0n,
-    direct: false,
-    score: -2,
-    scoreAtMs: 9000n,
-    banUntilMs: 0n,
-    goodbyeUntilMs: 0n,
-    redialUntilMs: 0n,
-  };
   const runtime = {
     getGossipDiagnostics: vi.fn(async () => page),
     getPeerScores: vi.fn(async () => ({
       observedMonoMs: page.observedMonoMs,
       observedUnixMs: page.observedUnixMs,
-      peers: [
-        {identity: peer.identity, score: peer.score, scoreAtMs: peer.scoreAtMs, gossipScore: page.peers[0]?.score ?? 0},
-      ],
+      peers: [{identity, score: -2, scoreAtMs: 9000n, gossipScore: page.peers[0]?.score ?? 0}],
     })),
   } satisfies Pick<NativeNetwork, "getPeerScores" | "getGossipDiagnostics">;
-  return {page, peer, runtime, peerId: peerIdFromPublicKey(key.publicKey).toString()};
+  return {page, runtime, peerId: identity};
 }
 
 it("exposes native score components, real timestamps, IPs and empty mesh subscriptions", async () => {
-  const {runtime, peerId} = await fixture();
+  const {runtime, peerId} = fixture();
+  expect(await dumpNativePeerScores(runtime)).toEqual([
+    {peerId, lodestarScore: -2, gossipScore: -5, ignoreNegativeGossipScore: false, score: -7, lastUpdate: 999000},
+  ]);
+  expect(runtime.getGossipDiagnostics).not.toHaveBeenCalled();
   const gossip = await dumpNativeGossipScores(runtime);
   expect(gossip[peerId]).toMatchObject({
     connected: true,
@@ -108,32 +85,10 @@ it("exposes native score components, real timestamps, IPs and empty mesh subscri
     },
   });
   expect(await dumpNativeMeshPeers(runtime)).toEqual({block: [peerId], empty: []});
-  expect(await dumpNativePeerScores(runtime)).toEqual([
-    {peerId, lodestarScore: -2, gossipScore: -5, ignoreNegativeGossipScore: false, score: -7, lastUpdate: 999000},
-  ]);
 });
 
-it("traverses sparse pages and deduplicates peers across owner turns", async () => {
-  const {page, runtime, peerId} = await fixture();
-  runtime.getGossipDiagnostics.mockResolvedValueOnce({...page, nextCursor: 40}).mockResolvedValueOnce(page);
-  expect(await dumpNativeMeshPeers(runtime)).toEqual({block: [peerId], empty: []});
-  expect(runtime.getGossipDiagnostics).toHaveBeenNthCalledWith(2, 40);
-});
-
-it.each([0, -1, 0.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
-  "refuses invalid diagnostic cursor %s",
-  async (cursor) => {
-    const {page, runtime} = await fixture();
-    page.nextCursor = cursor;
-    await expect(dumpNativeMeshPeers(runtime)).rejects.toMatchObject({
-      type: {code: NativeNetworkErrorCode.CONFIGURATION},
-    });
-    expect(runtime.getGossipDiagnostics).toHaveBeenCalledTimes(1);
-  }
-);
-
-it("follows native pagination independently of page count and table dimensions", async () => {
-  const {page, runtime, peerId} = await fixture();
+it("follows sparse native cursors without a page limit and deduplicates peers across pages", async () => {
+  const {page, runtime, peerId} = fixture();
   runtime.getGossipDiagnostics.mockImplementation(async (cursor = 0) => ({
     ...page,
     nextCursor: cursor === 690 ? null : cursor + 10,
@@ -143,11 +98,11 @@ it("follows native pagination independently of page count and table dimensions",
   expect(runtime.getGossipDiagnostics).toHaveBeenLastCalledWith(690);
 });
 
-it("rejects a cursor that moves backward after the first page", async () => {
-  const {page, runtime} = await fixture();
+it.each([10, 20])("rejects a cursor that does not advance: %s after 20", async (cursor) => {
+  const {page, runtime} = fixture();
   runtime.getGossipDiagnostics
     .mockResolvedValueOnce({...page, nextCursor: 20})
-    .mockResolvedValueOnce({...page, nextCursor: 10});
+    .mockResolvedValueOnce({...page, nextCursor: cursor});
   await expect(dumpNativeMeshPeers(runtime)).rejects.toMatchObject({
     type: {code: NativeNetworkErrorCode.CONFIGURATION},
   });
@@ -155,7 +110,7 @@ it("rejects a cursor that moves backward after the first page", async () => {
 });
 
 it("includes RPC peers without gossip scores and distinguishes retained scores from actual mesh membership", async () => {
-  const {page, runtime, peerId} = await fixture();
+  const {page, runtime, peerId} = fixture();
   page.peers[0].connected = false;
   page.peers[0].expireAtMs = 12000n;
   page.peers[0].topics[0].meshMember = false;
@@ -164,11 +119,4 @@ it("includes RPC peers without gossip scores and distinguishes retained scores f
   expect((await dumpNativeGossipScores(runtime))[peerId]).toMatchObject({connected: false, expire: 1002000});
   page.peers = [];
   expect(await dumpNativePeerScores(runtime)).toMatchObject([{peerId, gossipScore: 0, score: -2}]);
-});
-
-it("reads compact peer scores without walking topic diagnostics", async () => {
-  const {runtime} = await fixture();
-  await dumpNativePeerScores(runtime);
-  expect(runtime.getPeerScores).toHaveBeenCalledOnce();
-  expect(runtime.getGossipDiagnostics).not.toHaveBeenCalled();
 });

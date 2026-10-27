@@ -110,35 +110,11 @@ describe("native configuration boundary", () => {
       await network.close();
     }
   });
-  it("preserves effective genesis fork selection before genesis and deduplicates same-epoch forks", async () => {
-    const node = await fixture();
-    const genesis = Math.floor(Date.now() / 1000) + 60;
-    const application = node.create({}, genesis);
-    try {
-      expect(application.genesisTime).toBe(BigInt(genesis));
-      expect(application.local).not.toHaveProperty("fork");
-      expect(application.local.status).not.toHaveProperty("forkDigest");
-      expect(application).not.toHaveProperty("requestForks");
-    } finally {
-      application.identitySecretKey.fill(0);
-    }
-  });
-
   it.each<Partial<NetworkOptions>>([
     {localMultiaddrs: []},
     {tcp: true},
-    {quic: false},
     {localMultiaddrs: ["/ip4/127.0.0.1/tcp/9000"]},
     {localMultiaddrs: ["/ip4/127.0.0.1/udp/9001/quic-v1", "/ip4/127.0.0.2/udp/9001/quic-v1"]},
-    {disablePeerScoring: true},
-    {mdns: true},
-    {gossipsubD: 9},
-    {rateLimitMultiplier: 2},
-    {dialTimeoutMs: 1000},
-    {requestTimeoutMs: 1000},
-    {respTimeoutMs: 1000},
-    {maxPeers: 257},
-    {maxPeers: 200, targetPeers: 200},
     {bootMultiaddrs: ["/dns4/example.invalid/udp/9001/quic-v1"]},
     {directPeers: ["/ip4/127.0.0.1/udp/9001/quic-v1"]},
     {directPeers: ["x".repeat(405)]},

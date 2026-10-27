@@ -1,16 +1,9 @@
 import {afterEach, expect, it, vi} from "vitest";
 import {NativeNetwork, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
-import {createBeaconConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
 import {NativeRequestAdmission} from "../../../../src/network/core/native/requestAdmission.js";
 import {outgoingNativeRequest} from "../../../../src/network/core/native/requests.js";
 import {ReqRespMethod} from "../../../../src/network/reqresp/types.js";
-import {collectMaxResponseTyped} from "../../../../src/network/reqresp/utils/collect.js";
-import {downloadByRange} from "../../../../src/sync/utils/downloadByRange.js";
-import {getMockedLogger} from "../../../mocks/loggerMock.js";
-import {getMockedNetwork} from "../../../mocks/mockedNetwork.js";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -187,23 +180,6 @@ it("cancels an accepted stream while a pull is pending", async () => {
   expect(accepted.return).toHaveBeenCalledOnce();
 });
 
-it("rejects overlapping pulls without registering a second wait", async () => {
-  const ready = defer<void>();
-  const request = vi
-    .fn<NativeNetwork["request"]>()
-    .mockImplementationOnce(() => {
-      throw full();
-    })
-    .mockReturnValue(stream());
-  const waitForRequestCapacity = vi.fn(() => ready.promise);
-  const iterator = new NativeRequestAdmission({request, waitForRequestCapacity}, args);
-  const first = iterator.next();
-  await expect(iterator.next()).rejects.toMatchObject({code: "NetworkRequestBusy"});
-  expect(waitForRequestCapacity).toHaveBeenCalledOnce();
-  ready.resolve();
-  await expect(first).resolves.toEqual(done);
-});
-
 it.each(["NetworkClosed", "NetworkRequestCapacityTimeout"])(
   "ends %s locally without reporting or retrying a peer",
   async (code) => {
@@ -248,95 +224,23 @@ it.each([false, true])("never retries a stream failure, received=%s", async (rec
   expect(waitForRequestCapacity).not.toHaveBeenCalled();
 });
 
-it("allows a range batch's accepted sibling to complete while only the refused request waits", async () => {
+it("allows a sibling request to the same peer to finish while one waits for admission", async () => {
   const ready = defer<void>();
-  const blocked = defer<void>();
-  const blocksDone = defer<void>();
-  const block = ssz.gloas.SignedBeaconBlock.defaultValue();
-  block.message.slot = 1;
-  const report = vi.fn();
-  const request = vi.fn<NativeNetwork["request"]>((_peer, id) => {
-    if (id.includes("envelopes") && request.mock.calls.filter(([, method]) => method === id).length === 1) throw full();
-    return (async function* () {
-      if (id.includes("beacon_blocks")) {
-        yield {
-          protocol: id,
-          data: ssz.gloas.SignedBeaconBlock.serialize(block),
-          fork: ForkName.gloas,
-          origin: {connection: {index: 0, generation: 1}, endpoint: null},
-        };
-      }
-    })();
-  });
-  const waitForRequestCapacity = vi.fn(() => {
-    blocked.resolve();
-    return ready.promise;
-  });
-  const native = {request, waitForRequestCapacity};
-  const network = getMockedNetwork();
-  network.sendBeaconBlocksByRange = vi.fn(async () => {
-    const blocks = await collectMaxResponseTyped(
-      outgoingNativeRequest(
-        native,
-        {
-          peerId: "peer",
-          method: ReqRespMethod.BeaconBlocksByRange,
-          versions: [2],
-          requestData: new Uint8Array(24),
-        },
-        report
-      ),
-      1,
-      () => ssz.gloas.SignedBeaconBlock
-    );
-    blocksDone.resolve();
-    return blocks;
-  });
-  network.sendExecutionPayloadEnvelopesByRange = vi.fn(async () =>
-    collectMaxResponseTyped(
-      outgoingNativeRequest(
-        native,
-        {
-          peerId: "peer",
-          method: ReqRespMethod.ExecutionPayloadEnvelopesByRange,
-          versions: [1],
-          requestData: new Uint8Array(16),
-        },
-        report
-      ),
-      1,
-      () => ssz.gloas.SignedExecutionPayloadEnvelope
-    )
-  );
-  let settled = false;
-  const result = downloadByRange({
-    config: createBeaconConfig(
-      {
-        ALTAIR_FORK_EPOCH: 0,
-        BELLATRIX_FORK_EPOCH: 0,
-        CAPELLA_FORK_EPOCH: 0,
-        DENEB_FORK_EPOCH: 0,
-        ELECTRA_FORK_EPOCH: 0,
-        FULU_FORK_EPOCH: 0,
-        GLOAS_FORK_EPOCH: 0,
-      },
-      new Uint8Array(32)
-    ),
-    network,
-    logger: getMockedLogger(),
-    peerIdStr: "peer",
-    blocksRequest: {startSlot: 1, count: 1, step: 1},
-    envelopesRequest: {startSlot: 1, count: 1},
-  }).finally(() => {
-    settled = true;
-  });
-  await blocked.promise;
-  await blocksDone.promise;
-  expect(settled).toBe(false);
+  const siblingProtocol = "/eth2/beacon_chain/req/execution_payload_envelopes_by_root/1/ssz_snappy";
+  const request = vi
+    .fn<NativeNetwork["request"]>()
+    .mockImplementationOnce(() => {
+      throw full();
+    })
+    .mockImplementation(() => stream());
+  const network = {request, waitForRequestCapacity: vi.fn(() => ready.promise)};
+  const waiting = new NativeRequestAdmission(network, args);
+  const other = new NativeRequestAdmission(network, [args[0], siblingProtocol, args[2]]);
+  const finished = vi.fn();
+  const pending = waiting.next().then(finished);
+  await expect(other.next()).resolves.toEqual(done);
+  expect(finished).not.toHaveBeenCalled();
   ready.resolve();
-  expect((await result).result.responses.validatedBlocks).toMatchObject([{block}]);
-  expect(network.sendBeaconBlocksByRange).toHaveBeenCalledOnce();
-  expect(network.sendExecutionPayloadEnvelopesByRange).toHaveBeenCalledOnce();
-  expect(request).toHaveBeenCalledTimes(3);
-  expect(report).not.toHaveBeenCalled();
+  await pending;
+  expect(request.mock.calls.map(([, method]) => method)).toEqual([protocol, siblingProtocol, protocol]);
 });

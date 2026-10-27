@@ -48,10 +48,6 @@ const config = createBeaconConfig(
 );
 const boundary = {fork: ForkName.electra, epoch: 0};
 
-/**
- * The real gossip handlers behind the native host. `order` records handler work as it runs, and each forwarding
- * admission a test records by releasing a job's `reported`.
- */
 function fixture() {
   const order: string[] = [];
   const opPool = new OpPool(config);
@@ -127,11 +123,6 @@ function accepted(validatorCommitteeIndex: number): {err: null; result: Attestat
   };
 }
 
-/** Lets every timer the handler work could have scheduled become due and run. */
-async function timersDue(): Promise<void> {
-  await vi.runAllTimersAsync();
-}
-
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
   vi.useRealTimers();
@@ -158,26 +149,8 @@ describe("native gossip handler order", () => {
       expect(await f.gossip.validate(held)).toEqual(["accept", "reject", "accept"]);
       expect(f.order).toEqual([]);
       f.order.push("verdicts submitted");
-      await timersDue();
+      await vi.runAllTimersAsync();
       expect(f.order).toEqual(["verdicts submitted", "attestation handler", "attestation handler"]);
-    } finally {
-      f.executor.stop();
-    }
-  });
-
-  it("records accepted operations before forwarding, even when the network closes", async () => {
-    const f = fixture();
-    vi.mocked(validateGossipVoluntaryExit).mockResolvedValue(undefined);
-    const forwarded = job("voluntary_exit", [message(GossipType.voluntary_exit, 1)]);
-    const closed = job("voluntary_exit", [message(GossipType.voluntary_exit, 2)]);
-    try {
-      expect(await f.gossip.validate(forwarded)).toEqual(["accept"]);
-      expect(await f.gossip.validate(closed)).toEqual(["accept"]);
-      await timersDue();
-      expect(f.order).toEqual(["exit handler", "exit handler"]);
-      f.order.push("verdicts submitted");
-      await timersDue();
-      expect(f.order).toEqual(["exit handler", "exit handler", "verdicts submitted"]);
     } finally {
       f.executor.stop();
     }

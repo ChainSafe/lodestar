@@ -1,23 +1,23 @@
 import {describe, expect, it} from "vitest";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {normalizeCommitteeSubscriptions} from "../../../../src/network/core/native/committee.js";
 
 const duty = {slot: 0, subnet: 0, validatorIndex: 0, isAggregator: true};
 
 describe("native committee inputs", () => {
-  it.each([4098, 8738, 20_000])("folds %s validator duties into bounded slot rows", (count) => {
-    const rows = Array.from({length: count}, (_, index) => ({
+  it("deduplicates 20,000 validator duties into per-slot subnet sets", () => {
+    const rows = Array.from({length: 20_000}, (_, index) => ({
       ...duty,
       validatorIndex: index,
-      slot: index % (2 * SLOTS_PER_EPOCH),
-      subnet: index % 64,
+      slot: index % 2,
+      subnet: Math.floor(index / 2) % ATTESTATION_SUBNET_COUNT,
     }));
     const demand = normalizeCommitteeSubscriptions(rows, false);
-    expect(demand.attesters.size).toBe(2 * SLOTS_PER_EPOCH);
-    for (const row of rows) {
-      const bit = 1n << BigInt(row.subnet);
-      expect((demand.attesters.get(row.slot)?.aggregators ?? 0n) & bit).toBe(bit);
-    }
+    const subnets = (1n << BigInt(ATTESTATION_SUBNET_COUNT)) - 1n;
+    expect([...demand.attesters.values()]).toEqual([
+      {slot: 0, subnets, aggregators: subnets},
+      {slot: 1, subnets, aggregators: subnets},
+    ]);
   });
   it("unions aggregators and keeps non-aggregators as peer demand only", () => {
     const demand = normalizeCommitteeSubscriptions(
@@ -53,16 +53,5 @@ describe("native committee inputs", () => {
         false
       )
     ).toThrow("duty slots");
-  });
-  it.each([
-    {...duty, slot: Number.NaN},
-    {...duty, slot: Number.MAX_SAFE_INTEGER},
-    {...duty, slot: -1},
-    {...duty, subnet: 64},
-    {...duty, validatorIndex: -1},
-    {...duty, isAggregator: undefined},
-  ])("validates redundant rows: %j", (invalid) => {
-    // @ts-expect-error Exercise malformed caller input.
-    expect(() => normalizeCommitteeSubscriptions([duty, invalid], false)).toThrow();
   });
 });

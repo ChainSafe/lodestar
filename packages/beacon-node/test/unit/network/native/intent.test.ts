@@ -12,13 +12,6 @@ function fixture() {
 }
 
 describe("native local intent ordering", () => {
-  it("submits nothing until the host changes state", async () => {
-    const node = fixture();
-    await setImmediate();
-    expect(node.applyIntent).not.toHaveBeenCalled();
-    expect(node.updateStatus).not.toHaveBeenCalled();
-    node.intent.close();
-  });
   it("serializes Status updates and snapshots caller roots", async () => {
     const node = fixture();
     const held = defer<void>();

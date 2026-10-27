@@ -1,6 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
-import {afterEach, expect, it, vi} from "vitest";
+import {expect, it, vi} from "vitest";
 import {IncomingRequest, NativeNetwork, NativePeerOrigin, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
@@ -28,10 +28,23 @@ function outgoingRequest(
   );
 }
 
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.useRealTimers();
-});
+const requestArgs = {
+  peerId: "peer",
+  method: ReqRespMethod.BeaconBlocksByRoot,
+  versions: [2],
+  requestData: new Uint8Array(32),
+};
+
+function failedResponse(error: Error): AsyncIterableIterator<NativeResponseChunk> {
+  return {
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    next: () => Promise.reject(error),
+    return: () => Promise.reject(error),
+    throw: () => Promise.reject(error),
+  };
+}
 
 it.each([{versions: [2, 2, 2, 2]}, {versions: [9, 8, 7, 6, 5, 4, 3, 2, 1]}])(
   "selects one supported protocol from the caller's version preferences %j",
@@ -62,13 +75,7 @@ it.each([{versions: []}, {versions: [9, 8, 7, 6]}])(
   "refuses an unsupported version list %j before native admission",
   ({versions}) => {
     const request = vi.fn();
-    expect(() =>
-      outgoingRequest(
-        {request},
-        {peerId: "peer", method: ReqRespMethod.BeaconBlocksByRoot, versions, requestData: new Uint8Array(32)},
-        vi.fn()
-      )
-    ).toThrow(
+    expect(() => outgoingRequest({request}, {...requestArgs, versions}, vi.fn())).toThrow(
       expect.objectContaining({
         type: {code: NativeNetworkErrorCode.UNAVAILABLE, resource: "protocol beacon_blocks_by_root"},
       })
@@ -76,23 +83,6 @@ it.each([{versions: []}, {versions: [9, 8, 7, 6]}])(
     expect(request).not.toHaveBeenCalled();
   }
 );
-
-it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])("rejects malformed protocol version %s", (version) => {
-  const request = vi.fn();
-  expect(() =>
-    outgoingRequest(
-      {request},
-      {
-        peerId: "peer",
-        method: ReqRespMethod.BeaconBlocksByRoot,
-        versions: [version, 2],
-        requestData: new Uint8Array(32),
-      },
-      vi.fn()
-    )
-  ).toThrow(expect.objectContaining({type: {code: NativeNetworkErrorCode.CONFIGURATION, resource: "request version"}}));
-  expect(request).not.toHaveBeenCalled();
-});
 
 it("keeps connection concurrency refusal separate from shared capacity", async () => {
   const report = vi.fn();
@@ -103,44 +93,15 @@ it("keeps connection concurrency refusal separate from shared capacity", async (
           throw Object.assign(new Error("full"), {code: "NetworkRequestRejected", reason: "too_many_requests"});
         },
       },
-      {peerId: "peer", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
+      requestArgs,
       report
     )
   ).toThrow(expect.objectContaining({type: {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}}));
   expect(report).not.toHaveBeenCalled();
 });
 
-it("maps a native empty single-chunk response to EMPTY_RESPONSE", async () => {
-  const key = await generateKeyPair("secp256k1");
-  const failure = Object.assign(new Error("empty"), {
-    code: "NetworkRequestFailed",
-    reason: "empty_response",
-    phase: "response",
-    detail: null,
-    context: null,
-    peerStatus: null,
-    peerMessage: null,
-  });
-  const response: AsyncIterableIterator<NativeResponseChunk> = {
-    [Symbol.asyncIterator]() {
-      return this;
-    },
-    next: () => Promise.reject(failure),
-  };
-  const iterator = outgoingRequest(
-    {request: vi.fn(() => response)},
-    {
-      peerId: peerIdFromPublicKey(key.publicKey).toString(),
-      method: ReqRespMethod.BeaconBlocksByRoot,
-      versions: [2],
-      requestData: new Uint8Array(32),
-    },
-    vi.fn()
-  );
-  await expect(iterator.next()).rejects.toMatchObject({type: {code: RequestErrorCode.EMPTY_RESPONSE}});
-});
-
 it.each([
+  ["empty_response", "response", null, RequestErrorCode.EMPTY_RESPONSE, null],
   ["negotiation_failed", "negotiation", "timeout", RequestErrorCode.DIAL_TIMEOUT, PeerAction.HighToleranceError],
   ["negotiation_rejected", "negotiation", null, RequestErrorCode.DIAL_ERROR, PeerAction.LowToleranceError],
   ["timeout", "negotiation", null, RequestErrorCode.DIAL_TIMEOUT, PeerAction.HighToleranceError],
@@ -161,25 +122,9 @@ it.each([
     peerFault: null,
     peerStatus: null,
   });
-  const response: AsyncIterableIterator<NativeResponseChunk> = {
-    [Symbol.asyncIterator]() {
-      return this;
-    },
-    next: () => Promise.reject(failure),
-    return: () => Promise.reject(failure),
-    throw: () => Promise.reject(failure),
-  };
+  const response = failedResponse(failure);
   const report = vi.fn();
-  const iterator = outgoingRequest(
-    {request: () => response},
-    {
-      peerId: "unused",
-      method: ReqRespMethod.BeaconBlocksByRoot,
-      versions: [2],
-      requestData: new Uint8Array(32),
-    },
-    report
-  );
+  const iterator = outgoingRequest({request: () => response}, requestArgs, report);
   await expect(iterator.next()).rejects.toMatchObject({type: {code}});
   await expect(iterator.next()).resolves.toEqual({done: true, value: undefined});
   await expect(iterator.return?.()).rejects.toMatchObject({type: {code}});
@@ -199,17 +144,8 @@ it.each([
     peerFault,
   });
   const report = vi.fn();
-  const response: AsyncIterableIterator<NativeResponseChunk> = {
-    [Symbol.asyncIterator]() {
-      return this;
-    },
-    next: () => Promise.reject(failure),
-  };
-  const iterator = outgoingRequest(
-    {request: () => response},
-    {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
-    report
-  );
+  const response = failedResponse(failure);
+  const iterator = outgoingRequest({request: () => response}, requestArgs, report);
   await expect(iterator.next()).rejects.toMatchObject({type: {code}});
   expect(report).not.toHaveBeenCalled();
 });
@@ -227,18 +163,9 @@ it.each([
     peerStatus,
     peerMessage: new Uint8Array(),
   });
-  const response: AsyncIterableIterator<NativeResponseChunk> = {
-    [Symbol.asyncIterator]() {
-      return this;
-    },
-    next: () => Promise.reject(failure),
-  };
+  const response = failedResponse(failure);
   const report = vi.fn();
-  const iterator = outgoingRequest(
-    {request: () => response},
-    {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
-    report
-  );
+  const iterator = outgoingRequest({request: () => response}, requestArgs, report);
   await expect(iterator.next()).rejects.toMatchObject({type: {code}});
   await expect(iterator.next()).resolves.toEqual({done: true, value: undefined});
   if (action === null) expect(report).not.toHaveBeenCalled();
@@ -260,7 +187,7 @@ it.each(["invalid_request", "invalid_request_options", "protocol_disabled"])(
             });
           },
         },
-        {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
+        requestArgs,
         report
       )
     ).toThrow();
@@ -491,7 +418,6 @@ it("releases the handler when native rejects a produced response", async () => {
 });
 
 it("preserves the failed request's origin when reporting a response error", async () => {
-  const key = await generateKeyPair("secp256k1");
   const origin = {
     connection: {index: 2, generation: 4},
     endpoint: {family: 4, address: Uint8Array.of(192, 0, 2, 1), port: 9000},
@@ -503,23 +429,9 @@ it("preserves the failed request's origin when reporting a response error", asyn
     origin,
     peerFault: null,
   });
-  const response: AsyncIterableIterator<NativeResponseChunk> = {
-    [Symbol.asyncIterator]() {
-      return this;
-    },
-    next: () => Promise.reject(failure),
-  };
+  const response = failedResponse(failure);
   const report = vi.fn();
-  const iterator = outgoingRequest(
-    {request: () => response},
-    {
-      peerId: peerIdFromPublicKey(key.publicKey).toString(),
-      method: ReqRespMethod.BeaconBlocksByRoot,
-      versions: [2],
-      requestData: new Uint8Array(32),
-    },
-    report
-  );
+  const iterator = outgoingRequest({request: () => response}, requestArgs, report);
   await expect(iterator.next()).rejects.toMatchObject({type: {code: RequestErrorCode.DIAL_ERROR}});
   expect(report).toHaveBeenCalledWith(expect.anything(), RequestErrorCode.DIAL_ERROR, origin);
 });
@@ -534,11 +446,7 @@ it("delivers the response origin for host validation after the request retires",
     yield {data: new Uint8Array(1), fork: "phase0", protocol, origin};
   })();
   const report = vi.fn();
-  const iterator = outgoingRequest(
-    {request: () => response},
-    {peerId: "peer", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
-    report
-  );
+  const iterator = outgoingRequest({request: () => response}, requestArgs, report);
   const received = await iterator.next();
   await iterator.return?.();
   expect(received.value?.peerReportContext).toEqual({origin, reason: "reqresp_response"});

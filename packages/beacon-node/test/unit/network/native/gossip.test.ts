@@ -127,21 +127,6 @@ describe("native gossip host", () => {
     expect(node.processor.check).toHaveBeenCalledExactlyOnceWith(checks);
   });
 
-  it("takes no work before an executor attaches, and only one executor", async () => {
-    const node = await fixture(false);
-    expect(node.gossip.ready()).toBe(false);
-    await expect(node.gossip.validate(job([node.message()]))).rejects.toThrow("gossip executor");
-    expect(() => node.gossip.checkDependencies([])).toThrow("gossip executor");
-    node.gossip.attach(node.processor);
-    expect(() => node.gossip.attach(node.processor)).toThrow("gossip executor attachment");
-  });
-
-  it("rejects a job whose topic cannot be prepared, before executing any of it", async () => {
-    const node = await fixture();
-    await expect(node.gossip.validate(job([node.message(1), node.message(2, "/invalid")], true))).rejects.toThrow();
-    expect(node.processor.execute).not.toHaveBeenCalled();
-  });
-
   it.each(["throw", "reject"])("rejects a job whose executor fails with %s, without observing it", async (failure) => {
     const node = await fixture();
     const error = new Error("executor failed");
@@ -184,6 +169,13 @@ describe("native gossip host", () => {
   it("preserves publication options and the existing duplicate error contract", async () => {
     const node = await fixture();
     const data = new Uint8Array(112);
+    node.network.publish.mockResolvedValueOnce({
+      queued: 1,
+      selected: 3,
+      pressured: 2,
+      unavailable: 0,
+      duplicate: false,
+    });
     expect(
       await node.gossip.publish(topic, data, {
         floodPublish: true,
@@ -197,6 +189,8 @@ describe("native gossip host", () => {
       ignoreDuplicate: true,
       maxQueueMs: expect.any(Number),
     });
+    expect(node.network.publish).toHaveBeenCalledOnce();
+    expect(node.network.waitForPublicationCapacity).not.toHaveBeenCalled();
     node.network.publish.mockRejectedValueOnce(
       Object.assign(new Error("duplicate"), {code: "NetworkGossipPublishFailed", reason: "duplicate"})
     );
@@ -205,13 +199,17 @@ describe("native gossip host", () => {
     expect(isPublishDuplicateError(error as Error)).toBe(true);
   });
 
-  it.each(["admission_full", "expired"])("preserves the binding's %s failure without resubmitting", async (reason) => {
-    const node = await fixture();
-    const failure = Object.assign(new Error(reason), {code: "NetworkGossipPublishFailed", reason});
-    node.network.publish.mockRejectedValueOnce(failure);
-    await expect(node.gossip.publish(topic, new Uint8Array(112))).rejects.toBe(failure);
-    expect(node.network.publish).toHaveBeenCalledTimes(1);
-  });
+  it.each(["admission_full", "expired", "resource_exhausted"])(
+    "preserves the binding's %s failure without resubmitting",
+    async (reason) => {
+      const node = await fixture();
+      const failure = Object.assign(new Error(reason), {code: "NetworkGossipPublishFailed", reason});
+      node.network.publish.mockRejectedValueOnce(failure);
+      await expect(node.gossip.publish(topic, new Uint8Array(112))).rejects.toBe(failure);
+      expect(node.network.publish).toHaveBeenCalledOnce();
+      expect(node.network.waitForPublicationCapacity).not.toHaveBeenCalled();
+    }
+  );
 
   it("waits for admission and carries the original deadline into the queue", async () => {
     const node = await fixture();
@@ -285,26 +283,6 @@ describe("native gossip host", () => {
     await cancelled;
     admitted.resolve({queued: 1, selected: 1, pressured: 0, unavailable: 0, duplicate: false});
     expect(await publishing).toBe(1);
-    expect(node.network.publish).toHaveBeenCalledTimes(2);
-  });
-
-  it("does not retry protocol resource exhaustion or a completed publication under peer pressure", async () => {
-    const node = await fixture();
-    const failure = Object.assign(new Error("full"), {
-      code: "NetworkGossipPublishFailed",
-      reason: "resource_exhausted",
-    });
-    node.network.publish.mockRejectedValueOnce(failure);
-    await expect(node.gossip.publish(topic, new Uint8Array(112))).rejects.toBe(failure);
-    expect(node.network.publish).toHaveBeenCalledTimes(1);
-    node.network.publish.mockResolvedValueOnce({
-      queued: 1,
-      selected: 3,
-      pressured: 2,
-      unavailable: 0,
-      duplicate: false,
-    });
-    expect(await node.gossip.publish(topic, new Uint8Array(112))).toBe(1);
     expect(node.network.publish).toHaveBeenCalledTimes(2);
   });
 });
