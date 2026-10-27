@@ -243,17 +243,17 @@ export class BeaconSync implements IBeaconSync {
         reason = "finalized_root_not_canonical";
       } else {
         const slot = await this.db.blockArchive.getSlotByRoot(remote.finalizedRoot);
-        if (slot === null) {
-          // If startSlot is earliestAvailableSlot, we allow it because pruneHistory deletes blocks before it,
-          // so a skipped start slot leaves the block in effect already pruned
-          if (startSlot <= this.chain.earliestAvailableSlot) return;
-          reason = "unknown_finalized_root";
-        } else if (slot > startSlot) {
+        if (slot !== null && slot > startSlot) {
           reason = "finalized_root_after_epoch_start";
-        } else if (slot < startSlot) {
-          // skipped slot checkpoint: the next canonical block must be after it
+        } else if (slot !== startSlot) {
           const childSlot = await this.db.blockArchive.getSlotByParentRoot(remote.finalizedRoot);
-          if (childSlot !== null && childSlot <= startSlot) reason = "finalized_root_not_in_effect_at_epoch_start";
+          if (childSlot !== null) {
+            if (childSlot <= startSlot) reason = "finalized_root_not_in_effect_at_epoch_start";
+          } else if (slot === null && startSlot > this.chain.earliestAvailableSlot) {
+            // childSlot == null too, neither the root nor a child is canonical
+            // or they are canonical and both pruned but peer's finalized epoch starts after earliestAvailableSlot
+            reason = "unknown_finalized_root";
+          }
         }
       }
 
