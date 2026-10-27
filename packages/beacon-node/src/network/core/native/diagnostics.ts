@@ -7,13 +7,12 @@ type Network = Pick<NativeNetwork, "getPeerScores" | "getGossipDiagnostics">;
 
 async function visitPages(network: Network, visit: (page: NativeGossipDiagnosticsPage) => void): Promise<void> {
   let cursor = 0;
-  for (let pageIndex = 0; pageIndex < 64; pageIndex++) {
+  for (;;) {
     const page = await network.getGossipDiagnostics(cursor);
     visit(page);
     if (page.nextCursor === null) return;
-    cursor = nativeInteger(page.nextCursor, "gossip diagnostics cursor", 512, cursor + 1);
+    cursor = nativeInteger(page.nextCursor, "gossip diagnostics cursor", undefined, cursor + 1);
   }
-  throw new NativeNetworkError({code: NativeNetworkErrorCode.CAPACITY, resource: "gossip diagnostics pages"});
 }
 
 function unixTime(time: bigint, page: Pick<NativeGossipDiagnosticsPage, "observedUnixMs" | "observedMonoMs">): number {

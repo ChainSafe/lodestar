@@ -120,13 +120,38 @@ it("traverses sparse pages and deduplicates peers across owner turns", async () 
   expect(runtime.getGossipDiagnostics).toHaveBeenNthCalledWith(2, 40);
 });
 
-it("refuses non-advancing diagnostic cursors instead of looping", async () => {
+it.each([0, -1, 0.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
+  "refuses invalid diagnostic cursor %s",
+  async (cursor) => {
+    const {page, runtime} = await fixture();
+    page.nextCursor = cursor;
+    await expect(dumpNativeMeshPeers(runtime)).rejects.toMatchObject({
+      type: {code: NativeNetworkErrorCode.CONFIGURATION},
+    });
+    expect(runtime.getGossipDiagnostics).toHaveBeenCalledTimes(1);
+  }
+);
+
+it("follows native pagination independently of page count and table dimensions", async () => {
+  const {page, runtime, peerId} = await fixture();
+  runtime.getGossipDiagnostics.mockImplementation(async (cursor = 0) => ({
+    ...page,
+    nextCursor: cursor === 690 ? null : cursor + 10,
+  }));
+  expect(await dumpNativeMeshPeers(runtime)).toEqual({block: [peerId], empty: []});
+  expect(runtime.getGossipDiagnostics).toHaveBeenCalledTimes(70);
+  expect(runtime.getGossipDiagnostics).toHaveBeenLastCalledWith(690);
+});
+
+it("rejects a cursor that moves backward after the first page", async () => {
   const {page, runtime} = await fixture();
-  page.nextCursor = 0;
+  runtime.getGossipDiagnostics
+    .mockResolvedValueOnce({...page, nextCursor: 20})
+    .mockResolvedValueOnce({...page, nextCursor: 10});
   await expect(dumpNativeMeshPeers(runtime)).rejects.toMatchObject({
     type: {code: NativeNetworkErrorCode.CONFIGURATION},
   });
-  expect(runtime.getGossipDiagnostics).toHaveBeenCalledTimes(1);
+  expect(runtime.getGossipDiagnostics).toHaveBeenCalledTimes(2);
 });
 
 it("includes RPC peers without gossip scores and distinguishes retained scores from actual mesh membership", async () => {
