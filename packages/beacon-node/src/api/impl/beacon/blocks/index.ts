@@ -1109,7 +1109,7 @@ export function getBeaconBlockApi(
     },
 
     async getSignedExecutionPayloadEnvelope({blockId}, context) {
-      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const {block, finalized} = await getBlockResponse(chain, blockId);
       const slot = block.message.slot;
       const fork = config.getForkName(slot);
 
@@ -1122,6 +1122,13 @@ export function getBeaconBlockApi(
 
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
+
+      // The block's own flag is the status of the payload it builds on, the envelope's is that of its
+      // FULL variant. An unfinalized block without one has not imported its envelope yet.
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
+      if (!finalized && payload === null) {
+        throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
+      }
 
       let data: Uint8Array | gloas.SignedExecutionPayloadEnvelope | null;
       try {
@@ -1147,7 +1154,7 @@ export function getBeaconBlockApi(
 
       return {
         data,
-        meta: {executionOptimistic, finalized, version: fork},
+        meta: {executionOptimistic: payload !== null && isOptimisticBlock(payload), finalized, version: fork},
       };
     },
 
