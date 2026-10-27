@@ -579,6 +579,7 @@ export class PeerManager {
     this.metrics?.peerManager.starved.set(starved ? 1 : 0);
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
     const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
+    const connectedHealthyPeerIds = new Set(connectedHealthyPeers.map((peer) => peer.toString()));
 
     const prioritizeTimer = this.metrics?.peerManager.prioritizePeersDuration.startTimer();
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, custodyGroupQueries} = prioritizePeers(
@@ -598,22 +599,30 @@ export class PeerManager {
       // Collect subnets which we need peers for in the current slot
       this.attnetsService
         .getActiveSubnets()
-        .map((request) => ({
-          ...request,
-          peers: this.gossipsub.getSubscribersWithOutboundStream({
+        .map((request) => {
+          const subscribers = this.gossipsub.getSubscribersWithOutboundStream({
             type: GossipType.beacon_attestation,
             boundary,
             subnet: request.subnet,
-          }),
-        })),
-      this.syncnetsService.getActiveSubnets().map((request) => ({
-        ...request,
-        peers: this.gossipsub.getSubscribersWithOutboundStream({
+          });
+          let peerCount = 0;
+          for (const peer of subscribers) {
+            if (connectedHealthyPeerIds.has(peer)) peerCount++;
+          }
+          return {...request, peerCount};
+        }),
+      this.syncnetsService.getActiveSubnets().map((request) => {
+        const subscribers = this.gossipsub.getSubscribersWithOutboundStream({
           type: GossipType.sync_committee,
           boundary,
           subnet: request.subnet,
-        }),
-      })),
+        });
+        let peerCount = 0;
+        for (const peer of subscribers) {
+          if (connectedHealthyPeerIds.has(peer)) peerCount++;
+        }
+        return {...request, peerCount};
+      }),
       // ignore samplingGroups for pre-fulu forks
       forkSeq >= ForkSeq.fulu ? this.networkConfig.custodyConfig.sampleGroups : undefined,
       {

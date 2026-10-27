@@ -6,10 +6,10 @@ import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 import {
   ExcessPeerDisconnectReason,
   PrioritizePeersOpts,
+  RequestedSubnetWithPeerCount,
   prioritizePeers,
   sortPeersToPrune,
 } from "../../../../src/network/peers/utils/prioritizePeers.js";
@@ -687,8 +687,8 @@ describe("network / peers / priorization", async () => {
     }));
     const result = prioritizePeers(
       connectedPeers,
-      [{subnet: 3, toSlot: 10, peers: new Set<string>()}],
-      [{subnet: 1, toSlot: 20, peers: new Set<string>()}],
+      [{subnet: 3, toSlot: 10, peerCount: 0}],
+      [{subnet: 1, toSlot: 20, peerCount: 0}],
       undefined,
       {...defaultOpts, targetPeers: 6, maxPeers: 10, targetSubnetPeers: 6},
       config,
@@ -701,7 +701,7 @@ describe("network / peers / priorization", async () => {
     expect(result.peersToDisconnect.size).toBe(0);
   });
 
-  it("counts connected subscribers without metadata and ignores disconnected subscribers", () => {
+  it("uses supplied subscriber coverage without metadata", () => {
     const connectedPeers = peers.slice(0, 6).map((id) => ({
       id,
       direction: null,
@@ -713,8 +713,8 @@ describe("network / peers / priorization", async () => {
     }));
     const result = prioritizePeers(
       connectedPeers,
-      [{subnet: 3, toSlot: 10, peers: new Set(peers.slice(1).map((peer) => peer.toString()))}],
-      [{subnet: 1, toSlot: 20, peers: new Set(peers.map((peer) => peer.toString()))}],
+      [{subnet: 3, toSlot: 10, peerCount: 5}],
+      [{subnet: 1, toSlot: 20, peerCount: 6}],
       undefined,
       {...defaultOpts, targetPeers: 6, maxPeers: 10, targetSubnetPeers: 6},
       config,
@@ -746,11 +746,11 @@ describe("network / peers / priorization", async () => {
     subnets: number[],
     connectedPeers: Parameters<typeof prioritizePeers>[0],
     type: "attnets" | "syncnets"
-  ): (RequestedSubnet & {peers: Set<string>})[] {
+  ): RequestedSubnetWithPeerCount[] {
     return subnets.map((subnet) => ({
       subnet,
       toSlot: 0,
-      peers: new Set(connectedPeers.filter((peer) => peer[type]?.get(subnet)).map((peer) => peer.id.toString())),
+      peerCount: connectedPeers.filter((peer) => peer[type]?.get(subnet)).length,
     }));
   }
 });

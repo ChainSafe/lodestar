@@ -49,7 +49,7 @@ const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
 type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: number};
 
-export type RequestedSubnetWithPeers = RequestedSubnet & {peers: ReadonlySet<string>};
+export type RequestedSubnetWithPeerCount = RequestedSubnet & {peerCount: number};
 
 /**
  * A map of das custody group index to maxPeersToDiscover
@@ -147,8 +147,8 @@ export function prioritizePeers(
     samplingGroups: CustodyIndex[] | null;
     score: number;
   }[],
-  activeAttnets: RequestedSubnetWithPeers[],
-  activeSyncnets: RequestedSubnetWithPeers[],
+  activeAttnets: RequestedSubnetWithPeerCount[],
+  activeSyncnets: RequestedSubnetWithPeerCount[],
   samplingGroups: CustodyIndex[] | undefined,
   opts: PrioritizePeersOpts,
   config: ChainConfig,
@@ -233,8 +233,8 @@ export function prioritizePeers(
  */
 function requestSubnetPeers(
   connectedPeers: PeerInfo[],
-  activeAttnets: RequestedSubnetWithPeers[],
-  activeSyncnets: RequestedSubnetWithPeers[],
+  activeAttnets: RequestedSubnetWithPeerCount[],
+  activeSyncnets: RequestedSubnetWithPeerCount[],
   ourSamplingGroups: CustodyIndex[] | undefined,
   opts: PrioritizePeersOpts,
   config: ChainConfig,
@@ -248,7 +248,6 @@ function requestSubnetPeers(
   const {targetSubnetPeers = TARGET_SUBNET_PEERS} = opts;
   const attnetQueries: SubnetDiscvQuery[] = [];
   const syncnetQueries: SubnetDiscvQuery[] = [];
-  const connectedPeerIds = new Set(connectedPeers.map((peer) => peer.id.toString()));
 
   // To filter out peers containing enough attnets of interest from possible disconnection
   const dutiesByPeer = new Map<PeerInfo, number>();
@@ -266,15 +265,11 @@ function requestSubnetPeers(
       dutiesByPeer.set(peer, dutyCount);
     }
 
-    for (const {subnet, toSlot, peers} of activeAttnets) {
-      let peersInSubnet = 0;
-      for (const peer of peers) {
-        if (connectedPeerIds.has(peer)) peersInSubnet++;
-      }
-      metrics?.peerManager.peersPerActiveSubnet.observe({type: SubnetType.attnets}, peersInSubnet);
-      if (peersInSubnet < targetSubnetPeers) {
+    for (const {subnet, toSlot, peerCount} of activeAttnets) {
+      metrics?.peerManager.peersPerActiveSubnet.observe({type: SubnetType.attnets}, peerCount);
+      if (peerCount < targetSubnetPeers) {
         // We need more peers
-        attnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peersInSubnet});
+        attnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peerCount});
       }
     }
   }
@@ -292,15 +287,11 @@ function requestSubnetPeers(
       dutiesByPeer.set(peer, dutyCount);
     }
 
-    for (const {subnet, toSlot, peers} of activeSyncnets) {
-      let peersInSubnet = 0;
-      for (const peer of peers) {
-        if (connectedPeerIds.has(peer)) peersInSubnet++;
-      }
-      metrics?.peerManager.peersPerActiveSubnet.observe({type: SubnetType.syncnets}, peersInSubnet);
-      if (peersInSubnet < targetSubnetPeers) {
+    for (const {subnet, toSlot, peerCount} of activeSyncnets) {
+      metrics?.peerManager.peersPerActiveSubnet.observe({type: SubnetType.syncnets}, peerCount);
+      if (peerCount < targetSubnetPeers) {
         // We need more peers
-        syncnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peersInSubnet});
+        syncnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peerCount});
       }
     }
   }

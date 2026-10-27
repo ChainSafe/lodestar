@@ -1,5 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {Connection} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
@@ -7,10 +8,18 @@ import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
+import {GoodByeReasonCode} from "../../../../src/constants/network.js";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus, getConnectionsMap} from "../../../../src/network/index.js";
+import {SubnetType} from "../../../../src/network/metadata.js";
 import {NetworkConfig} from "../../../../src/network/networkConfig.js";
 import {ClientKind} from "../../../../src/network/peers/client.js";
-import {IReqRespBeaconNodePeerManager, PeerManager, PeerRpcScoreStore} from "../../../../src/network/peers/index.js";
+import {PeerDiscovery} from "../../../../src/network/peers/discover.js";
+import {
+  IReqRespBeaconNodePeerManager,
+  PeerAction,
+  PeerManager,
+  PeerRpcScoreStore,
+} from "../../../../src/network/peers/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
 import {LocalStatusCache} from "../../../../src/network/statusCache.js";
@@ -19,7 +28,7 @@ import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig, getCustodyGroups} from "../../../../src/util/dataColumns.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
-import {getValidPeerId} from "../../../utils/peer.js";
+import {getRandPeerIdStr, getValidPeerId} from "../../../utils/peer.js";
 import {generateState} from "../../../utils/state.js";
 
 const logger = testLogger("peerManager");
@@ -35,7 +44,7 @@ describe("network / peers / PeerManager", () => {
     }
   });
 
-  async function mockModules(opts?: {preOpenConnections?: Connection[]}) {
+  async function mockModules(opts?: {preOpenConnections?: Connection[]; discovery?: PeerDiscovery}) {
     // Setup fake chain
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const state = generateState({
@@ -89,6 +98,11 @@ describe("network / peers / PeerManager", () => {
       subscribeSubnetsNextBoundary: () => {},
       unsubscribeSubnetsPrevBoundary: () => {},
     };
+    const gossip = {
+      getScore: () => 0,
+      scoreParams: {decayInterval: 1000},
+      getSubscribersWithOutboundStream: vi.fn<Eth2Gossipsub["getSubscribersWithOutboundStream"]>(),
+    };
 
     const peerManager = new PeerManager(
       {
@@ -104,7 +118,7 @@ describe("network / peers / PeerManager", () => {
         events: networkEventBus,
         attnetsService: mockSubnetsService,
         syncnetsService: mockSubnetsService,
-        gossip: {getScore: () => 0, scoreParams: {decayInterval: 1000}} as unknown as Eth2Gossipsub,
+        gossip: gossip as unknown as Eth2Gossipsub,
         peersData: new PeersData(),
       },
       {
@@ -114,14 +128,14 @@ describe("network / peers / PeerManager", () => {
         discv5: null,
         discv5FirstQueryDelayMs: 0,
       },
-      null
+      opts?.discovery ?? null
     );
 
     afterEachCallbacks.push(async () => {
       await peerManager.close();
     });
 
-    return {statusCache, clock, libp2p, reqResp, peerManager, networkEventBus};
+    return {statusCache, clock, libp2p, reqResp, peerManager, networkEventBus, gossip, mockSubnetsService};
   }
 
   // Create a real event emitter with stubbed methods
@@ -131,6 +145,45 @@ describe("network / peers / PeerManager", () => {
     sendGoodbye = vi.fn();
     sendPing = vi.fn();
   }
+
+  it.each([
+    {name: "banned", action: PeerAction.Fatal, actionCount: 1, reason: GoodByeReasonCode.BANNED},
+    {name: "low-score", action: PeerAction.LowToleranceError, actionCount: 3, reason: GoodByeReasonCode.SCORE_TOO_LOW},
+  ])(
+    "excludes $name and disconnected subscribers from coverage before goodbye completes",
+    async ({action, actionCount, reason}) => {
+      const discovery = {
+        discoverPeers: vi.fn<PeerDiscovery["discoverPeers"]>(),
+        stop: vi.fn<PeerDiscovery["stop"]>(),
+      };
+      const {libp2p, reqResp, peerManager, gossip, mockSubnetsService} = await mockModules({
+        discovery: discovery as unknown as PeerDiscovery,
+      });
+      const healthyPeer = peerIdFromPrivateKey(await generateKeyPair("secp256k1"));
+      vi.spyOn(peerManager, "getConnectedPeerIds").mockReturnValue([healthyPeer, peerId1]);
+      vi.spyOn(mockSubnetsService, "getActiveSubnets").mockReturnValue([{subnet: 3, toSlot: 10}]);
+      const subscribers = new Set([healthyPeer.toString(), peerId1.toString(), await getRandPeerIdStr()]);
+      gossip.getSubscribersWithOutboundStream.mockReturnValue(subscribers);
+      reqResp.sendGoodbye.mockResolvedValue(undefined);
+      const hangUp = vi.spyOn(libp2p, "hangUp").mockResolvedValue(undefined);
+      for (let i = 0; i < actionCount; i++) {
+        peerManager.reportPeer(peerId1, action, "test");
+      }
+
+      discovery.discoverPeers.mockClear();
+      peerManager.onCommitteeSubscriptions();
+
+      expect(reqResp.sendGoodbye).toHaveBeenCalledExactlyOnceWith(peerId1, BigInt(reason));
+      expect(hangUp).not.toHaveBeenCalled();
+      expect(discovery.discoverPeers).toHaveBeenCalledExactlyOnceWith(expect.any(Number), expect.any(Map), [
+        expect.objectContaining({type: SubnetType.attnets, subnet: 3, maxPeersToDiscover: 5}),
+        expect.objectContaining({type: SubnetType.syncnets, subnet: 3, maxPeersToDiscover: 5}),
+      ]);
+
+      await sleep(0);
+      expect(hangUp).toHaveBeenCalledExactlyOnceWith(peerId1);
+    }
+  );
 
   it("Should request metadata on receivedPing of unknown peer", async () => {
     const {reqResp, networkEventBus, peerManager} = await mockModules();
