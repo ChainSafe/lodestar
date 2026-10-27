@@ -785,12 +785,10 @@ describe("UnknownBlockSync", () => {
       processBlock,
       sendBeaconBlocksByRoot,
       peer,
-      waitForRequestCapacity = vi.fn(),
     }: {
       processBlock: ReturnType<typeof vi.fn>;
       sendBeaconBlocksByRoot: ReturnType<typeof vi.fn>;
       peer: PeerIdStr;
-      waitForRequestCapacity?: ReturnType<typeof vi.fn>;
     }): {service: BlockInputSync; reportPeer: ReturnType<typeof vi.fn>; chainEmitter: ChainEventEmitter} {
       const networkEvents = new NetworkEventBus();
       const reportPeer = vi.fn();
@@ -806,7 +804,6 @@ describe("UnknownBlockSync", () => {
         }),
         custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
         sendBeaconBlocksByRoot,
-        waitForRequestCapacity,
         reportPeer,
       } as unknown as INetwork;
 
@@ -909,42 +906,6 @@ describe("UnknownBlockSync", () => {
       expect(pendingBlocks.get(blockRootHex)?.status).toBe(PendingBlockInputStatus.pending);
 
       svc.close();
-    });
-
-    it("keeps unknown blocks pending through local pressure and resumes the same peer", async () => {
-      const peer = await getRandPeerIdStr();
-      const ready = defer<void>();
-      const waitForRequestCapacity = vi.fn(
-        (_token: string, _options: {signal: AbortSignal; timeoutMs: number}) => ready.promise
-      );
-      const sendBeaconBlocksByRoot = vi
-        .fn()
-        .mockRejectedValueOnce(
-          new RequestError({code: RequestErrorCode.REQUEST_LOCAL_CAPACITY, capacityToken: "bridge-bytes"})
-        )
-        .mockRejectedValue(new Error("no block"));
-      const {service, reportPeer, chainEmitter} = setupBlockSyncTest({
-        peer,
-        sendBeaconBlocksByRoot,
-        waitForRequestCapacity,
-        processBlock: vi.fn(),
-      });
-      try {
-        const event = {rootHex: toRootHex(Buffer.alloc(32, 7)), peer, source: BlockInputSource.gossip};
-        chainEmitter.emit(ChainEvent.unknownBlockRoot, event);
-        await vi.waitFor(() => expect(waitForRequestCapacity).toHaveBeenCalledOnce());
-        expect(waitForRequestCapacity.mock.calls[0][0]).toBe("bridge-bytes");
-        chainEmitter.emit(ChainEvent.unknownBlockRoot, event);
-        await sleep(10);
-        expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
-        expect(reportPeer).not.toHaveBeenCalled();
-        ready.resolve();
-        await vi.waitFor(() => expect(sendBeaconBlocksByRoot).toHaveBeenCalledTimes(2));
-        expect(sendBeaconBlocksByRoot.mock.calls.every(([id]) => id === peer)).toBe(true);
-        expect(reportPeer).not.toHaveBeenCalled();
-      } finally {
-        service.close();
-      }
     });
 
     it("retries a rate-limited download when the backoff expires around the retry timer", async () => {
@@ -1176,34 +1137,6 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
       expect(payloadInput.hasPayloadEnvelope()).toBe(true);
       expect(payloadInput.hasAllData()).toBe(true);
-    });
-
-    it("keeps payloads pending on local pressure and cancels its single wait on stop", async () => {
-      const peer = await getRandPeerIdStr();
-      const ready = defer<void>();
-      const waitForRequestCapacity = vi.fn(
-        (_token: string, _options: {signal: AbortSignal; timeoutMs: number}) => ready.promise
-      );
-      const sendExecutionPayloadEnvelopesByRoot = vi
-        .fn()
-        .mockRejectedValue(
-          new RequestError({code: RequestErrorCode.REQUEST_LOCAL_CAPACITY, capacityToken: "requests"})
-        );
-      const {payloadInput} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
-      const {emitter} = setupPayloadSyncTest({
-        networkOverrides: {sendExecutionPayloadEnvelopesByRoot, waitForRequestCapacity},
-        peers: [{peerId: peer}],
-      });
-      emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
-      await vi.waitFor(() => expect(waitForRequestCapacity).toHaveBeenCalledOnce());
-      emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
-      await sleep(10);
-      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
-      service.close();
-      expect(waitForRequestCapacity.mock.calls[0][1].signal.aborted).toBe(true);
-      ready.resolve();
-      await sleep(10);
-      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
     });
 
     it("retries a rate-limited payload download when the backoff expires around the retry timer", async () => {

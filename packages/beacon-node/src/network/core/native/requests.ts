@@ -23,14 +23,12 @@ import {onOutgoingReqRespError} from "../../reqresp/score.js";
 import {GetReqRespHandlerFn, OutgoingRequestArgs, ResponseIncoming} from "../../reqresp/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
+import {NativeRequestAdmission} from "./requestAdmission.js";
 
 function requestError(error: unknown): unknown {
   if (!(error instanceof Error) || !("code" in error)) return error;
   const native = error as NativeRequestError;
   if (native.code === "NetworkRequestRejected") {
-    if (native.reason === "local_capacity") {
-      return new RequestError({code: RequestErrorCode.REQUEST_LOCAL_CAPACITY, capacityToken: native.capacityToken});
-    }
     if (native.reason === "too_many_requests") {
       return new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
     }
@@ -76,7 +74,7 @@ function requestError(error: unknown): unknown {
 }
 
 export function outgoingNativeRequest(
-  network: Pick<NativeNetwork, "request">,
+  network: Pick<NativeNetwork, "request" | "waitForRequestCapacity">,
   data: OutgoingRequestArgs,
   report: (action: PeerAction, reason: string, origin?: NativePeerOrigin) => void
 ): AsyncIterableIterator<ResponseIncoming> {
@@ -92,7 +90,7 @@ export function outgoingNativeRequest(
   const protocol = selected;
   let iterator: AsyncIterableIterator<NativeResponseChunk>;
   try {
-    iterator = network.request(data.peerId, protocol.id, data.requestData);
+    iterator = new NativeRequestAdmission(network, [data.peerId, protocol.id, data.requestData]);
   } catch (error) {
     throw requestError(error);
   }

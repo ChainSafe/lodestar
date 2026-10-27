@@ -64,8 +64,6 @@ export interface INetworkCore extends INetworkCorePublic {
   setTargetGroupCount(count: number): Promise<void>;
   /** Opens stream to handle ReqResp outgoing request */
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming>;
-  /** True if capacity changed; otherwise arm requestCapacityChanged atomically with the check. */
-  watchRequestCapacity(token: string): Promise<boolean>;
   /** Publish gossip message to peers */
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
 
@@ -115,7 +113,6 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   setTargetGroupCount(count: number): Promise<void>;
 
   // sendReqRespRequest - implemented via events
-  watchRequestCapacity(token: string): Promise<boolean>;
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
 
   close(): Promise<void>;

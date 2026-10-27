@@ -243,9 +243,6 @@ export class WorkerNetworkCore implements INetworkCore {
 
   // ReqResp and gossip outgoing
 
-  watchRequestCapacity(token: string): Promise<boolean> {
-    return this.getApi().watchRequestCapacity(token);
-  }
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming> {
     return this.reqRespBridgeReqCaller.getAsyncIterable(data);
   }

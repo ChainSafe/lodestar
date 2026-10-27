@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {afterEach, expect, it, vi} from "vitest";
-import {IncomingRequest, NativePeerOrigin, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
+import {IncomingRequest, NativeNetwork, NativePeerOrigin, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
 import {RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ErrorAborted, defer} from "@lodestar/utils";
@@ -10,60 +10,41 @@ import {PeerAction} from "../../../../src/network/peers/score/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../../src/network/reqresp/types.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
+function outgoingRequest(
+  network: Pick<NativeNetwork, "request">,
+  data: Parameters<typeof outgoingNativeRequest>[1],
+  report: Parameters<typeof outgoingNativeRequest>[2]
+) {
+  return outgoingNativeRequest(
+    {
+      ...network,
+      waitForRequestCapacity: async () => {
+        throw new Error("Unexpected admission wait");
+      },
+    },
+    data,
+    report
+  );
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
-it.each([
-  [
-    {reason: "local_capacity", capacityToken: "capacity-token"},
-    {code: RequestErrorCode.REQUEST_LOCAL_CAPACITY, capacityToken: "capacity-token"},
-  ],
-  [{reason: "too_many_requests"}, {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}],
-])("preserves the scope of native admission refusal %j", async (refusal, mapped) => {
-  const key = await generateKeyPair("secp256k1");
-  const request = vi.fn(() => {
-    throw Object.assign(new Error("full"), {code: "NetworkRequestRejected", ...refusal});
-  });
-  expect(() =>
-    outgoingNativeRequest(
-      {request},
-      {
-        peerId: peerIdFromPublicKey(key.publicKey).toString(),
-        method: ReqRespMethod.BeaconBlocksByRoot,
-        versions: [2],
-        requestData: new Uint8Array(32),
-      },
-      vi.fn()
-    )
-  ).toThrow(expect.objectContaining({type: mapped}));
-});
-
-it("preserves an asynchronous capacity refusal without reporting the peer", async () => {
-  const failure = Object.assign(new Error("full"), {
-    code: "NetworkRequestRejected",
-    reason: "local_capacity",
-    capacityToken: "capacity-token",
-  });
+it("keeps connection concurrency refusal separate from shared capacity", async () => {
   const report = vi.fn();
-  const response: AsyncIterableIterator<NativeResponseChunk> = {
-    [Symbol.asyncIterator]() {
-      return this;
-    },
-    next: () => Promise.reject(failure),
-  };
-  const iterator = outgoingNativeRequest(
-    {request: () => response},
-    {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
-    report
-  );
-  await expect(iterator.next()).rejects.toMatchObject({
-    type: {
-      code: RequestErrorCode.REQUEST_LOCAL_CAPACITY,
-      capacityToken: "capacity-token",
-    },
-  });
+  expect(() =>
+    outgoingRequest(
+      {
+        request: () => {
+          throw Object.assign(new Error("full"), {code: "NetworkRequestRejected", reason: "too_many_requests"});
+        },
+      },
+      {peerId: "peer", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
+      report
+    )
+  ).toThrow(expect.objectContaining({type: {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}}));
   expect(report).not.toHaveBeenCalled();
 });
 
@@ -84,7 +65,7 @@ it("maps a native empty single-chunk response to EMPTY_RESPONSE", async () => {
     },
     next: () => Promise.reject(failure),
   };
-  const iterator = outgoingNativeRequest(
+  const iterator = outgoingRequest(
     {request: vi.fn(() => response)},
     {
       peerId: peerIdFromPublicKey(key.publicKey).toString(),
@@ -127,7 +108,7 @@ it.each([
     throw: () => Promise.reject(failure),
   };
   const report = vi.fn();
-  const iterator = outgoingNativeRequest(
+  const iterator = outgoingRequest(
     {request: () => response},
     {
       peerId: "unused",
@@ -138,7 +119,7 @@ it.each([
     report
   );
   await expect(iterator.next()).rejects.toMatchObject({type: {code}});
-  await expect(iterator.next()).rejects.toMatchObject({type: {code}});
+  await expect(iterator.next()).resolves.toEqual({done: true, value: undefined});
   await expect(iterator.return?.()).rejects.toMatchObject({type: {code}});
   await expect(iterator.throw?.(failure)).rejects.toMatchObject({type: {code}});
   if (action === null) expect(report).not.toHaveBeenCalled();
@@ -162,7 +143,7 @@ it.each([
     },
     next: () => Promise.reject(failure),
   };
-  const iterator = outgoingNativeRequest(
+  const iterator = outgoingRequest(
     {request: () => response},
     {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
     report
@@ -191,23 +172,23 @@ it.each([
     next: () => Promise.reject(failure),
   };
   const report = vi.fn();
-  const iterator = outgoingNativeRequest(
+  const iterator = outgoingRequest(
     {request: () => response},
     {peerId: "unused", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
     report
   );
   await expect(iterator.next()).rejects.toMatchObject({type: {code}});
-  await expect(iterator.next()).rejects.toMatchObject({type: {code}});
+  await expect(iterator.next()).resolves.toEqual({done: true, value: undefined});
   if (action === null) expect(report).not.toHaveBeenCalled();
   else expect(report).toHaveBeenCalledExactlyOnceWith(action, code);
 });
 
-it.each(["invalid_request", "invalid_request_options", "protocol_disabled", "local_capacity"])(
+it.each(["invalid_request", "invalid_request_options", "protocol_disabled"])(
   "does not penalize a peer for local admission refusal: %s",
   (reason) => {
     const report = vi.fn();
     expect(() =>
-      outgoingNativeRequest(
+      outgoingRequest(
         {
           request: () => {
             throw Object.assign(new Error(reason), {
@@ -467,7 +448,7 @@ it("preserves the failed request's origin when reporting a response error", asyn
     next: () => Promise.reject(failure),
   };
   const report = vi.fn();
-  const iterator = outgoingNativeRequest(
+  const iterator = outgoingRequest(
     {request: () => response},
     {
       peerId: peerIdFromPublicKey(key.publicKey).toString(),
@@ -491,7 +472,7 @@ it("delivers the response origin for host validation after the request retires",
     yield {data: new Uint8Array(1), fork: "phase0", protocol, origin};
   })();
   const report = vi.fn();
-  const iterator = outgoingNativeRequest(
+  const iterator = outgoingRequest(
     {request: () => response},
     {peerId: "peer", method: ReqRespMethod.BeaconBlocksByRoot, versions: [2], requestData: new Uint8Array(32)},
     report

@@ -10,7 +10,6 @@ import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarEr
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
-import {WaitForRequestCapacity} from "../../network/reqresp/requestCapacity.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
@@ -20,7 +19,6 @@ import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../con
 import {DownloadByRangeError, DownloadByRangeErrorCode, ParentPayload} from "../utils/downloadByRange.js";
 import {getRateLimitedUntilMs} from "../utils/rateLimit.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
-import {RequestCapacityPause, getRequestCapacityToken} from "../utils/requestCapacity.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
   ChainPeersBalancer,
@@ -46,7 +44,6 @@ export type SyncChainModules = {
 };
 
 export type SyncChainFns = {
-  waitForRequestCapacity: WaitForRequestCapacity;
   /**
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
@@ -140,7 +137,6 @@ export class SyncChain {
   private readonly reportPeer: SyncChainFns["reportPeer"];
   private readonly getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"];
   private readonly pruneBlockInputs: SyncChainFns["pruneBlockInputs"];
-  private readonly requestCapacity: RequestCapacityPause;
 
   /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
   private readonly batchProcessor = new ItTrigger();
@@ -191,11 +187,6 @@ export class SyncChain {
     this.parentPayload = parentPayload;
     this.logger = logger;
     this.logId = `${syncType}-${nextChainId++}`;
-    this.requestCapacity = new RequestCapacityPause(
-      fns.waitForRequestCapacity,
-      () => this.triggerBatchDownloader(),
-      (error) => this.logger.debug("Range sync capacity wait ended", {id: this.logId}, error)
-    );
 
     // Trigger event on parent class
     this.sync().then(
@@ -247,7 +238,6 @@ export class SyncChain {
    */
   stopSyncing(): void {
     this.status = SyncChainStatus.Stopped;
-    this.requestCapacity.cancel();
     this.clearRateLimitBackoffTimer();
     this.logger.debug("SyncChain stopSyncing", {id: this.logId});
   }
@@ -257,7 +247,6 @@ export class SyncChain {
    */
   remove(): void {
     this.status = SyncChainStatus.Stopped;
-    this.requestCapacity.cancel();
     this.logger.debug("SyncChain remove", {id: this.logId});
     this.clearRateLimitBackoffTimer();
     this.batchProcessor.end(new ErrorAborted("SyncChain"));
@@ -385,7 +374,6 @@ export class SyncChain {
       throw e;
     } finally {
       this.clearRateLimitBackoffTimer();
-      this.requestCapacity.cancel();
     }
   }
 
@@ -454,7 +442,7 @@ export class SyncChain {
    * It will exhaust the peer pool and left over batches until the batch buffer is reached.
    */
   private requestBatches(): void {
-    if (this.status !== SyncChainStatus.Syncing || this.requestCapacity.blocked) {
+    if (this.status !== SyncChainStatus.Syncing) {
       return;
     }
 
@@ -574,12 +562,6 @@ export class SyncChain {
       const res = await wrapError(this.downloadByRange(peer, batch, this.syncType));
 
       if (res.err) {
-        const capacityToken = getRequestCapacityToken(res.err);
-        if (capacityToken !== null) {
-          batch.downloadingDeferred();
-          if (this.status === SyncChainStatus.Syncing) this.requestCapacity.pause(capacityToken);
-          return;
-        }
         // There's several known error cases where we want to take action on the peer
         const errCode = (res.err as LodestarError<{code: string}>).type?.code;
         this.metrics?.syncRange.downloadByRange.error.inc({client: peer.client, code: errCode ?? "UNKNOWN"});

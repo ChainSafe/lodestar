@@ -6,7 +6,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
-import {Logger, defer, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -145,9 +145,6 @@ describe("sync / range / chain", () => {
             getConnectedPeerSyncMeta,
             reportPeer,
             pruneBlockInputs,
-            waitForRequestCapacity: async () => {
-              throw new Error("Unexpected capacity wait");
-            },
             onEnd,
           }),
           {config, logger, clock, custodyConfig, metrics: null},
@@ -223,9 +220,6 @@ describe("sync / range / chain", () => {
           }),
           reportPeer,
           pruneBlockInputs,
-          waitForRequestCapacity: async () => {
-            throw new Error("Unexpected capacity wait");
-          },
           onEnd: (err) => (err ? reject(err) : resolve()),
         },
         {
@@ -262,9 +256,6 @@ describe("sync / range / chain", () => {
       getConnectedPeerSyncMeta,
       reportPeer,
       pruneBlockInputs,
-      waitForRequestCapacity: async () => {
-        throw new Error("Unexpected capacity wait");
-      },
       onEnd: () => {},
     });
 
@@ -334,9 +325,6 @@ describe("sync / range / chain", () => {
           downloadByRange,
           reportPeer,
           pruneBlockInputs,
-          waitForRequestCapacity: async () => {
-            throw new Error("Unexpected capacity wait");
-          },
           getConnectedPeerSyncMeta,
           onEnd,
         }),
@@ -392,9 +380,6 @@ describe("sync / range / chain", () => {
         getConnectedPeerSyncMeta,
         reportPeer,
         pruneBlockInputs,
-        waitForRequestCapacity: async () => {
-          throw new Error("Unexpected capacity wait");
-        },
         onEnd: () => {},
       }),
       {config, logger, clock, custodyConfig, metrics: null},
@@ -475,9 +460,6 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           reportPeer,
           pruneBlockInputs,
-          waitForRequestCapacity: async () => {
-            throw new Error("Unexpected capacity wait");
-          },
           onEnd,
         }),
         {config, logger, clock, custodyConfig, metrics: null},
@@ -552,9 +534,6 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           reportPeer,
           pruneBlockInputs,
-          waitForRequestCapacity: async () => {
-            throw new Error("Unexpected capacity wait");
-          },
           onEnd,
         }),
         {config, logger, clock, custodyConfig, metrics: null},
@@ -566,106 +545,6 @@ describe("sync / range / chain", () => {
     });
 
     expect(downloads).toBeGreaterThanOrEqual(2);
-  });
-
-  it("Should resume local-capacity refusals without exhausting attempts or backing off the peer", async () => {
-    const startEpoch = 0;
-    const targetEpoch = 2;
-    let downloads = 0;
-
-    const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
-
-    const downloadByRange: SyncChainFns["downloadByRange"] = async (_peerMeta, request, _partialDownload) => {
-      downloads++;
-      if (downloads <= 10) {
-        throw new RequestError({
-          code: RequestErrorCode.REQUEST_LOCAL_CAPACITY,
-          capacityToken: "request-slots",
-        });
-      }
-
-      const blocks: IBlockInput[] = [];
-      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
-        blocks.push(
-          BlockInputPreData.createFromBlock({
-            block: {
-              message: generateEmptyBlock(i),
-              signature: ACCEPT_BLOCK,
-            },
-            blockRootHex: "0x00",
-            forkName: config.getForkName(i),
-            seenTimestampSec: Math.floor(Date.now() / 1000),
-            daOutOfRange: false,
-            source: BlockInputSource.byRange,
-          })
-        );
-      }
-      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
-    };
-
-    const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
-    const syncType = RangeSyncType.Finalized;
-
-    await new Promise<void>((resolve, reject) => {
-      const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
-      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
-      const initialSync = new SyncChain(
-        startEpoch,
-        target,
-        syncType,
-        logSyncChainFns(logger, {
-          processChainSegment,
-          downloadByRange,
-          getConnectedPeerSyncMeta,
-          reportPeer,
-          pruneBlockInputs,
-          waitForRequestCapacity: async (token) => {
-            expect(token).toBe("request-slots");
-          },
-          onEnd,
-        }),
-        {config, logger, clock, custodyConfig, metrics: null},
-        undefined
-      );
-
-      initialSync.addPeer(peer, target);
-      initialSync.startSyncing(startEpoch);
-    });
-
-    expect(downloads).toBeGreaterThan(10);
-  });
-
-  it("does not start a capacity wait when a removed chain receives a late refusal", async () => {
-    const download = defer<Awaited<ReturnType<SyncChainFns["downloadByRange"]>>>();
-    const ended = defer<void>();
-    const downloadByRange = vi.fn(() => download.promise);
-    const waitForRequestCapacity = vi.fn(async () => {});
-    const target = {slot: computeStartSlotAtEpoch(2), root: ZERO_HASH};
-    const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
-    const chain = new SyncChain(
-      0,
-      target,
-      RangeSyncType.Finalized,
-      {
-        processChainSegment: async () => {},
-        downloadByRange,
-        waitForRequestCapacity,
-        getConnectedPeerSyncMeta,
-        reportPeer,
-        pruneBlockInputs,
-        onEnd: () => ended.resolve(),
-      },
-      {config, logger, clock, custodyConfig, metrics: null},
-      undefined
-    );
-    chain.addPeer(peer, target);
-    chain.startSyncing(0);
-    expect(downloadByRange).toHaveBeenCalled();
-    chain.remove();
-    await ended.promise;
-    download.reject(new RequestError({code: RequestErrorCode.REQUEST_LOCAL_CAPACITY, capacityToken: "requests"}));
-    await new Promise((resolve) => setImmediate(resolve));
-    expect(waitForRequestCapacity).not.toHaveBeenCalled();
   });
 
   // The retry timer can fire before the backoff expires and the expiry can land between clock reads in its callback.
@@ -719,9 +598,6 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           reportPeer,
           pruneBlockInputs,
-          waitForRequestCapacity: async () => {
-            throw new Error("Unexpected capacity wait");
-          },
           onEnd: () => {},
         }),
         {config, logger, clock, custodyConfig, metrics: null},
@@ -791,9 +667,6 @@ describe("sync / range / chain", () => {
             getConnectedPeerSyncMeta,
             reportPeer: reportPeerSpy,
             pruneBlockInputs,
-            waitForRequestCapacity: async () => {
-              throw new Error("Unexpected capacity wait");
-            },
             onEnd,
           }),
           {config, logger, clock, custodyConfig, metrics: null},
@@ -916,7 +789,6 @@ describe("sync / range / chain", () => {
 
 function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
   return {
-    waitForRequestCapacity: fns.waitForRequestCapacity,
     processChainSegment(blocks, payloadEnvelopes, syncType) {
       logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.slot).join(",")});
       return fns.processChainSegment(blocks, payloadEnvelopes, syncType);

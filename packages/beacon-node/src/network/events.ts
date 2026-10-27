@@ -8,7 +8,6 @@ import {PendingGossipsubMessage} from "./processor/types.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 
 export enum NetworkEvent {
-  requestCapacityChanged = "req-resp.capacity-changed",
   /** A relevant peer has connected or has been re-STATUS'd */
   peerConnected = "peer-manager.peer-connected",
   /** A peer has been disconnected */
@@ -23,7 +22,6 @@ export enum NetworkEvent {
 }
 
 export type NetworkEventData = {
-  [NetworkEvent.requestCapacityChanged]: null;
   [NetworkEvent.peerConnected]: {
     peer: PeerIdStr;
     status: Status;
@@ -48,7 +46,6 @@ export enum EventDirection {
 }
 
 export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
-  [NetworkEvent.requestCapacityChanged]: EventDirection.workerToMain,
   [NetworkEvent.peerConnected]: EventDirection.workerToMain,
   [NetworkEvent.peerDisconnected]: EventDirection.workerToMain,
   [NetworkEvent.reqRespRequest]: EventDirection.none, // Only used internally in NetworkCore
