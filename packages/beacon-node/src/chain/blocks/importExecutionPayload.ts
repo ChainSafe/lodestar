@@ -332,8 +332,14 @@ export async function importExecutionPayload(
   );
 
   // 7. Queue notifyForkchoiceUpdate to engine api
+  // Skip a payload that does not satisfy the inclusion list constraints, fork choice keeps the EMPTY
+  // variant as head and the next prepare fcU keeps the engine on the parent payload
   const head = this.forkChoice.getHead();
-  if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
+  if (
+    !this.opts.disableImportExecutionFcU &&
+    blockRootHex === head.blockRoot &&
+    this.forkChoice.isPayloadInclusionListSatisfied(blockRootHex)
+  ) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
