@@ -144,6 +144,15 @@ export class BeaconEngine implements IBeaconEngine {
     this.core.emitter.on(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
   }
 
+  // Lifecycle
+  prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {
+    return this.core.prepareAnchorState(stateBytes);
+  }
+
+  persistAnchorState(): Promise<void> {
+    return this.core.persistAnchorState();
+  }
+
   async initializeFromAnchor(): Promise<EngineBootstrap> {
     const {chainViewSnapshot, ...bootstrap} = await this.core.initializeFromAnchor();
     this.chainView =
@@ -151,6 +160,14 @@ export class BeaconEngine implements IBeaconEngine {
         ? new ReplicateChainView(chainViewSnapshot, this.logger)
         : new ForkChoiceChainView(this.core);
     return bootstrap;
+  }
+
+  initRegen(): Promise<void> {
+    return this.core.initRegen();
+  }
+
+  loadHistoricalStateRegen(): Promise<void> {
+    return this.core.loadHistoricalStateRegen();
   }
 
   async close(): Promise<void> {
@@ -165,191 +182,37 @@ export class BeaconEngine implements IBeaconEngine {
     }
   }
 
-  /**
-   * `previousHead` must be read before the core call: ForkChoiceChainView already shows the new head afterwards.
-   */
-  private readonly onForkChoiceChanged = async (
-    changes: ForkChoiceChanges,
-    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
-  ): Promise<void> => {
-    if (!changes.headUpdate && !changes.justifiedCheckpointChanged) return;
-    let headUpdate: HeadUpdate<Root> | null = null;
-    if (this.chainView.onChainViewUpdate || changes.headUpdate) {
-      const snapshot = await this.core.getHeadSnapshot(
-        changes.headUpdate
-          ? {blockRoot: fromHex(previousHead.blockRoot), payloadStatus: previousHead.payloadStatus}
-          : undefined
-      );
-      const head = fromChainViewBlockBytes(snapshot.head);
-      const shouldEmitHeadUpdate =
-        this.chainView.onChainViewUpdate?.({
-          blocks: [head],
-          state: {
-            head,
-            justified: {...snapshot.justified, rootHex: toRootHex(snapshot.justified.root)},
-            finalized: {...snapshot.finalized, rootHex: toRootHex(snapshot.finalized.root)},
-          },
-          version: snapshot.version,
-        }) ?? true;
-      if (shouldEmitHeadUpdate) headUpdate = snapshot.headUpdate;
-    }
-    // Still honored when stale: the newer state already applied contains the change and its own flag may be false
-    if (changes.justifiedCheckpointChanged) {
-      this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
-    }
-    if (headUpdate) this.emitHeadUpdate(headUpdate);
-  };
-
-  private readonly onNewFinalizedCheckpoint = async (): Promise<void> => {
-    try {
-      const snapshot = await this.core.getFinalizedCheckpointSnapshot();
-      // Core uses byte roots for transport; archival consumers expect root hexes.
-      const toSummary = ({slot, blockRoot, payloadStatus}: FinalizedProtoSummary<Root>): FinalizedProtoSummary => ({
-        slot,
-        blockRoot: toRootHex(blockRoot),
-        payloadStatus,
-      });
-      const checkpointSnapshot = {
-        ...snapshot,
-        rootHex: toRootHex(snapshot.root),
-        blockSnapshot: {
-          canonical: snapshot.blockSnapshot.canonical.map(toSummary),
-          nonCanonical: snapshot.blockSnapshot.nonCanonical.map(toSummary),
-        },
-      };
-      // Finalization consumers read ChainView, so apply the checkpoint before emitting.
-      if (this.beaconEngineMode === BeaconEngineMode.Worker)
-        this.chainView.applyFinalizedCheckpoint?.(checkpointSnapshot);
-      this.emitter.emit(ChainEvent.updateStatus);
-      this.emitter.emit(ChainEvent.forkChoiceFinalized, checkpointSnapshot);
-    } catch (e) {
-      this.logger?.error("Error pulling finalized checkpoint", {}, e as Error);
-    }
-  };
-
-  private readonly onFatalError = (error: Error): void => {
-    this.emitter.emit(ChainEvent.fatalError, error);
-  };
-
-  private readonly emitHeadUpdate = (update: HeadUpdate<Root>): void => {
-    const {slot, payloadStatus, headRootChanged, epochTransition, executionOptimistic} = update;
-    const blockRoot = toRootHex(update.blockRoot);
-    try {
-      const stateRoot = toRootHex(update.stateRoot);
-      const previousDutyDependentRoot = toRootHex(update.previousDutyDependentRoot);
-      const currentDutyDependentRoot = toRootHex(update.currentDutyDependentRoot);
-      if (headRootChanged) {
-        this.emitter.emit(routes.events.EventType.head, {
-          slot,
-          block: blockRoot,
-          state: stateRoot,
-          epochTransition,
-          previousDutyDependentRoot,
-          currentDutyDependentRoot,
-          executionOptimistic,
-        });
-      }
-      this.emitter.emit(routes.events.EventType.headV2, {
-        version: this.config.getForkName(slot),
-        data: {
-          slot,
-          block: blockRoot,
-          state: stateRoot,
-          payloadStatus: payloadStatus === PayloadStatus.FULL ? "full" : "empty",
-          epochTransition,
-          currentEpochDependentRoot: previousDutyDependentRoot,
-          nextEpochDependentRoot: currentDutyDependentRoot,
-          executionOptimistic,
-        },
-      });
-    } catch (e) {
-      this.logger?.debug("Error emitting head update", {slot, root: blockRoot, headRootChanged}, e as Error);
-    }
-    // Same trigger as unstable, where the network refreshes its status on the `head` event
-    if (headRootChanged) this.emitter.emit(ChainEvent.updateStatus);
-  };
-
-  private readonly onProposerSlashingProduced = (slashing: phase0.ProposerSlashing): void => {
-    this.emitter.emit(routes.events.EventType.proposerSlashing, slashing);
-    this.emitter.emit(ChainEvent.publishProposerSlashing, slashing);
-  };
-
-  private readonly onFastConfirmation = (confirmation: FastConfirmation): void => {
-    this.emitter.emit(routes.events.EventType.fastConfirmation, confirmation);
-  };
-
-  private readonly onLightClientOptimisticUpdate = ({data, slot}: SerializedLightClientData): void => {
-    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
-      version: this.config.getForkName(slot),
-      data: this.config.getPostAltairForkTypes(slot).LightClientOptimisticUpdate.deserialize(data),
-    });
-  };
-
-  private readonly onLightClientFinalityUpdate = ({data, slot}: SerializedLightClientData): void => {
-    this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
-      version: this.config.getForkName(slot),
-      data: this.config.getPostAltairForkTypes(slot).LightClientFinalityUpdate.deserialize(data),
-    });
-  };
-
-  prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {
-    return this.core.prepareAnchorState(stateBytes);
+  // Clock / fork choice / head
+  async onSlot(slot: Slot): Promise<void> {
+    const previousHead = this.chainView.getHead();
+    const {headUpdate, justifiedCheckpointChanged, finalizedCheckpointChanged} = await this.core.onSlot(slot);
+    await this.onForkChoiceChanged({headUpdate, justifiedCheckpointChanged}, previousHead);
+    if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
   }
 
-  persistAnchorState(): Promise<void> {
-    return this.core.persistAnchorState();
+  async onEpoch(epoch: Epoch): Promise<void> {
+    return this.core.onEpoch(epoch);
   }
 
-  getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData> {
-    return this.core.getLightClientBootstrap(blockRoot);
+  async prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {
+    const previousHead = this.chainView.getHead();
+    const response = await this.core.prepareForNextSlot(clockSlot, opts);
+    await this.onForkChoiceChanged({headUpdate: response.headUpdate, justifiedCheckpointChanged: false}, previousHead);
+    return response;
   }
 
-  getLightClientUpdate(period: number): Promise<SerializedLightClientData> {
-    return this.core.getLightClientUpdate(period);
+  async recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<void> {
+    const previousHead = this.chainView.getHead();
+    const {headUpdate} = await this.core.recomputeForkChoiceHead(caller);
+    await this.onForkChoiceChanged({headUpdate, justifiedCheckpointChanged: false}, previousHead);
   }
 
-  getLightClientOptimisticUpdate(): Promise<SerializedLightClientData | null> {
-    return this.core.getLightClientOptimisticUpdate();
+  async isHeadOptimistic(): Promise<boolean> {
+    return this.core.isHeadOptimistic();
   }
 
-  getLightClientFinalityUpdate(): Promise<SerializedLightClientData | null> {
-    return this.core.getLightClientFinalityUpdate();
-  }
-
-  getLightClientCommitteeRoot(period: number): Promise<Root> {
-    return this.core.getLightClientCommitteeRoot(period);
-  }
-
-  pruneLightClientNonCheckpointData(roots: Root[]): Promise<void> {
-    return this.core.pruneLightClientNonCheckpointData(roots);
-  }
-
-  validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>> {
-    return this.core.validateGossipLightClientOptimisticUpdateBytes(bytes, fork);
-  }
-
-  validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>> {
-    return this.core.validateGossipLightClientFinalityUpdateBytes(bytes, fork);
-  }
-
-  getHeads(): Promise<ProtoBlock[]> {
-    return this.core.getHeads();
-  }
-
-  getDebugForkChoice(): Promise<routes.debug.ForkChoiceResponse> {
-    return this.core.getDebugForkChoice();
-  }
-
-  getDebugForkChoiceV2(): Promise<routes.debug.ForkChoiceResponseV2> {
-    return this.core.getDebugForkChoiceV2();
-  }
-
-  getFastConfirmationInfo(): Promise<routes.lodestar.FastConfirmationInfo> {
-    return this.core.getFastConfirmationInfo();
-  }
-
-  getProtoArrayNodes(): Promise<routes.debug.ProtoNodeList> {
-    return this.core.getProtoArrayNodes();
+  getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo> {
+    return this.core.getHeadExecutionStateInfo();
   }
 
   async pauseFastConfirmation(): Promise<void> {
@@ -360,21 +223,185 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.resumeFastConfirmation();
   }
 
-  persistArchiveBlock(
-    slot: Slot,
-    serializedBytes: Uint8Array,
-    blockRoot: Uint8Array,
-    parentRoot: Uint8Array
-  ): Promise<void> {
-    return this.core.persistArchiveBlock(slot, serializedBytes, blockRoot, parentRoot);
+  // Block processing
+  async validateApiBlock(blockInput: IBlockInput, opts: VerifyBlocksOpts): Promise<void> {
+    const block = blockInput.getBlock();
+    let bytes = this.serializedCache.get(block);
+    if (bytes === undefined) {
+      bytes = this.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
+      this.serializedCache.set(block, bytes);
+    }
+    const res =
+      this.beaconEngineMode === BeaconEngineMode.Worker
+        ? await this.core.validateApiBlockBytes(computeSignedBlockRoot(blockInput.forkName, block), bytes, opts)
+        : await this.core.validateApiBlock({data: block, bytes}, opts);
+    if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
   }
 
-  batchPersistArchiveBlocks(
-    entries: {slot: Slot; bytes: Uint8Array; blockRoot: Uint8Array; parentRoot: Uint8Array}[]
-  ): Promise<void> {
-    return this.core.batchPersistArchiveBlocks(entries);
+  async verifyBlocks(
+    blockInputs: IBlockInput[],
+    opts: VerifyBlocksOpts
+  ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
+    const getBlocksWithBytes = () =>
+      blockInputs.map((blockInput) => {
+        const block = blockInput.getBlock();
+        let bytes = this.serializedCache.get(block);
+        if (bytes === undefined) {
+          bytes = this.config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(block);
+          this.serializedCache.set(block, bytes);
+        }
+        return {data: block, bytes};
+      });
+
+    // main-thread mode
+    if (this.beaconEngineMode === BeaconEngineMode.MainThread) {
+      const res = await this.core.verifyBlocks(getBlocksWithBytes(), opts);
+      if (res.err !== null) throw blockErrorFromFailure(res.err, blockInputs);
+      return res.result;
+    }
+
+    // worker mode, gossip path
+    const isGossip = blockInputs.length === 1 && blockInputs[0].getBlockSource().source === BlockInputSource.gossip;
+    if (isGossip) {
+      const blockInput = blockInputs[0];
+      const block = blockInput.getBlock();
+      const result = await this.core.verifyGossipBlockBytes(computeSignedBlockRoot(blockInput.forkName, block), opts);
+      if (result.err !== null) {
+        if ("code" in result.err) throw new BlockError(blockInput.getBlock(), result.err);
+        throw blockErrorFromFailure(result.err, [blockInput]);
+      }
+      return result.result;
+    }
+
+    // other worker mode paths
+    const res = await this.core.verifyBlocksBytes(
+      getBlocksWithBytes().map(({data, bytes}, i) => ({
+        signedBlockRoot: computeSignedBlockRoot(blockInputs[i].forkName, data),
+        blockBytes: bytes,
+      })),
+      opts
+    );
+    if (res.err !== null) throw blockErrorFromFailure(res.err, blockInputs);
+    return res.result;
   }
 
+  async importBlock(
+    blockInput: IBlockInput,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportBlockOpts
+  ): Promise<ImportBlockResult> {
+    const res = await this.core.importBlock(
+      computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()),
+      dataAvailabilityStatus,
+      opts
+    );
+    if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
+    const {
+      justified,
+      finalized,
+      headUpdate,
+      reorg,
+      justifiedCheckpointChanged,
+      finalizedCheckpointChanged,
+      executionOptimistic,
+      version,
+    } = res.result;
+    const block = fromChainViewBlockBytes(res.result.block);
+    const newHead = fromChainViewBlockBytes(res.result.newHead);
+    const isCurrent =
+      this.chainView.onChainViewUpdate?.({
+        blocks: [block, newHead],
+        state: {
+          head: newHead,
+          justified: {...justified, rootHex: toRootHex(justified.root)},
+          finalized: {...finalized, rootHex: toRootHex(finalized.root)},
+        },
+        version,
+      }) ?? true;
+    if (justifiedCheckpointChanged) {
+      this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
+    }
+    if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
+    if (isCurrent && headUpdate) {
+      this.emitHeadUpdate(headUpdate);
+    }
+    if (isCurrent && reorg) {
+      this.emitter.emit(routes.events.EventType.chainReorg, {
+        ...reorg,
+        newHeadBlock: toRootHex(reorg.newHeadBlock),
+        oldHeadBlock: toRootHex(reorg.oldHeadBlock),
+        newHeadState: toRootHex(reorg.newHeadState),
+        oldHeadState: toRootHex(reorg.oldHeadState),
+      });
+    }
+    return {block, newHead, executionOptimistic};
+  }
+
+  async importExecutionPayload(
+    payloadInput: PayloadEnvelopeInput,
+    envelopeBytes: Uint8Array,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportExecutionPayloadOpts
+  ): Promise<{executionOptimistic: boolean}> {
+    const res =
+      this.beaconEngineMode === BeaconEngineMode.Worker
+        ? await this.core.importExecutionPayloadBytes(envelopeBytes, dataAvailabilityStatus, opts)
+        : await this.core.importExecutionPayload(
+            {data: payloadInput.getPayloadEnvelope(), bytes: envelopeBytes},
+            dataAvailabilityStatus,
+            opts
+          );
+    if (res.err !== null) {
+      const error = new PayloadImportError(payloadInput, res.err.type, res.err.message);
+      error.stack = res.err.stack;
+      throw error;
+    }
+    const {block, executionOptimistic} = res.result;
+    this.chainView.onChainViewUpdate?.({blocks: [fromChainViewBlockBytes(block)]});
+
+    // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.
+    const envelope = payloadInput.getPayloadEnvelope().message;
+    if (this.clock.currentSlot - envelope.payload.slotNumber < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+      this.emitter.emit(routes.events.EventType.executionPayload, {
+        slot: envelope.payload.slotNumber,
+        builderIndex: envelope.builderIndex,
+        blockHash: toRootHex(envelope.payload.blockHash),
+        blockRoot: toRootHex(envelope.beaconBlockRoot),
+        executionOptimistic,
+      });
+    }
+    return {executionOptimistic};
+  }
+
+  async discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void> {
+    return this.core.discardVerifiedBlocks(signedBlockRoots);
+  }
+
+  verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.verifyAndObserveBlockProposerBytes(bytes, root)
+      : this.core.verifyAndObserveBlockProposer(block, root);
+  }
+
+  verifyEnvelopeForPublish(
+    bytes: Uint8Array,
+    envelope: gloas.SignedExecutionPayloadEnvelope,
+    blockRootHex: RootHex
+  ): Promise<void> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.verifyEnvelopeForPublishBytes(bytes, blockRootHex)
+      : this.core.verifyEnvelopeForPublish(envelope, blockRootHex);
+  }
+
+  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean> {
+    return this.core.isBlockProposerSeen(slot, proposerIndex);
+  }
+
+  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {
+    return this.core.getConflictingBlockRoots(slot, proposerIndex, root);
+  }
+
+  // Block production / builder
   async produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse> {
     const previousHead = this.chainView.getHead();
     const response = await this.core.produceBlock(request);
@@ -434,13 +461,29 @@ export class BeaconEngine implements IBeaconEngine {
       : this.core.submitBlindedBlockNoResponse({data: signedBlindedBlock, bytes: signedBlindedBlockBytes});
   }
 
-  async prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {
-    const previousHead = this.chainView.getHead();
-    const response = await this.core.prepareForNextSlot(clockSlot, opts);
-    await this.onForkChoiceChanged({headUpdate: response.headUpdate, justifiedCheckpointChanged: false}, previousHead);
-    return response;
+  produceAttestationData(
+    slot: Slot,
+    committeeIndex?: CommitteeIndex
+  ): Promise<ProductionResponse<phase0.AttestationData>> {
+    return this.core.produceAttestationData(slot, committeeIndex);
   }
 
+  async produceSyncCommitteeContribution(
+    subnet: SubcommitteeIndex,
+    slot: Slot,
+    blockRoot: Root
+  ): Promise<ProductionResponse<altair.SyncCommitteeContribution | null>> {
+    const result = await this.core.produceSyncCommitteeContribution(subnet, slot, blockRoot);
+    return result.ok
+      ? {ok: true, data: result.data === null ? null : ssz.altair.SyncCommitteeContribution.deserialize(result.data)}
+      : result;
+  }
+
+  async getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null> {
+    return this.core.getPayloadAttestationBlock(slot);
+  }
+
+  // Validator duties / proposer cache
   getProposerDuties(
     epoch: Epoch,
     timing: {currentEpoch: Epoch; checkpointWaitTimeoutMs?: number},
@@ -472,76 +515,384 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getPtcDuties(epoch, indices, currentEpoch);
   }
 
-  dumpCacheSummary(): Promise<routes.lodestar.StateCacheItem[]> {
-    return this.core.dumpCacheSummary();
+  getProposerFeeRecipient(proposerIndex: ValidatorIndex): Promise<string | undefined> {
+    return this.core.getProposerFeeRecipient(proposerIndex);
   }
 
-  dropCache(): Promise<void> {
-    return this.core.dropCache();
+  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<boolean> {
+    return this.core.trackAttachedValidators(epoch, validatorIndices);
   }
 
-  dumpRegenQueueItems(): Promise<{key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[]> {
-    return this.core.dumpRegenQueueItems();
+  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<boolean> {
+    return this.core.updateProposerPreparation(epoch, proposers);
   }
 
-  registerLocalValidators(indices: ValidatorIndex[]): Promise<void> {
-    return this.core.registerLocalValidators(indices);
+  getProposerCacheValidatorIndices(): Promise<ValidatorIndex[]> {
+    return this.core.getProposerCacheValidatorIndices();
   }
 
-  registerLocalValidatorsInSyncCommittee(
-    subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]
+  prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
+    return this.core.prepareBeaconCommitteeSubnets(subscriptions);
+  }
+
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean> {
+    return this.core.validatorSeenAtEpoch(index, epoch);
+  }
+
+  // Gossip / API validation
+  validateGossipBlock(
+    signedBlock: SignedBeaconBlock,
+    blockBytes: Uint8Array,
+    fork: ForkName,
+    seenTimestampSec?: number
+  ): Promise<GossipBlockResult> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipBlockBytes(
+          computeSignedBlockRoot(fork, signedBlock),
+          blockBytes,
+          fork,
+          seenTimestampSec
+        )
+      : this.core.validateGossipBlock({data: signedBlock, bytes: blockBytes}, fork, seenTimestampSec);
+  }
+
+  validateGossipAttestationsSameAttData(
+    fork: ForkName,
+    attestations: GossipAttestation[],
+    seenTimestampSecs: number[]
+  ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}> {
+    return this.core.validateGossipAttestationsSameAttData(fork, attestations, seenTimestampSecs);
+  }
+
+  validateApiAttestation(
+    fork: ForkName,
+    attestationOrBytes: ApiAttestation
+  ): Promise<GossipValidationResult<AttestationValidationResult>> {
+    return this.core.validateApiAttestation(fork, attestationOrBytes);
+  }
+
+  validateGossipAggregateAndProof(
+    aggregateBytes: Uint8Array,
+    signedAggregateAndProof: SignedAggregateAndProof,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipAggregateAndProofBytes(aggregateBytes, fork, seenTimestampSec)
+      : this.core.validateGossipAggregateAndProof(
+          {data: signedAggregateAndProof, bytes: aggregateBytes},
+          fork,
+          seenTimestampSec
+        );
+  }
+
+  validateApiAggregateAndProof(
+    aggregateBytes: Uint8Array,
+    fork: ForkName,
+    signedAggregateAndProof: SignedAggregateAndProof
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateApiAggregateAndProofBytes(aggregateBytes, fork)
+      : this.core.validateApiAggregateAndProof(fork, signedAggregateAndProof);
+  }
+
+  validateGossipSyncCommittee(
+    syncCommitteeBytes: Uint8Array,
+    syncCommittee: altair.SyncCommitteeMessage,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipSyncCommitteeBytes(syncCommitteeBytes, subnet)
+      : this.core.validateGossipSyncCommittee(syncCommittee, subnet);
+  }
+
+  validateApiSyncCommittee(
+    syncCommitteeBytes: Uint8Array,
+    syncCommittee: altair.SyncCommitteeMessage
+  ): Promise<GossipValidationResult<{subnets: number[]}>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateApiSyncCommitteeBytes(syncCommitteeBytes)
+      : this.core.validateApiSyncCommittee(syncCommittee);
+  }
+
+  validateSyncCommitteeGossipContributionAndProof(
+    contributionBytes: Uint8Array,
+    signedContributionAndProof: altair.SignedContributionAndProof,
+    skipValidationKnownParticipants?: boolean
+  ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateSyncCommitteeGossipContributionAndProofBytes(
+          contributionBytes,
+          skipValidationKnownParticipants
+        )
+      : this.core.validateSyncCommitteeGossipContributionAndProof(
+          signedContributionAndProof,
+          skipValidationKnownParticipants
+        );
+  }
+
+  validateApiSyncCommitteeContributionAndProof(
+    contributionBytes: Uint8Array,
+    signedContributionAndProof: altair.SignedContributionAndProof
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateApiSyncCommitteeContributionAndProofBytes(contributionBytes)
+      : this.core.validateApiSyncCommitteeContributionAndProof(signedContributionAndProof);
+  }
+
+  validateGossipBlobSidecar(
+    blobBytes: Uint8Array,
+    blobSidecar: deneb.BlobSidecar,
+    fork: ForkName,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipBlobSidecarBytes(blobBytes, fork, subnet)
+      : this.core.validateGossipBlobSidecar(blobSidecar, fork, subnet);
+  }
+
+  validateGossipFuluDataColumnSidecar(
+    dataColumnBytes: Uint8Array,
+    dataColumnSidecar: fulu.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipFuluDataColumnSidecarBytes(dataColumnBytes, gossipSubnet)
+      : this.core.validateGossipFuluDataColumnSidecar(dataColumnSidecar, gossipSubnet);
+  }
+
+  validateGossipGloasDataColumnSidecar(
+    dataColumnBytes: Uint8Array,
+    dataColumnSidecar: gloas.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipGloasDataColumnSidecarBytes(dataColumnBytes, gossipSubnet)
+      : this.core.validateGossipGloasDataColumnSidecar(dataColumnSidecar, gossipSubnet);
+  }
+
+  validateGossipPayloadAttestationMessage(
+    payloadAttestationBytes: Uint8Array,
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipPayloadAttestationMessageBytes(payloadAttestationBytes)
+      : this.core.validateGossipPayloadAttestationMessage(payloadAttestationMessage);
+  }
+
+  validateApiPayloadAttestationMessage(
+    payloadAttestationBytes: Uint8Array,
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateApiPayloadAttestationMessageBytes(payloadAttestationBytes)
+      : this.core.validateApiPayloadAttestationMessage(payloadAttestationMessage);
+  }
+
+  validateGossipExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    source: SourceMeta
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipExecutionPayloadEnvelopeBytes(envelopeBytes, source)
+      : this.core.validateGossipExecutionPayloadEnvelope(executionPayloadEnvelope, source);
+  }
+
+  validateApiExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateApiExecutionPayloadEnvelopeBytes(envelopeBytes, seenTimestampSec)
+      : this.core.validateApiExecutionPayloadEnvelope(executionPayloadEnvelope, seenTimestampSec);
+  }
+
+  validateGossipExecutionPayloadBid(
+    bidBytes: Uint8Array,
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipExecutionPayloadBidBytes(bidBytes, fork, seenTimestampSec)
+      : this.core.validateGossipExecutionPayloadBid(signedExecutionPayloadBid, seenTimestampSec);
+  }
+
+  validateApiExecutionPayloadBid(
+    bidBytes: Uint8Array,
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateApiExecutionPayloadBidBytes(bidBytes)
+      : this.core.validateApiExecutionPayloadBid(signedExecutionPayloadBid);
+  }
+
+  validateGossipProposerPreferences(
+    preferencesBytes: Uint8Array,
+    signedProposerPreferences: gloas.SignedProposerPreferences
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipProposerPreferencesBytes(preferencesBytes)
+      : this.core.validateGossipProposerPreferences(signedProposerPreferences);
+  }
+
+  // Op pools
+  validateGossipAttesterSlashing(
+    attesterSlashingBytes: Uint8Array,
+    attesterSlashing: AttesterSlashing,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipAttesterSlashingBytes(attesterSlashingBytes, fork)
+      : this.core.validateGossipAttesterSlashing(attesterSlashing, fork);
+  }
+
+  validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void> {
+    return this.core.validateApiAttesterSlashing(attesterSlashing, fork);
+  }
+
+  validateGossipProposerSlashing(
+    proposerSlashingBytes: Uint8Array,
+    proposerSlashing: phase0.ProposerSlashing
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipProposerSlashingBytes(proposerSlashingBytes)
+      : this.core.validateGossipProposerSlashing(proposerSlashing);
+  }
+
+  validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
+    return this.core.validateApiProposerSlashing(proposerSlashing);
+  }
+
+  validateGossipVoluntaryExit(
+    voluntaryExitBytes: Uint8Array,
+    voluntaryExit: phase0.SignedVoluntaryExit
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipVoluntaryExitBytes(voluntaryExitBytes)
+      : this.core.validateGossipVoluntaryExit(voluntaryExit);
+  }
+
+  validateApiVoluntaryExit(
+    voluntaryExit: phase0.SignedVoluntaryExit
+  ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}> {
+    return this.core.validateApiVoluntaryExit(voluntaryExit);
+  }
+
+  drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
+    return this.core.drainDeferredVoluntaryExits();
+  }
+
+  insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void> {
+    return this.core.insertVoluntaryExit(exit);
+  }
+
+  validateGossipBlsToExecutionChange(
+    blsToExecutionChangeBytes: Uint8Array,
+    blsToExecutionChange: capella.SignedBLSToExecutionChange
+  ): Promise<GossipValidationResult<void>> {
+    return this.beaconEngineMode === BeaconEngineMode.Worker
+      ? this.core.validateGossipBlsToExecutionChangeBytes(blsToExecutionChangeBytes)
+      : this.core.validateGossipBlsToExecutionChange(blsToExecutionChange);
+  }
+
+  validateApiBlsToExecutionChange(
+    blsToExecutionChange: capella.SignedBLSToExecutionChange,
+    preCapella: boolean
   ): Promise<void> {
-    return this.core.registerLocalValidatorsInSyncCommittee(subscriptions);
+    return this.core.validateApiBlsToExecutionChange(blsToExecutionChange, preCapella);
   }
 
-  registerApiBlock(seenTimestampSec: number, block: ValidatorMonitorBlock): Promise<void> {
-    return this.core.registerApiBlock(seenTimestampSec, block);
+  addAttestationToPool(
+    committeeIndex: CommitteeIndex,
+    attestation: SingleAttestation,
+    attDataRootHex: RootHex,
+    validatorCommitteeIndex: number,
+    committeeSize: number,
+    priority?: boolean
+  ): Promise<InsertOutcome> {
+    return this.core.addAttestationToPool(
+      committeeIndex,
+      attestation,
+      attDataRootHex,
+      validatorCommitteeIndex,
+      committeeSize,
+      priority
+    );
   }
 
-  registerApiExecutionPayloadEnvelope(
-    delaySec: number,
-    signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
-  ): Promise<void> {
-    return this.core.registerApiExecutionPayloadEnvelope(delaySec, signedExecutionPayloadEnvelope);
+  getAttestationAggregate(
+    slot: Slot,
+    dataRootHex: RootHex,
+    committeeIndex: CommitteeIndex
+  ): Promise<Attestation | null> {
+    return this.core.getAttestationAggregate(slot, dataRootHex, committeeIndex);
   }
 
-  onPoolSubmitUnaggregatedAttestation(
-    seenTimestampSec: number,
-    attestation: ValidatorMonitorAttestation,
-    subnet: SubnetID,
-    sentPeers: number
-  ): Promise<void> {
-    return this.core.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, attestation, subnet, sentPeers);
+  getPoolAggregatedAttestations(bySlot?: Slot): Promise<Attestation[]> {
+    return this.core.getPoolAggregatedAttestations(bySlot);
   }
 
-  onPoolSubmitAggregatedAttestation(
-    seenTimestampSec: number,
-    attestation: ValidatorMonitorAttestation,
-    sentPeers: number
-  ): Promise<void> {
-    return this.core.onPoolSubmitAggregatedAttestation(seenTimestampSec, attestation, sentPeers);
+  getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]> {
+    return this.core.getPoolPayloadAttestations(slot);
   }
 
-  getMonitoredValidatorIndices(): Promise<ValidatorIndex[]> {
-    return this.core.getMonitoredValidatorIndices();
+  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): Promise<gloas.SignedProposerPreferences[]> {
+    return this.core.getPoolProposerPreferences(slot, dependentRoot);
   }
 
-  scrapeMetrics(): ReturnType<IBeaconEngine["scrapeMetrics"]> {
-    return this.core.scrapeMetrics();
+  getPoolAttesterSlashings(): Promise<AttesterSlashing[]> {
+    return this.core.getPoolAttesterSlashings();
   }
 
-  initRegen(): Promise<void> {
-    return this.core.initRegen();
+  getPoolProposerSlashings(): Promise<phase0.ProposerSlashing[]> {
+    return this.core.getPoolProposerSlashings();
   }
 
-  getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo> {
-    return this.core.getHeadExecutionStateInfo();
+  getPoolVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
+    return this.core.getPoolVoluntaryExits();
   }
 
-  async isHeadOptimistic(): Promise<boolean> {
-    return this.core.isHeadOptimistic();
+  getPoolBlsToExecutionChanges(): Promise<capella.SignedBLSToExecutionChange[]> {
+    return this.core.getPoolBlsToExecutionChanges();
   }
 
+  // Light client
+  getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData> {
+    return this.core.getLightClientBootstrap(blockRoot);
+  }
+
+  getLightClientUpdate(period: number): Promise<SerializedLightClientData> {
+    return this.core.getLightClientUpdate(period);
+  }
+
+  getLightClientOptimisticUpdate(): Promise<SerializedLightClientData | null> {
+    return this.core.getLightClientOptimisticUpdate();
+  }
+
+  getLightClientFinalityUpdate(): Promise<SerializedLightClientData | null> {
+    return this.core.getLightClientFinalityUpdate();
+  }
+
+  getLightClientCommitteeRoot(period: number): Promise<Root> {
+    return this.core.getLightClientCommitteeRoot(period);
+  }
+
+  pruneLightClientNonCheckpointData(roots: Root[]): Promise<void> {
+    return this.core.pruneLightClientNonCheckpointData(roots);
+  }
+
+  validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>> {
+    return this.core.validateGossipLightClientOptimisticUpdateBytes(bytes, fork);
+  }
+
+  validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>> {
+    return this.core.validateGossipLightClientFinalityUpdateBytes(bytes, fork);
+  }
+
+  // API block reads
   /** Source: unstable@9cb14e3381 api/impl/beacon/blocks/utils.ts#resolveBlockId. */
   async getBlockRoot(blockId: routes.beacon.BlockId): Promise<BlockRootResponse> {
     const normalized = String(blockId).toLowerCase();
@@ -562,18 +913,6 @@ export class BeaconEngine implements IBeaconEngine {
     const res = await this.core.getBlockRoot(id);
     if (!res) throw new ApiError(404, `Block not found for id '${blockId}'`);
     return res;
-  }
-
-  getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch> {
-    return this.core.getLatestWeakSubjectivityCheckpointEpoch();
-  }
-
-  loadHistoricalStateRegen(): Promise<void> {
-    return this.core.loadHistoricalStateRegen();
-  }
-
-  getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
-    return this.core.getPersistedCheckpointState(checkpoint);
   }
 
   async getCanonicalBlockAtSlot(
@@ -613,17 +952,15 @@ export class BeaconEngine implements IBeaconEngine {
     };
   }
 
+  // API state reads
+  getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
+    return this.core.getPersistedCheckpointState(checkpoint);
+  }
+
   getSerializedState(
     id: ApiStateId
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     return this.core.getSerializedState(id);
-  }
-
-  getFinalizedEffectiveBalances(
-    finalizedCheckpoint: CheckpointWithHex,
-    validatorIndices: ValidatorIndex[]
-  ): Promise<number[] | null> {
-    return this.core.getFinalizedEffectiveBalances(finalizedCheckpoint, validatorIndices);
   }
 
   getStateProof(id: ApiStateId, descriptor: Uint8Array): Promise<{proof: CompactMultiProof; fork: ForkName} | null> {
@@ -753,10 +1090,6 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getStateProposerLookahead(id, returnBytes);
   }
 
-  getHeadProposerPubkey(slot: Slot): Promise<Uint8Array> {
-    return this.core.getHeadProposerPubkey(slot);
-  }
-
   getBuilderPendingPayments(
     id: ApiStateId,
     returnBytes: boolean
@@ -771,6 +1104,10 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getBuilderPendingWithdrawals(id, returnBytes);
   }
 
+  getHeadProposerPubkey(slot: Slot): Promise<Uint8Array> {
+    return this.core.getHeadProposerPubkey(slot);
+  }
+
   getHeadParentPayload(): Promise<HeadParentPayload | undefined> {
     return this.core.getHeadParentPayload();
   }
@@ -779,17 +1116,11 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getActiveOrPendingValidators(indices);
   }
 
-  produceAttestationData(
-    slot: Slot,
-    committeeIndex?: CommitteeIndex
-  ): Promise<ProductionResponse<phase0.AttestationData>> {
-    return this.core.produceAttestationData(slot, committeeIndex);
+  getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch> {
+    return this.core.getLatestWeakSubjectivityCheckpointEpoch();
   }
 
-  async getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null> {
-    return this.core.getPayloadAttestationBlock(slot);
-  }
-
+  // Rewards
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {
     return this.core.getBlockRewards(block);
   }
@@ -808,361 +1139,84 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.getSyncCommitteeRewards(block, validatorIds);
   }
 
-  validateGossipBlock(
-    signedBlock: SignedBeaconBlock,
-    blockBytes: Uint8Array,
-    fork: ForkName,
-    seenTimestampSec?: number
-  ): Promise<GossipBlockResult> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipBlockBytes(
-          computeSignedBlockRoot(fork, signedBlock),
-          blockBytes,
-          fork,
-          seenTimestampSec
-        )
-      : this.core.validateGossipBlock({data: signedBlock, bytes: blockBytes}, fork, seenTimestampSec);
+  // Validator monitor
+  registerLocalValidators(indices: ValidatorIndex[]): Promise<void> {
+    return this.core.registerLocalValidators(indices);
   }
 
-  validateGossipSyncCommittee(
-    syncCommitteeBytes: Uint8Array,
-    syncCommittee: altair.SyncCommitteeMessage,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipSyncCommitteeBytes(syncCommitteeBytes, subnet)
-      : this.core.validateGossipSyncCommittee(syncCommittee, subnet);
-  }
-
-  validateApiSyncCommittee(
-    syncCommitteeBytes: Uint8Array,
-    syncCommittee: altair.SyncCommitteeMessage
-  ): Promise<GossipValidationResult<{subnets: number[]}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiSyncCommitteeBytes(syncCommitteeBytes)
-      : this.core.validateApiSyncCommittee(syncCommittee);
-  }
-
-  validateSyncCommitteeGossipContributionAndProof(
-    contributionBytes: Uint8Array,
-    signedContributionAndProof: altair.SignedContributionAndProof,
-    skipValidationKnownParticipants?: boolean
-  ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateSyncCommitteeGossipContributionAndProofBytes(
-          contributionBytes,
-          skipValidationKnownParticipants
-        )
-      : this.core.validateSyncCommitteeGossipContributionAndProof(
-          signedContributionAndProof,
-          skipValidationKnownParticipants
-        );
-  }
-
-  validateApiSyncCommitteeContributionAndProof(
-    contributionBytes: Uint8Array,
-    signedContributionAndProof: altair.SignedContributionAndProof
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiSyncCommitteeContributionAndProofBytes(contributionBytes)
-      : this.core.validateApiSyncCommitteeContributionAndProof(signedContributionAndProof);
-  }
-
-  validateGossipBlobSidecar(
-    blobBytes: Uint8Array,
-    blobSidecar: deneb.BlobSidecar,
-    fork: ForkName,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipBlobSidecarBytes(blobBytes, fork, subnet)
-      : this.core.validateGossipBlobSidecar(blobSidecar, fork, subnet);
-  }
-
-  validateGossipFuluDataColumnSidecar(
-    dataColumnBytes: Uint8Array,
-    dataColumnSidecar: fulu.DataColumnSidecar,
-    gossipSubnet: SubnetID
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipFuluDataColumnSidecarBytes(dataColumnBytes, gossipSubnet)
-      : this.core.validateGossipFuluDataColumnSidecar(dataColumnSidecar, gossipSubnet);
-  }
-
-  validateGossipGloasDataColumnSidecar(
-    dataColumnBytes: Uint8Array,
-    dataColumnSidecar: gloas.DataColumnSidecar,
-    gossipSubnet: SubnetID
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipGloasDataColumnSidecarBytes(dataColumnBytes, gossipSubnet)
-      : this.core.validateGossipGloasDataColumnSidecar(dataColumnSidecar, gossipSubnet);
-  }
-
-  validateGossipPayloadAttestationMessage(
-    payloadAttestationBytes: Uint8Array,
-    payloadAttestationMessage: gloas.PayloadAttestationMessage
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipPayloadAttestationMessageBytes(payloadAttestationBytes)
-      : this.core.validateGossipPayloadAttestationMessage(payloadAttestationMessage);
-  }
-
-  validateApiPayloadAttestationMessage(
-    payloadAttestationBytes: Uint8Array,
-    payloadAttestationMessage: gloas.PayloadAttestationMessage
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiPayloadAttestationMessageBytes(payloadAttestationBytes)
-      : this.core.validateApiPayloadAttestationMessage(payloadAttestationMessage);
-  }
-
-  validateGossipAttestationsSameAttData(
-    fork: ForkName,
-    attestations: GossipAttestation[],
-    seenTimestampSecs: number[]
-  ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}> {
-    return this.core.validateGossipAttestationsSameAttData(fork, attestations, seenTimestampSecs);
-  }
-
-  prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
-    return this.core.prepareBeaconCommitteeSubnets(subscriptions);
-  }
-
-  validateApiAttestation(
-    fork: ForkName,
-    attestationOrBytes: ApiAttestation
-  ): Promise<GossipValidationResult<AttestationValidationResult>> {
-    return this.core.validateApiAttestation(fork, attestationOrBytes);
-  }
-
-  validateGossipAggregateAndProof(
-    aggregateBytes: Uint8Array,
-    signedAggregateAndProof: SignedAggregateAndProof,
-    fork: ForkName,
-    seenTimestampSec: number
-  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipAggregateAndProofBytes(aggregateBytes, fork, seenTimestampSec)
-      : this.core.validateGossipAggregateAndProof(
-          {data: signedAggregateAndProof, bytes: aggregateBytes},
-          fork,
-          seenTimestampSec
-        );
-  }
-
-  validateApiAggregateAndProof(
-    aggregateBytes: Uint8Array,
-    fork: ForkName,
-    signedAggregateAndProof: SignedAggregateAndProof
-  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiAggregateAndProofBytes(aggregateBytes, fork)
-      : this.core.validateApiAggregateAndProof(fork, signedAggregateAndProof);
-  }
-
-  validateGossipExecutionPayloadEnvelope(
-    envelopeBytes: Uint8Array,
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    source: SourceMeta
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipExecutionPayloadEnvelopeBytes(envelopeBytes, source)
-      : this.core.validateGossipExecutionPayloadEnvelope(executionPayloadEnvelope, source);
-  }
-
-  validateApiExecutionPayloadEnvelope(
-    envelopeBytes: Uint8Array,
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    seenTimestampSec: number
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiExecutionPayloadEnvelopeBytes(envelopeBytes, seenTimestampSec)
-      : this.core.validateApiExecutionPayloadEnvelope(executionPayloadEnvelope, seenTimestampSec);
-  }
-
-  validateGossipExecutionPayloadBid(
-    bidBytes: Uint8Array,
-    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
-    fork: ForkName,
-    seenTimestampSec: number
-  ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipExecutionPayloadBidBytes(bidBytes, fork, seenTimestampSec)
-      : this.core.validateGossipExecutionPayloadBid(signedExecutionPayloadBid, seenTimestampSec);
-  }
-
-  validateApiExecutionPayloadBid(
-    bidBytes: Uint8Array,
-    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiExecutionPayloadBidBytes(bidBytes)
-      : this.core.validateApiExecutionPayloadBid(signedExecutionPayloadBid);
-  }
-
-  validateGossipProposerPreferences(
-    preferencesBytes: Uint8Array,
-    signedProposerPreferences: gloas.SignedProposerPreferences
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipProposerPreferencesBytes(preferencesBytes)
-      : this.core.validateGossipProposerPreferences(signedProposerPreferences);
-  }
-
-  validateGossipAttesterSlashing(
-    attesterSlashingBytes: Uint8Array,
-    attesterSlashing: AttesterSlashing,
-    fork: ForkName
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipAttesterSlashingBytes(attesterSlashingBytes, fork)
-      : this.core.validateGossipAttesterSlashing(attesterSlashing, fork);
-  }
-
-  validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void> {
-    return this.core.validateApiAttesterSlashing(attesterSlashing, fork);
-  }
-
-  validateGossipProposerSlashing(
-    proposerSlashingBytes: Uint8Array,
-    proposerSlashing: phase0.ProposerSlashing
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipProposerSlashingBytes(proposerSlashingBytes)
-      : this.core.validateGossipProposerSlashing(proposerSlashing);
-  }
-
-  validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    return this.core.validateApiProposerSlashing(proposerSlashing);
-  }
-
-  validateGossipVoluntaryExit(
-    voluntaryExitBytes: Uint8Array,
-    voluntaryExit: phase0.SignedVoluntaryExit
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipVoluntaryExitBytes(voluntaryExitBytes)
-      : this.core.validateGossipVoluntaryExit(voluntaryExit);
-  }
-
-  validateApiVoluntaryExit(
-    voluntaryExit: phase0.SignedVoluntaryExit
-  ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}> {
-    return this.core.validateApiVoluntaryExit(voluntaryExit);
-  }
-
-  drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
-    return this.core.drainDeferredVoluntaryExits();
-  }
-
-  insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void> {
-    return this.core.insertVoluntaryExit(exit);
-  }
-
-  validateGossipBlsToExecutionChange(
-    blsToExecutionChangeBytes: Uint8Array,
-    blsToExecutionChange: capella.SignedBLSToExecutionChange
-  ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipBlsToExecutionChangeBytes(blsToExecutionChangeBytes)
-      : this.core.validateGossipBlsToExecutionChange(blsToExecutionChange);
-  }
-
-  validateApiBlsToExecutionChange(
-    blsToExecutionChange: capella.SignedBLSToExecutionChange,
-    preCapella: boolean
+  registerLocalValidatorsInSyncCommittee(
+    subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]
   ): Promise<void> {
-    return this.core.validateApiBlsToExecutionChange(blsToExecutionChange, preCapella);
+    return this.core.registerLocalValidatorsInSyncCommittee(subscriptions);
   }
 
-  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): Promise<gloas.SignedProposerPreferences[]> {
-    return this.core.getPoolProposerPreferences(slot, dependentRoot);
+  registerApiBlock(seenTimestampSec: number, block: ValidatorMonitorBlock): Promise<void> {
+    return this.core.registerApiBlock(seenTimestampSec, block);
   }
 
-  getPoolAttesterSlashings(): Promise<AttesterSlashing[]> {
-    return this.core.getPoolAttesterSlashings();
+  registerApiExecutionPayloadEnvelope(
+    delaySec: number,
+    signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  ): Promise<void> {
+    return this.core.registerApiExecutionPayloadEnvelope(delaySec, signedExecutionPayloadEnvelope);
   }
 
-  getPoolProposerSlashings(): Promise<phase0.ProposerSlashing[]> {
-    return this.core.getPoolProposerSlashings();
+  onPoolSubmitUnaggregatedAttestation(
+    seenTimestampSec: number,
+    attestation: ValidatorMonitorAttestation,
+    subnet: SubnetID,
+    sentPeers: number
+  ): Promise<void> {
+    return this.core.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, attestation, subnet, sentPeers);
   }
 
-  getPoolVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
-    return this.core.getPoolVoluntaryExits();
+  onPoolSubmitAggregatedAttestation(
+    seenTimestampSec: number,
+    attestation: ValidatorMonitorAttestation,
+    sentPeers: number
+  ): Promise<void> {
+    return this.core.onPoolSubmitAggregatedAttestation(seenTimestampSec, attestation, sentPeers);
   }
 
-  getPoolBlsToExecutionChanges(): Promise<capella.SignedBLSToExecutionChange[]> {
-    return this.core.getPoolBlsToExecutionChanges();
+  getMonitoredValidatorIndices(): Promise<ValidatorIndex[]> {
+    return this.core.getMonitoredValidatorIndices();
   }
 
-  addAttestationToPool(
-    committeeIndex: CommitteeIndex,
-    attestation: SingleAttestation,
-    attDataRootHex: RootHex,
-    validatorCommitteeIndex: number,
-    committeeSize: number,
-    priority?: boolean
-  ): Promise<InsertOutcome> {
-    return this.core.addAttestationToPool(
-      committeeIndex,
-      attestation,
-      attDataRootHex,
-      validatorCommitteeIndex,
-      committeeSize,
-      priority
-    );
+  // Debug / metrics
+  getHeads(): Promise<ProtoBlock[]> {
+    return this.core.getHeads();
   }
 
-  getAttestationAggregate(
-    slot: Slot,
-    dataRootHex: RootHex,
-    committeeIndex: CommitteeIndex
-  ): Promise<Attestation | null> {
-    return this.core.getAttestationAggregate(slot, dataRootHex, committeeIndex);
+  getDebugForkChoice(): Promise<routes.debug.ForkChoiceResponse> {
+    return this.core.getDebugForkChoice();
   }
 
-  getPoolAggregatedAttestations(bySlot?: Slot): Promise<Attestation[]> {
-    return this.core.getPoolAggregatedAttestations(bySlot);
+  getDebugForkChoiceV2(): Promise<routes.debug.ForkChoiceResponseV2> {
+    return this.core.getDebugForkChoiceV2();
   }
 
-  async produceSyncCommitteeContribution(
-    subnet: SubcommitteeIndex,
-    slot: Slot,
-    blockRoot: Root
-  ): Promise<ProductionResponse<altair.SyncCommitteeContribution | null>> {
-    const result = await this.core.produceSyncCommitteeContribution(subnet, slot, blockRoot);
-    return result.ok
-      ? {ok: true, data: result.data === null ? null : ssz.altair.SyncCommitteeContribution.deserialize(result.data)}
-      : result;
+  getFastConfirmationInfo(): Promise<routes.lodestar.FastConfirmationInfo> {
+    return this.core.getFastConfirmationInfo();
   }
 
-  getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]> {
-    return this.core.getPoolPayloadAttestations(slot);
+  getProtoArrayNodes(): Promise<routes.debug.ProtoNodeList> {
+    return this.core.getProtoArrayNodes();
   }
 
-  getProposerFeeRecipient(proposerIndex: ValidatorIndex): Promise<string | undefined> {
-    return this.core.getProposerFeeRecipient(proposerIndex);
+  dumpCacheSummary(): Promise<routes.lodestar.StateCacheItem[]> {
+    return this.core.dumpCacheSummary();
   }
 
-  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<boolean> {
-    return this.core.trackAttachedValidators(epoch, validatorIndices);
+  dropCache(): Promise<void> {
+    return this.core.dropCache();
   }
 
-  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<boolean> {
-    return this.core.updateProposerPreparation(epoch, proposers);
+  dumpRegenQueueItems(): Promise<{key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[]> {
+    return this.core.dumpRegenQueueItems();
   }
 
-  getProposerCacheValidatorIndices(): Promise<ValidatorIndex[]> {
-    return this.core.getProposerCacheValidatorIndices();
-  }
-
-  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): Promise<EffectiveBalanceIncrements | undefined> {
-    return this.core.getCheckpointEffectiveBalances(checkpoint);
-  }
-
-  pruneOnFinalized(): Promise<void> {
-    return this.core.pruneOnFinalized();
+  scrapeMetrics(): ReturnType<IBeaconEngine["scrapeMetrics"]> {
+    return this.core.scrapeMetrics();
   }
 
   regenCanAcceptWork(): boolean {
@@ -1185,202 +1239,20 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.bls.canAcceptWork();
   }
 
-  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean> {
-    return this.core.validatorSeenAtEpoch(index, epoch);
-  }
-
-  async recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<void> {
-    const previousHead = this.chainView.getHead();
-    const {headUpdate} = await this.core.recomputeForkChoiceHead(caller);
-    await this.onForkChoiceChanged({headUpdate, justifiedCheckpointChanged: false}, previousHead);
-  }
-
-  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {
-    return this.core.getConflictingBlockRoots(slot, proposerIndex, root);
-  }
-
-  verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.verifyAndObserveBlockProposerBytes(bytes, root)
-      : this.core.verifyAndObserveBlockProposer(block, root);
-  }
-
-  verifyEnvelopeForPublish(
-    bytes: Uint8Array,
-    envelope: gloas.SignedExecutionPayloadEnvelope,
-    blockRootHex: RootHex
+  // DB / archive / finalization
+  persistArchiveBlock(
+    slot: Slot,
+    serializedBytes: Uint8Array,
+    blockRoot: Uint8Array,
+    parentRoot: Uint8Array
   ): Promise<void> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.verifyEnvelopeForPublishBytes(bytes, blockRootHex)
-      : this.core.verifyEnvelopeForPublish(envelope, blockRootHex);
+    return this.core.persistArchiveBlock(slot, serializedBytes, blockRoot, parentRoot);
   }
 
-  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean> {
-    return this.core.isBlockProposerSeen(slot, proposerIndex);
-  }
-
-  async validateApiBlock(blockInput: IBlockInput, opts: VerifyBlocksOpts): Promise<void> {
-    const block = blockInput.getBlock();
-    let bytes = this.serializedCache.get(block);
-    if (bytes === undefined) {
-      bytes = this.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
-      this.serializedCache.set(block, bytes);
-    }
-    const res =
-      this.beaconEngineMode === BeaconEngineMode.Worker
-        ? await this.core.validateApiBlockBytes(computeSignedBlockRoot(blockInput.forkName, block), bytes, opts)
-        : await this.core.validateApiBlock({data: block, bytes}, opts);
-    if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
-  }
-
-  async verifyBlocks(
-    blockInputs: IBlockInput[],
-    opts: VerifyBlocksOpts
-  ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
-    const getBlocksWithBytes = () =>
-      blockInputs.map((blockInput) => {
-        const block = blockInput.getBlock();
-        let bytes = this.serializedCache.get(block);
-        if (bytes === undefined) {
-          bytes = this.config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(block);
-          this.serializedCache.set(block, bytes);
-        }
-        return {data: block, bytes};
-      });
-
-    // main-thread mode
-    if (this.beaconEngineMode === BeaconEngineMode.MainThread) {
-      const res = await this.core.verifyBlocks(getBlocksWithBytes(), opts);
-      if (res.err !== null) throw blockErrorFromFailure(res.err, blockInputs);
-      return res.result;
-    }
-
-    // worker mode, gossip path
-    const isGossip = blockInputs.length === 1 && blockInputs[0].getBlockSource().source === BlockInputSource.gossip;
-    if (isGossip) {
-      const blockInput = blockInputs[0];
-      const block = blockInput.getBlock();
-      const result = await this.core.verifyGossipBlockBytes(computeSignedBlockRoot(blockInput.forkName, block), opts);
-      if (result.err !== null) {
-        if ("code" in result.err) throw new BlockError(blockInput.getBlock(), result.err);
-        throw blockErrorFromFailure(result.err, [blockInput]);
-      }
-      return result.result;
-    }
-
-    // other worker mode paths
-    const res = await this.core.verifyBlocksBytes(
-      getBlocksWithBytes().map(({data, bytes}, i) => ({
-        signedBlockRoot: computeSignedBlockRoot(blockInputs[i].forkName, data),
-        blockBytes: bytes,
-      })),
-      opts
-    );
-    if (res.err !== null) throw blockErrorFromFailure(res.err, blockInputs);
-    return res.result;
-  }
-
-  async importBlock(
-    blockInput: IBlockInput,
-    dataAvailabilityStatus: DataAvailabilityStatus,
-    opts: ImportBlockOpts
-  ): Promise<ImportBlockResult> {
-    const res = await this.core.importBlock(
-      computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()),
-      dataAvailabilityStatus,
-      opts
-    );
-    if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
-    const {
-      justified,
-      finalized,
-      headUpdate,
-      reorg,
-      justifiedCheckpointChanged,
-      finalizedCheckpointChanged,
-      executionOptimistic,
-      version,
-    } = res.result;
-    const block = fromChainViewBlockBytes(res.result.block);
-    const newHead = fromChainViewBlockBytes(res.result.newHead);
-    const isCurrent =
-      this.chainView.onChainViewUpdate?.({
-        blocks: [block, newHead],
-        state: {
-          head: newHead,
-          justified: {...justified, rootHex: toRootHex(justified.root)},
-          finalized: {...finalized, rootHex: toRootHex(finalized.root)},
-        },
-        version,
-      }) ?? true;
-    if (justifiedCheckpointChanged) {
-      this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
-    }
-    if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
-    if (isCurrent && headUpdate) {
-      this.emitHeadUpdate(headUpdate);
-    }
-    if (isCurrent && reorg) {
-      this.emitter.emit(routes.events.EventType.chainReorg, {
-        ...reorg,
-        newHeadBlock: toRootHex(reorg.newHeadBlock),
-        oldHeadBlock: toRootHex(reorg.oldHeadBlock),
-        newHeadState: toRootHex(reorg.newHeadState),
-        oldHeadState: toRootHex(reorg.oldHeadState),
-      });
-    }
-    return {block, newHead, executionOptimistic};
-  }
-
-  async discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void> {
-    return this.core.discardVerifiedBlocks(signedBlockRoots);
-  }
-
-  async onSlot(slot: Slot): Promise<void> {
-    const previousHead = this.chainView.getHead();
-    const {headUpdate, justifiedCheckpointChanged, finalizedCheckpointChanged} = await this.core.onSlot(slot);
-    await this.onForkChoiceChanged({headUpdate, justifiedCheckpointChanged}, previousHead);
-    if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
-  }
-
-  async onEpoch(epoch: Epoch): Promise<void> {
-    return this.core.onEpoch(epoch);
-  }
-
-  async importExecutionPayload(
-    payloadInput: PayloadEnvelopeInput,
-    envelopeBytes: Uint8Array,
-    dataAvailabilityStatus: DataAvailabilityStatus,
-    opts: ImportExecutionPayloadOpts
-  ): Promise<{executionOptimistic: boolean}> {
-    const res =
-      this.beaconEngineMode === BeaconEngineMode.Worker
-        ? await this.core.importExecutionPayloadBytes(envelopeBytes, dataAvailabilityStatus, opts)
-        : await this.core.importExecutionPayload(
-            {data: payloadInput.getPayloadEnvelope(), bytes: envelopeBytes},
-            dataAvailabilityStatus,
-            opts
-          );
-    if (res.err !== null) {
-      const error = new PayloadImportError(payloadInput, res.err.type, res.err.message);
-      error.stack = res.err.stack;
-      throw error;
-    }
-    const {block, executionOptimistic} = res.result;
-    this.chainView.onChainViewUpdate?.({blocks: [fromChainViewBlockBytes(block)]});
-
-    // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.
-    const envelope = payloadInput.getPayloadEnvelope().message;
-    if (this.clock.currentSlot - envelope.payload.slotNumber < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
-      this.emitter.emit(routes.events.EventType.executionPayload, {
-        slot: envelope.payload.slotNumber,
-        builderIndex: envelope.builderIndex,
-        blockHash: toRootHex(envelope.payload.blockHash),
-        blockRoot: toRootHex(envelope.beaconBlockRoot),
-        executionOptimistic,
-      });
-    }
-    return {executionOptimistic};
+  batchPersistArchiveBlocks(
+    entries: {slot: Slot; bytes: Uint8Array; blockRoot: Uint8Array; parentRoot: Uint8Array}[]
+  ): Promise<void> {
+    return this.core.batchPersistArchiveBlocks(entries);
   }
 
   migrateCanonicalBlocks(): Promise<Slot[]> {
@@ -1422,6 +1294,21 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core.pruneHistory(finalizedEpoch, currentEpoch);
   }
 
+  pruneOnFinalized(): Promise<void> {
+    return this.core.pruneOnFinalized();
+  }
+
+  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): Promise<EffectiveBalanceIncrements | undefined> {
+    return this.core.getCheckpointEffectiveBalances(checkpoint);
+  }
+
+  getFinalizedEffectiveBalances(
+    finalizedCheckpoint: CheckpointWithHex,
+    validatorIndices: ValidatorIndex[]
+  ): Promise<number[] | null> {
+    return this.core.getFinalizedEffectiveBalances(finalizedCheckpoint, validatorIndices);
+  }
+
   loadOpPoolFromDisk(): Promise<void> {
     return this.core.loadOpPoolFromDisk();
   }
@@ -1429,6 +1316,134 @@ export class BeaconEngine implements IBeaconEngine {
   persistOpPoolToDisk(): Promise<void> {
     return this.core.persistOpPoolToDisk();
   }
+
+  // Private
+  /**
+   * `previousHead` must be read before the core call: ForkChoiceChainView already shows the new head afterwards.
+   */
+  private readonly onForkChoiceChanged = async (
+    changes: ForkChoiceChanges,
+    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
+  ): Promise<void> => {
+    if (!changes.headUpdate && !changes.justifiedCheckpointChanged) return;
+    let headUpdate: HeadUpdate<Root> | null = null;
+    if (this.chainView.onChainViewUpdate || changes.headUpdate) {
+      const snapshot = await this.core.getHeadSnapshot(
+        changes.headUpdate
+          ? {blockRoot: fromHex(previousHead.blockRoot), payloadStatus: previousHead.payloadStatus}
+          : undefined
+      );
+      const head = fromChainViewBlockBytes(snapshot.head);
+      const shouldEmitHeadUpdate =
+        this.chainView.onChainViewUpdate?.({
+          blocks: [head],
+          state: {
+            head,
+            justified: {...snapshot.justified, rootHex: toRootHex(snapshot.justified.root)},
+            finalized: {...snapshot.finalized, rootHex: toRootHex(snapshot.finalized.root)},
+          },
+          version: snapshot.version,
+        }) ?? true;
+      if (shouldEmitHeadUpdate) headUpdate = snapshot.headUpdate;
+    }
+    // Still honored when stale: the newer state already applied contains the change and its own flag may be false
+    if (changes.justifiedCheckpointChanged) {
+      this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
+    }
+    if (headUpdate) this.emitHeadUpdate(headUpdate);
+  };
+
+  private readonly onNewFinalizedCheckpoint = async (): Promise<void> => {
+    try {
+      const snapshot = await this.core.getFinalizedCheckpointSnapshot();
+      // Core uses byte roots for transport; archival consumers expect root hexes.
+      const toSummary = ({slot, blockRoot, payloadStatus}: FinalizedProtoSummary<Root>): FinalizedProtoSummary => ({
+        slot,
+        blockRoot: toRootHex(blockRoot),
+        payloadStatus,
+      });
+      const checkpointSnapshot = {
+        ...snapshot,
+        rootHex: toRootHex(snapshot.root),
+        blockSnapshot: {
+          canonical: snapshot.blockSnapshot.canonical.map(toSummary),
+          nonCanonical: snapshot.blockSnapshot.nonCanonical.map(toSummary),
+        },
+      };
+      // Finalization consumers read ChainView, so apply the checkpoint before emitting.
+      if (this.beaconEngineMode === BeaconEngineMode.Worker)
+        this.chainView.applyFinalizedCheckpoint?.(checkpointSnapshot);
+      this.emitter.emit(ChainEvent.updateStatus);
+      this.emitter.emit(ChainEvent.forkChoiceFinalized, checkpointSnapshot);
+    } catch (e) {
+      this.logger?.error("Error pulling finalized checkpoint", {}, e as Error);
+    }
+  };
+
+  private readonly onFatalError = (error: Error): void => {
+    this.emitter.emit(ChainEvent.fatalError, error);
+  };
+
+  private readonly emitHeadUpdate = (update: HeadUpdate<Root>): void => {
+    const {slot, payloadStatus, headRootChanged, epochTransition, executionOptimistic} = update;
+    const blockRoot = toRootHex(update.blockRoot);
+    try {
+      const stateRoot = toRootHex(update.stateRoot);
+      const previousDutyDependentRoot = toRootHex(update.previousDutyDependentRoot);
+      const currentDutyDependentRoot = toRootHex(update.currentDutyDependentRoot);
+      if (headRootChanged) {
+        this.emitter.emit(routes.events.EventType.head, {
+          slot,
+          block: blockRoot,
+          state: stateRoot,
+          epochTransition,
+          previousDutyDependentRoot,
+          currentDutyDependentRoot,
+          executionOptimistic,
+        });
+      }
+      this.emitter.emit(routes.events.EventType.headV2, {
+        version: this.config.getForkName(slot),
+        data: {
+          slot,
+          block: blockRoot,
+          state: stateRoot,
+          payloadStatus: payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+          epochTransition,
+          currentEpochDependentRoot: previousDutyDependentRoot,
+          nextEpochDependentRoot: currentDutyDependentRoot,
+          executionOptimistic,
+        },
+      });
+    } catch (e) {
+      this.logger?.debug("Error emitting head update", {slot, root: blockRoot, headRootChanged}, e as Error);
+    }
+    // Same trigger as unstable, where the network refreshes its status on the `head` event
+    if (headRootChanged) this.emitter.emit(ChainEvent.updateStatus);
+  };
+
+  private readonly onProposerSlashingProduced = (slashing: phase0.ProposerSlashing): void => {
+    this.emitter.emit(routes.events.EventType.proposerSlashing, slashing);
+    this.emitter.emit(ChainEvent.publishProposerSlashing, slashing);
+  };
+
+  private readonly onFastConfirmation = (confirmation: FastConfirmation): void => {
+    this.emitter.emit(routes.events.EventType.fastConfirmation, confirmation);
+  };
+
+  private readonly onLightClientOptimisticUpdate = ({data, slot}: SerializedLightClientData): void => {
+    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
+      version: this.config.getForkName(slot),
+      data: this.config.getPostAltairForkTypes(slot).LightClientOptimisticUpdate.deserialize(data),
+    });
+  };
+
+  private readonly onLightClientFinalityUpdate = ({data, slot}: SerializedLightClientData): void => {
+    this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
+      version: this.config.getForkName(slot),
+      data: this.config.getPostAltairForkTypes(slot).LightClientFinalityUpdate.deserialize(data),
+    });
+  };
 }
 
 function blockErrorFromFailure(

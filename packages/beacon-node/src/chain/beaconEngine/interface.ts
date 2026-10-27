@@ -299,53 +299,82 @@ export type ImportExecutionPayloadResult = {
 };
 
 export interface IBeaconEngineCore {
+  readonly config: BeaconConfig;
+
+  // Lifecycle
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
   persistAnchorState(): Promise<void>;
   initializeFromAnchor(): Promise<EngineBootstrapWithChainView>;
-  getChainViewSnapshot(): Promise<ChainViewSnapshot>;
+  initRegen(): Promise<void>;
+  // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
+  loadHistoricalStateRegen(): Promise<void>;
+  /** Tear down engine-owned resources (historical-state regen worker, BLS pool, …). */
+  close(): Promise<void>;
+
+  // Clock / fork choice / head
+  onSlot(slot: Slot): OnSlotResponse;
+  onEpoch(epoch: Epoch): void;
+  // Advance preparation for the next slot: recompute head, regen the prepare-state, predict a
+  // proposer-boost-reorg, precompute the epoch transition and prepare the EL/builder.
+  // Returns requested payload attributes and an optional parent for facade-owned DA pruning.
+  prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse>;
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): {headUpdate: boolean};
   /** Include head-event metadata only when a previous ChainView head is supplied. */
   getHeadSnapshot(previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot;
-  readonly config: BeaconConfig;
-
-  getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData>;
-  getLightClientUpdate(period: number): Promise<SerializedLightClientData>;
-  getLightClientOptimisticUpdate(): Promise<SerializedLightClientData | null>;
-  getLightClientFinalityUpdate(): Promise<SerializedLightClientData | null>;
-  getLightClientCommitteeRoot(period: number): Promise<Root>;
-  pruneLightClientNonCheckpointData(roots: Root[]): Promise<void>;
-  validateGossipLightClientOptimisticUpdateBytes(
-    bytes: Uint8Array,
-    fork: ForkName
-  ): Promise<GossipValidationResult<void>>;
-  validateGossipLightClientFinalityUpdateBytes(
-    bytes: Uint8Array,
-    fork: ForkName
-  ): Promise<GossipValidationResult<void>>;
-
-  // Developer API diagnostics only. Operational reads belong to BeaconChain.
-  getHeads(): Promise<ProtoBlock[]>;
-  getDebugForkChoice(): Promise<routes.debug.ForkChoiceResponse>;
-  getDebugForkChoiceV2(): Promise<routes.debug.ForkChoiceResponseV2>;
-  getFastConfirmationInfo(): Promise<routes.lodestar.FastConfirmationInfo>;
-  getProtoArrayNodes(): Promise<routes.debug.ProtoNodeList>;
-
+  getChainViewSnapshot(): Promise<ChainViewSnapshot>;
+  getFinalizedCheckpointSnapshot(): FinalizedCheckpointSnapshot<Root>;
+  isHeadOptimistic(): boolean;
+  getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo>;
   pauseFastConfirmation(): void;
   resumeFastConfirmation(): void;
 
-  // Cold block-archive writes + reverse-lookup (backfill).
-  persistArchiveBlock(
-    slot: Slot,
-    serializedBytes: Uint8Array,
-    blockRoot: Uint8Array,
-    parentRoot: Uint8Array
-  ): Promise<void>;
-  batchPersistArchiveBlocks(
-    entries: {slot: Slot; bytes: Uint8Array; blockRoot: Uint8Array; parentRoot: Uint8Array}[]
-  ): Promise<void>;
+  // Block processing
+  /**
+   * Consensus checks for API broadcast validation, without EL submission or retaining an import bundle.
+   * Never changes verifiedBlocks: a concurrent import may already own a bundle for this signed candidate.
+   * Records authenticated proposer headers without triggering slashing production.
+   * The facade must still wait for DA before publishing the block.
+   */
+  validateApiBlockBytes(
+    signedBlockRoot: SignedBlockRoot,
+    blockBytes: Uint8Array,
+    opts: VerifyBlocksOpts
+  ): Promise<Result<void, BlockFailure>>;
+  /**
+   * Marks verified proposals as known independently of DA and retains bundles by signed root until
+   * importBlock or discardVerifiedBlocks releases them.
+   */
+  verifyBlocksBytes(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>>;
+  /**
+   * Uses the same verification pipeline as verifyBlocksBytes, for one cached gossip candidate.
+   * validateGossipBlockBytes must run first and retain its block/bytes. An absent or evicted candidate
+   * returns GOSSIP_BLOCK_NOT_CACHED; its bytes are never requested again through this method.
+   */
+  verifyGossipBlockBytes(signedBlockRoot: SignedBlockRoot, opts: VerifyBlocksOpts): Promise<VerifyGossipBlockResult>;
+  /** Import and release the verification bundle for this exact signed candidate. */
+  importBlock(
+    signedBlockRoot: SignedBlockRoot,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportBlockOpts
+  ): Promise<Result<ImportBlockResponse, BlockFailure>>;
+  // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts.
+  // The facade supplies DA; the engine verifies, persists and imports the envelope in one call.
+  importExecutionPayloadBytes(
+    envelopeBytes: Uint8Array,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportExecutionPayloadOpts
+  ): Promise<Result<ImportExecutionPayloadResult, PayloadFailure>>;
+  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): void;
+  verifyAndObserveBlockProposerBytes(bytes: Uint8Array, root: RootHex): Promise<void>;
+  verifyEnvelopeForPublishBytes(bytes: Uint8Array, blockRootHex: RootHex): Promise<void>;
+  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean>;
+  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]>;
 
+  // Block production / builder
   produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse>;
   produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response>;
-
+  /** Register a URL already authenticated by the facade, so the engine can warm its local connection. */
+  registerAuthenticatedBuilder(url: string): Promise<void>;
   registerValidatorBytes(epoch: Epoch, registrationsBytes: Uint8Array): Promise<void>;
   /**
    * Pre-Fulu path: submit via Builder API v1 and return full block contents for BeaconChain to gossip.
@@ -360,15 +389,18 @@ export interface IBeaconEngineCore {
     signedBlindedBlockBytes: Uint8Array,
     fork: ForkPostBellatrix & ForkPreGloas
   ): Promise<void>;
+  produceAttestationData(
+    slot: Slot,
+    committeeIndex?: CommitteeIndex
+  ): Promise<ProductionResponse<phase0.AttestationData>>;
+  produceSyncCommitteeContribution(
+    subnet: SubcommitteeIndex,
+    slot: Slot,
+    blockRoot: Root
+  ): ProductionResponse<Uint8Array | null>;
+  getPayloadAttestationBlock(slot: Slot): PayloadAttestationBlock | null;
 
-  /** Register a URL already authenticated by the facade, so the engine can warm its local connection. */
-  registerAuthenticatedBuilder(url: string): Promise<void>;
-
-  // Advance preparation for the next slot: recompute head, regen the prepare-state, predict a
-  // proposer-boost-reorg, precompute the epoch transition and prepare the EL/builder.
-  // Returns requested payload attributes and an optional parent for facade-owned DA pruning.
-  prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse>;
-
+  // Validator duties / proposer cache
   // Validator duties. The engine resolves state internally and returns fully-populated duties (with
   // pubkeys) + dependentRoot; no `IBeaconStateView` crosses. Clock-derived values are passed in (the
   // engine holds no clock): `currentEpoch` for head-state resolution, and `checkpointWaitTimeoutMs` (a
@@ -393,45 +425,146 @@ export interface IBeaconEngineCore {
     indices: ValidatorIndex[],
     currentEpoch: Epoch
   ): Promise<{data: routes.validator.PtcDuty[]; dependentRoot: Root; head: ProtoBlock}>;
+  getProposerFeeRecipient(proposerIndex: ValidatorIndex): Promise<string | undefined>;
+  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<boolean>;
+  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<boolean>;
+  getProposerCacheValidatorIndices(): Promise<ValidatorIndex[]>;
+  prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void>;
+  /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
 
-  // State reads (regen-backed; no IBeaconStateView crosses — the engine resolves state internally and
-  // returns scalars / DTOs). See BLK-3.
-  dumpCacheSummary(): Promise<routes.lodestar.StateCacheItem[]>;
-  dropCache(): Promise<void>;
-  dumpRegenQueueItems(): Promise<{key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[]>;
-  registerLocalValidators(indices: ValidatorIndex[]): Promise<void>;
-  registerLocalValidatorsInSyncCommittee(
-    subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]
+  // Gossip / API validation
+  /**
+   * Always returns a validation result, including decoding failures. Invalid SSZ or a mismatched
+   * root returns Reject; unexpected internal failures are logged and return Ignore/UNEXPECTED_ERROR.
+   */
+  validateGossipBlockBytes(
+    signedBlockRoot: SignedBlockRoot,
+    blockBytes: Uint8Array,
+    fork: ForkName,
+    seenTimestampSec?: number
+  ): Promise<GossipBlockResult>;
+  validateGossipAttestationsSameAttData(
+    fork: ForkName,
+    attestations: GossipAttestation[],
+    seenTimestampSecs: number[]
+  ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}>;
+  validateApiAttestation(
+    fork: ForkName,
+    attestationOrBytes: ApiAttestation
+  ): Promise<GossipValidationResult<AttestationValidationResult>>;
+  validateGossipAggregateAndProofBytes(
+    aggregateBytes: Uint8Array,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
+  validateApiAggregateAndProofBytes(
+    aggregateBytes: Uint8Array,
+    fork: ForkName
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
+  validateGossipSyncCommitteeBytes(
+    syncCommitteeBytes: Uint8Array,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateApiSyncCommitteeBytes(syncCommitteeBytes: Uint8Array): Promise<GossipValidationResult<{subnets: number[]}>>;
+  validateSyncCommitteeGossipContributionAndProofBytes(
+    contributionBytes: Uint8Array,
+    skipValidationKnownParticipants?: boolean
+  ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>>;
+  validateApiSyncCommitteeContributionAndProofBytes(
+    contributionBytes: Uint8Array
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipBlobSidecarBytes(
+    blobBytes: Uint8Array,
+    fork: ForkName,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipFuluDataColumnSidecarBytes(
+    dataColumnBytes: Uint8Array,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipGloasDataColumnSidecarBytes(
+    dataColumnBytes: Uint8Array,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipPayloadAttestationMessageBytes(
+    payloadAttestationBytes: Uint8Array
+  ): Promise<GossipValidationResult<void>>;
+  validateApiPayloadAttestationMessageBytes(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateGossipExecutionPayloadEnvelopeBytes(
+    envelopeBytes: Uint8Array,
+    source: SourceMeta
+  ): Promise<GossipValidationResult<void>>;
+  validateApiExecutionPayloadEnvelopeBytes(
+    envelopeBytes: Uint8Array,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipExecutionPayloadBidBytes(
+    bidBytes: Uint8Array,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
+  validateApiExecutionPayloadBidBytes(bidBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateGossipProposerPreferencesBytes(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+
+  // Op pools
+  validateGossipAttesterSlashingBytes(
+    attesterSlashingBytes: Uint8Array,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>>;
+  validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void>;
+  validateGossipProposerSlashingBytes(proposerSlashingBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void>;
+  validateGossipVoluntaryExitBytes(voluntaryExitBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateApiVoluntaryExit(
+    voluntaryExit: phase0.SignedVoluntaryExit
+  ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}>;
+  drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]>;
+  insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>;
+  validateGossipBlsToExecutionChangeBytes(blsToExecutionChangeBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateApiBlsToExecutionChange(
+    blsToExecutionChange: capella.SignedBLSToExecutionChange,
+    preCapella: boolean
   ): Promise<void>;
-  registerApiBlock(seenTimestampSec: number, block: ValidatorMonitorBlock): Promise<void>;
-  registerApiExecutionPayloadEnvelope(
-    delaySec: number,
-    signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
-  ): Promise<void>;
-  onPoolSubmitUnaggregatedAttestation(
-    seenTimestampSec: number,
-    attestation: ValidatorMonitorAttestation,
-    subnet: SubnetID,
-    sentPeers: number
-  ): Promise<void>;
-  onPoolSubmitAggregatedAttestation(
-    seenTimestampSec: number,
-    attestation: ValidatorMonitorAttestation,
-    sentPeers: number
-  ): Promise<void>;
-  getMonitoredValidatorIndices(): Promise<ValidatorIndex[]>;
-  scrapeMetrics(): Promise<ScrapedMetrics>;
-  initRegen(): Promise<void>;
-  /** Tear down engine-owned resources (historical-state regen worker, BLS pool, …). */
-  close(): Promise<void>;
-  getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo>;
-  isHeadOptimistic(): boolean;
+  addAttestationToPool(
+    committeeIndex: CommitteeIndex,
+    attestation: SingleAttestation,
+    attDataRootHex: RootHex,
+    validatorCommitteeIndex: number,
+    committeeSize: number,
+    priority?: boolean
+  ): Promise<InsertOutcome>;
+  getAttestationAggregate(
+    slot: Slot,
+    dataRootHex: RootHex,
+    committeeIndex: CommitteeIndex
+  ): Promise<Attestation | null>;
+  getPoolAggregatedAttestations(bySlot?: Slot): Promise<Attestation[]>;
+  getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]>;
+  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): Promise<gloas.SignedProposerPreferences[]>;
+  getPoolAttesterSlashings(): Promise<AttesterSlashing[]>;
+  getPoolProposerSlashings(): Promise<phase0.ProposerSlashing[]>;
+  getPoolVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]>;
+  getPoolBlsToExecutionChanges(): Promise<capella.SignedBLSToExecutionChange[]>;
+
+  // Light client
+  getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData>;
+  getLightClientUpdate(period: number): Promise<SerializedLightClientData>;
+  getLightClientOptimisticUpdate(): Promise<SerializedLightClientData | null>;
+  getLightClientFinalityUpdate(): Promise<SerializedLightClientData | null>;
+  getLightClientCommitteeRoot(period: number): Promise<Root>;
+  pruneLightClientNonCheckpointData(roots: Root[]): Promise<void>;
+  validateGossipLightClientOptimisticUpdateBytes(
+    bytes: Uint8Array,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipLightClientFinalityUpdateBytes(
+    bytes: Uint8Array,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>>;
+
+  // API block reads
   getBlockRoot(blockId: ApiBlockId): Promise<BlockRootResponse | null>;
-  getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch>;
-  // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
-  loadHistoricalStateRegen(): Promise<void>;
-  /** Return serialized bytes of a persisted checkpoint state, or the latest safe checkpoint if omitted. */
-  getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
   getCanonicalBlockAtSlot(
     slot: Slot
   ): Promise<{block: Uint8Array; slot: Slot; executionOptimistic: boolean; finalized: boolean} | null>;
@@ -442,15 +575,15 @@ export interface IBeaconEngineCore {
     data: Uint8Array;
     meta: {executionOptimistic: boolean; finalized: boolean};
   }>;
+
+  // API state reads
+  /** Return serialized bytes of a persisted checkpoint state, or the latest safe checkpoint if omitted. */
+  getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
   // API state queries — the engine resolves the state internally (no IBeaconStateView crosses). `id` is
   // the resolved stateId (root / slot / checkpoint); the API keeps `resolveStateId` (400 on bad input).
   getSerializedState(
     id: ApiStateId
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
-  getFinalizedEffectiveBalances(
-    finalizedCheckpoint: CheckpointWithHex,
-    validatorIndices: ValidatorIndex[]
-  ): Promise<number[] | null>;
   getStateProof(id: ApiStateId, descriptor: Uint8Array): Promise<{proof: CompactMultiProof; fork: ForkName} | null>;
   getHistoricalSummaries(id: ApiStateId): Promise<{
     slot: Slot;
@@ -464,7 +597,6 @@ export interface IBeaconEngineCore {
     requests: {slot: Slot; epoch: Epoch; attestations: Attestation[]}[],
     forkSeq: ForkSeq
   ): Promise<IndexedAttestation[]>;
-  // beacon/state family — each returns the endpoint DTO (or invalid/null); no IBeaconStateView crosses.
   getStateBuilders(
     id: ApiStateId,
     builderIds: routes.beacon.BuilderId[],
@@ -522,7 +654,6 @@ export interface IBeaconEngineCore {
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | fulu.ProposerLookahead>>;
-  getHeadProposerPubkey(slot: Slot): Promise<Uint8Array>;
   getBuilderPendingPayments(
     id: ApiStateId,
     returnBytes: boolean
@@ -531,14 +662,12 @@ export interface IBeaconEngineCore {
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>>;
+  getHeadProposerPubkey(slot: Slot): Promise<Uint8Array>;
   getHeadParentPayload(): Promise<HeadParentPayload | undefined>;
   getActiveOrPendingValidators(indices: ValidatorIndex[]): Promise<Set<ValidatorIndex>>;
-  produceAttestationData(
-    slot: Slot,
-    committeeIndex?: CommitteeIndex
-  ): Promise<ProductionResponse<phase0.AttestationData>>;
-  getPayloadAttestationBlock(slot: Slot): PayloadAttestationBlock | null;
-  getFinalizedCheckpointSnapshot(): FinalizedCheckpointSnapshot<Root>;
+  getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch>;
+
+  // Rewards
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
   getAttestationsRewards(
     epoch: Epoch,
@@ -549,188 +678,51 @@ export interface IBeaconEngineCore {
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<rewards.SyncCommitteeRewards>;
 
-  /**
-   * Always returns a validation result, including decoding failures. Invalid SSZ or a mismatched
-   * root returns Reject; unexpected internal failures are logged and return Ignore/UNEXPECTED_ERROR.
-   */
-  validateGossipBlockBytes(
-    signedBlockRoot: SignedBlockRoot,
-    blockBytes: Uint8Array,
-    fork: ForkName,
-    seenTimestampSec?: number
-  ): Promise<GossipBlockResult>;
-  validateGossipSyncCommitteeBytes(
-    syncCommitteeBytes: Uint8Array,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>>;
-  validateApiSyncCommitteeBytes(syncCommitteeBytes: Uint8Array): Promise<GossipValidationResult<{subnets: number[]}>>;
-  validateSyncCommitteeGossipContributionAndProofBytes(
-    contributionBytes: Uint8Array,
-    skipValidationKnownParticipants?: boolean
-  ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>>;
-  validateApiSyncCommitteeContributionAndProofBytes(
-    contributionBytes: Uint8Array
-  ): Promise<GossipValidationResult<void>>;
-  validateGossipBlobSidecarBytes(
-    blobBytes: Uint8Array,
-    fork: ForkName,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>>;
-  validateGossipFuluDataColumnSidecarBytes(
-    dataColumnBytes: Uint8Array,
-    gossipSubnet: SubnetID
-  ): Promise<GossipValidationResult<void>>;
-  validateGossipGloasDataColumnSidecarBytes(
-    dataColumnBytes: Uint8Array,
-    gossipSubnet: SubnetID
-  ): Promise<GossipValidationResult<void>>;
-  validateGossipPayloadAttestationMessageBytes(
-    payloadAttestationBytes: Uint8Array
-  ): Promise<GossipValidationResult<void>>;
-  validateApiPayloadAttestationMessageBytes(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-  validateGossipAttestationsSameAttData(
-    fork: ForkName,
-    attestations: GossipAttestation[],
-    seenTimestampSecs: number[]
-  ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}>;
-  prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void>;
-  validateApiAttestation(
-    fork: ForkName,
-    attestationOrBytes: ApiAttestation
-  ): Promise<GossipValidationResult<AttestationValidationResult>>;
-  validateGossipAggregateAndProofBytes(
-    aggregateBytes: Uint8Array,
-    fork: ForkName,
-    seenTimestampSec: number
-  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
-  validateApiAggregateAndProofBytes(
-    aggregateBytes: Uint8Array,
-    fork: ForkName
-  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
-  validateGossipExecutionPayloadEnvelopeBytes(
-    envelopeBytes: Uint8Array,
-    source: SourceMeta
-  ): Promise<GossipValidationResult<void>>;
-  validateApiExecutionPayloadEnvelopeBytes(
-    envelopeBytes: Uint8Array,
-    seenTimestampSec: number
-  ): Promise<GossipValidationResult<void>>;
-  validateGossipExecutionPayloadBidBytes(
-    bidBytes: Uint8Array,
-    fork: ForkName,
-    seenTimestampSec: number
-  ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
-  validateApiExecutionPayloadBidBytes(bidBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-  validateGossipProposerPreferencesBytes(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-
-  // Op pool: gossip validate (+ insert on Accept) / API validate (throws, + insert) / REST reads. The
-  // pools live inside the engine (not exposed as cache objects); the facade reaches them only here.
-  validateGossipAttesterSlashingBytes(
-    attesterSlashingBytes: Uint8Array,
-    fork: ForkName
-  ): Promise<GossipValidationResult<void>>;
-  validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void>;
-  validateGossipProposerSlashingBytes(proposerSlashingBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-  validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void>;
-  validateGossipVoluntaryExitBytes(voluntaryExitBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-  validateApiVoluntaryExit(
-    voluntaryExit: phase0.SignedVoluntaryExit
-  ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}>;
-  drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]>;
-  insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>;
-  validateGossipBlsToExecutionChangeBytes(blsToExecutionChangeBytes: Uint8Array): Promise<GossipValidationResult<void>>;
-  validateApiBlsToExecutionChange(
-    blsToExecutionChange: capella.SignedBLSToExecutionChange,
-    preCapella: boolean
+  // Validator monitor
+  registerLocalValidators(indices: ValidatorIndex[]): Promise<void>;
+  registerLocalValidatorsInSyncCommittee(
+    subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]
   ): Promise<void>;
-  getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): Promise<gloas.SignedProposerPreferences[]>;
-  getPoolAttesterSlashings(): Promise<AttesterSlashing[]>;
-  getPoolProposerSlashings(): Promise<phase0.ProposerSlashing[]>;
-  getPoolVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]>;
-  getPoolBlsToExecutionChanges(): Promise<capella.SignedBLSToExecutionChange[]>;
+  registerApiBlock(seenTimestampSec: number, block: ValidatorMonitorBlock): Promise<void>;
+  registerApiExecutionPayloadEnvelope(
+    delaySec: number,
+    signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  ): Promise<void>;
+  onPoolSubmitUnaggregatedAttestation(
+    seenTimestampSec: number,
+    attestation: ValidatorMonitorAttestation,
+    subnet: SubnetID,
+    sentPeers: number
+  ): Promise<void>;
+  onPoolSubmitAggregatedAttestation(
+    seenTimestampSec: number,
+    attestation: ValidatorMonitorAttestation,
+    sentPeers: number
+  ): Promise<void>;
+  getMonitoredValidatorIndices(): Promise<ValidatorIndex[]>;
 
-  // Op pools (engine-internal): narrow add/read bridges for gossip handlers + REST/validator API.
-  addAttestationToPool(
-    committeeIndex: CommitteeIndex,
-    attestation: SingleAttestation,
-    attDataRootHex: RootHex,
-    validatorCommitteeIndex: number,
-    committeeSize: number,
-    priority?: boolean
-  ): Promise<InsertOutcome>;
-  getAttestationAggregate(
+  // Debug / metrics
+  // Developer API diagnostics only. Operational reads belong to BeaconChain.
+  getHeads(): Promise<ProtoBlock[]>;
+  getDebugForkChoice(): Promise<routes.debug.ForkChoiceResponse>;
+  getDebugForkChoiceV2(): Promise<routes.debug.ForkChoiceResponseV2>;
+  getFastConfirmationInfo(): Promise<routes.lodestar.FastConfirmationInfo>;
+  getProtoArrayNodes(): Promise<routes.debug.ProtoNodeList>;
+  dumpCacheSummary(): Promise<routes.lodestar.StateCacheItem[]>;
+  dropCache(): Promise<void>;
+  dumpRegenQueueItems(): Promise<{key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[]>;
+  scrapeMetrics(): Promise<ScrapedMetrics>;
+
+  // DB / archive / finalization
+  persistArchiveBlock(
     slot: Slot,
-    dataRootHex: RootHex,
-    committeeIndex: CommitteeIndex
-  ): Promise<Attestation | null>;
-  getPoolAggregatedAttestations(bySlot?: Slot): Promise<Attestation[]>;
-  produceSyncCommitteeContribution(
-    subnet: SubcommitteeIndex,
-    slot: Slot,
-    blockRoot: Root
-  ): ProductionResponse<Uint8Array | null>;
-  getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]>;
-
-  // Proposer cache + finalized balances (engine-internal).
-  getProposerFeeRecipient(proposerIndex: ValidatorIndex): Promise<string | undefined>;
-  trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<boolean>;
-  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<boolean>;
-  getProposerCacheValidatorIndices(): Promise<ValidatorIndex[]>;
-  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): Promise<EffectiveBalanceIncrements | undefined>;
-
-  /** Prune the (internal) op pool + seen-block-proposers on finalization — driven by the facade's finalized event. */
-  pruneOnFinalized(): Promise<void>;
-  /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
-  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): {headUpdate: boolean};
-  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]>;
-  verifyAndObserveBlockProposerBytes(bytes: Uint8Array, root: RootHex): Promise<void>;
-  verifyEnvelopeForPublishBytes(bytes: Uint8Array, blockRootHex: RootHex): Promise<void>;
-  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean>;
-
-  /**
-   * Consensus checks for API broadcast validation, without EL submission or retaining an import bundle.
-   * Never changes verifiedBlocks: a concurrent import may already own a bundle for this signed candidate.
-   * Records authenticated proposer headers without triggering slashing production.
-   * The facade must still wait for DA before publishing the block.
-   */
-  validateApiBlockBytes(
-    signedBlockRoot: SignedBlockRoot,
-    blockBytes: Uint8Array,
-    opts: VerifyBlocksOpts
-  ): Promise<Result<void, BlockFailure>>;
-  /**
-   * Marks verified proposals as known independently of DA and retains bundles by signed root until
-   * importBlock or discardVerifiedBlocks releases them.
-   */
-  verifyBlocksBytes(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>>;
-  /**
-   * Uses the same verification pipeline as verifyBlocksBytes, for one cached gossip candidate.
-   * validateGossipBlockBytes must run first and retain its block/bytes. An absent or evicted candidate
-   * returns GOSSIP_BLOCK_NOT_CACHED; its bytes are never requested again through this method.
-   */
-  verifyGossipBlockBytes(signedBlockRoot: SignedBlockRoot, opts: VerifyBlocksOpts): Promise<VerifyGossipBlockResult>;
-  /** Import and release the verification bundle for this exact signed candidate. */
-  importBlock(
-    signedBlockRoot: SignedBlockRoot,
-    dataAvailabilityStatus: DataAvailabilityStatus,
-    opts: ImportBlockOpts
-  ): Promise<Result<ImportBlockResponse, BlockFailure>>;
-  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): void;
-
-  onSlot(slot: Slot): OnSlotResponse;
-  onEpoch(epoch: Epoch): void;
-
-  // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts.
-  // The facade supplies DA; the engine verifies, persists and imports the envelope in one call.
-  importExecutionPayloadBytes(
-    envelopeBytes: Uint8Array,
-    dataAvailabilityStatus: DataAvailabilityStatus,
-    opts: ImportExecutionPayloadOpts
-  ): Promise<Result<ImportExecutionPayloadResult, PayloadFailure>>;
-
-  // --- DB ownership (blocks + states + payload envelopes) ---
-
+    serializedBytes: Uint8Array,
+    blockRoot: Uint8Array,
+    parentRoot: Uint8Array
+  ): Promise<void>;
+  batchPersistArchiveBlocks(
+    entries: {slot: Slot; bytes: Uint8Array; blockRoot: Uint8Array; parentRoot: Uint8Array}[]
+  ): Promise<void>;
   // TODO - beacon engine: preserve this ordered archive protocol in the worker implementation.
   migrateCanonicalBlocks(): Promise<Slot[]>;
   migrateExecutionPayloadEnvelopes(): Promise<Slot[]>;
@@ -739,13 +731,17 @@ export interface IBeaconEngineCore {
   deleteNonCanonicalBlocks(roots: Uint8Array[]): Promise<void>;
   completeFinalization(finalized: CheckpointWithHex): Promise<number>;
   getEarliestArchivedBlockSlot(): Promise<Slot | null>;
-
   /** Persist the latest finalized state to the (engine-owned) archive DB — used on graceful shutdown. */
   persistFinalizedStateToDisk(): Promise<void>;
-
   /** Prune finalized blocks, states and envelopes below the retention window. */
   pruneHistory(finalizedEpoch: Epoch, currentEpoch: Epoch): Promise<Slot>;
-
+  /** Prune the (internal) op pool + seen-block-proposers on finalization — driven by the facade's finalized event. */
+  pruneOnFinalized(): Promise<void>;
+  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): Promise<EffectiveBalanceIncrements | undefined>;
+  getFinalizedEffectiveBalances(
+    finalizedCheckpoint: CheckpointWithHex,
+    validatorIndices: ValidatorIndex[]
+  ): Promise<number[] | null>;
   /** Load / persist the (engine-owned) op pool from/to its DB repos. Facade lifecycle delegates here. */
   loadOpPoolFromDisk(): Promise<void>;
   persistOpPoolToDisk(): Promise<void>;
