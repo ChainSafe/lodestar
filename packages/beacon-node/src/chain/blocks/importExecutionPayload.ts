@@ -26,7 +26,6 @@ import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "./verifyExecutionPayloadEnvelope.js";
-import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
@@ -99,7 +98,8 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * are applied on the next block via processParentExecutionPayload.
  *
  * The DA wait must have run upstream (range sync awaits DA in `verifyBlocksInEpoch` for the
- * whole segment; gossip / API path uses the `processExecutionPayload` wrapper below).
+ * whole segment; the gossip / API / unknown-payload sync path waits in `PayloadEnvelopeProcessor`
+ * before the import is queued).
  *
  * Steps:
  * 1. Emit `execution_payload_available` event for payload attestation
@@ -371,22 +371,4 @@ export async function importExecutionPayload(
     blockHash: blockHashHex,
     delaySec,
   });
-}
-
-/**
- * Process an execution payload envelope end-to-end: wait for DA, then import.
- *
- * Used by the PayloadEnvelopeProcessor queue (gossip / API / unknown-payload sync) — i.e.
- * callers that have NOT already awaited DA themselves. Range sync's inline dispatch in
- * processBlocks skips this wrapper and calls `importExecutionPayload` directly, since
- * `verifyBlocksInEpoch` already awaited DA for the segment.
- */
-export async function processExecutionPayload(
-  this: BeaconChain,
-  payloadInput: PayloadEnvelopeInput,
-  signal: AbortSignal,
-  opts: ImportPayloadOpts = {}
-): Promise<void> {
-  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(this.config, [payloadInput], signal);
-  await importExecutionPayload.call(this, payloadInput, dataAvailabilityStatuses[0], opts);
 }

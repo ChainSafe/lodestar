@@ -16,6 +16,7 @@ import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.
 import {FullyVerifiedBlock, ImportBlockOpts, ProcessBlocksResult} from "./types.js";
 import {OrphanedPayloadEnvelope, assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
+import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
@@ -32,7 +33,12 @@ export class BlockProcessor {
     ProcessBlocksResult
   >;
 
-  constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
+  constructor(
+    chain: BeaconChain,
+    metrics: Metrics | null,
+    opts: BlockProcessOpts,
+    private readonly signal: AbortSignal
+  ) {
     this.jobQueue = new JobItemQueue<
       [IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts],
       ProcessBlocksResult
@@ -50,6 +56,17 @@ export class BlockProcessor {
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts: ImportBlockOpts = {}
   ): Promise<ProcessBlocksResult> {
+    // The queue is serial, waiting for blobs or columns inside the job would hold every later block,
+    // including the next slot's, behind one whose data never arrives
+    try {
+      await verifyBlocksDataAvailability(job, this.signal);
+    } catch (e) {
+      if (isErrorAborted(e)) {
+        return {orphaned: [], skipped: false};
+      }
+      throw e;
+    }
+
     return this.jobQueue.push(job, payloadEnvelopes, opts);
   }
 }
