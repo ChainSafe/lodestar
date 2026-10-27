@@ -129,7 +129,6 @@ describe("chain / blocks / PayloadEnvelopeProcessor", () => {
       stuckResolved = true;
     });
 
-    // The payload queued second must import while the first is still waiting for its columns
     await processor.processPayloadEnvelopeJob(payloadInput);
     expect(importExecutionPayload).toHaveBeenCalledTimes(1);
     expect(importExecutionPayload).toHaveBeenLastCalledWith(payloadInput, DataAvailabilityStatus.Available, {});
@@ -148,7 +147,6 @@ describe("chain / blocks / PayloadEnvelopeProcessor", () => {
     await expect(processor.processPayloadEnvelopeJob(payloadInput)).rejects.toThrow("DATA_UNAVAILABLE");
     expect(importExecutionPayload).not.toHaveBeenCalled();
 
-    // The failed wait is dropped so the import runs once the data arrives
     await processor.processPayloadEnvelopeJob(payloadInput);
     expect(importExecutionPayload).toHaveBeenCalledTimes(1);
   });

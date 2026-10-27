@@ -14,11 +14,9 @@ const QUEUE_MAX_LENGTH = 16;
  * PayloadEnvelopeProcessor imports payload envelopes in a queued fashion, one after the other.
  *
  * Jobs are triggered only on envelope arrival (gossip or API). The envelope may reach us before the
- * sampled data columns, so the data availability wait runs before the job is queued: the serial
- * worker only runs imports that can proceed. Waiting inside the job would let one envelope whose
- * columns never arrive hold every later payload import, including the head branch's, for up to a
- * slot. Duplicate triggers for the same payloadInput are deduped by sharing the in-flight promise:
- * every caller observes the real import outcome. Resolving duplicates early instead would let
+ * sampled data columns, the data availability wait runs before the job is queued. Duplicate
+ * triggers for the same payloadInput are deduped by sharing the in-flight promise: every caller
+ * observes the real import outcome. Resolving duplicates early instead would let
  * BlockInputSync mark a still-pending payload as processed, re-queue it, and spin re-processing
  * the same root until OOM while the import is blocked (e.g. EL syncing).
  */

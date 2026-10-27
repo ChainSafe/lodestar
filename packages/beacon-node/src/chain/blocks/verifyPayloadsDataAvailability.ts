@@ -22,9 +22,7 @@ export async function verifyPayloadsDataAvailability(
   const promises: Promise<gloas.DataColumnSidecar[]>[] = [];
   for (const payloadInput of payloadInputs) {
     if (!payloadInput.hasAllData()) {
-      // Sync and reconstruction keep pulling the data columns from the network while we wait. Past one slot
-      // the payload has lost its PTC vote, the timeout surfaces as DATA_UNAVAILABLE and sync retries the
-      // import once the columns arrive.
+      // Sync and reconstruction keep pulling the data columns from the network while we wait
       promises.push(
         payloadInput.waitForAllData(config.getSlotDurationMs(payloadInput.forkName), signal).catch((e) => {
           if (e instanceof TimeoutError) {

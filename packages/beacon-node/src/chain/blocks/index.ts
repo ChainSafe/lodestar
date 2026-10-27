@@ -56,8 +56,6 @@ export class BlockProcessor {
     payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts: ImportBlockOpts = {}
   ): Promise<ProcessBlocksResult> {
-    // The queue is serial, waiting for blobs or columns inside the job would hold every later block,
-    // including the next slot's, behind one whose data never arrives
     try {
       await verifyBlocksDataAvailability(job, this.signal);
     } catch (e) {

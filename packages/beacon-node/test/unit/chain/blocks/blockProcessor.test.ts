@@ -25,7 +25,6 @@ describe("chain / blocks / BlockProcessor", () => {
     // The DA wait is mocked, the input is only used as an identity key
     blockInput = {} as IBlockInput;
     vi.mocked(verifyBlocksDataAvailability).mockImplementation(() => dataAvailable());
-    // No relevant blocks, processBlocks returns before touching the chain
     vi.mocked(verifyBlocksSanityChecks).mockReturnValue({relevantBlocks: [], parentSlots: [], parentBlock: null});
   });
 
@@ -74,7 +73,6 @@ describe("chain / blocks / BlockProcessor", () => {
       stuckResolved = true;
     });
 
-    // The block queued second must import while the first is still waiting for its blobs or columns
     await processor.processBlocksJob([blockInput], null);
     expect(verifyBlocksSanityChecks).toHaveBeenCalledTimes(1);
     expect(vi.mocked(verifyBlocksSanityChecks).mock.calls[0][1]).toEqual([blockInput]);
