@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {fromHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
-import type {IBeaconEngine} from "../../../../../../src/chain/beaconEngine.js";
+import type {IBeaconEngine} from "../../../../../../src/chain/interface.js";
 import {withBeaconEngineFacade} from "../../../../../mocks/mockedBeaconChain.js";
 import {getApiTestModules} from "../../../../../utils/api.js";
 

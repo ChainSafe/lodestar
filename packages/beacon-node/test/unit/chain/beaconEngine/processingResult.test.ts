@@ -5,11 +5,11 @@ import {phase0, ssz} from "@lodestar/types";
 import {ErrorAborted, LodestarError, toRootHex} from "@lodestar/utils";
 import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {blockFailureFromError, payloadFailureFromError} from "../../../../src/chain/beaconEngine/processingResult.js";
-import type {IBeaconEngine} from "../../../../src/chain/beaconEngine.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import {computeSignedBlockRoot} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {BlockError, BlockErrorCode, BlockErrorType} from "../../../../src/chain/errors/blockError.js";
+import type {IBeaconEngine} from "../../../../src/chain/interface.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {MockedBeaconChain, getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 

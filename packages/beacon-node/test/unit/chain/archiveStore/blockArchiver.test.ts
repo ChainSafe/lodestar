@@ -9,7 +9,7 @@ import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
 import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import type {IBeaconEngine} from "../../../../src/chain/beaconEngine.js";
+import type {IBeaconEngine} from "../../../../src/chain/interface.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
