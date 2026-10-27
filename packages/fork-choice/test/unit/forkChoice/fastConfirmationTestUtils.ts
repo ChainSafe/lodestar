@@ -82,26 +82,32 @@ export function makeState(
   validatorCount: number,
   balancePerValidator: number,
   committeeSlots: Slot[],
-  slashedIndices: ValidatorIndex[] = []
+  slashedIndices: ValidatorIndex[] = [],
+  inactiveIndices: ValidatorIndex[] = []
 ): IBeaconStateView {
   const balances = new Uint16Array(Array.from({length: validatorCount}, () => balancePerValidator));
-  const activeIndices = Uint32Array.from(Array.from({length: validatorCount}, (_, i) => i as ValidatorIndex));
+  const allIndices = Uint32Array.from(Array.from({length: validatorCount}, (_, i) => i as ValidatorIndex));
   const slashed = new Set<ValidatorIndex>(slashedIndices);
-  const committees = new Map<Slot, Uint32Array>(committeeSlots.map((slot) => [slot, activeIndices]));
+  const inactive = new Set<ValidatorIndex>(inactiveIndices);
+  const activeIndices = allIndices.filter((i) => !inactive.has(i));
+  const zeroInactiveBalances = balances.map((balance, i) => (slashed.has(i) || inactive.has(i) ? 0 : balance));
+  // Committees keep inactive validators: they come from the head state, which can differ from the
+  // state a balance source is read from.
+  const committees = new Map<Slot, Uint32Array>(committeeSlots.map((slot) => [slot, allIndices]));
   const slot = (committeeSlots.length > 0 ? Math.max(...committeeSlots) : 0) as Slot;
 
   const state = {
     slot,
     epoch: computeEpochAtSlot(slot),
     effectiveBalanceIncrements: balances,
-    getEffectiveBalanceIncrementsZeroInactive: () => balances,
+    getEffectiveBalanceIncrementsZeroInactive: () => zeroInactiveBalances,
     getCurrentShuffling: () => ({activeIndices}) as {activeIndices: Uint32Array},
     getBeaconCommitteeCountPerSlot: () => 1,
-    getBeaconCommittee: (slot: Slot) => committees.get(slot) ?? activeIndices,
+    getBeaconCommittee: (slot: Slot) => committees.get(slot) ?? allIndices,
     getValidator: (index: ValidatorIndex) => ({
       slashed: slashed.has(index),
       activationEpoch: 0,
-      exitEpoch: FAR_FUTURE_EPOCH,
+      exitEpoch: inactive.has(index) ? 0 : FAR_FUTURE_EPOCH,
     }),
     validatorCount,
     processSlots: (nextSlot: Slot) => ({

@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "engines": {
-    "node": "^24.13.0"
+    "node": "^24.22.1"
   },
   "packageManager": "pnpm@11.0.0+sha512.5bd187500e49cc6c3d891d973b432c02b844a5eb7209172c90a517a3ef4f579ed5c23d409b699e6a9dc418ff7b2b1890e63f6d74f1d3fc49848f37779c89c84c",
   "workspaces": [
@@ -60,7 +60,7 @@
     "axios": "^1.13.2",
     "dotenv": "^16.4.5",
     "inquirer": "^9.1.5",
-    "libp2p": "3.3.9",
+    "libp2p": "3.4.0",
     "node-gyp": "^9.4.0",
     "playwright": "^1.60.0",
     "prettier": "^3.2.5",

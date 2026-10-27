@@ -24,6 +24,7 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasBeaconBlock,
   isGloasDataColumnSidecar,
   ssz,
   sszTypesFor,
@@ -150,6 +151,31 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
+  const incompletePayloadWaits = new WeakSet<PayloadEnvelopeInput>();
+
+  function scheduleIncompletePayloadEnvelope(payloadInput: PayloadEnvelopeInput, peer: string): void {
+    if (payloadInput.isComplete() || incompletePayloadWaits.has(payloadInput)) {
+      return;
+    }
+    incompletePayloadWaits.add(payloadInput);
+
+    const fork = config.getForkName(payloadInput.slot);
+    const cutoffTimeMs = getCutoffTimeMs(chain, payloadInput.slot, config.getPayloadDueMs(fork));
+    payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch(() => {
+      if (
+        payloadInput.isComplete() ||
+        chain.seenPayloadEnvelopeInputCache.get(payloadInput.blockRootHex) !== payloadInput
+      ) {
+        return;
+      }
+      chain.logger.debug("Payload envelope incomplete at payload deadline", payloadInput.getLogMeta());
+      chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+        payloadInput,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+    });
+  }
 
   /**
    * Add a gossip block to the seen caches. The proposer signature of the block MUST be verified.
@@ -692,11 +718,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
         if (e instanceof BlockError) {
           switch (e.type.code) {
-            case BlockErrorCode.DATA_UNAVAILABLE: {
-              // Error is quite frequent and not critical
+            case BlockErrorCode.DATA_UNAVAILABLE:
+              // Data did not arrive in time, BlockInputSync keeps pulling it and retries the import
               logLevel = LogLevel.debug;
               break;
-            }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
             // PARENT_BLOCK_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
             case BlockErrorCode.ALREADY_KNOWN:
@@ -764,7 +789,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // roots per proposer and slot, which bounds full imports over gossip to one alternate
           chain.seenBlockProposers.hasBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root) &&
           // A sibling with an unknown parent cannot be imported, sync fetches it if its branch becomes relevant
-          chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) !== null
+          chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) !== null &&
+          (!isGloasBeaconBlock(signedBlock.message) ||
+            chain.forkChoice.getBlockHexAndBlockHash(
+              toRootHex(signedBlock.message.parentRoot),
+              toRootHex(signedBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+            ) !== null)
         ) {
           const blockInput = cacheSignatureVerifiedBlock(
             signedBlock,
@@ -902,25 +932,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
             // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
 
-            if (!payloadInput.isComplete()) {
-              const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
-              // do not await here to not delay gossip validation
-              payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch((_e) => {
-                chain.logger.debug(
-                  "Waited for envelope and data after receiving gossip column. Cut-off reached so emitting incompletePayloadEnvelope",
-                  {
-                    dataColumnIndex: index,
-                    ...payloadInputMeta,
-                  }
-                );
-                // TODO GLOAS: UnknownBlockSync to handle this event
-                chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
-                  payloadInput,
-                  peer: peerIdStr,
-                  source: BlockInputSource.gossip,
-                });
-              });
-            }
+            scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
           } catch (e) {
             logger.debug(
               "Error handling gossip data column",
@@ -1330,6 +1342,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             peerIdStr,
           });
 
+          scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
+
           chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
             slot,
             builderIndex: envelope.builderIndex,
@@ -1343,6 +1357,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
             if (e instanceof PayloadError) {
               switch (e.type.code) {
+                case PayloadErrorCode.DATA_UNAVAILABLE:
+                  // Columns did not arrive in time, BlockInputSync keeps pulling them and retries the import
+                  logLevel = LogLevel.debug;
+                  break;
                 // BLOCK_NOT_IN_FORK_CHOICE should not happen, validateGossipExecutionPayloadEnvelope above
                 // already verified the block is in fork choice
                 case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:

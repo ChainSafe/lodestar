@@ -427,4 +427,25 @@ describe("httpClient json client", () => {
       if (!(e instanceof ErrorAborted)) throw Error(`Not an ErrorAborted: ${(e as Error).message}`);
     }
   });
+
+  it("should abort immediately when the signal is already aborted", async () => {
+    const {baseUrl} = await getServer({
+      ...testRoute,
+      handler: async () => new Promise((r) => setTimeout(r, 1000)),
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+    const httpClient = new HttpClient({
+      baseUrl,
+      globalInit: {signal: controller.signal, timeoutMs: 5000},
+    });
+
+    try {
+      await httpClient.request(testDefinition, {});
+      return Promise.reject(Error("did not throw"));
+    } catch (e) {
+      if (!(e instanceof ErrorAborted)) throw Error(`Not an ErrorAborted: ${(e as Error).message}`);
+    }
+  });
 });

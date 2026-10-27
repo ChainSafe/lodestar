@@ -1,3 +1,4 @@
+import {SerializedList} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
   ExecutionStatus,
@@ -36,6 +37,7 @@ export enum PayloadErrorCode {
   MISS_BLOCK_STATE = "PAYLOAD_ERROR_MISS_BLOCK_STATE",
   ENVELOPE_VERIFICATION_ERROR = "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR",
   INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
+  DATA_UNAVAILABLE = "PAYLOAD_ERROR_DATA_UNAVAILABLE",
 }
 
 export type PayloadErrorType =
@@ -63,6 +65,9 @@ export type PayloadErrorType =
     }
   | {
       code: PayloadErrorCode.INVALID_SIGNATURE;
+    }
+  | {
+      code: PayloadErrorCode.DATA_UNAVAILABLE;
     };
 
 export class PayloadError extends Error {
@@ -206,7 +211,7 @@ export async function importExecutionPayload(
     }
     inclusionListTransactions =
       dependentRoot === null
-        ? []
+        ? SerializedList.empty()
         : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
   }
 
@@ -382,6 +387,6 @@ export async function processExecutionPayload(
   signal: AbortSignal,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
-  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], signal);
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(this.config, [payloadInput], signal);
   await importExecutionPayload.call(this, payloadInput, dataAvailabilityStatuses[0], opts);
 }
