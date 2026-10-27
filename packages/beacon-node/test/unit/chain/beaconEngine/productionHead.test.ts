@@ -239,8 +239,8 @@ describe.each([
     expect(onHead).not.toHaveBeenCalled();
   });
 
-  it("does not pull or emit when pending production finishes after close", async () => {
-    const {engine, produce, produced, produceBlockWrapper, headPull, onView, onHead} = await setup(
+  it("pulls and emits when pending production finishes after close", async () => {
+    const {engine, produce, produced, produceBlockWrapper, headPull, onView, onHead, order} = await setup(
       fork,
       beaconEngineWorker
     );
@@ -256,8 +256,9 @@ describe.each([
     pending.resolve();
 
     expect(await production).toMatchObject({ok: true, headUpdate: true});
-    expect(headPull).not.toHaveBeenCalled();
-    expect(onView).not.toHaveBeenCalled();
-    expect(onHead).not.toHaveBeenCalled();
+    expect(headPull).toHaveBeenCalledOnce();
+    expect(onView).toHaveBeenCalledTimes(beaconEngineWorker ? 1 : 0);
+    expect(onHead).toHaveBeenCalledTimes(2);
+    expect(order).toEqual([...(beaconEngineWorker ? ["view"] : []), "head", "head_v2"]);
   });
 });

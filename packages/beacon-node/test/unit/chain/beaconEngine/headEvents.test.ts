@@ -241,7 +241,7 @@ describe("BeaconEngine head notifications", () => {
     );
   });
 
-  it.each([false, true])("does not pull or notify after close, including failed close=%s", async (failClose) => {
+  it.each([false, true])("pulls and notifies after close, including failed close=%s", async (failClose) => {
     if (failClose) close.mockRejectedValueOnce(Error("close failed"));
     if (failClose) await expect(engine.close()).rejects.toThrow("close failed");
     else await engine.close();
@@ -251,9 +251,9 @@ describe("BeaconEngine head notifications", () => {
     await engine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
     next = {...next, blockRoot: root(7)};
     await engine.onSlot(next.slot);
-    expect(headPull).not.toHaveBeenCalled();
-    expect(order).toEqual([]);
-    expect(onHead).not.toHaveBeenCalled();
-    expect(onHeadV2).not.toHaveBeenCalled();
+    expect(headPull).toHaveBeenCalledTimes(2);
+    expect(order).toEqual(["view", "head", "head_v2", "view", "head", "head_v2"]);
+    expect(onHead).toHaveBeenCalledTimes(2);
+    expect(onHeadV2).toHaveBeenCalledTimes(2);
   });
 });

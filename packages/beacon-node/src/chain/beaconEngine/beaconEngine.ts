@@ -114,7 +114,6 @@ export class BeaconEngine implements IBeaconEngine {
   private readonly serializedCache: SerializedCache;
   private readonly beaconEngineWorker: boolean;
   private readonly logger?: Logger;
-  private closed = false;
   /** Set by initializeFromAnchor() */
   chainView!: IChainView;
 
@@ -151,7 +150,6 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   async close(): Promise<void> {
-    this.closed = true;
     try {
       await this.core.close();
     } finally {
@@ -170,7 +168,7 @@ export class BeaconEngine implements IBeaconEngine {
     changes: ForkChoiceChanges,
     previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
   ): Promise<void> => {
-    if (this.closed || (!changes.headUpdate && !changes.justifiedCheckpointChanged)) return;
+    if (!changes.headUpdate && !changes.justifiedCheckpointChanged) return;
     let headUpdate: HeadUpdate<Root> | null = null;
     if (this.chainView.onChainViewUpdate || changes.headUpdate) {
       const snapshot = await this.core.getHeadSnapshot(
@@ -199,10 +197,8 @@ export class BeaconEngine implements IBeaconEngine {
   };
 
   private readonly onNewFinalizedCheckpoint = async (): Promise<void> => {
-    if (this.closed) return;
     try {
       const snapshot = await this.core.getFinalizedCheckpointSnapshot();
-      if (this.closed) return;
       // Core uses byte roots for transport; archival consumers expect root hexes.
       const toSummary = ({slot, blockRoot, payloadStatus}: FinalizedProtoSummary<Root>): FinalizedProtoSummary => ({
         slot,
@@ -1301,33 +1297,31 @@ export class BeaconEngine implements IBeaconEngine {
     } = res.result;
     const block = fromChainViewBlockBytes(res.result.block);
     const newHead = fromChainViewBlockBytes(res.result.newHead);
-    if (!this.closed) {
-      const isCurrent =
-        this.chainView.onChainViewUpdate?.({
-          blocks: [block, newHead],
-          state: {
-            head: newHead,
-            justified: {...justified, rootHex: toRootHex(justified.root)},
-            finalized: {...finalized, rootHex: toRootHex(finalized.root)},
-          },
-          version,
-        }) ?? true;
-      if (justifiedCheckpointChanged) {
-        this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
-      }
-      if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
-      if (isCurrent && headUpdate) {
-        this.emitHeadUpdate(headUpdate);
-      }
-      if (isCurrent && reorg) {
-        this.emitter.emit(routes.events.EventType.chainReorg, {
-          ...reorg,
-          newHeadBlock: toRootHex(reorg.newHeadBlock),
-          oldHeadBlock: toRootHex(reorg.oldHeadBlock),
-          newHeadState: toRootHex(reorg.newHeadState),
-          oldHeadState: toRootHex(reorg.oldHeadState),
-        });
-      }
+    const isCurrent =
+      this.chainView.onChainViewUpdate?.({
+        blocks: [block, newHead],
+        state: {
+          head: newHead,
+          justified: {...justified, rootHex: toRootHex(justified.root)},
+          finalized: {...finalized, rootHex: toRootHex(finalized.root)},
+        },
+        version,
+      }) ?? true;
+    if (justifiedCheckpointChanged) {
+      this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
+    }
+    if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
+    if (isCurrent && headUpdate) {
+      this.emitHeadUpdate(headUpdate);
+    }
+    if (isCurrent && reorg) {
+      this.emitter.emit(routes.events.EventType.chainReorg, {
+        ...reorg,
+        newHeadBlock: toRootHex(reorg.newHeadBlock),
+        oldHeadBlock: toRootHex(reorg.oldHeadBlock),
+        newHeadState: toRootHex(reorg.newHeadState),
+        oldHeadState: toRootHex(reorg.oldHeadState),
+      });
     }
     return {block, newHead, executionOptimistic};
   }
@@ -1339,7 +1333,6 @@ export class BeaconEngine implements IBeaconEngine {
   async onSlot(slot: Slot): Promise<void> {
     const previousHead = this.chainView.getHead();
     const {headUpdate, justifiedCheckpointChanged, finalizedCheckpointChanged} = await this.core.onSlot(slot);
-    if (this.closed) return;
     await this.onForkChoiceChanged({headUpdate, justifiedCheckpointChanged}, previousHead);
     if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
   }
@@ -1367,7 +1360,6 @@ export class BeaconEngine implements IBeaconEngine {
       throw error;
     }
     const {block, executionOptimistic} = res.result;
-    if (this.closed) return {executionOptimistic};
     this.chainView.onChainViewUpdate?.({blocks: [fromChainViewBlockBytes(block)]});
 
     // Source: unstable@1bf214377e chain/blocks/importExecutionPayload.ts, post-import event emission.

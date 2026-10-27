@@ -1098,7 +1098,7 @@ describe("bytes-based engine startup", () => {
     );
     await beaconChain.close();
     await beaconChain.beaconEngine.onSlot(head.slot + 1);
-    expect(onUpdate).toHaveBeenCalledOnce();
+    expect(onUpdate).toHaveBeenCalledTimes(2);
   });
 
   it("merges imported blocks and checkpoints before head events", async () => {
@@ -1573,8 +1573,8 @@ describe("bytes-based engine startup", () => {
       chain = undefined;
       afterClose.resolve(response);
       expect(await importingAtClose).toEqual({executionOptimistic: true});
-      expect(viewUpdates).toBe(replica ? 2 : 0);
-      expect(imported).toHaveBeenCalledOnce();
+      expect(viewUpdates).toBe(replica ? 3 : 0);
+      expect(imported).toHaveBeenCalledTimes(2);
     }
   );
 

@@ -244,8 +244,8 @@ describe("next-slot preparation head pull", () => {
     controller.abort();
   });
 
-  it("does not pull or emit when pending preparation finishes after close", async () => {
-    const {engine, view, regen, preparedState, previous, headPull, order, coreEmit} = await setup();
+  it("pulls and emits when pending preparation finishes after close", async () => {
+    const {engine, view, regen, preparedState, next, headPull, order, coreEmit} = await setup();
     const pending = defer<typeof preparedState>();
     regen.getBlockSlotState.mockReturnValueOnce(pending.promise);
     const preparing = engine.prepareForNextSlot(clockSlot, opts);
@@ -254,9 +254,9 @@ describe("next-slot preparation head pull", () => {
     await engine.close();
     pending.resolve(preparedState);
     expect(await preparing).toEqual({ok: true, data: null, headUpdate: true});
-    expect(view.getHead()).toEqual(toChainViewBlock(previous));
-    expect(headPull).not.toHaveBeenCalled();
-    expect(order).toEqual([]);
+    expect(view.getHead()).toEqual(toChainViewBlock(next));
+    expect(headPull).toHaveBeenCalledOnce();
+    expect(order).toEqual(["view", "head", "head_v2"]);
     expect(coreEmit).not.toHaveBeenCalled();
   });
 });

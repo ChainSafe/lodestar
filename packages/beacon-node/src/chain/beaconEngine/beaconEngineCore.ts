@@ -698,11 +698,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   }
 
   private assertStartupPhase(expected: "created" | "initialized" | "prepared"): void {
-    if (this.closed || this.startupPhase !== expected) {
+    if (this.startupPhase !== expected) {
       throw new LodestarError({
         code: "BEACON_ENGINE_STARTUP_PHASE",
         expected,
-        actual: this.closed ? "closed" : this.startupPhase,
+        actual: this.startupPhase,
       });
     }
   }
@@ -863,7 +863,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     this.seenAttestationDatas.onSlot(slot);
 
     // Source: unstable@2593063a82 chain/chain.ts#onClockSlot.
-    if (this.metrics && (slot + 1) % SLOTS_PER_EPOCH === 0 && !this.closed && !this.signal.aborted) {
+    if (this.metrics && (slot + 1) % SLOTS_PER_EPOCH === 0 && !this.signal.aborted) {
       clearTimeout(this.validatorMonitorTimeout);
       this.validatorMonitorTimeout = setTimeout(
         () => {
@@ -2701,7 +2701,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
 
   async scrapeMetrics(): ReturnType<IBeaconEngineCore["scrapeMetrics"]> {
     const metrics = this.metrics;
-    if (!metrics || this.closed) return {metrics: [], extra: ""};
+    if (!metrics) return {metrics: [], extra: ""};
     if (this.startupPhase === "ready") {
       metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
       metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
@@ -2743,7 +2743,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     // Defer to not block other checkpoint event handlers, which can cause lightclient update delays
     if (state) callInNextEventLoop(() => this.shufflingCache.processState(state));
 
-    if (!this.opts.disableArchiveOnCheckpoint && !this.closed && !this.signal.aborted) {
+    if (!this.opts.disableArchiveOnCheckpoint && !this.signal.aborted) {
       this.archiveStateOnCheckpoint().catch((err) => {
         this.logger.error("Error during state archive", {}, err);
       });

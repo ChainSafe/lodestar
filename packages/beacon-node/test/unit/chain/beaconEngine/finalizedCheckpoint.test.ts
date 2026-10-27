@@ -284,9 +284,10 @@ describe("finalized checkpoint pull", () => {
     const observedAtClose = [...observed];
     afterClose.resolve(response);
     await importingAtClose;
-    expect(observed).toEqual(observedAtClose);
-    expect(pull).toHaveBeenCalledOnce();
-    expect(reorg).toHaveBeenCalledOnce();
+    expect(observed).toEqual([...observedAtClose, "view", "head", "head_v2", "chain_reorg"]);
+    expect(pull).toHaveBeenCalledTimes(2);
+    expect(reorg).toHaveBeenCalledTimes(2);
+    expect(onFinalized).toHaveBeenCalledTimes(2);
   });
 
   it("returns detached bytes and the finalized block's optimism, independent of head", async () => {
@@ -561,7 +562,7 @@ describe("finalized checkpoint pull", () => {
     expect(onFinalized).toHaveBeenCalledOnce();
   });
 
-  it("discards a pending finalization pull after close", async () => {
+  it("applies a pending finalization pull and emits its update after close", async () => {
     const {core, engine, forkChoice, onFinalized, finalize} = await setup();
     forkChoice.updateTime.mockImplementationOnce(() => {
       finalize(1);
@@ -575,7 +576,9 @@ describe("finalized checkpoint pull", () => {
     await pending.promise;
     await engine.onSlot(SLOTS_PER_EPOCH + 1);
     expect(pull).toHaveBeenCalledOnce();
-    expect(onFinalized).not.toHaveBeenCalled();
+    expect(onFinalized).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({epoch: 1, rootHex: forkChoice.getFinalizedCheckpoint().rootHex})
+    );
   });
 
   it("applies a pending head pull and emits its update after close", async () => {
