@@ -15,3 +15,4 @@ export {StringType, stringType} from "./utils/stringType.js";
 // Typeguards
 export * from "./utils/typeguards.js";
 export * from "./utils/validatorStatus.js";
+export * from "./utils/withFork.js";

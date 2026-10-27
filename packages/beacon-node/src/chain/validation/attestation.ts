@@ -32,9 +32,11 @@ import {
   Slot,
   SubnetID,
   ValidatorIndex,
+  WithFork,
   isElectraSingleAttestation,
   phase0,
   ssz,
+  withFork,
 } from "@lodestar/types";
 import {assert, toRootHex} from "@lodestar/utils";
 import {sszDeserializeSingleAttestation} from "../../network/gossip/topic.js";
@@ -64,7 +66,7 @@ export type BatchResult = {
 };
 
 export type AttestationValidationResult = {
-  attestation: SingleAttestation;
+  attestation: WithFork<"SingleAttestation">;
   indexedAttestation: IndexedAttestation;
   subnet: SubnetID;
   attDataRootHex: RootHex;
@@ -159,7 +161,7 @@ export async function validateGossipAttestationsSameAttData(
     }
 
     const {validatorIndex, attestation} = step0Results[i];
-    const targetEpoch = attestation.data.target.epoch;
+    const targetEpoch = attestation.value.data.target.epoch;
     if (sigValid) {
       // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
       //
@@ -213,7 +215,7 @@ export async function validateApiAttestation(
     const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
 
     if (isValid) {
-      const targetEpoch = attestation.data.target.epoch;
+      const targetEpoch = attestation.value.data.target.epoch;
       chain.seenAttesters.add(targetEpoch, validatorIndex);
       return step0Result;
     }
@@ -565,21 +567,21 @@ async function validateAttestationNoSignatureCheck(
     signature,
   };
 
-  const attestation: SingleAttestation = attestationOrCache.attestation
-    ? attestationOrCache.attestation
+  const attestation: WithFork<"SingleAttestation"> = attestationOrCache.attestation
+    ? withFork("SingleAttestation", fork, attestationOrCache.attestation)
     : !isForkPostElectra(fork)
-      ? {
+      ? withFork("SingleAttestation", fork, {
           // Aggregation bits are already asserted above to not be null
           aggregationBits: aggregationBits as BitArray,
           data: attData,
           signature,
-        }
-      : {
+        })
+      : withFork("SingleAttestation", fork, {
           committeeIndex,
           attesterIndex: validatorIndex,
           data: attData,
           signature,
-        };
+        });
 
   return {
     attestation,

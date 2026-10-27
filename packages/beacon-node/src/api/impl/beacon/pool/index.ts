@@ -1,14 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {
-  ForkPostElectra,
-  ForkPreElectra,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostElectra,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
-import {Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {Epoch, isElectraAttestation, isWithForkPostElectra, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
@@ -101,8 +95,15 @@ export function getBeaconPoolApi({
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
-              await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+            const {
+              attestation: validatedAttestation,
+              indexedAttestation,
+              subnet,
+              attDataRootHex,
+              committeeIndex,
+              validatorCommitteeIndex,
+              committeeSize,
+            } = await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
             try {
               // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
@@ -122,19 +123,13 @@ export function getBeaconPoolApi({
               logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
-            if (isForkPostElectra(fork)) {
-              chain.emitter.emit(
-                routes.events.EventType.singleAttestation,
-                attestation as SingleAttestation<ForkPostElectra>
-              );
+            if (isWithForkPostElectra(validatedAttestation)) {
+              chain.emitter.emit(routes.events.EventType.singleAttestation, validatedAttestation.value);
             } else {
-              chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
+              chain.emitter.emit(routes.events.EventType.attestation, validatedAttestation.value);
               chain.emitter.emit(
                 routes.events.EventType.singleAttestation,
-                toElectraSingleAttestation(
-                  attestation as SingleAttestation<ForkPreElectra>,
-                  indexedAttestation.attestingIndices[0]
-                )
+                toElectraSingleAttestation(validatedAttestation.value, indexedAttestation.attestingIndices[0])
               );
             }
 

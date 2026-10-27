@@ -3,7 +3,7 @@ import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {ssz, withFork} from "@lodestar/types";
 import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
@@ -100,7 +100,7 @@ describe("validateGossipAttestationsSameAttData", () => {
         if (isValid) {
           phase0Results.push(
             Promise.resolve({
-              attestation: ssz.phase0.Attestation.defaultValue(),
+              attestation: withFork("SingleAttestation", ForkName.phase0, ssz.phase0.Attestation.defaultValue()),
               signatureSet,
               validatorIndex: i,
             } as Partial<Step0Result> as Step0Result)

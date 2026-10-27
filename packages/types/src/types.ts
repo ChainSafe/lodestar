@@ -383,6 +383,19 @@ export type TypesFor<F extends ForkName, K extends keyof TypesByFork[F] | void =
   ? TypesByFork[F]
   : TypesByFork[F][Exclude<K, void>];
 
+export type TypeKey = {[F in ForkName]: keyof TypesByFork[F]}[ForkName];
+
+/**
+ * A value paired with the fork it was decoded under. Distributes over `F` so that narrowing `fork` with one of the
+ * `isWithForkPost*` guards narrows `value` with it, which lets consumers read fork-specific fields without casting.
+ * Forks that do not define `K` are not members of the union.
+ */
+export type WithFork<K extends TypeKey, F extends ForkName = ForkName> = F extends ForkName
+  ? K extends keyof TypesByFork[F]
+    ? {fork: F; value: TypesByFork[F][K]}
+    : never
+  : never;
+
 export type BeaconBlockHeader<F extends ForkAll = ForkAll> = TypesByFork[F]["BeaconBlockHeader"];
 export type SignedBeaconBlockHeader<F extends ForkAll = ForkAll> = TypesByFork[F]["SignedBeaconBlockHeader"];
 

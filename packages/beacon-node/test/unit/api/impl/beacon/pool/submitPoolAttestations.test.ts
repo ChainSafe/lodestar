@@ -4,7 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {ssz, withFork} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool/index.js";
 import {AttestationPool} from "../../../../../../src/chain/opPools/attestationPool.js";
@@ -44,7 +44,7 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     modules.network.shouldAggregate = vi.fn().mockReturnValue(false);
 
     const validationResult: AttestationValidationResult = {
-      attestation: ssz.electra.SingleAttestation.defaultValue(),
+      attestation: withFork("SingleAttestation", ForkName.electra, ssz.electra.SingleAttestation.defaultValue()),
       indexedAttestation: ssz.electra.IndexedAttestation.defaultValue(),
       subnet,
       attDataRootHex: "0x00",
@@ -99,7 +99,7 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
     attestation.signature = SecretKey.fromBytes(Buffer.alloc(32, 1)).sign(dataRoot).toBytes();
     vi.mocked(validateGossipFnRetryUnknownRoot<AttestationValidationResult>).mockResolvedValue({
-      attestation,
+      attestation: withFork("SingleAttestation", ForkName.electra, attestation),
       indexedAttestation: ssz.electra.IndexedAttestation.defaultValue(),
       subnet,
       attDataRootHex: toRootHex(dataRoot),

@@ -1,23 +1,12 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {
-  ForkName,
-  ForkPostDeneb,
-  ForkPostElectra,
-  ForkPostGloas,
-  ForkPreElectra,
-  ForkSeq,
-  NUMBER_OF_COLUMNS,
-  isForkPostElectra,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ForkName, ForkPostDeneb, ForkPostGloas, ForkSeq, NUMBER_OF_COLUMNS, isForkPostGloas} from "@lodestar/params";
 import {computeTimeAtSlot, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   Root,
   RootHex,
   SignedBeaconBlock,
-  SingleAttestation,
   Slot,
   SubnetID,
   UintNum64,
@@ -26,6 +15,7 @@ import {
   gloas,
   isGloasBeaconBlock,
   isGloasDataColumnSidecar,
+  isWithForkPostElectra,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -1637,7 +1627,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
                 const insertOutcome = chain.attestationPool.add(
                   committeeIndex,
-                  attestation,
+                  attestation.value,
                   attDataRootHex,
                   validatorCommitteeIndex,
                   committeeSize
@@ -1657,19 +1647,13 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               }
             }
 
-            if (isForkPostElectra(fork)) {
-              chain.emitter.emit(
-                routes.events.EventType.singleAttestation,
-                attestation as SingleAttestation<ForkPostElectra>
-              );
+            if (isWithForkPostElectra(attestation)) {
+              chain.emitter.emit(routes.events.EventType.singleAttestation, attestation.value);
             } else {
-              chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
+              chain.emitter.emit(routes.events.EventType.attestation, attestation.value);
               chain.emitter.emit(
                 routes.events.EventType.singleAttestation,
-                toElectraSingleAttestation(
-                  attestation as SingleAttestation<ForkPreElectra>,
-                  indexedAttestation.attestingIndices[0]
-                )
+                toElectraSingleAttestation(attestation.value, indexedAttestation.attestingIndices[0])
               );
             }
           } catch (e) {
