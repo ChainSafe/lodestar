@@ -3,11 +3,13 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
   CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS,
   FINALIZED_ROOT_GINDEX,
+  FINALIZED_ROOT_GINDEX_EIP8453,
   FINALIZED_ROOT_GINDEX_ELECTRA,
   FINALIZED_ROOT_GINDEX_GLOAS,
   ForkName,
   ForkPostBellatrix,
   NEXT_SYNC_COMMITTEE_GINDEX_GLOAS,
+  isForkPostEip8453,
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -101,11 +103,14 @@ export function getCurrentSyncCommitteeBranch(syncCommitteesWitness: SyncCommitt
 
 export function getFinalizedRootProof(state: CachedBeaconStateAllForks): Uint8Array[] {
   const fork = state.config.getForkName(state.slot);
-  const finalizedRootGindex = isForkPostGloas(fork)
-    ? FINALIZED_ROOT_GINDEX_GLOAS
-    : state.epochCtx.isPostElectra()
-      ? FINALIZED_ROOT_GINDEX_ELECTRA
-      : FINALIZED_ROOT_GINDEX;
+  // [EIP8453] finalized_checkpoint is a HeightCheckpoint {height, root} at a new position in the state
+  const finalizedRootGindex = isForkPostEip8453(fork)
+    ? FINALIZED_ROOT_GINDEX_EIP8453
+    : isForkPostGloas(fork)
+      ? FINALIZED_ROOT_GINDEX_GLOAS
+      : state.epochCtx.isPostElectra()
+        ? FINALIZED_ROOT_GINDEX_ELECTRA
+        : FINALIZED_ROOT_GINDEX;
   return new Tree(state.node).getSingleProof(BigInt(finalizedRootGindex));
 }
 
