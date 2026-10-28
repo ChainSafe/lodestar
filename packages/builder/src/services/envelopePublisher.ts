@@ -145,7 +145,7 @@ export class EnvelopePublisher {
         },
         broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       },
-      {signal}
+      {signal, retries: 0}
     );
     response.assertOk();
     ledger.recordRevealPublished(identity.slot, identity.blockRoot, identity.blockHash, envelopeRoot);
