@@ -96,8 +96,6 @@
           "level": "off"
         },
         "noPrivateImports": "error",
-        // Biome 2.6 reports new findings, remove after fixing them in a separate PR
-        "noUnsafeOptionalChaining": "warn",
         // Catches imports in src/ that are not runtime dependencies
         "noUndeclaredDependencies": {
           "level": "error",
