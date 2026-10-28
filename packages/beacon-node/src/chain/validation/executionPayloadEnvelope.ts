@@ -1,4 +1,5 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
+import {isForkPostGloas} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
   getExecutionPayloadEnvelopeSignatureSet,
@@ -124,6 +125,27 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // [REJECT] The payload's block hash is computed correctly
+  const fork = chain.config.getForkName(block.slot);
+  if (!isForkPostGloas(fork)) {
+    throw new Error(`Expected gloas+ fork for execution payload envelope validation, got fork=${fork}`);
+  }
+  const computedBlockHash = computeExecutionBlockHash(
+    fork,
+    payload,
+    envelope.parentBeaconBlockRoot,
+    envelope.executionRequests
+  );
+  if (!byteArrayEquals(computedBlockHash, payload.blockHash)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      blockHash: toRootHex(payload.blockHash),
+      computedBlockHash: toRootHex(computedBlockHash),
+    });
+  }
+
   // Get the block state to verify the builder's signature.
   const blockState = await chain.regen
     .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
@@ -152,24 +174,6 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
       slot: payload.slotNumber,
       root: blockRootHex,
-    });
-  }
-
-  // [REJECT] The payload's block hash is computed correctly
-  // Checked after the signature, unlike the spec, so an unsigned envelope cannot make us hash its payload
-  const computedBlockHash = computeExecutionBlockHash(
-    blockState.forkName,
-    payload,
-    envelope.parentBeaconBlockRoot,
-    envelope.executionRequests
-  );
-  if (!byteArrayEquals(computedBlockHash, payload.blockHash)) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH,
-      slot: payload.slotNumber,
-      root: blockRootHex,
-      blockHash: toRootHex(payload.blockHash),
-      computedBlockHash: toRootHex(computedBlockHash),
     });
   }
 }

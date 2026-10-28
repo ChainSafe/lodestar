@@ -87,8 +87,16 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
     });
   });
 
-  it("checks the signature before the block hash", async () => {
+  it("checks the block hash before the signature", async () => {
     signedEnvelope.message.payload.transactions = SerializedList.fromArray([Uint8Array.from([2, 9, 9, 9])]);
+    vi.mocked(chain.bls.verifySignatureSets).mockResolvedValue(false);
+    await expect(validateGossipExecutionPayloadEnvelope(chain, signedEnvelope)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH},
+    });
+    expect(chain.bls.verifySignatureSets).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid signature on an envelope with a valid block hash", async () => {
     vi.mocked(chain.bls.verifySignatureSets).mockResolvedValue(false);
     await expect(validateGossipExecutionPayloadEnvelope(chain, signedEnvelope)).rejects.toMatchObject({
       type: {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE},
