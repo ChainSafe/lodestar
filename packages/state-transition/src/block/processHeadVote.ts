@@ -3,11 +3,15 @@ import {
   PAYLOAD_STATUS_EMPTY,
   PAYLOAD_STATUS_FULL,
   PAYLOAD_STATUS_PENDING,
-  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {eip8453} from "@lodestar/types";
 import {CachedBeaconStateEip8453} from "../types.js";
-import {getHeadVoteCommittee, getHeadVoteSigningRoot, isHeadVoteSameSlot} from "../util/eip8453.js";
+import {
+  getHeadVoteCommittee,
+  getHeadVoteParticipationIndex,
+  getHeadVoteSigningRoot,
+  isHeadVoteSameSlot,
+} from "../util/eip8453.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
 import {createAggregateSignatureSetFromComponents, verifySignatureSet} from "../util/signatureSets.js";
 
@@ -82,9 +86,7 @@ export function processHeadVote(
 
   // Record the seats that voted for the block of their slot; a validator with several seats fills all of them
   if (sameSlot) {
-    const participationIndex =
-      voteEpoch === currentEpoch ? SLOTS_PER_EPOCH + (data.slot % SLOTS_PER_EPOCH) : data.slot % SLOTS_PER_EPOCH;
-    const participation = state.headVoteParticipation.get(participationIndex);
+    const participation = state.headVoteParticipation.get(getHeadVoteParticipationIndex(state, data.slot));
     const voterSet = new Set(voterIndices);
     for (let position = 0; position < committee.length; position++) {
       if (voterSet.has(committee[position])) {

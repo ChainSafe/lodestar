@@ -16,6 +16,7 @@ import {
   ForkPreEip8453,
   ForkPreGloas,
   ForkSeq,
+  PAYLOAD_STATUS_PENDING,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -28,6 +29,9 @@ import {
   computeEpochAtSlot,
   computeTimeAtSlot,
   getExpectedGasLimit,
+  getHeadVoteCommittee,
+  getHeadVoteParticipationIndex,
+  isHeadVoteSameSlot,
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
@@ -1199,10 +1203,20 @@ function applyEip8453Operations(
   bodyEip8453.attesterSlashings = [];
   bodyEip8453.attestations = this.finalityAttestationPool.getAttestationsForBlock(state);
   // A vote counts as support when its block is in the tree and no later than the vote's slot
-  const {headVotes, headVoteSupport} = this.headVotePool.getHeadVotesForBlock(blockSlot, (rootHex, voteSlot) => {
-    const block = this.forkChoice.getBlockHexDefaultStatus(rootHex);
-    return block !== null && block.slot <= voteSlot;
-  });
+  const {headVotes, headVoteSupport} = this.headVotePool.getHeadVotesForBlock(
+    blockSlot,
+    (rootHex, voteSlot) => {
+      const block = this.forkChoice.getBlockHexDefaultStatus(rootHex);
+      return block !== null && block.slot <= voteSlot;
+    },
+    // Older votes only matter on chain as same-slot participation (builder payments); include the seats not yet set
+    (data, validatorIndex) => {
+      if (data.payloadStatus !== PAYLOAD_STATUS_PENDING || !isHeadVoteSameSlot(state, data)) return false;
+      const committee = getHeadVoteCommittee(state, data.slot);
+      const participation = state.headVoteParticipation.get(getHeadVoteParticipationIndex(state, data.slot));
+      return committee.some((index, position) => index === validatorIndex && !participation.get(position));
+    }
+  );
   bodyEip8453.headVotes = headVotes;
   bodyEip8453.headVoteSupport = headVoteSupport;
 }

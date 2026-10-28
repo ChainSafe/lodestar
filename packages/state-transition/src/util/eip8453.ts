@@ -189,6 +189,15 @@ export function isHeadVoteSameSlot(state: CachedBeaconStateEip8453, data: eip845
   return !byteArrayEquals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot - 1));
 }
 
+/**
+ * Index into `state.head_vote_participation` of a slot of the previous or current epoch: the previous epoch's
+ * slots come first, the current epoch's after them.
+ */
+export function getHeadVoteParticipationIndex(state: CachedBeaconStateEip8453, slot: Slot): number {
+  const voteEpoch = computeEpochAtSlot(slot);
+  return voteEpoch === state.epochCtx.epoch ? SLOTS_PER_EPOCH + (slot % SLOTS_PER_EPOCH) : slot % SLOTS_PER_EPOCH;
+}
+
 // Spec: has_builder_payment_quorum
 export function hasBuilderPaymentQuorum(participation: BitArray): boolean {
   const seats = participation.getTrueBitIndexes().length;

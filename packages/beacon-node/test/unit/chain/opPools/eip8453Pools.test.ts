@@ -34,6 +34,15 @@ describe("HeadVotePool", () => {
     expect(headVotes[1].voterIndices).toEqual([1]);
     expect(headVoteSupport[1].toBoolArray()).toEqual([false]);
     expect(pool.getVoteCount()).toBe(4);
+
+    // the proposer's filter keeps older voters selectively; previous-slot votes are never filtered
+    const filtered = pool.getHeadVotesForBlock(
+      10,
+      () => true,
+      (voteData, index) => voteData.slot === 8 && index !== 1
+    );
+    expect(filtered.headVotes).toHaveLength(1);
+    expect(filtered.headVotes[0].voterIndices).toEqual([3, 5, 7]);
   });
 
   it("prunes votes older than the previous epoch", () => {
