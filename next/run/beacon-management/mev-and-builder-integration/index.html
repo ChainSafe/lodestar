@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.a0c064e1.css">
-<script src="/lodestar/assets/js/runtime~main.fbc21b31.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.4db6d4bb.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.50afe3e7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -24,10 +24,12 @@
 <h2 class="anchor anchorWithStickyNavbar_d3C5" id="configure-lodestar-setup-for-mev">Configure Lodestar setup for MEV<a href="#configure-lodestar-setup-for-mev" class="hash-link" aria-label="Direct link to Configure Lodestar setup for MEV" title="Direct link to Configure Lodestar setup for MEV">​</a></h2>
 <p>All you have to do is:</p>
 <ol>
-<li>Provide lodestar beacon node with a Builder endpoint (which corresponds to the network you are running) via these additional flags:<!-- -->
+<li>
+<p>Provide lodestar beacon node with a Builder endpoint (which corresponds to the network you are running) via these additional flags:</p>
 <div class="language-shell codeBlockContainer_kkD2 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_u9N1"><pre tabindex="0" class="prism-code language-shell codeBlock_SI3U thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_zoFh"><span class="token-line" style="color:#000000"><span class="token parameter variable" style="color:rgb(9, 134, 88)">--builder</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">--builder.url</span><span class="token plain"> </span><span class="token operator" style="color:rgb(0, 0, 0)">&lt;</span><span class="token plain">builder/relay/boost url</span><span class="token operator" style="color:rgb(0, 0, 0)">&gt;</span><br></span></code></pre><div class="buttonGroup_iEFQ"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_jVq5" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_Cbpo"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_dzuM"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 </li>
-<li>Run lodestar validator client with these additional flags<!-- -->
+<li>
+<p>Run lodestar validator client with these additional flags</p>
 <div class="language-shell codeBlockContainer_kkD2 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_u9N1"><pre tabindex="0" class="prism-code language-shell codeBlock_SI3U thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_zoFh"><span class="token-line" style="color:#000000"><span class="token parameter variable" style="color:rgb(9, 134, 88)">--builder</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">--suggestedFeeRecipient</span><span class="token plain"> </span><span class="token operator" style="color:rgb(0, 0, 0)">&lt;</span><span class="token plain">your ethereum address</span><span class="token operator" style="color:rgb(0, 0, 0)">&gt;</span><br></span></code></pre><div class="buttonGroup_iEFQ"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_jVq5" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_Cbpo"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_dzuM"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 </li>
 </ol>
