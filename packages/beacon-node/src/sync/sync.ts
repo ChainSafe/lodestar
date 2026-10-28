@@ -230,7 +230,7 @@ export class BeaconSync implements IBeaconSync {
   /**
    * A behind peer's finalized checkpoint must be the canonical block in effect at the start slot of its epoch
    */
-  private async verifyPastFinalizedCheckpoint(peer: PeerIdStr, remote: Status): Promise<void> {
+  async verifyPastFinalizedCheckpoint(peer: PeerIdStr, remote: Status): Promise<void> {
     const startSlot = computeStartSlotAtEpoch(remote.finalizedEpoch);
     const root = toRootHex(remote.finalizedRoot);
     try {
