@@ -237,8 +237,7 @@
       "nursery": {
         // Need to enable this rule with exception to anonymous functions
         "useExplicitType": "off",
-        // Biome 2.6 reports new findings, restore to "error" after fixing them in a separate PR
-        "noFloatingPromises": "warn",
+        "noFloatingPromises": "error",
         "noMisusedPromises": "error"
       },
       "complexity": {
