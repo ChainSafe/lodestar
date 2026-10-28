@@ -314,9 +314,6 @@ importers:
       deepmerge:
         specifier: ^4.3.1
         version: 4.3.1
-      ethereum-cryptography:
-        specifier: ^2.2.1
-        version: 2.2.1
       fastify:
         specifier: ^5.8.1
         version: 5.12.6

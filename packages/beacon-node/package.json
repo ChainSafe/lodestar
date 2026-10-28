@@ -143,7 +143,6 @@
     "datastore-core": "^12.0.1",
     "datastore-level": "^13.0.1",
     "deepmerge": "^4.3.1",
-    "ethereum-cryptography": "^2.2.1",
     "fastify": "^5.8.1",
     "interface-datastore": "^10.0.1",
     "jwt-simple": "0.5.6",

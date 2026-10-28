@@ -1,5 +1,5 @@
+import crypto from "node:crypto";
 import {Input, RLP} from "@ethereumjs/rlp";
-import {keccak256} from "ethereum-cryptography/keccak.js";
 import {digest as sha256} from "@chainsafe/as-sha256";
 import {ForkPostBellatrix, ForkSeq} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, capella, deneb, gloas} from "@lodestar/types";
@@ -9,6 +9,10 @@ import {serializeExecutionRequestsToBytes} from "./types.js";
 /** keccak256(rlp([])), the ommers hash of every post-merge block */
 const EMPTY_OMMERS_HASH = fromHex("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347");
 const ZERO_NONCE = new Uint8Array(8);
+
+function keccak256(data: Uint8Array): Uint8Array {
+  return crypto.createHash("keccak-256").update(data).digest();
+}
 
 /**
  * Compute the execution block hash of `payload`: keccak256 of the RLP-encoded execution block header,
