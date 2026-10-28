@@ -2,6 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkName,
   ForkPreEip8453,
+  ForkSeq,
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -783,7 +784,8 @@ export function createValidatorMonitor(
 
       const rootCache = new RootHexCache(headState);
 
-      if (isStatePostAltair(headState)) {
+      // [EIP8453] the legacy per-epoch attestation summary reads participation flags the state no longer has
+      if (isStatePostAltair(headState) && config.getForkSeq(headState.slot) < ForkSeq.eip8453) {
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
         const prevEpochFork = config.getForkName(prevEpochStartSlot);
         const prevEpochTargetRoot = toRootHex(headState.getBlockRootAtSlot(prevEpochStartSlot));

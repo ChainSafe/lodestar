@@ -244,6 +244,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
       throw new Error("previousEpochParticipation is not available before Altair");
     }
+    // [EIP8453] participation flags are removed; the finality gadget tracks votes by height, so there is none
+    if (this.config.getForkSeq(this.cachedState.slot) >= ForkSeq.eip8453) return 0;
     return (this.cachedState as CachedBeaconStateAltair).previousEpochParticipation.get(validatorIndex);
   }
 
@@ -251,6 +253,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
       throw new Error("currentEpochParticipation is not available before Altair");
     }
+    if (this.config.getForkSeq(this.cachedState.slot) >= ForkSeq.eip8453) return 0;
     return (this.cachedState as CachedBeaconStateAltair).currentEpochParticipation.get(validatorIndex);
   }
 
