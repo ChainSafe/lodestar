@@ -790,19 +790,16 @@ export function getBeaconBlockApi(
         broadcastValidation,
         ...(submittedContents !== null ? {submittedBlobs: submittedContents.blobs.length} : {}),
       };
-      let validSignature = false;
       try {
         switch (broadcastValidation) {
           case routes.beacon.BroadcastValidation.gossip: {
             await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
-            validSignature = true;
             break;
           }
 
           case routes.beacon.BroadcastValidation.consensusAndEquivocation:
           case routes.beacon.BroadcastValidation.consensus: {
             await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
-            validSignature = true;
 
             // Verify the envelope against the post-block state
             const blockState = await chain.regen
@@ -988,7 +985,7 @@ export function getBeaconBlockApi(
         // make sure the verified signature is the one from this execution payload
         () =>
           chain.processExecutionPayload(payloadInput, {
-            validSignature: validSignature && payloadInput.getPayloadEnvelope() === signedExecutionPayloadEnvelope,
+            validSignature: payloadInput.getPayloadEnvelope() === signedExecutionPayloadEnvelope,
           }),
       ];
 
