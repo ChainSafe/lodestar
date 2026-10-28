@@ -10,7 +10,7 @@ const rootHex = toHexString(root);
 export const testData: GenericServerTestCases<Endpoints> = {
   getDebugChainHeadsV2: {
     args: undefined,
-    res: {data: [{slot: 1, root: rootHex, executionOptimistic: true}]},
+    res: {data: [{slot: 1, root: rootHex, executionOptimistic: true, payloadStatus: "full"}]},
   },
   getDebugForkChoice: {
     args: undefined,
