@@ -1,7 +1,7 @@
 import path from "node:path";
 import {expect} from "vitest";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkSeq} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq, isForkPostEip8453} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -97,7 +97,7 @@ const epochProcessing =
     return {
       testFunction: async (testcase, _directoryName, testCaseName) => {
         const stateTB = testcase.pre.clone();
-        const state = createCachedBeaconStateTest(stateTB, config);
+        const state = createCachedBeaconStateTest(stateTB, config, {lenient: isForkPostEip8453(fork)});
         const {metrics, register} = createSpecTestMetrics();
 
         const epochTransitionCache = beforeProcessEpoch(state, metrics);

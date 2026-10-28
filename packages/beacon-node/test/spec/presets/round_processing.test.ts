@@ -46,7 +46,9 @@ const roundProcessing: TestRunnerFn<RoundProcessingTestCase, BeaconStateAllForks
     testFunction: (testcase) => {
       // Alternative condition: the whole round transition must also reproduce `post_round` from `pre_round`
       if (testcase.pre_round !== undefined) {
-        const roundState = createCachedBeaconStateTest(testcase.pre_round.clone(), config) as CachedBeaconStateEip8453;
+        const roundState = createCachedBeaconStateTest(testcase.pre_round.clone(), config, {
+          lenient: true,
+        }) as CachedBeaconStateEip8453;
         if (testcase.post_round === undefined) {
           expect(() => epochFns.processRound(roundState)).toThrow();
         } else {
@@ -56,7 +58,9 @@ const roundProcessing: TestRunnerFn<RoundProcessingTestCase, BeaconStateAllForks
         }
       }
 
-      const state = createCachedBeaconStateTest(testcase.pre.clone(), config) as CachedBeaconStateEip8453;
+      const state = createCachedBeaconStateTest(testcase.pre.clone(), config, {
+        lenient: true,
+      }) as CachedBeaconStateEip8453;
       if (testcase.post === undefined) {
         // An absent post state requires the sub-transition to abort
         expect(() => roundTransitionFn(state)).toThrow();

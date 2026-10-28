@@ -1,7 +1,7 @@
 import path from "node:path";
 import {createChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName, ForkPreEip8453, ForkSeq, isForkPostGloas} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkPreEip8453, ForkSeq, isForkPostEip8453, isForkPostGloas} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -226,7 +226,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         ...getConfig(fork, epoch),
         ...loadSpecTestConfig(path.join(specTestDir, directoryName, testCaseName)),
       });
-      const cachedState = createCachedBeaconStateTest(state, config);
+      const cachedState = createCachedBeaconStateTest(state, config, {lenient: isForkPostEip8453(fork)});
 
       const postState = operationFn(cachedState, testcase);
       if (postState !== undefined) {

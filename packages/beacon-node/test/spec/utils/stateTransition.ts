@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostEip8453} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -24,7 +24,7 @@ export function createBeaconStateViewForTest(
   state: BeaconStateAllForks,
   chainConfig: ChainForkConfig = getConfig(fork)
 ): IBeaconStateView {
-  const cachedState = createCachedBeaconStateTest(state, chainConfig);
+  const cachedState = createCachedBeaconStateTest(state, chainConfig, {lenient: isForkPostEip8453(fork)});
   if (nativeStateTransition) {
     return createBeaconStateView({
       nativeStateTransition: true,
