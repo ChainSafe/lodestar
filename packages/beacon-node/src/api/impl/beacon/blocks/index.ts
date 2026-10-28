@@ -982,9 +982,10 @@ export function getBeaconBlockApi(
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-        // make sure the verified signature is the one from this execution payload
+        // Import execution payload
         () =>
           chain.processExecutionPayload(payloadInput, {
+            // make sure the verified signature is the one from this execution payload
             validSignature: payloadInput.getPayloadEnvelope() === signedExecutionPayloadEnvelope,
           }),
       ];
