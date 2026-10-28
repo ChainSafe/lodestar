@@ -172,9 +172,11 @@ describe("BeaconEngine validator data", () => {
     const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
     contribution.aggregationBits.set(3, true);
     getContribution.mockReturnValue(contribution);
-    const response = structuredClone(core.produceSyncCommitteeContribution(0, head.slot, fromHex(head.blockRoot)));
+    const response = structuredClone(
+      await core.produceSyncCommitteeContribution(0, head.slot, fromHex(head.blockRoot))
+    );
     expect(response).toMatchObject({ok: true, data: expect.any(Uint8Array)});
-    vi.spyOn(core, "produceSyncCommitteeContribution").mockReturnValue(response);
+    vi.spyOn(core, "produceSyncCommitteeContribution").mockResolvedValue(response);
     const result = await engine.produceSyncCommitteeContribution(0, head.slot, fromHex(head.blockRoot));
     if (!result.ok || !result.data) throw Error("Expected a contribution");
     expect(result.data.aggregationBits.getTrueBitIndexes()).toEqual([3]);

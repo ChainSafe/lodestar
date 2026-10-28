@@ -13,7 +13,6 @@ import {
   HeadSnapshot,
   ImportBlockResponse,
 } from "../../../../src/chain/beaconEngine/interface.js";
-import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/utils.js";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
@@ -67,7 +66,7 @@ async function setup() {
     clock: new ClockStopped(0),
     serializedCache: new SerializedCache(),
     logger,
-    beaconEngineMode: BeaconEngineMode.Worker,
+    coreEmitter: core.emitter,
   });
   const view = new ReplicateChainView(await core.getChainViewSnapshot());
   engine.chainView = view;
@@ -304,7 +303,7 @@ describe("finalized checkpoint pull", () => {
       payloadStatus,
     });
     const blockSnapshot = {canonical: ancestors.map(summarize), nonCanonical: [summarize(orphan)]};
-    const result = core.getFinalizedCheckpointSnapshot();
+    const result = await core.getFinalizedCheckpointSnapshot();
     expect(result).toEqual({
       epoch: 1,
       root: fromHex(block.blockRoot),
@@ -321,7 +320,7 @@ describe("finalized checkpoint pull", () => {
       summary.slot = -1;
     }
     block.executionStatus = ExecutionStatus.Valid;
-    const next = core.getFinalizedCheckpointSnapshot();
+    const next = await core.getFinalizedCheckpointSnapshot();
     expect(next.root).toEqual(fromHex(block.blockRoot));
     expect(next.stateRoot).toEqual(fromHex(block.stateRoot));
     expect(next.executionOptimistic).toBe(false);
@@ -337,7 +336,7 @@ describe("finalized checkpoint pull", () => {
     const coreEmit = vi.spyOn(events, "emit");
     const emit = vi.spyOn(emitter, "emit");
     await engine.onSlot(1);
-    expect(onSlot).toHaveReturnedWith({
+    expect(onSlot).toHaveResolvedWith({
       headUpdate: false,
       justifiedCheckpointChanged: false,
       finalizedCheckpointChanged: false,
@@ -392,7 +391,7 @@ describe("finalized checkpoint pull", () => {
       });
     }
     await engine.onSlot(SLOTS_PER_EPOCH);
-    expect(onSlot).toHaveReturnedWith({
+    expect(onSlot).toHaveResolvedWith({
       headUpdate: change !== "justified",
       justifiedCheckpointChanged: justifiedChanged,
       finalizedCheckpointChanged: false,
@@ -408,7 +407,7 @@ describe("finalized checkpoint pull", () => {
     expect(view.getJustifiedCheckpoint()).toEqual(structuredClone(forkChoice.getJustifiedCheckpoint()));
     const headEvents = change === "justified" ? [] : change === "payload" ? ["head_v2"] : ["head", "head_v2"];
     expect(observed).toEqual(["view", ...(justifiedChanged ? ["justified"] : []), ...headEvents]);
-    const snapshot = headPull.mock.results[0].value;
+    const snapshot = await headPull.mock.results[0].value;
     expect(structuredClone(snapshot)).toEqual(snapshot);
     snapshot.head.blockRoot.fill(0);
     snapshot.justified.root.fill(0);
@@ -453,7 +452,7 @@ describe("finalized checkpoint pull", () => {
       });
     });
     await engine.onSlot(SLOTS_PER_EPOCH);
-    expect(onSlot).toHaveReturnedWith({
+    expect(onSlot).toHaveResolvedWith({
       headUpdate: true,
       justifiedCheckpointChanged: false,
       finalizedCheckpointChanged: true,
@@ -490,7 +489,7 @@ describe("finalized checkpoint pull", () => {
     });
     const onSlot = vi.spyOn(core, "onSlot");
     await engine.onSlot(SLOTS_PER_EPOCH);
-    expect(onSlot).toHaveReturnedWith({
+    expect(onSlot).toHaveResolvedWith({
       headUpdate: false,
       justifiedCheckpointChanged: false,
       finalizedCheckpointChanged: true,
@@ -523,12 +522,12 @@ describe("finalized checkpoint pull", () => {
   it("emits each pulled checkpoint as soon as its data is available", async () => {
     const {core, engine, onFinalized, finalize} = await setup();
     finalize(1);
-    vi.spyOn(core, "onSlot").mockReturnValue({
+    vi.spyOn(core, "onSlot").mockResolvedValue({
       headUpdate: true,
       justifiedCheckpointChanged: false,
       finalizedCheckpointChanged: true,
     });
-    const checkpoint = core.getFinalizedCheckpointSnapshot();
+    const checkpoint = await core.getFinalizedCheckpointSnapshot();
     const pending = defer<FinalizedCheckpointSnapshot<Root>>();
     const pull = vi.fn<() => FinalizedCheckpointSnapshot<Root> | Promise<FinalizedCheckpointSnapshot<Root>>>();
     pull.mockReturnValueOnce(pending.promise).mockReturnValue(checkpoint);
@@ -573,7 +572,7 @@ describe("finalized checkpoint pull", () => {
     Object.assign(core, {getFinalizedCheckpointSnapshot: pull});
     await engine.onSlot(SLOTS_PER_EPOCH);
     await engine.close();
-    pending.resolve(BeaconEngineCore.prototype.getFinalizedCheckpointSnapshot.call(core));
+    pending.resolve(await BeaconEngineCore.prototype.getFinalizedCheckpointSnapshot.call(core));
     await pending.promise;
     await engine.onSlot(SLOTS_PER_EPOCH + 1);
     expect(pull).toHaveBeenCalledOnce();
@@ -597,7 +596,7 @@ describe("finalized checkpoint pull", () => {
     expect(pull).toHaveBeenCalledOnce();
     await engine.close();
     pending.resolve(
-      BeaconEngineCore.prototype.getHeadSnapshot.call(core, {
+      await BeaconEngineCore.prototype.getHeadSnapshot.call(core, {
         blockRoot: fromHex(previous.blockRoot),
         payloadStatus: previous.payloadStatus,
       })
@@ -689,7 +688,7 @@ describe("finalized checkpoint pull", () => {
       payloadStatus,
     });
     const expected = protoArray.getAllAncestorAndNonAncestorNodes(root(4), PayloadStatus.PENDING);
-    expect(core.getFinalizedCheckpointSnapshot().blockSnapshot).toEqual({
+    expect((await core.getFinalizedCheckpointSnapshot()).blockSnapshot).toEqual({
       canonical: expected.ancestors.map(summarize),
       nonCanonical: expected.nonAncestors.map(summarize),
     });
@@ -705,19 +704,19 @@ describe("finalized checkpoint pull", () => {
       anchor.dataAvailabilityStatus
     );
     expect(
-      core.getFinalizedCheckpointSnapshot().blockSnapshot,
+      (await core.getFinalizedCheckpointSnapshot()).blockSnapshot,
       "exclude payload variants imported after the finalized node"
     ).toEqual({
       canonical: expected.ancestors.map(summarize),
       nonCanonical: expected.nonAncestors.map(summarize),
     });
-    const captured = core.getFinalizedCheckpointSnapshot();
+    const captured = await core.getFinalizedCheckpointSnapshot();
     protoArray.pruneThreshold = protoArray.nodes.length;
     expect(protoArray.maybePrune(root(2))).toEqual([]);
-    expect(core.getFinalizedCheckpointSnapshot()).toEqual(captured);
+    expect(await core.getFinalizedCheckpointSnapshot()).toEqual(captured);
     protoArray.pruneThreshold = 0;
     protoArray.maybePrune(root(2));
-    const snapshot = core.getFinalizedCheckpointSnapshot().blockSnapshot;
+    const snapshot = (await core.getFinalizedCheckpointSnapshot()).blockSnapshot;
     expect(snapshot.canonical.map((block) => [toRootHex(block.blockRoot), block.payloadStatus])).toEqual([
       [root(4), PayloadStatus.PENDING],
       [root(2), PayloadStatus.FULL],

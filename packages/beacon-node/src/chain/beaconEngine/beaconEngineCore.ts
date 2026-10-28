@@ -313,7 +313,7 @@ import {
   HeadExecutionStateInfo,
   HeadParentPayload,
   HeadSnapshot,
-  IBeaconEngineCore,
+  IBeaconEngineCoreApi,
   ImportBlockResponse,
   ImportExecutionPayloadOpts,
   ImportExecutionPayloadResult,
@@ -359,7 +359,7 @@ const MAX_VERIFIED_PROPOSER_SIGNATURES = 3 * SLOTS_PER_EPOCH;
  * shared helpers or error paths. Both verification entrypoints retain live post-states in verifiedBlocks
  * until import/discard. Verification results expose only metadata; bundles never leave Core.
  */
-export class BeaconEngineCore implements IBeaconEngineCore {
+export class BeaconEngineCore implements IBeaconEngineCoreApi {
   private readonly aggregatorTracker = new AggregatorTracker();
   readonly config: BeaconConfig;
   readonly opts: IBeaconEngineOptions;
@@ -709,7 +709,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
   // Clock / fork choice / head
   // Source: unstable@75239241d4 chain/chain.ts#onClockSlot and #onClockEpoch.
   // [beacon-engine] BeaconChain forwards clock events; engine-owned maintenance stays here.
-  onSlot(slot: Slot): OnSlotResponse {
+  async onSlot(slot: Slot): Promise<OnSlotResponse> {
     const previousHead = this.forkChoice.getHead();
     const previousJustified = this.forkChoice.getJustifiedCheckpoint();
     const previousFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
@@ -747,7 +747,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return {headUpdate: this.isHeadChanged(previousHead), justifiedCheckpointChanged, finalizedCheckpointChanged};
   }
 
-  onEpoch(epoch: Epoch): void {
+  async onEpoch(epoch: Epoch): Promise<void> {
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);
     this.seenPayloadAttesters.prune(epoch);
@@ -775,12 +775,18 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     return response;
   }
 
+  /** Async per the IBeaconEngineCoreApi contract; Core-internal callers use recomputeForkChoiceHeadSync() */
+  async recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<{headUpdate: boolean}> {
+    return this.recomputeForkChoiceHeadSync(caller);
+  }
+
   /**
+   * Sync for Core-internal callers that read fork choice right after recomputing.
    * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/chain.ts#recomputeForkChoiceHead.
    * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
    * [beacon-engine] deviation: returns a refresh flag; public head events follow the facade's snapshot pull.
    */
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): {headUpdate: boolean} {
+  recomputeForkChoiceHeadSync(caller: ForkchoiceCaller): {headUpdate: boolean} {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
@@ -796,7 +802,9 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
   }
 
-  getHeadSnapshot(previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot {
+  async getHeadSnapshot(
+    previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">
+  ): Promise<HeadSnapshot> {
     const head = this.forkChoice.getHead();
     const justified = this.forkChoice.getJustifiedCheckpoint();
     const finalized = this.forkChoice.getFinalizedCheckpoint();
@@ -830,7 +838,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     };
   }
 
-  getFinalizedCheckpointSnapshot(): FinalizedCheckpointSnapshot<Root> {
+  async getFinalizedCheckpointSnapshot(): Promise<FinalizedCheckpointSnapshot<Root>> {
     const checkpoint = this.forkChoice.getFinalizedCheckpoint();
     const block = this.forkChoice.getFinalizedBlock();
     // Source: unstable@9cb14e3381 chain/archiveStore/utils/archiveBlocks.ts#archiveBlocks (archival selection).
@@ -853,7 +861,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     };
   }
 
-  isHeadOptimistic(): boolean {
+  async isHeadOptimistic(): Promise<boolean> {
     return isOptimisticBlock(this.forkChoice.getHead());
   }
 
@@ -871,11 +879,11 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     };
   }
 
-  pauseFastConfirmation(): void {
+  async pauseFastConfirmation(): Promise<void> {
     this.forkChoice.pauseFastConfirmation();
   }
 
-  resumeFastConfirmation(): void {
+  async resumeFastConfirmation(): Promise<void> {
     this.forkChoice.resumeFastConfirmation();
   }
 
@@ -1033,7 +1041,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     );
   }
 
-  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): void {
+  async discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void> {
     for (const signedBlockRoot of signedBlockRoots) {
       this.verifiedBlocks.delete(toSignedBlockRootHex(signedBlockRoot));
     }
@@ -1288,15 +1296,15 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }
   }
 
-  produceSyncCommitteeContribution(
+  async produceSyncCommitteeContribution(
     subnet: SubcommitteeIndex,
     slot: Slot,
     blockRoot: Root
-  ): ProductionResponse<Uint8Array | null> {
+  ): Promise<ProductionResponse<Uint8Array | null>> {
     return produceSyncCommitteeContribution.call(this, subnet, slot, blockRoot);
   }
 
-  getPayloadAttestationBlock(slot: Slot): PayloadAttestationBlock | null {
+  async getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null> {
     const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
     return block ? {blockRoot: block.blockRoot, slot: block.slot} : null;
   }
@@ -2561,7 +2569,7 @@ export class BeaconEngineCore implements IBeaconEngineCore {
     }));
   }
 
-  async scrapeMetrics(): ReturnType<IBeaconEngineCore["scrapeMetrics"]> {
+  async scrapeMetrics(): ReturnType<IBeaconEngineCoreApi["scrapeMetrics"]> {
     const metrics = this.metrics;
     if (!metrics) return {metrics: [], extra: ""};
     if (this.startupPhase === "ready") {

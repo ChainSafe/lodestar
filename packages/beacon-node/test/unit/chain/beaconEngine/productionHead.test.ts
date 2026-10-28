@@ -88,7 +88,7 @@ async function setup(fork: ForkName.bellatrix | ForkName.gloas, beaconEngineMode
     emitter,
     logger,
     serializedCache: new SerializedCache(),
-    beaconEngineMode,
+    ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: core.emitter} : {}),
   });
   const view =
     beaconEngineMode === BeaconEngineMode.Worker

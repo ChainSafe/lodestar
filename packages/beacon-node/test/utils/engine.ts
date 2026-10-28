@@ -112,7 +112,7 @@ export function createTestBeaconEngine(
     emitter,
     clock,
     serializedCache,
-    beaconEngineMode,
+    ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: beaconEngineCore.emitter} : {}),
   });
   return {
     ...chainModules,
@@ -128,7 +128,7 @@ export function createTestBeaconEngine(
 
 /** Access the in-process core for tests that inspect or mutate consensus internals. */
 export function getBeaconEngineCore(engine: IBeaconEngine): BeaconEngineCore {
-  const core: unknown = Reflect.get(engine, "core");
+  const core: unknown = Reflect.get(engine, "coreApi");
   if (!(core instanceof BeaconEngineCore)) throw Error("Expected an in-process BeaconEngineCore");
   return core;
 }

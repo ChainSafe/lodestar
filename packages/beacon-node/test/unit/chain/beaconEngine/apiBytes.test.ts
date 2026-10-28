@@ -79,19 +79,11 @@ describe("BeaconEngineCore API bytes", () => {
       clock: core.clock,
       emitter: new ChainEventEmitter(),
       serializedCache: cache,
-      beaconEngineMode,
+      ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: core.emitter} : {}),
     });
   }
 
-  it("rejects native mode before subscribing to core events", () => {
-    const subscribe = vi.spyOn(core.emitter, "on");
-    expect(() => facade(BeaconEngineMode.Native)).toThrowError(
-      expect.objectContaining({type: {code: "BEACON_ENGINE_NATIVE_NOT_IMPLEMENTED"}})
-    );
-    expect(subscribe).not.toHaveBeenCalled();
-  });
-
-  it("uses the object method when the mode is omitted", async () => {
+  it("uses the object method with a main-thread core", async () => {
     const value = ssz.altair.SyncCommitteeMessage.defaultValue();
     const bytes = ssz.altair.SyncCommitteeMessage.serialize(value);
     const validate = vi.spyOn(core, "validateApiSyncCommittee").mockResolvedValue(accept({subnets: [0]}));

@@ -113,7 +113,7 @@ describe("BeaconEngine block persistence", () => {
         value: {add: vi.fn(), pruneBelowParent: vi.fn()},
       });
       Object.assign(chain.beaconEngine, {
-        recomputeForkChoiceHead: BeaconEngineCore.prototype.recomputeForkChoiceHead,
+        recomputeForkChoiceHeadSync: BeaconEngineCore.prototype.recomputeForkChoiceHeadSync,
         getHeadUpdate: BeaconEngineCore.prototype.getHeadUpdate,
       });
       chain.forkChoice.onBlock.mockImplementation(() => {

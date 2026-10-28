@@ -6,7 +6,6 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
-import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/utils.js";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
@@ -101,7 +100,7 @@ describe("BeaconEngine head notifications", () => {
       clock: new ClockStopped(0),
       serializedCache: new SerializedCache(),
       logger: core.logger,
-      beaconEngineMode: BeaconEngineMode.Worker,
+      coreEmitter: core.emitter,
     });
     view = new ReplicateChainView(await core.getChainViewSnapshot());
     engine.chainView = view;
@@ -201,9 +200,9 @@ describe("BeaconEngine head notifications", () => {
     expect(headPull).not.toHaveBeenCalled();
   });
 
-  it("returns a synchronous change flag without publishing from Core", () => {
+  it("returns a change flag without publishing from Core", async () => {
     const coreEmit = vi.spyOn(events, "emit");
-    expect(core.recomputeForkChoiceHead(ForkchoiceCaller.importBlock)).toEqual({headUpdate: true});
+    expect(await core.recomputeForkChoiceHead(ForkchoiceCaller.importBlock)).toEqual({headUpdate: true});
     expect(coreEmit).not.toHaveBeenCalled();
     expect(view.getHead()).toEqual(toChainViewBlock(previous));
   });

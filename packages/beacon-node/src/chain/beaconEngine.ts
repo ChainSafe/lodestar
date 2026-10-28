@@ -43,7 +43,7 @@ import {IClock} from "../util/clock.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {deserializeError} from "../util/serializedError.js";
 import type {BeaconEngineCore} from "./beaconEngine/beaconEngineCore.js";
-import {BeaconEngineEvent, FastConfirmation, HeadUpdate} from "./beaconEngine/events.js";
+import {BeaconEngineEvent, FastConfirmation, HeadUpdate, IBeaconEngineEventBus} from "./beaconEngine/events.js";
 import {GossipBlockResult} from "./beaconEngine/gossipValidation/block.js";
 import {GossipValidationResult} from "./beaconEngine/gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./beaconEngine/initialization.js";
@@ -56,6 +56,7 @@ import {
   FinalizedProtoSummary,
   HeadExecutionStateInfo,
   HeadParentPayload,
+  IBeaconEngineCoreApi,
   ImportBlockResult,
   ImportExecutionPayloadOpts,
   PayloadAttestationBlock,
@@ -70,7 +71,6 @@ import {
   SubmitBlindedBlockResponse,
   VerifyBlocksOpts,
 } from "./beaconEngine/interface.js";
-import {BeaconEngineMode, assertSupportedBeaconEngineMode} from "./beaconEngine/options.js";
 import {BlockFailure, SerializedBlockErrorType} from "./beaconEngine/processingResult.js";
 import {ProposerPreparationData} from "./beaconProposerCache.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/index.js";
@@ -97,130 +97,127 @@ const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
 type ForkChoiceChanges = {headUpdate: boolean; justifiedCheckpointChanged: boolean};
 
+/** A `BeaconEngineCore` instance means main-thread mode, passing decoded objects without serialization */
 export type BeaconEngineModules = {
-  core: BeaconEngineCore;
   config: BeaconConfig;
   emitter: ChainEventEmitter;
   clock: IClock;
   serializedCache: SerializedCache;
-  beaconEngineMode?: BeaconEngineMode;
   logger?: Logger;
-};
+} & ({core: BeaconEngineCore} | {core: IBeaconEngineCoreApi; coreEmitter: IBeaconEngineEventBus});
 
 export class BeaconEngine implements IBeaconEngine {
   readonly config: BeaconConfig;
-  private readonly core: BeaconEngineCore;
+  private readonly coreApi: IBeaconEngineCoreApi;
+  /** Only set in main-thread mode, where decoded objects are passed to core without serialization */
+  private readonly core: BeaconEngineCore | null;
+  // TODO - beacon engine: native engine cannot provide a Node EventEmitter; define core events as plain-data messages
+  private readonly coreEmitter: IBeaconEngineEventBus;
   private readonly emitter: ChainEventEmitter;
   private readonly clock: IClock;
   private readonly serializedCache: SerializedCache;
-  private readonly beaconEngineMode: BeaconEngineMode;
   private readonly logger?: Logger;
   /** Set by initializeFromAnchor() */
   chainView!: IChainView;
 
-  constructor({
-    core,
-    config,
-    emitter,
-    clock,
-    serializedCache,
-    beaconEngineMode = BeaconEngineMode.MainThread,
-    logger,
-  }: BeaconEngineModules) {
-    assertSupportedBeaconEngineMode(beaconEngineMode);
-
-    this.core = core;
+  constructor(modules: BeaconEngineModules) {
+    const {config, emitter, clock, serializedCache, logger} = modules;
+    if ("coreEmitter" in modules) {
+      this.coreApi = modules.core;
+      this.core = null;
+      this.coreEmitter = modules.coreEmitter;
+    } else {
+      this.coreApi = modules.core;
+      this.core = modules.core;
+      this.coreEmitter = modules.core.emitter;
+    }
     this.config = config;
     this.emitter = emitter;
     this.clock = clock;
     this.serializedCache = serializedCache;
-    this.beaconEngineMode = beaconEngineMode;
     this.logger = logger;
-    // TODO - beacon engine: in worker mode, post core notifications to a main-thread event bus.
-    this.core.emitter.on(BeaconEngineEvent.fatalError, this.onFatalError);
-    this.core.emitter.on(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
-    this.core.emitter.on(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
-    this.core.emitter.on(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
-    this.core.emitter.on(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.coreEmitter.on(BeaconEngineEvent.fatalError, this.onFatalError);
+    this.coreEmitter.on(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
+    this.coreEmitter.on(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
+    this.coreEmitter.on(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+    this.coreEmitter.on(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
   }
 
   // Lifecycle
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary> {
-    return this.core.prepareAnchorState(stateBytes);
+    return this.coreApi.prepareAnchorState(stateBytes);
   }
 
   persistAnchorState(): Promise<void> {
-    return this.core.persistAnchorState();
+    return this.coreApi.persistAnchorState();
   }
 
   async initializeFromAnchor(): Promise<EngineBootstrap> {
-    const {chainViewSnapshot, ...bootstrap} = await this.core.initializeFromAnchor();
+    const {chainViewSnapshot, ...bootstrap} = await this.coreApi.initializeFromAnchor();
     this.chainView =
-      this.beaconEngineMode === BeaconEngineMode.Worker
-        ? new ReplicateChainView(chainViewSnapshot, this.logger)
-        : new ForkChoiceChainView(this.core);
+      this.core === null ? new ReplicateChainView(chainViewSnapshot, this.logger) : new ForkChoiceChainView(this.core);
     return bootstrap;
   }
 
   initRegen(): Promise<void> {
-    return this.core.initRegen();
+    return this.coreApi.initRegen();
   }
 
   loadHistoricalStateRegen(): Promise<void> {
-    return this.core.loadHistoricalStateRegen();
+    return this.coreApi.loadHistoricalStateRegen();
   }
 
   async close(): Promise<void> {
     try {
-      await this.core.close();
+      await this.coreApi.close();
     } finally {
-      this.core.emitter.off(BeaconEngineEvent.fatalError, this.onFatalError);
-      this.core.emitter.off(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
-      this.core.emitter.off(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
-      this.core.emitter.off(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
-      this.core.emitter.off(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+      this.coreEmitter.off(BeaconEngineEvent.fatalError, this.onFatalError);
+      this.coreEmitter.off(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
+      this.coreEmitter.off(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
+      this.coreEmitter.off(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+      this.coreEmitter.off(BeaconEngineEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     }
   }
 
   // Clock / fork choice / head
   async onSlot(slot: Slot): Promise<void> {
     const previousHead = this.chainView.getHead();
-    const {headUpdate, justifiedCheckpointChanged, finalizedCheckpointChanged} = await this.core.onSlot(slot);
+    const {headUpdate, justifiedCheckpointChanged, finalizedCheckpointChanged} = await this.coreApi.onSlot(slot);
     await this.onForkChoiceChanged({headUpdate, justifiedCheckpointChanged}, previousHead);
     if (finalizedCheckpointChanged) void this.onNewFinalizedCheckpoint();
   }
 
   async onEpoch(epoch: Epoch): Promise<void> {
-    return this.core.onEpoch(epoch);
+    return this.coreApi.onEpoch(epoch);
   }
 
   async prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse> {
     const previousHead = this.chainView.getHead();
-    const response = await this.core.prepareForNextSlot(clockSlot, opts);
+    const response = await this.coreApi.prepareForNextSlot(clockSlot, opts);
     await this.onForkChoiceChanged({headUpdate: response.headUpdate, justifiedCheckpointChanged: false}, previousHead);
     return response;
   }
 
   async recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<void> {
     const previousHead = this.chainView.getHead();
-    const {headUpdate} = await this.core.recomputeForkChoiceHead(caller);
+    const {headUpdate} = await this.coreApi.recomputeForkChoiceHead(caller);
     await this.onForkChoiceChanged({headUpdate, justifiedCheckpointChanged: false}, previousHead);
   }
 
   async isHeadOptimistic(): Promise<boolean> {
-    return this.core.isHeadOptimistic();
+    return this.coreApi.isHeadOptimistic();
   }
 
   getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo> {
-    return this.core.getHeadExecutionStateInfo();
+    return this.coreApi.getHeadExecutionStateInfo();
   }
 
   async pauseFastConfirmation(): Promise<void> {
-    return this.core.pauseFastConfirmation();
+    return this.coreApi.pauseFastConfirmation();
   }
 
   async resumeFastConfirmation(): Promise<void> {
-    return this.core.resumeFastConfirmation();
+    return this.coreApi.resumeFastConfirmation();
   }
 
   // Block processing
@@ -232,8 +229,8 @@ export class BeaconEngine implements IBeaconEngine {
       this.serializedCache.set(block, bytes);
     }
     const res =
-      this.beaconEngineMode === BeaconEngineMode.Worker
-        ? await this.core.validateApiBlockBytes(computeSignedBlockRoot(blockInput.forkName, block), bytes, opts)
+      this.core === null
+        ? await this.coreApi.validateApiBlockBytes(computeSignedBlockRoot(blockInput.forkName, block), bytes, opts)
         : await this.core.validateApiBlock({data: block, bytes}, opts);
     if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
   }
@@ -254,7 +251,7 @@ export class BeaconEngine implements IBeaconEngine {
       });
 
     // main-thread mode
-    if (this.beaconEngineMode === BeaconEngineMode.MainThread) {
+    if (this.core !== null) {
       const res = await this.core.verifyBlocks(getBlocksWithBytes(), opts);
       if (res.err !== null) throw blockErrorFromFailure(res.err, blockInputs);
       return res.result;
@@ -265,7 +262,10 @@ export class BeaconEngine implements IBeaconEngine {
     if (isGossip) {
       const blockInput = blockInputs[0];
       const block = blockInput.getBlock();
-      const result = await this.core.verifyGossipBlockBytes(computeSignedBlockRoot(blockInput.forkName, block), opts);
+      const result = await this.coreApi.verifyGossipBlockBytes(
+        computeSignedBlockRoot(blockInput.forkName, block),
+        opts
+      );
       if (result.err !== null) {
         if ("code" in result.err) throw new BlockError(blockInput.getBlock(), result.err);
         throw blockErrorFromFailure(result.err, [blockInput]);
@@ -274,7 +274,7 @@ export class BeaconEngine implements IBeaconEngine {
     }
 
     // other worker mode paths
-    const res = await this.core.verifyBlocksBytes(
+    const res = await this.coreApi.verifyBlocksBytes(
       getBlocksWithBytes().map(({data, bytes}, i) => ({
         signedBlockRoot: computeSignedBlockRoot(blockInputs[i].forkName, data),
         blockBytes: bytes,
@@ -290,7 +290,7 @@ export class BeaconEngine implements IBeaconEngine {
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult> {
-    const res = await this.core.importBlock(
+    const res = await this.coreApi.importBlock(
       computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()),
       dataAvailabilityStatus,
       opts
@@ -344,8 +344,8 @@ export class BeaconEngine implements IBeaconEngine {
     opts: ImportExecutionPayloadOpts
   ): Promise<{executionOptimistic: boolean}> {
     const res =
-      this.beaconEngineMode === BeaconEngineMode.Worker
-        ? await this.core.importExecutionPayloadBytes(envelopeBytes, dataAvailabilityStatus, opts)
+      this.core === null
+        ? await this.coreApi.importExecutionPayloadBytes(envelopeBytes, dataAvailabilityStatus, opts)
         : await this.core.importExecutionPayload(
             {data: payloadInput.getPayloadEnvelope(), bytes: envelopeBytes},
             dataAvailabilityStatus,
@@ -374,12 +374,12 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   async discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void> {
-    return this.core.discardVerifiedBlocks(signedBlockRoots);
+    return this.coreApi.discardVerifiedBlocks(signedBlockRoots);
   }
 
   verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.verifyAndObserveBlockProposerBytes(bytes, root)
+    return this.core === null
+      ? this.coreApi.verifyAndObserveBlockProposerBytes(bytes, root)
       : this.core.verifyAndObserveBlockProposer(block, root);
   }
 
@@ -388,36 +388,36 @@ export class BeaconEngine implements IBeaconEngine {
     envelope: gloas.SignedExecutionPayloadEnvelope,
     blockRootHex: RootHex
   ): Promise<void> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.verifyEnvelopeForPublishBytes(bytes, blockRootHex)
+    return this.core === null
+      ? this.coreApi.verifyEnvelopeForPublishBytes(bytes, blockRootHex)
       : this.core.verifyEnvelopeForPublish(envelope, blockRootHex);
   }
 
   isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean> {
-    return this.core.isBlockProposerSeen(slot, proposerIndex);
+    return this.coreApi.isBlockProposerSeen(slot, proposerIndex);
   }
 
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, root: RootHex): Promise<RootHex[]> {
-    return this.core.getConflictingBlockRoots(slot, proposerIndex, root);
+    return this.coreApi.getConflictingBlockRoots(slot, proposerIndex, root);
   }
 
   // Block production / builder
   async produceBlock(request: ProduceBlockRequest): Promise<ProduceBlockResponse> {
     const previousHead = this.chainView.getHead();
-    const response = await this.core.produceBlock(request);
+    const response = await this.coreApi.produceBlock(request);
     await this.onForkChoiceChanged({headUpdate: response.headUpdate, justifiedCheckpointChanged: false}, previousHead);
     return response;
   }
 
   async produceBlockV4(request: ProduceBlockV4Request): Promise<ProduceBlockV4Response> {
     const previousHead = this.chainView.getHead();
-    const response = await this.core.produceBlockV4(request);
+    const response = await this.coreApi.produceBlockV4(request);
     await this.onForkChoiceChanged({headUpdate: response.headUpdate, justifiedCheckpointChanged: false}, previousHead);
     return response;
   }
 
   registerAuthenticatedBuilder(url: string): Promise<void> {
-    return this.core.registerAuthenticatedBuilder(url);
+    return this.coreApi.registerAuthenticatedBuilder(url);
   }
 
   registerValidator(
@@ -425,8 +425,8 @@ export class BeaconEngine implements IBeaconEngine {
     registrationsBytes: Uint8Array,
     registrations: bellatrix.SignedValidatorRegistrationV1[]
   ): Promise<void> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.registerValidatorBytes(epoch, registrationsBytes)
+    return this.core === null
+      ? this.coreApi.registerValidatorBytes(epoch, registrationsBytes)
       : this.core.registerValidator(epoch, registrations);
   }
 
@@ -435,7 +435,7 @@ export class BeaconEngine implements IBeaconEngine {
     signedBlindedBlock: SignedBlindedBeaconBlock,
     fork: ForkPostBellatrix & ForkPreGloas
   ): Promise<SubmitBlindedBlockResponse> {
-    if (this.beaconEngineMode === BeaconEngineMode.MainThread) {
+    if (this.core !== null) {
       return {
         signedBlockContents: await this.core.submitBlindedBlock({
           data: signedBlindedBlock,
@@ -444,7 +444,7 @@ export class BeaconEngine implements IBeaconEngine {
       };
     }
 
-    const contentsBytes = await this.core.submitBlindedBlockBytes(signedBlindedBlockBytes, fork);
+    const contentsBytes = await this.coreApi.submitBlindedBlockBytes(signedBlindedBlockBytes, fork);
     const signedBlockContents = isForkPostDeneb(fork)
       ? sszTypesFor(fork).SignedBlockContents.deserialize(contentsBytes)
       : {signedBlock: sszTypesFor(fork).SignedBeaconBlock.deserialize(contentsBytes)};
@@ -456,8 +456,8 @@ export class BeaconEngine implements IBeaconEngine {
     signedBlindedBlock: SignedBlindedBeaconBlock,
     fork: ForkPostBellatrix & ForkPreGloas
   ): Promise<void> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.submitBlindedBlockNoResponseBytes(signedBlindedBlockBytes, fork)
+    return this.core === null
+      ? this.coreApi.submitBlindedBlockNoResponseBytes(signedBlindedBlockBytes, fork)
       : this.core.submitBlindedBlockNoResponse({data: signedBlindedBlock, bytes: signedBlindedBlockBytes});
   }
 
@@ -465,7 +465,7 @@ export class BeaconEngine implements IBeaconEngine {
     slot: Slot,
     committeeIndex?: CommitteeIndex
   ): Promise<ProductionResponse<phase0.AttestationData>> {
-    return this.core.produceAttestationData(slot, committeeIndex);
+    return this.coreApi.produceAttestationData(slot, committeeIndex);
   }
 
   async produceSyncCommitteeContribution(
@@ -473,14 +473,14 @@ export class BeaconEngine implements IBeaconEngine {
     slot: Slot,
     blockRoot: Root
   ): Promise<ProductionResponse<altair.SyncCommitteeContribution | null>> {
-    const result = await this.core.produceSyncCommitteeContribution(subnet, slot, blockRoot);
+    const result = await this.coreApi.produceSyncCommitteeContribution(subnet, slot, blockRoot);
     return result.ok
       ? {ok: true, data: result.data === null ? null : ssz.altair.SyncCommitteeContribution.deserialize(result.data)}
       : result;
   }
 
   async getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null> {
-    return this.core.getPayloadAttestationBlock(slot);
+    return this.coreApi.getPayloadAttestationBlock(slot);
   }
 
   // Validator duties / proposer cache
@@ -489,7 +489,7 @@ export class BeaconEngine implements IBeaconEngine {
     timing: {currentEpoch: Epoch; checkpointWaitTimeoutMs?: number},
     v2: boolean
   ): Promise<{data: routes.validator.ProposerDuty[]; dependentRoot: Root; head: ProtoBlock}> {
-    return this.core.getProposerDuties(epoch, timing, v2);
+    return this.coreApi.getProposerDuties(epoch, timing, v2);
   }
 
   getAttesterDuties(
@@ -497,14 +497,14 @@ export class BeaconEngine implements IBeaconEngine {
     indices: ValidatorIndex[],
     currentEpoch: Epoch
   ): Promise<{data: routes.validator.AttesterDuty[]; dependentRoot: Root; head: ProtoBlock}> {
-    return this.core.getAttesterDuties(epoch, indices, currentEpoch);
+    return this.coreApi.getAttesterDuties(epoch, indices, currentEpoch);
   }
 
   getSyncCommitteeDuties(
     epoch: Epoch,
     indices: ValidatorIndex[]
   ): Promise<{data: routes.validator.SyncDuty[]; head: ProtoBlock}> {
-    return this.core.getSyncCommitteeDuties(epoch, indices);
+    return this.coreApi.getSyncCommitteeDuties(epoch, indices);
   }
 
   getPtcDuties(
@@ -512,31 +512,31 @@ export class BeaconEngine implements IBeaconEngine {
     indices: ValidatorIndex[],
     currentEpoch: Epoch
   ): Promise<{data: routes.validator.PtcDuty[]; dependentRoot: Root; head: ProtoBlock}> {
-    return this.core.getPtcDuties(epoch, indices, currentEpoch);
+    return this.coreApi.getPtcDuties(epoch, indices, currentEpoch);
   }
 
   getProposerFeeRecipient(proposerIndex: ValidatorIndex): Promise<string | undefined> {
-    return this.core.getProposerFeeRecipient(proposerIndex);
+    return this.coreApi.getProposerFeeRecipient(proposerIndex);
   }
 
   trackAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<boolean> {
-    return this.core.trackAttachedValidators(epoch, validatorIndices);
+    return this.coreApi.trackAttachedValidators(epoch, validatorIndices);
   }
 
   updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<boolean> {
-    return this.core.updateProposerPreparation(epoch, proposers);
+    return this.coreApi.updateProposerPreparation(epoch, proposers);
   }
 
   getProposerCacheValidatorIndices(): Promise<ValidatorIndex[]> {
-    return this.core.getProposerCacheValidatorIndices();
+    return this.coreApi.getProposerCacheValidatorIndices();
   }
 
   prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
-    return this.core.prepareBeaconCommitteeSubnets(subscriptions);
+    return this.coreApi.prepareBeaconCommitteeSubnets(subscriptions);
   }
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean> {
-    return this.core.validatorSeenAtEpoch(index, epoch);
+    return this.coreApi.validatorSeenAtEpoch(index, epoch);
   }
 
   // Gossip / API validation
@@ -546,8 +546,8 @@ export class BeaconEngine implements IBeaconEngine {
     fork: ForkName,
     seenTimestampSec?: number
   ): Promise<GossipBlockResult> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipBlockBytes(
+    return this.core === null
+      ? this.coreApi.validateGossipBlockBytes(
           computeSignedBlockRoot(fork, signedBlock),
           blockBytes,
           fork,
@@ -561,14 +561,14 @@ export class BeaconEngine implements IBeaconEngine {
     attestations: GossipAttestation[],
     seenTimestampSecs: number[]
   ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}> {
-    return this.core.validateGossipAttestationsSameAttData(fork, attestations, seenTimestampSecs);
+    return this.coreApi.validateGossipAttestationsSameAttData(fork, attestations, seenTimestampSecs);
   }
 
   validateApiAttestation(
     fork: ForkName,
     attestationOrBytes: ApiAttestation
   ): Promise<GossipValidationResult<AttestationValidationResult>> {
-    return this.core.validateApiAttestation(fork, attestationOrBytes);
+    return this.coreApi.validateApiAttestation(fork, attestationOrBytes);
   }
 
   validateGossipAggregateAndProof(
@@ -577,8 +577,8 @@ export class BeaconEngine implements IBeaconEngine {
     fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipAggregateAndProofBytes(aggregateBytes, fork, seenTimestampSec)
+    return this.core === null
+      ? this.coreApi.validateGossipAggregateAndProofBytes(aggregateBytes, fork, seenTimestampSec)
       : this.core.validateGossipAggregateAndProof(
           {data: signedAggregateAndProof, bytes: aggregateBytes},
           fork,
@@ -591,8 +591,8 @@ export class BeaconEngine implements IBeaconEngine {
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiAggregateAndProofBytes(aggregateBytes, fork)
+    return this.core === null
+      ? this.coreApi.validateApiAggregateAndProofBytes(aggregateBytes, fork)
       : this.core.validateApiAggregateAndProof(fork, signedAggregateAndProof);
   }
 
@@ -601,8 +601,8 @@ export class BeaconEngine implements IBeaconEngine {
     syncCommittee: altair.SyncCommitteeMessage,
     subnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipSyncCommitteeBytes(syncCommitteeBytes, subnet)
+    return this.core === null
+      ? this.coreApi.validateGossipSyncCommitteeBytes(syncCommitteeBytes, subnet)
       : this.core.validateGossipSyncCommittee(syncCommittee, subnet);
   }
 
@@ -610,8 +610,8 @@ export class BeaconEngine implements IBeaconEngine {
     syncCommitteeBytes: Uint8Array,
     syncCommittee: altair.SyncCommitteeMessage
   ): Promise<GossipValidationResult<{subnets: number[]}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiSyncCommitteeBytes(syncCommitteeBytes)
+    return this.core === null
+      ? this.coreApi.validateApiSyncCommitteeBytes(syncCommitteeBytes)
       : this.core.validateApiSyncCommittee(syncCommittee);
   }
 
@@ -620,8 +620,8 @@ export class BeaconEngine implements IBeaconEngine {
     signedContributionAndProof: altair.SignedContributionAndProof,
     skipValidationKnownParticipants?: boolean
   ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateSyncCommitteeGossipContributionAndProofBytes(
+    return this.core === null
+      ? this.coreApi.validateSyncCommitteeGossipContributionAndProofBytes(
           contributionBytes,
           skipValidationKnownParticipants
         )
@@ -635,8 +635,8 @@ export class BeaconEngine implements IBeaconEngine {
     contributionBytes: Uint8Array,
     signedContributionAndProof: altair.SignedContributionAndProof
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiSyncCommitteeContributionAndProofBytes(contributionBytes)
+    return this.core === null
+      ? this.coreApi.validateApiSyncCommitteeContributionAndProofBytes(contributionBytes)
       : this.core.validateApiSyncCommitteeContributionAndProof(signedContributionAndProof);
   }
 
@@ -646,8 +646,8 @@ export class BeaconEngine implements IBeaconEngine {
     fork: ForkName,
     subnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipBlobSidecarBytes(blobBytes, fork, subnet)
+    return this.core === null
+      ? this.coreApi.validateGossipBlobSidecarBytes(blobBytes, fork, subnet)
       : this.core.validateGossipBlobSidecar(blobSidecar, fork, subnet);
   }
 
@@ -656,8 +656,8 @@ export class BeaconEngine implements IBeaconEngine {
     dataColumnSidecar: fulu.DataColumnSidecar,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipFuluDataColumnSidecarBytes(dataColumnBytes, gossipSubnet)
+    return this.core === null
+      ? this.coreApi.validateGossipFuluDataColumnSidecarBytes(dataColumnBytes, gossipSubnet)
       : this.core.validateGossipFuluDataColumnSidecar(dataColumnSidecar, gossipSubnet);
   }
 
@@ -666,8 +666,8 @@ export class BeaconEngine implements IBeaconEngine {
     dataColumnSidecar: gloas.DataColumnSidecar,
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipGloasDataColumnSidecarBytes(dataColumnBytes, gossipSubnet)
+    return this.core === null
+      ? this.coreApi.validateGossipGloasDataColumnSidecarBytes(dataColumnBytes, gossipSubnet)
       : this.core.validateGossipGloasDataColumnSidecar(dataColumnSidecar, gossipSubnet);
   }
 
@@ -675,8 +675,8 @@ export class BeaconEngine implements IBeaconEngine {
     payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipPayloadAttestationMessageBytes(payloadAttestationBytes)
+    return this.core === null
+      ? this.coreApi.validateGossipPayloadAttestationMessageBytes(payloadAttestationBytes)
       : this.core.validateGossipPayloadAttestationMessage(payloadAttestationMessage);
   }
 
@@ -684,8 +684,8 @@ export class BeaconEngine implements IBeaconEngine {
     payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiPayloadAttestationMessageBytes(payloadAttestationBytes)
+    return this.core === null
+      ? this.coreApi.validateApiPayloadAttestationMessageBytes(payloadAttestationBytes)
       : this.core.validateApiPayloadAttestationMessage(payloadAttestationMessage);
   }
 
@@ -694,8 +694,8 @@ export class BeaconEngine implements IBeaconEngine {
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
     source: SourceMeta
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipExecutionPayloadEnvelopeBytes(envelopeBytes, source)
+    return this.core === null
+      ? this.coreApi.validateGossipExecutionPayloadEnvelopeBytes(envelopeBytes, source)
       : this.core.validateGossipExecutionPayloadEnvelope(executionPayloadEnvelope, source);
   }
 
@@ -704,8 +704,8 @@ export class BeaconEngine implements IBeaconEngine {
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiExecutionPayloadEnvelopeBytes(envelopeBytes, seenTimestampSec)
+    return this.core === null
+      ? this.coreApi.validateApiExecutionPayloadEnvelopeBytes(envelopeBytes, seenTimestampSec)
       : this.core.validateApiExecutionPayloadEnvelope(executionPayloadEnvelope, seenTimestampSec);
   }
 
@@ -715,8 +715,8 @@ export class BeaconEngine implements IBeaconEngine {
     fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipExecutionPayloadBidBytes(bidBytes, fork, seenTimestampSec)
+    return this.core === null
+      ? this.coreApi.validateGossipExecutionPayloadBidBytes(bidBytes, fork, seenTimestampSec)
       : this.core.validateGossipExecutionPayloadBid(signedExecutionPayloadBid, seenTimestampSec);
   }
 
@@ -724,8 +724,8 @@ export class BeaconEngine implements IBeaconEngine {
     bidBytes: Uint8Array,
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateApiExecutionPayloadBidBytes(bidBytes)
+    return this.core === null
+      ? this.coreApi.validateApiExecutionPayloadBidBytes(bidBytes)
       : this.core.validateApiExecutionPayloadBid(signedExecutionPayloadBid);
   }
 
@@ -733,8 +733,8 @@ export class BeaconEngine implements IBeaconEngine {
     preferencesBytes: Uint8Array,
     signedProposerPreferences: gloas.SignedProposerPreferences
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipProposerPreferencesBytes(preferencesBytes)
+    return this.core === null
+      ? this.coreApi.validateGossipProposerPreferencesBytes(preferencesBytes)
       : this.core.validateGossipProposerPreferences(signedProposerPreferences);
   }
 
@@ -744,57 +744,57 @@ export class BeaconEngine implements IBeaconEngine {
     attesterSlashing: AttesterSlashing,
     fork: ForkName
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipAttesterSlashingBytes(attesterSlashingBytes, fork)
+    return this.core === null
+      ? this.coreApi.validateGossipAttesterSlashingBytes(attesterSlashingBytes, fork)
       : this.core.validateGossipAttesterSlashing(attesterSlashing, fork);
   }
 
   validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void> {
-    return this.core.validateApiAttesterSlashing(attesterSlashing, fork);
+    return this.coreApi.validateApiAttesterSlashing(attesterSlashing, fork);
   }
 
   validateGossipProposerSlashing(
     proposerSlashingBytes: Uint8Array,
     proposerSlashing: phase0.ProposerSlashing
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipProposerSlashingBytes(proposerSlashingBytes)
+    return this.core === null
+      ? this.coreApi.validateGossipProposerSlashingBytes(proposerSlashingBytes)
       : this.core.validateGossipProposerSlashing(proposerSlashing);
   }
 
   validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    return this.core.validateApiProposerSlashing(proposerSlashing);
+    return this.coreApi.validateApiProposerSlashing(proposerSlashing);
   }
 
   validateGossipVoluntaryExit(
     voluntaryExitBytes: Uint8Array,
     voluntaryExit: phase0.SignedVoluntaryExit
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipVoluntaryExitBytes(voluntaryExitBytes)
+    return this.core === null
+      ? this.coreApi.validateGossipVoluntaryExitBytes(voluntaryExitBytes)
       : this.core.validateGossipVoluntaryExit(voluntaryExit);
   }
 
   validateApiVoluntaryExit(
     voluntaryExit: phase0.SignedVoluntaryExit
   ): Promise<ApiVoluntaryExitResult & {inserted?: boolean}> {
-    return this.core.validateApiVoluntaryExit(voluntaryExit);
+    return this.coreApi.validateApiVoluntaryExit(voluntaryExit);
   }
 
   drainDeferredVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
-    return this.core.drainDeferredVoluntaryExits();
+    return this.coreApi.drainDeferredVoluntaryExits();
   }
 
   insertVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void> {
-    return this.core.insertVoluntaryExit(exit);
+    return this.coreApi.insertVoluntaryExit(exit);
   }
 
   validateGossipBlsToExecutionChange(
     blsToExecutionChangeBytes: Uint8Array,
     blsToExecutionChange: capella.SignedBLSToExecutionChange
   ): Promise<GossipValidationResult<void>> {
-    return this.beaconEngineMode === BeaconEngineMode.Worker
-      ? this.core.validateGossipBlsToExecutionChangeBytes(blsToExecutionChangeBytes)
+    return this.core === null
+      ? this.coreApi.validateGossipBlsToExecutionChangeBytes(blsToExecutionChangeBytes)
       : this.core.validateGossipBlsToExecutionChange(blsToExecutionChange);
   }
 
@@ -802,7 +802,7 @@ export class BeaconEngine implements IBeaconEngine {
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
     preCapella: boolean
   ): Promise<void> {
-    return this.core.validateApiBlsToExecutionChange(blsToExecutionChange, preCapella);
+    return this.coreApi.validateApiBlsToExecutionChange(blsToExecutionChange, preCapella);
   }
 
   addAttestationToPool(
@@ -813,7 +813,7 @@ export class BeaconEngine implements IBeaconEngine {
     committeeSize: number,
     priority?: boolean
   ): Promise<InsertOutcome> {
-    return this.core.addAttestationToPool(
+    return this.coreApi.addAttestationToPool(
       committeeIndex,
       attestation,
       attDataRootHex,
@@ -828,68 +828,68 @@ export class BeaconEngine implements IBeaconEngine {
     dataRootHex: RootHex,
     committeeIndex: CommitteeIndex
   ): Promise<Attestation | null> {
-    return this.core.getAttestationAggregate(slot, dataRootHex, committeeIndex);
+    return this.coreApi.getAttestationAggregate(slot, dataRootHex, committeeIndex);
   }
 
   getPoolAggregatedAttestations(bySlot?: Slot): Promise<Attestation[]> {
-    return this.core.getPoolAggregatedAttestations(bySlot);
+    return this.coreApi.getPoolAggregatedAttestations(bySlot);
   }
 
   getPoolPayloadAttestations(slot?: Slot): Promise<gloas.PayloadAttestation[]> {
-    return this.core.getPoolPayloadAttestations(slot);
+    return this.coreApi.getPoolPayloadAttestations(slot);
   }
 
   getPoolProposerPreferences(slot?: Slot, dependentRoot?: RootHex): Promise<gloas.SignedProposerPreferences[]> {
-    return this.core.getPoolProposerPreferences(slot, dependentRoot);
+    return this.coreApi.getPoolProposerPreferences(slot, dependentRoot);
   }
 
   getPoolAttesterSlashings(): Promise<AttesterSlashing[]> {
-    return this.core.getPoolAttesterSlashings();
+    return this.coreApi.getPoolAttesterSlashings();
   }
 
   getPoolProposerSlashings(): Promise<phase0.ProposerSlashing[]> {
-    return this.core.getPoolProposerSlashings();
+    return this.coreApi.getPoolProposerSlashings();
   }
 
   getPoolVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
-    return this.core.getPoolVoluntaryExits();
+    return this.coreApi.getPoolVoluntaryExits();
   }
 
   getPoolBlsToExecutionChanges(): Promise<capella.SignedBLSToExecutionChange[]> {
-    return this.core.getPoolBlsToExecutionChanges();
+    return this.coreApi.getPoolBlsToExecutionChanges();
   }
 
   // Light client
   getLightClientBootstrap(blockRoot: Root): Promise<SerializedLightClientData> {
-    return this.core.getLightClientBootstrap(blockRoot);
+    return this.coreApi.getLightClientBootstrap(blockRoot);
   }
 
   getLightClientUpdate(period: number): Promise<SerializedLightClientData> {
-    return this.core.getLightClientUpdate(period);
+    return this.coreApi.getLightClientUpdate(period);
   }
 
   getLightClientOptimisticUpdate(): Promise<SerializedLightClientData | null> {
-    return this.core.getLightClientOptimisticUpdate();
+    return this.coreApi.getLightClientOptimisticUpdate();
   }
 
   getLightClientFinalityUpdate(): Promise<SerializedLightClientData | null> {
-    return this.core.getLightClientFinalityUpdate();
+    return this.coreApi.getLightClientFinalityUpdate();
   }
 
   getLightClientCommitteeRoot(period: number): Promise<Root> {
-    return this.core.getLightClientCommitteeRoot(period);
+    return this.coreApi.getLightClientCommitteeRoot(period);
   }
 
   pruneLightClientNonCheckpointData(roots: Root[]): Promise<void> {
-    return this.core.pruneLightClientNonCheckpointData(roots);
+    return this.coreApi.pruneLightClientNonCheckpointData(roots);
   }
 
   validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>> {
-    return this.core.validateGossipLightClientOptimisticUpdateBytes(bytes, fork);
+    return this.coreApi.validateGossipLightClientOptimisticUpdateBytes(bytes, fork);
   }
 
   validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>> {
-    return this.core.validateGossipLightClientFinalityUpdateBytes(bytes, fork);
+    return this.coreApi.validateGossipLightClientFinalityUpdateBytes(bytes, fork);
   }
 
   // API block reads
@@ -910,7 +910,7 @@ export class BeaconEngine implements IBeaconEngine {
         throw new ValidationError(`Invalid block id '${normalized}'`, "blockId");
       }
     }
-    const res = await this.core.getBlockRoot(id);
+    const res = await this.coreApi.getBlockRoot(id);
     if (!res) throw new ApiError(404, `Block not found for id '${blockId}'`);
     return res;
   }
@@ -918,7 +918,7 @@ export class BeaconEngine implements IBeaconEngine {
   async getCanonicalBlockAtSlot(
     slot: Slot
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const res = await this.core.getCanonicalBlockAtSlot(slot);
+    const res = await this.coreApi.getCanonicalBlockAtSlot(slot);
     return (
       res && {
         block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.block, {reuseBytes: false}),
@@ -931,7 +931,7 @@ export class BeaconEngine implements IBeaconEngine {
   async getBlockByRoot(
     root: Root
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const res = await this.core.getBlockByRoot(root);
+    const res = await this.coreApi.getBlockByRoot(root);
     return (
       res && {
         block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.block, {reuseBytes: false}),
@@ -945,7 +945,7 @@ export class BeaconEngine implements IBeaconEngine {
     data: routes.beacon.BlockHeaderResponse[];
     meta: {executionOptimistic: boolean; finalized: boolean};
   }> {
-    const res = await this.core.getBlockHeaders(opts);
+    const res = await this.coreApi.getBlockHeaders(opts);
     return {
       data: routes.beacon.block.BlockHeadersResponseType.deserialize(res.data, {reuseBytes: false}),
       meta: res.meta,
@@ -954,17 +954,17 @@ export class BeaconEngine implements IBeaconEngine {
 
   // API state reads
   getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
-    return this.core.getPersistedCheckpointState(checkpoint);
+    return this.coreApi.getPersistedCheckpointState(checkpoint);
   }
 
   getSerializedState(
     id: ApiStateId
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    return this.core.getSerializedState(id);
+    return this.coreApi.getSerializedState(id);
   }
 
   getStateProof(id: ApiStateId, descriptor: Uint8Array): Promise<{proof: CompactMultiProof; fork: ForkName} | null> {
-    return this.core.getStateProof(id, descriptor);
+    return this.coreApi.getStateProof(id, descriptor);
   }
 
   getHistoricalSummaries(id: ApiStateId): Promise<{
@@ -975,14 +975,14 @@ export class BeaconEngine implements IBeaconEngine {
     executionOptimistic: boolean;
     finalized: boolean;
   } | null> {
-    return this.core.getHistoricalSummaries(id);
+    return this.coreApi.getHistoricalSummaries(id);
   }
 
   getIndexedAttestationsForSlashing(
     requests: {slot: Slot; epoch: Epoch; attestations: Attestation[]}[],
     forkSeq: ForkSeq
   ): Promise<IndexedAttestation[]> {
-    return this.core.getIndexedAttestationsForSlashing(requests, forkSeq);
+    return this.coreApi.getIndexedAttestationsForSlashing(requests, forkSeq);
   }
 
   getStateBuilders(
@@ -990,19 +990,19 @@ export class BeaconEngine implements IBeaconEngine {
     builderIds: routes.beacon.BuilderId[],
     statuses: string[]
   ): Promise<ApiStateResult<routes.beacon.BuilderResponse[]>> {
-    return this.core.getStateBuilders(id, builderIds, statuses);
+    return this.coreApi.getStateBuilders(id, builderIds, statuses);
   }
 
   getStateRoot(id: ApiStateId): Promise<ApiStateResult<{root: Root}>> {
-    return this.core.getStateRoot(id);
+    return this.coreApi.getStateRoot(id);
   }
 
   getStateFork(id: ApiStateId): Promise<ApiStateResult<phase0.Fork>> {
-    return this.core.getStateFork(id);
+    return this.coreApi.getStateFork(id);
   }
 
   getStateRandao(id: ApiStateId, epoch?: Epoch): Promise<ApiStateResult<{randao: Bytes32}>> {
-    return this.core.getStateRandao(id, epoch);
+    return this.coreApi.getStateRandao(id, epoch);
   }
 
   getStateFinalityCheckpoints(id: ApiStateId): Promise<
@@ -1012,7 +1012,7 @@ export class BeaconEngine implements IBeaconEngine {
       finalized: phase0.Checkpoint;
     }>
   > {
-    return this.core.getStateFinalityCheckpoints(id);
+    return this.coreApi.getStateFinalityCheckpoints(id);
   }
 
   getStateValidators(
@@ -1020,145 +1020,145 @@ export class BeaconEngine implements IBeaconEngine {
     validatorIds: routes.beacon.ValidatorId[],
     statuses: string[]
   ): Promise<ApiStateResult<routes.beacon.ValidatorResponse[]>> {
-    return this.core.getStateValidators(id, validatorIds, statuses);
+    return this.coreApi.getStateValidators(id, validatorIds, statuses);
   }
 
   getStateValidatorIdentities(
     id: ApiStateId,
     validatorIds: routes.beacon.ValidatorId[]
   ): Promise<ApiStateResult<routes.beacon.ValidatorIdentities>> {
-    return this.core.getStateValidatorIdentities(id, validatorIds);
+    return this.coreApi.getStateValidatorIdentities(id, validatorIds);
   }
 
   getStateValidator(
     id: ApiStateId,
     validatorId: routes.beacon.ValidatorId
   ): Promise<ApiStateResult<routes.beacon.ValidatorResponse>> {
-    return this.core.getStateValidator(id, validatorId);
+    return this.coreApi.getStateValidator(id, validatorId);
   }
 
   getStateValidatorBalances(
     id: ApiStateId,
     validatorIds: routes.beacon.ValidatorId[]
   ): Promise<ApiStateResult<routes.beacon.ValidatorBalance[]>> {
-    return this.core.getStateValidatorBalances(id, validatorIds);
+    return this.coreApi.getStateValidatorBalances(id, validatorIds);
   }
 
   getEpochCommittees(
     id: ApiStateId,
     filters: {epoch?: Epoch; index?: CommitteeIndex; slot?: Slot}
   ): Promise<ApiStateResult<routes.beacon.EpochCommitteeResponse[]>> {
-    return this.core.getEpochCommittees(id, filters);
+    return this.coreApi.getEpochCommittees(id, filters);
   }
 
   getStatePtc(id: ApiStateId, slot?: Slot): Promise<ApiStateResult<{slot: Slot; validators: ValidatorIndex[]}>> {
-    return this.core.getStatePtc(id, slot);
+    return this.coreApi.getStatePtc(id, slot);
   }
 
   getEpochSyncCommittees(
     id: ApiStateId,
     epoch?: Epoch
   ): Promise<ApiStateResult<routes.beacon.EpochSyncCommitteeResponse>> {
-    return this.core.getEpochSyncCommittees(id, epoch);
+    return this.coreApi.getEpochSyncCommittees(id, epoch);
   }
 
   getStatePendingDeposits(
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingDeposits>> {
-    return this.core.getStatePendingDeposits(id, returnBytes);
+    return this.coreApi.getStatePendingDeposits(id, returnBytes);
   }
 
   getStatePendingPartialWithdrawals(
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingPartialWithdrawals>> {
-    return this.core.getStatePendingPartialWithdrawals(id, returnBytes);
+    return this.coreApi.getStatePendingPartialWithdrawals(id, returnBytes);
   }
 
   getStatePendingConsolidations(
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingConsolidations>> {
-    return this.core.getStatePendingConsolidations(id, returnBytes);
+    return this.coreApi.getStatePendingConsolidations(id, returnBytes);
   }
 
   getStateProposerLookahead(
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | fulu.ProposerLookahead>> {
-    return this.core.getStateProposerLookahead(id, returnBytes);
+    return this.coreApi.getStateProposerLookahead(id, returnBytes);
   }
 
   getBuilderPendingPayments(
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingPayments>> {
-    return this.core.getBuilderPendingPayments(id, returnBytes);
+    return this.coreApi.getBuilderPendingPayments(id, returnBytes);
   }
 
   getBuilderPendingWithdrawals(
     id: ApiStateId,
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>> {
-    return this.core.getBuilderPendingWithdrawals(id, returnBytes);
+    return this.coreApi.getBuilderPendingWithdrawals(id, returnBytes);
   }
 
   getHeadProposerPubkey(slot: Slot): Promise<Uint8Array> {
-    return this.core.getHeadProposerPubkey(slot);
+    return this.coreApi.getHeadProposerPubkey(slot);
   }
 
   getHeadParentPayload(): Promise<HeadParentPayload | undefined> {
-    return this.core.getHeadParentPayload();
+    return this.coreApi.getHeadParentPayload();
   }
 
   getActiveOrPendingValidators(indices: ValidatorIndex[]): Promise<Set<ValidatorIndex>> {
-    return this.core.getActiveOrPendingValidators(indices);
+    return this.coreApi.getActiveOrPendingValidators(indices);
   }
 
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch> {
-    return this.core.getLatestWeakSubjectivityCheckpointEpoch();
+    return this.coreApi.getLatestWeakSubjectivityCheckpointEpoch();
   }
 
   // Rewards
   getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {
-    return this.core.getBlockRewards(block);
+    return this.coreApi.getBlockRewards(block);
   }
 
   getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}> {
-    return this.core.getAttestationsRewards(epoch, validatorIds);
+    return this.coreApi.getAttestationsRewards(epoch, validatorIds);
   }
 
   getSyncCommitteeRewards(
     block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<rewards.SyncCommitteeRewards> {
-    return this.core.getSyncCommitteeRewards(block, validatorIds);
+    return this.coreApi.getSyncCommitteeRewards(block, validatorIds);
   }
 
   // Validator monitor
   registerLocalValidators(indices: ValidatorIndex[]): Promise<void> {
-    return this.core.registerLocalValidators(indices);
+    return this.coreApi.registerLocalValidators(indices);
   }
 
   registerLocalValidatorsInSyncCommittee(
     subscriptions: {validatorIndex: ValidatorIndex; untilEpoch: Epoch}[]
   ): Promise<void> {
-    return this.core.registerLocalValidatorsInSyncCommittee(subscriptions);
+    return this.coreApi.registerLocalValidatorsInSyncCommittee(subscriptions);
   }
 
   registerApiBlock(seenTimestampSec: number, block: ValidatorMonitorBlock): Promise<void> {
-    return this.core.registerApiBlock(seenTimestampSec, block);
+    return this.coreApi.registerApiBlock(seenTimestampSec, block);
   }
 
   registerApiExecutionPayloadEnvelope(
     delaySec: number,
     signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
   ): Promise<void> {
-    return this.core.registerApiExecutionPayloadEnvelope(delaySec, signedExecutionPayloadEnvelope);
+    return this.coreApi.registerApiExecutionPayloadEnvelope(delaySec, signedExecutionPayloadEnvelope);
   }
 
   onPoolSubmitUnaggregatedAttestation(
@@ -1167,7 +1167,7 @@ export class BeaconEngine implements IBeaconEngine {
     subnet: SubnetID,
     sentPeers: number
   ): Promise<void> {
-    return this.core.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, attestation, subnet, sentPeers);
+    return this.coreApi.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, attestation, subnet, sentPeers);
   }
 
   onPoolSubmitAggregatedAttestation(
@@ -1175,52 +1175,52 @@ export class BeaconEngine implements IBeaconEngine {
     attestation: ValidatorMonitorAttestation,
     sentPeers: number
   ): Promise<void> {
-    return this.core.onPoolSubmitAggregatedAttestation(seenTimestampSec, attestation, sentPeers);
+    return this.coreApi.onPoolSubmitAggregatedAttestation(seenTimestampSec, attestation, sentPeers);
   }
 
   getMonitoredValidatorIndices(): Promise<ValidatorIndex[]> {
-    return this.core.getMonitoredValidatorIndices();
+    return this.coreApi.getMonitoredValidatorIndices();
   }
 
   // Debug / metrics
   getHeads(): Promise<ProtoBlock[]> {
-    return this.core.getHeads();
+    return this.coreApi.getHeads();
   }
 
   getDebugForkChoice(): Promise<routes.debug.ForkChoiceResponse> {
-    return this.core.getDebugForkChoice();
+    return this.coreApi.getDebugForkChoice();
   }
 
   getDebugForkChoiceV2(): Promise<routes.debug.ForkChoiceResponseV2> {
-    return this.core.getDebugForkChoiceV2();
+    return this.coreApi.getDebugForkChoiceV2();
   }
 
   getFastConfirmationInfo(): Promise<routes.lodestar.FastConfirmationInfo> {
-    return this.core.getFastConfirmationInfo();
+    return this.coreApi.getFastConfirmationInfo();
   }
 
   getProtoArrayNodes(): Promise<routes.debug.ProtoNodeList> {
-    return this.core.getProtoArrayNodes();
+    return this.coreApi.getProtoArrayNodes();
   }
 
   dumpCacheSummary(): Promise<routes.lodestar.StateCacheItem[]> {
-    return this.core.dumpCacheSummary();
+    return this.coreApi.dumpCacheSummary();
   }
 
   dropCache(): Promise<void> {
-    return this.core.dropCache();
+    return this.coreApi.dropCache();
   }
 
   dumpRegenQueueItems(): Promise<{key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[]> {
-    return this.core.dumpRegenQueueItems();
+    return this.coreApi.dumpRegenQueueItems();
   }
 
   scrapeMetrics(): ReturnType<IBeaconEngine["scrapeMetrics"]> {
-    return this.core.scrapeMetrics();
+    return this.coreApi.scrapeMetrics();
   }
 
   regenCanAcceptWork(): boolean {
-    if (this.beaconEngineMode === BeaconEngineMode.Worker) {
+    if (this.core === null) {
       // TODO - beacon engine: temporarily disable regen gossip backpressure to avoid synchronous
       // engine calls across the worker boundary.
       // for a worker BeaconEngine, can do a shared Uint8Array for this
@@ -1230,7 +1230,7 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   blsThreadPoolCanAcceptWork(): boolean {
-    if (this.beaconEngineMode === BeaconEngineMode.Worker) {
+    if (this.core === null) {
       // TODO - beacon engine: temporarily disable BLS gossip backpressure to avoid synchronous
       // engine calls across the worker boundary.
       // for a worker BeaconEngine, can do a shared Uint8Array for this
@@ -1246,75 +1246,75 @@ export class BeaconEngine implements IBeaconEngine {
     blockRoot: Uint8Array,
     parentRoot: Uint8Array
   ): Promise<void> {
-    return this.core.persistArchiveBlock(slot, serializedBytes, blockRoot, parentRoot);
+    return this.coreApi.persistArchiveBlock(slot, serializedBytes, blockRoot, parentRoot);
   }
 
   batchPersistArchiveBlocks(
     entries: {slot: Slot; bytes: Uint8Array; blockRoot: Uint8Array; parentRoot: Uint8Array}[]
   ): Promise<void> {
-    return this.core.batchPersistArchiveBlocks(entries);
+    return this.coreApi.batchPersistArchiveBlocks(entries);
   }
 
   migrateCanonicalBlocks(): Promise<Slot[]> {
-    return this.core.migrateCanonicalBlocks();
+    return this.coreApi.migrateCanonicalBlocks();
   }
 
   migrateExecutionPayloadEnvelopes(): Promise<Slot[]> {
-    return this.core.migrateExecutionPayloadEnvelopes();
+    return this.coreApi.migrateExecutionPayloadEnvelopes();
   }
 
   deleteNonCanonicalExecutionPayloadEnvelopes(roots: Uint8Array[]): Promise<void> {
-    return this.core.deleteNonCanonicalExecutionPayloadEnvelopes(roots);
+    return this.coreApi.deleteNonCanonicalExecutionPayloadEnvelopes(roots);
   }
 
   persistOrphanedBlocks(blocks: FinalizedProtoSummary[], directory?: string): Promise<void> {
-    return this.core.persistOrphanedBlocks(blocks, directory);
+    return this.coreApi.persistOrphanedBlocks(blocks, directory);
   }
 
   deleteNonCanonicalBlocks(roots: Uint8Array[]): Promise<void> {
-    return this.core.deleteNonCanonicalBlocks(roots);
+    return this.coreApi.deleteNonCanonicalBlocks(roots);
   }
 
   async completeFinalization(finalized: CheckpointWithHex): Promise<number> {
-    const prunedBlockCount = await this.core.completeFinalization(finalized);
+    const prunedBlockCount = await this.coreApi.completeFinalization(finalized);
     // Only drop ChainView metadata once core has archived state and pruned fork choice
-    if (this.beaconEngineMode === BeaconEngineMode.Worker) this.chainView.prune?.(finalized);
+    if (this.core === null) this.chainView.prune?.(finalized);
     return prunedBlockCount;
   }
 
   getEarliestArchivedBlockSlot(): Promise<Slot | null> {
-    return this.core.getEarliestArchivedBlockSlot();
+    return this.coreApi.getEarliestArchivedBlockSlot();
   }
 
   persistFinalizedStateToDisk(): Promise<void> {
-    return this.core.persistFinalizedStateToDisk();
+    return this.coreApi.persistFinalizedStateToDisk();
   }
 
   pruneHistory(finalizedEpoch: Epoch, currentEpoch: Epoch): Promise<Slot> {
-    return this.core.pruneHistory(finalizedEpoch, currentEpoch);
+    return this.coreApi.pruneHistory(finalizedEpoch, currentEpoch);
   }
 
   pruneOnFinalized(): Promise<void> {
-    return this.core.pruneOnFinalized();
+    return this.coreApi.pruneOnFinalized();
   }
 
   getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): Promise<EffectiveBalanceIncrements | undefined> {
-    return this.core.getCheckpointEffectiveBalances(checkpoint);
+    return this.coreApi.getCheckpointEffectiveBalances(checkpoint);
   }
 
   getFinalizedEffectiveBalances(
     finalizedCheckpoint: CheckpointWithHex,
     validatorIndices: ValidatorIndex[]
   ): Promise<number[] | null> {
-    return this.core.getFinalizedEffectiveBalances(finalizedCheckpoint, validatorIndices);
+    return this.coreApi.getFinalizedEffectiveBalances(finalizedCheckpoint, validatorIndices);
   }
 
   loadOpPoolFromDisk(): Promise<void> {
-    return this.core.loadOpPoolFromDisk();
+    return this.coreApi.loadOpPoolFromDisk();
   }
 
   persistOpPoolToDisk(): Promise<void> {
-    return this.core.persistOpPoolToDisk();
+    return this.coreApi.persistOpPoolToDisk();
   }
 
   // Private
@@ -1328,7 +1328,7 @@ export class BeaconEngine implements IBeaconEngine {
     if (!changes.headUpdate && !changes.justifiedCheckpointChanged) return;
     let headUpdate: HeadUpdate<Root> | null = null;
     if (this.chainView.onChainViewUpdate || changes.headUpdate) {
-      const snapshot = await this.core.getHeadSnapshot(
+      const snapshot = await this.coreApi.getHeadSnapshot(
         changes.headUpdate
           ? {blockRoot: fromHex(previousHead.blockRoot), payloadStatus: previousHead.payloadStatus}
           : undefined
@@ -1355,7 +1355,7 @@ export class BeaconEngine implements IBeaconEngine {
 
   private readonly onNewFinalizedCheckpoint = async (): Promise<void> => {
     try {
-      const snapshot = await this.core.getFinalizedCheckpointSnapshot();
+      const snapshot = await this.coreApi.getFinalizedCheckpointSnapshot();
       // Core uses byte roots for transport; archival consumers expect root hexes.
       const toSummary = ({slot, blockRoot, payloadStatus}: FinalizedProtoSummary<Root>): FinalizedProtoSummary => ({
         slot,
@@ -1371,8 +1371,7 @@ export class BeaconEngine implements IBeaconEngine {
         },
       };
       // Finalization consumers read ChainView, so apply the checkpoint before emitting.
-      if (this.beaconEngineMode === BeaconEngineMode.Worker)
-        this.chainView.applyFinalizedCheckpoint?.(checkpointSnapshot);
+      if (this.core === null) this.chainView.applyFinalizedCheckpoint?.(checkpointSnapshot);
       this.emitter.emit(ChainEvent.updateStatus);
       this.emitter.emit(ChainEvent.forkChoiceFinalized, checkpointSnapshot);
     } catch (e) {

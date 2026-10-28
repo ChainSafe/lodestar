@@ -278,7 +278,7 @@ export class BeaconNode {
       emitter,
       clock,
       serializedCache,
-      beaconEngineMode,
+      ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: beaconEngineCore.emitter} : {}),
     });
     await beaconEngineCore.init();
     const {earliestAvailableSlot} = await executeStateInitialization(

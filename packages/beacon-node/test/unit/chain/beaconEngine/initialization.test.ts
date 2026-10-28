@@ -556,7 +556,7 @@ describe("bytes-based engine startup", () => {
       });
       vi.spyOn(core, "onEpoch").mockImplementation((epoch) => {
         forwarded.push(`epoch:${epoch}`);
-        onEpoch(epoch);
+        return onEpoch(epoch);
       });
 
       vi.setSystemTime((SLOTS_PER_EPOCH + 1) * config.SLOT_DURATION_MS);
@@ -1111,20 +1111,20 @@ describe("bytes-based engine startup", () => {
     const beaconChain = new BeaconChain(workerOpts, dependencies);
     chain = beaconChain;
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
-    const snapshot = core.getHeadSnapshot();
+    const snapshot = await core.getHeadSnapshot();
     const head = {
       ...core.forkChoice.getHead(),
       slot: snapshot.head.slot + 1,
       parentRoot: toRootHex(snapshot.head.blockRoot),
       blockRoot: toRootHex(Buffer.alloc(32, 1)),
     };
-    vi.spyOn(core, "onSlot").mockReturnValue({
+    vi.spyOn(core, "onSlot").mockResolvedValue({
       headUpdate: true,
       justifiedCheckpointChanged: false,
       finalizedCheckpointChanged: false,
     });
     const headBytes = toChainViewBlockBytes(head);
-    vi.spyOn(core, "getHeadSnapshot").mockReturnValue({
+    vi.spyOn(core, "getHeadSnapshot").mockResolvedValue({
       ...snapshot,
       head: headBytes,
       version: snapshot.version + 1,
@@ -1250,12 +1250,12 @@ describe("bytes-based engine startup", () => {
     const core = getBeaconEngineCore(beaconChain.beaconEngine);
     const head = beaconChain.beaconEngine.chainView.getHead();
     // Core reports a finalized change once; the next slot runs the real onSlot
-    vi.spyOn(core, "onSlot").mockReturnValueOnce({
+    vi.spyOn(core, "onSlot").mockResolvedValueOnce({
       headUpdate: false,
       justifiedCheckpointChanged: false,
       finalizedCheckpointChanged: true,
     });
-    vi.spyOn(core, "getFinalizedCheckpointSnapshot").mockReturnValue({
+    vi.spyOn(core, "getFinalizedCheckpointSnapshot").mockResolvedValue({
       epoch: 1,
       root: fromHex(head.blockRoot),
       slot: head.slot,

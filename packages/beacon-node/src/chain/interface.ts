@@ -44,7 +44,7 @@ import type {GossipValidationResult} from "./beaconEngine/gossipValidationResult
 import type {EngineBootstrap} from "./beaconEngine/initialization.js";
 import type {
   BlockRootResponse,
-  IBeaconEngineCore,
+  IBeaconEngineCoreApi,
   ImportBlockResult,
   ImportExecutionPayloadOpts,
   PayloadAttestationBlock,
@@ -205,7 +205,8 @@ export interface IBeaconChain {
 /** Main-thread facade; processing methods reconstruct errors with their local inputs. */
 export interface IBeaconEngine
   extends Omit<
-    IBeaconEngineCore,
+    IBeaconEngineCoreApi,
+    | "init"
     | "initializeFromAnchor"
     | "onSlot"
     | "onEpoch"
@@ -258,6 +259,7 @@ export interface IBeaconEngine
     | "getBlockByRoot"
     | "getBlockHeaders"
   > {
+  readonly config: BeaconConfig;
   readonly chainView: IChainView;
 
   // Lifecycle

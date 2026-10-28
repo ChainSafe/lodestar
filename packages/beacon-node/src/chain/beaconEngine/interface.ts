@@ -258,11 +258,6 @@ export type PrepareNextSlotResponse = {
 );
 
 /**
- * The consensus engine seam. Starts minimal and transitional (JS-only); ownership of consensus
- * collaborators and flows migrates here across later phases. This interface is the contract shared
- * with the native engine (lodestar-z) — both the JS and native engines implement the same signatures.
- */
-/**
  * Result of an engine API state read. `null` = state not found (API → 404); `invalid` = a state-derived
  * validation failure the API maps to `ApiError(code, message)` (keeps the engine HTTP-free); otherwise the
  * targeted `data` + meta. `fork` is included where the response meta needs `version`.
@@ -298,10 +293,13 @@ export type ImportExecutionPayloadResult = {
   block: ChainViewBlock<Root>;
 };
 
-export interface IBeaconEngineCore {
-  readonly config: BeaconConfig;
-
+/**
+ * The consensus engine seam, shared by the JS engine (in-process or worker) and the native engine (lodestar-z).
+ * Every method is async so that each implementation can sit behind a thread or FFI boundary.
+ */
+export interface IBeaconEngineCoreApi {
   // Lifecycle
+  init(): Promise<void>;
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
   persistAnchorState(): Promise<void>;
   initializeFromAnchor(): Promise<EngineBootstrapWithChainView>;
@@ -312,21 +310,21 @@ export interface IBeaconEngineCore {
   close(): Promise<void>;
 
   // Clock / fork choice / head
-  onSlot(slot: Slot): OnSlotResponse;
-  onEpoch(epoch: Epoch): void;
+  onSlot(slot: Slot): Promise<OnSlotResponse>;
+  onEpoch(epoch: Epoch): Promise<void>;
   // Advance preparation for the next slot: recompute head, regen the prepare-state, predict a
   // proposer-boost-reorg, precompute the epoch transition and prepare the EL/builder.
   // Returns requested payload attributes and an optional parent for facade-owned DA pruning.
   prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse>;
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): {headUpdate: boolean};
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<{headUpdate: boolean}>;
   /** Include head-event metadata only when a previous ChainView head is supplied. */
-  getHeadSnapshot(previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): HeadSnapshot;
+  getHeadSnapshot(previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): Promise<HeadSnapshot>;
   getChainViewSnapshot(): Promise<ChainViewSnapshot>;
-  getFinalizedCheckpointSnapshot(): FinalizedCheckpointSnapshot<Root>;
-  isHeadOptimistic(): boolean;
+  getFinalizedCheckpointSnapshot(): Promise<FinalizedCheckpointSnapshot<Root>>;
+  isHeadOptimistic(): Promise<boolean>;
   getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo>;
-  pauseFastConfirmation(): void;
-  resumeFastConfirmation(): void;
+  pauseFastConfirmation(): Promise<void>;
+  resumeFastConfirmation(): Promise<void>;
 
   // Block processing
   /**
@@ -364,7 +362,7 @@ export interface IBeaconEngineCore {
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportExecutionPayloadOpts
   ): Promise<Result<ImportExecutionPayloadResult, PayloadFailure>>;
-  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): void;
+  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void>;
   verifyAndObserveBlockProposerBytes(bytes: Uint8Array, root: RootHex): Promise<void>;
   verifyEnvelopeForPublishBytes(bytes: Uint8Array, blockRootHex: RootHex): Promise<void>;
   isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): Promise<boolean>;
@@ -397,8 +395,8 @@ export interface IBeaconEngineCore {
     subnet: SubcommitteeIndex,
     slot: Slot,
     blockRoot: Root
-  ): ProductionResponse<Uint8Array | null>;
-  getPayloadAttestationBlock(slot: Slot): PayloadAttestationBlock | null;
+  ): Promise<ProductionResponse<Uint8Array | null>>;
+  getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null>;
 
   // Validator duties / proposer cache
   // Validator duties. The engine resolves state internally and returns fully-populated duties (with

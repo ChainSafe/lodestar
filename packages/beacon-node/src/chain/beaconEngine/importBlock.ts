@@ -305,7 +305,7 @@ export async function importBlock(
   const oldHead = this.forkChoice.getHead();
 
   // Public notifications follow application of the returned ChainView metadata in the facade.
-  this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+  this.recomputeForkChoiceHeadSync(ForkchoiceCaller.importBlock);
   const newHead = this.forkChoice.getHead();
   const headUpdate = this.getHeadUpdate(oldHead, newHead);
   let reorg: ChainReorg<Root> | null = null;

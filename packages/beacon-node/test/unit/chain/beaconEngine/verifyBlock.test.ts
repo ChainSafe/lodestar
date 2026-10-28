@@ -215,7 +215,7 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(core.verifiedBlocks.size).toBe(2);
     expect(core.verifiedBlocks.get(signedRoot(first))).toBe(firstBundle);
     expect(core.verifiedBlocks.get(signedRoot(other))?.block.signature).toEqual(otherBlock.signature);
-    core.discardVerifiedBlocks([computeSignedBlockRoot(other.forkName, other.getBlock())]);
+    await core.discardVerifiedBlocks([computeSignedBlockRoot(other.forkName, other.getBlock())]);
     expect(core.verifiedBlocks.get(signedRoot(other))).toBeUndefined();
     expect(core.verifiedBlocks.get(signedRoot(first))).toBe(firstBundle);
   });

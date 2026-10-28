@@ -9,7 +9,6 @@ import {ErrorAborted, defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {BeaconEngineErrorCode} from "../../../../src/chain/beaconEngine/interface.js";
-import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/utils.js";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine.js";
 import {BeaconChain} from "../../../../src/chain/chain.js";
@@ -83,7 +82,7 @@ async function setup() {
     emitter,
     logger,
     serializedCache: new SerializedCache(),
-    beaconEngineMode: BeaconEngineMode.Worker,
+    coreEmitter: core.emitter,
   });
   const view = new ReplicateChainView(await core.getChainViewSnapshot());
   engine.chainView = view;

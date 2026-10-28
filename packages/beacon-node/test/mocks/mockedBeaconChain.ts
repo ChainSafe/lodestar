@@ -8,6 +8,7 @@ import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineCoreEventBus, BeaconEngineEventBus} from "../../src/chain/beaconEngine/events.js";
+import {BeaconEngineMode} from "../../src/chain/beaconEngine/options.js";
 import {BeaconEngine} from "../../src/chain/beaconEngine.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
@@ -51,9 +52,10 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   produceBlockWrapper: Mock<BeaconEngineCore["produceBlockWrapper"]>;
   forkChoice: MockedForkChoice;
   // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
-  // real `prepareForNextSlot` bound onto it call `this.recomputeForkChoiceHead`
+  // real `prepareForNextSlot` bound onto it call `this.recomputeForkChoiceHeadSync`
   // etc.). No longer on the facade — stubbed here so tests can control head selection.
   recomputeForkChoiceHead: Mock<BeaconEngineCore["recomputeForkChoiceHead"]>;
+  recomputeForkChoiceHeadSync: Mock<BeaconEngineCore["recomputeForkChoiceHeadSync"]>;
   updateBuilderStatus: Mock<(slot: Slot) => void>;
   predictProposerHead: Mock<() => ProtoBlock>;
   getProposerHead: Mock<() => ProtoBlock>;
@@ -105,7 +107,7 @@ export function withBeaconEngineFacade(chain: MockedBeaconChain): BeaconChain {
     emitter,
     clock: chain.clock,
     serializedCache: chain.serializedCache,
-    beaconEngineMode: chain.opts.beaconEngineMode,
+    ...(chain.opts.beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: chain.beaconEngine.emitter} : {}),
   });
   Object.assign(beaconEngine, {chainView: chain.chainView});
   return Object.assign(Object.create(chain) as BeaconChain, {emitter, beaconEngine});
@@ -292,6 +294,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       getFinalizedBlockSlotByRoot: vi.fn(),
       getSerializedFinalizedBlockByParentRoot: vi.fn(),
       recomputeForkChoiceHead: vi.fn(),
+      recomputeForkChoiceHeadSync: vi.fn(),
       predictProposerHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),
       getHeadState: vi.fn(),
@@ -344,7 +347,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   (chain as {beaconEngine: unknown}).beaconEngine = chain;
   // Duty flows are real BeaconEngineCore methods; bind the real implementations (and the private helpers
   // they call) so duty tests exercise real logic against the mock's collaborators.
-  // `prepareForNextSlot` is a real BeaconEngineCore method too; `recomputeForkChoiceHead` / `predictProposerHead`
+  // `prepareForNextSlot` is a real BeaconEngineCore method too; `recomputeForkChoiceHeadSync` / `predictProposerHead`
   // stay as mock fns above so tests can control head selection.
   for (const name of [
     "reportIrrecoverableError",

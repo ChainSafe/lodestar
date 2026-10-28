@@ -75,11 +75,11 @@ describe("PrepareNextSlot scheduler", () => {
 
       const preparing = scheduler.prepareForNextSlot(clockSlot);
       await vi.advanceTimersByTimeAsync(7999);
-      expect(chainStub.recomputeForkChoiceHead).not.toHaveBeenCalled();
+      expect(chainStub.recomputeForkChoiceHeadSync).not.toHaveBeenCalled();
       expect(prepare).not.toHaveBeenCalled();
       chainStub.emitter.on(routes.events.EventType.payloadAttributes, vi.fn());
       await vi.advanceTimersByTimeAsync(1);
-      expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+      expect(chainStub.recomputeForkChoiceHeadSync).toHaveBeenCalledOnce();
       expect(prepare).toHaveBeenCalledWith(clockSlot, {produceSSEPayloadAttributes: true});
       await preparing;
     }
@@ -88,7 +88,7 @@ describe("PrepareNextSlot scheduler", () => {
   it("pre bellatrix - should not run due to not last slot of epoch", async () => {
     getForkStub.mockReturnValue(ForkName.phase0);
     await scheduler.prepareForNextSlot(3);
-    expect(chainStub.recomputeForkChoiceHead).not.toHaveBeenCalled();
+    expect(chainStub.recomputeForkChoiceHeadSync).not.toHaveBeenCalled();
   });
 
   it("pre bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
@@ -98,7 +98,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(chainStub.recomputeForkChoiceHeadSync).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
   });
 
@@ -110,7 +110,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(chainStub.recomputeForkChoiceHeadSync).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
   });
 
@@ -123,7 +123,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(chainStub.recomputeForkChoiceHeadSync).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
     expect(loggerStub.error).toHaveBeenCalledTimes(1);
   });
@@ -135,7 +135,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(chainStub.recomputeForkChoiceHeadSync).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
   });
 
@@ -148,7 +148,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(chainStub.recomputeForkChoiceHeadSync).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
   });
 
@@ -202,7 +202,7 @@ describe("PrepareNextSlot scheduler", () => {
         vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
       ]);
 
-      expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+      expect(chainStub.recomputeForkChoiceHeadSync).toHaveBeenCalledOnce();
       expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
       expect(prepare).toHaveBeenCalledWith(prepareSlot - 1, {produceSSEPayloadAttributes: hasListener});
       expect(listenerCount).toHaveBeenCalledExactlyOnceWith(routes.events.EventType.payloadAttributes);

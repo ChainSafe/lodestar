@@ -172,7 +172,7 @@ describe("BeaconEngineCore gossip bytes", () => {
           clock: engine.clock,
           emitter: new ChainEventEmitter(),
           serializedCache: new SerializedCache(),
-          beaconEngineMode,
+          ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: engine.emitter} : {}),
         });
         const publicationBytes = originalBytes.map((bytes) => Uint8Array.from(bytes));
         const results = await Promise.all(
@@ -493,7 +493,7 @@ describe("BeaconEngineCore gossip bytes", () => {
           clock: engine.clock,
           emitter: new ChainEventEmitter(),
           serializedCache: cache,
-          beaconEngineMode,
+          ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: engine.emitter} : {}),
         });
         const lookup = vi.spyOn(cache, "get");
         const error = new GossipActionError(GossipAction.IGNORE, {code: "TEST_IGNORE"});

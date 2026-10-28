@@ -4,7 +4,7 @@ import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {ApiError, ValidationError} from "../../../../../../src/api/impl/errors.js";
-import {IBeaconEngineCore} from "../../../../../../src/chain/beaconEngine/interface.js";
+import {IBeaconEngineCoreApi} from "../../../../../../src/chain/beaconEngine/interface.js";
 import {withBeaconEngineFacade} from "../../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
@@ -14,8 +14,8 @@ describe("getBlockRoot", () => {
   const slotZeroRoot = Buffer.alloc(32, 0x11);
   let modules: ApiTestModules;
   let api: ReturnType<typeof getBeaconBlockApi>;
-  const getCanonicalBlockAtSlot = vi.fn<IBeaconEngineCore["getCanonicalBlockAtSlot"]>();
-  const getBlockByRoot = vi.fn<IBeaconEngineCore["getBlockByRoot"]>();
+  const getCanonicalBlockAtSlot = vi.fn<IBeaconEngineCoreApi["getCanonicalBlockAtSlot"]>();
+  const getBlockByRoot = vi.fn<IBeaconEngineCoreApi["getBlockByRoot"]>();
 
   function getRootHex(res: Awaited<ReturnType<typeof api.getBlockRoot>>): string {
     if (res.data instanceof Uint8Array) {
