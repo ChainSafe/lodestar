@@ -221,6 +221,9 @@ importers:
       '@crate-crypto/node-eth-kzg':
         specifier: 0.9.1
         version: 0.9.1
+      '@ethereumjs/rlp':
+        specifier: ^10.1.1
+        version: 10.1.1
       '@fastify/bearer-auth':
         specifier: ^10.0.1
         version: 10.0.1
@@ -311,6 +314,9 @@ importers:
       deepmerge:
         specifier: ^4.3.1
         version: 4.3.1
+      ethereum-cryptography:
+        specifier: ^2.2.1
+        version: 2.2.1
       fastify:
         specifier: ^5.8.1
         version: 5.12.6
@@ -348,9 +354,6 @@ importers:
         specifier: 1.0.2
         version: 1.0.2
     devDependencies:
-      '@ethereumjs/rlp':
-        specifier: ^4.0.1
-        version: 4.0.1
       '@libp2p/interface-internal':
         specifier: ^3.2.0
         version: 3.2.0
