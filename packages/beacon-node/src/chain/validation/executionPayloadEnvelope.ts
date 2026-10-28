@@ -6,6 +6,7 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {computeExecutionBlockHash} from "../../execution/engine/blockHash.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -151,6 +152,24 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
       slot: payload.slotNumber,
       root: blockRootHex,
+    });
+  }
+
+  // [REJECT] The payload's block hash is computed correctly
+  // Checked after the signature, unlike the spec, so an unsigned envelope cannot make us hash its payload
+  const computedBlockHash = computeExecutionBlockHash(
+    blockState.forkName,
+    payload,
+    envelope.parentBeaconBlockRoot,
+    envelope.executionRequests
+  );
+  if (!byteArrayEquals(computedBlockHash, payload.blockHash)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      blockHash: toRootHex(payload.blockHash),
+      computedBlockHash: toRootHex(computedBlockHash),
     });
   }
 }
