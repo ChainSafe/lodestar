@@ -35,6 +35,8 @@ export {
   type IForkChoiceStore,
   type JustifiedBalancesGetter,
 } from "./forkChoice/store.js";
+// EIP-8453 Goldilocks fork choice (prototype, not wired into the beacon node yet)
+export * from "./goldilocks/index.js";
 export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
 export type {
   BlockExecutionStatus,
