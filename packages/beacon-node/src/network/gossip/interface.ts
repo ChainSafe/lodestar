@@ -24,6 +24,7 @@ import {AttestationError, AttestationErrorType} from "../../chain/errors/attesta
 import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import type {PeerAction} from "../peers/index.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -163,6 +164,9 @@ export type GossipModules = {
   chain: IBeaconChain;
 };
 
+/** Reports about this delivery retain its source even after validation or import awaits. */
+export type GossipPeerReport = (action: PeerAction, reason: string) => void;
+
 /**
  * Contains various methods for validation of incoming gossip topic data.
  * The conditions for valid gossip topics and how they are handled are specified here:
@@ -175,6 +179,7 @@ export type GossipModules = {
  * js-libp2p-gossipsub expects validation functions that look like this
  */
 export type GossipMessageInfo = {
+  reportPeer: GossipPeerReport;
   topic: GossipTopic;
   msg: Message;
   propagationSource: PeerIdStr;
@@ -202,6 +207,7 @@ export type GossipData = {
 };
 
 export type GossipHandlerParam = {
+  reportPeer: GossipPeerReport;
   gossipData: GossipData;
   topic: GossipTopicMap[GossipType];
   peerIdStr: string;
@@ -213,6 +219,7 @@ export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam) => Promis
 export type BatchGossipHandlerFn = (gossipHandlerParam: GossipHandlerParam[]) => Promise<(null | AttestationError)[]>;
 
 export type GossipHandlerParamGeneric<T extends GossipType> = {
+  reportPeer: GossipPeerReport;
   gossipData: GossipData;
   topic: GossipTopicMap[T];
   peerIdStr: string;

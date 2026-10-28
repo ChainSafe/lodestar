@@ -248,16 +248,27 @@ export class FlatFileStore implements IFlatFileStore {
       const offsets = parseDcolOffsets(offsetTable, N, fileSize - DCOL_HEADER_SIZE - tableSize);
 
       const results: (Uint8Array | undefined)[] = [];
+      const maxBytes = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar.maxSize;
       for (const idx of indices) {
         const range = getColumnByteRange(header, offsets, idx);
         if (!range) {
           results.push(undefined);
           continue;
         }
+        // Snappy's worst-case compressed size; check before allocating the read buffer.
+        const maxCompressedBytes = 32 + maxBytes + Math.floor(maxBytes / 6);
+        if (range.length > maxCompressedBytes) {
+          throw new DataColumnStoreError({
+            code: DataColumnStoreErrorCode.READ_LIMIT_EXCEEDED,
+            bytes: range.length,
+            limit: maxCompressedBytes,
+          });
+        }
         const buf = new Uint8Array(range.length);
         await readExactly(fd, buf, range.offset);
         this.metrics?.readBytes.inc(buf.length);
-        results.push(uncompress(buf));
+        const value = uncompress(buf, maxBytes);
+        results.push(value);
       }
 
       return results;

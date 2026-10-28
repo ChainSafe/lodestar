@@ -34,9 +34,9 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+    const knownSlot = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex)?.slot;
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
-    const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(blockRoot);
+    const slot = knownSlot ?? (await db.blockArchive.getSlotByRoot(blockRoot));
 
     if (slot === null) {
       // We haven't seen the block
@@ -81,7 +81,7 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     if (unavailableColumnIndices.length) {
-      const finalized = !block || (await db.blockArchive.getSlotByRoot(blockRoot)) === slot;
+      const finalized = knownSlot === undefined || (await db.blockArchive.getSlotByRoot(blockRoot)) === slot;
       await handleColumnSidecarUnavailability({
         chain,
         db,

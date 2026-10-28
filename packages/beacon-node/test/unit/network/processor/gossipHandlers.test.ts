@@ -17,9 +17,8 @@ import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockPropo
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
-import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NetworkEventBus} from "../../../../src/network/events.js";
-import {GossipType, SequentialGossipHandler} from "../../../../src/network/gossip/interface.js";
+import {GossipPeerReport, GossipType, SequentialGossipHandler} from "../../../../src/network/gossip/interface.js";
 import {PeerAction} from "../../../../src/network/peers/index.js";
 import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 import {getGossipHandlers} from "../../../../src/network/processor/gossipHandlers.js";
@@ -113,7 +112,6 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
         config,
         logger,
         metrics: null,
-        core: {reportPeer: vi.fn()} as unknown as INetworkCore,
         events: new NetworkEventBus(),
         aggregatorTracker: {} as AggregatorTracker,
       },
@@ -135,6 +133,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
         topic: {boundary: {fork, epoch: 0}, type: GossipType.execution_payload},
         peerIdStr,
         seenTimestampSec: Date.now() / 1000,
+        reportPeer: vi.fn(),
       });
       await vi.advanceTimersByTimeAsync(0);
     }
@@ -149,6 +148,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
         topic: {boundary: {fork, epoch: 0}, type: GossipType.data_column_sidecar, subnet: 0},
         peerIdStr,
         seenTimestampSec: Date.now() / 1000,
+        reportPeer: vi.fn(),
       });
       await vi.advanceTimersByTimeAsync(0);
     }
@@ -267,22 +267,22 @@ describe("getGossipHandlers", () => {
   });
 
   it("does not report the gossip peer when block processing hits an execution engine error", async () => {
-    const {core} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.EXECUTION_ENGINE_ERROR);
+    const {reportPeer} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.EXECUTION_ENGINE_ERROR);
 
-    expect(core.reportPeer).not.toHaveBeenCalled();
+    expect(reportPeer).not.toHaveBeenCalled();
   });
 
   it("does not report the gossip peer when block data is unavailable", async () => {
-    const {core} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.DATA_UNAVAILABLE);
+    const {reportPeer} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.DATA_UNAVAILABLE);
 
-    expect(core.reportPeer).not.toHaveBeenCalled();
+    expect(reportPeer).not.toHaveBeenCalled();
   });
 
   it("reports the gossip peer when block processing gets a definitive execution INVALID verdict", async () => {
-    const {core, peerIdStr} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.EXECUTION_ENGINE_INVALID);
+    const {reportPeer} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.EXECUTION_ENGINE_INVALID);
 
-    expect(core.reportPeer).toHaveBeenCalledOnce();
-    expect(core.reportPeer).toHaveBeenCalledWith(peerIdStr, PeerAction.LowToleranceError, "ExecutionEngineInvalid");
+    expect(reportPeer).toHaveBeenCalledOnce();
+    expect(reportPeer).toHaveBeenCalledWith(PeerAction.LowToleranceError, "ExecutionEngineInvalid");
   });
 
   it("imports a signature-verified REPEAT_PROPOSAL (equivocating) block into fork choice but keeps IGNORE", async () => {
@@ -372,9 +372,10 @@ describe("getGossipHandlers", () => {
       errorMessage: "invalid payload",
     },
   ])("evicts the cached envelope when payload processing fails with $code", async (errorType) => {
-    const {removeInvalid, payloadInput} = await runExecutionPayloadProcessingError(errorType);
+    const {removeInvalid, payloadInput, reportPeer} = await runExecutionPayloadProcessingError(errorType);
 
     expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
+    expect(reportPeer).toHaveBeenCalledExactlyOnceWith(PeerAction.LowToleranceError, "BadGossipPayload");
   });
 
   it("keeps the cached envelope when payload data is unavailable", async () => {
@@ -384,19 +385,21 @@ describe("getGossipHandlers", () => {
   });
 
   it("keeps the cached envelope when payload processing hits an execution engine error", async () => {
-    const {removeInvalid} = await runExecutionPayloadProcessingError({
+    const {removeInvalid, reportPeer} = await runExecutionPayloadProcessingError({
       code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
       execStatus: ExecutionPayloadStatus.ELERROR,
       errorMessage: "execution engine offline",
     });
 
     expect(removeInvalid).not.toHaveBeenCalled();
+    expect(reportPeer).not.toHaveBeenCalled();
   });
 });
 
 async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): Promise<{
   removeInvalid: ReturnType<typeof vi.fn>;
   payloadInput: PayloadEnvelopeInput;
+  reportPeer: GossipPeerReport;
 }> {
   const config = createBeaconConfig(
     {
@@ -431,6 +434,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
   signedEnvelope.message.payload.slotNumber = 1;
 
   const removeInvalid = vi.fn();
+  const reportPeer = vi.fn<GossipPeerReport>();
   const chain = {
     clock: new ClockStopped(1),
     emitter: new ChainEventEmitter(),
@@ -448,7 +452,6 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
       aggregatorTracker: {} as AggregatorTracker,
       chain,
       config,
-      core: {reportPeer: vi.fn()} as unknown as INetworkCore,
       events: new NetworkEventBus(),
       logger,
       metrics: null,
@@ -460,6 +463,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
   ] as SequentialGossipHandler<GossipType.execution_payload>;
 
   await executionPayloadHandler({
+    reportPeer,
     gossipData: {serializedData: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope)},
     peerIdStr,
     seenTimestampSec: 0,
@@ -472,7 +476,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {removeInvalid, payloadInput};
+  return {removeInvalid, payloadInput, reportPeer};
 }
 
 async function runBeaconBlockProcessingError(
@@ -482,8 +486,7 @@ async function runBeaconBlockProcessingError(
     | BlockErrorCode.EXECUTION_ENGINE_INVALID
     | BlockErrorCode.DATA_UNAVAILABLE
 ): Promise<{
-  core: Pick<INetworkCore, "reportPeer">;
-  peerIdStr: PeerIdStr;
+  reportPeer: GossipPeerReport;
 }> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
@@ -500,7 +503,7 @@ async function runBeaconBlockProcessingError(
     peerIdStr,
   });
   const error = getExecutionBlockError(signedBlock, code);
-  const core = {reportPeer: vi.fn()} as Pick<INetworkCore, "reportPeer">;
+  const reportPeer = vi.fn<GossipPeerReport>();
   const chain = {
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
@@ -529,7 +532,6 @@ async function runBeaconBlockProcessingError(
       aggregatorTracker: {} as AggregatorTracker,
       chain,
       config,
-      core: core as INetworkCore,
       events: new NetworkEventBus(),
       logger,
       metrics: null,
@@ -539,6 +541,7 @@ async function runBeaconBlockProcessingError(
   const beaconBlockHandler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
 
   await beaconBlockHandler({
+    reportPeer,
     gossipData: {
       serializedData: ssz.deneb.SignedBeaconBlock.serialize(signedBlock),
     },
@@ -555,7 +558,7 @@ async function runBeaconBlockProcessingError(
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {core, peerIdStr};
+  return {reportPeer};
 }
 
 async function runBeaconBlockRepeatProposal(
@@ -669,7 +672,6 @@ async function runBeaconBlockRepeatProposal(
       aggregatorTracker: {} as AggregatorTracker,
       chain,
       config,
-      core: {reportPeer: vi.fn()} as unknown as INetworkCore,
       events: new NetworkEventBus(),
       logger,
       metrics: null,
@@ -681,6 +683,7 @@ async function runBeaconBlockRepeatProposal(
   let threw = false;
   try {
     await beaconBlockHandler({
+      reportPeer: vi.fn(),
       gossipData: {serializedData},
       peerIdStr,
       seenTimestampSec: 0,

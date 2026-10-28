@@ -366,8 +366,10 @@ export function getBeaconPoolApi({
               }
             }
 
-            // TODO: Broadcast at once to all topics
-            await Promise.all(subnets.map(async (subnet) => network.publishSyncCommitteeSignature(signature, subnet)));
+            const publications = subnets.map(async (subnet) =>
+              network.publishSyncCommitteeSignature(signature, subnet)
+            );
+            await Promise.all(publications);
           } catch (e) {
             // TODO: gossipsub should allow publishing same message to different topics
             // https://github.com/ChainSafe/js-libp2p-gossipsub/issues/272

@@ -1,7 +1,8 @@
+import {NativePeerReportContext} from "@chainsafe/lodestar-z/network";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkPostAltair, ForkPostFulu, isForkPostAltair, isForkPostFulu} from "@lodestar/params";
-import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
+import {Protocol, ProtocolHandler, ReqRespRequest, ResponseIncoming as RpcResponseIncoming} from "@lodestar/reqresp";
 import {
   DataColumnSidecar,
   LightClientBootstrap,
@@ -31,6 +32,8 @@ import {
   ExecutionPayloadEnvelopesByRootRequest,
   ExecutionPayloadEnvelopesByRootRequestType,
 } from "../../util/types.js";
+
+export type ResponseIncoming = RpcResponseIncoming & {peerReportContext?: NativePeerReportContext};
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 

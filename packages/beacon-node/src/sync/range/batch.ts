@@ -647,9 +647,8 @@ export class Batch {
 
   /**
    * Downloading -> AwaitingDownload (without counting as a failed attempt).
-   * Used when the peer rate-limited us — the request was never actually served.
    */
-  downloadingRateLimited(): void {
+  downloadingDeferred(): void {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }

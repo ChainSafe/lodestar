@@ -185,6 +185,7 @@ describe("options / beaconNodeOptions", () => {
         collectSystemStats: true,
       },
       network: {
+        backend: "libp2p",
         discv5: {
           config: {},
           bindAddrs: {
@@ -232,6 +233,58 @@ describe("options / beaconNodeOptions", () => {
 });
 
 describe("options / network / tcp and quic flags", () => {
+  it.each([
+    [{"network.gossipsubD": 9}, "gossipsubD=8"],
+    [{"network.gossipsubDLow": 7}, "gossipsubDLow=6"],
+    [{"network.gossipsubDHigh": 13}, "gossipsubDHigh=12"],
+    [{"network.rateLimitMultiplier": 2}, "rateLimitMultiplier=1"],
+    [{disablePeerScoring: true}, "disablePeerScoring=false"],
+    [{mdns: true}, "mdns=false"],
+    [{"network.connectToDiscv5Bootnodes": true}, "connectToDiscv5Bootnodes=false"],
+    [{"network.gossipsubAwaitHandler": true}, "gossipsubAwaitHandler=false"],
+    [{"network.discv5FirstQueryDelayMs": 0}, "omit discv5FirstQueryDelayMs"],
+    [{"network.maxPeers": 257}, "maxPeers=257"],
+    [{"network.maxPeers": 200, targetPeers: 200}, "targetPeers=200"],
+  ] satisfies [NetworkArgs, string][])("names unsupported native settings %j", (args, message) => {
+    expect(() => parseNetworkArgs({"network.backend": "native", tcp: false, ...args})).toThrow(message);
+    expect(() => parseNetworkArgs(args)).not.toThrow();
+  });
+
+  it.each([true, false])("accepts native networking independently of useWorker=%s", (useWorker) => {
+    expect(parseNetworkArgs({"network.backend": "native", tcp: false, "network.useWorker": useWorker})).toMatchObject({
+      backend: "native",
+      useWorker,
+    });
+  });
+
+  it("keeps stock default and selects native explicitly", () => {
+    expect(parseNetworkArgs({}).backend).toBe("libp2p");
+    expect(parseNetworkArgs({"network.backend": "native", tcp: false, listenAddress: "127.0.0.1"})).toMatchObject({
+      backend: "native",
+      localMultiaddrs: ["/ip4/127.0.0.1/udp/9001/quic-v1"],
+    });
+  });
+  it.each([
+    {"network.backend": "native", listenAddress: "127.0.0.1"},
+    {"network.backend": "native", tcp: false, quic: false},
+  ] satisfies NetworkArgs[])("rejects unsupported native listeners %o", (args) => {
+    expect(() => parseNetworkArgs(args)).toThrow("native backend requires");
+  });
+  it("accepts native dual-stack listeners with independent ports", () => {
+    const result = parseNetworkArgs({
+      "network.backend": "native",
+      tcp: false,
+      listenAddress: "0.0.0.0",
+      listenAddress6: "::",
+      discoveryPort: 9000,
+      quicPort: 9001,
+      discoveryPort6: 19000,
+      quicPort6: 19001,
+    });
+    expect(result.localMultiaddrs).toEqual(["/ip4/0.0.0.0/udp/9001/quic-v1", "/ip6/::/udp/19001/quic-v1"]);
+    expect(result.discv5).toMatchObject({bindAddrs: {ip4: "/ip4/0.0.0.0/udp/9000", ip6: "/ip6/::/udp/19000"}});
+    expect(() => parseNetworkArgs({"network.backend": "native", tcp: false})).not.toThrow();
+  });
   it("should include both tcp and quic multiaddrs by default", () => {
     const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000} as NetworkArgs);
     expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
@@ -406,5 +459,21 @@ describe("options / network / hasGlobalIPv6Address", () => {
     };
     expect(hasGlobalIPv6Address(interfaces)).toBe(true);
     expect(hasGlobalIPv6Address({eth0: [iface("2003::1", "IPv6")]})).toBe(true);
+  });
+});
+
+it("passes native transport knobs through the CLI", () => {
+  expect(
+    parseNetworkArgs({
+      "network.native.traceGossip": true,
+      "network.native.receiveBudgetBytes": 1024 ** 3,
+      "network.native.initialCongestionWindowPackets": 32,
+      "network.native.receiveDatagramsPerTurn": 128,
+    }).native
+  ).toEqual({
+    traceGossip: true,
+    receiveBudgetBytes: 1024 ** 3,
+    initialCongestionWindowPackets: 32,
+    receiveDatagramsPerTurn: 128,
   });
 });

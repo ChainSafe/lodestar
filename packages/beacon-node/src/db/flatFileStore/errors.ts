@@ -1,6 +1,7 @@
 import {LodestarError} from "@lodestar/utils";
 
 export enum DataColumnStoreErrorCode {
+  READ_LIMIT_EXCEEDED = "DATA_COLUMN_STORE_READ_LIMIT_EXCEEDED",
   INVALID_ROOT = "DATA_COLUMN_STORE_INVALID_ROOT",
   INVALID_SLOT = "DATA_COLUMN_STORE_INVALID_SLOT",
   SLOT_OUT_OF_RANGE = "DATA_COLUMN_STORE_SLOT_OUT_OF_RANGE",
@@ -22,6 +23,7 @@ export enum DataColumnStoreErrorCode {
 }
 
 export type DataColumnStoreErrorType =
+  | {code: DataColumnStoreErrorCode.READ_LIMIT_EXCEEDED; bytes: number; limit: number}
   | {code: DataColumnStoreErrorCode.INVALID_ROOT; root: string}
   | {code: DataColumnStoreErrorCode.INVALID_SLOT; slot: number}
   | {code: DataColumnStoreErrorCode.SLOT_OUT_OF_RANGE}

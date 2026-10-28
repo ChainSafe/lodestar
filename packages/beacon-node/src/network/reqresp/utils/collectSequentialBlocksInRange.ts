@@ -1,8 +1,7 @@
-import {ResponseIncoming} from "@lodestar/reqresp";
 import {SignedBeaconBlock, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {SerializedCache} from "../../../util/serializedCache.js";
-import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
+import {ReqRespMethod, ResponseIncoming, responseSszTypeByMethod} from "../types.js";
 import {sszDeserializeResponse} from "./collect.js";
 
 /**
@@ -12,13 +11,14 @@ import {sszDeserializeResponse} from "./collect.js";
 export async function collectSequentialBlocksInRange(
   blockStream: AsyncIterable<ResponseIncoming>,
   {count, startSlot}: Pick<phase0.BeaconBlocksByRangeRequest, "count" | "startSlot">,
-  serializedCache?: SerializedCache
+  serializedCache?: SerializedCache,
+  onInvalidResponse?: (chunk: ResponseIncoming) => void
 ): Promise<SignedBeaconBlock[]> {
   const blocks: SignedBeaconBlock[] = [];
 
   for await (const chunk of blockStream) {
     const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, chunk.protocolVersion);
-    const block = sszDeserializeResponse(blockType, chunk.data);
+    const block = sszDeserializeResponse(blockType, chunk, onInvalidResponse);
 
     const blockSlot = block.message.slot;
 

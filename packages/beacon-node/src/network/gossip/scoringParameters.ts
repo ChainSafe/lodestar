@@ -66,7 +66,6 @@ type MeshMessageInfo = {
   decaySlots: number;
   capFactor: number;
   activationWindow: number;
-  currentSlot: number;
 };
 
 type PreComputedParams = {
@@ -92,6 +91,35 @@ export function computeGossipPeerScoreParams({
   config: BeaconConfig;
   eth2Context: Eth2Context;
 }): Partial<PeerScoreParams> {
+  const byKind = computeGossipPeerScoreParamsByKind(config, eth2Context.activeValidatorCount);
+  const topics: Record<string, TopicScoreParams> = {};
+  for (const boundary of getActiveForkBoundaries(config, eth2Context.currentEpoch)) {
+    for (const type of Object.values(GossipType)) {
+      const policy = byKind.topics[type];
+      if (!policy) continue;
+      const {meshDeliveryStartSlot, ...params} = policy;
+      if (eth2Context.currentSlot < meshDeliveryStartSlot) {
+        params.meshMessageDeliveriesThreshold = 0;
+        params.meshMessageDeliveriesWeight = 0;
+      }
+      if (type === GossipType.beacon_attestation) {
+        for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++)
+          topics[stringifyGossipTopic(config, {type, subnet, boundary})] = params;
+      } else if (
+        type !== GossipType.blob_sidecar &&
+        type !== GossipType.data_column_sidecar &&
+        type !== GossipType.sync_committee
+      ) {
+        topics[stringifyGossipTopic(config, {type, boundary})] = params;
+      }
+    }
+  }
+  return {...byKind, topics};
+}
+
+export type TopicScorePolicy = TopicScoreParams & {meshDeliveryStartSlot: number};
+
+export function computeGossipPeerScoreParamsByKind(config: BeaconConfig, activeValidatorCount: number) {
   const decayIntervalMs = config.SLOT_DURATION_MS;
   const decayToZero = 0.01;
   const epochDurationMs = config.SLOT_DURATION_MS * SLOTS_PER_EPOCH;
@@ -105,7 +133,7 @@ export function computeGossipPeerScoreParams({
   const topicScoreCap = maxPositiveScore * 0.5;
 
   const params = {
-    topics: getAllTopicsScoreParams(config, eth2Context, {
+    topics: getTopicsScoreParamsByKind(config, activeValidatorCount, {
       epochDurationMs,
       slotDurationMs,
       scoreParameterDecayFn,
@@ -126,175 +154,107 @@ export function computeGossipPeerScoreParams({
   return params;
 }
 
-function getAllTopicsScoreParams(
+function getTopicsScoreParamsByKind(
   config: BeaconConfig,
-  eth2Context: Eth2Context,
+  activeValidatorCount: number,
   precomputedParams: PreComputedParams
-): Record<string, TopicScoreParams> {
+): Partial<Record<GossipType, TopicScorePolicy>> {
   const {epochDurationMs, slotDurationMs} = precomputedParams;
-  const epoch = eth2Context.currentEpoch;
-  const topicsParams: Record<string, TopicScoreParams> = {};
-  const boundaries = getActiveForkBoundaries(config, epoch);
+  const topicsParams: Partial<Record<GossipType, TopicScorePolicy>> = {};
   const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
-  for (const boundary of boundaries) {
-    //first all fixed topics
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.voluntary_exit,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: VOLUNTARY_EXIT_WEIGHT,
-      expectedMessageRate: 4 / SLOTS_PER_EPOCH,
-      firstMessageDecayTime: epochDurationMs * 100,
-    });
+  //first all fixed topics
+  topicsParams[GossipType.voluntary_exit] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: VOLUNTARY_EXIT_WEIGHT,
+    expectedMessageRate: 4 / SLOTS_PER_EPOCH,
+    firstMessageDecayTime: epochDurationMs * 100,
+  });
 
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.bls_to_execution_change,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: BLS_TO_EXECUTION_CHANGE_WEIGHT,
-      expectedMessageRate: 4 / SLOTS_PER_EPOCH,
-      firstMessageDecayTime: epochDurationMs * 100,
-    });
+  topicsParams[GossipType.bls_to_execution_change] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: BLS_TO_EXECUTION_CHANGE_WEIGHT,
+    expectedMessageRate: 4 / SLOTS_PER_EPOCH,
+    firstMessageDecayTime: epochDurationMs * 100,
+  });
 
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.attester_slashing,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: ATTESTER_SLASHING_WEIGHT,
-      expectedMessageRate: 1 / 5 / SLOTS_PER_EPOCH,
-      firstMessageDecayTime: epochDurationMs * 100,
-    });
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.proposer_slashing,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: PROPOSER_SLASHING_WEIGHT,
-      expectedMessageRate: 1 / 5 / SLOTS_PER_EPOCH,
-      firstMessageDecayTime: epochDurationMs * 100,
-    });
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.payload_attestation_message,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: PAYLOAD_ATTESTATION_WEIGHT,
-      expectedMessageRate: PTC_SIZE,
-      firstMessageDecayTime: epochDurationMs * 100,
-    });
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.execution_payload_bid,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: EXECUTION_PAYLOAD_BID_WEIGHT,
-      expectedMessageRate: 1024, // TODO GLOAS: Need an estimate for this
-      firstMessageDecayTime: epochDurationMs * 100,
-    });
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.proposer_preferences,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: PROPOSER_PREFERENCES_WEIGHT,
-      // Upper bound ~64 messages per epoch: one per proposer across the current + next epoch.
-      expectedMessageRate: 64 / SLOTS_PER_EPOCH,
-      firstMessageDecayTime: epochDurationMs * 100,
-    });
+  topicsParams[GossipType.attester_slashing] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: ATTESTER_SLASHING_WEIGHT,
+    expectedMessageRate: 1 / 5 / SLOTS_PER_EPOCH,
+    firstMessageDecayTime: epochDurationMs * 100,
+  });
+  topicsParams[GossipType.proposer_slashing] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: PROPOSER_SLASHING_WEIGHT,
+    expectedMessageRate: 1 / 5 / SLOTS_PER_EPOCH,
+    firstMessageDecayTime: epochDurationMs * 100,
+  });
+  topicsParams[GossipType.payload_attestation_message] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: PAYLOAD_ATTESTATION_WEIGHT,
+    expectedMessageRate: PTC_SIZE,
+    firstMessageDecayTime: epochDurationMs * 100,
+  });
+  topicsParams[GossipType.execution_payload_bid] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: EXECUTION_PAYLOAD_BID_WEIGHT,
+    expectedMessageRate: 1024, // TODO GLOAS: Need an estimate for this
+    firstMessageDecayTime: epochDurationMs * 100,
+  });
+  topicsParams[GossipType.proposer_preferences] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: PROPOSER_PREFERENCES_WEIGHT,
+    // Upper bound ~64 messages per epoch: one per proposer across the current + next epoch.
+    expectedMessageRate: 64 / SLOTS_PER_EPOCH,
+    firstMessageDecayTime: epochDurationMs * 100,
+  });
 
-    // other topics
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.beacon_block,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: BEACON_BLOCK_WEIGHT,
-      expectedMessageRate: 1,
-      firstMessageDecayTime: epochDurationMs * 20,
-      meshMessageInfo: {
-        decaySlots: SLOTS_PER_EPOCH * 5,
-        capFactor: 3,
-        activationWindow: epochDurationMs,
-        currentSlot: eth2Context.currentSlot,
-      },
-    });
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.execution_payload,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: EXECUTION_PAYLOAD_WEIGHT,
-      expectedMessageRate: 1,
-      firstMessageDecayTime: epochDurationMs * 20,
-      meshMessageInfo: {
-        decaySlots: SLOTS_PER_EPOCH * 5,
-        capFactor: 3,
-        activationWindow: epochDurationMs,
-        currentSlot: eth2Context.currentSlot,
-      },
-    });
+  // other topics
+  topicsParams[GossipType.beacon_block] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: BEACON_BLOCK_WEIGHT,
+    expectedMessageRate: 1,
+    firstMessageDecayTime: epochDurationMs * 20,
+    meshMessageInfo: {
+      decaySlots: SLOTS_PER_EPOCH * 5,
+      capFactor: 3,
+      activationWindow: epochDurationMs,
+    },
+  });
+  topicsParams[GossipType.execution_payload] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: EXECUTION_PAYLOAD_WEIGHT,
+    expectedMessageRate: 1,
+    firstMessageDecayTime: epochDurationMs * 20,
+    meshMessageInfo: {
+      decaySlots: SLOTS_PER_EPOCH * 5,
+      capFactor: 3,
+      activationWindow: epochDurationMs,
+    },
+  });
 
-    const activeValidatorCount = eth2Context.activeValidatorCount;
-    const {aggregatorsPerslot, committeesPerSlot} = expectedAggregatorCountPerSlot(activeValidatorCount);
+  const {aggregatorsPerslot, committeesPerSlot} = expectedAggregatorCountPerSlot(activeValidatorCount);
 
-    // Checks to prevent unwanted errors in gossipsub
-    // Error: invalid score parameters for topic /eth2/4a26c58b/beacon_attestation_0/ssz_snappy: invalid FirstMessageDeliveriesCap; must be positive
-    //   at Object.validatePeerScoreParams (/usr/app/node_modules/libp2p-gossipsub/src/score/peer-score-params.js:62:27)
-    if (activeValidatorCount === 0) throw Error("activeValidatorCount === 0");
-    if (aggregatorsPerslot === 0) throw Error("aggregatorsPerslot === 0");
+  // Checks to prevent unwanted errors in gossipsub
+  // Error: invalid score parameters for topic /eth2/4a26c58b/beacon_attestation_0/ssz_snappy: invalid FirstMessageDeliveriesCap; must be positive
+  //   at Object.validatePeerScoreParams (/usr/app/node_modules/libp2p-gossipsub/src/score/peer-score-params.js:62:27)
+  if (activeValidatorCount === 0) throw Error("activeValidatorCount === 0");
+  if (aggregatorsPerslot === 0) throw Error("aggregatorsPerslot === 0");
 
-    const multipleBurstsPerSubnetPerEpoch = committeesPerSlot >= (2 * ATTESTATION_SUBNET_COUNT) / SLOTS_PER_EPOCH;
-    topicsParams[
-      stringifyGossipTopic(config, {
-        type: GossipType.beacon_aggregate_and_proof,
-        boundary,
-      })
-    ] = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: BEACON_AGGREGATE_PROOF_WEIGHT,
-      expectedMessageRate: aggregatorsPerslot,
-      firstMessageDecayTime: epochDurationMs,
-      meshMessageInfo: {
-        decaySlots: SLOTS_PER_EPOCH * 2,
-        capFactor: 4,
-        activationWindow: epochDurationMs,
-        currentSlot: eth2Context.currentSlot,
-      },
-    });
+  const multipleBurstsPerSubnetPerEpoch = committeesPerSlot >= (2 * ATTESTATION_SUBNET_COUNT) / SLOTS_PER_EPOCH;
+  topicsParams[GossipType.beacon_aggregate_and_proof] = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: BEACON_AGGREGATE_PROOF_WEIGHT,
+    expectedMessageRate: aggregatorsPerslot,
+    firstMessageDecayTime: epochDurationMs,
+    meshMessageInfo: {
+      decaySlots: SLOTS_PER_EPOCH * 2,
+      capFactor: 4,
+      activationWindow: epochDurationMs,
+    },
+  });
 
-    const beaconAttestationParams = getTopicScoreParams(config, precomputedParams, {
-      topicWeight: beaconAttestationSubnetWeight,
-      expectedMessageRate: activeValidatorCount / ATTESTATION_SUBNET_COUNT / SLOTS_PER_EPOCH,
-      firstMessageDecayTime: multipleBurstsPerSubnetPerEpoch ? epochDurationMs : epochDurationMs * 4,
-      meshMessageInfo: {
-        decaySlots: multipleBurstsPerSubnetPerEpoch ? SLOTS_PER_EPOCH * 4 : SLOTS_PER_EPOCH * 16,
-        capFactor: 16,
-        activationWindow: multipleBurstsPerSubnetPerEpoch
-          ? slotDurationMs * (SLOTS_PER_EPOCH / 2 + 1)
-          : epochDurationMs,
-        currentSlot: eth2Context.currentSlot,
-      },
-    });
-    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      const topicStr = stringifyGossipTopic(config, {
-        type: GossipType.beacon_attestation,
-        subnet,
-        boundary,
-      });
-      topicsParams[topicStr] = beaconAttestationParams;
-    }
-  }
+  const beaconAttestationParams = getTopicScoreParams(config, precomputedParams, {
+    topicWeight: beaconAttestationSubnetWeight,
+    expectedMessageRate: activeValidatorCount / ATTESTATION_SUBNET_COUNT / SLOTS_PER_EPOCH,
+    firstMessageDecayTime: multipleBurstsPerSubnetPerEpoch ? epochDurationMs : epochDurationMs * 4,
+    meshMessageInfo: {
+      decaySlots: multipleBurstsPerSubnetPerEpoch ? SLOTS_PER_EPOCH * 4 : SLOTS_PER_EPOCH * 16,
+      capFactor: 16,
+      activationWindow: multipleBurstsPerSubnetPerEpoch ? slotDurationMs * (SLOTS_PER_EPOCH / 2 + 1) : epochDurationMs,
+    },
+  });
+  topicsParams[GossipType.beacon_attestation] = beaconAttestationParams;
   return topicsParams;
 }
 
@@ -302,8 +262,11 @@ function getTopicScoreParams(
   config: BeaconConfig,
   {epochDurationMs, slotDurationMs, scoreParameterDecayFn}: PreComputedParams,
   {topicWeight, expectedMessageRate, firstMessageDecayTime, meshMessageInfo}: TopicScoreInput
-): TopicScoreParams {
-  const params = {...defaultTopicScoreParams};
+): TopicScorePolicy {
+  const params = {
+    ...defaultTopicScoreParams,
+    meshDeliveryStartSlot: meshMessageInfo ? meshMessageInfo.decaySlots + 1 : 0,
+  };
 
   params.topicWeight = topicWeight;
 
@@ -319,7 +282,7 @@ function getTopicScoreParams(
   params.firstMessageDeliveriesWeight = 40 / params.firstMessageDeliveriesCap;
 
   if (meshMessageInfo) {
-    const {decaySlots, capFactor, activationWindow, currentSlot} = meshMessageInfo;
+    const {decaySlots, capFactor, activationWindow} = meshMessageInfo;
     const decayTimeMs = config.SLOT_DURATION_MS * decaySlots;
     params.meshMessageDeliveriesDecay = scoreParameterDecayFn(decayTimeMs);
     params.meshMessageDeliveriesThreshold = threshold(params.meshMessageDeliveriesDecay, expectedMessageRate / 50);
@@ -331,10 +294,6 @@ function getTopicScoreParams(
     params.meshMessageDeliveriesWeight =
       (-1 * maxPositiveScore) / (params.topicWeight * Math.pow(params.meshMessageDeliveriesThreshold, 2));
     params.meshFailurePenaltyWeight = params.meshMessageDeliveriesWeight;
-    if (decaySlots >= currentSlot) {
-      params.meshMessageDeliveriesThreshold = 0;
-      params.meshMessageDeliveriesWeight = 0;
-    }
   } else {
     params.meshMessageDeliveriesWeight = 0;
     params.meshMessageDeliveriesThreshold = 0;
