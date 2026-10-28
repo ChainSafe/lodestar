@@ -522,8 +522,8 @@ export async function runGossipValidationTest(
             blockRootHex,
             block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
             forkName: fork,
-            sampledColumns: [],
-            custodyColumns: [],
+            sampledColumns: chain.custodyConfig.sampledColumns,
+            custodyColumns: chain.custodyConfig.custodyColumns,
             seenTimestampSec: 0,
             source: PayloadEnvelopeInputSource.gossip,
           });
