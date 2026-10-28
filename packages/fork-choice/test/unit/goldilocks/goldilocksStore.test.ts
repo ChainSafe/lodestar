@@ -194,4 +194,21 @@ describe("GoldilocksStore", () => {
     store.onTick(at(2, 1));
     expect(store.vote(2, at(2, 1))?.root).toBe("0xc");
   });
+
+  it("walks past the fork-slot block nobody could vote for, instead of voting the anchor forever", () => {
+    // Activated mid-slot 5 by the first post-fork block (slot 5); the anchor is the last pre-fork block
+    const late = new GoldilocksStore({root: "0xg", slot: 4, fg: fg(1)}, at(5, 0.5), {
+      slotDurationMs: SLOT_MS,
+      committeeSize: COMMITTEE,
+      forkSlot: 5,
+    });
+    late.insertBlock(block("0xa", 5, "0xg"), at(5, 0.6));
+    late.insertBlock(block("0xb", 6, "0xa"), at(6, 0.2));
+    // No vote of slot 5 exists, but 0xa is a bootstrap-slot block, so the voter at Δ of slot 6 reaches 0xb
+    expect(late.vote(6, at(6, 1))?.root).toBe("0xb");
+    for (const v of votes(0, 16, 6, "0xb")) late.processHeadVote(v, at(6, 1));
+    late.insertBlock(block("0xc", 7, "0xb"), at(7, 0.2));
+    expect(late.vote(7, at(7, 1))?.root).toBe("0xc");
+    expect(late.fgInputs(7, at(7, 2))?.source.root).toBe("0xb");
+  });
 });

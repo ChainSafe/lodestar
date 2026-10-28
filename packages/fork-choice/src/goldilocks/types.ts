@@ -62,7 +62,7 @@ export type GoldilocksOpts = {
   slotDurationMs: number;
   /** `HEAD_VOTE_COMMITTEE_SIZE`: support thresholds compare seat counts against half of it */
   committeeSize: number;
-  /** First slot of the EIP-8453 fork; blocks before it are always eligible children */
+  /** First slot of the EIP-8453 fork; blocks before it, and up to the slot the store starts in, are always eligible */
   forkSlot: Slot;
   /** Slots a lock stays live after it is taken; the spec has not fixed this yet */
   lockTtlSlots?: number;

@@ -79,6 +79,11 @@ export class GoldilocksStore {
   readonly delta: number;
   readonly committeeSize: number;
   readonly forkSlot: Slot;
+  /**
+   * Last slot whose blocks no vote this store saw could target: the slot before the fork and every slot up to the
+   * one the store started in. Their blocks are always eligible, otherwise GHOST could never walk past them.
+   */
+  readonly bootstrapSlot: Slot;
   readonly lockTtlMs: number;
   readonly slowLockStreak: number;
 
@@ -128,6 +133,7 @@ export class GoldilocksStore {
     this.hMax = anchor.fg.targetHeight;
     this.ticked = now;
     this.restartTime = now;
+    this.bootstrapSlot = Math.max(this.forkSlot - 1, this.slotAt(now));
   }
 
   // Time
@@ -460,8 +466,8 @@ export class GoldilocksStore {
 
   /**
    * Time-aware GHOST: from the anchor, follow the viable, eligible child with the most support, ties to the
-   * greater root. A child is eligible when its parent is below the height floor, it is of the current slot or
-   * before the fork, or it has a majority of the participating seats.
+   * greater root. A child is eligible when its parent is below the height floor, it is of the current slot, it is
+   * from the bootstrap slots (no vote could have targeted it), or it has a majority of the participating seats.
    */
   selectHead(
     view: View,
@@ -480,7 +486,7 @@ export class GoldilocksStore {
         const eligible =
           !this.viableHead(frame, head) ||
           child.slot === currentSlot ||
-          child.slot < this.forkSlot ||
+          child.slot <= this.bootstrapSlot ||
           this.hasMajority(counts, child);
         if (!eligible) continue;
         if (

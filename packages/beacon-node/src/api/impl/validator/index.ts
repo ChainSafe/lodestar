@@ -1761,13 +1761,20 @@ export function getValidatorApi(
       if (sourceBlock === null || headBlock === null) {
         throw new ApiError(500, "Goldilocks source or head block is unknown to the fork choice");
       }
-      const sourceState = asCachedStateEip8453(
-        await chain.regen.getState(sourceBlock.stateRoot, RegenCaller.getDuties)
-      );
-      const headState =
-        headBlock.blockRoot === sourceBlock.blockRoot
-          ? sourceState
-          : asCachedStateEip8453(await chain.regen.getState(headBlock.stateRoot, RegenCaller.getDuties));
+      // Right after the fork the store's source and head can be the last pre-fork block (the fork anchor), whose
+      // state has no height checkpoints. The upgrade gave the post-fork states target (1, anchor root) and the
+      // pre-fork finalized root as justified, so the first post-fork state on the legacy head carries the same
+      // values the anchor would.
+      const forkSlot = computeStartSlotAtEpoch(config.EIP8453_FORK_EPOCH);
+      const postForkHead = headBlock.slot >= forkSlot ? headBlock : legacyHead;
+      if (postForkHead.slot < forkSlot) {
+        throw new ApiError(503, "No post-fork head yet, finality attestation inputs are unavailable");
+      }
+      const headState = asCachedStateEip8453(await chain.regen.getState(postForkHead.stateRoot, RegenCaller.getDuties));
+      const sourceState =
+        sourceBlock.slot < forkSlot || sourceBlock.blockRoot === postForkHead.blockRoot
+          ? headState
+          : asCachedStateEip8453(await chain.regen.getState(sourceBlock.stateRoot, RegenCaller.getDuties));
       const target = readHeightCheckpoint(sourceState.targetCheckpoint);
       if (isZeroRoot(target.root)) {
         // the source advanced the height, its own root is the target
