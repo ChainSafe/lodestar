@@ -848,18 +848,19 @@ export class ForkChoice implements IForkChoice {
     const isEip8453 = this.config.getForkSeq(slot) >= ForkSeq.eip8453;
     if (isEip8453) {
       // [EIP8453] The state has no Casper FFG checkpoints; the view reports the finality gadget's finalized block
-      // at the epoch of finalized_slot as both. Keep the parent's checkpoints until the gadget finalizes past
-      // them, so the block stays viable for head under the parent's justification.
-      if (finalizedCheckpoint.epoch <= parentBlock.finalizedEpoch) {
+      // at the epoch of finalized_slot as both. Keep the parent's pulled-up (unrealized) checkpoints, which are
+      // what the store's justified epoch follows, until the gadget finalizes past them, so the block stays
+      // viable for head: a current-epoch block is judged on its realized justified epoch.
+      if (finalizedCheckpoint.epoch <= parentBlock.unrealizedFinalizedEpoch) {
         justifiedCheckpoint = {
-          epoch: parentBlock.justifiedEpoch,
-          root: fromHex(parentBlock.justifiedRoot),
-          rootHex: parentBlock.justifiedRoot,
+          epoch: parentBlock.unrealizedJustifiedEpoch,
+          root: fromHex(parentBlock.unrealizedJustifiedRoot),
+          rootHex: parentBlock.unrealizedJustifiedRoot,
         };
         finalizedCheckpoint = {
-          epoch: parentBlock.finalizedEpoch,
-          root: fromHex(parentBlock.finalizedRoot),
-          rootHex: parentBlock.finalizedRoot,
+          epoch: parentBlock.unrealizedFinalizedEpoch,
+          root: fromHex(parentBlock.unrealizedFinalizedRoot),
+          rootHex: parentBlock.unrealizedFinalizedRoot,
         };
       } else {
         justifiedCheckpoint = finalizedCheckpoint;
