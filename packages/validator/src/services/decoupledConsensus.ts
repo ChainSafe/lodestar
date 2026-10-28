@@ -3,7 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {IClock, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, eip8453} from "@lodestar/types";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {sleep, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
 import {LoggerVc} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -186,7 +186,7 @@ export class DecoupledConsensusService {
     const inputs = (await this.api.validator.produceFinalityAttestationInputs({slot})).value();
     const attestations: eip8453.SingleAttestation[] = [];
     for (const duty of duties) {
-      const pubkeyHex = toRootHex(duty.pubkey);
+      const pubkeyHex = toPubkeyHex(duty.pubkey);
       let record = this.records.get(pubkeyHex);
       if (record === undefined) {
         record = emptyFinalitySigningRecord();
