@@ -36,6 +36,7 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateCapella,
+  CachedBeaconStateEip8453,
   CachedBeaconStateElectra,
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
@@ -162,15 +163,35 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get previousJustifiedCheckpoint(): Checkpoint {
-    return (this.cachedState as CachedBeaconStatePreEip8453).previousJustifiedCheckpoint;
+    return this.isEip8453()
+      ? this.finalizedHeightAsCheckpoint()
+      : (this.cachedState as CachedBeaconStatePreEip8453).previousJustifiedCheckpoint;
   }
 
   get currentJustifiedCheckpoint(): Checkpoint {
-    return (this.cachedState as CachedBeaconStatePreEip8453).currentJustifiedCheckpoint;
+    return this.isEip8453()
+      ? this.finalizedHeightAsCheckpoint()
+      : (this.cachedState as CachedBeaconStatePreEip8453).currentJustifiedCheckpoint;
   }
 
   get finalizedCheckpoint(): Checkpoint {
-    return (this.cachedState as CachedBeaconStatePreEip8453).finalizedCheckpoint;
+    return this.isEip8453()
+      ? this.finalizedHeightAsCheckpoint()
+      : (this.cachedState as CachedBeaconStatePreEip8453).finalizedCheckpoint;
+  }
+
+  private isEip8453(): boolean {
+    return this.cachedState.config.getForkSeq(this.cachedState.slot) >= ForkSeq.eip8453;
+  }
+
+  /**
+   * [EIP8453] The Casper FFG checkpoints are gone from the state. Until the Goldilocks store drives fork choice,
+   * the legacy fork choice is fed the finality gadget's finalized block at the epoch of `finalized_slot` as both
+   * the justified and the finalized checkpoint, so pruning and finality tracking keep working.
+   */
+  private finalizedHeightAsCheckpoint(): Checkpoint {
+    const state = this.cachedState as CachedBeaconStateEip8453;
+    return {epoch: computeEpochAtSlot(state.finalizedSlot), root: state.finalizedCheckpoint.root};
   }
 
   getBlockRootAtSlot(slot: Slot): Root {
@@ -800,6 +821,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     justifiedCheckpoint: phase0.Checkpoint;
     finalizedCheckpoint: phase0.Checkpoint;
   } {
+    if (this.isEip8453()) {
+      // [EIP8453] no Casper FFG justification to pull up; see finalizedHeightAsCheckpoint
+      const checkpoint = this.finalizedHeightAsCheckpoint();
+      return {justifiedCheckpoint: checkpoint, finalizedCheckpoint: checkpoint};
+    }
     return computeUnrealizedCheckpoints(this.cachedState);
   }
 

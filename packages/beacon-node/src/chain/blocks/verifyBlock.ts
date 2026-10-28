@@ -2,12 +2,14 @@ import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPreEip8453, ForkSeq, isForkPostFulu} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
+  EpochShuffling,
   IBeaconStateView,
   computeEpochAtSlot,
+  computeIndexedAttestationEip8453,
   getIndexedAttestation,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {BeaconBlockBody, IndexedAttestation, Slot, deneb} from "@lodestar/types";
+import {BeaconBlockBody, Epoch, IndexedAttestation, Slot, deneb, eip8453} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import type {BeaconChain} from "../chain.js";
@@ -112,17 +114,23 @@ export async function verifyBlocksInEpoch(
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
     for (const [i, block] of blocks.entries()) {
-      // Casper FFG attestations only exist before EIP-8453
-      const attestations = (block.message.body as BeaconBlockBody<ForkPreEip8453>).attestations;
-      indexedAttestationsByBlock[i] = attestations.map((attestation) => {
-        const attEpoch = computeEpochAtSlot(attestation.data.slot);
-        // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
-        // we should have the shuffling inside ShufflingCache most of the time
-        const shuffling =
-          this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
-          preState0.getShufflingAtEpoch(attEpoch);
-        return getIndexedAttestation(shuffling, fork, attestation);
-      });
+      // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
+      // we should have the shuffling inside ShufflingCache most of the time
+      const shufflingAt = (attEpoch: Epoch): EpochShuffling =>
+        this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
+        preState0.getShufflingAtEpoch(attEpoch);
+      if (fork >= ForkSeq.eip8453) {
+        // [EIP8453] finality gadget attestations name their epoch and partition the active validators
+        indexedAttestationsByBlock[i] = (block.message.body as eip8453.BeaconBlockBody).attestations.map(
+          (attestation) => computeIndexedAttestationEip8453(shufflingAt(attestation.epoch).activeIndices, attestation)
+        );
+      } else {
+        // Casper FFG attestations only exist before EIP-8453
+        const attestations = (block.message.body as BeaconBlockBody<ForkPreEip8453>).attestations;
+        indexedAttestationsByBlock[i] = attestations.map((attestation) =>
+          getIndexedAttestation(shufflingAt(computeEpochAtSlot(attestation.data.slot)), fork, attestation)
+        );
+      }
     }
 
     // Pick the data-availability source by fork:

@@ -234,7 +234,11 @@ export function getAttestationCommittee(
   epoch: Epoch,
   committeeIndex: number
 ): Uint32Array {
-  const indices = getActiveIndicesAtEpoch(state, epoch);
+  return computeAttestationCommittee(getActiveIndicesAtEpoch(state, epoch), epoch, committeeIndex);
+}
+
+/** `get_attestation_committee` over a given active validator set, for callers that only hold a shuffling */
+export function computeAttestationCommittee(indices: Uint32Array, epoch: Epoch, committeeIndex: number): Uint32Array {
   const count = indices.length;
   if (count === 0) {
     return new Uint32Array(0);
@@ -282,11 +286,20 @@ export function getAggregateParticipants(
   epoch: Epoch,
   aggregate: eip8453.Attestation
 ): ValidatorIndex[] {
+  return computeAggregateParticipants(getActiveIndicesAtEpoch(state, epoch), epoch, aggregate);
+}
+
+/** `get_aggregate_participants` over a given active validator set of `epoch` */
+export function computeAggregateParticipants(
+  activeIndices: Uint32Array,
+  epoch: Epoch,
+  aggregate: eip8453.Attestation
+): ValidatorIndex[] {
   const {aggregationBits, committeeBits} = aggregate;
   const participants: ValidatorIndex[] = [];
   let committeeOffset = 0;
   for (const committeeIndex of committeeBits.getTrueBitIndexes()) {
-    const committee = getAttestationCommittee(state, epoch, committeeIndex);
+    const committee = computeAttestationCommittee(activeIndices, epoch, committeeIndex);
     if (aggregationBits.bitLen < committeeOffset + committee.length) {
       throw Error(
         `Aggregation bits too short: bitLen=${aggregationBits.bitLen} needed=${committeeOffset + committee.length}`
@@ -315,7 +328,15 @@ export function getIndexedAttestationEip8453(
   state: CachedBeaconStateEip8453,
   attestation: eip8453.Attestation
 ): eip8453.IndexedAttestation {
-  const attestingIndices = getAttestingIndicesEip8453(state, attestation);
+  return computeIndexedAttestationEip8453(getActiveIndicesAtEpoch(state, attestation.epoch), attestation);
+}
+
+/** `get_indexed_attestation` from the active validators of `attestation.epoch`, for callers holding a shuffling */
+export function computeIndexedAttestationEip8453(
+  activeIndices: Uint32Array,
+  attestation: eip8453.Attestation
+): eip8453.IndexedAttestation {
+  const attestingIndices = computeAggregateParticipants(activeIndices, attestation.epoch, attestation);
   attestingIndices.sort((a, b) => a - b);
   return {attestingIndices, data: attestation.data, signature: attestation.signature, epoch: attestation.epoch};
 }

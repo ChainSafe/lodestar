@@ -1,6 +1,6 @@
 import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPreEip8453, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkPreEip8453, isForkPostEip8453, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
 import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedAggregateAndProof, SingleAttestation, Slot, phase0, ssz} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
@@ -74,6 +74,11 @@ export class AttestationService {
       return;
     }
     const fork = this.config.getForkName(slot);
+    if (isForkPostEip8453(fork)) {
+      // [EIP8453] Casper FFG attestations are replaced by finality gadget attestations and head votes (not yet produced)
+      this.logger.debug("Skipping Casper FFG attestation duties after EIP-8453", {slot});
+      return;
+    }
 
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or

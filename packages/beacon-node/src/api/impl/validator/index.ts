@@ -15,6 +15,7 @@ import {
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkPostBellatrix,
   isForkPostDeneb,
+  isForkPostEip8453,
   isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
@@ -1352,6 +1353,10 @@ export function getValidatorApi(
 
     async produceAttestationData({committeeIndex, slot}) {
       notWhileSyncing(chain, sync.state);
+      if (isForkPostEip8453(config.getForkName(slot))) {
+        // [EIP8453] Casper FFG attestations are replaced by finality gadget attestations and head votes
+        throw new ApiError(400, `Casper FFG attestations are not produced after EIP-8453 (slot ${slot})`);
+      }
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 

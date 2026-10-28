@@ -13,6 +13,7 @@ import {
   ForkPostDeneb,
   ForkPostFulu,
   ForkPostGloas,
+  ForkPreEip8453,
   ForkPreGloas,
   ForkSeq,
   isForkPostAltair,
@@ -32,6 +33,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
+  AttesterSlashing,
   BLSPubkey,
   BLSSignature,
   BeaconBlock,
@@ -52,6 +54,7 @@ import {
   bellatrix,
   capella,
   deneb,
+  eip8453,
   electra,
   fulu,
   gloas,
@@ -265,6 +268,7 @@ export async function produceBlockBody<T extends BlockType>(
     gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
       currentState.withParentPayloadApplied(parentExecutionRequests)
     );
+    applyEip8453Operations(fork, gloasBody, commonBlockBody);
     blockBody = gloasBody as AssembledBodyType<T>;
 
     this.logger.verbose("Produced block with builder bid", {
@@ -421,6 +425,7 @@ export async function produceBlockBody<T extends BlockType>(
       isBuildingOnFull,
       () => stateAfterParentPayload
     );
+    applyEip8453Operations(fork, gloasBody, commonBlockBody);
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
@@ -1125,12 +1130,17 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
-    fork,
-    this.forkChoice,
-    this.shufflingCache,
-    currentState
-  );
+  // [EIP8453] Casper FFG attestations are not included after the fork; the body gets finality gadget
+  // attestations and head votes from their own pools (see applyEip8453Operations)
+  const attestations =
+    ForkSeq[fork] >= ForkSeq.eip8453
+      ? []
+      : this.aggregatedAttestationPool.getAttestationsForBlock(
+          fork,
+          this.forkChoice,
+          this.shufflingCache,
+          currentState
+        );
   endAttestations?.({
     step: BlockProductionStep.attestations,
   });
@@ -1164,4 +1174,19 @@ export async function produceCommonBlockBody<T extends BlockType>(
   }
 
   return commonBlockBody;
+}
+
+/**
+ * [EIP8453] Reshape the operations of a Gloas/Heze body for an EIP-8453 block: Casper FFG attester slashings
+ * move to `legacy_attester_slashings`, and the finality gadget attestations, head votes and support bits are
+ * empty until their pools and duties exist. No-op before the fork.
+ */
+function applyEip8453Operations(fork: ForkName, body: gloas.BeaconBlockBody, commonBlockBody: CommonBlockBody): void {
+  if (ForkSeq[fork] < ForkSeq.eip8453) return;
+  const bodyEip8453 = body as unknown as eip8453.BeaconBlockBody;
+  bodyEip8453.legacyAttesterSlashings = commonBlockBody.attesterSlashings as AttesterSlashing<ForkPreEip8453>[];
+  bodyEip8453.attesterSlashings = [];
+  bodyEip8453.attestations = [];
+  bodyEip8453.headVotes = [];
+  bodyEip8453.headVoteSupport = [];
 }

@@ -35,6 +35,7 @@ import {
   IndexedAttestation,
   altair,
   capella,
+  eip8453,
   electra,
   isGloasBeaconBlock,
   phase0,
@@ -179,7 +180,8 @@ export async function importBlock(
   // Only process attestations of blocks with relevant attestations for the fork-choice:
   // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
-  if (importsBlockAttestations(opts, blockEpoch, currentEpoch)) {
+  // [EIP8453] blocks carry finality gadget attestations and head votes, which the legacy fork choice does not consume
+  if (fork < ForkSeq.eip8453 && importsBlockAttestations(opts, blockEpoch, currentEpoch)) {
     // Casper FFG attestations only exist before EIP-8453
     const attestations = (block.message.body as BeaconBlockBody<ForkPreEip8453>).attestations;
     const rootCache = new RootCache(postState);
@@ -269,7 +271,13 @@ export async function importBlock(
     (opts.importAttestations !== AttestationImportOpt.Skip &&
       blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT - 1 - MAX_SEED_LOOKAHEAD)
   ) {
-    for (const slashing of (block.message.body as BeaconBlockBody<ForkPreEip8453>).attesterSlashings) {
+    // [EIP8453] slashings of Casper FFG attestations move to legacy_attester_slashings; finality gadget
+    // slashings (body.attesterSlashings) are not consumed by the legacy fork choice
+    const legacyAttesterSlashings =
+      fork >= ForkSeq.eip8453
+        ? (block.message.body as eip8453.BeaconBlockBody).legacyAttesterSlashings
+        : (block.message.body as BeaconBlockBody<ForkPreEip8453>).attesterSlashings;
+    for (const slashing of legacyAttesterSlashings) {
       try {
         // all AttesterSlashings are valid before reaching this
         this.forkChoice.onAttesterSlashing(slashing);
