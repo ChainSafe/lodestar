@@ -1,8 +1,18 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
+import {ForkPreEip8453, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
-import {Epoch, isElectraAttestation, isWithForkPostElectra, ssz, sszTypesFor} from "@lodestar/types";
+import {
+  Attestation,
+  AttesterSlashing,
+  Epoch,
+  SingleAttestation,
+  WithFork,
+  isElectraAttestation,
+  isWithForkPostElectra,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
@@ -32,8 +42,11 @@ export function getBeaconPoolApi({
 }: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ApplicationMethods<routes.beacon.pool.Endpoints> {
   return {
     async getPoolAttestationsV2({slot, committeeIndex}) {
-      // Already filtered by slot
-      let attestations = [...chain.aggregatedAttestationPool.getAll(slot), ...chain.attestationPool.getAll(slot)];
+      // Already filtered by slot. The pools only hold Casper FFG attestations, which exist before EIP-8453
+      let attestations = [
+        ...chain.aggregatedAttestationPool.getAll(slot),
+        ...chain.attestationPool.getAll(slot),
+      ] as Attestation<ForkPreEip8453>[];
       const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
       const isPostElectra = isForkPostElectra(fork);
 
@@ -63,7 +76,9 @@ export function getBeaconPoolApi({
 
     async getPoolAttesterSlashingsV2() {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
-      return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: fork}};
+      // Casper FFG attester slashings only exist before EIP-8453
+      const attesterSlashings = chain.opPool.getAllAttesterSlashings() as AttesterSlashing<ForkPreEip8453>[];
+      return {data: attesterSlashings, meta: {version: fork}};
     },
 
     async getPoolProposerSlashings() {
@@ -87,8 +102,11 @@ export function getBeaconPoolApi({
       // see https://github.com/ChainSafe/lodestar/issues/7548
       const priority = true;
 
+      // This route takes Casper FFG attestations, which only exist before EIP-8453
+      const casperAttestations = signedAttestations as SingleAttestation<ForkPreEip8453>[];
+
       await Promise.all(
-        signedAttestations.map(async (attestation, i) => {
+        casperAttestations.map(async (attestation, i) => {
           try {
             const validateFn = () => validateApiAttestation(fork, chain, {attestation, serializedData: null});
             const {slot, beaconBlockRoot} = attestation.data;
@@ -96,7 +114,7 @@ export function getBeaconPoolApi({
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const {
-              attestation: validatedAttestation,
+              attestation: validatedAttestationUnion,
               indexedAttestation,
               subnet,
               attDataRootHex,
@@ -104,6 +122,8 @@ export function getBeaconPoolApi({
               validatorCommitteeIndex,
               committeeSize,
             } = await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+            // Validated under the same pre-EIP-8453 fork as the submitted attestation
+            const validatedAttestation = validatedAttestationUnion as WithFork<"SingleAttestation", ForkPreEip8453>;
 
             try {
               // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
@@ -164,7 +184,9 @@ export function getBeaconPoolApi({
       }
     },
 
-    async submitPoolAttesterSlashingsV2({attesterSlashing}) {
+    async submitPoolAttesterSlashingsV2({attesterSlashing: attesterSlashingUnion}) {
+      // This route takes Casper FFG attester slashings, which only exist before EIP-8453
+      const attesterSlashing = attesterSlashingUnion as AttesterSlashing<ForkPreEip8453>;
       const verifiedDomains = await validateApiAttesterSlashing(chain, attesterSlashing);
       const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
       chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);

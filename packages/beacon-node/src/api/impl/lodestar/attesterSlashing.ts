@@ -1,4 +1,4 @@
-import {ForkSeq} from "@lodestar/params";
+import {ForkPreEip8453, ForkSeq} from "@lodestar/params";
 import {
   getIntersectingIndices,
   isSlashableAttestationData,
@@ -12,9 +12,9 @@ import {AttesterSlashing, IndexedAttestation} from "@lodestar/types";
  */
 export function getAttesterSlashingsFromIndexedAttestations(
   fork: ForkSeq,
-  indexedAttestations: IndexedAttestation[]
-): AttesterSlashing[] {
-  const slashings: AttesterSlashing[] = [];
+  indexedAttestations: IndexedAttestation<ForkPreEip8453>[]
+): AttesterSlashing<ForkPreEip8453>[] {
+  const slashings: AttesterSlashing<ForkPreEip8453>[] = [];
 
   for (let i = 0; i < indexedAttestations.length; i++) {
     for (let j = i + 1; j < indexedAttestations.length; j++) {

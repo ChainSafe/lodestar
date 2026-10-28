@@ -1,5 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPreEip8453,
+  MIN_ATTESTATION_INCLUSION_DELAY,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+} from "@lodestar/params";
 import {
   IBeaconStateView,
   ParticipationFlags,
@@ -80,23 +86,26 @@ export type ValidatorMonitor = {
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
-    indexedAttestation: IndexedAttestation,
+    indexedAttestation: IndexedAttestation<ForkPreEip8453>,
     subnet: SubnetID,
     sentPeers: number
   ): void;
   onPoolSubmitAggregatedAttestation(
     seenTimestampSec: number,
-    indexedAttestation: IndexedAttestation,
+    indexedAttestation: IndexedAttestation<ForkPreEip8453>,
     sentPeers: number
   ): void;
-  registerGossipUnaggregatedAttestation(seenTimestampSec: Seconds, indexedAttestation: IndexedAttestation): void;
+  registerGossipUnaggregatedAttestation(
+    seenTimestampSec: Seconds,
+    indexedAttestation: IndexedAttestation<ForkPreEip8453>
+  ): void;
   registerGossipAggregatedAttestation(
     seenTimestampSec: Seconds,
     signedAggregateAndProof: SignedAggregateAndProof,
-    indexedAttestation: IndexedAttestation
+    indexedAttestation: IndexedAttestation<ForkPreEip8453>
   ): void;
   registerAttestationInBlock(
-    indexedAttestation: IndexedAttestation,
+    indexedAttestation: IndexedAttestation<ForkPreEip8453>,
     parentSlot: Slot,
     correctHead: boolean,
     missedSlotVote: boolean,

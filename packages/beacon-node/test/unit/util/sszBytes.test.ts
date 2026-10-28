@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
-import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
+import {ForkName, ForkPreEip8453, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {
   CommitteeIndex,
@@ -60,7 +60,7 @@ import {
 import {generateRandomBlob} from "../../utils/kzg.js";
 
 describe("SinlgeAttestation SSZ serialized picking", () => {
-  const testCases: SingleAttestation[] = [
+  const testCases: SingleAttestation<ForkPreEip8453>[] = [
     ssz.phase0.Attestation.defaultValue(),
     phase0SingleAttestationFromValues(
       4_000_000,

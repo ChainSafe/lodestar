@@ -2,6 +2,7 @@ import {describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {ForkPreEip8453} from "@lodestar/params";
 import {IndexedAttestation, RootHex, Slot} from "@lodestar/types";
 import {ForkChoice, ProtoArray} from "../../../src/index.js";
 import {getBlockRoot} from "../../utils/index.js";
@@ -18,7 +19,7 @@ import {
 const earlierSlot = genesisSlot + 1;
 const laterSlot = genesisSlot + 2;
 
-function toAttestation(slot: Slot, blockRoot: RootHex): IndexedAttestation {
+function toAttestation(slot: Slot, blockRoot: RootHex): IndexedAttestation<ForkPreEip8453> {
   const root = fromHexString(blockRoot);
   return {
     attestingIndices: [0],

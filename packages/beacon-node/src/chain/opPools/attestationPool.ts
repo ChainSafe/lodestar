@@ -1,7 +1,7 @@
 import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {MAX_COMMITTEES_PER_SLOT, isForkPostElectra} from "@lodestar/params";
+import {ForkPreEip8453, MAX_COMMITTEES_PER_SLOT, isForkPostElectra} from "@lodestar/params";
 import {Attestation, RootHex, SingleAttestation, Slot, isElectraSingleAttestation} from "@lodestar/types";
 import {MapDef, assert} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -26,7 +26,7 @@ const SLOTS_RETAINED = 3;
 const MAX_ATTESTATIONS_PER_SLOT = 16_384;
 
 type AggregateFastPhase0 = {
-  data: Attestation["data"];
+  data: Attestation<ForkPreEip8453>["data"];
   aggregationBits: BitArray;
   signature: Signature;
 };
@@ -108,7 +108,7 @@ export class AttestationPool {
    */
   add(
     committeeIndex: CommitteeIndex,
-    attestation: SingleAttestation,
+    attestation: SingleAttestation<ForkPreEip8453>,
     attDataRootHex: RootHex,
     validatorCommitteeIndex: number,
     committeeSize: number,
@@ -163,7 +163,7 @@ export class AttestationPool {
   /**
    * For validator API to get an aggregate
    */
-  getAggregate(slot: Slot, dataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null {
+  getAggregate(slot: Slot, dataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation<ForkPreEip8453> | null {
     const fork = this.config.getForkName(slot);
     const isPostElectra = isForkPostElectra(fork);
     committeeIndex = isPostElectra ? committeeIndex : null;
@@ -197,8 +197,8 @@ export class AttestationPool {
    * Get all attestations optionally filtered by `attestation.data.slot`
    * @param bySlot slot to filter, `bySlot === attestation.data.slot`
    */
-  getAll(bySlot?: Slot): Attestation[] {
-    const attestations: Attestation[] = [];
+  getAll(bySlot?: Slot): Attestation<ForkPreEip8453>[] {
+    const attestations: Attestation<ForkPreEip8453>[] = [];
 
     const aggregateByRoots =
       bySlot === undefined
@@ -227,7 +227,7 @@ export class AttestationPool {
  */
 function aggregateAttestationInto(
   aggregate: AggregateFast,
-  attestation: SingleAttestation,
+  attestation: SingleAttestation<ForkPreEip8453>,
   validatorCommitteeIndex: number
 ): InsertOutcome {
   let bitIndex: number | null;
@@ -254,7 +254,7 @@ function aggregateAttestationInto(
  * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
  */
 function attestationToAggregate(
-  attestation: SingleAttestation,
+  attestation: SingleAttestation<ForkPreEip8453>,
   validatorCommitteeIndex: number,
   committeeSize: number
 ): AggregateFast {
@@ -277,6 +277,6 @@ function attestationToAggregate(
 /**
  * Unwrap AggregateFast to Attestation
  */
-function fastToAttestation(aggFast: AggregateFast): Attestation {
+function fastToAttestation(aggFast: AggregateFast): Attestation<ForkPreEip8453> {
   return {...aggFast, signature: aggFast.signature.toBytes()};
 }

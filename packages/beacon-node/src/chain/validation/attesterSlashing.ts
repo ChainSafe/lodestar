@@ -1,3 +1,4 @@
+import {ForkPreEip8453} from "@lodestar/params";
 import {
   assertValidAttesterSlashing,
   getAttesterSlashableIndices,
@@ -11,7 +12,7 @@ import {getAttesterSlashingSignatureDomains} from "../opPools/utils.js";
 
 export async function validateApiAttesterSlashing(
   chain: IBeaconChain,
-  attesterSlashing: AttesterSlashing
+  attesterSlashing: AttesterSlashing<ForkPreEip8453>
 ): Promise<[Domain, Domain]> {
   const prioritizeBls = true;
   return validateAttesterSlashing(chain, attesterSlashing, prioritizeBls);
@@ -19,14 +20,14 @@ export async function validateApiAttesterSlashing(
 
 export async function validateGossipAttesterSlashing(
   chain: IBeaconChain,
-  attesterSlashing: AttesterSlashing
+  attesterSlashing: AttesterSlashing<ForkPreEip8453>
 ): Promise<[Domain, Domain]> {
   return validateAttesterSlashing(chain, attesterSlashing);
 }
 
 export async function validateAttesterSlashing(
   chain: IBeaconChain,
-  attesterSlashing: AttesterSlashing,
+  attesterSlashing: AttesterSlashing<ForkPreEip8453>,
   prioritizeBls = false
 ): Promise<[Domain, Domain]> {
   // [IGNORE] At least one index in the intersection of the attesting indices of each attestation has not yet been seen

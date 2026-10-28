@@ -1,6 +1,6 @@
 import {ProgressiveListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostElectra, ForkPreElectra, PTC_SIZE, isForkPostElectra} from "@lodestar/params";
+import {ForkName, ForkPreEip8453, ForkPreElectra, PTC_SIZE, isForkPostElectra} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -144,7 +144,7 @@ export type Endpoints = {
    */
   submitPoolAttestationsV2: Endpoint<
     "POST",
-    {signedAttestations: SingleAttestation[]},
+    {signedAttestations: SingleAttestation<ForkPreEip8453>[]},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
@@ -156,7 +156,7 @@ export type Endpoints = {
    */
   submitPoolAttesterSlashingsV2: Endpoint<
     "POST",
-    {attesterSlashing: AttesterSlashing},
+    {attesterSlashing: AttesterSlashing<ForkPreEip8453>},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
@@ -297,7 +297,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
             body: isForkPostElectra(fork)
-              ? SingleAttestationListTypeElectra.toJson(signedAttestations as SingleAttestation<ForkPostElectra>[])
+              ? SingleAttestationListTypeElectra.toJson(signedAttestations as electra.SingleAttestation[])
               : SingleAttestationListTypePhase0.toJson(signedAttestations as SingleAttestation<ForkPreElectra>[]),
             headers: {[MetaHeader.Version]: fork},
           };
@@ -314,7 +314,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
             body: isForkPostElectra(fork)
-              ? SingleAttestationListTypeElectra.serialize(signedAttestations as SingleAttestation<ForkPostElectra>[])
+              ? SingleAttestationListTypeElectra.serialize(signedAttestations as electra.SingleAttestation[])
               : SingleAttestationListTypePhase0.serialize(signedAttestations as SingleAttestation<ForkPreElectra>[]),
             headers: {[MetaHeader.Version]: fork},
           };

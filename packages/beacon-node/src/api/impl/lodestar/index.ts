@@ -2,14 +2,14 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPreEip8453, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getIndexedAttestation,
   isStatePostCapella,
 } from "@lodestar/state-transition";
-import {Attestation, Epoch, IndexedAttestation, ssz} from "@lodestar/types";
+import {Attestation, BeaconBlockBody, Epoch, IndexedAttestation, ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
@@ -309,10 +309,11 @@ export function getLodestarApi({
     },
 
     async getAttesterSlashingsFromBlocks({signedBlocks}) {
-      const attestations = new Map<Epoch, Attestation[]>();
+      const attestations = new Map<Epoch, Attestation<ForkPreEip8453>[]>();
 
       for (const block of signedBlocks) {
-        const attestationsOfABlock = block.message.body.attestations;
+        // Casper FFG attestations and their slashings only exist before EIP-8453
+        const attestationsOfABlock = (block.message.body as BeaconBlockBody<ForkPreEip8453>).attestations;
         for (const attestation of attestationsOfABlock) {
           const epoch = computeEpochAtSlot(attestation.data.slot);
           let attestationsPerEpoch = attestations.get(epoch);
@@ -324,7 +325,7 @@ export function getLodestarApi({
         }
       }
 
-      const indexedAttestations: IndexedAttestation[] = [];
+      const indexedAttestations: IndexedAttestation<ForkPreEip8453>[] = [];
       // Assume all blocks are from the same fork
       const forkSeq = config.getForkSeq(signedBlocks[0].message.slot);
 

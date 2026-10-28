@@ -7,6 +7,7 @@ import {
   ForkPostFulu,
   ForkPostGloas,
   ForkPreBellatrix,
+  ForkPreEip8453,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -24,6 +25,7 @@ import {
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {
+  BeaconBlockBody,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
@@ -682,7 +684,8 @@ export function getBeaconBlockApi(
     async getBlockAttestationsV2({blockId}) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
-        data: block.message.body.attestations,
+        // Casper FFG attestations only exist before EIP-8453; the finality gadget gets its own route
+        data: (block.message.body as BeaconBlockBody<ForkPreEip8453>).attestations,
         meta: {executionOptimistic, finalized, version: config.getForkName(block.message.slot)},
       };
     },

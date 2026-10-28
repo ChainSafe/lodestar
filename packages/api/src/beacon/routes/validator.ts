@@ -4,6 +4,7 @@ import {
   ForkPostDeneb,
   ForkPostGloas,
   ForkPreDeneb,
+  ForkPreEip8453,
   MAX_BUILDER_ENTRIES,
   MAX_BUILDER_PUBKEYS,
   MAX_BUILDER_URL_SIZE,
@@ -631,7 +632,7 @@ export type Endpoints = {
       committeeIndex: number;
     },
     {query: {attestation_data_root: string; slot: number; committee_index: number}},
-    Attestation,
+    Attestation<ForkPreEip8453>,
     VersionMeta
   >;
 

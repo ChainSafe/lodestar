@@ -3,7 +3,7 @@ import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {ForkPreEip8453, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
   BeaconStateView,
   ISignatureSet,
@@ -63,7 +63,7 @@ function makeState(
   beaconConfig = config,
   validatorOverrides: Partial<phase0.Validator> = {}
 ): BeaconStateView {
-  const state = beaconConfig.getForkTypes(slot).BeaconState.defaultViewDU();
+  const state = beaconConfig.getForkTypes<ForkPreEip8453>(slot).BeaconState.defaultViewDU();
   state.slot = slot;
   const validators = generateState({}, config, true).validators.getAllReadonlyValues();
   validators[0] = {...validators[0], ...validatorOverrides};

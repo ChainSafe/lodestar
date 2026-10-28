@@ -1,4 +1,5 @@
-import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
+import {ForkPreEip8453, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
+import {BeaconBlockBody} from "@lodestar/types";
 import {Assertion, AssertionResult, Match} from "../../interfaces.js";
 import {expectedMaxInclusionDelay, inclusionDelayAssertion} from "./inclusionDelayAssertion.js";
 
@@ -17,7 +18,8 @@ export const attestationsCountAssertion: Assertion<"attestationsCount", number, 
     // Use a Set since the same validator can be included in multiple attestations
     const shuffledParticipants = new Set<number>();
 
-    for (const attestation of block.message.body.attestations) {
+    // Committee-indexed Casper FFG attestations only exist in pre-EIP-8453 blocks
+    for (const attestation of (block.message.body as BeaconBlockBody<ForkPreEip8453>).attestations) {
       // Assume constant committee size on all committees
       const committeeSize = attestation.aggregationBits.bitLen;
       const indexesInCommittee = attestation.aggregationBits.getTrueBitIndexes();

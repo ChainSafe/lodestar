@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPreEip8453, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateView,
   IBeaconStateView,
@@ -31,8 +31,10 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     // Check if there was a proposed block and how many attestations it includes
     const block = await bn.chain.getCanonicalBlockAtSlot(head.slot);
     if (block) {
-      const bits = sumAttestationBits(block.block.message);
-      const inclDelay = avgInclusionDelay(block.block.message);
+      // Attestation-count and inclusion-delay stats read Casper FFG attestations, which DC blocks no longer carry
+      const message = block.block.message as BeaconBlock<ForkPreEip8453>;
+      const bits = sumAttestationBits(message);
+      const inclDelay = avgInclusionDelay(message);
       attestationsPerBlock.set(slot, bits);
       inclusionDelayPerBlock.set(slot, inclDelay);
       logger.info("> Block attestations", {slot, bits, inclDelay});
@@ -96,14 +98,14 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   };
 }
 
-function sumAttestationBits(block: BeaconBlock): number {
+function sumAttestationBits(block: BeaconBlock<ForkPreEip8453>): number {
   return Array.from(block.body.attestations).reduce(
     (total, att) => total + att.aggregationBits.getTrueBitIndexes().length,
     0
   );
 }
 
-function avgInclusionDelay(block: BeaconBlock): number {
+function avgInclusionDelay(block: BeaconBlock<ForkPreEip8453>): number {
   const inclDelay = Array.from(block.body.attestations).map((att) => block.slot - att.data.slot);
   return avg(inclDelay);
 }

@@ -18,6 +18,7 @@ import {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
+  ForkPreEip8453,
   ForkSeq,
   MAX_BUILDER_AUTH_DATA_SIZE,
 } from "@lodestar/params";
@@ -757,7 +758,7 @@ export class ValidatorStore {
     duty: routes.validator.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
-  ): Promise<SingleAttestation> {
+  ): Promise<SingleAttestation<ForkPreEip8453>> {
     // Make sure the target epoch is not higher than the current epoch to avoid potential attacks.
     if (attestationData.target.epoch > currentEpoch) {
       throw Error(
@@ -808,13 +809,13 @@ export class ValidatorStore {
   async signAggregateAndProof(
     duty: routes.validator.AttesterDuty,
     selectionProof: BLSSignature,
-    aggregate: Attestation
+    aggregate: Attestation<ForkPreEip8453>
   ): Promise<SignedAggregateAndProof> {
     this.validateAttestationDuty(duty, aggregate.data);
 
     this.assertDoppelgangerSafe(duty.pubkey);
 
-    const aggregateAndProof: AggregateAndProof = {
+    const aggregateAndProof: AggregateAndProof<ForkPreEip8453> = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
       selectionProof,

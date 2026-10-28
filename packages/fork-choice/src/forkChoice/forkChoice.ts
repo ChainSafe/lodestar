@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
+  ForkPreEip8453,
   MIN_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
   isForkPostFulu,
@@ -1012,7 +1013,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
+  onAttestation(attestation: IndexedAttestation<ForkPreEip8453>, attDataRoot: string, forceImport?: boolean): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -1100,7 +1101,7 @@ export class ForkChoice implements IForkChoice {
    * We already call is_slashable_attestation_data() and is_valid_indexed_attestation
    * in state transition so no need to do it again
    */
-  onAttesterSlashing(attesterSlashing: AttesterSlashing): void {
+  onAttesterSlashing(attesterSlashing: AttesterSlashing<ForkPreEip8453>): void {
     // TODO: we already call in in state-transition, find a way not to recompute it again
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
     for (const validatorIndex of intersectingIndices) {
@@ -2003,7 +2004,7 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#validate_on_attestation
    */
   private validateOnAttestation(
-    indexedAttestation: IndexedAttestation,
+    indexedAttestation: IndexedAttestation<ForkPreEip8453>,
     slot: Slot,
     blockRootHex: string,
     targetEpoch: Epoch,

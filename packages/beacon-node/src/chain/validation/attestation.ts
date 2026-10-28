@@ -6,6 +6,7 @@ import {
   DOMAIN_BEACON_ATTESTER,
   ForkName,
   ForkPostElectra,
+  ForkPreEip8453,
   ForkPreElectra,
   ForkSeq,
   SLOTS_PER_EPOCH,
@@ -66,8 +67,8 @@ export type BatchResult = {
 };
 
 export type AttestationValidationResult = {
-  attestation: WithFork<"SingleAttestation">;
-  indexedAttestation: IndexedAttestation;
+  attestation: WithFork<"SingleAttestation", ForkPreEip8453>;
+  indexedAttestation: IndexedAttestation<ForkPreEip8453>;
   subnet: SubnetID;
   attDataRootHex: RootHex;
   committeeIndex: CommitteeIndex;
@@ -78,7 +79,7 @@ export type AttestationValidationResult = {
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
 
 /** attestation from api */
-export type ApiAttestation = {attestation: SingleAttestation; serializedData: null};
+export type ApiAttestation = {attestation: SingleAttestation<ForkPreEip8453>; serializedData: null};
 
 /** attestation from gossip */
 export type GossipAttestation = {
@@ -255,7 +256,7 @@ async function validateAttestationNoSignatureCheck(
   // Run the checks that happen before an indexed attestation is constructed.
 
   let attestationOrCache:
-    | {attestation: SingleAttestation; cache: null}
+    | {attestation: SingleAttestation<ForkPreEip8453>; cache: null}
     | {attestation: null; cache: AttestationDataCacheEntry; serializedData: Uint8Array};
   let attDataKey: SeenAttDataKey | null = null;
   if (attestationOrBytes.serializedData) {
@@ -268,7 +269,11 @@ async function validateAttestationNoSignatureCheck(
     const cachedAttData =
       attDataKey !== null ? chain.seenAttestationDatas.get(attSlot, committeeIndexForLookup, attDataKey) : null;
     if (cachedAttData === null) {
-      const attestation = sszDeserializeSingleAttestation(fork, attestationOrBytes.serializedData);
+      // Casper FFG attestations only exist before EIP-8453
+      const attestation = sszDeserializeSingleAttestation(
+        fork,
+        attestationOrBytes.serializedData
+      ) as SingleAttestation<ForkPreEip8453>;
       // only deserialize on the first AttestationData that's not cached
       attestationOrCache = {attestation, cache: null};
     } else {
@@ -561,22 +566,24 @@ async function validateAttestationNoSignatureCheck(
   }
 
   // no signature check, leave that for step1
-  const indexedAttestation: IndexedAttestation = {
+  const indexedAttestation: IndexedAttestation<ForkPreEip8453> = {
     attestingIndices,
     data: attData,
     signature,
   };
 
-  const attestation: WithFork<"SingleAttestation"> = attestationOrCache.attestation
-    ? withFork("SingleAttestation", fork, attestationOrCache.attestation)
-    : !isForkPostElectra(fork)
-      ? withFork("SingleAttestation", fork, {
+  // Casper FFG attestations only exist before EIP-8453, so the fork paired with the value is narrowed here
+  const attFork = fork as ForkPreEip8453;
+  const attestation: WithFork<"SingleAttestation", ForkPreEip8453> = attestationOrCache.attestation
+    ? withFork("SingleAttestation", attFork, attestationOrCache.attestation)
+    : !isForkPostElectra(attFork)
+      ? withFork("SingleAttestation", attFork, {
           // Aggregation bits are already asserted above to not be null
           aggregationBits: aggregationBits as BitArray,
           data: attData,
           signature,
         })
-      : withFork("SingleAttestation", fork, {
+      : withFork("SingleAttestation", attFork, {
           committeeIndex,
           attesterIndex: validatorIndex,
           data: attData,
@@ -913,7 +920,7 @@ export function getCommitteeIndexFromAttestationOrBytes(
 export function toElectraSingleAttestation(
   attestation: SingleAttestation<ForkPreElectra>,
   attesterIndex: ValidatorIndex
-): SingleAttestation<ForkPostElectra> {
+): SingleAttestation<ForkPostElectra & ForkPreEip8453> {
   return {
     committeeIndex: attestation.data.index,
     attesterIndex,

@@ -1,6 +1,6 @@
 import {ContainerType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkPreEip8453, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodestar/params";
 import {
   Attestation,
   AttesterSlashing,
@@ -20,10 +20,14 @@ import {
   heze,
   phase0,
   ssz,
-  sszTypesFor,
 } from "@lodestar/types";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
-import {getPostAltairForkTypes, getPostBellatrixForkTypes, getPostGloasForkTypes} from "../../utils/fork.js";
+import {
+  getPostAltairForkTypes,
+  getPostBellatrixForkTypes,
+  getPostGloasForkTypes,
+  getPreEip8453ForkTypes,
+} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
 
@@ -212,11 +216,11 @@ export type EventData = {
     slot: Slot;
     block: RootHex;
   };
-  [EventType.attestation]: Attestation;
+  [EventType.attestation]: Attestation<ForkPreEip8453>;
   [EventType.singleAttestation]: electra.SingleAttestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
   [EventType.proposerSlashing]: phase0.ProposerSlashing;
-  [EventType.attesterSlashing]: AttesterSlashing;
+  [EventType.attesterSlashing]: AttesterSlashing<ForkPreEip8453>;
   [EventType.blsToExecutionChange]: capella.SignedBLSToExecutionChange;
   [EventType.finalizedCheckpoint]: {
     block: RootHex;
@@ -381,11 +385,11 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.attestation]: {
       toJson: (attestation) => {
         const fork = config.getForkName(attestation.data.slot);
-        return sszTypesFor(fork).Attestation.toJson(attestation);
+        return getPreEip8453ForkTypes(fork).Attestation.toJson(attestation);
       },
       fromJson: (attestation) => {
-        const fork = config.getForkName((attestation as Attestation).data.slot);
-        return sszTypesFor(fork).Attestation.fromJson(attestation);
+        const fork = config.getForkName((attestation as Attestation<ForkPreEip8453>).data.slot);
+        return getPreEip8453ForkTypes(fork).Attestation.fromJson(attestation);
       },
     },
     [EventType.singleAttestation]: ssz.electra.SingleAttestation,
@@ -394,11 +398,13 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.attesterSlashing]: {
       toJson: (attesterSlashing) => {
         const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
-        return sszTypesFor(fork).AttesterSlashing.toJson(attesterSlashing);
+        return getPreEip8453ForkTypes(fork).AttesterSlashing.toJson(attesterSlashing);
       },
       fromJson: (attesterSlashing) => {
-        const fork = config.getForkName(Number((attesterSlashing as AttesterSlashing).attestation1.data.slot));
-        return sszTypesFor(fork).AttesterSlashing.fromJson(attesterSlashing);
+        const fork = config.getForkName(
+          Number((attesterSlashing as AttesterSlashing<ForkPreEip8453>).attestation1.data.slot)
+        );
+        return getPreEip8453ForkTypes(fork).AttesterSlashing.fromJson(attesterSlashing);
       },
     },
     [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,

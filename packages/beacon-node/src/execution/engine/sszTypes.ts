@@ -335,7 +335,10 @@ export type PayloadStatusSsz = ValueOf<typeof PayloadStatus>;
 /** Fork names accepted in the `Eth-Execution-Version` header */
 export type ExecutionForkName = "paris" | "shanghai" | "cancun" | "prague" | "osaka" | "amsterdam";
 
-/** Heze has no execution fork name in the spec yet, auto mode serves it over JSON-RPC and ssz mode fails the call */
+/**
+ * Heze has no execution fork name in the spec yet, auto mode serves it over JSON-RPC and ssz mode fails the call.
+ * EIP-8453 keeps the Heze execution payload so it shares that value
+ */
 export const executionForkName: Record<ForkPostBellatrix, ExecutionForkName | null> = {
   [ForkName.bellatrix]: "paris",
   [ForkName.capella]: "shanghai",
@@ -344,6 +347,7 @@ export const executionForkName: Record<ForkPostBellatrix, ExecutionForkName | nu
   [ForkName.fulu]: "osaka",
   [ForkName.gloas]: "amsterdam",
   [ForkName.heze]: null,
+  [ForkName.eip8453]: null,
 };
 
 export enum PayloadStatusCode {

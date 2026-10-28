@@ -12,6 +12,7 @@ import {
 import {
   ForkPostAltair,
   ForkPostElectra,
+  ForkPreEip8453,
   ForkSeq,
   GENESIS_EPOCH,
   MAX_SEED_LOOKAHEAD,
@@ -29,7 +30,9 @@ import {
 import {
   Attestation,
   BeaconBlock,
+  BeaconBlockBody,
   Epoch,
+  IndexedAttestation,
   altair,
   capella,
   electra,
@@ -177,7 +180,8 @@ export async function importBlock(
   // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
   if (importsBlockAttestations(opts, blockEpoch, currentEpoch)) {
-    const attestations = block.message.body.attestations;
+    // Casper FFG attestations only exist before EIP-8453
+    const attestations = (block.message.body as BeaconBlockBody<ForkPreEip8453>).attestations;
     const rootCache = new RootCache(postState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
@@ -186,7 +190,7 @@ export async function importBlock(
     for (let i = 0; i < attestations.length; i++) {
       const attestation = attestations[i];
       try {
-        const indexedAttestation = indexedAttestations[i];
+        const indexedAttestation = indexedAttestations[i] as IndexedAttestation<ForkPreEip8453>;
         const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
@@ -195,7 +199,7 @@ export async function importBlock(
           postState,
           target,
           attDataRoot,
-          attestation as Attestation<ForkPostElectra>,
+          attestation as Attestation<ForkPostElectra & ForkPreEip8453>,
           indexedAttestation
         );
         // Duplicated logic from fork-choice onAttestation validation logic.
@@ -265,7 +269,7 @@ export async function importBlock(
     (opts.importAttestations !== AttestationImportOpt.Skip &&
       blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT - 1 - MAX_SEED_LOOKAHEAD)
   ) {
-    for (const slashing of block.message.body.attesterSlashings) {
+    for (const slashing of (block.message.body as BeaconBlockBody<ForkPreEip8453>).attesterSlashings) {
       try {
         // all AttesterSlashings are valid before reaching this
         this.forkChoice.onAttesterSlashing(slashing);
@@ -559,12 +563,13 @@ export async function importBlock(
         }
       }
       if (this.emitter.listenerCount(routes.events.EventType.attestation)) {
-        for (const attestation of block.message.body.attestations) {
+        // Casper FFG attestations only exist before EIP-8453
+        for (const attestation of (block.message.body as BeaconBlockBody<ForkPreEip8453>).attestations) {
           this.emitter.emit(routes.events.EventType.attestation, attestation);
         }
       }
       if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
-        for (const attesterSlashing of block.message.body.attesterSlashings) {
+        for (const attesterSlashing of (block.message.body as BeaconBlockBody<ForkPreEip8453>).attesterSlashings) {
           this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
         }
       }
@@ -632,7 +637,7 @@ export function addAttestationPreElectra(
   _: IBeaconStateView,
   target: phase0.Checkpoint,
   attDataRoot: string,
-  attestation: Attestation,
+  attestation: Attestation<ForkPreEip8453>,
   indexedAttestation: phase0.IndexedAttestation
 ): void {
   this.seenAggregatedAttestations.add(
@@ -649,7 +654,7 @@ export function addAttestationPostElectra(
   state: IBeaconStateView,
   target: phase0.Checkpoint,
   attDataRoot: string,
-  attestation: Attestation<ForkPostElectra>,
+  attestation: Attestation<ForkPostElectra & ForkPreEip8453>,
   indexedAttestation: electra.IndexedAttestation
 ): void {
   const committeeIndices = attestation.committeeBits.getTrueBitIndexes();

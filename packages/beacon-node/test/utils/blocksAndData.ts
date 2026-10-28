@@ -65,6 +65,8 @@ export const slots: Record<ForkPostCapella, number> = {
   fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
   gloas: computeStartSlotAtEpoch(GLOAS_FORK_EPOCH),
   heze: computeStartSlotAtEpoch(HEZE_FORK_EPOCH),
+  // No DC fixtures yet; mirror heze so the record covers every fork name
+  eip8453: computeStartSlotAtEpoch(HEZE_FORK_EPOCH),
 };
 
 /**

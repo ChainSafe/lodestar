@@ -2,6 +2,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {
   BLS_WITHDRAWAL_PREFIX,
   ForkName,
+  ForkPreEip8453,
   ForkSeq,
   MAX_ATTESTER_SLASHINGS,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
@@ -46,7 +47,7 @@ import {
 
 type HexRoot = string;
 type AttesterSlashingCached = {
-  attesterSlashing: AttesterSlashing;
+  attesterSlashing: AttesterSlashing<ForkPreEip8453>;
   intersectingIndices: number[];
   verifiedDomains: [Domain, Domain];
 };
@@ -94,7 +95,9 @@ export class OpPool {
 
     // Persisted operations have no verification context. Rebuild it before they can enter the pool.
     // The startup anchor may precede a fork whose slashings are already persisted.
-    for (const {key, value: attesterSlashing} of attesterSlashings) {
+    for (const {key, value} of attesterSlashings) {
+      // The repository stores Casper FFG slashings, which only exist before EIP-8453
+      const attesterSlashing = value as AttesterSlashing<ForkPreEip8453>;
       try {
         assertValidAttesterSlashing(this.config, currentSlot, state.validatorCount, attesterSlashing, false);
       } catch {
@@ -196,7 +199,7 @@ export class OpPool {
   /** Must be validated beforehand */
   insertAttesterSlashing(
     fork: ForkName,
-    attesterSlashing: AttesterSlashing,
+    attesterSlashing: AttesterSlashing<ForkPreEip8453>,
     verifiedDomains: [Domain, Domain],
     rootHash?: Uint8Array
   ): void {
@@ -248,7 +251,7 @@ export class OpPool {
     blockType: BlockType,
     metrics: Metrics | null
   ): [
-    AttesterSlashing[],
+    AttesterSlashing<ForkPreEip8453>[],
     phase0.ProposerSlashing[],
     phase0.SignedVoluntaryExit[],
     capella.SignedBLSToExecutionChange[],
@@ -288,7 +291,7 @@ export class OpPool {
     });
 
     const endAttesterSlashings = stepsMetrics?.startTimer();
-    const attesterSlashings: AttesterSlashing[] = [];
+    const attesterSlashings: AttesterSlashing<ForkPreEip8453>[] = [];
     const maxAttesterSlashings = stateFork >= ForkSeq.electra ? MAX_ATTESTER_SLASHINGS_ELECTRA : MAX_ATTESTER_SLASHINGS;
     attesterSlashing: for (const [key, attesterSlashing] of this.attesterSlashings) {
       const domains = getAttesterSlashingSignatureDomains(this.config, state.slot, attesterSlashing.attesterSlashing);
@@ -369,7 +372,7 @@ export class OpPool {
   }
 
   /** For beacon pool API */
-  getAllAttesterSlashings(): AttesterSlashing[] {
+  getAllAttesterSlashings(): AttesterSlashing<ForkPreEip8453>[] {
     return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
   }
 

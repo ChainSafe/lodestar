@@ -1,3 +1,5 @@
+import {ForkPreEip8453} from "@lodestar/params";
+import {BeaconBlockBody} from "@lodestar/types";
 import {Assertion, AssertionResult} from "../../interfaces.js";
 import {avg} from "../../utils/index.js";
 import {everySlotMatcher} from "../matchers.js";
@@ -8,9 +10,9 @@ export const inclusionDelayAssertion: Assertion<"inclusionDelay", number> = {
   id: "inclusionDelay",
   match: everySlotMatcher,
   async capture(input) {
-    return avg(
-      Array.from(input.block.message.body.attestations).map((att) => input.block.message.slot - att.data.slot)
-    );
+    // Inclusion delay is measured on Casper FFG attestations, which pre-EIP-8453 blocks carry
+    const body = input.block.message.body as BeaconBlockBody<ForkPreEip8453>;
+    return avg(Array.from(body.attestations).map((att) => input.block.message.slot - att.data.slot));
   },
 
   async assert({slot, store}) {

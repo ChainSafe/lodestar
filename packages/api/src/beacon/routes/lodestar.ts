@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkPreEip8453} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -24,7 +24,7 @@ import {
   JsonOnlyResponseCodec,
   WithVersion,
 } from "../../utils/codecs.js";
-import {toForkName} from "../../utils/fork.js";
+import {getPreEip8453ForkTypes, toForkName} from "../../utils/fork.js";
 import {fromHeaders} from "../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
@@ -426,7 +426,7 @@ export type Endpoints = {
     "POST",
     {signedBlocks: SignedBeaconBlock[]},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
-    AttesterSlashing[],
+    AttesterSlashing<ForkPreEip8453>[],
     VersionMeta
   >;
 };
@@ -703,7 +703,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: WithVersion((fork) => ArrayOf(ssz[fork].AttesterSlashing)),
+        data: WithVersion((fork) => ArrayOf(getPreEip8453ForkTypes(fork).AttesterSlashing)),
         meta: VersionCodec,
       },
     },

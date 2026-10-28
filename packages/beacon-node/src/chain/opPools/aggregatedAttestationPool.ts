@@ -4,6 +4,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {
   ForkName,
+  ForkPreEip8453,
   ForkSeq,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_COMMITTEES_PER_SLOT,
@@ -147,7 +148,7 @@ export class AggregatedAttestationPool {
   }
 
   add(
-    attestation: Attestation,
+    attestation: Attestation<ForkPreEip8453>,
     dataRootHex: RootHex,
     attestingIndicesCount: number,
     committee: Uint32Array
@@ -213,7 +214,7 @@ export class AggregatedAttestationPool {
     forkChoice: IForkChoice,
     shufflingCache: ShufflingCache,
     state: IBeaconStateView
-  ): Attestation[] {
+  ): Attestation<ForkPreEip8453>[] {
     const forkSeq = ForkSeq[fork];
     if (forkSeq < ForkSeq.electra) {
       throw new Error("Does not support producing blocks for pre-electra forks anymore");
@@ -444,7 +445,7 @@ export class AggregatedAttestationPool {
    * a homogenous array.
    * @param bySlot slot to filter, `bySlot === attestation.data.slot`
    */
-  getAll(bySlot?: Slot): Attestation[] {
+  getAll(bySlot?: Slot): Attestation<ForkPreEip8453>[] {
     let attestationGroupsArr: Map<CommitteeIndex, MatchingDataAttestationGroup>[];
     if (bySlot === undefined) {
       attestationGroupsArr = Array.from(this.attestationGroupByIndexByDataHexBySlot.values()).flatMap((byIndex) =>
@@ -456,7 +457,7 @@ export class AggregatedAttestationPool {
       attestationGroupsArr = Array.from(attestationGroupsByIndex.values());
     }
 
-    const attestations: Attestation[] = [];
+    const attestations: Attestation<ForkPreEip8453>[] = [];
     for (const attestationGroups of attestationGroupsArr) {
       for (const attestationGroup of attestationGroups.values()) {
         attestations.push(...attestationGroup.getAttestations());
@@ -518,12 +519,12 @@ export class AggregatedAttestationPool {
 }
 
 interface AttestationWithIndex {
-  attestation: Attestation;
+  attestation: Attestation<ForkPreEip8453>;
   trueBitsCount: number;
 }
 
 type AttestationNonParticipant = {
-  attestation: Attestation;
+  attestation: Attestation<ForkPreEip8453>;
   // this was `notSeenAttesterCount` in pre-electra
   // since electra, we prioritize total effective balance over attester count
   // as attestation value can vary significantly between validators due to EIP-7251
@@ -624,7 +625,7 @@ export class MatchingDataAttestationGroup {
     maxAttestation: number
   ): GetAttestationsGroupResult {
     const attestations: AttestationNonParticipant[] = [];
-    const excluded = new Set<Attestation>();
+    const excluded = new Set<Attestation<ForkPreEip8453>>();
     for (let i = 0; i < maxAttestation; i++) {
       const mostValuableAttestation = this.getMostValuableAttestation(
         fork,
@@ -657,7 +658,7 @@ export class MatchingDataAttestationGroup {
     fork: ForkName,
     effectiveBalanceIncrements: EffectiveBalanceIncrements,
     notSeenCommitteeMembers: Set<number>,
-    excluded: Set<Attestation>
+    excluded: Set<Attestation<ForkPreEip8453>>
   ): AttestationNonParticipant | null {
     if (notSeenCommitteeMembers.size === 0) {
       // no more attesters to consider
@@ -710,7 +711,7 @@ export class MatchingDataAttestationGroup {
   }
 
   /** Get attestations for API. */
-  getAttestations(): Attestation[] {
+  getAttestations(): Attestation<ForkPreEip8453>[] {
     return this.attestations.map((attestation) => attestation.attestation);
   }
 }

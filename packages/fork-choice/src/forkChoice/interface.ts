@@ -1,3 +1,4 @@
+import {ForkPreEip8453} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
 import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
 import {
@@ -183,7 +184,7 @@ export interface IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void;
+  onAttestation(attestation: IndexedAttestation<ForkPreEip8453>, attDataRoot: string, forceImport?: boolean): void;
   /**
    * Register attester slashing in order not to consider their votes in `getHead`
    *
@@ -191,7 +192,7 @@ export interface IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
    */
-  onAttesterSlashing(slashing: AttesterSlashing): void;
+  onAttesterSlashing(slashing: AttesterSlashing<ForkPreEip8453>): void;
   /**
    * Process PTC (Payload Timeliness Committee) messages from a block
    * Updates the PTC votes for the attested beacon block

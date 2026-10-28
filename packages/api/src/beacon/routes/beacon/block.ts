@@ -5,6 +5,7 @@ import {
   ForkPostGloas,
   ForkPreBellatrix,
   ForkPreDeneb,
+  ForkPreEip8453,
   ForkPreGloas,
   isForkPostBellatrix,
   isForkPostDeneb,
@@ -108,7 +109,7 @@ export type Endpoints = {
     "GET",
     BlockArgs,
     {params: {block_id: string}},
-    BeaconBlockBody["attestations"],
+    BeaconBlockBody<ForkPreEip8453>["attestations"],
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
 
@@ -319,7 +320,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: blockIdOnlyReq,
       resp: {
-        data: WithVersion((fork) => ssz[fork].BeaconBlockBody.fields.attestations),
+        data: WithVersion((fork) => ssz[fork as ForkPreEip8453].BeaconBlockBody.fields.attestations),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

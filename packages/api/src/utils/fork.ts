@@ -5,9 +5,11 @@ import {
   ForkPostDeneb,
   ForkPostElectra,
   ForkPostGloas,
+  ForkPreEip8453,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostDeneb,
+  isForkPostEip8453,
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -58,6 +60,18 @@ export function getPostElectraForkTypes(fork: ForkName): SSZTypesFor<ForkPostEle
 export function getPostGloasForkTypes(fork: ForkName): SSZTypesFor<ForkPostGloas> {
   if (!isForkPostGloas(fork)) {
     throw Error(`Invalid fork=${fork} for post-gloas fork types`);
+  }
+
+  return sszTypesFor(fork);
+}
+
+/**
+ * SSZ types for the forks that still carry Casper FFG attestations. EIP-8453 (Decoupled Consensus) replaces
+ * `AttestationData`, so routes that read `data.slot` or hand attestations to a fork-specific codec only exist before it.
+ */
+export function getPreEip8453ForkTypes(fork: ForkName): SSZTypesFor<ForkPreEip8453> {
+  if (isForkPostEip8453(fork)) {
+    throw Error(`Invalid fork=${fork} for pre-eip8453 fork types`);
   }
 
   return sszTypesFor(fork);

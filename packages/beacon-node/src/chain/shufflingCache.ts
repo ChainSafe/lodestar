@@ -1,4 +1,4 @@
-import {ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
+import {ForkPreEip8453, ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
 import {
   EpochShuffling,
   IBeaconStateView,
@@ -213,13 +213,18 @@ export class ShufflingCache {
     epoch: number,
     decisionRoot: string,
     fork: ForkSeq,
-    attestation: Attestation
-  ): IndexedAttestation {
+    attestation: Attestation<ForkPreEip8453>
+  ): IndexedAttestation<ForkPreEip8453> {
     const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
     return getIndexedAttestation(shuffling, fork, attestation);
   }
 
-  getAttestingIndices(epoch: number, decisionRoot: string, fork: ForkSeq, attestation: Attestation): number[] {
+  getAttestingIndices(
+    epoch: number,
+    decisionRoot: string,
+    fork: ForkSeq,
+    attestation: Attestation<ForkPreEip8453>
+  ): number[] {
     const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
     return getAttestingIndices(shuffling, fork, attestation);
   }

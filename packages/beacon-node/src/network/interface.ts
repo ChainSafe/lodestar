@@ -17,6 +17,7 @@ import type {
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
 import type {Datastore} from "interface-datastore";
 import type {Libp2p as ILibp2p} from "libp2p";
+import {ForkPreEip8453} from "@lodestar/params";
 import {
   AttesterSlashing,
   DataColumnSidecar,
@@ -103,14 +104,14 @@ export interface INetwork extends INetworkCorePublic {
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
-  publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number>;
+  publishBeaconAttestation(attestation: SingleAttestation<ForkPreEip8453>, subnet: SubnetID): Promise<number>;
   publishDataColumnSidecar(
     dataColumnSideCar: DataColumnSidecar
   ): Promise<{sentPeers: number; alreadyPublished: boolean}>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
   publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number>;
-  publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number>;
+  publishAttesterSlashing(attesterSlashing: AttesterSlashing<ForkPreEip8453>): Promise<number>;
   publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: SubnetID): Promise<number>;
   publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;

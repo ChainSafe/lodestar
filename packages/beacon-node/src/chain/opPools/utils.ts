@@ -1,7 +1,7 @@
 import {Signature} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {DbBatch, Id, Repository} from "@lodestar/db";
-import {BLS_WITHDRAWAL_PREFIX, DOMAIN_BEACON_ATTESTER, DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
+import {BLS_WITHDRAWAL_PREFIX, DOMAIN_BEACON_ATTESTER, DOMAIN_BEACON_PROPOSER, ForkPreEip8453} from "@lodestar/params";
 import {IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {AttesterSlashing, Domain, Slot, capella, phase0} from "@lodestar/types";
 import {AggregateFast, AggregateFastElectra} from "./attestationPool.js";
@@ -17,7 +17,7 @@ export function getProposerSlashingSignatureDomain(
 export function getAttesterSlashingSignatureDomains(
   config: BeaconConfig,
   stateSlot: Slot,
-  slashing: AttesterSlashing
+  slashing: AttesterSlashing<ForkPreEip8453>
 ): [Domain, Domain] {
   return [
     config.getDomain(

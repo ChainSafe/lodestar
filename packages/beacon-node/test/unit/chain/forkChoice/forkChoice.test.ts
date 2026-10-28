@@ -2,9 +2,10 @@ import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice, PayloadStatus} from "@lodestar/fork-choice";
-import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkPreEip8453, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
   BeaconStateView,
+  CachedBeaconStatePreEip8453,
   DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
@@ -173,7 +174,7 @@ describe("LodestarForkChoice", () => {
 
       const {block: block12, state: state12} = makeChild({block: block08, state: state08}, 12);
       const {block: block16, state: state16} = makeChild({block: block12, state: state12}, 16);
-      state16.cachedState.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
+      (state16.cachedState as CachedBeaconStatePreEip8453).currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block08.message),
         epoch: 1,
       });
@@ -183,7 +184,7 @@ describe("LodestarForkChoice", () => {
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block08.message),
         epoch: 1,
       });
-      state24.cachedState.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
+      (state24.cachedState as CachedBeaconStatePreEip8453).currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block16.message),
         epoch: 2,
       });
@@ -193,7 +194,7 @@ describe("LodestarForkChoice", () => {
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block16.message),
         epoch: 2,
       });
-      state32.cachedState.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
+      (state32.cachedState as CachedBeaconStatePreEip8453).currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block24.message),
         epoch: 3,
       });
@@ -436,7 +437,7 @@ describe("LodestarForkChoice", () => {
       // Z stays on next epoch, a child of X which potentially reorg Y
       const {block: blockZ, state: stateZ} = makeChild({block: blockX, state: stateX}, 16);
       // without unrealized checkpoints, Y would be filtered due to different justified checkpoint
-      stateZ.cachedState.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
+      (stateZ.cachedState as CachedBeaconStatePreEip8453).currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
         root: ssz.phase0.BeaconBlock.hashTreeRoot(blockW.message),
         epoch: computeEpochAtSlot(blockW.message.slot),
       });
@@ -488,7 +489,7 @@ function createIndexedAttestation(
   target: phase0.SignedBeaconBlock,
   block: phase0.SignedBeaconBlock,
   validatorIndex: ValidatorIndex
-): IndexedAttestation {
+): IndexedAttestation<ForkPreEip8453> {
   return {
     attestingIndices: [validatorIndex],
     data: {

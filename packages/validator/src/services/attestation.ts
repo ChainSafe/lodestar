@@ -1,6 +1,6 @@
 import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkPreEip8453, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
 import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedAggregateAndProof, SingleAttestation, Slot, phase0, ssz} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
@@ -140,7 +140,7 @@ export class AttestationService {
     attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const signedAttestations: SingleAttestation[] = [];
+    const signedAttestations: SingleAttestation<ForkPreEip8453>[] = [];
     const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
 

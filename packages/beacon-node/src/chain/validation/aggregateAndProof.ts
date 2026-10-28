@@ -1,4 +1,4 @@
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPreEip8453, ForkSeq} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createAggregateSignatureSetFromComponents,
@@ -20,7 +20,7 @@ import {
 import {getAggregateAndProofSignatureSet, getSelectionProofSignatureSet} from "./signatureSets/index.js";
 
 export type AggregateAndProofValidationResult = {
-  indexedAttestation: IndexedAttestation;
+  indexedAttestation: IndexedAttestation<ForkPreEip8453>;
   committeeValidatorIndices: Uint32Array;
   attDataRootHex: RootHex;
 };
@@ -228,7 +228,7 @@ async function validateAggregateAndProof(
   }
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeValidatorIndices);
 
-  const indexedAttestation: IndexedAttestation = {
+  const indexedAttestation: IndexedAttestation<ForkPreEip8453> = {
     attestingIndices,
     data: attData,
     signature: aggregate.signature,

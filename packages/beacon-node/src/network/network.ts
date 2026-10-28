@@ -5,7 +5,7 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq} from "@lodestar/params";
+import {ForkPreEip8453, ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
@@ -404,7 +404,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number> {
+  async publishBeaconAttestation(attestation: SingleAttestation<ForkPreEip8453>, subnet: SubnetID): Promise<number> {
     const epoch = computeEpochAtSlot(attestation.data.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
@@ -451,7 +451,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
+  async publishAttesterSlashing(attesterSlashing: AttesterSlashing<ForkPreEip8453>): Promise<number> {
     const epoch = computeEpochAtSlot(Number(attesterSlashing.attestation1.data.slot as bigint));
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 

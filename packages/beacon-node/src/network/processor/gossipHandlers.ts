@@ -1,15 +1,26 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {ForkName, ForkPostDeneb, ForkPostGloas, ForkSeq, NUMBER_OF_COLUMNS, isForkPostGloas} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostDeneb,
+  ForkPostGloas,
+  ForkPreEip8453,
+  ForkSeq,
+  NUMBER_OF_COLUMNS,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {computeTimeAtSlot, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
+  AttesterSlashing,
+  IndexedAttestation,
   Root,
   RootHex,
   SignedBeaconBlock,
   Slot,
   SubnetID,
   UintNum64,
+  WithFork,
   deneb,
   fulu,
   gloas,
@@ -1081,7 +1092,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
       const {serializedData} = gossipData;
       const {fork} = topic.boundary;
-      const attesterSlashing = sszDeserialize(topic, serializedData);
+      // The attester_slashing topic carries Casper FFG slashings, which only exist before EIP-8453
+      const attesterSlashing = sszDeserialize(topic, serializedData) as AttesterSlashing<ForkPreEip8453>;
       const verifiedDomains = await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler - deferred to next event loop so the validation result propagates first
@@ -1607,14 +1619,17 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         for (const [i, validationResult] of validationResults.entries()) {
           if (validationResult.err) continue;
           const {
-            indexedAttestation,
+            indexedAttestation: indexedAttestationUnion,
             attDataRootHex,
-            attestation,
+            attestation: attestationUnion,
             committeeIndex,
             validatorCommitteeIndex,
             committeeSize,
             subnet,
           } = validationResult.result;
+          // The beacon_attestation topic carries Casper FFG attestations, which only exist before EIP-8453
+          const indexedAttestation = indexedAttestationUnion as IndexedAttestation<ForkPreEip8453>;
+          const attestation = attestationUnion as WithFork<"SingleAttestation", ForkPreEip8453>;
           try {
             chain.validatorMonitor?.registerGossipUnaggregatedAttestation(
               gossipHandlerParams[i].seenTimestampSec,

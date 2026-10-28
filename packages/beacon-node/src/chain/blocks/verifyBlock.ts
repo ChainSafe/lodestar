@@ -1,5 +1,5 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkPreEip8453, ForkSeq, isForkPostFulu} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   IBeaconStateView,
@@ -7,7 +7,7 @@ import {
   getIndexedAttestation,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
+import {BeaconBlockBody, IndexedAttestation, Slot, deneb} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import type {BeaconChain} from "../chain.js";
@@ -112,7 +112,9 @@ export async function verifyBlocksInEpoch(
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
     for (const [i, block] of blocks.entries()) {
-      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
+      // Casper FFG attestations only exist before EIP-8453
+      const attestations = (block.message.body as BeaconBlockBody<ForkPreEip8453>).attestations;
+      indexedAttestationsByBlock[i] = attestations.map((attestation) => {
         const attEpoch = computeEpochAtSlot(attestation.data.slot);
         // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
         // we should have the shuffling inside ShufflingCache most of the time
