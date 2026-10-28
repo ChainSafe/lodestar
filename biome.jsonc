@@ -77,12 +77,6 @@
       "proseWrap": "preserve"
     }
   },
-  "yaml": {
-    // Will be enabled in a separate PR
-    "formatter": {
-      "enabled": false
-    }
-  },
   "linter": {
     "rules": {
       "correctness": {

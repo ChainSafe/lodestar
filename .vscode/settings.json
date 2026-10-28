@@ -20,6 +20,9 @@
   "[jsonc]": {
     "editor.defaultFormatter": "biomejs.biome" 
   },
+  "[yaml]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
   "[markdown]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
