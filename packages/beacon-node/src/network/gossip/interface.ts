@@ -15,6 +15,7 @@ import {
   altair,
   capella,
   deneb,
+  eip8453,
   gloas,
   heze,
   phase0,
@@ -44,6 +45,9 @@ export enum GossipType {
   execution_payload_bid = "execution_payload_bid",
   proposer_preferences = "proposer_preferences",
   inclusion_list = "inclusion_list",
+  // EIP-8453
+  head_vote = "head_vote",
+  attestation = "attestation",
 }
 
 export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
@@ -83,6 +87,8 @@ export type GossipTopicTypeMap = {
   [GossipType.execution_payload_bid]: {type: GossipType.execution_payload_bid};
   [GossipType.proposer_preferences]: {type: GossipType.proposer_preferences};
   [GossipType.inclusion_list]: {type: GossipType.inclusion_list};
+  [GossipType.head_vote]: {type: GossipType.head_vote};
+  [GossipType.attestation]: {type: GossipType.attestation; subnet: SubnetID};
 };
 
 export type GossipTopicMap = {
@@ -117,6 +123,8 @@ export type GossipTypeMap = {
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
   [GossipType.proposer_preferences]: gloas.SignedProposerPreferences;
   [GossipType.inclusion_list]: heze.SignedInclusionList;
+  [GossipType.head_vote]: eip8453.HeadVoteMessage;
+  [GossipType.attestation]: eip8453.SingleAttestation;
 };
 
 export type GossipFnByType = {
@@ -152,6 +160,8 @@ export type GossipFnByType = {
     signedProposerPreferences: gloas.SignedProposerPreferences
   ) => Promise<void> | void;
   [GossipType.inclusion_list]: (signedInclusionList: heze.SignedInclusionList) => Promise<void> | void;
+  [GossipType.head_vote]: (headVote: eip8453.HeadVoteMessage) => Promise<void> | void;
+  [GossipType.attestation]: (attestation: eip8453.SingleAttestation) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];

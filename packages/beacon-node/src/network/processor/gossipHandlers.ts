@@ -66,6 +66,7 @@ import {
   validateGossipFuluDataColumnSidecar,
   validateGossipGloasDataColumnSidecar,
 } from "../../chain/validation/dataColumnSidecar.js";
+import {validateFinalityAttestation, validateHeadVoteMessage} from "../../chain/validation/eip8453.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
 import {InclusionListValidationResult, validateGossipInclusionList} from "../../chain/validation/inclusionList.js";
@@ -1401,6 +1402,32 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
       });
     },
+    // [EIP8453] head votes are pooled for block inclusion; the Goldilocks store is not wired yet
+    [GossipType.head_vote]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.head_vote>) => {
+      const headVote = sszDeserialize(topic, gossipData.serializedData);
+      const {dataRootHex} = await validateHeadVoteMessage(chain, headVote);
+      callInNextEventLoop(() => {
+        try {
+          chain.headVotePool.add(headVote, dataRootHex);
+        } catch (e) {
+          logger.debug("Error adding head vote to pool", {slot: headVote.data.slot}, e as Error);
+        }
+      });
+    },
+
+    // [EIP8453] finality gadget attestations are pooled for block inclusion
+    [GossipType.attestation]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.attestation>) => {
+      const attestation = sszDeserialize(topic, gossipData.serializedData);
+      const {dataRootHex} = await validateFinalityAttestation(chain, attestation, topic.subnet);
+      callInNextEventLoop(() => {
+        try {
+          chain.finalityAttestationPool.add(attestation, dataRootHex);
+        } catch (e) {
+          logger.debug("Error adding finality attestation to pool", {epoch: attestation.epoch}, e as Error);
+        }
+      });
+    },
+
     [GossipType.payload_attestation_message]: async ({
       gossipData,
       topic,

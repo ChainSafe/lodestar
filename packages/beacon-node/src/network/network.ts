@@ -24,6 +24,7 @@ import {
   altair,
   capella,
   deneb,
+  eip8453,
   fulu,
   gloas,
   heze,
@@ -520,6 +521,16 @@ export class Network implements INetwork {
       signedBid,
       {floodPublish: true}
     );
+  }
+
+  async publishHeadVote(headVote: eip8453.HeadVoteMessage): Promise<number> {
+    const boundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(headVote.data.slot));
+    return this.publishGossip<GossipType.head_vote>({type: GossipType.head_vote, boundary}, headVote);
+  }
+
+  async publishFinalityAttestation(attestation: eip8453.SingleAttestation, subnet: SubnetID): Promise<number> {
+    const boundary = this.config.getForkBoundaryAtEpoch(attestation.epoch);
+    return this.publishGossip<GossipType.attestation>({type: GossipType.attestation, boundary, subnet}, attestation);
   }
 
   async publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number> {

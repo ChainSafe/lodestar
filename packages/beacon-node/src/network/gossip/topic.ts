@@ -1,6 +1,7 @@
 import {type CompositeTypeAny} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig, ForkDigestContext} from "@lodestar/config";
 import {
+  ATTESTATION_COMMITTEES_PER_ROUND,
   ATTESTATION_SUBNET_COUNT,
   ForkName,
   ForkSeq,
@@ -93,9 +94,11 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.execution_payload_bid:
     case GossipType.proposer_preferences:
     case GossipType.inclusion_list:
+    case GossipType.head_vote:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
+    case GossipType.attestation:
       return `${topic.type}_${topic.subnet}`;
     case GossipType.blob_sidecar:
       return `${topic.type}_${topic.subnet}`;
@@ -142,6 +145,10 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.gloas.SignedExecutionPayloadEnvelope;
     case GossipType.payload_attestation_message:
       return ssz.gloas.PayloadAttestationMessage;
+    case GossipType.head_vote:
+      return ssz.eip8453.HeadVoteMessage;
+    case GossipType.attestation:
+      return ssz.eip8453.SingleAttestation;
     case GossipType.execution_payload_bid:
       return isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.proposer_preferences:
@@ -243,11 +250,16 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.execution_payload_bid:
       case GossipType.proposer_preferences:
       case GossipType.inclusion_list:
+      case GossipType.head_vote:
         return {type: gossipTypeStr, boundary, encoding};
     }
 
-    for (const gossipType of [GossipType.beacon_attestation as const, GossipType.sync_committee as const]) {
-      if (gossipTypeStr.startsWith(gossipType)) {
+    for (const gossipType of [
+      GossipType.beacon_attestation as const,
+      GossipType.sync_committee as const,
+      GossipType.attestation as const,
+    ]) {
+      if (gossipTypeStr.startsWith(`${gossipType}_`)) {
         const subnetStr = gossipTypeStr.slice(gossipType.length + 1); // +1 for '_' concatenating the topic name and the subnet
         const subnet = parseInt(subnetStr, 10);
         if (Number.isNaN(subnet)) throw Error(`Subnet ${subnetStr} is not a number`);
@@ -302,6 +314,14 @@ export function getCoreTopicsAtFork(
 
   if (ForkSeq[fork] >= ForkSeq.heze) {
     topics.push({type: GossipType.inclusion_list});
+  }
+
+  // [EIP8453] head votes on one global topic, finality gadget attestations on one subnet per committee
+  if (ForkSeq[fork] >= ForkSeq.eip8453) {
+    topics.push({type: GossipType.head_vote});
+    for (let subnet = 0; subnet < ATTESTATION_COMMITTEES_PER_ROUND; subnet++) {
+      topics.push({type: GossipType.attestation, subnet});
+    }
   }
 
   // After fulu also track data_column_sidecar_{index}
@@ -422,6 +442,8 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.execution_payload_bid]: true,
   [GossipType.proposer_preferences]: true,
   [GossipType.inclusion_list]: true,
+  [GossipType.head_vote]: true,
+  [GossipType.attestation]: true,
 };
 
 /**
@@ -461,4 +483,6 @@ export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
   [GossipType.execution_payload_bid]: false,
   [GossipType.proposer_preferences]: false,
   [GossipType.inclusion_list]: false,
+  [GossipType.head_vote]: false,
+  [GossipType.attestation]: false,
 };

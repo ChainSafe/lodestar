@@ -20,6 +20,7 @@ import {
   SyncCommitteeErrorCode,
   VoluntaryExitErrorCode,
 } from "../../chain/errors/index.js";
+import {Eip8453GossipErrorCode} from "../../chain/validation/eip8453.js";
 import {Metrics} from "../../metrics/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetworkCore} from "../core/index.js";
@@ -86,6 +87,14 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   [GossipType.payload_attestation_message]: {
     default: PeerAction.MidToleranceError,
     byCode: {[PayloadAttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.head_vote]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[Eip8453GossipErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.attestation]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[Eip8453GossipErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.inclusion_list]: {
     default: PeerAction.MidToleranceError,

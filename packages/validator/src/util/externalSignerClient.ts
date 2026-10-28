@@ -11,6 +11,7 @@ import {
   RootHex,
   Slot,
   altair,
+  eip8453,
   gloas,
   heze,
   phase0,
@@ -39,6 +40,9 @@ export enum SignableMessageType {
   PROPOSER_PREFERENCES = "PROPOSER_PREFERENCES",
   BUILDER_REQUEST_AUTH = "BUILDER_REQUEST_AUTH",
   INCLUSION_LIST = "INCLUSION_LIST",
+  // EIP-8453
+  HEAD_VOTE = "HEAD_VOTE",
+  FINALITY_ATTESTATION = "FINALITY_ATTESTATION",
 }
 
 const AggregationSlotType = new ContainerType({
@@ -92,7 +96,9 @@ export type SignableMessage =
   | {type: SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE; data: gloas.PayloadAttestationData}
   | {type: SignableMessageType.PROPOSER_PREFERENCES; data: gloas.ProposerPreferences}
   | {type: SignableMessageType.BUILDER_REQUEST_AUTH; data: gloas.BuilderRequestAuth}
-  | {type: SignableMessageType.INCLUSION_LIST; data: heze.InclusionList};
+  | {type: SignableMessageType.INCLUSION_LIST; data: heze.InclusionList}
+  | {type: SignableMessageType.HEAD_VOTE; data: eip8453.HeadVoteData}
+  | {type: SignableMessageType.FINALITY_ATTESTATION; data: eip8453.AttestationData};
 
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.AGGREGATION_SLOT]: true,
@@ -112,6 +118,8 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.PROPOSER_PREFERENCES]: true,
   [SignableMessageType.BUILDER_REQUEST_AUTH]: false,
   [SignableMessageType.INCLUSION_LIST]: true,
+  [SignableMessageType.HEAD_VOTE]: true,
+  [SignableMessageType.FINALITY_ATTESTATION]: true,
 };
 
 type Web3SignerSerializedRequest = {
@@ -326,6 +334,10 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
 
     case SignableMessageType.INCLUSION_LIST:
       return {inclusion_list: ssz.heze.InclusionList.toJson(payload.data)};
+    case SignableMessageType.HEAD_VOTE:
+      return {head_vote: ssz.eip8453.HeadVoteData.toJson(payload.data)};
+    case SignableMessageType.FINALITY_ATTESTATION:
+      return {attestation: ssz.eip8453.AttestationData.toJson(payload.data)};
   }
 }
 

@@ -132,6 +132,37 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {committeeIndex: 2, slot: 32000},
     res: {data: ssz.phase0.AttestationData.defaultValue()},
   },
+  getFinalityAttesterDuties: {
+    args: {epoch: 1000, indices: [1, 2, 3]},
+    res: {data: [{pubkey: new Uint8Array(48).fill(1), validatorIndex: 2, committeeIndex: 3, slot: 7}]},
+  },
+  getHeadVoteDuties: {
+    args: {epoch: 1000, indices: [1, 2, 3]},
+    res: {data: [{pubkey: new Uint8Array(48).fill(1), validatorIndex: 2, slots: [8000, 8003]}]},
+  },
+  produceHeadVoteData: {
+    args: {slot: 32000},
+    res: {data: ssz.eip8453.HeadVoteData.defaultValue()},
+  },
+  produceFinalityAttestationInputs: {
+    args: {slot: 32000},
+    res: {
+      data: {
+        epoch: 1000,
+        target: ssz.eip8453.HeightCheckpoint.defaultValue(),
+        justified: ssz.eip8453.HeightCheckpoint.defaultValue(),
+        finalizedHeight: 3,
+      },
+    },
+  },
+  submitHeadVotes: {
+    args: {headVotes: [ssz.eip8453.HeadVoteMessage.defaultValue()]},
+    res: undefined,
+  },
+  submitFinalityAttestations: {
+    args: {attestations: [ssz.eip8453.SingleAttestation.defaultValue()]},
+    res: undefined,
+  },
   producePayloadAttestationData: {
     args: {slot: 32000},
     res: {data: ssz.gloas.PayloadAttestationData.defaultValue(), meta: {version: ForkName.gloas}},

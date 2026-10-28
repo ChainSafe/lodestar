@@ -30,6 +30,7 @@ import {
   ValidatorIndex,
   altair,
   bellatrix,
+  eip8453,
   gloas,
   heze,
   phase0,
@@ -252,6 +253,50 @@ export const LivenessResponseDataType = new ContainerType(
 
 export const ValidatorIndicesType = ArrayOf(ssz.ValidatorIndex);
 export const AttesterDutyListType = ArrayOf(AttesterDutyType);
+
+// EIP-8453 (Decoupled Consensus)
+
+/** One finality gadget attestation duty: the validator attests in `slot` with committee `committeeIndex` */
+export const FinalityAttesterDutyType = new ContainerType(
+  {
+    pubkey: ssz.BLSPubkey,
+    validatorIndex: ssz.ValidatorIndex,
+    /** The validator's attestation committee in the epoch (`get_attestation_committee_assignment`) */
+    committeeIndex: ssz.CommitteeIndex,
+    /** The slot of the round in which this committee attests (`compute_attestation_committee_slot`) */
+    slot: ssz.Slot,
+  },
+  {typeName: "FinalityAttesterDuty", jsonCase: "eth2"}
+);
+export const FinalityAttesterDutyListType = ArrayOf(FinalityAttesterDutyType);
+
+/** The slots of an epoch in which a validator sits on the head vote committee */
+export const HeadVoteDutyType = new ContainerType(
+  {
+    pubkey: ssz.BLSPubkey,
+    validatorIndex: ssz.ValidatorIndex,
+    slots: ArrayOf(ssz.Slot, SLOTS_PER_EPOCH),
+  },
+  {typeName: "HeadVoteDuty", jsonCase: "eth2"}
+);
+export const HeadVoteDutyListType = ArrayOf(HeadVoteDutyType);
+
+/** The chain view a finality gadget attestation is derived from (validator.md "Attestation data") */
+export const FinalityAttestationInputsType = new ContainerType(
+  {
+    /** The epoch of the attestation, the epoch of the duty slot */
+    epoch: ssz.Epoch,
+    /** `source_state.target_checkpoint` with the root filled when the source advanced the height */
+    target: ssz.eip8453.HeightCheckpoint,
+    /** `head_state.justified_checkpoint` */
+    justified: ssz.eip8453.HeightCheckpoint,
+    /** `head_state.finalized_checkpoint.height` */
+    finalizedHeight: ssz.UintNum64,
+  },
+  {typeName: "FinalityAttestationInputs", jsonCase: "eth2"}
+);
+export const HeadVoteMessageListType = ArrayOf(ssz.eip8453.HeadVoteMessage);
+export const FinalitySingleAttestationListType = ArrayOf(ssz.eip8453.SingleAttestation);
 export const ProposerDutyListType = ArrayOf(ProposerDutyType);
 export const PtcDutyListType = ArrayOf(PtcDutyType);
 export const SyncDutyListType = ArrayOf(SyncDutyType);
@@ -345,6 +390,13 @@ export type InclusionListDutyList = ValueOf<typeof InclusionListDutyListType>;
 export type ValidatorIndices = ValueOf<typeof ValidatorIndicesType>;
 export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
 export type AttesterDutyList = ValueOf<typeof AttesterDutyListType>;
+export type FinalityAttesterDuty = ValueOf<typeof FinalityAttesterDutyType>;
+export type FinalityAttesterDutyList = ValueOf<typeof FinalityAttesterDutyListType>;
+export type HeadVoteDuty = ValueOf<typeof HeadVoteDutyType>;
+export type HeadVoteDutyList = ValueOf<typeof HeadVoteDutyListType>;
+export type FinalityAttestationInputs = ValueOf<typeof FinalityAttestationInputsType>;
+export type HeadVoteMessageList = ValueOf<typeof HeadVoteMessageListType>;
+export type FinalitySingleAttestationList = ValueOf<typeof FinalitySingleAttestationListType>;
 export type ProposerDuty = ValueOf<typeof ProposerDutyType>;
 export type ProposerDutyList = ValueOf<typeof ProposerDutyListType>;
 export type PtcDuty = ValueOf<typeof PtcDutyType>;
@@ -444,6 +496,60 @@ export type Endpoints = {
     {params: {epoch: Epoch}},
     ProposerDutyList,
     ExecutionOptimisticAndDependentRootMeta
+  >;
+
+  /**
+   * [EIP8453] Finality gadget attestation duties of an epoch: one entry per validator per round slot
+   */
+  getFinalityAttesterDuties: Endpoint<
+    "POST",
+    {epoch: Epoch; indices: ValidatorIndices},
+    {params: {epoch: Epoch}; body: unknown},
+    FinalityAttesterDutyList,
+    EmptyMeta
+  >;
+
+  /**
+   * [EIP8453] Head vote duties of an epoch: the slots in which each validator sits on the head vote committee
+   */
+  getHeadVoteDuties: Endpoint<
+    "POST",
+    {epoch: Epoch; indices: ValidatorIndices},
+    {params: {epoch: Epoch}; body: unknown},
+    HeadVoteDutyList,
+    EmptyMeta
+  >;
+
+  /**
+   * [EIP8453] The head vote data for `slot`: the AC voting head and its payload status
+   */
+  produceHeadVoteData: Endpoint<"GET", {slot: Slot}, {query: {slot: number}}, eip8453.HeadVoteData, EmptyMeta>;
+
+  /**
+   * [EIP8453] The target, justified and finalized checkpoints a finality attestation of `slot` is built from
+   */
+  produceFinalityAttestationInputs: Endpoint<
+    "GET",
+    {slot: Slot},
+    {query: {slot: number}},
+    FinalityAttestationInputs,
+    EmptyMeta
+  >;
+
+  /**
+   * [EIP8453] Submit signed head votes for gossip and block inclusion
+   */
+  submitHeadVotes: Endpoint<"POST", {headVotes: HeadVoteMessageList}, {body: unknown}, EmptyResponseData, EmptyMeta>;
+
+  /**
+   * [EIP8453] Submit signed finality gadget attestations for gossip and block inclusion
+   */
+  submitFinalityAttestations: Endpoint<
+    "POST",
+    {attestations: FinalitySingleAttestationList},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
   >;
 
   getSyncCommitteeDuties: Endpoint<
@@ -887,6 +993,74 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         data: ProposerDutyListType,
         meta: ExecutionOptimisticAndDependentRootCodec,
       },
+    },
+    getFinalityAttesterDuties: {
+      url: "/eth/v1/validator/duties/finality_attester/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {params: {epoch: Schema.UintRequired}, body: Schema.StringArray},
+      },
+      resp: {data: FinalityAttesterDutyListType, meta: EmptyMetaCodec},
+    },
+    getHeadVoteDuties: {
+      url: "/eth/v1/validator/duties/head_vote/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {params: {epoch: Schema.UintRequired}, body: Schema.StringArray},
+      },
+      resp: {data: HeadVoteDutyListType, meta: EmptyMetaCodec},
+    },
+    produceHeadVoteData: {
+      url: "/eth/v1/validator/head_vote_data",
+      method: "GET",
+      req: {
+        writeReq: ({slot}) => ({query: {slot}}),
+        parseReq: ({query}) => ({slot: query.slot}),
+        schema: {query: {slot: Schema.UintRequired}},
+      },
+      resp: {data: ssz.eip8453.HeadVoteData, meta: EmptyMetaCodec},
+    },
+    produceFinalityAttestationInputs: {
+      url: "/eth/v1/validator/finality_attestation_inputs",
+      method: "GET",
+      req: {
+        writeReq: ({slot}) => ({query: {slot}}),
+        parseReq: ({query}) => ({slot: query.slot}),
+        schema: {query: {slot: Schema.UintRequired}},
+      },
+      resp: {data: FinalityAttestationInputsType, meta: EmptyMetaCodec},
+    },
+    submitHeadVotes: {
+      url: "/eth/v1/validator/head_votes",
+      method: "POST",
+      req: {
+        writeReqJson: ({headVotes}) => ({body: HeadVoteMessageListType.toJson(headVotes)}),
+        parseReqJson: ({body}) => ({headVotes: HeadVoteMessageListType.fromJson(body)}),
+        writeReqSsz: ({headVotes}) => ({body: HeadVoteMessageListType.serialize(headVotes)}),
+        parseReqSsz: ({body}) => ({headVotes: HeadVoteMessageListType.deserialize(body)}),
+        schema: {body: Schema.ObjectArray},
+      },
+      resp: EmptyResponseCodec,
+    },
+    submitFinalityAttestations: {
+      url: "/eth/v1/validator/finality_attestations",
+      method: "POST",
+      req: {
+        writeReqJson: ({attestations}) => ({body: FinalitySingleAttestationListType.toJson(attestations)}),
+        parseReqJson: ({body}) => ({attestations: FinalitySingleAttestationListType.fromJson(body)}),
+        writeReqSsz: ({attestations}) => ({body: FinalitySingleAttestationListType.serialize(attestations)}),
+        parseReqSsz: ({body}) => ({attestations: FinalitySingleAttestationListType.deserialize(body)}),
+        schema: {body: Schema.ObjectArray},
+      },
+      resp: EmptyResponseCodec,
     },
     getSyncCommitteeDuties: {
       url: "/eth/v1/validator/duties/sync/{epoch}",

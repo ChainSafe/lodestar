@@ -100,6 +100,8 @@ import {
   AttestationPool,
   DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
+  FinalityAttestationPool,
+  HeadVotePool,
   InclusionListStore,
   OpPool,
   PayloadAttestationPool,
@@ -198,6 +200,8 @@ export class BeaconChain implements IBeaconChain {
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
+  readonly headVotePool: HeadVotePool;
+  readonly finalityAttestationPool: FinalityAttestationPool;
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
   readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;
@@ -335,6 +339,8 @@ export class BeaconChain implements IBeaconChain {
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
+    this.headVotePool = new HeadVotePool();
+    this.finalityAttestationPool = new FinalityAttestationPool();
     this.opPool = new OpPool(config);
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     this.inclusionListStore = new InclusionListStore(config);
@@ -1832,6 +1838,8 @@ export class BeaconChain implements IBeaconChain {
     this.syncCommitteeMessagePool.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
+    this.headVotePool.prune(slot);
+    this.finalityAttestationPool.prune(this.forkChoice.getFinalizedCheckpoint().epoch);
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.proposerPreferencesPool.prune(slot);

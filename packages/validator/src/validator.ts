@@ -24,6 +24,7 @@ import {AttestationService} from "./services/attestation.js";
 import {BlockProposingService} from "./services/block.js";
 import {BlockDutiesService} from "./services/blockDuties.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
+import {DecoupledConsensusService} from "./services/decoupledConsensus.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
@@ -343,6 +344,9 @@ export class Validator {
         distributedAggregationSelection: opts.distributed,
       }
     );
+
+    // [EIP8453] head votes and finality gadget attestations
+    new DecoupledConsensusService(config, loggerVc, api, clock, validatorStore);
 
     new ProposalPreferencesService(
       config,

@@ -11,6 +11,8 @@ import {
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_BUILDER_REQUEST_AUTH,
   DOMAIN_CONTRIBUTION_AND_PROOF,
+  DOMAIN_FINALITY_ATTESTER,
+  DOMAIN_HEAD_VOTE,
   DOMAIN_INCLUSION_LIST_COMMITTEE,
   DOMAIN_PROPOSER_PREFERENCES,
   DOMAIN_PTC_ATTESTER,
@@ -47,6 +49,7 @@ import {
   ValidatorIndex,
   altair,
   bellatrix,
+  eip8453,
   gloas,
   heze,
   phase0,
@@ -987,6 +990,44 @@ export class ValidatorStore {
     return {
       message: inclusionList,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  /** [EIP8453] Sign head vote data under DOMAIN_HEAD_VOTE at the epoch of the vote's slot */
+  async signHeadVote(
+    pubkey: BLSPubkeyMaybeHex,
+    validatorIndex: ValidatorIndex,
+    data: eip8453.HeadVoteData
+  ): Promise<eip8453.HeadVoteMessage> {
+    this.assertDoppelgangerSafe(pubkey);
+    const domain = this.config.getDomain(data.slot, DOMAIN_HEAD_VOTE);
+    const signingRoot = computeSigningRoot(ssz.eip8453.HeadVoteData, data, domain);
+    const signableMessage: SignableMessage = {type: SignableMessageType.HEAD_VOTE, data};
+    return {validatorIndex, data, signature: await this.getSignature(pubkey, signingRoot, data.slot, signableMessage)};
+  }
+
+  /**
+   * [EIP8453] Sign finality gadget attestation data under DOMAIN_FINALITY_ATTESTER at `epoch`. The caller has
+   * already applied the FinalitySigningRecord rules, which replace slashing protection for these votes.
+   */
+  async signFinalityAttestation(
+    pubkey: BLSPubkeyMaybeHex,
+    validatorIndex: ValidatorIndex,
+    committeeIndex: number,
+    epoch: Epoch,
+    data: eip8453.AttestationData
+  ): Promise<eip8453.SingleAttestation> {
+    this.assertDoppelgangerSafe(pubkey);
+    const signingSlot = computeStartSlotAtEpoch(epoch);
+    const domain = this.config.getDomain(signingSlot, DOMAIN_FINALITY_ATTESTER);
+    const signingRoot = computeSigningRoot(ssz.eip8453.AttestationData, data, domain);
+    const signableMessage: SignableMessage = {type: SignableMessageType.FINALITY_ATTESTATION, data};
+    return {
+      committeeIndex,
+      attesterIndex: validatorIndex,
+      data,
+      signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
+      epoch,
     };
   }
 

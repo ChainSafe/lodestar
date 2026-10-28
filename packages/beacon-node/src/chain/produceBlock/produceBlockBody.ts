@@ -81,6 +81,7 @@ import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
+import {asCachedStateEip8453} from "../eip8453/state.js";
 import {CommonBlockBody} from "../interface.js";
 import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -268,7 +269,7 @@ export async function produceBlockBody<T extends BlockType>(
     gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
       currentState.withParentPayloadApplied(parentExecutionRequests)
     );
-    applyEip8453Operations(fork, gloasBody, commonBlockBody);
+    applyEip8453Operations.call(this, fork, gloasBody, commonBlockBody, currentState, blockSlot);
     blockBody = gloasBody as AssembledBodyType<T>;
 
     this.logger.verbose("Produced block with builder bid", {
@@ -425,7 +426,7 @@ export async function produceBlockBody<T extends BlockType>(
       isBuildingOnFull,
       () => stateAfterParentPayload
     );
-    applyEip8453Operations(fork, gloasBody, commonBlockBody);
+    applyEip8453Operations.call(this, fork, gloasBody, commonBlockBody, currentState, blockSlot);
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
@@ -1178,15 +1179,30 @@ export async function produceCommonBlockBody<T extends BlockType>(
 
 /**
  * [EIP8453] Reshape the operations of a Gloas/Heze body for an EIP-8453 block: Casper FFG attester slashings
- * move to `legacy_attester_slashings`, and the finality gadget attestations, head votes and support bits are
- * empty until their pools and duties exist. No-op before the fork.
+ * move to `legacy_attester_slashings`; finality gadget attestations come from the FG attestation pool and head
+ * votes with their support bits from the head vote pool (validator.md "Constructing the BeaconBlockBody").
+ * No-op before the fork.
  */
-function applyEip8453Operations(fork: ForkName, body: gloas.BeaconBlockBody, commonBlockBody: CommonBlockBody): void {
+function applyEip8453Operations(
+  this: BeaconChain,
+  fork: ForkName,
+  body: gloas.BeaconBlockBody,
+  commonBlockBody: CommonBlockBody,
+  currentState: IBeaconStateView,
+  blockSlot: Slot
+): void {
   if (ForkSeq[fork] < ForkSeq.eip8453) return;
   const bodyEip8453 = body as unknown as eip8453.BeaconBlockBody;
+  const state = asCachedStateEip8453(currentState);
   bodyEip8453.legacyAttesterSlashings = commonBlockBody.attesterSlashings as AttesterSlashing<ForkPreEip8453>[];
+  // Finality gadget slashings have no pool yet
   bodyEip8453.attesterSlashings = [];
-  bodyEip8453.attestations = [];
-  bodyEip8453.headVotes = [];
-  bodyEip8453.headVoteSupport = [];
+  bodyEip8453.attestations = this.finalityAttestationPool.getAttestationsForBlock(state);
+  // A vote counts as support when its block is in the tree and no later than the vote's slot
+  const {headVotes, headVoteSupport} = this.headVotePool.getHeadVotesForBlock(blockSlot, (rootHex, voteSlot) => {
+    const block = this.forkChoice.getBlockHexDefaultStatus(rootHex);
+    return block !== null && block.slot <= voteSlot;
+  });
+  bodyEip8453.headVotes = headVotes;
+  bodyEip8453.headVoteSupport = headVoteSupport;
 }

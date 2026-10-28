@@ -10,6 +10,9 @@ import {
   ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
+  PAYLOAD_STATUS_EMPTY,
+  PAYLOAD_STATUS_FULL,
+  PAYLOAD_STATUS_PENDING,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
@@ -26,14 +29,20 @@ import {
   IBeaconStateView,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
+  computeAttestationCommitteeSlot,
   computeEpochAtSlot,
+  computeRoundAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
+  getAttestationCommitteeAssignment,
   getCurrentSlot,
+  getHeadVoteCommittee,
   getInclusionListCommittee,
   isStatePostAltair,
   isStatePostGloas,
+  isZeroRoot,
   proposerShufflingDecisionRoot,
+  readHeightCheckpoint,
 } from "@lodestar/state-transition";
 import {
   BLSSignature,
@@ -72,6 +81,7 @@ import {
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
 import {InclusionListSource} from "../../../chain/blocks/types.js";
+import {asCachedStateEip8453} from "../../../chain/eip8453/state.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -87,6 +97,7 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
+import {validateFinalityAttestation, validateHeadVoteMessage} from "../../../chain/validation/eip8453.js";
 import {
   InclusionListValidationResult,
   validateApiAggregateAndProof,
@@ -1661,6 +1672,134 @@ export function getValidatorApi(
 
     async getProposerDutiesV2(args, context) {
       return this.getProposerDuties(args, context, {v2: true});
+    },
+
+    // EIP-8453 (Decoupled Consensus)
+
+    async getFinalityAttesterDuties({epoch, indices}) {
+      notWhileSyncing(chain, sync.state);
+      if (indices.length === 0) throw new ApiError(400, "No validator to get finality attester duties");
+      if (epoch > chain.clock.currentEpoch + 1)
+        throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
+      const stateView = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      const pubkeys = getPubkeysForIndices(stateView, indices);
+      const state = asCachedStateEip8453(stateView);
+      const duties: routes.validator.FinalityAttesterDuty[] = [];
+      const firstRound = computeRoundAtSlot(computeStartSlotAtEpoch(epoch));
+      const lastRound = computeRoundAtSlot(computeStartSlotAtEpoch(epoch + 1) - 1);
+      for (let i = 0; i < indices.length; i++) {
+        const committeeIndex = getAttestationCommitteeAssignment(state, epoch, indices[i]);
+        if (committeeIndex === null) continue;
+        for (let round = firstRound; round <= lastRound; round++) {
+          const slot = computeAttestationCommitteeSlot(round, committeeIndex);
+          if (computeEpochAtSlot(slot) !== epoch) continue;
+          duties.push({pubkey: pubkeys[i], validatorIndex: indices[i], committeeIndex, slot});
+        }
+      }
+      return {data: duties};
+    },
+
+    async getHeadVoteDuties({epoch, indices}) {
+      notWhileSyncing(chain, sync.state);
+      if (indices.length === 0) throw new ApiError(400, "No validator to get head vote duties");
+      if (epoch > chain.clock.currentEpoch + 1)
+        throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
+      const stateView = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      const pubkeys = getPubkeysForIndices(stateView, indices);
+      const state = asCachedStateEip8453(stateView);
+      const wanted = new Map<ValidatorIndex, Slot[]>(indices.map((index) => [index, []]));
+      const startSlot = computeStartSlotAtEpoch(epoch);
+      for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
+        if (chain.config.getForkSeq(slot) < ForkSeq.eip8453) continue;
+        for (const index of new Set(getHeadVoteCommittee(state, slot))) {
+          wanted.get(index)?.push(slot);
+        }
+      }
+      return {
+        data: indices.map((validatorIndex, i) => ({
+          pubkey: pubkeys[i],
+          validatorIndex,
+          slots: wanted.get(validatorIndex) ?? [],
+        })),
+      };
+    },
+
+    async produceHeadVoteData({slot}) {
+      notWhileSyncing(chain, sync.state);
+      await waitForSlot(slot);
+      // The AC voting head; until the Goldilocks store is wired this is the legacy fork choice head, and a
+      // block older than the slot is voted with the payload status the fork choice knows for it
+      const head = chain.forkChoice.getHead();
+      const payloadStatus =
+        head.slot === slot
+          ? PAYLOAD_STATUS_PENDING
+          : head.payloadStatus === PayloadStatus.EMPTY
+            ? PAYLOAD_STATUS_EMPTY
+            : PAYLOAD_STATUS_FULL;
+      return {data: {slot, beaconBlockRoot: fromHex(head.blockRoot), payloadStatus}};
+    },
+
+    async produceFinalityAttestationInputs({slot}) {
+      notWhileSyncing(chain, sync.state);
+      await waitForSlot(slot);
+      // Source and head are both the fork choice head until the Goldilocks confirmation rule is wired
+      const head = chain.forkChoice.getHead();
+      const state = asCachedStateEip8453(chain.getHeadState());
+      const target = readHeightCheckpoint(state.targetCheckpoint);
+      if (isZeroRoot(target.root)) {
+        // the source advanced the height, its own root is the target
+        target.root = fromHex(head.blockRoot);
+      }
+      return {
+        data: {
+          epoch: computeEpochAtSlot(slot),
+          target,
+          justified: readHeightCheckpoint(state.justifiedCheckpoint),
+          finalizedHeight: state.finalizedCheckpoint.height,
+        },
+      };
+    },
+
+    async submitHeadVotes({headVotes}) {
+      const failures: FailureList = [];
+      await Promise.all(
+        headVotes.map(async (headVote, i) => {
+          try {
+            const {dataRootHex} = await validateHeadVoteMessage(chain, headVote, true);
+            chain.headVotePool.add(headVote, dataRootHex);
+            await network.publishHeadVote(headVote);
+          } catch (e) {
+            failures.push({index: i, message: (e as Error).message});
+            logger.debug(
+              "Error on submitHeadVotes",
+              {slot: headVote.data.slot, validator: headVote.validatorIndex},
+              e as Error
+            );
+          }
+        })
+      );
+      if (failures.length > 0) throw new IndexedError("Error processing head votes", failures);
+    },
+
+    async submitFinalityAttestations({attestations}) {
+      const failures: FailureList = [];
+      await Promise.all(
+        attestations.map(async (attestation, i) => {
+          try {
+            const {dataRootHex, subnet} = await validateFinalityAttestation(chain, attestation, null);
+            chain.finalityAttestationPool.add(attestation, dataRootHex);
+            await network.publishFinalityAttestation(attestation, subnet);
+          } catch (e) {
+            failures.push({index: i, message: (e as Error).message});
+            logger.debug(
+              "Error on submitFinalityAttestations",
+              {epoch: attestation.epoch, validator: attestation.attesterIndex},
+              e as Error
+            );
+          }
+        })
+      );
+      if (failures.length > 0) throw new IndexedError("Error processing finality attestations", failures);
     },
 
     async getAttesterDuties({epoch, indices}) {

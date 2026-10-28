@@ -5,7 +5,13 @@ import {
   defaultTopicScoreParams,
 } from "@libp2p/gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, PTC_SIZE, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  HEAD_VOTE_COMMITTEE_SIZE,
+  PTC_SIZE,
+  SLOTS_PER_EPOCH,
+  TARGET_AGGREGATORS_PER_COMMITTEE,
+} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
 import {getActiveForkBoundaries} from "../forks.js";
 import {Eth2Context} from "./gossipsub.js";
@@ -188,6 +194,17 @@ function getAllTopicsScoreParams(
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: PAYLOAD_ATTESTATION_WEIGHT,
       expectedMessageRate: PTC_SIZE,
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
+    // [EIP8453] head votes: one message per committee seat per slot
+    topicsParams[
+      stringifyGossipTopic(config, {
+        type: GossipType.head_vote,
+        boundary,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: PAYLOAD_ATTESTATION_WEIGHT,
+      expectedMessageRate: HEAD_VOTE_COMMITTEE_SIZE,
       firstMessageDecayTime: epochDurationMs * 100,
     });
     topicsParams[

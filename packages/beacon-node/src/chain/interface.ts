@@ -49,6 +49,8 @@ import {
   AttestationPool,
   DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
+  FinalityAttestationPool,
+  HeadVotePool,
   InclusionListStore,
   OpPool,
   PayloadAttestationPool,
@@ -131,6 +133,8 @@ export interface IBeaconChain {
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
+  readonly headVotePool: HeadVotePool;
+  readonly finalityAttestationPool: FinalityAttestationPool;
   readonly proposerPreferencesPool: ProposerPreferencesPool;
   readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;

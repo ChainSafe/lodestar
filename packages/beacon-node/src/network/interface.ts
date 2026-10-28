@@ -32,6 +32,7 @@ import {
   altair,
   capella,
   deneb,
+  eip8453,
   fulu,
   gloas,
   heze,
@@ -103,6 +104,8 @@ export interface INetwork extends INetworkCorePublic {
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
+  publishHeadVote(headVote: eip8453.HeadVoteMessage): Promise<number>;
+  publishFinalityAttestation(attestation: eip8453.SingleAttestation, subnet: SubnetID): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: SingleAttestation<ForkPreEip8453>, subnet: SubnetID): Promise<number>;
   publishDataColumnSidecar(

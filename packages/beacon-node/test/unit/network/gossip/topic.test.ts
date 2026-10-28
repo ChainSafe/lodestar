@@ -35,7 +35,10 @@ import {computeMaxGloasDataColumnSidecarSize} from "../../../../src/util/sszByte
 import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("network / gossip / topic", () => {
-  const config = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: 700000, HEZE_FORK_EPOCH: 800000}, ZERO_HASH);
+  const config = createBeaconConfig(
+    {...chainConfig, GLOAS_FORK_EPOCH: 700000, HEZE_FORK_EPOCH: 800000, EIP8453_FORK_EPOCH: 900000},
+    ZERO_HASH
+  );
   const encoding = GossipEncoding.ssz_snappy;
   const maxDataColumnSidecarSize = computeMaxGloasDataColumnSidecarSize(config);
   const getMaxSize = (topic: Parameters<typeof getGossipSSZType>[0], cfg = config): number =>
@@ -217,6 +220,27 @@ describe("network / gossip / topic", () => {
           encoding,
         },
         topicStr: "/eth2/29065f35/inclusion_list/ssz_snappy",
+      },
+    ],
+    [GossipType.head_vote]: [
+      {
+        topic: {
+          type: GossipType.head_vote,
+          boundary: {fork: ForkName.eip8453, epoch: config.EIP8453_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: `/eth2/${config.forkBoundary2ForkDigestHex({fork: ForkName.eip8453, epoch: config.EIP8453_FORK_EPOCH})}/head_vote/ssz_snappy`,
+      },
+    ],
+    [GossipType.attestation]: [
+      {
+        topic: {
+          type: GossipType.attestation,
+          subnet: 3,
+          boundary: {fork: ForkName.eip8453, epoch: config.EIP8453_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: `/eth2/${config.forkBoundary2ForkDigestHex({fork: ForkName.eip8453, epoch: config.EIP8453_FORK_EPOCH})}/attestation_3/ssz_snappy`,
       },
     ],
   };

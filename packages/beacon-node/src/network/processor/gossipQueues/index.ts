@@ -88,6 +88,18 @@ const linearGossipQueueOpts: {
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },
+  [GossipType.head_vote]: {
+    // HEAD_VOTE_COMMITTEE_SIZE votes per slot
+    maxLength: 4096,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
+  [GossipType.attestation]: {
+    // one finality gadget attestation per validator per round
+    maxLength: 16384,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
   [GossipType.inclusion_list]: {
     // 16 committee members, two lists each under the first-or-second-message rule, 32 per slot
     maxLength: 1024,
