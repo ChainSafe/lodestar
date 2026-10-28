@@ -982,9 +982,13 @@ export function getBeaconBlockApi(
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-        // Import execution payload. Signature is verified during broadcast validation, an already
-        // known envelope was verified by its original source
-        () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
+        // Import execution payload
+        () =>
+          chain.processExecutionPayload(payloadInput, {
+            // Signature is verified during broadcast validation only for the submitted envelope,
+            // an envelope cached by another source is verified at import
+            validSignature: payloadInput.getPayloadEnvelope() === signedExecutionPayloadEnvelope,
+          }),
       ];
 
       const publishPromise = promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
