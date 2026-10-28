@@ -7,37 +7,39 @@ import {MapDef} from "@lodestar/utils";
 const SLOTS_RETAINED = 2;
 
 /**
- * Tracks execution payload bids we've already seen per
+ * Tracks the value of the last valid execution payload bid seen per
  * (slot, builder, parent block hash, parent block root).
  */
 export class SeenExecutionPayloadBids {
-  private readonly branchesByBuilderBySlot = new MapDef<Slot, MapDef<BuilderIndex, Set<string>>>(
-    () => new MapDef<BuilderIndex, Set<string>>(() => new Set<string>())
+  private readonly valueByBranchByBuilderBySlot = new MapDef<Slot, MapDef<BuilderIndex, Map<string, number>>>(
+    () => new MapDef<BuilderIndex, Map<string, number>>(() => new Map<string, number>())
   );
   private lowestPermissibleSlot: Slot = 0;
 
-  isKnown(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): boolean {
+  getValue(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): number | null {
     return (
-      this.branchesByBuilderBySlot.get(slot)?.get(builderIndex)?.has(branchKey(parentBlockHash, parentBlockRoot)) ===
-      true
+      this.valueByBranchByBuilderBySlot
+        .get(slot)
+        ?.get(builderIndex)
+        ?.get(branchKey(parentBlockHash, parentBlockRoot)) ?? null
     );
   }
 
-  add(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): void {
+  add(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex, value: number): void {
     if (slot < this.lowestPermissibleSlot) {
       throw Error(`slot ${slot} < lowestPermissibleSlot ${this.lowestPermissibleSlot}`);
     }
-    this.branchesByBuilderBySlot
+    this.valueByBranchByBuilderBySlot
       .getOrDefault(slot)
       .getOrDefault(builderIndex)
-      .add(branchKey(parentBlockHash, parentBlockRoot));
+      .set(branchKey(parentBlockHash, parentBlockRoot), value);
   }
 
   prune(currentSlot: Slot): void {
     this.lowestPermissibleSlot = Math.max(currentSlot - SLOTS_RETAINED, 0);
-    for (const slot of this.branchesByBuilderBySlot.keys()) {
+    for (const slot of this.valueByBranchByBuilderBySlot.keys()) {
       if (slot < this.lowestPermissibleSlot) {
-        this.branchesByBuilderBySlot.delete(slot);
+        this.valueByBranchByBuilderBySlot.delete(slot);
       }
     }
   }
