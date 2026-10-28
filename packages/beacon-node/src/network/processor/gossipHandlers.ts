@@ -1405,10 +1405,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // [EIP8453] head votes are pooled for block inclusion; the Goldilocks store is not wired yet
     [GossipType.head_vote]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.head_vote>) => {
       const headVote = sszDeserialize(topic, gossipData.serializedData);
-      const {dataRootHex} = await validateHeadVoteMessage(chain, headVote);
+      const {dataRootHex, state} = await validateHeadVoteMessage(chain, headVote);
       callInNextEventLoop(() => {
         try {
           chain.headVotePool.add(headVote, dataRootHex);
+          chain.goldilocks.onHeadVote(headVote, state);
         } catch (e) {
           logger.debug("Error adding head vote to pool", {slot: headVote.data.slot}, e as Error);
         }

@@ -6,6 +6,7 @@ import {
   ForkSeq,
 } from "@lodestar/params";
 import {
+  CachedBeaconStateEip8453,
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
@@ -45,7 +46,7 @@ export function computeSubnetForFinalityAttestation(committeeIndex: number): num
   return committeeIndex % ATTESTATION_SUBNET_COUNT;
 }
 
-export type HeadVoteValidationResult = {dataRootHex: RootHex};
+export type HeadVoteValidationResult = {dataRootHex: RootHex; state: CachedBeaconStateEip8453};
 
 export async function validateHeadVoteMessage(
   chain: IBeaconChain,
@@ -86,7 +87,7 @@ export async function validateHeadVoteMessage(
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new GossipActionError(GossipAction.REJECT, {code: Eip8453GossipErrorCode.INVALID_SIGNATURE});
   }
-  return {dataRootHex: toRootHex(ssz.eip8453.HeadVoteData.hashTreeRoot(data))};
+  return {dataRootHex: toRootHex(ssz.eip8453.HeadVoteData.hashTreeRoot(data)), state};
 }
 
 export type FinalityAttestationValidationResult = {dataRootHex: RootHex; subnet: number};

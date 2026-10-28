@@ -90,6 +90,7 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
+import {GoldilocksTracker} from "./eip8453/goldilocks.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
@@ -202,6 +203,7 @@ export class BeaconChain implements IBeaconChain {
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly headVotePool: HeadVotePool;
   readonly finalityAttestationPool: FinalityAttestationPool;
+  readonly goldilocks: GoldilocksTracker;
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
   readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;
@@ -341,6 +343,7 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.headVotePool = new HeadVotePool();
     this.finalityAttestationPool = new FinalityAttestationPool();
+    this.goldilocks = new GoldilocksTracker(config, anchorState.genesisTime, logger);
     this.opPool = new OpPool(config);
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
     this.inclusionListStore = new InclusionListStore(config);
@@ -1840,6 +1843,7 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool.prune(slot);
     this.headVotePool.prune(slot);
     this.finalityAttestationPool.prune(this.forkChoice.getFinalizedCheckpoint().epoch);
+    this.goldilocks.logSlot(slot, this.forkChoice.getHeadRoot());
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.proposerPreferencesPool.prune(slot);

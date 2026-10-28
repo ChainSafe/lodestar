@@ -40,6 +40,7 @@ import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/
 import {IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
+import {GoldilocksTracker} from "./eip8453/goldilocks.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
@@ -135,6 +136,7 @@ export interface IBeaconChain {
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly headVotePool: HeadVotePool;
   readonly finalityAttestationPool: FinalityAttestationPool;
+  readonly goldilocks: GoldilocksTracker;
   readonly proposerPreferencesPool: ProposerPreferencesPool;
   readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;

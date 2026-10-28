@@ -1727,8 +1727,18 @@ export function getValidatorApi(
     async produceHeadVoteData({slot}) {
       notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
-      // The AC voting head; until the Goldilocks store is wired this is the legacy fork choice head, and a
-      // block older than the slot is voted with the payload status the fork choice knows for it
+      // The AC voting head from the Goldilocks store's recorded duty when it has one for this slot, else the
+      // legacy fork choice head with the payload status the fork choice knows for it
+      const voteHead = chain.goldilocks.voteHead(slot);
+      if (voteHead !== null) {
+        return {
+          data: {
+            slot,
+            beaconBlockRoot: fromHex(voteHead.root),
+            payloadStatus: chain.goldilocks.payloadStatusFor(voteHead, slot),
+          },
+        };
+      }
       const head = chain.forkChoice.getHead();
       const payloadStatus =
         head.slot === slot
@@ -1742,20 +1752,33 @@ export function getValidatorApi(
     async produceFinalityAttestationInputs({slot}) {
       notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
-      // Source and head are both the fork choice head until the Goldilocks confirmation rule is wired
-      const head = chain.forkChoice.getHead();
-      const state = asCachedStateEip8453(chain.getHeadState());
-      const target = readHeightCheckpoint(state.targetCheckpoint);
+      // Source and head from the Goldilocks store's recorded FG duty (fast-confirmed source, voting-view head);
+      // before the store has them, both are the legacy fork choice head
+      const fg = chain.goldilocks.fgInputs(slot);
+      const legacyHead = chain.forkChoice.getHead();
+      const sourceBlock = fg !== null ? chain.forkChoice.getBlockHexDefaultStatus(fg.source.root) : legacyHead;
+      const headBlock = fg !== null ? chain.forkChoice.getBlockHexDefaultStatus(fg.head.root) : legacyHead;
+      if (sourceBlock === null || headBlock === null) {
+        throw new ApiError(500, "Goldilocks source or head block is unknown to the fork choice");
+      }
+      const sourceState = asCachedStateEip8453(
+        await chain.regen.getState(sourceBlock.stateRoot, RegenCaller.getDuties)
+      );
+      const headState =
+        headBlock.blockRoot === sourceBlock.blockRoot
+          ? sourceState
+          : asCachedStateEip8453(await chain.regen.getState(headBlock.stateRoot, RegenCaller.getDuties));
+      const target = readHeightCheckpoint(sourceState.targetCheckpoint);
       if (isZeroRoot(target.root)) {
         // the source advanced the height, its own root is the target
-        target.root = fromHex(head.blockRoot);
+        target.root = fromHex(sourceBlock.blockRoot);
       }
       return {
         data: {
           epoch: computeEpochAtSlot(slot),
           target,
-          justified: readHeightCheckpoint(state.justifiedCheckpoint),
-          finalizedHeight: state.finalizedCheckpoint.height,
+          justified: readHeightCheckpoint(headState.justifiedCheckpoint),
+          finalizedHeight: headState.finalizedCheckpoint.height,
         },
       };
     },
@@ -1765,8 +1788,9 @@ export function getValidatorApi(
       await Promise.all(
         headVotes.map(async (headVote, i) => {
           try {
-            const {dataRootHex} = await validateHeadVoteMessage(chain, headVote, true);
+            const {dataRootHex, state} = await validateHeadVoteMessage(chain, headVote, true);
             chain.headVotePool.add(headVote, dataRootHex);
+            chain.goldilocks.onHeadVote(headVote, state);
             await network.publishHeadVote(headVote);
           } catch (e) {
             failures.push({index: i, message: (e as Error).message});

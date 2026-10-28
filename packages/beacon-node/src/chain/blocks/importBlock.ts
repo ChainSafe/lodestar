@@ -168,6 +168,11 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
 
+  // [EIP8453] feed the Goldilocks store (shadow mode)
+  if (fork >= ForkSeq.eip8453) {
+    this.goldilocks.onBlockImported(block, postState, toRootHex(block.message.parentRoot));
+  }
+
   this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
