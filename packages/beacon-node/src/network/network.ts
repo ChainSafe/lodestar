@@ -855,7 +855,9 @@ export class Network implements INetwork {
   };
 
   private onTargetGroupCountUpdated = (count: number): void => {
-    this.core.setTargetGroupCount(count);
+    this.core.setTargetGroupCount(count).catch((e) => {
+      this.logger.error("Error setting target custody group count", {count}, e as Error);
+    });
   };
 
   private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {
