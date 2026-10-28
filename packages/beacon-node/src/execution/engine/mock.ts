@@ -18,6 +18,7 @@ import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {kzg} from "../../util/kzg.js";
+import {computeExecutionBlockHash} from "./blockHash.js";
 import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {
   BlobsBundleRpc,
@@ -352,7 +353,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       executionPayload.gasLimit = INTEROP_GAS_LIMIT;
       executionPayload.gasUsed = Math.floor(0.5 * INTEROP_GAS_LIMIT);
       executionPayload.timestamp = payloadAttributes.timestamp;
-      executionPayload.blockHash = crypto.randomBytes(32);
       const transactions: Uint8Array[] = [];
 
       // Between 0 and 4 transactions for all forks
@@ -402,6 +402,18 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         (executionPayload as gloas.ExecutionPayload).slotNumber = payloadAttributes.slotNumber;
       }
 
+      const executionRequests =
+        ForkSeq[fork] >= ForkSeq.gloas
+          ? ssz.gloas.ExecutionRequests.defaultValue()
+          : ssz.electra.ExecutionRequests.defaultValue();
+
+      executionPayload.blockHash = computeExecutionBlockHash(
+        fork,
+        executionPayload,
+        payloadAttributes.parentBeaconBlockRoot ?? null,
+        ForkSeq[fork] >= ForkSeq.electra ? executionRequests : null
+      );
+
       this.preparingPayloads.set(payloadId, {
         executionPayload: serializeExecutionPayload(fork, executionPayload),
         blobsBundle: serializeBlobsBundle({
@@ -409,12 +421,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
           blobs,
           proofs,
         }),
-        executionRequests: serializeExecutionRequests(
-          fork,
-          ForkSeq[fork] >= ForkSeq.gloas
-            ? ssz.gloas.ExecutionRequests.defaultValue()
-            : ssz.electra.ExecutionRequests.defaultValue()
-        ),
+        executionRequests: serializeExecutionRequests(fork, executionRequests),
       });
 
       // IF the payload is deemed VALID and the build process has begun

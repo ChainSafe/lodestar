@@ -24,7 +24,7 @@ export function computeExecutionBlockHash(
 ): Uint8Array {
   const forkSeq = ForkSeq[fork];
   // Field order follows `class Header` in execution-specs `src/ethereum/forks/<el_fork>/blocks.py` @ 7f2f4c9:
-  // bellatrix=paris, capella=shanghai, deneb=cancun, electra=prague, fulu=osaka, gloas=amsterdam.
+  // bellatrix=paris, capella=shanghai, deneb=cancun, electra=prague, fulu=osaka, gloas=amsterdam, heze=bogota.
   // Each fork only appends fields to the previous one.
   const fields: Input[] = [
     payload.parentHash,
