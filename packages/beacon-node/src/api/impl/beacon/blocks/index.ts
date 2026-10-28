@@ -316,18 +316,8 @@ export function getBeaconBlockApi(
         break;
       }
 
-      case routes.beacon.BroadcastValidation.none: {
-        chain.logger.debug("Skipping broadcast validation", valLogMeta);
-        break;
-      }
-
       default: {
-        // error or log warning we do not support this validation
-        const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
-        if (chain.opts.broadcastValidationStrictness === "error") {
-          throw Error(message);
-        }
-        chain.logger.warn(message, valLogMeta);
+        throw new ApiError(400, `Invalid broadcast validation level ${broadcastValidation}`);
       }
     }
 
@@ -804,11 +794,6 @@ export function getBeaconBlockApi(
       };
       try {
         switch (broadcastValidation) {
-          case routes.beacon.BroadcastValidation.none: {
-            chain.logger.debug("Skipping broadcast validation of execution payload envelope", valLogMeta);
-            break;
-          }
-
           case routes.beacon.BroadcastValidation.gossip: {
             await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
             break;
@@ -847,11 +832,7 @@ export function getBeaconBlockApi(
           }
 
           default: {
-            const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
-            if (chain.opts.broadcastValidationStrictness === "error") {
-              throw Error(message);
-            }
-            chain.logger.warn(message, valLogMeta);
+            throw new ApiError(400, `Invalid broadcast validation level ${broadcastValidation}`);
           }
         }
       } catch (error) {
@@ -1004,7 +985,7 @@ export function getBeaconBlockApi(
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
         // Import execution payload. Signature is verified during broadcast validation, an already
-        // known envelope was verified by its original source and `none` deliberately skips validation
+        // known envelope was verified by its original source
         () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];
 
