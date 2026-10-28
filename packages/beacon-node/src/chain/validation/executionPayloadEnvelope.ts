@@ -125,6 +125,19 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // An empty transaction is a deletion in the transactions trie, so trailing empty transactions would not change
+  // the block hash. The EL rejects such a payload, as `verify_and_notify_new_payload` does before hashing.
+  for (let i = 0; i < payload.transactions.length; i++) {
+    if (payload.transactions.getSize(i) === 0) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.ZERO_LENGTH_TRANSACTION,
+        slot: payload.slotNumber,
+        root: blockRootHex,
+        index: i,
+      });
+    }
+  }
+
   // [REJECT] The payload's block hash is computed correctly
   const fork = chain.config.getForkName(block.slot);
   if (!isForkPostGloas(fork)) {
