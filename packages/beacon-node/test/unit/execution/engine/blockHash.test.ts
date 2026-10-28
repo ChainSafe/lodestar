@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import {describe, expect, it} from "vitest";
 import {SerializedList} from "@chainsafe/ssz";
 import {ForkName, ForkPostBellatrix, ForkSeq} from "@lodestar/params";
@@ -123,6 +125,18 @@ describe("execution / engine / blockHash", () => {
     const {executionPayload} = parseExecutionPayload(ForkName.bellatrix, rpc);
 
     expect(toHex(computeExecutionBlockHash(ForkName.bellatrix, executionPayload, null, null))).toBe(rpc.blockHash);
+  });
+
+  it("computeExecutionBlockHash matches the EL hash of a Sepolia gloas envelope", () => {
+    // Finalized Sepolia envelope at slot 11451369 from the beacon API, with 72 transactions and an execution request
+    const fixture = path.resolve(__dirname, "../../../fixtures/gloas/sepoliaExecutionPayloadEnvelope11451369.json");
+    const {payload, parentBeaconBlockRoot, executionRequests} = ssz.gloas.SignedExecutionPayloadEnvelope.fromJson(
+      JSON.parse(fs.readFileSync(fixture, "utf8"))
+    ).message;
+
+    expect(toHex(computeExecutionBlockHash(ForkName.gloas, payload, parentBeaconBlockRoot, executionRequests))).toBe(
+      toHex(payload.blockHash)
+    );
   });
 
   // Expected hashes computed with py-rlp, py-trie and eth-hash, using the header layout of the
