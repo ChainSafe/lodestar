@@ -17,6 +17,7 @@ import {
   PayloadAttestationError,
   PayloadAttestationErrorCode,
   SyncCommitteeError,
+  SyncCommitteeErrorCode,
 } from "../../../../chain/errors/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
@@ -340,7 +341,10 @@ export function getBeaconPoolApi({
             const synCommittee = state.getIndexedSyncCommittee(signature.slot);
             const indexesInCommittee = synCommittee.validatorIndexMap.get(signature.validatorIndex);
             if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
-              return; // Not a sync committee member
+              throw new SyncCommitteeError(GossipAction.REJECT, {
+                code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
+                validatorIndex: signature.validatorIndex,
+              });
             }
 
             // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
