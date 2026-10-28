@@ -232,9 +232,7 @@
         // There is a lot of empty code blocks, should be enabled and clean up separately.
         "noEmptyBlockStatements": "off",
         // We are using `Object.prototype.hasOwnProperty` a lot because compiling lib is set to prior 2022
-        "noPrototypeBuiltins": "off",
-        // Biome 2.6 reports new findings, remove after fixing them in a separate PR
-        "noNonNullAssertedOptionalChain": "warn"
+        "noPrototypeBuiltins": "off"
       },
       "nursery": {
         // Need to enable this rule with exception to anonymous functions
