@@ -42,6 +42,7 @@ import {
   BlockInputSource,
   IBlockInput,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
@@ -51,6 +52,7 @@ import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../..
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
+import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validation/executionPayloadEnvelope.js";
 import {validateGossipInclusionList} from "../../../src/chain/validation/inclusionList.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
@@ -177,6 +179,7 @@ const gossipTopicByHandler = {
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
   gossip_inclusion_list: GossipType.inclusion_list,
+  gossip_execution_payload_envelope: GossipType.execution_payload,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -514,6 +517,16 @@ export async function runGossipValidationTest(
             ...blockProps,
             block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
           });
+          // Mirror gossip block handler: seed the envelope input so envelope vectors find their block
+          chain.seenPayloadEnvelopeInputCache.add({
+            blockRootHex,
+            block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+            forkName: fork,
+            sampledColumns: [],
+            custodyColumns: [],
+            seenTimestampSec: 0,
+            source: PayloadEnvelopeInputSource.gossip,
+          });
         } else if (isForkPostFulu(fork)) {
           blockImport = BlockInputColumns.createFromBlock({
             ...blockProps,
@@ -744,6 +757,26 @@ async function validateMessageForTopic(
       const {committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList);
       // Mirror gossip handler: store the list so later vectors see it
       chain.inclusionListStore.process(signedInclusionList, committeeIndices, true);
+      break;
+    }
+
+    case GossipType.execution_payload: {
+      const signedEnvelope = rejectOnInvalidSerializedBytes(() =>
+        ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(bytes)
+      );
+      const blockRootHex = toRootHex(signedEnvelope.message.beaconBlockRoot);
+
+      if (failedBlockRoots.has(blockRootHex)) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_BLOCK_FAILED_VALIDATION"});
+      }
+
+      await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+      // Mirror gossip handler: attach the envelope so duplicate detection works
+      chain.seenPayloadEnvelopeInputCache.get(blockRootHex)?.addPayloadEnvelope({
+        envelope: signedEnvelope,
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec: 0,
+      });
       break;
     }
 
