@@ -243,7 +243,7 @@
         "useExplicitType": "off",
         // Biome 2.6 reports new findings, restore to "error" after fixing them in a separate PR
         "noFloatingPromises": "warn",
-        "noMisusedPromises": "warn"
+        "noMisusedPromises": "error"
       },
       "complexity": {
         // Should be done in a separate PR
