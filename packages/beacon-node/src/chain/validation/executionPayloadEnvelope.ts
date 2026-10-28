@@ -143,12 +143,14 @@ async function validateExecutionPayloadEnvelope(
   if (!isForkPostGloas(fork)) {
     throw new Error(`Expected gloas+ fork for execution payload envelope validation, got fork=${fork}`);
   }
+  const timer = chain.metrics?.gossipExecutionPayloadEnvelope.blockHashTime.startTimer();
   const computedBlockHash = computeExecutionBlockHash(
     fork,
     payload,
     envelope.parentBeaconBlockRoot,
     envelope.executionRequests
   );
+  timer?.();
   if (!byteArrayEquals(computedBlockHash, payload.blockHash)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH,

@@ -1062,6 +1062,11 @@ export function createLodestarMetrics(
         help: "Count of errors, by error type, while processing execution payload envelopes",
         labelNames: ["error"],
       }),
+      blockHashTime: register.histogram({
+        name: "lodestar_gossip_execution_payload_envelope_block_hash_seconds",
+        help: "Time to compute the execution block hash of a gossip execution payload envelope",
+        buckets: [0.001, 0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.5, 1],
+      }),
       executionPayload: {
         recvToValidation: register.histogram({
           name: "lodestar_gossip_execution_payload_envelope_received_to_execution_payload_verification_seconds",
