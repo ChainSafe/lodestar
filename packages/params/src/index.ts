@@ -137,6 +137,7 @@ export const {
   MIN_ROUNDS_TO_INACTIVITY_LEAK,
   EJECTION_INACTIVITY_SCORE,
   MAX_HEAD_VOTES,
+  MAX_ATTESTER_SLASHING_SIZE_EIP8453,
 } = activePreset;
 
 ////////////
@@ -397,6 +398,14 @@ export const NEXT_SYNC_COMMITTEE_DEPTH_GLOAS = 11;
 export const NEXT_SYNC_COMMITTEE_INDEX_GLOAS = 898;
 export const BUILDER_INDEX_FLAG = 2 ** 40;
 export const BUILDER_INDEX_SELF_BUILD = Infinity;
+
+/**
+ * Spec: gloas/fork-choice.md constants, carried on the wire by EIP-8453 `HeadVoteData.payload_status`.
+ * Note that `PayloadStatus` in `@lodestar/fork-choice` is an internal enum with a different numbering.
+ */
+export const PAYLOAD_STATUS_EMPTY = 0;
+export const PAYLOAD_STATUS_FULL = 1;
+export const PAYLOAD_STATUS_PENDING = 2;
 export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
 export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;
 export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;

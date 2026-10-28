@@ -363,6 +363,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MIN_ROUNDS_TO_INACTIVITY_LEAK: eip8453ForkRelevant,
     EJECTION_INACTIVITY_SCORE: eip8453ForkRelevant,
     MAX_HEAD_VOTES: eip8453ForkRelevant,
+    MAX_ATTESTER_SLASHING_SIZE_EIP8453: eip8453ForkRelevant,
 
     // FastConfirmationRule
     CONFIRMATION_BYZANTINE_THRESHOLD: false,

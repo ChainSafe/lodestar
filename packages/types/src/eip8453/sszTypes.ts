@@ -1,6 +1,7 @@
 import {
   BitVectorType,
   ContainerType,
+  ListBasicType,
   ListCompositeType,
   ProgressiveBitListType,
   ProgressiveContainerType,
@@ -15,6 +16,7 @@ import {
   MAX_ATTESTATIONS_ELECTRA,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
   MAX_HEAD_VOTES,
+  MIN_SEED_LOOKAHEAD,
   PENDING_FINALITY_WINDOW,
   SLOTS_PER_EPOCH,
   VALIDATOR_REGISTRY_LIMIT,
@@ -23,8 +25,18 @@ import {ssz as gloasSsz} from "../gloas/index.js";
 import {ssz as hezeSsz} from "../heze/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
-const {Slot, Epoch, Root, BLSSignature, ValidatorIndex, CommitteeIndex, UintNum64, UintBn64, ParticipationFlags} =
-  primitiveSsz;
+const {
+  Slot,
+  Epoch,
+  Root,
+  BLSSignature,
+  ValidatorIndex,
+  CommitteeIndex,
+  UintNum64,
+  UintBn64,
+  Uint8,
+  ParticipationFlags,
+} = primitiveSsz;
 const BooleanSsz = primitiveSsz.Boolean;
 
 function activeFields(count: number, gaps: number[] = []): boolean[] {
@@ -49,10 +61,26 @@ export const HeadVoteCommittee = new VectorBasicType(ValidatorIndex, HEAD_VOTE_C
 
 export const HeadVoteCommitteeBits = new BitVectorType(HEAD_VOTE_COMMITTEE_SIZE);
 
+/** The indices of the validators participating in a head vote, sorted and unique */
+export const HeadVoteCommitteeIndices = new ListBasicType(ValidatorIndex, HEAD_VOTE_COMMITTEE_SIZE);
+
+/** A rolling window of head vote committees for the previous, current and lookahead epochs */
+export const HeadVoteCommitteeWindow = new VectorCompositeType(
+  HeadVoteCommittee,
+  (MIN_SEED_LOOKAHEAD + 2) * SLOTS_PER_EPOCH
+);
+
 export const HeadVoteParticipation = new VectorCompositeType(HeadVoteCommitteeBits, 2 * SLOTS_PER_EPOCH);
 
+/** One bit per voter of a head vote, in the order of its `voterIndices`, set when the proposer counted it as support */
 export const HeadVoteSupportBits = new ProgressiveBitListType({
   typeName: "HeadVoteSupportBits",
+  limit: HEAD_VOTE_COMMITTEE_SIZE,
+});
+
+/** The support bits of each head vote in a beacon block */
+export const HeadVoteSupport = new ProgressiveListCompositeType(HeadVoteSupportBits, {
+  typeName: "HeadVoteSupport",
   limit: MAX_HEAD_VOTES,
 });
 
@@ -96,17 +124,19 @@ export const PendingFinality = new ContainerType(
 
 export const PendingFinalities = new ListCompositeType(PendingFinality, PENDING_FINALITY_WINDOW);
 
+/** `payloadStatus` uses the spec numbering (`PAYLOAD_STATUS_EMPTY` 0, `_FULL` 1, `_PENDING` 2) */
 export const HeadVoteData = new ContainerType(
   {
     slot: Slot,
     beaconBlockRoot: Root,
+    payloadStatus: Uint8,
   },
   {typeName: "HeadVoteData", jsonCase: "eth2"}
 );
 
 export const HeadVote = new ProgressiveContainerType(
   {
-    aggregationBits: HeadVoteCommitteeBits,
+    voterIndices: HeadVoteCommitteeIndices,
     data: HeadVoteData,
     signature: BLSSignature,
   },
@@ -241,7 +271,7 @@ export const BeaconBlockBody = new ProgressiveContainerType(
     payloadAttestations: hezeBody.payloadAttestations,
     parentExecutionRequests: hezeBody.parentExecutionRequests,
     headVotes: HeadVotes, // [New in EIP8453]
-    headVoteSupportBits: HeadVoteSupportBits, // [New in EIP8453]
+    headVoteSupport: HeadVoteSupport, // [New in EIP8453]
     legacyAttesterSlashings: LegacyAttesterSlashings, // [New in EIP8453]
   },
   // Field order is chunk order. Heze gaps (eth1Data, deposits) keep the surviving generalized indices stable
@@ -301,8 +331,9 @@ export const BeaconState = new ProgressiveContainerType(
     roundParticipation: RoundParticipation, // [New in EIP8453]
     pendingFinality: PendingFinalities, // [New in EIP8453]
     headVoteParticipation: HeadVoteParticipation, // [New in EIP8453]
+    headVoteCommitteeWindow: HeadVoteCommitteeWindow, // [New in EIP8453]
   },
   // Heze gaps (8, 9, 10, 28) plus the removed participation and Casper FFG fields (15..20)
-  activeFields(56, [8, 9, 10, 15, 16, 17, 18, 19, 20, 28]),
+  activeFields(57, [8, 9, 10, 15, 16, 17, 18, 19, 20, 28]),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

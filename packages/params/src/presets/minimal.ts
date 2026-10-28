@@ -178,4 +178,6 @@ export const minimalPreset: BeaconPreset = {
   MIN_ROUNDS_TO_INACTIVITY_LEAK: 8, // 2**3
   EJECTION_INACTIVITY_SCORE: 65536, // 2**16
   MAX_HEAD_VOTES: 8, // 2**3
+  // [customized] 8,578 bytes, ~8 KiB
+  MAX_ATTESTER_SLASHING_SIZE_EIP8453: 8578,
 };

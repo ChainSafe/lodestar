@@ -1,6 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkPreEip8453, ForkSeq} from "@lodestar/params";
-import {IndexedAttestation, SignedBeaconBlock, Slot, altair, capella, eip8453, gloas} from "@lodestar/types";
+import {IndexedAttestation, SignedBeaconBlock, altair, capella, eip8453, gloas} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {IBeaconStateView, IBeaconStateViewGloas} from "../stateView/interface.js";
@@ -48,8 +48,6 @@ export function getBlockSignatureSets(
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;
-    /** EIP8453 head votes are signed by the head vote committee of their slot, which the caller resolves */
-    getHeadVoteCommittee?: (slot: Slot) => Uint32Array;
   }
 ): ISignatureSet[] {
   // fork based validations
@@ -80,16 +78,8 @@ export function getBlockSignatureSets(
     for (const indexedAttestation of indexedAttestations as eip8453.IndexedAttestation[]) {
       signatureSets.push(getIndexedAttestationSignatureSetEip8453(config, blockSlot, indexedAttestation));
     }
-    if (body.headVotes.length > 0) {
-      const getHeadVoteCommittee = opts?.getHeadVoteCommittee;
-      if (getHeadVoteCommittee === undefined) {
-        throw Error("getHeadVoteCommittee is required to verify EIP8453 head votes");
-      }
-      for (const headVote of body.headVotes) {
-        signatureSets.push(
-          getHeadVoteSignatureSet(config, blockSlot, headVote, getHeadVoteCommittee(headVote.data.slot))
-        );
-      }
+    for (const headVote of body.headVotes) {
+      signatureSets.push(getHeadVoteSignatureSet(config, blockSlot, headVote));
     }
   } else {
     const signedBlockPre = signedBlock as SignedBeaconBlock<ForkPreEip8453>;

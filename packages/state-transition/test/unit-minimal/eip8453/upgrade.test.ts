@@ -2,7 +2,14 @@ import {describe, expect, it} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  FAR_FUTURE_EPOCH,
+  ForkName,
+  HEAD_VOTE_COMMITTEE_SIZE,
+  MAX_EFFECTIVE_BALANCE,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconState} from "../../../src/cache/stateCache.js";
 import {upgradeStateToEip8453} from "../../../src/slot/upgradeStateToEip8453.js";
@@ -73,6 +80,22 @@ describe("upgradeStateToEip8453", () => {
     expect(post.roundParticipation.getAll()).toEqual(zeros);
     expect(post.pendingFinality.length).toBe(0);
     expect(post.headVoteParticipation.length).toBe(2 * SLOTS_PER_EPOCH);
+    // the window has no previous epoch, then sampled committees for the current and lookahead epochs
+    expect(post.headVoteCommitteeWindow.length).toBe((MIN_SEED_LOOKAHEAD + 2) * SLOTS_PER_EPOCH);
+    expect(
+      post.headVoteCommitteeWindow
+        .get(0)
+        .getAll()
+        .every((index) => index === 0)
+    ).toBe(true);
+    for (let i = SLOTS_PER_EPOCH; i < (MIN_SEED_LOOKAHEAD + 2) * SLOTS_PER_EPOCH; i++) {
+      const committee = post.headVoteCommitteeWindow.get(i).getAll();
+      expect(committee).toHaveLength(HEAD_VOTE_COMMITTEE_SIZE);
+      expect(committee.every((index) => index < validatorCount)).toBe(true);
+    }
+    expect(post.headVoteCommitteeWindow.get(SLOTS_PER_EPOCH).getAll()).not.toEqual(
+      post.headVoteCommitteeWindow.get(SLOTS_PER_EPOCH + 1).getAll()
+    );
     expect(post.inactivityScores.getAll()).toEqual(zeros.map((_, i) => i));
     expect(post.validators.length).toBe(validatorCount);
     // the removed fields are not present on the view

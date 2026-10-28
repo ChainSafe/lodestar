@@ -8,7 +8,10 @@ export type AttestationCommitteeBits = ValueOf<typeof ssz.AttestationCommitteeBi
 export type HeadVoteCommittee = ValueOf<typeof ssz.HeadVoteCommittee>;
 export type HeadVoteCommitteeBits = ValueOf<typeof ssz.HeadVoteCommitteeBits>;
 export type HeadVoteParticipation = ValueOf<typeof ssz.HeadVoteParticipation>;
+export type HeadVoteCommitteeIndices = ValueOf<typeof ssz.HeadVoteCommitteeIndices>;
+export type HeadVoteCommitteeWindow = ValueOf<typeof ssz.HeadVoteCommitteeWindow>;
 export type HeadVoteSupportBits = ValueOf<typeof ssz.HeadVoteSupportBits>;
+export type HeadVoteSupport = ValueOf<typeof ssz.HeadVoteSupport>;
 export type HeightParticipation = ValueOf<typeof ssz.HeightParticipation>;
 export type RoundParticipation = ValueOf<typeof ssz.RoundParticipation>;
 

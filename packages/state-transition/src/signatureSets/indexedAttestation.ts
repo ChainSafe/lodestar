@@ -96,19 +96,14 @@ export function getHeadVoteDataSigningRoot(
   return computeSigningRoot(ssz.eip8453.HeadVoteData, data, domain);
 }
 
-/** Signature set of an aggregated head vote, given the head vote committee of its slot */
+/** Signature set of an aggregated head vote; membership of `voterIndices` in the committee is checked by process_head_vote */
 export function getHeadVoteSignatureSet(
   config: BeaconConfig,
   stateSlot: Slot,
-  headVote: eip8453.HeadVote,
-  committee: Uint32Array
+  headVote: eip8453.HeadVote
 ): ISignatureSet {
-  const indices: number[] = [];
-  for (const position of headVote.aggregationBits.getTrueBitIndexes()) {
-    indices.push(committee[position]);
-  }
   return createAggregateSignatureSetFromComponents(
-    indices,
+    headVote.voterIndices,
     getHeadVoteDataSigningRoot(config, stateSlot, headVote.data),
     headVote.signature
   );

@@ -1,4 +1,5 @@
 import path from "node:path";
+import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName, ForkPreEip8453, ForkSeq, isForkPostEip8453, isForkPostGloas} from "@lodestar/params";
@@ -84,12 +85,13 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     );
   },
 
-  // EIP-8453: a single aggregate head vote, verified with the committee of its slot
+  // EIP-8453: a single aggregate head vote, verified with the committee of its slot. The vector carries no
+  // support bits (support is a block-level input), so none of the voters count as support.
   head_vote: (state, testCase: BaseSpecTest & {head_vote: eip8453.HeadVote}) => {
     blockFns.processHeadVote(
       state as CachedBeaconStateEip8453,
       testCase.head_vote,
-      new Map(),
+      BitArray.fromBitLen(testCase.head_vote.voterIndices.length),
       !shouldIgnoreBls(testCase)
     );
   },

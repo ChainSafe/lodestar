@@ -1,6 +1,8 @@
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateEip8453, CachedBeaconStateHeze} from "../types.js";
+import {computeHeadVoteCommittee} from "../util/eip8453.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
 import {zeroProgressiveListBasicRootNode} from "../util/ssz.js";
 
@@ -83,6 +85,18 @@ export function upgradeStateToEip8453(stateHeze: CachedBeaconStateHeze): CachedB
   // pending_finality and head_vote_participation keep their default (empty) values
 
   const statePost = getCachedBeaconState(post, stateHeze);
+  // [New in EIP8453] initialize_head_vote_committee_window: no previous epoch, then the current epoch and the
+  // MIN_SEED_LOOKAHEAD next epochs, sampled with the upgraded state
+  const currentEpoch = statePost.epochCtx.epoch;
+  const windowStart = computeStartSlotAtEpoch(currentEpoch);
+  const windowEnd = computeStartSlotAtEpoch(currentEpoch + MIN_SEED_LOOKAHEAD + 1);
+  const window = statePost.headVoteCommitteeWindow;
+  for (let slot = windowStart; slot < windowEnd; slot++) {
+    window.set(
+      SLOTS_PER_EPOCH + (slot - windowStart),
+      ssz.eip8453.HeadVoteCommittee.toViewDU(Array.from(computeHeadVoteCommittee(statePost, slot)))
+    );
+  }
   statePost.commit();
   // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   statePost["clearCache"]();

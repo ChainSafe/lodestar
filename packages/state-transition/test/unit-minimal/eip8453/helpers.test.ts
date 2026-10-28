@@ -70,12 +70,14 @@ describe("eip8453 helpers", () => {
     expect(new Set(ilCommittee).size).toBe(INCLUSION_LIST_COMMITTEE_SIZE);
   });
 
-  it("validator weight falls with the square of the inactivity score", () => {
+  it("validator weight scales with effective balance and falls with the square of the inactivity score", () => {
     const full = EJECTION_INACTIVITY_SCORE ** 2;
-    expect(getValidatorWeight(0)).toBe(full);
-    expect(getValidatorWeight(32768) / full).toBeCloseTo(0.75);
-    expect(getValidatorWeight(EJECTION_INACTIVITY_SCORE)).toBe(0);
-    expect(getValidatorWeight(EJECTION_INACTIVITY_SCORE + 5)).toBe(0);
+    expect(getValidatorWeight(32, 0)).toBe(32 * full);
+    expect(getValidatorWeight(1, 32768) / full).toBeCloseTo(0.75);
+    expect(getValidatorWeight(2048, 0)).toBe(2048 * full);
+    expect(getValidatorWeight(32, EJECTION_INACTIVITY_SCORE)).toBe(0);
+    expect(getValidatorWeight(32, EJECTION_INACTIVITY_SCORE + 5)).toBe(0);
+    expect(getValidatorWeight(0, 0)).toBe(0);
   });
 
   it("attestation data predicates", () => {

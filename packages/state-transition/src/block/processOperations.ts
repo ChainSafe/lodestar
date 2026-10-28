@@ -17,7 +17,7 @@ import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDeposit} from "./processDeposit.js";
 import {processDepositRequest} from "./processDepositRequest.js";
-import {HeadVoteCommitteeCache, processHeadVote} from "./processHeadVote.js";
+import {processHeadVote} from "./processHeadVote.js";
 import {processPayloadAttestation} from "./processPayloadAttestation.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
@@ -75,16 +75,11 @@ export function processOperations(
     const stateEip8453 = state as CachedBeaconStateEip8453;
     const bodyEip8453 = body as eip8453.BeaconBlockBody;
 
-    // [New in EIP8453] a support bit may only be set on a vote of the previous slot
-    if (bodyEip8453.headVoteSupportBits.bitLen !== bodyEip8453.headVotes.length) {
+    // [New in EIP8453] one support bitlist per head vote
+    if (bodyEip8453.headVoteSupport.length !== bodyEip8453.headVotes.length) {
       throw Error(
-        `Head vote support bits length ${bodyEip8453.headVoteSupportBits.bitLen} != head votes ${bodyEip8453.headVotes.length}`
+        `Head vote support length ${bodyEip8453.headVoteSupport.length} != head votes ${bodyEip8453.headVotes.length}`
       );
-    }
-    for (const voteIndex of bodyEip8453.headVoteSupportBits.getTrueBitIndexes()) {
-      if (bodyEip8453.headVotes[voteIndex].data.slot !== state.slot - 1) {
-        throw Error(`Supported head vote ${voteIndex} is not of the previous slot`);
-      }
     }
 
     {
@@ -186,9 +181,9 @@ export function processOperations(
 
   if (fork >= ForkSeq.eip8453) {
     const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processHeadVote});
-    const committeeCache: HeadVoteCommitteeCache = new Map();
-    for (const headVote of (body as eip8453.BeaconBlockBody).headVotes) {
-      processHeadVote(state as CachedBeaconStateEip8453, headVote, committeeCache, opts.verifySignatures);
+    const {headVotes, headVoteSupport} = body as eip8453.BeaconBlockBody;
+    for (let i = 0; i < headVotes.length; i++) {
+      processHeadVote(state as CachedBeaconStateEip8453, headVotes[i], headVoteSupport[i], opts.verifySignatures);
     }
     timer?.();
   }

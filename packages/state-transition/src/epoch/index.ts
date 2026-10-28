@@ -22,6 +22,7 @@ import {
 import {processBuilderPendingPayments, processBuilderPendingPaymentsEip8453} from "./processBuilderPendingPayments.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
+import {processHeadVoteCommitteeWindow} from "./processHeadVoteCommitteeWindow.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
 import {processHistoricalSummariesUpdate} from "./processHistoricalSummariesUpdate.js";
 import {processInactivityUpdates} from "./processInactivityUpdates.js";
@@ -60,6 +61,7 @@ export {
   processPendingConsolidations,
   processProposerLookahead,
   processPtcWindow,
+  processHeadVoteCommitteeWindow,
   processBuilderPendingPayments,
   processBuilderPendingPaymentsEip8453,
 };
@@ -94,6 +96,7 @@ export enum EpochTransitionStep {
   processPendingConsolidations = "processPendingConsolidations",
   processProposerLookahead = "processProposerLookahead",
   processPtcWindow = "processPtcWindow",
+  processHeadVoteCommitteeWindow = "processHeadVoteCommitteeWindow",
   processBuilderPendingPayments = "processBuilderPendingPayments",
   processRound = "processRound",
 }
@@ -248,6 +251,14 @@ export function processEpoch(
   if (fork >= ForkSeq.gloas) {
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processPtcWindow});
     processPtcWindow(state as CachedBeaconStateGloas, cache);
+    timer?.();
+  }
+
+  if (isEip8453) {
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: EpochTransitionStep.processHeadVoteCommitteeWindow,
+    });
+    processHeadVoteCommitteeWindow(state as CachedBeaconStateEip8453, cache);
     timer?.();
   }
 }

@@ -11,8 +11,9 @@ import {
   DOMAIN_RANDAO,
   FAR_FUTURE_EPOCH,
   ForkName,
-  HEAD_VOTE_COMMITTEE_SIZE,
   MAX_EFFECTIVE_BALANCE,
+  MIN_SEED_LOOKAHEAD,
+  PAYLOAD_STATUS_PENDING,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
@@ -24,6 +25,7 @@ import {CachedBeaconStateEip8453, createCachedBeaconState, processSlots, stateTr
 import {zeroHeightParticipation} from "../../../src/slot/upgradeStateToEip8453.js";
 import {
   HeightCheckpointLike,
+  computeHeadVoteCommittee,
   getAttestationCommittee,
   getFinalityAttestationSigningRoot,
   getHeadVoteCommittee,
@@ -50,7 +52,8 @@ export type VoteOpts = {
 export type BlockOpts = {
   attestations?: eip8453.Attestation[];
   headVotes?: eip8453.HeadVote[];
-  headVoteSupportBits?: boolean[];
+  /** One bit per voter of each head vote; defaults to all set for votes of the previous slot, none otherwise */
+  headVoteSupport?: boolean[][];
   attesterSlashings?: eip8453.AttesterSlashing[];
   legacyAttesterSlashings?: eip8453.LegacyAttesterSlashings;
   verifySignatures?: boolean;
@@ -135,6 +138,15 @@ export class Eip8453Harness {
     view.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
 
     this.state = createCachedBeaconState(view, {config: this.config, pubkeyCache});
+    // initialize_head_vote_committee_window: committees of the current and lookahead epochs, no previous epoch
+    const window = this.state.headVoteCommitteeWindow;
+    for (let slot = 0; slot < (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH; slot++) {
+      window.set(
+        SLOTS_PER_EPOCH + slot,
+        ssz.eip8453.HeadVoteCommittee.toViewDU(Array.from(computeHeadVoteCommittee(this.state, slot)))
+      );
+    }
+    this.state.commit();
   }
 
   snapshot(state: CachedBeaconStateEip8453 = this.state): HeightSnapshot {
@@ -275,23 +287,28 @@ export class Eip8453Harness {
   }
 
   /**
-   * Build and sign an aggregated head vote for `data.slot` from the committee seats held by `voters` (all seats
-   * by default). A validator with several seats signs once per seat, as in get_aggregate_head_vote.
+   * Build and sign an aggregated head vote for `data.slot` from the committee members among `voters` (the whole
+   * committee by default). Voters are listed once each, sorted, and sign once; `payloadStatus` defaults to
+   * PENDING, which is what a vote for the block of its own slot must carry.
    */
-  headVote(atSlot: Slot, data: eip8453.HeadVoteData, voters?: ValidatorIndex[]): eip8453.HeadVote {
+  headVote(
+    atSlot: Slot,
+    data: Omit<eip8453.HeadVoteData, "payloadStatus"> & {payloadStatus?: number},
+    voters?: ValidatorIndex[]
+  ): eip8453.HeadVote {
     const stateAtSlot = this.stateAt(atSlot);
     const committee = getHeadVoteCommittee(stateAtSlot, data.slot);
     const voterSet = voters === undefined ? null : new Set(voters);
-    const aggregationBits = BitArray.fromBitLen(HEAD_VOTE_COMMITTEE_SIZE);
-    const seatSigners: ValidatorIndex[] = [];
-    for (let position = 0; position < committee.length; position++) {
-      if (voterSet === null || voterSet.has(committee[position])) {
-        aggregationBits.set(position, true);
-        seatSigners.push(committee[position]);
-      }
-    }
-    const signingRoot = getHeadVoteSigningRoot(stateAtSlot, data);
-    return {aggregationBits, data, signature: this.aggregate(seatSigners, signingRoot)};
+    const voterIndices = Array.from(new Set(committee))
+      .filter((index) => voterSet === null || voterSet.has(index))
+      .sort((a, b) => a - b);
+    const voteData: eip8453.HeadVoteData = {
+      slot: data.slot,
+      beaconBlockRoot: data.beaconBlockRoot,
+      payloadStatus: data.payloadStatus ?? PAYLOAD_STATUS_PENDING,
+    };
+    const signingRoot = getHeadVoteSigningRoot(stateAtSlot, voteData);
+    return {voterIndices, data: voteData, signature: this.aggregate(voterIndices, signingRoot)};
   }
 
   private aggregate(signers: ValidatorIndex[], signingRoot: Uint8Array): Uint8Array {
@@ -327,9 +344,9 @@ export class Eip8453Harness {
     };
     body.attestations = opts.attestations ?? [];
     body.headVotes = opts.headVotes ?? [];
-    body.headVoteSupportBits = BitArray.fromBoolArray(
-      opts.headVoteSupportBits ?? body.headVotes.map((vote) => vote.data.slot === slot - 1)
-    );
+    body.headVoteSupport = (
+      opts.headVoteSupport ?? body.headVotes.map((vote) => vote.voterIndices.map(() => vote.data.slot === slot - 1))
+    ).map((bits) => BitArray.fromBoolArray(bits));
     body.attesterSlashings = opts.attesterSlashings ?? [];
     body.legacyAttesterSlashings = opts.legacyAttesterSlashings ?? [];
 

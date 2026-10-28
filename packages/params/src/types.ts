@@ -129,6 +129,7 @@ export type BeaconPreset = {
   MIN_ROUNDS_TO_INACTIVITY_LEAK: number;
   EJECTION_INACTIVITY_SCORE: number;
   MAX_HEAD_VOTES: number;
+  MAX_ATTESTER_SLASHING_SIZE_EIP8453: number;
 };
 
 /**
@@ -263,6 +264,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MIN_ROUNDS_TO_INACTIVITY_LEAK: "number",
   EJECTION_INACTIVITY_SCORE: "number",
   MAX_HEAD_VOTES: "number",
+  MAX_ATTESTER_SLASHING_SIZE_EIP8453: "number",
 };
 
 type BeaconPresetTypes = {

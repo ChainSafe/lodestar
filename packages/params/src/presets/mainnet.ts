@@ -171,4 +171,6 @@ export const mainnetPreset: BeaconPreset = {
   MIN_ROUNDS_TO_INACTIVITY_LEAK: 16, // 2**4
   EJECTION_INACTIVITY_SCORE: 65536, // 2**16
   MAX_HEAD_VOTES: 8, // 2**3
+  // 2,097,538 bytes, ~2 MiB
+  MAX_ATTESTER_SLASHING_SIZE_EIP8453: 2097538,
 };

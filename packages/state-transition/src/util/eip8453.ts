@@ -18,8 +18,10 @@ import {
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MAX_VALIDATORS_PER_AGGREGATE,
   MIN_ROUNDS_TO_INACTIVITY_LEAK,
+  MIN_SEED_LOOKAHEAD,
   PTC_SIZE,
   ROUND_REWARD_FACTOR,
+  SLOTS_PER_EPOCH,
   SLOTS_PER_ROUND,
 } from "@lodestar/params";
 import {Epoch, Root, Slot, ValidatorIndex, eip8453, ssz} from "@lodestar/types";
@@ -401,31 +403,42 @@ export function getHeadVoteSigningRoot(state: CachedBeaconStateEip8453, data: ei
 
 /**
  * Spec: get_validator_weight
- * Every validator has the same weight regardless of balance, reduced with the square of its inactivity score.
+ * A validator's weight is its effective balance in increments times `EJECTION_INACTIVITY_SCORE**2 - score**2`,
+ * so it falls with the square of its inactivity score and reaches zero at `EJECTION_INACTIVITY_SCORE`. At most
+ * `2048 * 2**32 < 2**44`, exact in a JS number; sums are accumulated as bigint (the spec uses Uint256).
  */
-export function getValidatorWeight(inactivityScore: number): number {
+export function getValidatorWeight(effectiveBalanceIncrements: number, inactivityScore: number): number {
   const score = Math.min(inactivityScore, EJECTION_INACTIVITY_SCORE);
-  return (EJECTION_INACTIVITY_SCORE - score) * (EJECTION_INACTIVITY_SCORE + score);
+  return effectiveBalanceIncrements * (EJECTION_INACTIVITY_SCORE - score) * (EJECTION_INACTIVITY_SCORE + score);
 }
 
-/**
- * Weight sums are at most `validators * EJECTION_INACTIVITY_SCORE**2 = validators * 2**32`, which fits a JS
- * number for up to 2**21 validators. Throw rather than silently lose precision beyond that.
- */
-function checkedWeightSum(sum: number): number {
-  if (sum > Number.MAX_SAFE_INTEGER) {
-    throw Error("Finality gadget weight sum exceeds Number.MAX_SAFE_INTEGER");
+/** Exact sum of per-validator weights: partial sums stay below 2**53 and are flushed into a bigint */
+class WeightSum {
+  private total = BigInt(0);
+  private partial = 0;
+  private static readonly FLUSH_AT = 2 ** 52;
+
+  add(weight: number): void {
+    this.partial += weight;
+    if (this.partial >= WeightSum.FLUSH_AT) {
+      this.total += BigInt(this.partial);
+      this.partial = 0;
+    }
   }
-  return sum;
+
+  value(): bigint {
+    return this.total + BigInt(this.partial);
+  }
 }
 
 // Spec: get_total_weight, over the active validators of the current epoch
-export function getTotalActiveWeight(state: CachedBeaconStateEip8453, inactivityScores: number[]): number {
-  let total = 0;
+export function getTotalActiveWeight(state: CachedBeaconStateEip8453, inactivityScores: number[]): bigint {
+  const {effectiveBalanceIncrements} = state.epochCtx;
+  const sum = new WeightSum();
   for (const index of state.epochCtx.currentShuffling.activeIndices) {
-    total += getValidatorWeight(inactivityScores[index]);
+    sum.add(getValidatorWeight(effectiveBalanceIncrements[index], inactivityScores[index]));
   }
-  return checkedWeightSum(total);
+  return sum.value();
 }
 
 // Spec: get_participating_weight
@@ -433,21 +446,22 @@ export function getParticipatingWeight(
   state: CachedBeaconStateEip8453,
   inactivityScores: number[],
   participation: boolean[]
-): number {
+): bigint {
+  const {effectiveBalanceIncrements} = state.epochCtx;
   const validators = state.validators;
-  let total = 0;
+  const sum = new WeightSum();
   for (const index of state.epochCtx.currentShuffling.activeIndices) {
     if (participation[index] && !validators.getReadonly(index).slashed) {
-      total += getValidatorWeight(inactivityScores[index]);
+      sum.add(getValidatorWeight(effectiveBalanceIncrements[index], inactivityScores[index]));
     }
   }
-  return checkedWeightSum(total);
+  return sum.value();
 }
 
 /** Inactivity scores read once per block for the quorum checks of `process_height_events` */
 export type QuorumContext = {
   inactivityScores: number[];
-  totalWeight: number;
+  totalWeight: bigint;
 };
 
 export function getQuorumContext(state: CachedBeaconStateEip8453): QuorumContext {
@@ -458,7 +472,7 @@ export function getQuorumContext(state: CachedBeaconStateEip8453): QuorumContext
 // Spec: has_quorum
 export function hasQuorum(state: CachedBeaconStateEip8453, participation: boolean[], ctx: QuorumContext): boolean {
   const participatingWeight = getParticipatingWeight(state, ctx.inactivityScores, participation);
-  return participatingWeight > 0 && participatingWeight * 3 >= ctx.totalWeight * 2;
+  return participatingWeight > BigInt(0) && participatingWeight * BigInt(3) >= ctx.totalWeight * BigInt(2);
 }
 
 // Committees
@@ -527,16 +541,51 @@ export function computeSlotSeed(
   return digest(Buffer.concat([getSeed(state, epoch, domainType), intToBytes(slot, 8, "le")]));
 }
 
-// Spec: get_head_vote_committee
-export function getHeadVoteCommittee(state: CachedBeaconStateEip8453, slot: Slot): Uint32Array {
+/**
+ * Spec: compute_head_vote_committee
+ * Sampled by effective balance like the PTC, with possible duplicates. `activeIndices` defaults to the active
+ * validators of the slot's epoch.
+ */
+export function computeHeadVoteCommittee(
+  state: CachedBeaconStateEip8453,
+  slot: Slot,
+  activeIndices: Uint32Array = getActiveIndicesAtEpoch(state, computeEpochAtSlot(slot))
+): Uint32Array {
   const epoch = computeEpochAtSlot(slot);
   return computeBalanceWeightedSelection(
     state.epochCtx.effectiveBalanceIncrements,
-    getActiveIndicesAtEpoch(state, epoch),
+    activeIndices,
     computeSlotSeed(state, epoch, DOMAIN_HEAD_VOTE_COMMITTEE, slot),
     HEAD_VOTE_COMMITTEE_SIZE,
     true
   );
+}
+
+/**
+ * Spec: get_head_vote_committee
+ * Read from `state.head_vote_committee_window`, which holds the committees of the previous, current and
+ * `MIN_SEED_LOOKAHEAD` next epochs so that votes of the previous epoch are checked against the committee they
+ * were sampled for.
+ */
+export function getHeadVoteCommittee(state: CachedBeaconStateEip8453, slot: Slot): Uint32Array {
+  const epoch = computeEpochAtSlot(slot);
+  const stateEpoch = state.epochCtx.epoch;
+  if (epoch < state.config.EIP8453_FORK_EPOCH) {
+    throw Error(`Head vote slot ${slot} is before the EIP8453 fork epoch`);
+  }
+  let offset: number;
+  if (epoch < stateEpoch) {
+    if (epoch + 1 !== stateEpoch) {
+      throw Error(`Head vote epoch ${epoch} is older than the previous epoch ${stateEpoch - 1}`);
+    }
+    offset = 0;
+  } else {
+    if (epoch > stateEpoch + MIN_SEED_LOOKAHEAD) {
+      throw Error(`Head vote epoch ${epoch} is beyond the lookahead of epoch ${stateEpoch}`);
+    }
+    offset = (epoch - stateEpoch + 1) * SLOTS_PER_EPOCH;
+  }
+  return new Uint32Array(state.headVoteCommitteeWindow.getReadonly(offset + (slot % SLOTS_PER_EPOCH)).getAll());
 }
 
 // Spec: compute_ptc [Modified in EIP8453]
