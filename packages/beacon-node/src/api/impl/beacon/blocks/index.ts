@@ -790,16 +790,19 @@ export function getBeaconBlockApi(
         broadcastValidation,
         ...(submittedContents !== null ? {submittedBlobs: submittedContents.blobs.length} : {}),
       };
+      let validSignature = false;
       try {
         switch (broadcastValidation) {
           case routes.beacon.BroadcastValidation.gossip: {
             await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+            validSignature = true;
             break;
           }
 
           case routes.beacon.BroadcastValidation.consensusAndEquivocation:
           case routes.beacon.BroadcastValidation.consensus: {
             await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+            validSignature = true;
 
             // Verify the envelope against the post-block state
             const blockState = await chain.regen
@@ -982,9 +985,11 @@ export function getBeaconBlockApi(
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-        // Import execution payload. Signature is verified during broadcast validation, an already
-        // known envelope was verified by its original source
-        () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
+        // make sure the verified signature is the one from this execution payload
+        () =>
+          chain.processExecutionPayload(payloadInput, {
+            validSignature: validSignature && payloadInput.getPayloadEnvelope() === signedExecutionPayloadEnvelope,
+          }),
       ];
 
       const publishPromise = promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
