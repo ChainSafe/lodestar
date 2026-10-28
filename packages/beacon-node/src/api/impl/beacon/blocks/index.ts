@@ -985,7 +985,8 @@ export function getBeaconBlockApi(
         // Import execution payload
         () =>
           chain.processExecutionPayload(payloadInput, {
-            // make sure the verified signature is the one from this execution payload
+            // Signature is verified during broadcast validation only for the submitted envelope,
+            // an envelope cached by another source is verified at import
             validSignature: payloadInput.getPayloadEnvelope() === signedExecutionPayloadEnvelope,
           }),
       ];
