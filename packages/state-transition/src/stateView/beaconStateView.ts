@@ -191,7 +191,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
    */
   private finalizedHeightAsCheckpoint(): Checkpoint {
     const state = this.cachedState as CachedBeaconStateEip8453;
-    return {epoch: computeEpochAtSlot(state.finalizedSlot), root: state.finalizedCheckpoint.root};
+    const epoch = computeEpochAtSlot(state.finalizedSlot);
+    // The legacy fork choice expects a checkpoint root to be the block at the epoch's first slot: it prunes to it,
+    // caches balances by it and keeps the justified root fixed within an epoch. The gadget finalizes blocks at any
+    // slot, several per epoch, so report the boundary block of the finalized chain and let the finalized epoch
+    // lag the gadget by at most an epoch.
+    const boundarySlot = Math.min(computeStartSlotAtEpoch(epoch), state.slot - 1);
+    return {epoch, root: getBlockRootAtSlot(state, boundarySlot)};
   }
 
   getBlockRootAtSlot(slot: Slot): Root {
