@@ -387,26 +387,24 @@ export function getBeaconBlockApi(
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
-        chain
-          .processBlock(blockForImport, opts)
-          .catch((e) => {
-            if (e instanceof BlockError) {
-              switch (e.type.code) {
-                case BlockErrorCode.ALREADY_KNOWN:
-                  // Block was imported while publishing, e.g. received via gossip
-                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-                  return;
-                case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
-                case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
-                  chain.emitter.emit(ChainEvent.blockUnknownParent, {
-                    blockInput: blockForImport,
-                    peer: IDENTITY_PEER_ID,
-                    source: BlockInputSource.api,
-                  });
-              }
+        chain.processBlock(blockForImport, opts).catch((e) => {
+          if (e instanceof BlockError) {
+            switch (e.type.code) {
+              case BlockErrorCode.ALREADY_KNOWN:
+                // Block was imported while publishing, e.g. received via gossip
+                chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                return;
+              case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
+              case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
+                chain.emitter.emit(ChainEvent.blockUnknownParent, {
+                  blockInput: blockForImport,
+                  peer: IDENTITY_PEER_ID,
+                  source: BlockInputSource.api,
+                });
             }
-            throw e;
-          }),
+          }
+          throw e;
+        }),
     ];
     const sentPeersArr = await promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
       publishPromises

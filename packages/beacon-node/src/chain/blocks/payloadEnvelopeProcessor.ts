@@ -35,7 +35,7 @@ export class PayloadEnvelopeProcessor {
 
   async processPayloadEnvelopeJob(payloadInput: PayloadEnvelopeInput, opts: ImportPayloadOpts = {}): Promise<void> {
     const existing = this.imports.get(payloadInput);
-    if (existing) {
+    if (existing !== undefined) {
       return existing;
     }
 
@@ -43,7 +43,7 @@ export class PayloadEnvelopeProcessor {
 
     // Re-check after await, as another call may have queued this payload.
     const queued = this.imports.get(payloadInput);
-    if (queued) {
+    if (queued !== undefined) {
       return queued;
     }
 
