@@ -4,9 +4,15 @@ import specTestVersions from "../spec-tests-version.json" with {type: "json"};
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * `SPEC_TESTS_DIR` points the spec test runners at another root holding `tests/<preset>/<fork>/<runner>/...`,
+ * for example a locally generated compliance suite, without re-downloading the pinned release.
+ */
 export const ethereumConsensusSpecsTests = {
   ...specTestVersions.ethereumConsensusSpecsTests,
-  outputDir: path.join(__dirname, "../../", specTestVersions.ethereumConsensusSpecsTests.outputDirBase),
+  outputDir:
+    process.env.SPEC_TESTS_DIR ??
+    path.join(__dirname, "../../", specTestVersions.ethereumConsensusSpecsTests.outputDirBase),
 };
 
 export const sszSpecTests = {

@@ -53,6 +53,7 @@ const coveredTestRunners = [
   "networking",
   "operations",
   "rewards",
+  "round_processing",
   "sanity",
   "random",
   "shuffling",

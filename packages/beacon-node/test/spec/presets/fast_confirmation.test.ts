@@ -13,6 +13,7 @@ import {
   ForkPostFulu,
   ForkPostGloas,
   ForkPreDeneb,
+  ForkPreEip8453,
   ForkPreFulu,
   ForkPreGloas,
   ForkSeq,
@@ -669,8 +670,8 @@ const fastConfirmationTest =
           const blobs = new Map<string, deneb.Blobs>();
           const columns = new Map<string, fulu.DataColumnSidecar>();
           const executionPayloadEnvelopes = new Map<string, gloas.SignedExecutionPayloadEnvelope>();
-          const attestations = new Map<string, Attestation>();
-          const attesterSlashings = new Map<string, AttesterSlashing>();
+          const attestations = new Map<string, Attestation<ForkPreEip8453>>();
+          const attesterSlashings = new Map<string, AttesterSlashing<ForkPreEip8453>>();
           for (const key in t) {
             if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
 
@@ -830,8 +831,8 @@ type FastConfirmationTestCase = {
   blobs: Map<string, deneb.Blobs>;
   columns: Map<string, fulu.DataColumnSidecar>;
   executionPayloadEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope>;
-  attestations: Map<string, Attestation>;
-  attesterSlashings: Map<string, AttesterSlashing>;
+  attestations: Map<string, Attestation<ForkPreEip8453>>;
+  attesterSlashings: Map<string, AttesterSlashing<ForkPreEip8453>>;
 };
 
 /**

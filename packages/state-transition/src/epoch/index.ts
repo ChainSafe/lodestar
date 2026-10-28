@@ -61,6 +61,7 @@ export {
   processProposerLookahead,
   processPtcWindow,
   processBuilderPendingPayments,
+  processBuilderPendingPaymentsEip8453,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";

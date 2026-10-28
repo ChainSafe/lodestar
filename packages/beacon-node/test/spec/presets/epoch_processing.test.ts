@@ -1,13 +1,15 @@
 import path from "node:path";
 import {expect} from "vitest";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStateEip8453,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreEip8453,
   CachedBeaconStatePreHeze,
   EpochTransitionCache,
   beforeProcessEpoch,
@@ -30,8 +32,9 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   },
   eth1_data_reset: (state, cache) => epochFns.processEth1DataReset(state as CachedBeaconStatePreHeze, cache),
   historical_roots_update: epochFns.processHistoricalRootsUpdate,
-  inactivity_updates: epochFns.processInactivityUpdates as EpochTransitionFn,
-  justification_and_finalization: epochFns.processJustificationAndFinalization,
+  inactivity_updates: (state, cache) => epochFns.processInactivityUpdates(state as CachedBeaconStateAltair, cache),
+  justification_and_finalization: (state, cache) =>
+    epochFns.processJustificationAndFinalization(state as CachedBeaconStatePreEip8453, cache),
   participation_flag_updates: epochFns.processParticipationFlagUpdates as EpochTransitionFn,
   participation_record_updates: epochFns.processParticipationRecordUpdates as EpochTransitionFn,
   randao_mixes_reset: epochFns.processRandaoMixesReset,
@@ -57,7 +60,14 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   ptc_window: (state, epochTransitionCache) => {
     epochFns.processPtcWindow(state as CachedBeaconStateGloas, epochTransitionCache);
   },
-  builder_pending_payments: epochFns.processBuilderPendingPayments as EpochTransitionFn,
+  builder_pending_payments: (state) => {
+    const fork = state.config.getForkSeq(state.slot);
+    if (fork >= ForkSeq.eip8453) {
+      epochFns.processBuilderPendingPaymentsEip8453(state as CachedBeaconStateEip8453);
+    } else {
+      epochFns.processBuilderPendingPayments(state as CachedBeaconStateGloas);
+    }
+  },
 };
 
 /**

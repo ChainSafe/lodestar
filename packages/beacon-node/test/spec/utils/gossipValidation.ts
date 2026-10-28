@@ -15,6 +15,7 @@ import {
   ForkPostFulu,
   ForkPostGloas,
   ForkPreDeneb,
+  ForkPreEip8453,
   ForkPreFulu,
   ForkPreGloas,
   isForkPostDeneb,
@@ -32,7 +33,7 @@ import {
   createCachedBeaconState,
   isExecutionStateType,
 } from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
+import {Attestation, AttesterSlashing, RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlockInputBlobs,
@@ -651,7 +652,9 @@ async function validateMessageForTopic(
     }
 
     case GossipType.beacon_attestation: {
-      const attestation = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).Attestation.deserialize(bytes));
+      const attestation = rejectOnInvalidSerializedBytes(
+        () => sszTypesFor(fork).Attestation.deserialize(bytes) as Attestation<ForkPreEip8453>
+      );
       const beaconBlockRootHex = toRootHex(attestation.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
@@ -694,7 +697,9 @@ async function validateMessageForTopic(
     }
 
     case GossipType.attester_slashing: {
-      const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes));
+      const slashing = rejectOnInvalidSerializedBytes(
+        () => sszTypesFor(fork).AttesterSlashing.deserialize(bytes) as AttesterSlashing<ForkPreEip8453>
+      );
       const verifiedDomains = await validateGossipAttesterSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool + fork choice
       chain.opPool.insertAttesterSlashing(fork, slashing, verifiedDomains);

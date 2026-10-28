@@ -1,13 +1,14 @@
 import path from "node:path";
 import {createChainForkConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostGloas} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkPreEip8453, ForkSeq, isForkPostGloas} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  CachedBeaconStateEip8453,
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
   CachedBeaconStatePreHeze,
@@ -16,7 +17,19 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {
+  Attestation,
+  AttesterSlashing,
+  altair,
+  bellatrix,
+  capella,
+  eip8453,
+  electra,
+  gloas,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -40,14 +53,50 @@ const syncAggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
 };
 
 const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = {
-  attestation: (state, testCase: {attestation: phase0.Attestation}) => {
+  attestation: (state, testCase: BaseSpecTest & {attestation: Attestation}) => {
     const fork = state.config.getForkSeq(state.slot);
+    if (fork >= ForkSeq.eip8453) {
+      // Finality gadget attestations; `bls_setting: 2` vectors carry no valid signature
+      blockFns.processAttestationsEip8453(
+        state as CachedBeaconStateEip8453,
+        [testCase.attestation as eip8453.Attestation],
+        !shouldIgnoreBls(testCase)
+      );
+      return;
+    }
     blockFns.processAttestations(
       fork,
       state,
-      [testCase.attestation],
+      [testCase.attestation as Attestation<ForkPreEip8453>],
       fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestBlockHeader.slot : null
     );
+  },
+
+  // EIP-8453: slashings of attestations made before the fork, with the pre-fork container and domain
+  legacy_attester_slashing: (
+    state,
+    testCase: BaseSpecTest & {legacy_attester_slashing: AttesterSlashing<ForkPreEip8453>}
+  ) => {
+    blockFns.processLegacyAttesterSlashing(
+      state as CachedBeaconStateEip8453,
+      testCase.legacy_attester_slashing,
+      shouldVerify(testCase)
+    );
+  },
+
+  // EIP-8453: a single aggregate head vote, verified with the committee of its slot
+  head_vote: (state, testCase: BaseSpecTest & {head_vote: eip8453.HeadVote}) => {
+    blockFns.processHeadVote(
+      state as CachedBeaconStateEip8453,
+      testCase.head_vote,
+      new Map(),
+      !shouldIgnoreBls(testCase)
+    );
+  },
+
+  // EIP-8453: state-only handler, the pre state is the input of process_height_events after all attestations
+  height_events: (state) => {
+    blockFns.processHeightEvents(state as CachedBeaconStateEip8453);
   },
 
   attester_slashing: (state, testCase: BaseSpecTest & {attester_slashing: AttesterSlashing}) => {
@@ -149,6 +198,11 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
 
 export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => T | void;
 
+/** `bls_setting: 2` means the vector's signatures are not valid and must not be checked */
+function shouldIgnoreBls(testCase: BaseSpecTest): boolean {
+  return testCase.meta?.bls_setting === BigInt(2);
+}
+
 export type OperationsTestCase = {
   meta?: {bls_setting?: bigint};
   pre: BeaconStateAllForks;
@@ -213,6 +267,9 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
           : ssz.gloas.SignedExecutionPayloadBid,
         builder_deposit_request: ssz.gloas.BuilderDepositRequest,
         builder_exit_request: ssz.gloas.BuilderExitRequest,
+        // EIP-8453
+        head_vote: ssz.eip8453.HeadVote,
+        legacy_attester_slashing: ssz.heze.AttesterSlashing,
       },
       shouldError: (testCase) => testCase.post === undefined,
       // Only an ssz list limit violation is an expected input error, anything else is a decode bug

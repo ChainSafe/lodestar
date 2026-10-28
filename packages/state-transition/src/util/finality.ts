@@ -1,7 +1,7 @@
 import {ForkSeq, MIN_EPOCHS_TO_INACTIVITY_PENALTY} from "@lodestar/params";
-import {Epoch} from "@lodestar/types";
+import {Epoch, Slot} from "@lodestar/types";
 import {CachedBeaconStateAllForks, CachedBeaconStateEip8453, CachedBeaconStatePreEip8453} from "../types.js";
-import {computeEpochAtSlot} from "./epoch.js";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
 /**
  * The epoch of the last finalized block. Before EIP8453 it is `state.finalized_checkpoint.epoch`; from EIP8453
@@ -11,6 +11,16 @@ export function getFinalizedEpoch(state: CachedBeaconStateAllForks): Epoch {
   return state.config.getForkSeq(state.slot) >= ForkSeq.eip8453
     ? computeEpochAtSlot((state as CachedBeaconStateEip8453).finalizedSlot)
     : (state as CachedBeaconStatePreEip8453).finalizedCheckpoint.epoch;
+}
+
+/**
+ * The slot up to which deposits and other finalized-only data may be consumed. Before EIP8453 it is the start of
+ * the finalized epoch; from EIP8453 the spec reads `state.finalized_slot` exactly.
+ */
+export function getFinalizedSlot(state: CachedBeaconStateAllForks): Slot {
+  return state.config.getForkSeq(state.slot) >= ForkSeq.eip8453
+    ? (state as CachedBeaconStateEip8453).finalizedSlot
+    : computeStartSlotAtEpoch((state as CachedBeaconStatePreEip8453).finalizedCheckpoint.epoch);
 }
 
 export function getFinalityDelay(state: CachedBeaconStateAllForks): number {

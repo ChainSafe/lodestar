@@ -27,6 +27,7 @@ import {BlockProcessStep, ProcessBlockOpts, ProposerRewardType} from "./types.js
 
 // Spec tests
 export {processAttestationsEip8453} from "./processAttestationsEip8453.js";
+export {processLegacyAttesterSlashing} from "./processAttesterSlashing.js";
 export {processHeadVote} from "./processHeadVote.js";
 export {advanceHeight, processHeightEvents} from "./processHeightEvents.js";
 export {

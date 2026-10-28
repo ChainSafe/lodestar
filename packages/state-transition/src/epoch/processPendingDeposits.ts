@@ -10,8 +10,7 @@ import {addValidatorToRegistry, isValidDepositSignature} from "../block/processD
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
-import {computeStartSlotAtEpoch} from "../util/epoch.js";
-import {getFinalizedEpoch} from "../util/finality.js";
+import {getFinalizedSlot} from "../util/finality.js";
 import {getActivationChurnLimit, getActivationExitChurnLimit} from "../util/validator.js";
 
 /**
@@ -33,7 +32,8 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   let nextDepositIndex = 0;
   const depositsToPostpone = [];
   let isChurnLimitReached = false;
-  const finalizedSlot = computeStartSlotAtEpoch(getFinalizedEpoch(state));
+  // [Modified in EIP8453] deposits are released once their exact slot is finalized, not the start of its epoch
+  const finalizedSlot = getFinalizedSlot(state);
 
   let startIndex = 0;
   // TODO: is this a good number?
