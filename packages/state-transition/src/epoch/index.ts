@@ -37,31 +37,30 @@ import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
 
+export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 export {
-  processJustificationAndFinalization,
-  processInactivityUpdates,
-  processRewardsAndPenalties,
-  processRegistryUpdates,
-  processSlashings,
-  processEth1DataReset,
+  processBuilderPendingPayments,
   processEffectiveBalanceUpdates,
-  processSlashingsReset,
-  processRandaoMixesReset,
+  processEth1DataReset,
   processHistoricalRootsUpdate,
-  processParticipationRecordUpdates,
-  processParticipationFlagUpdates,
-  processSyncCommitteeUpdates,
   processHistoricalSummariesUpdate,
-  processPendingDeposits,
+  processInactivityUpdates,
+  processJustificationAndFinalization,
+  processParticipationFlagUpdates,
+  processParticipationRecordUpdates,
   processPendingConsolidations,
+  processPendingDeposits,
   processProposerLookahead,
   processPtcWindow,
-  processBuilderPendingPayments,
+  processRandaoMixesReset,
+  processRegistryUpdates,
+  processRewardsAndPenalties,
+  processSlashings,
+  processSlashingsReset,
+  processSyncCommitteeUpdates,
 };
-
-export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
 
 const maxValidatorsPerStateSlashing = SLOTS_PER_EPOCH * MAX_ATTESTER_SLASHINGS * MAX_VALIDATORS_PER_COMMITTEE;
 const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BALANCE);

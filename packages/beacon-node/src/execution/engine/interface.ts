@@ -25,7 +25,7 @@ import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBodyV2} from "./types.js";
 import {DATA} from "./utils.js";
 
-export {PayloadIdCache, type PayloadId, type WithdrawalV1};
+export {type PayloadId, PayloadIdCache, type WithdrawalV1};
 export type ClientVersion = routes.node.ClientVersion;
 export const ClientCode = routes.node.ClientCode;
 

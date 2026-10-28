@@ -12,8 +12,6 @@
       "Bash(pnpm vitest *)",
       "Bash(pnpm download-spec-tests)",
       "Bash(pnpm test:spec)",
-      "Bash(pnpm docs:lint)",
-      "Bash(pnpm docs:lint:fix)",
       "Bash(git status *)",
       "Bash(git diff *)",
       "Bash(git log *)",
