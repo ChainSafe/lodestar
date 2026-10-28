@@ -2,6 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkPreEip8453,
+  ForkSeq,
   MIN_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
   isForkPostFulu,
@@ -842,10 +843,29 @@ export class ForkChoice implements IForkChoice {
     // store only after the insertion succeeds.
     const proposerBoostRoot = isProposerBoostBlock ? blockRootHex : this.proposerBoostRoot;
 
-    const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
+    let justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
+    let finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
+    const isEip8453 = this.config.getForkSeq(slot) >= ForkSeq.eip8453;
+    if (isEip8453) {
+      // [EIP8453] The state has no Casper FFG checkpoints; the view reports the finality gadget's finalized block
+      // at the epoch of finalized_slot as both. Keep the parent's checkpoints until the gadget finalizes past
+      // them, so the block stays viable for head under the parent's justification.
+      if (finalizedCheckpoint.epoch <= parentBlock.finalizedEpoch) {
+        justifiedCheckpoint = {
+          epoch: parentBlock.justifiedEpoch,
+          root: fromHex(parentBlock.justifiedRoot),
+          rootHex: parentBlock.justifiedRoot,
+        };
+        finalizedCheckpoint = {
+          epoch: parentBlock.finalizedEpoch,
+          root: fromHex(parentBlock.finalizedRoot),
+          rootHex: parentBlock.finalizedRoot,
+        };
+      } else {
+        justifiedCheckpoint = finalizedCheckpoint;
+      }
+    }
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
-
-    const finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
 
     const blockEpoch = computeEpochAtSlot(slot);
 
@@ -866,7 +886,7 @@ export class ForkChoice implements IForkChoice {
     // performing optimally.
     let unrealizedJustifiedCheckpoint: CheckpointWithHex;
     let unrealizedFinalizedCheckpoint: CheckpointWithHex;
-    if (this.opts?.computeUnrealized) {
+    if (this.opts?.computeUnrealized && !isEip8453) {
       if (
         block.body.proposerSlashings.length === 0 &&
         block.body.attesterSlashings.length === 0 &&
