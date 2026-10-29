@@ -1,8 +1,8 @@
 import {LEVEL, MESSAGE} from "triple-beam";
 import {LogData, LogHandler, LogLevel, Logger} from "@lodestar/utils";
 
-export {LogLevel, LEVEL, MESSAGE};
-export type {Logger, LogHandler, LogData};
+export type {LogData, LogHandler, Logger};
+export {LEVEL, LogLevel, MESSAGE};
 
 export const logLevelNum: {[K in LogLevel]: number} = {
   [LogLevel.error]: 0,

@@ -140,6 +140,7 @@ const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.payload_attestation_message]: {},
   [GossipType.execution_payload_bid]: {},
   [GossipType.proposer_preferences]: {},
+  [GossipType.inclusion_list]: {},
   [GossipType.execution_proof]: {},
 };
 const executeGossipWorkOrder = Object.keys(executeGossipWorkOrderObj) as (keyof typeof executeGossipWorkOrderObj)[];
@@ -867,19 +868,20 @@ export class NetworkProcessor {
     const nowSec = Date.now() / 1000;
     const minSlot = clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE;
 
-    for (const [slot, searchedRoots] of this.searchedRootsBySlot) {
+    for (const [slot, bufferedRoots] of this.bufferedRootsBySlot) {
       if (slot > minSlot) continue;
 
-      // expire messages awaiting an unknown block for these roots. Only roots this slot did a BLOCK search
-      // for (blockPeerIds set) have block waits keyed here; skipping the rest avoids deleting a payload wait
-      // that a newer slot created for the same root (block/envelope searches share searchedRootsBySlot).
-      for (const [rootHex, entry] of searchedRoots) {
-        if (entry.blockPeerIds === undefined) continue;
+      for (const rootHex of bufferedRoots) {
         const messagesByTopic = this.awaitingMessagesByBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
-        let removed = 0;
+        let remaining = 0;
         for (const messages of messagesByTopic.values()) {
           for (const message of messages) {
+            // the same root may be buffered again from a newer slot, keep those messages.
+            // msgSlot is always set before buffering, a missing one expires rather than leaks
+            if ((message.msgSlot ?? minSlot) > minSlot) continue;
+            messages.delete(message);
+            this.awaitingBlockMessageCount--;
             const topicType = message.topic.type;
             this.metrics?.awaitingBlockGossipMessages.reject.inc({
               topic: topicType,
@@ -891,22 +893,22 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          removed += messages.size;
+          remaining += messages.size;
         }
-        if (this.awaitingMessagesByBlockRoot.delete(rootHex)) {
-          this.awaitingBlockMessageCount -= removed;
-        }
+        if (remaining === 0) this.awaitingMessagesByBlockRoot.delete(rootHex);
       }
 
-      // expire messages awaiting an unknown payload envelope for these roots. Symmetric to the block pass:
-      // only roots this slot did an ENVELOPE search for (envelopePeerIds set) have payload waits keyed here.
-      for (const [rootHex, entry] of searchedRoots) {
-        if (entry.envelopePeerIds === undefined) continue;
+      for (const rootHex of bufferedRoots) {
         const messagesByTopic = this.awaitingMessagesByPayloadBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
-        let removed = 0;
+        let remaining = 0;
         for (const messages of messagesByTopic.values()) {
           for (const message of messages) {
+            // the same root may be buffered again from a newer slot, keep those messages.
+            // msgSlot is always set before buffering, a missing one expires rather than leaks
+            if ((message.msgSlot ?? minSlot) > minSlot) continue;
+            messages.delete(message);
+            this.awaitingPayloadMessageCount--;
             const topicType = message.topic.type;
             this.metrics?.awaitingPayloadGossipMessages.reject.inc({
               topic: topicType,
@@ -918,18 +920,16 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          removed += messages.size;
+          remaining += messages.size;
         }
-        if (this.awaitingMessagesByPayloadBlockRoot.delete(rootHex)) {
-          this.awaitingPayloadMessageCount -= removed;
-        }
+        if (remaining === 0) this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
       }
 
-      this.searchedRootsBySlot.delete(slot);
+      this.bufferedRootsBySlot.delete(slot);
     }
 
-    for (const slot of this.bufferedRootsBySlot.keys()) {
-      if (slot <= minSlot) this.bufferedRootsBySlot.delete(slot);
+    for (const slot of this.searchedRootsBySlot.keys()) {
+      if (slot <= minSlot) this.searchedRootsBySlot.delete(slot);
     }
 
     for (const [peer, slot] of this.fatalPeers) {

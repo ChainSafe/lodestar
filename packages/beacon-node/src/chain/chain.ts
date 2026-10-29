@@ -100,6 +100,7 @@ import {
   AttestationPool,
   DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
+  InclusionListStore,
   OpPool,
   PayloadAttestationPool,
   ProposerPreferencesPool,
@@ -201,6 +202,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
+  readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;
   readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
@@ -341,6 +343,7 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
     this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
+    this.inclusionListStore = new InclusionListStore(config);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -1490,10 +1493,10 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
     const slot = this.clock.currentSlot;
-    const secFromSlot = this.clock.secFromSlot(slot);
+    const msFromSlot = this.clock.msFromSlot(slot);
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, secFromSlot, slot}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, msFromSlot, slot}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
@@ -1505,13 +1508,13 @@ export class BeaconChain implements IBeaconChain {
   getProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.getProposerHead});
-    const secFromSlot = this.clock.secFromSlot(slot);
+    const msFromSlot = this.clock.msFromSlot(slot);
 
     try {
       // Do not emit head event here, when proposing we rely on the one emitted when importing our own block
       const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetProposerHead,
-        secFromSlot,
+        msFromSlot,
         slot,
       });
 
@@ -1839,6 +1842,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.proposerPreferencesPool.prune(slot);
+    this.inclusionListStore.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 

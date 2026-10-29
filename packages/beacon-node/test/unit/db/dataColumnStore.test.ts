@@ -23,8 +23,7 @@ describe("LegacyDataColumnStore", () => {
       {
         values: vi.fn().mockResolvedValue([]),
         getManyBinary: getArchived,
-        keys: vi.fn().mockResolvedValue([]),
-        deleteMany: vi.fn(),
+        pruneBefore: vi.fn(),
       },
       {getSlotByRoot: vi.fn().mockResolvedValue(10)}
     );
@@ -49,7 +48,7 @@ describe("LegacyDataColumnStore", () => {
       const store = new LegacyDataColumnStore(
         flatFiles,
         {values: vi.fn(), getManyBinary: getHot, deleteMany: vi.fn()},
-        {values: vi.fn(), getManyBinary: getArchived, keys: vi.fn(), deleteMany: vi.fn()},
+        {values: vi.fn(), getManyBinary: getArchived, pruneBefore: vi.fn()},
         {getSlotByRoot}
       );
 
@@ -65,7 +64,7 @@ describe("LegacyDataColumnStore", () => {
     const store = new LegacyDataColumnStore(
       makeFlatFiles(),
       {values: vi.fn(), getManyBinary: getHot, deleteMany: vi.fn()},
-      {values: vi.fn(), getManyBinary: vi.fn(), keys: vi.fn(), deleteMany: vi.fn()},
+      {values: vi.fn(), getManyBinary: vi.fn(), pruneBefore: vi.fn()},
       {getSlotByRoot: vi.fn()}
     );
 
@@ -86,8 +85,7 @@ describe("LegacyDataColumnStore", () => {
       {
         values: vi.fn().mockResolvedValue([]),
         getManyBinary: getArchived,
-        keys: vi.fn().mockResolvedValue([]),
-        deleteMany: vi.fn(),
+        pruneBefore: vi.fn(),
       },
       {getSlotByRoot: vi.fn().mockResolvedValue(null)}
     );
@@ -120,8 +118,7 @@ describe("LegacyDataColumnStore", () => {
       {
         values: getArchived,
         getManyBinary: vi.fn(),
-        keys: vi.fn().mockResolvedValue([]),
-        deleteMany: vi.fn(),
+        pruneBefore: vi.fn(),
       },
       {getSlotByRoot}
     );
@@ -147,19 +144,14 @@ describe("LegacyDataColumnStore", () => {
     const flatFiles = makeFlatFiles();
     vi.mocked(flatFiles.pruneBefore).mockResolvedValue([4, 2]);
     const deleteHot = vi.fn().mockResolvedValue(undefined);
-    const deleteArchive = vi.fn().mockResolvedValue(undefined);
+    const pruneArchive = vi.fn().mockResolvedValue([3, 4]);
     const store = new LegacyDataColumnStore(
       flatFiles,
       {values: vi.fn(), getManyBinary: vi.fn(), deleteMany: deleteHot},
       {
         values: vi.fn(),
         getManyBinary: vi.fn(),
-        keys: vi.fn().mockResolvedValue([
-          {prefix: 3, id: 0},
-          {prefix: 3, id: 1},
-          {prefix: 4, id: 0},
-        ]),
-        deleteMany: deleteArchive,
+        pruneBefore: pruneArchive,
       },
       {getSlotByRoot: vi.fn()}
     );
@@ -174,7 +166,7 @@ describe("LegacyDataColumnStore", () => {
     expect(flatFiles.deleteMany).toHaveBeenCalledWith([key]);
     expect(deleteHot).toHaveBeenCalledWith([fromHex(ROOT)]);
     expect(flatFiles.pruneBefore).toHaveBeenCalledWith(5);
-    expect(deleteArchive).toHaveBeenCalledWith([3, 4]);
+    expect(pruneArchive).toHaveBeenCalledWith(5);
   });
 });
 

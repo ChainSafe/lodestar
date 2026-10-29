@@ -197,6 +197,7 @@ export class ArchiveStore {
     //
     // `jobQueue.push()` can throw synchronously (queue aborted / full) or reject asynchronously;
     // awaiting it inside the deferred callback funnels both failure modes into the one catch.
+    // biome-ignore lint/nursery/noMisusedPromises: the callback catches all errors itself
     callInNextEventLoop(async () => {
       try {
         await this.jobQueue.push(finalized);

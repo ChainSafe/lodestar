@@ -14,7 +14,7 @@ import {
 import {lockFilepath} from "../../../util/lockfile.js";
 import {IPersistedKeysBackend, LocalKeystoreDefinition} from "./interface.js";
 
-export {ImportStatus, DeletionStatus};
+export {DeletionStatus, ImportStatus};
 
 type PathArgs = {
   keystoresDir: string;

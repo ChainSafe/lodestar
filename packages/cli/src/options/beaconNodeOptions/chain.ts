@@ -38,7 +38,6 @@ export type ChainArgs = {
   "chain.maxSkipSlots"?: number;
   "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
-  broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
@@ -98,7 +97,6 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     maxSkipSlots: args["chain.maxSkipSlots"],
     disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
-    broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
@@ -311,15 +309,6 @@ Will double processing times. Use only for debugging purposes.",
     default: defaultOptions.chain.archiveMode,
     type: "string",
     group: "chain",
-  },
-
-  broadcastValidationStrictness: {
-    // TODO: hide the option till validations fully implemented
-    hidden: true,
-    description:
-      "'warn' or 'error' - options to either throw error or to log warning when broadcast validation can't be performed",
-    type: "string",
-    default: "warn",
   },
 
   "chain.minSameMessageSignatureSetsToBatch": {

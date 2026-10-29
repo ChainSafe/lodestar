@@ -65,6 +65,7 @@ export type ForkConfig = {
   getSyncContributionDueMs(fork: ForkName): number;
   getProposerReorgCutoffMs(fork: ForkName): number;
   getPayloadDueMs(fork: ForkName): number;
+  getInclusionListDueMs(fork: ForkName): number;
 
   /** Get slot duration in ms for a given fork */
   getSlotDurationMs(fork: ForkName): number;

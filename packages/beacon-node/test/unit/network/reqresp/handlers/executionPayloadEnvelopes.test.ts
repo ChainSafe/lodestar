@@ -1,5 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
@@ -156,7 +157,7 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
     it("omits a mismatched envelope and serves the rest", async () => {
       const fulls = [await seed(10), await seed(11)];
       const bad = payloadBodiesOf(fulls[0]);
-      bad.transactions = [Uint8Array.from([0xff])];
+      bad.transactions = SerializedList.fromArray([Uint8Array.from([0xff])]);
       getPayloadBodiesByHashV2.mockResolvedValue([bad, payloadBodiesOf(fulls[1])]);
       // Roots resolve through blockArchive.getSlotByRoot; stub it to map our two roots to their slots
       const roots = fulls.map((f) => f.message.beaconBlockRoot);

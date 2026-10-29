@@ -28,6 +28,7 @@ import {
   eip8025,
   fulu,
   gloas,
+  heze,
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
@@ -536,6 +537,16 @@ export class Network implements INetwork {
     );
   }
 
+  async publishInclusionList(signedInclusionList: heze.SignedInclusionList): Promise<number> {
+    const epoch = computeEpochAtSlot(signedInclusionList.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.inclusion_list>(
+      {type: GossipType.inclusion_list, boundary},
+      signedInclusionList
+    );
+  }
+
   async publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number> {
     const epoch = computeEpochAtSlot(signedProposerPreferences.message.proposalSlot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
@@ -861,7 +872,9 @@ export class Network implements INetwork {
   };
 
   private onTargetGroupCountUpdated = (count: number): void => {
-    this.core.setTargetGroupCount(count);
+    this.core.setTargetGroupCount(count).catch((e) => {
+      this.logger.debug("Error setting target custody group count", {count}, e as Error);
+    });
   };
 
   private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {

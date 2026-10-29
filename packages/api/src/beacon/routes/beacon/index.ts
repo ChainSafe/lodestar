@@ -11,10 +11,6 @@ import * as pool from "./pool.js";
 import * as rewards from "./rewards.js";
 import * as state from "./state.js";
 
-// NOTE: We choose to split the block, pool, state and rewards namespaces so the files are not too big.
-// However, for a consumer all these methods are within the same service "beacon"
-export {block, pool, state, rewards};
-
 export type {BlockHeaderResponse, BlockId} from "./block.js";
 export {BroadcastValidation} from "./block.js";
 // TODO: Review if re-exporting all these types is necessary
@@ -33,6 +29,9 @@ export type {
   ValidatorStatus,
   ValidatorStatusFilter,
 } from "./state.js";
+// NOTE: We choose to split the block, pool, state and rewards namespaces so the files are not too big.
+// However, for a consumer all these methods are within the same service "beacon"
+export {block, pool, rewards, state};
 
 const SignedProposerPreferencesListType = ArrayOf(ssz.gloas.SignedProposerPreferences);
 

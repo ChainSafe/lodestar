@@ -34,6 +34,7 @@ import {
   eip8025,
   fulu,
   gloas,
+  heze,
   phase0,
 } from "@lodestar/types";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
@@ -119,6 +120,7 @@ export interface INetwork extends INetworkCorePublic {
   publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number>;
   publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
   publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number>;
+  publishInclusionList(signedInclusionList: heze.SignedInclusionList): Promise<number>;
   publishExecutionProof(signedProofEnvelope: eip8025.SignedExecutionProofEnvelope, blockSlot: Slot): Promise<number>;
 
   // Debug

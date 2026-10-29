@@ -7,6 +7,7 @@ import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork} from "../network/index.js";
 import {SyncChainDebugState} from "./range/chain.js";
+
 export type {SyncChainDebugState};
 
 export type SyncingStatus = routes.node.SyncingStatus;
