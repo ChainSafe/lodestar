@@ -35,6 +35,7 @@ describe("BeaconChain finalized_checkpoint event", () => {
         getHead: vi.fn().mockReturnValue(generateProtoBlock()),
       },
       seenBlockProposers: {prune: vi.fn()},
+      seenExecutionProofs: {prune: vi.fn()},
       updateValidatorsCustodyRequirement: vi.fn().mockReturnValue(custodyUpdate),
       regen: {getStateSync: vi.fn().mockReturnValue(null)},
       getBlockByRoot: vi.fn().mockResolvedValue({block: generateSignedBlockAtSlot(0)}),
@@ -73,6 +74,7 @@ describe("BeaconChain finalized_checkpoint event", () => {
     expect(events).toHaveLength(0);
     expect(chain.metrics.finalizedEpoch.set).toHaveBeenCalledWith(cp.epoch);
     expect(chain.seenBlockProposers.prune).toHaveBeenCalledOnce();
+    expect(chain.seenExecutionProofs.prune).toHaveBeenCalledOnce();
     expect(chain.updateValidatorsCustodyRequirement).toHaveBeenCalledWith(cp);
     expect(chain.getBlockByRoot).toHaveBeenCalledOnce();
   });
