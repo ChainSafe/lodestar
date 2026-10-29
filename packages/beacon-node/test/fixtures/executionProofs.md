@@ -26,5 +26,6 @@ The dedicated EIP-8025 CI job runs the download command before `pnpm test:8025`.
 does not download execution-proof fixtures.
 
 The pinned revisions must match the `ere` release the installed `lodestar-z` verifier was built with.
-Proofs from a newer SP1 or ZisK than the verifier fail verification, so bump the revisions here together
-with the `@chainsafe/lodestar-z` catalog entry.
+With the ERE v0.19.2 verifier of `lodestar-z` 2.2.0 the OpenVM and SP1 proofs still verify, but every ZisK
+proof from the v0.19.6 fixtures fails, so bump the revisions here together with the `@chainsafe/lodestar-z`
+catalog entry.
