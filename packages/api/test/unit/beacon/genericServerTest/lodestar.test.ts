@@ -119,7 +119,7 @@ describe("beacon / lodestar", () => {
         proof,
       };
       const proofHex = proof.map((node) => toHexString(node));
-      mockApi.getHistoricalBlockRootProof.mockResolvedValue({data, meta: {}});
+      mockApi.getHistoricalBlockRootProof.mockResolvedValue({data, meta: undefined});
 
       const httpClient = new HttpClient({baseUrl});
       const client = getClient(config, httpClient);
