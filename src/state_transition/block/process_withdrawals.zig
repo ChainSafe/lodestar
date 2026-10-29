@@ -1,5 +1,5 @@
 const std = @import("std");
-const diagnostics = @import("diagnostics");
+const diagnostics = @import("../diagnostics.zig");
 const Allocator = std.mem.Allocator;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const BeaconState = @import("fork_types").BeaconState;
@@ -49,7 +49,7 @@ pub fn processWithdrawals(
     try types.capella.Withdrawals.hashTreeRoot(allocator, &expected_withdrawals_result.withdrawals, &expected_withdrawals_root);
 
     if (!std.mem.eql(u8, &expected_withdrawals_root, &payload_withdrawals_root)) {
-        return diagnostics.state_transition.withdrawalsRootMismatch(
+        return diagnostics.withdrawalsRootMismatch(
             diag,
             &expected_withdrawals_root,
             &payload_withdrawals_root,

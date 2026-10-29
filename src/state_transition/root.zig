@@ -3,7 +3,7 @@ const testing = std.testing;
 
 pub const stateTransition = @import("state_transition.zig").stateTransition;
 pub const processSlots = @import("state_transition.zig").processSlots;
-pub const Diagnostics = @import("diagnostics").Diagnostics;
+pub const Diagnostics = @import("diagnostics.zig").Diagnostics;
 pub const TransitionOpts = @import("state_transition.zig").TransitionOpts;
 
 pub const metrics = @import("metrics.zig");

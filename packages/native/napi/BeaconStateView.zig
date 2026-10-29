@@ -1482,7 +1482,9 @@ pub fn stateTransition(
     const cached_state = try self.acquireState();
     defer self.finishState();
     const allocator = cached_state.allocator;
-    const opts = try @import("./transition_opts.zig").parseOptions(options);
+    var opts = try @import("./transition_opts.zig").parseOptions(options);
+    var diagnostics: st.Diagnostics = .{};
+    opts.diagnostics = &diagnostics;
 
     const bytes = try signed_block_bytes.toSlice();
 
@@ -1499,14 +1501,22 @@ pub fn stateTransition(
     const signed_block = try AnySignedBeaconBlock.deserialize(allocator, block_type, fork_seq, bytes);
     defer signed_block.deinit(allocator);
 
-    const post_state = try st.stateTransition(
+    const post_state = st.stateTransition(
         allocator,
         js.io(),
         cached_state,
         signed_block,
         opts,
         validator_monitor.get(),
-    );
+    ) catch |err| {
+        if (diagnostics.detail) |*detail| {
+            var buffer: [256]u8 = undefined;
+            const message = std.fmt.bufPrintSentinel(&buffer, "{f}", .{detail}, 0) catch return err;
+            try js.env().throwError(@errorName(err), message);
+            return error.PendingException;
+        }
+        return err;
+    };
     return .{
         .cached_state = post_state,
         .pool_rc = self.pool_rc.?.ref(),

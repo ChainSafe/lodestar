@@ -25,8 +25,71 @@ describe("serialized state transition", () => {
         verifySignatures: false,
         verifyStateRoot: false,
       })
-    ).toThrow("BlockParentRootMismatch");
+    ).toThrowError(expect.objectContaining({code: "BlockParentRootMismatch", message: "BlockParentRootMismatch"}));
     expect(state.hashTreeRoot()).toEqual(before);
+  });
+
+  it.each([
+    {isBlinded: false, mismatch: "root"},
+    {isBlinded: true, mismatch: "root"},
+    {isBlinded: false, mismatch: "length"},
+  ])("includes withdrawal $mismatch diagnostics with isBlinded=$isBlinded", ({isBlinded, mismatch}) => {
+    const value = createStfState();
+    value.latestExecutionPayloadHeader.blockHash.fill(1);
+    value.validators[0].withdrawalCredentials[0] = 1;
+    value.balances[0] = 33_000_000_000;
+    const native = bindings.BeaconStateView.createFromBytes(ssz.fulu.BeaconState.serialize(value), config);
+    let advanced: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    try {
+      const slot = native.slot + 1;
+      advanced = native.processSlots(slot);
+      const withdrawals = advanced.getExpectedWithdrawals().expectedWithdrawals;
+      expect(withdrawals).toHaveLength(1);
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      block.message.proposerIndex = advanced.getBeaconProposer(slot);
+      block.message.parentRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(advanced.latestBlockHeader);
+      const payload = block.message.body.executionPayload;
+      payload.withdrawals =
+        mismatch === "length" ? [] : withdrawals.map((withdrawal) => ({...withdrawal, amount: withdrawal.amount + 1n}));
+      const actualRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
+      const blinded = {
+        ...block,
+        message: {
+          ...block.message,
+          body: {
+            ...block.message.body,
+            executionPayloadHeader: {
+              ...payload,
+              transactionsRoot: ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions),
+              withdrawalsRoot: actualRoot,
+            },
+          },
+        },
+      };
+      const bytes = isBlinded
+        ? ssz.fulu.SignedBlindedBeaconBlock.serialize(blinded)
+        : ssz.fulu.SignedBeaconBlock.serialize(block);
+      const expectedRoot = ssz.capella.Withdrawals.hashTreeRoot(withdrawals);
+      const code = mismatch === "length" ? "WithdrawalsLengthMismatch" : "WithdrawalsRootMismatch";
+      const message =
+        mismatch === "length"
+          ? `${code} expected=1 actual=0`
+          : `${code} expected=0x${Buffer.from(expectedRoot).toString("hex")} actual=0x${Buffer.from(actualRoot).toString("hex")}`;
+      const before = native.hashTreeRoot();
+
+      expect(() =>
+        native.stateTransition(bytes, isBlinded, {
+          verifyProposer: false,
+          verifySignatures: false,
+          verifyStateRoot: false,
+        })
+      ).toThrowError(expect.objectContaining({code, message}));
+      expect(native.hashTreeRoot()).toEqual(before);
+    } finally {
+      advanced?.release();
+      native.release();
+    }
   });
 
   it("exports the fork sequence used by Lodestar", () => {

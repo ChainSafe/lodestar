@@ -1,7 +1,7 @@
 //! Tests for `state_transition.zig`.
 
 const std = @import("std");
-const Diagnostics = @import("diagnostics").Diagnostics;
+const Diagnostics = @import("diagnostics.zig").Diagnostics;
 const types = @import("consensus_types");
 const AnySignedBeaconBlock = @import("fork_types").AnySignedBeaconBlock;
 const deinitReusedEpochTransitionCache = @import("cache/epoch_transition_cache.zig").deinitReusedEpochTransitionCache;
@@ -391,6 +391,59 @@ test "proposer rewards should accumulate slashing rewards with and without a whi
     try std.testing.expectEqual(@as(u64, reward - proposer_share), try balances.get(whistleblower) - whistleblower_before);
 }
 
+test "state transition should reset diagnostics before success or allocation failure" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 180_000 });
+    defer pool.deinit();
+    defer deinitReusedEpochTransitionCache();
+
+    var fixture = try TestCachedBeaconState.init(allocator, &pool, 256);
+    defer fixture.deinit();
+
+    var block = types.electra.SignedBeaconBlock.default_value;
+    defer types.electra.SignedBeaconBlock.deinit(allocator, &block);
+    try generateElectraBlock(allocator, fixture.cached_state, &block);
+
+    var diagnostics: Diagnostics = .{};
+    const stale_detail: @import("diagnostics.zig").ErrorDetails = .{ .withdrawals_length_mismatch = .{
+        .expected = 1,
+        .actual = 0,
+    } };
+    const opts: TransitionOpts = .{
+        .diagnostics = &diagnostics,
+        .verify_proposer = false,
+        .verify_signatures = false,
+        .verify_state_root = false,
+    };
+
+    diagnostics.detail = stale_detail;
+    var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 0 });
+    try testing.expectError(error.OutOfMemory, stateTransition(
+        failing.allocator(),
+        std.testing.io,
+        fixture.cached_state,
+        .{ .full_electra = &block },
+        opts,
+        null,
+    ));
+    try testing.expectEqual(null, diagnostics.detail);
+
+    diagnostics.detail = stale_detail;
+    const post = try stateTransition(
+        allocator,
+        std.testing.io,
+        fixture.cached_state,
+        .{ .full_electra = &block },
+        opts,
+        null,
+    );
+    defer {
+        post.deinit();
+        allocator.destroy(post);
+    }
+    try testing.expectEqual(null, diagnostics.detail);
+}
+
 test "state transition should preserve withdrawal diagnostics after failure" {
     const allocator = std.testing.allocator;
     var pool = try Node.Pool.init(.{
@@ -439,7 +492,7 @@ test "state transition should preserve withdrawal diagnostics after failure" {
         .{ .diagnostics = &diagnostics, .verify_proposer = false },
         null,
     ));
-    const mismatch = &diagnostics.detail.?.state_transition.withdrawals_root_mismatch;
+    const mismatch = &diagnostics.detail.?.withdrawals_root_mismatch;
     try testing.expectEqualSlices(u8, &expected_root, &mismatch.expected);
     try testing.expectEqualSlices(u8, &actual_root, &mismatch.actual);
     try testing.expectEqualSlices(u8, &before_root, try state.hashTreeRoot());
@@ -454,8 +507,6 @@ test "state transition should preserve withdrawal diagnostics after failure" {
         allocator,
         types.capella.Withdrawal.default_value,
     );
-    diagnostics = .{};
-
     try testing.expectError(error.WithdrawalsLengthMismatch, stateTransition(
         allocator,
         std.testing.io,
@@ -464,7 +515,7 @@ test "state transition should preserve withdrawal diagnostics after failure" {
         .{ .diagnostics = &diagnostics, .verify_proposer = false },
         null,
     ));
-    const length_mismatch = &diagnostics.detail.?.state_transition.withdrawals_length_mismatch;
+    const length_mismatch = &diagnostics.detail.?.withdrawals_length_mismatch;
     try testing.expectEqual(@as(usize, 0), length_mismatch.expected);
     try testing.expectEqual(@as(usize, 1), length_mismatch.actual);
     try testing.expectEqualSlices(u8, &before_root, try state.hashTreeRoot());
@@ -479,7 +530,6 @@ test "state transition should preserve withdrawal diagnostics after failure" {
         null,
     ));
 
-    diagnostics = .{};
     block.message.slot = slot - 1;
     try testing.expectError(error.outdatedSlot, stateTransition(
         allocator,

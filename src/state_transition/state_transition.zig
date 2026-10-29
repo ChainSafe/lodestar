@@ -1,5 +1,5 @@
 const std = @import("std");
-const Diagnostics = @import("diagnostics").Diagnostics;
+const Diagnostics = @import("diagnostics.zig").Diagnostics;
 const Allocator = std.mem.Allocator;
 const ForkSeq = @import("config").ForkSeq;
 const metrics = @import("metrics.zig");
@@ -199,6 +199,8 @@ pub fn stateTransition(
     opts: TransitionOpts,
     validator_monitor: ?*ValidatorMonitor,
 ) !*CachedBeaconState {
+    if (opts.diagnostics) |diagnostics| diagnostics.* = .{};
+
     const block = signed_block.beaconBlock();
     const block_slot = block.slot();
 
@@ -248,9 +250,7 @@ pub fn stateTransition(
                     if (comptime (bt == .blinded and f.lt(.bellatrix)) or (bt == .blinded and f.gte(.gloas))) {
                         return error.InvalidBlockTypeForFork;
                     } else {
-                        var block_diagnostics: Diagnostics = .{};
-                        const diagnostics = opts.diagnostics orelse &block_diagnostics;
-                        processBlock(
+                        try processBlock(
                             f,
                             allocator,
                             io,
@@ -262,13 +262,8 @@ pub fn stateTransition(
                             bt,
                             block.castToFork(bt, f),
                             opts.block_external_data,
-                            .{ .verify_signature = opts.verify_signatures, .diagnostics = diagnostics },
-                        ) catch |err| {
-                            if (diagnostics.detail) |*detail| {
-                                std.log.warn("Block processing failed at slot {d}: {f}", .{ block_slot, detail });
-                            }
-                            return err;
-                        };
+                            .{ .verify_signature = opts.verify_signatures, .diagnostics = opts.diagnostics },
+                        );
                     }
                 },
             }

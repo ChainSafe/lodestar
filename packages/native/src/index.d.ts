@@ -443,7 +443,10 @@ export declare class BeaconStateView {
 
   /** Serialize this call with other STF operations and cache teardown within this thread. */
   processSlots(slot: number, options?: ProcessSlotsOpts): BeaconStateView;
-  /** Serialize this call with other STF operations and cache teardown within this thread. */
+  /**
+   * Serialize this call with other STF operations and cache teardown within this thread.
+   * Throws an Error with the native error name in `code` and available diagnostic details in `message`.
+   */
   stateTransition(signedBlockBytes: Uint8Array, isBlinded: boolean, options?: TransitionOpts): BeaconStateView;
 }
 

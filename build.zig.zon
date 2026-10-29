@@ -181,9 +181,6 @@
         .bounded_array = .{
             .root_source_file = "src/bounded_array.zig",
         },
-        .diagnostics = .{
-            .root_source_file = "src/diagnostics.zig",
-        },
         .clock = .{
             .root_source_file = "src/clock/root.zig",
             .imports = .{ .zio, .consensus_types, .bounded_array, .time },
@@ -233,7 +230,6 @@
         .state_transition = .{
             .root_source_file = "src/state_transition/root.zig",
             .imports = .{
-                .diagnostics,
                 .build_options,
                 .bounded_array,
                 .swap_or_not_shuffle,
@@ -438,7 +434,6 @@
         .hex = .{ .root_module = .hex },
         .bit_array = .{ .root_module = .bit_array },
         .bounded_array = .{ .root_module = .bounded_array },
-        .diagnostics = .{ .root_module = .diagnostics },
         .cpu_count = .{ .root_module = .cpu_count },
         .hashing = .{ .root_module = .hashing },
         .preset = .{ .root_module = .preset },

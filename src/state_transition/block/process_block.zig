@@ -1,5 +1,5 @@
 const std = @import("std");
-const diagnostics = @import("diagnostics");
+const diagnostics = @import("../diagnostics.zig");
 const Diagnostics = diagnostics.Diagnostics;
 const Allocator = std.mem.Allocator;
 const metrics = @import("../metrics.zig");
@@ -101,7 +101,7 @@ pub fn processBlock(
                     .full => blk: {
                         const actual_withdrawals = block.body().executionPayload().inner.withdrawals;
                         if (withdrawals_result.withdrawals.items.len != actual_withdrawals.items.len) {
-                            return diagnostics.state_transition.withdrawalsLengthMismatch(
+                            return diagnostics.withdrawalsLengthMismatch(
                                 opts.diagnostics,
                                 withdrawals_result.withdrawals.items.len,
                                 actual_withdrawals.items.len,
