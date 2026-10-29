@@ -200,6 +200,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       adversarialWithholdExecutionPayload: args["adversarial.withhold.executionPayload"],
       adversarialDelayExecutionPayload: args["adversarial.delay.executionPayload"],
       adversarialDelayExecutionPayloadBps: args["adversarial.delay.executionPayloadBps"],
+      adversarialPtcAttestAtDeadline: args["adversarial.ptc.attestAtDeadline"],
       externalSigner: {
         urls: args["externalSigner.urls"],
         fetch: args["externalSigner.fetch"],

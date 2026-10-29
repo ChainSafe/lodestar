@@ -16,6 +16,11 @@ import {ValidatorStore} from "./validatorStore.js";
 /**
  * Service that sets up and handles validator Payload Timeliness Committee duties.
  */
+export type PtcServiceOpts = {
+  /** ADVERSARIAL (devnet test only): attest at the PTC deadline instead of as soon as the payload is available */
+  adversarialPtcAttestAtDeadline?: boolean;
+};
+
 export class PtcService {
   private readonly dutiesService: PtcDutiesService;
 
@@ -28,7 +33,8 @@ export class PtcService {
     private readonly emitter: ValidatorEventEmitter,
     private readonly chainHeadTracker: ChainHeaderTracker,
     syncingStatusTracker: SyncingStatusTracker,
-    private readonly metrics: Metrics | null
+    private readonly metrics: Metrics | null,
+    private readonly opts: PtcServiceOpts = {}
   ) {
     this.dutiesService = new PtcDutiesService(
       config,
@@ -68,10 +74,18 @@ export class PtcService {
     // Submit as soon as the canonical head block's payload is available, or at the deadline
     const payloadAvailable = new AbortController();
     try {
-      await Promise.race([
-        sleep(payloadAttestationDueMs - this.clock.msFromSlot(slot), signal),
-        this.waitForCanonicalPayload(slot, payloadAvailable.signal),
-      ]);
+      if (this.opts.adversarialPtcAttestAtDeadline) {
+        this.logger.warn("ADVERSARIAL: Waiting for the PTC deadline before attesting", {
+          slot,
+          payloadAttestationDueMs,
+        });
+        await sleep(payloadAttestationDueMs - this.clock.msFromSlot(slot), signal);
+      } else {
+        await Promise.race([
+          sleep(payloadAttestationDueMs - this.clock.msFromSlot(slot), signal),
+          this.waitForCanonicalPayload(slot, payloadAvailable.signal),
+        ]);
+      }
     } finally {
       payloadAvailable.abort();
     }

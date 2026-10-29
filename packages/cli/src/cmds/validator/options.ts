@@ -64,6 +64,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "adversarial.withhold.executionPayload"?: boolean;
     "adversarial.delay.executionPayload"?: boolean;
     "adversarial.delay.executionPayloadBps"?: number;
+    "adversarial.ptc.attestAtDeadline"?: boolean;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -375,6 +376,15 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "boolean",
     description:
       "ADVERSARIAL (devnet test only): for self-built Gloas blocks, delay publishing the execution payload envelope until the configured point in the slot",
+    default: false,
+    group: "adversarial",
+  },
+
+  "adversarial.ptc.attestAtDeadline": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "ADVERSARIAL (devnet test only): submit payload attestations at the PTC deadline instead of as soon as the payload is available, emulating clients that attest at the deadline",
     default: false,
     group: "adversarial",
   },

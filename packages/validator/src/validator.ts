@@ -93,6 +93,7 @@ export type ValidatorOptions = {
   adversarialWithholdExecutionPayload?: boolean;
   adversarialDelayExecutionPayload?: boolean;
   adversarialDelayExecutionPayloadBps?: number;
+  adversarialPtcAttestAtDeadline?: boolean;
   externalSigner?: ExternalSignerOptions;
   clock?: ClockOptions;
 };
@@ -324,7 +325,8 @@ export class Validator {
       emitter,
       chainHeaderTracker,
       syncingStatusTracker,
-      metrics
+      metrics,
+      {adversarialPtcAttestAtDeadline: opts.adversarialPtcAttestAtDeadline ?? false}
     );
 
     const inclusionListService = new InclusionListService(
