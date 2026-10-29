@@ -79,6 +79,25 @@ describe("ChainView", () => {
     expect(view.onChainViewUpdate({blocks: [], state: initial, version: 5})).toBe(true);
   });
 
+  it("recognizes a descendant after its delayed parent metadata arrives", () => {
+    const finalized = block(1, SLOTS_PER_EPOCH, 0);
+    const parent = block(2, SLOTS_PER_EPOCH + 1, 1);
+    const child = block(3, SLOTS_PER_EPOCH + 2, 2);
+    const initial = {
+      ...snapshot([finalized]),
+      justified: checkpoint(1, 1),
+      finalized: checkpoint(1, 1),
+    };
+    const view = new ReplicateChainView(initial);
+    view.onChainViewUpdate({blocks: [child], version: 2});
+    expect(view.hasBlockHex(child.blockRoot)).toBe(false);
+
+    view.onChainViewUpdate({blocks: [parent], version: 1});
+    expect(view.hasBlockHex(parent.blockRoot)).toBe(true);
+    expect(view.hasBlockHex(child.blockRoot)).toBe(true);
+    expect(view.version).toBe(2);
+  });
+
   it("adds returned FULL metadata without changing head or checkpoints", () => {
     const a = block(1, 0, 0);
     const pending = block(2, 1, 1, {payloadStatus: PayloadStatus.PENDING});

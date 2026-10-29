@@ -253,7 +253,7 @@ export class ReplicateChainView implements IChainView {
     const cached = this.finalizedDescendants.get(block.blockRoot);
     if (cached !== undefined) return cached;
     const path: RootHex[] = [];
-    let descendant = false;
+    let descendant: boolean | undefined;
     for (const ancestor of this.iterateAncestorBlocks(block.blockRoot, block.payloadStatus)) {
       const known = this.finalizedDescendants.get(ancestor.blockRoot);
       if (known !== undefined) {
@@ -266,6 +266,8 @@ export class ReplicateChainView implements IChainView {
         break;
       }
     }
+    // Missing ancestry may arrive in a later response, so only cache a resolved walk.
+    if (descendant === undefined) return false;
     for (const root of path) this.finalizedDescendants.set(root, descendant);
     return descendant;
   }
