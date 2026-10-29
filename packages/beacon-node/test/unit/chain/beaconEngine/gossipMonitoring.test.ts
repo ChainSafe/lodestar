@@ -3,7 +3,9 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {BeaconEngine} from "../../../../src/chain/beaconEngine.js";
 import {computeSignedBlockRoot} from "../../../../src/chain/blocks/signedBlockRoot.js";
+import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -21,6 +23,7 @@ import * as bidValidation from "../../../../src/chain/validation/executionPayloa
 import * as contributionValidation from "../../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {OpSource, ValidatorMonitor, createValidatorMonitor} from "../../../../src/chain/validatorMonitor.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getApiTestModules} from "../../../utils/api.js";
 
 describe("BeaconEngineCore gossip monitoring", () => {
@@ -230,6 +233,36 @@ describe("BeaconEngineCore gossip monitoring", () => {
     expect(observedAggregate.mock.calls[0][2]).toBe(indexedAttestation);
     expect(observedContribution).toHaveBeenCalledExactlyOnceWith(contribution.message, participants);
     expect(observedContribution.mock.calls[0][1]).toBe(participants);
+  });
+
+  it("preserves main-thread aggregate acceptance when pool insertion fails", async () => {
+    const aggregate = ssz.electra.SignedAggregateAndProof.defaultValue();
+    const indexedAttestation = ssz.electra.IndexedAttestation.defaultValue();
+    vi.spyOn(aggregateValidation, "validateGossipAggregateAndProof").mockResolvedValue({
+      indexedAttestation,
+      committeeValidatorIndices: new Uint32Array(),
+      attDataRootHex: toRootHex(Buffer.alloc(32)),
+    });
+    const error = new Error("pool insertion failed");
+    vi.mocked(engine.aggregatedAttestationPool.add).mockImplementation(() => {
+      throw error;
+    });
+    const facade = new BeaconEngine({
+      core: engine,
+      config: engine.config,
+      clock: engine.clock,
+      emitter: new ChainEventEmitter(),
+      serializedCache: new SerializedCache(),
+    });
+    const result = await facade.validateGossipAggregateAndProof(
+      ssz.electra.SignedAggregateAndProof.serialize(aggregate),
+      aggregate,
+      ForkName.electra,
+      12.5
+    );
+    await vi.runAllTimersAsync();
+    expect(engine.aggregatedAttestationPool.add).toHaveBeenCalledOnce();
+    expect(result).toEqual({err: null, result: {indexedAttestation}});
   });
 
   it("restores deferred bid monitoring without changing validation when the monitor fails", async () => {

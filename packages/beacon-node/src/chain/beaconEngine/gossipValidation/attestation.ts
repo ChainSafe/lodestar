@@ -152,13 +152,21 @@ export async function validateGossipAggregateAndProof(
         aggregateBytes
       );
       // Insert into the aggregated-attestation pool on Accept (moved from the gossip handler).
-      const insertOutcome = this.aggregatedAttestationPool.add(
-        signedAggregateAndProof.message.aggregate,
-        result.attDataRootHex,
-        result.indexedAttestation.attestingIndices.length,
-        result.committeeValidatorIndices
-      );
-      this.metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+      try {
+        const insertOutcome = this.aggregatedAttestationPool.add(
+          signedAggregateAndProof.message.aggregate,
+          result.attDataRootHex,
+          result.indexedAttestation.attestingIndices.length,
+          result.committeeValidatorIndices
+        );
+        this.metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+      } catch (e) {
+        this.logger.error(
+          "Error adding aggregated attestation to pool",
+          {slot: result.indexedAttestation.data.slot},
+          e as Error
+        );
+      }
       // Fork-choice write on Accept (moved from the gossip handler). Contain errors — a fork-choice error
       // must not flip the gossip verdict.
       if (!this.opts.dontSendGossipAttestationsToForkchoice) {
