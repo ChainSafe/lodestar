@@ -9,11 +9,11 @@
     "packages/*"
   ],
   "scripts": {
-    "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
+    "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo ./packages/native/zig-out",
     "clean:nm": "rm -rf ./packages/*/node_modules ./node_modules",
     "build": "pnpm -r build",
     "build:watch": "pnpm -r --parallel exec pnpm run build:watch",
-    "build:ifchanged": "pnpm -r exec -- ../../scripts/build_if_changed.sh",
+    "build:ifchanged": "pnpm build:native && pnpm -r --filter \"!@lodestar/native\" exec -- ../../scripts/build_if_changed.sh",
     "lint": "biome check",
     "lint:fix": "pnpm lint --write",
     "lint-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards",
@@ -36,7 +36,11 @@
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
-    "release:publish": "lerna publish from-package --yes --no-verify-access"
+    "release:publish": "node scripts/release/publish.mjs",
+    "lint:zig": "zig fmt --check . && zig build test:tidy",
+    "build:native": "pnpm --filter @lodestar/native build",
+    "test:native": "pnpm --filter @lodestar/native test",
+    "lint:native": "pnpm --filter @lodestar/native lint"
   },
   "devDependencies": {
     "@actions/core": "^1.11.1",
@@ -49,7 +53,11 @@
     "@lerna-lite/publish": "^4.9.4",
     "@lerna-lite/run": "^4.9.4",
     "@lerna-lite/version": "^4.9.4",
+    "@lodestar/config": "workspace:^",
+    "@lodestar/era": "workspace:^",
     "@lodestar/params": "workspace:",
+    "@lodestar/state-transition": "workspace:^",
+    "@lodestar/types": "workspace:^",
     "@types/node": "^24.10.1",
     "@typescript/typescript6": "^6.0.1",
     "@vitest/browser": "catalog:",
@@ -74,7 +82,7 @@
   },
   "dependencies": {
     "@chainsafe/lodestar": "workspace:*",
-    "@chainsafe/lodestar-z": "catalog:"
+    "@lodestar/native": "workspace:^"
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",

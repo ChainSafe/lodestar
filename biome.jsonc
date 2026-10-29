@@ -56,6 +56,7 @@
       "**/packages/**/*/test/**/*.ts",
       "**/configs/**/*.ts",
       "vitest.config.ts",
+      "scripts/release/publish.mjs",
       "**/*.md",
       "**/*.yml",
       "**/*.yaml",

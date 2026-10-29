@@ -1,5 +1,5 @@
-import {aggregateSerializedPublicKeys} from "@chainsafe/lodestar-z/blst";
 import {ChainConfig} from "@lodestar/config";
+import {aggregateSerializedPublicKeys} from "@lodestar/native/blst";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,

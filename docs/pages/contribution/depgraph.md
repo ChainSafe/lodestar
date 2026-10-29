@@ -26,7 +26,7 @@ graph TD
     validator["validator"]:::nodemodule
     state-transition["state-transition"]:::nodemodule
     ssz["ssz"]:::nodemodule
-    lodestar-z["lodestar-z"]:::nodemodule
+    native["native"]:::nodemodule
     discv5["discv5"]:::nodemodule
     libp2p["libp2p"]:::nodemodule
     libp2p-gossipsub["libp2p-gossipsub"]:::nodemodule
@@ -40,8 +40,8 @@ graph TD
     ssz-->validator
     ssz-->state-transition
 
-    lodestar-z-->beacon-node
-    lodestar-z-->state-transition
+    native-->beacon-node
+    native-->state-transition
 
     discv5-->beacon-node
 
@@ -114,7 +114,7 @@ graph TD
     click utils "https://github.com/ChainSafe/lodestar/tree/unstable/packages/utils"
     click config "https://github.com/ChainSafe/lodestar/tree/unstable/packages/config"
     click ssz "https://github.com/ChainSafe/ssz"
-    click lodestar-z "https://github.com/ChainSafe/lodestar-z"
+    click native "https://github.com/ChainSafe/lodestar/tree/unstable/packages/native"
     click discv5 "https://github.com/ChainSafe/discv5"
     click libp2p "https://github.com/libp2p/js-libp2p"
     click libp2p-gossipsub "https://github.com/ChainSafe/js-libp2p-gossipsub"
@@ -133,6 +133,10 @@ Below is a brief summary of each package in alphabetical order.
 ### `@chainsafe/lodestar`
 
 [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar/tree/unstable/packages/cli) combines everything together for CLI usage and configuration of the beacon node and validator.
+
+### `@lodestar/native`
+
+[`@lodestar/native`](https://github.com/ChainSafe/lodestar/tree/unstable/packages/native) provides Lodestar's Zig implementations, including BLS12-381 signature verification backed by [supranational/blst](https://github.com/supranational/blst).
 
 ### `@lodestar/api`
 
@@ -192,10 +196,6 @@ For a good explanation on how the fork choice itself works, see the [annotated f
 ## External Dependencies
 
 Below is a brief summary, listed alphabetically, of each of our main external dependencies managed externally from our monorepo.
-
-### `@chainsafe/lodestar-z`
-
-[`@chainsafe/lodestar-z`](https://github.com/ChainSafe/lodestar-z) provides Lodestar's Zig implementations, including BLS12-381 signature verification backed by [supranational/blst](https://github.com/supranational/blst).
 
 ### `@chainsafe/discv5`
 

@@ -1,5 +1,5 @@
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {NetworkName} from "@lodestar/config/networks";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {getNetworkCachedStateBytes} from "@lodestar/test-utils";
 import {CachedBeaconStateAllForks} from "../../src/index.js";
 import {testCachePath} from "../../src/testUtils/cache.js";

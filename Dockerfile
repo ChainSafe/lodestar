@@ -4,7 +4,7 @@ WORKDIR /usr/app
 RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools curl xz-utils && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install zig toolchain
-# Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+# Required to build the @lodestar/native workspace package
 ARG TARGETARCH
 ARG ZIG_VERSION=0.16.0
 RUN case "${TARGETARCH}" in \
@@ -26,7 +26,8 @@ RUN corepack enable && corepack prepare --activate && \
   pnpm install --frozen-lockfile && \
   pnpm build && \
   pnpm clean:nm && \
-  pnpm install --frozen-lockfile --prod
+  pnpm install --frozen-lockfile --prod && \
+  rm -rf .zig-cache zig-pkg zig-out packages/native/artifacts
 
 # To have access to the specific branch and commit used to build this source,
 # a git-data.json file is created by persisting git data at build time. Then,

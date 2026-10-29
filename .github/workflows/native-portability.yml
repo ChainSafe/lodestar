@@ -23,13 +23,13 @@ jobs:
           node-version: 24
           check-latest: true
 
-      # Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+      # Required to build the @lodestar/native workspace package
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: 0.16.0
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile && pnpm build:native
 
       - name: Install binutils
         run: sudo apt-get install -y binutils

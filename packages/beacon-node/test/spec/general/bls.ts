@@ -1,3 +1,4 @@
+import {fromHexString} from "@chainsafe/ssz";
 import {
   aggregateVerify as BLSAggregateVerify,
   fastAggregateVerify as BLSFastAggregateVerify,
@@ -7,8 +8,7 @@ import {
   verify as _verify,
   aggregateSerializedPublicKeys,
   aggregateSignatures,
-} from "@chainsafe/lodestar-z/blst";
-import {fromHexString} from "@chainsafe/ssz";
+} from "@lodestar/native/blst";
 import {InputType} from "@lodestar/spec-test-util";
 import {TestRunnerFn} from "../utils/types.js";
 

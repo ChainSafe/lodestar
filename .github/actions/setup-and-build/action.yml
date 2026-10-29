@@ -29,11 +29,11 @@ runs:
         # cache: pnpm
         package-manager-cache: false
 
-    # Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+    # Required to build the @lodestar/native workspace package
     - name: Setup Zig
       uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       with:
-        version: 0.16.0
+        version: ${{ inputs.zig }}
 
     - name: Node.js version
       id: node
@@ -44,7 +44,7 @@ runs:
       id: build-cache
       shell: bash
       # This build cache will be reused among different jobs for the same commit
-      run: echo "key=build-cache-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+      run: echo "key=build-cache-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-zig-${{ inputs.zig }}-preset-${{ env.LODESTAR_PRESET || 'mainnet' }}-${{ github.sha }}" >> $GITHUB_OUTPUT
 
     - name: Restore build
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -53,6 +53,7 @@ runs:
         path: |
           lib/
           packages/*/lib
+          packages/native/zig-out
           packages/*/.git-data.json
         key: ${{ steps.build-cache.outputs.key }}
 
@@ -70,5 +71,6 @@ runs:
         path: |
           lib/
           packages/*/lib
+          packages/native/zig-out
           packages/*/.git-data.json
         key: ${{ steps.build-cache.outputs.key }}

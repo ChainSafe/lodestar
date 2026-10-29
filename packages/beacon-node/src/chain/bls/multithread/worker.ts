@@ -1,10 +1,6 @@
 import worker from "node:worker_threads";
-import {
-  type BlsSignatureSet,
-  verifySignatureSets,
-  verifySignatureSetsSameMessage,
-} from "@chainsafe/lodestar-z/bls-verifier";
 import {expose} from "@chainsafe/threads/worker";
+import {type BlsSignatureSet, verifySignatureSets, verifySignatureSetsSameMessage} from "@lodestar/native/bls-verifier";
 import {
   BlsWorkReq,
   BlsWorkResult,

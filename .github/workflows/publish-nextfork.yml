@@ -35,7 +35,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           check-latest: true
           cache: pnpm
-      # Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+      # Required to build the @lodestar/native workspace package
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: 0.16.0
@@ -73,9 +73,9 @@ jobs:
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
           pnpm lerna version ${{ steps.version.outputs.version }} \
+          --yes \
           --force-publish \
           --exact \
-          --yes \
           --no-git-tag-version
 
           git config user.name 'temp'
@@ -107,9 +107,7 @@ jobs:
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          pnpm lerna publish from-package \
-          --yes \
-          --no-verify-access \
+          pnpm run release:publish \
           --dist-tag next \
           --no-git-reset \
           --force-publish \

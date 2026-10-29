@@ -1,0 +1,7 @@
+# Copied from https://github.com/ChainSafe/lodestar/blob/unstable/prometheus.yml
+scrape_configs:
+  - job_name: beacon
+    scrape_interval: 5s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["localhost:8008"]

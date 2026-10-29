@@ -1,0 +1,87 @@
+{
+  "name": "@lodestar/native",
+  "version": "1.50.1",
+  "description": "Native consensus modules for Lodestar",
+  "files": [
+    "src/"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./blst": {
+      "types": "./src/blst.d.ts",
+      "import": "./src/blst.js"
+    },
+    "./bls-verifier": {
+      "types": "./src/bls-verifier.d.ts",
+      "import": "./src/bls-verifier.js"
+    },
+    "./pubkeys": {
+      "types": "./src/pubkeys.d.ts",
+      "import": "./src/pubkeys.js"
+    },
+    "./state-transition": {
+      "types": "./src/state-transition.d.ts",
+      "import": "./src/state-transition.js"
+    },
+    "./metrics": {
+      "types": "./src/metrics.d.ts",
+      "import": "./src/metrics.js"
+    },
+    "./shuffle": {
+      "types": "./src/shuffle.d.ts",
+      "import": "./src/shuffle.js"
+    },
+    "./execution-proof-verifier": {
+      "types": "./src/execution-proof-verifier.d.ts",
+      "import": "./src/execution-proof-verifier.js"
+    }
+  },
+  "scripts": {
+    "prepare-mainnet": "cd ../.. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=mainnet --prefix packages/native/zig-out",
+    "prepare-minimal": "cd ../.. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=minimal --prefix packages/native/zig-out",
+    "prepare-gnosis": "cd ../.. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=gnosis --prefix packages/native/zig-out",
+    "lint": "biome check",
+    "test": "NODE_OPTIONS='--expose-gc' vitest run",
+    "benchmark": "NODE_OPTIONS='--import tsx' benchmark 'perf/**/*.test.ts' --isolate --config .benchrc.yaml --defaultBranch unstable",
+    "build": "pnpm run prepare-${LODESTAR_PRESET:-mainnet}",
+    "build:watch": "pnpm run build --watch",
+    "build:release": "pnpm clean && pnpm build",
+    "clean": "rm -rf zig-out",
+    "check-build": "node -e \"import('./src/index.js')\"",
+    "prepublishOnly": "node -e \"throw new Error('Publish native platform packages through pnpm release:publish')\""
+  },
+  "keywords": [],
+  "author": "ChainSafe Systems",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChainSafe/lodestar.git",
+    "directory": "packages/native"
+  },
+  "zapi": {
+    "binaryName": "bindings",
+    "step": "build-lib:bindings",
+    "targets": [
+      "aarch64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "x86_64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl"
+    ]
+  },
+  "dependencies": {
+    "@chainsafe/zapi": "4.1.0"
+  },
+  "devDependencies": {
+    "@chainsafe/benchmark": "2.1.0",
+    "@chainsafe/ssz": "^1.9.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

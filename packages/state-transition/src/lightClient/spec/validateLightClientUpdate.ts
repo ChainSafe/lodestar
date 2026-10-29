@@ -1,5 +1,5 @@
-import {PublicKey, Signature, fastAggregateVerify} from "@chainsafe/lodestar-z/blst";
 import {ChainForkConfig} from "@lodestar/config";
+import {PublicKey, Signature, fastAggregateVerify} from "@lodestar/native/blst";
 import {DOMAIN_SYNC_COMMITTEE, GENESIS_SLOT, MIN_SYNC_COMMITTEE_PARTICIPANTS} from "@lodestar/params";
 import {LightClientUpdate, Root, ssz} from "@lodestar/types";
 import type {ILightClientStore, SyncCommitteeFast} from "./store.js";

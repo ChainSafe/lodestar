@@ -64,7 +64,6 @@ docs/site
 **/.nyc_output
 **/coverage
 **/node_modules
-**/test
 **/lib
 **/.tmp
 **/dist
@@ -73,3 +72,15 @@ docs/site
 **/*.tsbuildinfo
 .idea
 .tmp
+# Zig build and fixture caches
+.zig-cache
+zig-pkg
+zig-out
+packages/native/zig-out
+packages/native/artifacts
+fixtures
+test/spec/spec_tests
+test/spec/test_case
+test/spec/ssz/generic_tests.zig
+test/spec/ssz/static_tests.zig
+test/spec/bls/spec_tests.zig

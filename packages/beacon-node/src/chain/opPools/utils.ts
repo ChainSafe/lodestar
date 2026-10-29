@@ -1,6 +1,6 @@
-import {Signature} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {DbBatch, Id, Repository} from "@lodestar/db";
+import {Signature} from "@lodestar/native/blst";
 import {BLS_WITHDRAWAL_PREFIX, DOMAIN_BEACON_ATTESTER, DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {AttesterSlashing, Domain, Slot, capella, phase0} from "@lodestar/types";

@@ -13,6 +13,32 @@
 - **Incremental commits** after review starts — do not force push unless maintainer requests it
 - **Communication style:** DO NOT use `—`. Keep communication succinct and human-friendly. NO AI SLOP VERBOSITY.
 
+## Zig and native bindings
+
+Zig sources live in `src/`, the TypeScript monorepo in `packages/`, and the Node.js
+addon in `packages/native/`. Run Zig commands from the repository root.
+`@lodestar/native` uses the root lockfile and shared Lerna version. Run its package commands with `pnpm --filter @lodestar/native`.
+
+- Use Zig 0.16.0 and follow [.gemini/styleguide.md](.gemini/styleguide.md).
+- Bound loops and allocations, avoid recursion, assert invariants, and fail fast.
+- Pair allocations with cleanup immediately and cover partial initialization errors.
+- Validate JavaScript-controlled lengths, indexes, encodings, and ownership at NAPI boundaries.
+- Keep JavaScript wrappers and declarations synchronized with native exports.
+- A module has at most one `test` block. Move additional tests to a sibling
+  `<module>_test.zig`, imported from the owning module. Keep private-internal tests inline;
+  never make declarations public solely to move tests. Run `zig build test:tidy`.
+- Do not edit generated spec tests. Regenerate with the corresponding `zig build run:write_*` step.
+- Run `zig fmt --check .`, `zig build test:tidy`, binding lint, and relevant module,
+  binding, or spec tests before pushing Zig or binding changes.
+- Use `pnpm --filter @lodestar/native prepare-mainnet` to rebuild the addon before binding tests.
+  `prepare-minimal` and `prepare-gnosis` select other presets. Do not share one output
+  directory between concurrent builds for different presets.
+- Surface candidate security-objective violations before consulting [THREAT_MODEL.md](THREAT_MODEL.md).
+  It is not an allowlist. Verify trust assumptions against the actual or planned call path.
+  If code and documentation conflict, report both the behavior and the documentation gap.
+- Update the threat model only when security objectives, trust assumptions, boundaries,
+  or caller obligations change. Document enduring preconditions beside their owning API.
+
 ## Project overview
 
 Lodestar is a TypeScript implementation of the Ethereum consensus client
@@ -36,6 +62,7 @@ and serves as:
   era/              # Era file handling for historical data
   fork-choice/      # Fork choice implementation (proto-array)
   logger/           # Logging utilities
+  native/           # Zig NAPI bindings, wrappers, and binding tests
   params/           # Consensus parameters and presets
   reqresp/          # libp2p request/response protocol
   spec-test-util/   # Test harness for consensus spec tests

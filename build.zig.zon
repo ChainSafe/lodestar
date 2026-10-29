@@ -1,0 +1,553 @@
+.{
+    .name = .lodestar_z,
+    .version = "0.0.0",
+    .fingerprint = 0xfe5cc37f635c4ea4,
+    .minimum_zig_version = "0.16.0",
+    .paths = .{
+        "LICENSE",
+        "build.zig",
+        "build.zig.zon",
+        "bench",
+        "packages/native",
+        "examples",
+        "scripts",
+        "src",
+        "test",
+    },
+    .description = "Zig consensus modules for Lodestar (Ethereum beacon chain client)",
+    .dependencies = .{
+        .zbuild = .{
+            .url = "git+https://github.com/chainsafe/zbuild.git#f7d5f19de09f2808e54acf599605f9e18c9bd804",
+            .hash = "zbuild-0.4.0-XJFav-1nAgDmfVY1nVSIIzbkcbuHZj7yMb7Fv8yvznPO",
+        },
+        .blst = .{
+            .url = "git+https://github.com/ChainSafe/blst.zig.git#4b13f897d72fe7c9168f0f0eccf055e3941f56c7",
+            .hash = "blst_zig-0.0.0-cnAxzmIPAADDM1ada7PDap4MdWbHWq-zpVsnJYTWWt3q",
+            .args = .{
+                .optimize = .ReleaseFast,
+                .portable = true,
+            },
+        },
+        .hashtree = .{
+            .url = "git+https://github.com/ChainSafe/hashtree-z.git#9b0fdad8f5159b8d7ccc3b5d74f18f63a3881482",
+            .hash = "hashtree-0.1.0-sBOovn0WAAC0xm013qX6iNDJGmZ3OVnomsF-F19Y_Yxy",
+        },
+        .snappy = .{
+            .url = "git+https://github.com/ChainSafe/snappy.zig#713942410426051da6107a955b29f3f152815622",
+            .hash = "snappy-0.1.0-n4AaquQ4AADQScvw9-i6SJvZTTagvxmGgGKnat4T_a4e",
+        },
+        .yaml = .{
+            .url = "git+https://github.com/ChainSafe/zig-yaml#b74f4e8113bee6d307c4f1fd0f190767c8196fc8",
+            .hash = "zig_yaml-0.1.0-C1161kFWAwDxjKAFmklKwWVDvz2mmq0Q__bDhGGjeyd3",
+        },
+        .zapi = .{
+            .url = "https://github.com/ChainSafe/zapi/archive/ff6e70e820781bda86d49bdb99fadc2d1d3bf3a0.tar.gz",
+            .hash = "zapi-4.1.0-rIqzUaUlBQAhcLLX5ucd8L0BfxosVdV5ywYO9rVb7gYT",
+        },
+        .zbench = .{
+            .url = "git+https://github.com/hendriknielaender/zBench#b2b89c475e3ef1bb2bd71255c80478a82d3e0ca8",
+            .hash = "zbench-0.13.0-YTdc7xVBAQCCMC-IdLLuotBeiNNNm8k9Pi2V4VYqrwfI",
+        },
+        .metrics = .{
+            .url = "git+https://github.com/karlseguin/metrics.zig.git#816dd1f6c1e67fa947e7e6310ca50f5ff49edde9",
+            .hash = "metrics-0.0.0-W7G4eLisAQDYpQvJy25olo-N1XcrgExt67RITrH43viY",
+        },
+        // TODO: Re-enable httpz + metrics_stf executable once karlseguin/http.zig supports Zig 0.16.0.
+        // See: https://github.com/karlseguin/http.zig/issues/175
+        // .httpz = .{
+        //     .url = "git+https://github.com/karlseguin/http.zig.git#2924ead41db9e1986db3b4909a82185c576f6361",
+        //     .hash = "httpz-0.0.0-PNVzrC7CBgDSMZNP7chgAczR3FyAz5Eum6Kb1_K9kmYR",
+        // },
+        .zio = .{
+            .url = "git+https://github.com/lalinsky/zio?ref=v0.14.0#aa860381beb42bc077e24ef304827cbdc23fcef9",
+            .hash = "zio-0.14.0-xHbVVPxFHgBCop4CvfF4u360kzWlHD4FS8Ud-RIkPcZ7",
+        },
+        .ere = .{
+            .url = "git+https://github.com/ChainSafe/ere.zig#66d27cc300e467cae55335f673fad13569bf56cf",
+            .hash = "ere_zig-0.1.0-UBcsLXo1AADfv1_PF3kwGLo9wx-O0Usjf-4SnZKi-3mM",
+        },
+    },
+    .options_modules = .{
+        .build_options = .{
+            .zero_hash_max_depth = .{
+                .type = .u8,
+                .description = "Maximum depth for the zero-hash table (optional; consumed as `?u8`).",
+            },
+            .preset = .{
+                .type = .string,
+                .default = "mainnet",
+                .description = "Consensus preset: \"mainnet\", \"minimal\" or \"gnosis\".",
+            },
+        },
+        .bls_options = .{
+            .thread_count = .{
+                .type = .u8,
+                .default = 0,
+                .description = "BLS thread pool size. 0 = auto (CPU count - 1).",
+            },
+        },
+        .download_era_options = .{
+            .era_base_url = .{
+                .type = .string,
+                .default = "https://mainnet.era.nimbus.team",
+                .description = "Base URL to download ERA files from.",
+            },
+            .era_files = .{
+                .type = .list,
+                .default = .{
+                    "mainnet-01628-47ac89fb.era",
+                    "mainnet-01629-f4b834bc.era",
+                },
+                .description = "ERA files to download.",
+            },
+            .era_out_dir = .{
+                .type = .string,
+                .default = "fixtures/era",
+                .description = "Local output directory for downloaded ERA files.",
+            },
+        },
+        .download_ere_fixture_options = .{
+            .ere_fixture_base_url = .{
+                .type = .string,
+                .default = "https://raw.githubusercontent.com/eth-act/ere/c0c411ae9215e0f72a00d52e32e267b30ef48606",
+                .description = "Base URL of the eth-act/ere tree (v0.19.2) that holds the verifier fixtures.",
+            },
+            .ere_fixture_out_dir = .{
+                .type = .string,
+                .default = "test/fixtures/ere",
+                .description = "Output directory for the ere verifier fixtures.",
+            },
+        },
+        .spec_test_options = .{
+            .spec_test_url = .{
+                .type = .string,
+                .default = "https://github.com/ethereum/consensus-specs",
+                .description = "Git repo URL for consensus spec tests.",
+            },
+            .spec_test_version = .{
+                .type = .string,
+                .default = "v1.7.0-beta.4",
+                .description = "Consensus spec tests version tag.",
+            },
+            // Keep the existing YAML corpus for invalid-encoding coverage alongside the JSON fixtures.
+            // Consensus releases dropped ssz_generic in alpha.14 (ethereum/consensus-specs#5524).
+            .ssz_generic_spec_test_version = .{
+                .type = .string,
+                .default = "v1.7.0-alpha.11",
+                .description = "Legacy YAML ssz_generic fixture tag.",
+            },
+            .ssz_spec_test_url = .{
+                .type = .string,
+                .default = "https://github.com/ethereum/ssz-specs",
+                .description = "Git repo URL for the SSZ generic JSON tests.",
+            },
+            .ssz_spec_test_version = .{
+                .type = .string,
+                .default = "v0.0.1.dev2",
+                .description = "SSZ generic JSON fixture tag.",
+            },
+            .ssz_spec_test_sha256 = .{
+                .type = .string,
+                .default = "d83a63d7dd39a843eeffbe073562d89c4e2448c85e9df0bbcee857bd9ad63d19",
+                .description = "SHA-256 of the pinned SSZ fixture archive.",
+            },
+            .spec_test_out_dir = .{
+                .type = .string,
+                .default = "test/spec/spec_tests",
+                .description = "Output directory for downloaded spec tests.",
+            },
+        },
+    },
+    // Preset bundles let CI keep using `-Dpreset=mainnet` / `-Dpreset=minimal`.
+    // Under new zbuild the raw flag maps to an options_module field via
+    // `-Dbuild_options.preset=...`; presets wrap that so shorter CLI still works.
+    .presets = .{
+        .mainnet = .{
+            .build_options = .{ .preset = "mainnet" },
+        },
+        .minimal = .{
+            .build_options = .{ .preset = "minimal" },
+        },
+        .gnosis = .{
+            .build_options = .{ .preset = "gnosis" },
+        },
+    },
+    .modules = .{
+        .constants = .{
+            .root_source_file = "src/constants/root.zig",
+        },
+        .hex = .{
+            .root_source_file = "src/hex.zig",
+        },
+        .time = .{
+            .root_source_file = "src/time.zig",
+        },
+        .bit_array = .{
+            .root_source_file = "src/bit_array/root.zig",
+        },
+        .bounded_array = .{
+            .root_source_file = "src/bounded_array.zig",
+        },
+        .diagnostics = .{
+            .root_source_file = "src/diagnostics.zig",
+        },
+        .clock = .{
+            .root_source_file = "src/clock/root.zig",
+            .imports = .{ .zio, .consensus_types, .bounded_array, .time },
+        },
+        .cpu_count = .{
+            .root_source_file = "src/cpu_count.zig",
+        },
+        .testing_allocators = .{
+            .root_source_file = "src/testing_allocators.zig",
+        },
+        .hashing = .{
+            .root_source_file = "src/hashing/root.zig",
+            .imports = .{ .build_options, .hex, .hashtree },
+        },
+        .preset = .{
+            .root_source_file = "src/preset/root.zig",
+            .imports = .{ .build_options, .constants },
+        },
+        .persistent_merkle_tree = .{
+            .root_source_file = "src/persistent_merkle_tree/root.zig",
+            .imports = .{ .build_options, .hex, .hashing },
+        },
+        .ssz = .{
+            .root_source_file = "src/ssz/root.zig",
+            .imports = .{ .build_options, .bit_array, .hex, .hashing, .persistent_merkle_tree, .testing_allocators },
+        },
+        .consensus_types = .{
+            .root_source_file = "src/consensus_types/root.zig",
+            .imports = .{ .build_options, .ssz, .constants, .preset },
+        },
+        .config = .{
+            .root_source_file = "src/config/root.zig",
+            .imports = .{ .build_options, .preset, .consensus_types, .hex, .constants },
+        },
+        .fork_types = .{
+            .root_source_file = "src/fork_types/root.zig",
+            .imports = .{ .consensus_types, .constants, .config, .persistent_merkle_tree, .preset, .ssz },
+        },
+        .bls = .{
+            .root_source_file = "src/bls/root.zig",
+            .imports = .{.blst},
+        },
+        .swap_or_not_shuffle = .{
+            .root_source_file = "src/swap_or_not_shuffle/root.zig",
+            .imports = .{.blst},
+        },
+        .state_transition = .{
+            .root_source_file = "src/state_transition/root.zig",
+            .imports = .{
+                .diagnostics,
+                .build_options,
+                .bounded_array,
+                .swap_or_not_shuffle,
+                .ssz,
+                .config,
+                .consensus_types,
+                .bls,
+                .fork_types,
+                .preset,
+                .constants,
+                .hex,
+                .persistent_merkle_tree,
+                .metrics,
+                .hashing,
+                .time,
+            },
+        },
+        .era = .{
+            .root_source_file = "src/era/root.zig",
+            .imports = .{ .consensus_types, .config, .fork_types, .preset, .state_transition, .snappy, .persistent_merkle_tree },
+        },
+        .fork_choice = .{
+            .root_source_file = "src/fork_choice/root.zig",
+            .imports = .{ .consensus_types, .config, .preset, .state_transition, .fork_types, .hex, .constants, .metrics, .time },
+        },
+        .beacon_node = .{
+            .root_source_file = "src/beacon_node/root.zig",
+            .imports = .{ .consensus_types, .state_transition, .persistent_merkle_tree, .testing_allocators, .metrics, .hex, .time },
+        },
+        .ere_verifier = .{
+            .root_source_file = "src/ere_verifier/root.zig",
+            .imports = .{.ere},
+        },
+    },
+    .executables = .{
+        .download_era_files = .{
+            .root_module = .{
+                .root_source_file = "scripts/download_era_files.zig",
+                .imports = .{.download_era_options},
+            },
+        },
+        .download_ere_fixtures = .{
+            .root_module = .{
+                .root_source_file = "scripts/download_ere_fixtures.zig",
+                .imports = .{.download_ere_fixture_options},
+            },
+        },
+        // TODO: Re-enable metrics_stf once karlseguin/http.zig supports Zig 0.16.0.
+        // See: https://github.com/karlseguin/http.zig/issues/175
+        // .metrics_stf = .{
+        //     .root_module = .{
+        //         .root_source_file = "examples/metrics.zig",
+        //         .imports = .{
+        //             .consensus_types,
+        //             .fork_types,
+        //             .state_transition,
+        //             .download_era_options,
+        //             .era,
+        //             .config,
+        //             .preset,
+        //             .httpz,
+        //         },
+        //     },
+        // },
+        .download_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/download_spec_tests.zig",
+                .imports = .{.spec_test_options},
+            },
+        },
+        .download_ssz_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/download_ssz_spec_tests.zig",
+                .imports = .{.spec_test_options},
+            },
+        },
+        .write_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/write_spec_tests.zig",
+                .imports = .{ .spec_test_options, .config, .preset, .consensus_types, .state_transition },
+            },
+        },
+        .write_ssz_generic_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/ssz/write_generic_tests.zig",
+                .imports = .{.spec_test_options},
+            },
+        },
+        .write_ssz_static_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/ssz/write_static_tests.zig",
+                .imports = .{.spec_test_options},
+            },
+        },
+        .write_bls_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/bls/write_spec_tests.zig",
+                .imports = .{.spec_test_options},
+            },
+        },
+        .bench_ssz_attestation = .{
+            .root_module = .{
+                .root_source_file = "bench/ssz/attestation.zig",
+                .imports = .{ .config, .consensus_types, .download_era_options, .era, .ssz, .zbench },
+            },
+        },
+        .bench_ssz_block = .{
+            .root_module = .{
+                .root_source_file = "bench/ssz/block.zig",
+                .imports = .{ .config, .consensus_types, .download_era_options, .era, .ssz, .zbench },
+            },
+        },
+        .bench_ssz_state = .{
+            .root_module = .{
+                .root_source_file = "bench/ssz/state.zig",
+                .imports = .{ .config, .consensus_types, .download_era_options, .era, .ssz, .zbench },
+            },
+        },
+        .bench_list_chunked_leaf = .{
+            .root_module = .{
+                .root_source_file = "bench/ssz/list_chunked_leaf.zig",
+                .imports = .{ .persistent_merkle_tree, .ssz, .zbench },
+            },
+        },
+        .bench_merkle_gindex = .{
+            .root_module = .{
+                .root_source_file = "bench/ssz/gindex.zig",
+                .imports = .{ .hashing, .persistent_merkle_tree, .zbench },
+            },
+        },
+        .bench_merkle_node = .{
+            .root_module = .{
+                .root_source_file = "src/persistent_merkle_tree/node_bench.zig",
+                .imports = .{ .hashing, .zbench },
+            },
+        },
+        .bench_hashing = .{
+            .root_module = .{
+                .root_source_file = "bench/ssz/hashing.zig",
+                .imports = .{ .hashing, .zbench },
+            },
+        },
+        .bench_process_block = .{
+            .root_module = .{
+                .root_source_file = "bench/state_transition/process_block.zig",
+                .imports = .{ .state_transition, .fork_types, .consensus_types, .config, .zbench, .persistent_merkle_tree, .download_era_options, .era, .time },
+                .strip = false,
+                .omit_frame_pointer = false,
+            },
+        },
+        .bench_process_epoch = .{
+            .root_module = .{
+                .root_source_file = "bench/state_transition/process_epoch.zig",
+                .imports = .{ .state_transition, .fork_types, .consensus_types, .config, .zbench, .persistent_merkle_tree, .download_era_options, .era, .time },
+            },
+        },
+        .bench_flat_cache = .{
+            .root_module = .{
+                .root_source_file = "bench/state_transition/flat_cache.zig",
+                .imports = .{ .state_transition, .fork_types, .config, .persistent_merkle_tree, .time },
+            },
+        },
+        .bench_locality_decay = .{
+            .root_module = .{
+                .root_source_file = "bench/state_transition/locality_decay.zig",
+                .imports = .{ .state_transition, .fork_types, .consensus_types, .config, .persistent_merkle_tree, .time },
+            },
+        },
+        .bench_fork_choice_compute_deltas = .{
+            .root_module = .{
+                .root_source_file = "bench/fork_choice/compute_deltas.zig",
+                .imports = .{ .fork_choice, .state_transition, .config, .constants, .zbench },
+            },
+        },
+        .bench_fork_choice_on_attestation = .{
+            .root_module = .{
+                .root_source_file = "bench/fork_choice/on_attestation.zig",
+                .imports = .{ .fork_choice, .fork_types, .consensus_types, .state_transition, .config, .constants, .zbench },
+            },
+        },
+        .bench_fork_choice_update_head = .{
+            .root_module = .{
+                .root_source_file = "bench/fork_choice/update_head.zig",
+                .imports = .{ .fork_choice, .state_transition, .config, .constants, .zbench },
+            },
+        },
+    },
+    .libraries = .{
+        .bindings = .{
+            .root_module = .{
+                .root_source_file = "packages/native/napi/root.zig",
+                .imports = .{
+                    .bls,
+                    .bls_options,
+                    .cpu_count,
+                    .swap_or_not_shuffle,
+                    .hex,
+                    .persistent_merkle_tree,
+                    .ssz,
+                    .consensus_types,
+                    .constants,
+                    .preset,
+                    .config,
+                    .fork_types,
+                    .state_transition,
+                    .hex,
+                    .ere_verifier,
+                    "zapi:zapi",
+                },
+            },
+            .linkage = .dynamic,
+            .linker_allow_shlib_undefined = true,
+            .dest_sub_path = "bindings.node",
+        },
+    },
+    .tests = .{
+        // Per-module unit tests (mirror the old auto-generated `test:<module>` steps).
+        .constants = .{ .root_module = .constants },
+        .hex = .{ .root_module = .hex },
+        .bit_array = .{ .root_module = .bit_array },
+        .bounded_array = .{ .root_module = .bounded_array },
+        .diagnostics = .{ .root_module = .diagnostics },
+        .cpu_count = .{ .root_module = .cpu_count },
+        .hashing = .{ .root_module = .hashing },
+        .preset = .{ .root_module = .preset },
+        .persistent_merkle_tree = .{ .root_module = .persistent_merkle_tree },
+        .ssz = .{ .root_module = .ssz },
+        .consensus_types = .{ .root_module = .consensus_types },
+        .config = .{ .root_module = .config },
+        .fork_types = .{ .root_module = .fork_types },
+        .bls = .{ .root_module = .bls },
+        .swap_or_not_shuffle = .{ .root_module = .swap_or_not_shuffle },
+        .state_transition = .{ .root_module = .state_transition },
+        .era = .{ .root_module = .era },
+        .fork_choice = .{ .root_module = .fork_choice },
+        .clock = .{ .root_module = .clock },
+        .beacon_node = .{ .root_module = .beacon_node },
+        .ere_verifier = .{ .root_module = .ere_verifier },
+        .bindings_allocator = .{
+            .root_module = .{
+                .root_source_file = "packages/native/napi/tracked_allocator.zig",
+                .imports = .{.persistent_merkle_tree},
+            },
+        },
+
+        .tidy = .{
+            .root_module = .{
+                .root_source_file = "test/tidy.zig",
+            },
+        },
+
+        .int = .{
+            .root_module = .{
+                .root_source_file = "test/int/era/root.zig",
+                .imports = .{
+                    .config,
+                    .download_era_options,
+                    .era,
+                },
+            },
+        },
+        .spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/root.zig",
+                .imports = .{
+                    .spec_test_options,
+                    .consensus_types,
+                    .config,
+                    .fork_types,
+                    .preset,
+                    .snappy,
+                    .state_transition,
+                    .ssz,
+                    .bls,
+                    .persistent_merkle_tree,
+                    .hex,
+                    .yaml,
+                },
+            },
+        },
+        .ssz_generic_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/ssz/generic_tests.zig",
+                .imports = .{ .hex, .snappy, .persistent_merkle_tree, .ssz, .spec_test_options, .yaml },
+            },
+        },
+        .ssz_static_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/ssz/static_tests.zig",
+                .imports = .{ .hex, .snappy, .persistent_merkle_tree, .ssz, .build_options, .spec_test_options, .consensus_types, .yaml },
+            },
+        },
+        .bls_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/bls/spec_tests.zig",
+                .imports = .{ .bls, .hex, .yaml, .spec_test_options },
+            },
+        },
+    },
+    .aliases = .{
+        .bench_ssz = .{
+            .description = "Run the bench_ssz_* benchmarks",
+            .depends_on = .{
+                "run:bench_ssz_attestation",
+                "run:bench_ssz_block",
+                "run:bench_ssz_state",
+            },
+        },
+    },
+}

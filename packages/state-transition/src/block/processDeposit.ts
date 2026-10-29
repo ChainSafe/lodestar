@@ -1,10 +1,10 @@
+import {BeaconConfig} from "@lodestar/config";
 import {
   BLS_VERIFIER_MAX_BATCH_SIZE,
   BLS_VERIFIER_SET_TYPE,
   type BlsSignatureSet,
   verifySignatureSets,
-} from "@chainsafe/lodestar-z/bls-verifier";
-import {BeaconConfig} from "@lodestar/config";
+} from "@lodestar/native/bls-verifier";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   DOMAIN_DEPOSIT,

@@ -43,7 +43,7 @@ jobs:
           check-latest: true
           cache: pnpm
 
-      # Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+      # Required to build the @lodestar/native workspace package
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: 0.16.0
