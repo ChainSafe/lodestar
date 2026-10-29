@@ -132,7 +132,7 @@ nohup ./lodestar beacon --network sepolia --dataDir "$WORK/sepolia-data" \
   > "$WORK/sepolia-data.log" 2>&1 &
 ```
 
-A proof type holds one key at a time. Once the provers move to the v0.19.0 keys for types 1 to 6, switch those entries to the explicit form with the new files until the spec table follows. OpenVM proofs verify across `ere` releases because its version did not change; SP1 and ZisK proofs only verify with a verifier built for the same SP1 or ZisK version the prover used.
+A proof type holds one key at a time. Once the provers move to the v0.19.0 keys for types 1 to 6, switch those entries to the explicit form with the new files until the spec table follows. Verifier and prover versions matter per zkVM. In CI the ERE v0.19.2 verifier accepted OpenVM and SP1 proofs from the v0.19.6 provers, but every ZisK proof failed because the ZisK release behind it changed, so keep the ZisK release of your verifier in step with the provers you follow.
 
 ### 5. Check that it works
 
