@@ -77,6 +77,25 @@ describe("NativeProofEngine", () => {
       [3, 2, vk],
     ]);
     expect([...engine.verifiableProofTypes]).toEqual([1, 2, 3]);
+    expect([...engine.supportedProofTypes]).toEqual([1, 2, 3]);
+  });
+
+  it("registers an explicit assignment without consulting the table and supports its type", () => {
+    const otherKey = Uint8Array.from([4, 3, 2, 1]);
+    const engine = new NativeProofEngine(
+      [
+        {proofType: 2, verificationKey: toHex(otherKey), zkvm: "zisk"},
+        {proofType: 8, verificationKey: toHex(otherKey), zkvm: "sp1"},
+      ],
+      null
+    );
+
+    expect(verifier.registerExecutionProofVerifier.mock.calls).toEqual([
+      [2, 2, otherKey],
+      [8, 1, otherKey],
+    ]);
+    expect([...engine.verifiableProofTypes]).toEqual([2, 8]);
+    expect([...engine.supportedProofTypes]).toEqual([1, 2, 3, 8]);
   });
 
   it("refuses a proof type without an assignment", () => {

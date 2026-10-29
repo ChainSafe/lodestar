@@ -33,6 +33,7 @@ Edgington
 Erigon
 Esat
 EthPandaOps
+ethrex
 EthStaker
 EtherScan
 Ethereum
@@ -77,16 +78,20 @@ MEV
 MacOS
 Metamask
 MevBoost
+minisign
 ModuleNotFoundError
 Monorepo
+nimbus
 NPM
 NVM
 Nethermind
 Nim
 NodeJS
 NodeSource
+OpenVM
 OSI
 PR
+provers
 PRs
 Plaintext
 PoS
@@ -117,6 +122,7 @@ VM
 Vitalik
 Vitest
 Wagyu
+zesu
 Zig
 addons
 api
@@ -273,4 +279,7 @@ xcode
 yaml
 yamux
 yml
+zilkworm
+ZisK
+zkboost
 zkVM
