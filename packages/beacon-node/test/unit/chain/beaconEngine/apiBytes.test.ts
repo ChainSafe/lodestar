@@ -159,7 +159,7 @@ describe("BeaconEngineCore API bytes", () => {
       create: validationCase(
         ssz.gloas.SignedExecutionPayloadBid,
         undefined,
-        (core, bytes) => core.validateApiExecutionPayloadBidBytes(bytes),
+        (core, bytes) => core.validateApiExecutionPayloadBidBytes(bytes, ForkName.gloas, 0),
         (facade, bytes, value) => facade.validateApiExecutionPayloadBid(bytes, value),
         (core, validate) => vi.spyOn(core, "validateApiExecutionPayloadBid").mockImplementation(validate)
       ),

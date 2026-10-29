@@ -98,6 +98,7 @@ export interface IBeaconChainDb {
 export type IBeaconDb = IBeaconChainDb &
   IBeaconEngineDb & {
     init(): Promise<void>;
+    compactLegacyDataColumns(prunedBeforeSlot: Slot, minSizeBytes?: number): Promise<void>;
     pruneHotDb(): Promise<void>;
 
     deleteDeprecatedEth1Data(): Promise<void>;

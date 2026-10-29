@@ -4,6 +4,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {MAX_PENDING_DEPOSITS_PER_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   computeWeakSubjectivitySummaryFromStateBytes,
+  getSlotDurations,
   getValidatorCountFromStateBytes,
   isWithinWeakSubjectivityPeriodFromSummary,
   readBeaconStateBytesMetadata,
@@ -129,7 +130,9 @@ function preparePubkeyCache(stateInit: StateInitialization, pubkeysFile: string,
   // over a year at organic rates, to avoid routine cache reallocations. Cache growth is protected
   // by its native lock; if this headroom is exceeded, it grows by the same fixed step.
   // The view syncs pubkeys during construction, so capacity must be reserved first.
-  const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
+  const headroomEpochs =
+    (90 * 24 * 60 * 60 * 1000) /
+    (Math.min(...getSlotDurations(config).map(([, slotDurationMs]) => slotDurationMs)) * SLOTS_PER_EPOCH);
   const pubkeyCacheCapacity = validatorCount + MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
   loadPubkeysFile(pubkeyCache, pubkeysFile, pubkeyCacheCapacity, config, stateBytes, validatorCount, logger);
   // unilaterally expand capacity after best-effort pubkey file loading

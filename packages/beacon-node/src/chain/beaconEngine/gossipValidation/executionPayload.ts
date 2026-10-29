@@ -280,16 +280,22 @@ export async function validateGossipExecutionPayloadBid(
   }
 }
 
-/**
- * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/executionPayloadBid.ts#validateApiExecutionPayloadBid.
- * Handler source: unstable@0edec865c8 packages/beacon-node/src/api/impl/beacon/blocks/index.ts#publishExecutionPayloadBid.
- * [beacon-engine] deviation: return a validation verdict; API orchestration remains in the caller.
- */
+/** Source: unstable@4671dbfa39 api/impl/beacon/blocks/index.ts#publishExecutionPayloadBid. */
 export function validateApiExecutionPayloadBid(
   this: BeaconEngineCore,
-  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
+  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+  seenTimestampSec: number
 ): Promise<GossipValidationResult<void>> {
-  return runGossipValidation(() =>
-    executionPayloadBidValidation.validateApiExecutionPayloadBid.call(this, signedExecutionPayloadBid)
-  );
+  return runGossipValidation(async () => {
+    const {proposerIndex} = await executionPayloadBidValidation.validateGossipExecutionPayloadBid.call(
+      this,
+      signedExecutionPayloadBid
+    );
+    const insertOutcome = this.executionPayloadBidPool.add(
+      signedExecutionPayloadBid,
+      Math.floor(this.clock.secFromSlot(signedExecutionPayloadBid.message.slot, seenTimestampSec) * 1000)
+    );
+    this.metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
+    this.validatorMonitor?.registerExecutionPayloadBid(OpSource.api, proposerIndex, signedExecutionPayloadBid.message);
+  });
 }

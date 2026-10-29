@@ -239,7 +239,11 @@ async function importPayloadEnvelopesOfKnownBlocks(
     return result;
   }
 
-  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(payloadInputs, new AbortController().signal);
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(
+    this.config,
+    payloadInputs,
+    new AbortController().signal
+  );
   for (let i = 0; i < payloadInputs.length; i++) {
     this.logger.debug("Importing payload envelope of known block", {
       slot: payloadInputs[i].slot,

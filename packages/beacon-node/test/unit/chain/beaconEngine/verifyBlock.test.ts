@@ -100,6 +100,16 @@ describe("BeaconEngineCore block execution verification", () => {
     vi.useRealTimers();
   });
 
+  it.each([
+    {opts: {}, expected: 12.75},
+    {opts: {seenTimestampSec: 3.5}, expected: 3.5},
+  ])("preserves the fractional seen timestamp $expected", async ({opts, expected}) => {
+    vi.spyOn(Date, "now").mockReturnValue(12_750);
+    const input = bellatrixInput();
+    await verifyEngineBlocks.call(core, serializeBlocks(input), {...opts, validSignatures: true});
+    expect(core.verifiedBlocks.get(signedRoot(input))?.seenTimestampSec).toBe(expected);
+  });
+
   it.each(["verifyBlocksBytes", "validateApiBlockBytes"] as const)(
     "%s records conflicting headers, but only normal processing schedules a slashing",
     async (method) => {
@@ -832,6 +842,16 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(discard).toHaveBeenCalledExactlyOnceWith(
       inputs.map((input) => computeSignedBlockRoot(input.forkName, input.getBlock()))
     );
+  });
+
+  it.each([
+    {opts: {}, expected: 12.75},
+    {opts: {seenTimestampSec: 3.5}, expected: 3.5},
+  ])("preserves the fractional seen timestamp $expected", async ({opts, expected}) => {
+    vi.spyOn(Date, "now").mockReturnValue(12_750);
+    const input = bellatrixInput();
+    await verifyEngineBlocks.call(core, serializeBlocks(input), {...opts, validSignatures: true});
+    expect(core.verifiedBlocks.get(signedRoot(input))?.seenTimestampSec).toBe(expected);
   });
 
   it.each(["verifyBlocksBytes", "validateApiBlockBytes"] as const)(

@@ -2,7 +2,12 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateAllForks, BeaconStateFulu, BeaconStateView} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  BeaconStateFulu,
+  BeaconStateView,
+  computeAnchorCheckpoint,
+} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {SYNC_TOLERANCE_EPOCHS} from "../../../../../../src/api/impl/utils.js";
@@ -179,6 +184,24 @@ describe("get proposers api impl", () => {
     const expected = toRootHex(new BeaconStateView(cachedState).getBlockRootAtSlot(currentSlot - 1));
     expect(v1.meta.dependentRoot).toBe(expected);
     expect(v2.meta.dependentRoot).toBe(expected);
+  });
+
+  it("should use the genesis block root as dependent root at genesis", async () => {
+    vi.setSystemTime(0);
+    initializeState(0);
+    modules.chain.getHeadState.mockReturnValue(new BeaconStateView(cachedState));
+    const genesisBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    genesisBlock.message.stateRoot = state.hashTreeRoot();
+    modules.chain.getCanonicalBlockAtSlot.mockResolvedValue({
+      block: ssz.fulu.SignedBeaconBlock.serialize(genesisBlock),
+      slot: 0,
+      executionOptimistic: false,
+      finalized: true,
+    });
+
+    const {meta} = (await api.getProposerDutiesV2({epoch: 0})) as {meta: {dependentRoot: string}};
+
+    expect(meta.dependentRoot).toBe(toRootHex(computeAnchorCheckpoint(config, state).checkpoint.root));
   });
 
   it("should get v1 proposers for next epoch from a mid-epoch head state", async () => {

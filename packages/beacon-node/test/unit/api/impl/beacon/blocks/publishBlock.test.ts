@@ -6,6 +6,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {BeaconEngineCore} from "../../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {GossipValidationStatus} from "../../../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {
@@ -34,7 +35,7 @@ describe("api - beacon - publishBlockV2", () => {
   let modules: ApiTestModules;
 
   function getApi() {
-    return getBeaconBlockApi({...modules, chain: withBeaconEngineFacade(modules.chain)});
+    return getBeaconBlockApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
   }
 
   beforeEach(() => {
@@ -477,7 +478,7 @@ describe("api - beacon - publishBlockV2", () => {
     await expect(
       api.publishBlockV2({
         signedBlockContents: {signedBlock: block, blobs, kzgProofs},
-        broadcastValidation: routes.beacon.BroadcastValidation.none,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       })
     ).resolves.toBeUndefined();
 

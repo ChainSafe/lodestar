@@ -117,6 +117,6 @@ export async function processExecutionPayload(
   signal: AbortSignal,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
-  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], signal);
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(this.config, [payloadInput], signal);
   await importExecutionPayload.call(this, payloadInput, dataAvailabilityStatuses[0], opts);
 }

@@ -202,7 +202,7 @@ async function verifyBlocksImpl(
         indexedAttestations: indexedAttestationsByBlock[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         parentBlockSlot: i === 0 ? parentBlock.slot : blocks[i - 1].message.slot,
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+        seenTimestampSec: opts.seenTimestampSec ?? Date.now() / 1000,
       };
     });
 

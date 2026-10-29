@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {fromHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import type {IBeaconEngine} from "../../../../../../src/chain/interface.js";
 import {withBeaconEngineFacade} from "../../../../../mocks/mockedBeaconChain.js";
 import {getApiTestModules} from "../../../../../utils/api.js";
@@ -16,7 +17,7 @@ describe("api - beacon - getBlockHeaders", () => {
     const chain = withBeaconEngineFacade(modules.chain);
     getBlockHeaders.mockReset();
     chain.beaconEngine.getBlockHeaders = getBlockHeaders;
-    api = getBeaconBlockApi({...modules, chain});
+    api = getBeaconBlockApi(defaultApiOptions, {...modules, chain});
   });
 
   it.each([{}, {slot: 0}, {parentRoot}, {slot: 1, parentRoot}])(

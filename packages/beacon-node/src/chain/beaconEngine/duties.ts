@@ -14,6 +14,7 @@ import {
   calculateCommitteeAssignments,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  getInclusionListCommittee,
   isStatePostAltair,
   isStatePostGloas,
   proposerShufflingDecisionRoot,
@@ -130,7 +131,7 @@ export async function getProposerDuties(
   }
   if (dependentRoot === null) {
     this.logger.verbose("Proposer duties decision root not in state, falling back to genesis block root", logCtx);
-    dependentRoot = genesisBlockRoot.call(this, state);
+    dependentRoot = await genesisBlockRoot.call(this, state);
   }
   this.logger.verbose("Computed proposer duties decision root", {...logCtx, dependentRoot: toRootHex(dependentRoot)});
 
@@ -175,7 +176,7 @@ export async function getAttesterDuties(
     }
   }
 
-  const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || genesisBlockRoot.call(this, state);
+  const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
   return {data, dependentRoot, head};
 }
 
@@ -246,7 +247,8 @@ export async function getPtcDuties(
     }
   }
 
-  const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || genesisBlockRoot.call(this, state);
+  const dependentRootEpoch = epoch === this.config.GLOAS_FORK_EPOCH ? epoch + 1 : epoch;
+  const dependentRoot = fromHex(state.getShufflingDecisionRoot(dependentRootEpoch));
   return {data, dependentRoot, head};
 }
 
@@ -292,10 +294,9 @@ async function waitForCheckpointState(
 /**
  * Compute and cache the genesis block root for the duty dependent-root fallback.
  * Source: unstable@551b8b0a3d packages/beacon-node/src/api/impl/validator/index.ts#getGenesisBlockRoot.
- * [beacon-engine] deviation: synchronous state-only lookup with a module-private cache per engine;
- * omit the upstream canonical-block DB lookup and retain the ZERO_HASH fallback when unavailable.
+ * [beacon-engine] deviation: cache per engine and resolve archived block bytes through the engine DB.
  */
-function genesisBlockRoot(this: BeaconEngineCore, state: IBeaconStateView): Root {
+async function genesisBlockRoot(this: BeaconEngineCore, state: IBeaconStateView): Promise<Root> {
   let root = genesisBlockRoots.get(this);
   if (!root) {
     // Close to genesis the genesis block may not be available in the DB
@@ -303,6 +304,12 @@ function genesisBlockRoot(this: BeaconEngineCore, state: IBeaconStateView): Root
       root = state.computeAnchorCheckpoint().checkpoint.root;
     } else if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
       root = state.getBlockRootAtSlot(GENESIS_SLOT);
+    } else {
+      const blockRes = await this.getCanonicalBlockAtSlot(GENESIS_SLOT);
+      if (blockRes) {
+        const forkTypes = this.config.getForkTypes(blockRes.slot);
+        root = forkTypes.BeaconBlock.hashTreeRoot(forkTypes.SignedBeaconBlock.deserialize(blockRes.block).message);
+      }
     }
     if (root) {
       genesisBlockRoots.set(this, root);
@@ -462,4 +469,46 @@ function getValidatorBlockError(this: BeaconEngineCore, blockRoot: Root): Produc
     };
   }
   return null;
+}
+
+/** Source: unstable@4671dbfa39 api/impl/validator/index.ts#getInclusionListCommitteeDuties. */
+export async function getInclusionListCommitteeDuties(
+  this: BeaconEngineCore,
+  epoch: Epoch,
+  indices: ValidatorIndex[],
+  currentEpoch: Epoch,
+  getHeadStateAtEpoch: GetHeadStateAtEpoch
+): Promise<{data: routes.validator.InclusionListDuty[]; dependentRoot: Root; head: ProtoBlock}> {
+  const head = this.forkChoice.getHead();
+  const state = await getHeadStateAtEpoch(currentEpoch, RegenCaller.getDuties);
+
+  const pubkeys = getPubkeysForIndices(state, indices);
+  const requestedIndices = new Set(indices);
+  const epochStartSlot = computeStartSlotAtEpoch(epoch);
+  const shuffling = state.getShufflingAtEpoch(epoch);
+
+  // Validators set this as `dependent_root` on their inclusion lists
+  const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
+
+  // A validator can be on several slots' committees in an epoch; report the earliest, as for attester duties
+  const dutySlotByValidator = new Map<ValidatorIndex, Slot>();
+  for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+    const slot = epochStartSlot + i;
+    for (const validatorIndex of getInclusionListCommittee(shuffling, slot).validatorIndices) {
+      if (requestedIndices.has(validatorIndex) && !dutySlotByValidator.has(validatorIndex)) {
+        dutySlotByValidator.set(validatorIndex, slot);
+      }
+    }
+  }
+
+  const duties: routes.validator.InclusionListDuty[] = [];
+  for (let i = 0; i < indices.length; i++) {
+    const validatorIndex = indices[i];
+    const slot = dutySlotByValidator.get(validatorIndex);
+    if (slot !== undefined) {
+      duties.push({pubkey: pubkeys[i], validatorIndex, slot, dependentRoot});
+    }
+  }
+
+  return {data: duties, dependentRoot, head};
 }

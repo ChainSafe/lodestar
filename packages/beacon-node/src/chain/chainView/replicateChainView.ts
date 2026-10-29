@@ -157,11 +157,17 @@ export class ReplicateChainView implements IChainView {
   }
 
   getBlockSummariesAtSlot(slot: Slot): ChainViewBlock[] {
-    return this.getBlocks().filter((block) => block.slot === slot);
+    return this.getBlocks().filter(
+      (block) =>
+        block.slot === slot && (block.parentBlockHash === null || block.payloadStatus === PayloadStatus.PENDING)
+    );
   }
 
   getBlockSummariesByParentRoot(root: RootHex): ChainViewBlock[] {
-    return this.getBlocks().filter((block) => block.parentRoot === root);
+    return this.getBlocks().filter(
+      (block) =>
+        block.parentRoot === root && (block.parentBlockHash === null || block.payloadStatus === PayloadStatus.PENDING)
+    );
   }
 
   isDescendant(

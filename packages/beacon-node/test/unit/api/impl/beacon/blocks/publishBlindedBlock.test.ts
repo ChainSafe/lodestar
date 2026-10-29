@@ -7,6 +7,7 @@ import {signedBeaconBlockToBlinded} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {SubmitBlindedBlockResponse} from "../../../../../../src/chain/beaconEngine/interface.js";
 import {
   BlockInputBlobs,
@@ -47,9 +48,12 @@ describe.each([false, true])("api - beacon - publishBlindedBlockV2 (response byt
         })
       );
       modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+      modules.chain.beaconEngine.validateGossipBlock = vi
+        .fn()
+        .mockResolvedValue({err: null, result: {skippedSlots: 0}});
 
-      const publishing = getBeaconBlockApi(modules).publishBlindedBlockV2(
-        {signedBlindedBlock, broadcastValidation: routes.beacon.BroadcastValidation.none},
+      const publishing = getBeaconBlockApi(defaultApiOptions, modules).publishBlindedBlockV2(
+        {signedBlindedBlock, broadcastValidation: routes.beacon.BroadcastValidation.gossip},
         {sszBytes: sszRequest ? bytes : null}
       );
       expect(submit).toHaveBeenCalledExactlyOnceWith(bytes, signedBlindedBlock, ForkName.capella);
@@ -79,6 +83,7 @@ describe.each([false, true])("api - beacon - publishBlindedBlockV2 (response byt
     modules.network.publishBeaconBlock = vi.fn();
     modules.network.publishBlobSidecar = vi.fn();
     modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+    modules.chain.beaconEngine.validateGossipBlock = vi.fn().mockResolvedValue({err: null, result: {skippedSlots: 0}});
     const contents = ssz.deneb.SignedBlockContents.defaultValue();
     contents.signedBlock.message.body.blobKzgCommitments.push(ssz.deneb.KZGCommitment.defaultValue());
     contents.blobs.push(ssz.deneb.Blob.defaultValue());
@@ -102,9 +107,9 @@ describe.each([false, true])("api - beacon - publishBlindedBlockV2 (response byt
     const deserialize = vi.spyOn(ssz.deneb.SignedBlockContents, "deserialize");
     const serialize = vi.spyOn(ssz.deneb.SignedBlockContents, "serialize");
     const serializeBlock = vi.spyOn(ssz.deneb.SignedBeaconBlock, "serialize");
-    await getBeaconBlockApi(modules).publishBlindedBlockV2({
+    await getBeaconBlockApi(defaultApiOptions, modules).publishBlindedBlockV2({
       signedBlindedBlock: signedBeaconBlockToBlinded(config, contents.signedBlock),
-      broadcastValidation: routes.beacon.BroadcastValidation.none,
+      broadcastValidation: routes.beacon.BroadcastValidation.gossip,
     });
     expect(deserialize).not.toHaveBeenCalled();
     expect(serialize).not.toHaveBeenCalled();
@@ -145,7 +150,7 @@ describe.each([false, true])("api - beacon - publishBlindedBlockV2 (response byt
       const response = defer<void>();
       const submit = vi.fn().mockReturnValue(response.promise);
       modules.chain.beaconEngine.submitBlindedBlockNoResponse = submit;
-      const publishing = getBeaconBlockApi(modules).publishBlindedBlockV2(
+      const publishing = getBeaconBlockApi(defaultApiOptions, modules).publishBlindedBlockV2(
         {signedBlindedBlock},
         {sszBytes: sszRequest ? bytes : null}
       );
@@ -157,7 +162,10 @@ describe.each([false, true])("api - beacon - publishBlindedBlockV2 (response byt
       expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
 
       submit.mockResolvedValueOnce(undefined);
-      await getBeaconBlockApi(modules).publishBlindedBlockV2({signedBlindedBlock}, {sszBytes: bytes});
+      await getBeaconBlockApi(defaultApiOptions, modules).publishBlindedBlockV2(
+        {signedBlindedBlock},
+        {sszBytes: bytes}
+      );
       expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
     }
   );

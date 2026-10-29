@@ -305,8 +305,7 @@ export function getBeaconPoolApi({
         signatures.map(async (signature, i) => {
           try {
             // Engine verifies the signature (allowing late API messages), resolves committee membership,
-            // inserts into its (internal) pool, and returns the subnets to broadcast to (empty if this
-            // validator isn't in the sync committee).
+            // inserts into its (internal) pool, and returns the subnets to broadcast to.
             const res = await chain.beaconEngine.validateApiSyncCommittee(signatureBytes[i], signature);
             if (res.err !== null) {
               failures.push({index: i, message: res.err.error?.message ?? res.err.code});

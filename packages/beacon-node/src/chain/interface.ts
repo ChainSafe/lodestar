@@ -28,6 +28,7 @@ import {
   deneb,
   type fulu,
   gloas,
+  heze,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -72,7 +73,7 @@ import {ReprocessController} from "./reprocess.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
 
-export {BlockType, type AssembledBlockType, type ProposerPreparationData};
+export {type AssembledBlockType, BlockType, type ProposerPreparationData};
 export type BlockHash = RootHex;
 
 export type StateGetOpts = {
@@ -232,6 +233,7 @@ export interface IBeaconEngine
     | "produceSyncCommitteeContribution"
     | "getPayloadAttestationBlock"
     | "validateGossipBlockBytes"
+    | "validateGossipInclusionListBytes"
     | "validateGossipAggregateAndProofBytes"
     | "validateApiAggregateAndProofBytes"
     | "validateGossipSyncCommitteeBytes"
@@ -323,6 +325,11 @@ export interface IBeaconEngine
   getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null>;
 
   // Gossip / API validation
+  validateGossipInclusionList(
+    listBytes: Uint8Array,
+    list: heze.SignedInclusionList,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{totalBytes: number}>>;
   validateGossipBlock(
     signedBlock: SignedBeaconBlock,
     blockBytes: Uint8Array,
@@ -400,7 +407,8 @@ export interface IBeaconEngine
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
   validateApiExecutionPayloadBid(
     bidBytes: Uint8Array,
-    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    seenTimestampSec?: number
   ): Promise<GossipValidationResult<void>>;
   validateGossipProposerPreferences(
     preferencesBytes: Uint8Array,

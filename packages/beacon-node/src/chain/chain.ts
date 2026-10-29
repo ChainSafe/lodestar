@@ -286,6 +286,7 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       metrics,
       config,
+      signal,
     });
 
     this.archiveStore = new ArchiveStore(

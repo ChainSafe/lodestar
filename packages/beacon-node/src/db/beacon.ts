@@ -15,6 +15,9 @@ import {
   DataColumnSidecarRepository,
 } from "./repositories/index.js";
 
+/** Below this size, seeks over leftover legacy column data stay cheap */
+const LEGACY_DATA_COLUMNS_COMPACTION_MIN_BYTES = 1024 ** 3;
+
 export type BeaconDbOpts = {
   dataColumnDir: string;
   logger: Logger;
@@ -30,6 +33,7 @@ export class BeaconDb extends BeaconEngineDb implements IBeaconDb {
   readonly dataColumns: IDataColumnStore;
   lastLegacyArchiveSlot: Slot | null = null;
   private readonly flatFileStore: FlatFileStore;
+  private readonly logger: Logger;
 
   constructor(config: ChainForkConfig, db: Db, opts: BeaconDbOpts) {
     super(config, db);
@@ -38,6 +42,7 @@ export class BeaconDb extends BeaconEngineDb implements IBeaconDb {
     this.dataColumnSidecar = new DataColumnSidecarRepository(config, db);
     this.dataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, db);
 
+    this.logger = opts.logger;
     this.flatFileStore = new FlatFileStore(opts.dataColumnDir, config, opts.logger, opts.metrics);
     this.dataColumns = new LegacyDataColumnStore(
       this.flatFileStore,
@@ -63,11 +68,50 @@ export class BeaconDb extends BeaconEngineDb implements IBeaconDb {
     this.flatFileStore.setMetrics(flatFileStoreMetrics);
   }
 
+  /**
+   * Deletes made while an iterator held a snapshot can stay in the bottom LevelDB level, which `compactRange` never
+   * rewrites, so every seek into the legacy column buckets walks them. Writing a key at each end of the pruned range
+   * makes the compaction overlap those files and rewrite them.
+   */
+  async compactLegacyDataColumns(
+    prunedBeforeSlot: Slot,
+    minSizeBytes = LEGACY_DATA_COLUMNS_COMPACTION_MIN_BYTES
+  ): Promise<void> {
+    const archiveBucket = Bucket.allForks_dataColumnSidecarsArchive;
+    const start = encodeKey(Bucket.allForks_dataColumnSidecars, Buffer.alloc(0));
+    const end = encodeKey(archiveBucket, this.dataColumnSidecarArchive.getMinKeyRaw(prunedBeforeSlot));
+    const sizeBytes = await this.db.approximateSize(start, end);
+    if (sizeBytes < minSizeBytes) return;
+
+    // Column indices stay below 0xffff and hot column keys are shorter, so no sentinel matches a real key
+    const upperSentinel =
+      prunedBeforeSlot > 0
+        ? encodeKey(archiveBucket, this.dataColumnSidecarArchive.encodeKeyRaw(prunedBeforeSlot - 1, 0xffff))
+        : encodeKey(Bucket.allForks_dataColumnSidecars, Buffer.alloc(35, 0xff));
+    const sentinels = [start, upperSentinel];
+
+    this.logger.info("Compacting legacy data columns, this may take a while", {sizeBytes});
+    const startTime = Date.now();
+    await this.db.batchPut(sentinels.map((key) => ({key, value: new Uint8Array()})));
+    await this.db.compactRange(start, end);
+    await this.db.batchDelete(sentinels);
+    await this.db.compactRange(start, end);
+    this.logger.verbose("Compacted legacy data columns", {
+      durationMs: Date.now() - startTime,
+      sizeBytes: await this.db.approximateSize(start, end),
+    });
+  }
+
   async pruneHotDb(): Promise<void> {
     // Prune all hot blobs
     await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
     // New columns are persisted in flat files, so this bucket only contains legacy hot data.
     await this.deleteBucketData(Bucket.allForks_dataColumnSidecars);
+    // Compact even if empty to reclaim tombstones left by previous startups.
+    await this.db.compactRange(
+      encodeKey(Bucket.allForks_dataColumnSidecars, Buffer.alloc(0)),
+      encodeKey(Bucket.allForks_dataColumnSidecars + 1, Buffer.alloc(0))
+    );
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());

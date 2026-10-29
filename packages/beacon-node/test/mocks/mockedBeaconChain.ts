@@ -18,7 +18,12 @@ import {IChainView} from "../../src/chain/chainView/interface.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
-import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
+import {
+  AggregatedAttestationPool,
+  InclusionListStore,
+  OpPool,
+  SyncContributionAndProofPool,
+} from "../../src/chain/opPools/index.js";
 import {ProposerPreferencesPool} from "../../src/chain/opPools/proposerPreferencesPool.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {
@@ -125,6 +130,9 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getHeadRoot: vi.fn(),
       getSlotsPresent: vi.fn(),
       getDependentRoot: vi.fn(),
+      recordPayloadInclusionListSatisfaction: vi.fn(),
+      isPayloadInclusionListSatisfied: vi.fn(),
+      getPayloadInclusionListSatisfaction: vi.fn(),
       getBlockHex: vi.fn(),
       getBlock: vi.fn(),
       getBlockDefaultStatus: vi.fn(),
@@ -247,6 +255,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         checkStatus: vi.fn().mockResolvedValue(undefined),
       },
       opPool: new OpPool(config as BeaconConfig),
+      inclusionListStore: new InclusionListStore(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
       // Engine-internal gossip seen-caches; the flat mock doubles as the engine, so validators read
@@ -279,6 +288,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         removeInvalid: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
+      getParentExecutionRequests: vi.fn(),
       shufflingCache: new ShufflingCache(),
       pubkeyCache,
       produceCommonBlockBody: vi.fn(),
@@ -352,6 +362,11 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   for (const name of [
     "reportIrrecoverableError",
     "isHeadChanged",
+    "getPayloadExecutionOptimistic",
+    "getInclusionListCommitteeDuties",
+    "getInclusionListsByIndices",
+    "validateGossipInclusionList",
+    "validateGossipInclusionListBytes",
     "getLightClientServer",
     "getLightClientBootstrap",
     "getLightClientUpdate",
@@ -494,6 +509,6 @@ export function getMockedForkChoice(): MockedForkChoice {
   return vi.mocked(new ForkChoice({} as any, {} as any, {} as any, {} as any, {} as any));
 }
 
+export type {ProtoBlock};
 // To avoid loading the package in test while mocked, exporting frequently used types and constants
 export {EpochDifference};
-export type {ProtoBlock};

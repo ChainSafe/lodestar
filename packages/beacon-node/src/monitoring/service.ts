@@ -101,7 +101,7 @@ export class MonitoringService {
     if (this.monitoringInterval) {
       clearTimeout(this.monitoringInterval);
     }
-    if (this.pendingRequest) {
+    if (this.pendingRequest !== undefined) {
       this.fetchAbortController?.abort(FetchAbortReason.Close);
       await this.pendingRequest;
     }

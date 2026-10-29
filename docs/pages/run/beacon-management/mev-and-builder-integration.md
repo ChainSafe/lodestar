@@ -23,10 +23,12 @@ This sits in parallel with the execution engine so when enabled, lodestar valida
 All you have to do is:
 
 1. Provide lodestar beacon node with a Builder endpoint (which corresponds to the network you are running) via these additional flags:
+
    ```shell
    --builder --builder.url <builder/relay/boost url>
    ```
 2. Run lodestar validator client with these additional flags
+
    ```shell
    --builder --suggestedFeeRecipient <your ethereum address>
    ```

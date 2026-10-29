@@ -30,9 +30,10 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   dataColumnSidecar: Mocked<DataColumnSidecarRepository>;
   dataColumnSidecarArchive: Mocked<DataColumnSidecarArchiveRepository>;
 
-  stateArchive: Mocked<StateArchiveRepository>;
   executionPayloadEnvelope: Mocked<ExecutionPayloadEnvelopeRepository>;
   executionPayloadEnvelopeArchive: Mocked<ExecutionPayloadEnvelopeArchiveRepository>;
+
+  stateArchive: Mocked<StateArchiveRepository>;
 
   voluntaryExit: Mocked<VoluntaryExitRepository>;
   blsToExecutionChange: Mocked<BLSToExecutionChangeRepository>;
@@ -62,11 +63,21 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       blobSidecarsArchive: vi.mocked(new BlobSidecarsArchiveRepository({} as any, {} as any)),
       dataColumnSidecar: vi.mocked(new DataColumnSidecarRepository({} as any, {} as any)),
       dataColumnSidecarArchive: vi.mocked(new DataColumnSidecarArchiveRepository({} as any, {} as any)),
-      stateArchive: vi.mocked(new StateArchiveRepository({} as any, {} as any)),
-      executionPayloadEnvelope: vi.mocked(new ExecutionPayloadEnvelopeRepository(minimalConfig, {} as Db)),
-      executionPayloadEnvelopeArchive: vi.mocked(
-        new ExecutionPayloadEnvelopeArchiveRepository(minimalConfig, {} as Db)
+      // Own method mocks per instance: the vitest automock shares base Repository methods
+      // (get, getBinary, batchDelete, ...) across all repository classes, which would make
+      // calls from different repositories indistinguishable in tests.
+      executionPayloadEnvelope: Object.assign(vi.mocked(new ExecutionPayloadEnvelopeRepository({} as any, {} as any)), {
+        get: vi.fn().mockResolvedValue(null),
+        getBinary: vi.fn().mockResolvedValue(null),
+        put: vi.fn().mockResolvedValue(undefined),
+        batchDelete: vi.fn().mockResolvedValue(undefined),
+        encodeKey: vi.fn(() => new Uint8Array(0)),
+      }),
+      executionPayloadEnvelopeArchive: Object.assign(
+        vi.mocked(new ExecutionPayloadEnvelopeArchiveRepository({} as any, {} as any)),
+        {getBinary: vi.fn().mockResolvedValue(null), batchArchiveAndDeleteHot: vi.fn().mockResolvedValue(undefined)}
       ),
+      stateArchive: vi.mocked(new StateArchiveRepository({} as any, {} as any)),
 
       voluntaryExit: vi.mocked(new VoluntaryExitRepository({} as any, {} as any)),
       blsToExecutionChange: vi.mocked(new BLSToExecutionChangeRepository({} as any, {} as any)),
@@ -86,10 +97,12 @@ vi.mock("../../src/db/index.js", async (importActual) => {
   };
 });
 
+const mockedDbLogger = testLogger();
+
 export function getMockedBeaconDb(): MockedBeaconDb {
   return new BeaconDb(minimalConfig, {} as Db, {
     dataColumnDir: "data_columns",
-    logger: testLogger(),
+    logger: mockedDbLogger,
   }) as MockedBeaconDb;
 }
 

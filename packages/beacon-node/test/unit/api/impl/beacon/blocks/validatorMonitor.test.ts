@@ -4,6 +4,7 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {getApiTestModules} from "../../../../../utils/api.js";
 
@@ -29,14 +30,17 @@ describe("block API monitor forwarding", () => {
       );
       const observed = vi.spyOn(modules.chain.beaconEngine, "registerApiBlock");
       modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+      modules.chain.beaconEngine.validateGossipBlock = vi
+        .fn()
+        .mockResolvedValue({err: null, result: {skippedSlots: 0}});
       modules.network.publishBeaconBlock = vi.fn().mockImplementation(async () => {
         expect(observed).toHaveBeenCalledExactlyOnceWith(12, {slot: 0, proposerIndex: 0, blockRoot});
         if (!success) throw new Error("publication failed");
         return 1;
       });
-      const pending = getBeaconBlockApi(modules).publishBlockV2({
+      const pending = getBeaconBlockApi(defaultApiOptions, modules).publishBlockV2({
         signedBlockContents: {signedBlock: block},
-        broadcastValidation: routes.beacon.BroadcastValidation.none,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       });
       if (success) await expect(pending).resolves.toBeUndefined();
       else await expect(pending).rejects.toThrow("publication failed");

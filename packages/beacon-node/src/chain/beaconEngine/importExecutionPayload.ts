@@ -1,3 +1,4 @@
+import {SerializedList} from "@chainsafe/ssz";
 import {
   ExecutionStatus,
   PayloadExecutionStatus,
@@ -5,11 +6,17 @@ import {
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
-import {WithBytes, gloas, ssz} from "@lodestar/types";
+import {
+  DataAvailabilityStatus,
+  computeEpochAtSlot,
+  isStatePostGloas,
+  isStatePostHeze,
+} from "@lodestar/state-transition";
+import {RootHex, WithBytes, bellatrix, gloas, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {PayloadEnvelopeInputSource} from "../blocks/payloadEnvelopeInput/index.js";
 import {PayloadError, PayloadErrorCode} from "../blocks/payloadError.js";
@@ -107,6 +114,38 @@ export async function importExecutionPayload(
   // The state supplies the committed bid instead of crossing the DA input into the engine.
   const slot = envelope.payload.slotNumber;
   const fork = this.config.getForkName(slot);
+
+  // Timely inclusion lists of the preceding slot, keyed by that slot's dependent root on the block's branch and
+  // resolved from the parent, which is at or before that slot. Gossip validation only accepts lists whose dependent
+  // block is in fork choice, so a dependent root fork choice cannot resolve (below the anchor after checkpoint sync)
+  // keys no stored list
+  let inclusionListTransactions: bellatrix.Transactions | undefined;
+  if (isStatePostHeze(blockState)) {
+    const inclusionListSlot = protoBlock.slot - 1;
+    let dependentRoot: RootHex | null = null;
+    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(protoBlock.parentRoot);
+    if (parentBlock !== null) {
+      try {
+        dependentRoot = getShufflingDependentRoot(
+          this.forkChoice,
+          computeEpochAtSlot(inclusionListSlot),
+          computeEpochAtSlot(parentBlock.slot),
+          parentBlock
+        );
+      } catch (e) {
+        this.logger.debug(
+          "Inclusion list dependent root not in fork choice, importing payload without lists",
+          {slot, root: blockRootHex},
+          e as Error
+        );
+      }
+    }
+    inclusionListTransactions =
+      dependentRoot === null
+        ? SerializedList.empty()
+        : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
+  }
+
   const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};
   this.logger.debug("Call engine api newPayload", logCtx);
   const verifyStartSec = Date.now() / 1000;
@@ -116,7 +155,8 @@ export async function importExecutionPayload(
       envelope.payload,
       blockState.latestExecutionPayloadBid.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       envelope.parentBeaconBlockRoot,
-      envelope.executionRequests
+      envelope.executionRequests,
+      inclusionListTransactions
     ),
     opts.validSignature === true
       ? Promise.resolve(true)
@@ -193,6 +233,32 @@ export async function importExecutionPayload(
   // Columns remain in BeaconChain's write queue, as for chain/beaconEngine/importBlock.ts.
   await this.db.executionPayloadEnvelope.putBinary(blockRoot, envelopeBytes);
 
+  // A VALID payload that does not satisfy the inclusion list constraints is still imported, fork choice
+  // only records the verdict so should_extend_payload moves the head to the EMPTY variant, which the next
+  // proposer builds on.
+  // Recorded before the payload enters fork choice. A VALID response must carry a verdict, an
+  // optimistically imported payload counts as satisfied until the engine validates it, anything else as
+  // unsatisfied. A VALID response without a verdict violates the engine API, it is logged and treated as
+  // satisfied so a non-compliant engine does not orphan every payload
+  if (inclusionListTransactions !== undefined) {
+    if (execResult.status === ExecutionPayloadStatus.VALID && execResult.inclusionListSatisfied == null) {
+      this.logger.warn("Execution engine reported no inclusion list verdict, not enforcing inclusion lists", logCtx);
+    }
+    const satisfied =
+      execResult.status === ExecutionPayloadStatus.VALID
+        ? (execResult.inclusionListSatisfied ?? true)
+        : execResult.status === ExecutionPayloadStatus.SYNCING || execResult.status === ExecutionPayloadStatus.ACCEPTED;
+    this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, satisfied);
+    if (!satisfied) {
+      this.logger.verbose("Payload did not satisfy inclusion list constraints", {
+        ...logCtx,
+        blockHash: blockHashHex,
+        status: execResult.status,
+        inclusionListTransactions: inclusionListTransactions.length,
+      });
+    }
+  }
+
   this.forkChoice.onExecutionPayload(
     blockRootHex,
     blockHashHex,
@@ -214,7 +280,11 @@ export async function importExecutionPayload(
 
   // Fire the FCU only when this payload's block is the canonical head.
   const head = this.forkChoice.getHead();
-  if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
+  if (
+    !this.opts.disableImportExecutionFcU &&
+    blockRootHex === head.blockRoot &&
+    this.forkChoice.isPayloadInclusionListSatisfied(blockRootHex)
+  ) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {

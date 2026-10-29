@@ -43,7 +43,7 @@ import {
 } from "../../chain/blocks/blockInput/index.js";
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlobSidecarValidation} from "../../chain/blocks/types.js";
+import {BlobSidecarValidation, InclusionListSource} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
@@ -131,6 +131,31 @@ function getSequentialHandlers(
   _options: GossipHandlerOpts = {}
 ): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
+  const incompletePayloadWaits = new WeakSet<PayloadEnvelopeInput>();
+
+  function scheduleIncompletePayloadEnvelope(payloadInput: PayloadEnvelopeInput, peer: string): void {
+    if (payloadInput.isComplete() || incompletePayloadWaits.has(payloadInput)) {
+      return;
+    }
+    incompletePayloadWaits.add(payloadInput);
+
+    const fork = config.getForkName(payloadInput.slot);
+    const cutoffTimeMs = getCutoffTimeMs(chain, payloadInput.slot, config.getPayloadDueMs(fork));
+    payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch(() => {
+      if (
+        payloadInput.isComplete() ||
+        chain.seenPayloadEnvelopeInputCache.get(payloadInput.blockRootHex) !== payloadInput
+      ) {
+        return;
+      }
+      chain.logger.debug("Payload envelope incomplete at payload deadline", payloadInput.getLogMeta());
+      chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+        payloadInput,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+    });
+  }
 
   /**
    * Add a gossip block to the seen caches. The proposer signature of the block MUST be verified.
@@ -666,8 +691,6 @@ function getSequentialHandlers(
 
           // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
           // which is all the information we need so there is no reason to delay until execution payload arrives
-          // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
-          // (for example later in the slot). Do not couple retries to incoming gossip columns.
           // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
           // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
           chain.getBlobsTracker.triggerGetBlobs(payloadInput);
@@ -679,11 +702,10 @@ function getSequentialHandlers(
 
         if (e instanceof BlockError) {
           switch (e.type.code) {
-            case BlockErrorCode.DATA_UNAVAILABLE: {
-              // Error is quite frequent and not critical
+            case BlockErrorCode.DATA_UNAVAILABLE:
+              // Data did not arrive in time, BlockInputSync keeps pulling it and retries the import
               logLevel = LogLevel.debug;
               break;
-            }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
             // PARENT_BLOCK_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
             case BlockErrorCode.ALREADY_KNOWN:
@@ -908,25 +930,7 @@ function getSequentialHandlers(
               // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
               // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
 
-              if (!payloadInput.isComplete()) {
-                const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
-                // do not await here to not delay gossip validation
-                payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch((_e) => {
-                  chain.logger.debug(
-                    "Waited for envelope and data after receiving gossip column. Cut-off reached so emitting incompletePayloadEnvelope",
-                    {
-                      dataColumnIndex: index,
-                      ...payloadInputMeta,
-                    }
-                  );
-                  // TODO GLOAS: UnknownBlockSync to handle this event
-                  chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
-                    payloadInput,
-                    peer: peerIdStr,
-                    source: BlockInputSource.gossip,
-                  });
-                });
-              }
+              scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
             } catch (e) {
               logger.debug(
                 "Error handling gossip data column",
@@ -1332,6 +1336,8 @@ function getSequentialHandlers(
               peerIdStr,
             });
 
+            scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
+
             chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
               slot,
               builderIndex: envelope.builderIndex,
@@ -1345,6 +1351,9 @@ function getSequentialHandlers(
 
               if (e instanceof PayloadError) {
                 switch (e.type.code) {
+                  case PayloadErrorCode.DATA_UNAVAILABLE:
+                    logLevel = LogLevel.debug;
+                    break;
                   // BLOCK_NOT_IN_FORK_CHOICE should not happen, validateGossipExecutionPayloadEnvelope above
                   // already verified the block is in fork choice
                   case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:
@@ -1490,6 +1499,51 @@ function getSequentialHandlers(
           }
         });
       });
+    },
+
+    [GossipType.inclusion_list]: async ({
+      gossipData,
+      topic,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
+      const {serializedData} = gossipData;
+      const signedInclusionList = sszDeserialize(topic, serializedData);
+      const {slot} = signedInclusionList.message;
+
+      metrics?.inclusionListsReceived.inc({source: InclusionListSource.gossip});
+      metrics?.inclusionListTransactionsReceived.inc(
+        {source: InclusionListSource.gossip},
+        signedInclusionList.message.transactions.length
+      );
+
+      const timer = metrics?.inclusionListsValidationTime.startTimer();
+      const validationResult = await chain.beaconEngine.validateGossipInclusionList(
+        serializedData,
+        signedInclusionList,
+        seenTimestampSec
+      );
+      timer?.({source: InclusionListSource.gossip});
+      if (validationResult.err !== null) return validationResult;
+      const {totalBytes} = validationResult.result;
+
+      // Handler - deferred to next event loop so the validation result propagates first
+      callInNextEventLoop(() => {
+        try {
+          metrics?.inclusionListsValid.inc({source: InclusionListSource.gossip});
+          metrics?.inclusionListsValidSize.inc(totalBytes);
+          // Timely only if received within its own slot before the deadline, so a list for the next slot that
+          // passed validation under clock disparity is untimely. Late lists are still stored, marked untimely
+          const secFromSlot = chain.clock.secFromSlot(slot, seenTimestampSec);
+          metrics?.inclusionListArrivalTime.observe(secFromSlot);
+          chain.emitter.emit(routes.events.EventType.inclusionList, {
+            version: config.getForkName(slot),
+            data: signedInclusionList,
+          });
+        } catch (e) {
+          logger.debug("Error handling gossip inclusion list", {slot}, e as Error);
+        }
+      });
+      return {err: null, result: undefined};
     },
   };
 }

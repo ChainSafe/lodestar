@@ -60,7 +60,7 @@ export class SeenEnginePayloadEnvelopeInput {
     const existing = this.payloadInputs.get(blockRootHex);
     if (existing) return existing;
     const inflight = this.reloading.get(blockRootHex);
-    if (inflight) return inflight;
+    if (inflight !== undefined) return inflight;
     const promise = this.reloadFromDb(blockRootHex);
     this.reloading.set(blockRootHex, promise);
     try {

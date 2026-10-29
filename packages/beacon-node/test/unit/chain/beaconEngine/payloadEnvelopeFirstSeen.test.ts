@@ -147,11 +147,19 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
     "observed_sibling",
     "unobserved_sibling",
     "sibling_unknown_parent",
+    "sibling_unknown_payload",
     "reject",
     "unexpected",
   ])("retains only signature-verified gossip blocks for %s", async (scenario) => {
-    if (scenario === "observed_sibling" || scenario === "sibling_unknown_parent") {
+    if (
+      scenario === "observed_sibling" ||
+      scenario === "sibling_unknown_parent" ||
+      scenario === "sibling_unknown_payload"
+    ) {
       engine.seenBlockProposers.observeBlockRoot(1, 7, root, signedBlockToSignedHeader(config, block));
+    }
+    if (scenario === "sibling_unknown_payload") {
+      vi.spyOn(engine.forkChoice, "getBlockHexAndBlockHash").mockReturnValue(null);
     }
     if (scenario === "sibling_unknown_parent") {
       vi.spyOn(engine.forkChoice, "getBlockHexDefaultStatus").mockReturnValue(null);
@@ -169,6 +177,7 @@ describe("payload input creation when a block first enters BeaconEngineCore", ()
         case "observed_sibling":
         case "unobserved_sibling":
         case "sibling_unknown_parent":
+        case "sibling_unknown_payload":
           throw new BlockGossipError(GossipAction.IGNORE, {
             code: BlockErrorCode.REPEAT_PROPOSAL,
             proposerIndex: 7,

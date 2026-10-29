@@ -1314,8 +1314,8 @@ describe("bytes-based engine startup", () => {
     engine.getProposerHead(0);
     nodes[0].weight = 84n;
     engine.updateTime(1);
-    engine.pauseFastConfirmation();
-    engine.resumeFastConfirmation();
+    await engine.pauseFastConfirmation();
+    await engine.resumeFastConfirmation();
     expect(getAllNodes).not.toHaveBeenCalled();
     expect(emit).not.toHaveBeenCalled();
     expect((await engine.getProtoArrayNodes())[0].weight).toBe(84n);

@@ -108,6 +108,7 @@ export class ArchiveStore {
     // Decouple archival from finalization notification delivery so queue failures cannot interrupt other listeners.
     // `jobQueue.push()` can throw synchronously (queue aborted / full) or reject asynchronously;
     // awaiting it inside the deferred callback funnels both failure modes into the one catch.
+    // biome-ignore lint/nursery/noMisusedPromises: the callback catches all errors itself
     callInNextEventLoop(async () => {
       try {
         await this.jobQueue.push(finalized, blockSnapshot);

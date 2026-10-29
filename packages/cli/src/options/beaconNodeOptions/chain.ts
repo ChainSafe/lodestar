@@ -36,7 +36,6 @@ export type ChainArgs = {
   "chain.maxSkipSlots"?: number;
   "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
-  broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.dontSendGossipAttestationsToForkchoice"?: boolean;
   "chain.maxShufflingCacheEpochs"?: number;
@@ -81,7 +80,6 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     maxSkipSlots: args["chain.maxSkipSlots"],
     disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
-    broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     dontSendGossipAttestationsToForkchoice: args["chain.dontSendGossipAttestationsToForkchoice"],
@@ -303,15 +301,6 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  broadcastValidationStrictness: {
-    // TODO: hide the option till validations fully implemented
-    hidden: true,
-    description:
-      "'warn' or 'error' - options to either throw error or to log warning when broadcast validation can't be performed",
-    type: "string",
-    default: "warn",
-  },
-
   "chain.minSameMessageSignatureSetsToBatch": {
     hidden: true,
     description: "Minimum number of same message signature sets to batch",
@@ -330,8 +319,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.archiveDataEpochs": {
     alias: "chain.archiveBlobEpochs",
-    description:
-      "Number of epochs to retain finalized blobs/columns (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS/MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)",
+    description: "Number of epochs to retain finalized data columns (minimum of the MIN_BLOB_DATA_RETENTION_MS window)",
     type: "number",
     group: "chain",
   },

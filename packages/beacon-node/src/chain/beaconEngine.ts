@@ -30,6 +30,7 @@ import {
   electra,
   fulu,
   gloas,
+  heze,
   phase0,
   rewards,
   ssz,
@@ -202,6 +203,10 @@ export class BeaconEngine implements IBeaconEngine {
     const previousHead = this.chainView.getHead();
     const {headUpdate} = await this.coreApi.recomputeForkChoiceHead(caller);
     await this.onForkChoiceChanged({headUpdate, justifiedCheckpointChanged: false}, previousHead);
+  }
+
+  getPayloadExecutionOptimistic(blockRoot: Root): Promise<boolean | null> {
+    return this.coreApi.getPayloadExecutionOptimistic(blockRoot);
   }
 
   async isHeadOptimistic(): Promise<boolean> {
@@ -507,6 +512,28 @@ export class BeaconEngine implements IBeaconEngine {
     return this.coreApi.getSyncCommitteeDuties(epoch, indices);
   }
 
+  getInclusionListCommitteeDuties(
+    epoch: Epoch,
+    indices: ValidatorIndex[],
+    currentEpoch: Epoch
+  ): Promise<{data: routes.validator.InclusionListDuty[]; dependentRoot: Root; head: ProtoBlock}> {
+    return this.coreApi.getInclusionListCommitteeDuties(epoch, indices, currentEpoch);
+  }
+
+  getInclusionListsByIndices(slot: Slot, dependentRoot: Root, indices: Uint8Array): Promise<Uint8Array[]> {
+    return this.coreApi.getInclusionListsByIndices(slot, dependentRoot, indices);
+  }
+
+  validateGossipInclusionList(
+    listBytes: Uint8Array,
+    list: heze.SignedInclusionList,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{totalBytes: number}>> {
+    return this.core === null
+      ? this.coreApi.validateGossipInclusionListBytes(listBytes, seenTimestampSec)
+      : this.core.validateGossipInclusionList(list, seenTimestampSec);
+  }
+
   getPtcDuties(
     epoch: Epoch,
     indices: ValidatorIndex[],
@@ -722,11 +749,16 @@ export class BeaconEngine implements IBeaconEngine {
 
   validateApiExecutionPayloadBid(
     bidBytes: Uint8Array,
-    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    seenTimestampSec = Date.now() / 1000
   ): Promise<GossipValidationResult<void>> {
     return this.core === null
-      ? this.coreApi.validateApiExecutionPayloadBidBytes(bidBytes)
-      : this.core.validateApiExecutionPayloadBid(signedExecutionPayloadBid);
+      ? this.coreApi.validateApiExecutionPayloadBidBytes(
+          bidBytes,
+          this.config.getForkName(signedExecutionPayloadBid.message.slot),
+          seenTimestampSec
+        )
+      : this.core.validateApiExecutionPayloadBid(signedExecutionPayloadBid, seenTimestampSec);
   }
 
   validateGossipProposerPreferences(

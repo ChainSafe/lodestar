@@ -48,7 +48,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_EPOCH} from "../../constants/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {StateGetOpts} from "../interface.js";
@@ -230,8 +230,13 @@ export async function getStateBuilders(
 
   const builderResponses: routes.beacon.BuilderResponse[] = [];
   if (builderIds.length) {
+    let builderIndexByPubkey: Map<string, BuilderIndex> | null = null;
+    const getBuilderIndexByPubkeyMap = () => {
+      builderIndexByPubkey ??= getBuilderIndexByPubkey(state);
+      return builderIndexByPubkey;
+    };
     for (const id of builderIds) {
-      const resp = getStateBuilderIndex(id, state);
+      const resp = getStateBuilderIndex(id, state, getBuilderIndexByPubkeyMap);
       if (resp.valid) {
         const builderIndex = resp.builderIndex;
         const builder = state.getBuilder(builderIndex);
@@ -886,9 +891,22 @@ export function getStateValidatorIndex(
   return {valid: true, validatorIndex};
 }
 
+export function getBuilderIndexByPubkey(state: IBeaconStateViewGloas): Map<string, BuilderIndex> {
+  const builderIndexByPubkey = new Map<string, BuilderIndex>();
+  const buildersLength = state.getBuildersLength();
+  for (let builderIndex = 0; builderIndex < buildersLength; builderIndex++) {
+    const pubkeyHex = toHex(state.getBuilder(builderIndex).pubkey);
+    if (!builderIndexByPubkey.has(pubkeyHex)) {
+      builderIndexByPubkey.set(pubkeyHex, builderIndex);
+    }
+  }
+  return builderIndexByPubkey;
+}
+
 export function getStateBuilderIndex(
   id: routes.beacon.BuilderId | BLSPubkey,
-  state: IBeaconStateViewGloas
+  state: IBeaconStateViewGloas,
+  getBuilderIndexByPubkeyMap: () => Map<string, BuilderIndex>
 ): {valid: true; builderIndex: BuilderIndex} | {valid: false; code: number; reason: string} {
   if (typeof id === "string") {
     // mutate `id` and fallthrough to below
@@ -916,12 +934,9 @@ export function getStateBuilderIndex(
   }
 
   // typeof id === Uint8Array
-  // There is no builder pubkey cache, linear scan over the registry
-  const buildersLength = state.getBuildersLength();
-  for (let builderIndex = 0; builderIndex < buildersLength; builderIndex++) {
-    if (byteArrayEquals(state.getBuilder(builderIndex).pubkey, id)) {
-      return {valid: true, builderIndex};
-    }
+  const builderIndex = getBuilderIndexByPubkeyMap().get(toHex(id));
+  if (builderIndex === undefined) {
+    return {valid: false, code: 404, reason: "Builder pubkey not found in state"};
   }
-  return {valid: false, code: 404, reason: "Builder pubkey not found in state"};
+  return {valid: true, builderIndex};
 }

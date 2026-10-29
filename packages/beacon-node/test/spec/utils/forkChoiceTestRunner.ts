@@ -89,6 +89,8 @@ const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 const PAYLOAD_ATTESTATION_MESSAGE_FILE_NAME = "^(payload_attestation_message)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
+const executionEngineLogger = testLogger("executionEngine");
+const mockedDb = getMockedBeaconDb();
 
 export const forkChoiceTestRunner =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
@@ -116,7 +118,7 @@ export const forkChoiceTestRunner =
         const controller = new AbortController();
         const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
           signal: controller.signal,
-          logger: testLogger("executionEngine"),
+          logger: executionEngineLogger,
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
@@ -153,7 +155,7 @@ export const forkChoiceTestRunner =
             privateKey: await generateKeyPair("secp256k1"),
             config: beaconConfig,
             pubkeyCache,
-            db: getMockedBeaconDb(),
+            db: mockedDb,
             dataDir: ".",
             dbName: ",",
             logger,
@@ -593,6 +595,9 @@ export const forkChoiceTestRunner =
                   validationError: null,
                 });
 
+                // The vectors carry no inclusion lists, so every payload satisfies the empty constraint set
+                (engine.forkChoice as ForkChoice).recordPayloadInclusionListSatisfaction(beaconBlockRoot, true);
+
                 (engine.forkChoice as ForkChoice).onExecutionPayload(
                   beaconBlockRoot,
                   blockHash,
@@ -674,7 +679,7 @@ export const forkChoiceTestRunner =
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const {proposerHead, notReorgedReason} = (engine.forkChoice as ForkChoice).getProposerHead(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
                 );
                 logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
@@ -724,7 +729,7 @@ export const forkChoiceTestRunner =
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = engine.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
                 );
                 if (result.shouldOverrideFcu === false) {

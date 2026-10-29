@@ -423,27 +423,24 @@ describe("regen/reload states with n-historical states configuration", () => {
         ({slot}) => slot === LAST_SLOT
       );
 
-      const reloadMetricValues = await (
-        getBeaconEngineCore(followupBn.chain.beaconEngine).metrics?.cpStateCache.stateReloadDuration as Histogram
-      ).get();
+      const metrics = getBeaconEngineCore(followupBn.chain.beaconEngine).metrics;
+      if (metrics === null) throw Error("followupBn engine metrics are not enabled");
+
+      const reloadMetricValues = await (metrics.cpStateCache.stateReloadDuration as Histogram).get();
       expect(
         reloadMetricValues?.values.find(
           (value) => value.metricName === "lodestar_cp_state_cache_state_reload_seconds_count"
         )?.value
       ).toEqual(reloadCount);
 
-      const stateSszMetricValues = await (
-        getBeaconEngineCore(followupBn.chain.beaconEngine).metrics?.stateSerializeDuration as Histogram
-      ).get();
+      const stateSszMetricValues = await (metrics.stateSerializeDuration as Histogram).get();
       expect(
         stateSszMetricValues?.values.find((value) => value.metricName === "lodestar_state_serialize_seconds_count")
           ?.value
       ).toEqual(persistCount);
 
       // assert number of persisted/in-memory states
-      const stateSizeMetricValues = await (
-        getBeaconEngineCore(followupBn.chain.beaconEngine).metrics?.cpStateCache.size as unknown as Gauge
-      ).get();
+      const stateSizeMetricValues = await (metrics.cpStateCache.size as unknown as Gauge).get();
       const numStateInMemoryItem = stateSizeMetricValues?.values.find(
         (value) => value.labels.type === CacheItemType.inMemory
       );
@@ -454,9 +451,7 @@ describe("regen/reload states with n-historical states configuration", () => {
       expect(numStatePersistedItem?.value).toEqual(numStatesPersisted);
 
       // assert number of epochs persisted/in-memory
-      const epochSizeMetricValues = await (
-        getBeaconEngineCore(followupBn.chain.beaconEngine).metrics?.cpStateCache.epochSize as unknown as Gauge
-      ).get();
+      const epochSizeMetricValues = await (metrics.cpStateCache.epochSize as unknown as Gauge).get();
       const numEpochsInMemoryItem = epochSizeMetricValues?.values.find(
         (value) => value.labels.type === CacheItemType.inMemory
       );

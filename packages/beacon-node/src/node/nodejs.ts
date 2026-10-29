@@ -7,11 +7,12 @@ import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {readBeaconStateBytesMetadata} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch, readBeaconStateBytesMetadata} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {LodestarError, sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
+import {getDataColumnSidecarsMinEpoch} from "../chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconEngineCore} from "../chain/beaconEngine/index.js";
 import {AnchorSummary} from "../chain/beaconEngine/initialization.js";
 import {BeaconEngineMode, assertSupportedBeaconEngineMode} from "../chain/beaconEngine/options.js";
@@ -188,6 +189,17 @@ export class BeaconNode {
     }
 
     const clock = new Clock({config, genesisTime: metadata.genesisTime, signal});
+
+    // Before any lookup into the legacy column buckets, which can be slow until compacted
+    const columnsMinEpoch =
+      opts.chain.archiveDataEpochs === Infinity
+        ? null
+        : getDataColumnSidecarsMinEpoch(config, clock.currentEpoch, opts.chain.archiveDataEpochs);
+    await db.compactLegacyDataColumns(
+      columnsMinEpoch !== null && columnsMinEpoch >= config.FULU_FORK_EPOCH
+        ? computeStartSlotAtEpoch(columnsMinEpoch)
+        : 0
+    );
 
     await db.init();
 

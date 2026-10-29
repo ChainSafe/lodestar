@@ -10,6 +10,11 @@ export enum GossipedInputType {
   dataColumn = "data_column",
 }
 
+export enum InclusionListSource {
+  gossip = "gossip",
+  api = "api",
+}
+
 type DataColumnData = {
   dataColumn: fulu.DataColumnSidecar;
   dataColumnBytes: Uint8Array | null;

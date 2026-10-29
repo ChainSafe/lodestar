@@ -6,12 +6,14 @@ import {PeerId} from "@libp2p/interface";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
-import {PayloadStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromAsync, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {archiveBlocks} from "../../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {
@@ -62,6 +64,7 @@ describe("facade execution payload envelope serving", () => {
       logger: testLogger(),
     });
     chain = getMockedBeaconChain({config});
+    chain.forkChoice.getBlockHex.mockReturnValue(protoBlock);
     Object.defineProperty(chain, "db", {value: db});
     Object.defineProperty(chain, "serializedCache", {value: new Map()});
     chain.getSerializedExecutionPayloadEnvelopes = vi.fn(
@@ -82,52 +85,69 @@ describe("facade execution payload envelope serving", () => {
     await rm(directory, {recursive: true, force: true});
   });
 
-  it("serves a cached envelope before its DB write lands", async () => {
-    const input = PayloadEnvelopeInput.createFromBlock({
-      block,
-      blockRootHex: rootHex,
-      forkName: ForkName.gloas,
-      sampledColumns: [],
-      custodyColumns: [],
-      seenTimestampSec: 0,
-      source: PayloadEnvelopeInputSource.gossip,
-      daOutOfRange: false,
-    });
-    input.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
-    vi.mocked(chain.seenPayloadEnvelopeInputCache.get).mockImplementation((key) =>
-      key === rootHex ? input : undefined
-    );
-    expect(await db.executionPayloadEnvelope.get(root)).toBeNull();
+  it.each([ExecutionStatus.Valid, ExecutionStatus.Syncing] as const)(
+    "serves a cached envelope with its own %s status",
+    async (executionStatus) => {
+      chain.forkChoice.getBlockHex.mockReturnValue({
+        ...protoBlock,
+        executionStatus,
+        executionPayloadBlockHash: toRootHex(envelope.message.payload.blockHash),
+        executionPayloadNumber: 0,
+        executionPayloadGasLimit: 0,
+        dataAvailabilityStatus: DataAvailabilityStatus.Available,
+      });
+      const input = PayloadEnvelopeInput.createFromBlock({
+        block,
+        blockRootHex: rootHex,
+        forkName: ForkName.gloas,
+        sampledColumns: [],
+        custodyColumns: [],
+        seenTimestampSec: 0,
+        source: PayloadEnvelopeInputSource.gossip,
+        daOutOfRange: false,
+      });
+      input.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+      vi.mocked(chain.seenPayloadEnvelopeInputCache.get).mockImplementation((key) =>
+        key === rootHex ? input : undefined
+      );
+      expect(await db.executionPayloadEnvelope.get(root)).toBeNull();
 
-    chain.beaconEngine.chainView.getFullBlockRootSlotsByRange = vi
-      .fn()
-      .mockReturnValue({finalizedSlot: 1, nonFinalized: [{slot: 1, root}]});
-    expect(
-      (await fromAsync(onExecutionPayloadEnvelopesByRange({startSlot: 1, count: 1}, chain, db, peerId, "test"))).map(
-        (r) => r.data
-      )
-    ).toEqual([envelopeBytes]);
-    expect(
-      (await fromAsync(onExecutionPayloadEnvelopesByRoot([root], chain, db, peerId, "test"))).map((r) => r.data)
-    ).toEqual([envelopeBytes]);
+      chain.beaconEngine.chainView.getFullBlockRootSlotsByRange = vi
+        .fn()
+        .mockReturnValue({finalizedSlot: 1, nonFinalized: [{slot: 1, root}]});
+      expect(
+        (await fromAsync(onExecutionPayloadEnvelopesByRange({startSlot: 1, count: 1}, chain, db, peerId, "test"))).map(
+          (r) => r.data
+        )
+      ).toEqual([envelopeBytes]);
+      expect(
+        (await fromAsync(onExecutionPayloadEnvelopesByRoot([root], chain, db, peerId, "test"))).map((r) => r.data)
+      ).toEqual([envelopeBytes]);
 
-    chain.getBlockByRoot.mockResolvedValue({
-      block: ssz.gloas.SignedBeaconBlock.serialize(block),
-      slot: block.message.slot,
-      executionOptimistic: false,
-      finalized: false,
-    });
-    const api = getBeaconBlockApi({
-      chain: withBeaconEngineFacade(chain),
-      config,
-      metrics: null,
-      network: getMockedNetwork(),
-    });
-    expect((await api.getSignedExecutionPayloadEnvelope({blockId: rootHex}, {returnBytes: true})).data).toEqual(
-      envelopeBytes
-    );
-    expect((await api.getSignedExecutionPayloadEnvelope({blockId: rootHex})).data).toBe(envelope);
-  });
+      chain.getBlockByRoot.mockResolvedValue({
+        block: ssz.gloas.SignedBeaconBlock.serialize(block),
+        slot: block.message.slot,
+        executionOptimistic: false,
+        finalized: false,
+      });
+      const api = getBeaconBlockApi(defaultApiOptions, {
+        chain: withBeaconEngineFacade(chain),
+        config,
+        metrics: null,
+        network: getMockedNetwork(),
+      });
+      expect((await api.getSignedExecutionPayloadEnvelope({blockId: rootHex}, {returnBytes: true})).data).toEqual(
+        envelopeBytes
+      );
+      const response = await api.getSignedExecutionPayloadEnvelope({blockId: rootHex});
+      expect(response.data).toBe(envelope);
+      expect(response.meta.executionOptimistic).toBe(executionStatus === ExecutionStatus.Syncing);
+      chain.forkChoice.getBlockHex.mockReturnValue(null);
+      await expect(api.getSignedExecutionPayloadEnvelope({blockId: rootHex})).rejects.toThrow(
+        "Execution payload envelope not found"
+      );
+    }
+  );
 
   it("serves persisted envelopes from hot DB and the cold archive stream", async () => {
     const orphanRoot = Buffer.alloc(32, 5);

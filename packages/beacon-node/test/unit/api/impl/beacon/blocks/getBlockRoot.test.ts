@@ -4,6 +4,7 @@ import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {ApiError, ValidationError} from "../../../../../../src/api/impl/errors.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {IBeaconEngineCoreApi} from "../../../../../../src/chain/beaconEngine/interface.js";
 import {withBeaconEngineFacade} from "../../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
@@ -31,7 +32,7 @@ describe("getBlockRoot", () => {
     modules.chain.getCanonicalBlockAtSlot = getCanonicalBlockAtSlot;
     getBlockByRoot.mockReset();
     modules.chain.getBlockByRoot = getBlockByRoot;
-    api = getBeaconBlockApi({...modules, chain});
+    api = getBeaconBlockApi(defaultApiOptions, {...modules, chain});
     modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 10, blockRoot: headRoot}));
     modules.forkChoice.getFinalizedCheckpoint.mockReturnValue({
       epoch: 0,

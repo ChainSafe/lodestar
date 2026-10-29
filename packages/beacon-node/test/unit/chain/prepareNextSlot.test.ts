@@ -66,6 +66,9 @@ describe("PrepareNextSlot scheduler", () => {
     "prepares at the current slot offset when the next duration is %i ms",
     async (nextDuration) => {
       const clockSlot = 2 * SLOTS_PER_EPOCH - 1;
+      // Anchor the fake clock to the start of clockSlot, else a wall time slot event from the real clock
+      // can trigger an extra prepareForNextSlot within the test window
+      vi.setSystemTime(clockSlot * config.SLOT_DURATION_MS);
       getForkStub.mockImplementation((slot) => (slot <= clockSlot ? ForkName.phase0 : ForkName.altair));
       vi.spyOn(config, "getSlotDurationMs").mockImplementation((fork) =>
         fork === ForkName.phase0 ? 12000 : nextDuration

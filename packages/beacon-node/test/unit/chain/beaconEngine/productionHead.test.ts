@@ -170,7 +170,7 @@ describe.each([
     expect(forkChoice.updateAndGetHead).toHaveBeenCalledExactlyOnceWith({
       mode: UpdateHeadOpt.GetProposerHead,
       slot: 2,
-      secFromSlot: 0,
+      msFromSlot: 0,
     });
     expect(produceBlockWrapper.mock.calls[0][1].parentBlock).toBe(previous);
     expect(view.getHead()).toEqual(beaconEngineMode === BeaconEngineMode.Worker ? toChainViewBlock(head) : head);

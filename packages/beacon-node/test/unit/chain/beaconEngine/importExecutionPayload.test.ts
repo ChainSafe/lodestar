@@ -80,6 +80,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     vi.spyOn(payloadVerification, "verifyExecutionPayloadEnvelope").mockReturnValue(undefined);
     chain.forkChoice.getConfirmedBlock.mockReturnValue(zeroProtoBlock);
     chain.forkChoice.getHead.mockReturnValue({...zeroProtoBlock, blockRoot: blockRootHex});
+    chain.forkChoice.isPayloadInclusionListSatisfied.mockReturnValue(true);
     chain.forkChoice.getFinalizedBlock.mockReturnValue({
       ...zeroProtoBlock,
       slot: 1,
@@ -269,6 +270,13 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
   it("does not send FCU for a non-head payload", async () => {
     chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
     await importPayload();
+    expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
+  });
+
+  it("imports a payload without FCU when its inclusion lists are not satisfied", async () => {
+    chain.forkChoice.isPayloadInclusionListSatisfied.mockReturnValue(false);
+    expect(await importPayload()).toMatchObject({err: null, result: {executionOptimistic: false}});
+    expect(chain.forkChoice.onExecutionPayload).toHaveBeenCalledOnce();
     expect(chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
   });
 

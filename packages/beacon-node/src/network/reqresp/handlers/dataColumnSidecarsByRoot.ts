@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
 import {ColumnIndex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -19,10 +19,10 @@ export async function* onDataColumnSidecarsByRoot(
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
-  // SPEC: minimum_request_epoch = max(current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH)
+  // SPEC: minimum_request_epoch = max(compute_blob_data_retention_start_epoch(current_epoch), FULU_FORK_EPOCH)
   const currentEpoch = chain.clock.currentEpoch;
   const minimumRequestEpoch = Math.max(
-    currentEpoch - chain.config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
+    getBlobDataRetentionStartEpoch(chain.config, currentEpoch),
     chain.config.FULU_FORK_EPOCH
   );
 

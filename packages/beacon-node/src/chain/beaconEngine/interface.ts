@@ -321,6 +321,7 @@ export interface IBeaconEngineCoreApi {
   getHeadSnapshot(previousHead?: Pick<ChainViewBlock<Root>, "blockRoot" | "payloadStatus">): Promise<HeadSnapshot>;
   getChainViewSnapshot(): Promise<ChainViewSnapshot>;
   getFinalizedCheckpointSnapshot(): Promise<FinalizedCheckpointSnapshot<Root>>;
+  getPayloadExecutionOptimistic(blockRoot: Root): Promise<boolean | null>;
   isHeadOptimistic(): Promise<boolean>;
   getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo>;
   pauseFastConfirmation(): Promise<void>;
@@ -418,6 +419,16 @@ export interface IBeaconEngineCoreApi {
     epoch: Epoch,
     indices: ValidatorIndex[]
   ): Promise<{data: routes.validator.SyncDuty[]; head: ProtoBlock}>;
+  getInclusionListCommitteeDuties(
+    epoch: Epoch,
+    indices: ValidatorIndex[],
+    currentEpoch: Epoch
+  ): Promise<{data: routes.validator.InclusionListDuty[]; dependentRoot: Root; head: ProtoBlock}>;
+  getInclusionListsByIndices(slot: Slot, dependentRoot: Root, indices: Uint8Array): Promise<Uint8Array[]>;
+  validateGossipInclusionListBytes(
+    listBytes: Uint8Array,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{totalBytes: number}>>;
   getPtcDuties(
     epoch: Epoch,
     indices: ValidatorIndex[],
@@ -502,7 +513,11 @@ export interface IBeaconEngineCoreApi {
     fork: ForkName,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
-  validateApiExecutionPayloadBidBytes(bidBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateApiExecutionPayloadBidBytes(
+    bidBytes: Uint8Array,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<void>>;
   validateGossipProposerPreferencesBytes(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>>;
 
   // Op pools

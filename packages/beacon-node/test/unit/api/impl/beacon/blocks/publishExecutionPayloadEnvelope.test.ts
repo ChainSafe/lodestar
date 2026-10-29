@@ -4,9 +4,10 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {IBeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {gloas, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {BeaconEngineCore} from "../../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {accept} from "../../../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {PayloadEnvelopeInput} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -55,8 +56,6 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it.each([
-    {success: true, broadcastValidation: routes.beacon.BroadcastValidation.none},
-    {success: false, broadcastValidation: routes.beacon.BroadcastValidation.none},
     {success: true, broadcastValidation: routes.beacon.BroadcastValidation.gossip},
     {success: false, broadcastValidation: routes.beacon.BroadcastValidation.gossip},
   ])(
@@ -96,7 +95,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
         return 1;
       });
 
-      const pending = getBeaconBlockApi({
+      const pending = getBeaconBlockApi(defaultApiOptions, {
         ...modules,
         chain: withBeaconEngineFacade(modules.chain),
       }).publishExecutionPayloadEnvelope({
@@ -151,7 +150,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       const monitor = modules.chain.beaconEngine.validatorMonitor;
       if (!monitor) throw new Error("Missing monitor");
       const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope");
-      const api = getBeaconBlockApi({...modules, chain: withBeaconEngineFacade(modules.chain)});
+      const api = getBeaconBlockApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
       await expect(
         api.publishExecutionPayloadEnvelope({
           signedEnvelopeOrContents: signedEnvelope,
@@ -163,6 +162,68 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
       expect(payloadInput.hasPayloadEnvelope()).toBe(false);
       expect(observed).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("broadcast_validation=gossip", () => {
+    function setupPayloadInput(): {
+      payloadInput: PayloadEnvelopeInput;
+      signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
+    } {
+      const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      const slot = signedBlock.message.slot;
+      const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+      const payloadInput = PayloadEnvelopeInput.createFromBlock({
+        blockRootHex: blockRoot,
+        block: signedBlock,
+        forkName: ForkName.gloas,
+        sampledColumns: [],
+        custodyColumns: [],
+        seenTimestampSec: 0,
+        source: PayloadEnvelopeInputSource.byRange,
+        daOutOfRange: false,
+      });
+      const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      signedEnvelope.message.beaconBlockRoot = fromHex(blockRoot);
+      signedEnvelope.message.payload.slotNumber = slot;
+
+      modules.forkChoice.getBlockHex.mockReturnValue(generateProtoBlock({slot}));
+      vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
+      return {payloadInput, signedEnvelope};
+    }
+
+    it("skips signature verification on import of the submitted envelope", async () => {
+      const {payloadInput, signedEnvelope} = setupPayloadInput();
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await api.publishExecutionPayloadEnvelope({
+        signedEnvelopeOrContents: signedEnvelope,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      });
+
+      expect(payloadInput.getPayloadEnvelope()).toBe(signedEnvelope);
+      expect(modules.chain.processExecutionPayload).toHaveBeenCalledWith(payloadInput, {validSignature: true});
+    });
+
+    it("verifies signature on import of an envelope added by another source", async () => {
+      const {payloadInput, signedEnvelope} = setupPayloadInput();
+      const cachedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(signedEnvelope);
+      cachedEnvelope.signature = Buffer.alloc(96, 1);
+      payloadInput.addPayloadEnvelope({
+        envelope: cachedEnvelope,
+        source: PayloadEnvelopeInputSource.byRange,
+        seenTimestampSec: 0,
+        peerIdStr: undefined,
+      });
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await api.publishExecutionPayloadEnvelope({
+        signedEnvelopeOrContents: signedEnvelope,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      });
+
+      expect(payloadInput.getPayloadEnvelope()).toBe(cachedEnvelope);
+      expect(modules.chain.processExecutionPayload).toHaveBeenCalledWith(payloadInput, {validSignature: false});
     });
   });
 });

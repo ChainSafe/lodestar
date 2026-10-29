@@ -1,11 +1,11 @@
-import {beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {GossipBlockResult} from "../../../../src/chain/beaconEngine/gossipValidation/block.js";
@@ -13,7 +13,7 @@ import {
   GossipValidationStatus,
   runGossipValidation,
 } from "../../../../src/chain/beaconEngine/gossipValidationResult.js";
-import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputBlobs, BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
@@ -46,6 +46,204 @@ vi.mock("../../../../src/chain/validation/executionPayloadEnvelope.js", () => ({
   validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../../../src/chain/validation/dataColumnSidecar.js", async (importActual) => ({
+  ...(await importActual<typeof import("../../../../src/chain/validation/dataColumnSidecar.js")>()),
+  validateGossipGloasDataColumnSidecar: vi.fn().mockResolvedValue(undefined),
+}));
+
+describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload gossip %s", (fork) => {
+  const forkTypes = sszTypesFor(fork);
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function setup(blobCount = 1) {
+    const config = createBeaconConfig(
+      {
+        ...defaultConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        HEZE_FORK_EPOCH: fork === ForkName.heze ? 0 : Infinity,
+        PAYLOAD_DUE_BPS: 7500,
+      },
+      new Uint8Array(32)
+    );
+    vi.setSystemTime(config.getSlotDurationMs(fork));
+    const block = forkTypes.SignedBeaconBlock.defaultValue();
+    block.message.slot = 1;
+    block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from(
+      {length: blobCount},
+      () => new Uint8Array(48)
+    );
+    const blockRoot = forkTypes.BeaconBlock.hashTreeRoot(block.message);
+    const payloadInput = PayloadEnvelopeInput.createFromBlock({
+      block,
+      blockRootHex: toRootHex(blockRoot),
+      forkName: fork,
+      sampledColumns: [0, 1],
+      custodyColumns: [0, 1],
+      daOutOfRange: false,
+      source: PayloadEnvelopeInputSource.gossip,
+      seenTimestampSec: Date.now() / 1000,
+    });
+    const logger = testLogger();
+    const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
+    const emitter = new ChainEventEmitter();
+    const onIncomplete = vi.fn();
+    emitter.on(ChainEvent.incompletePayloadEnvelope, onIncomplete);
+    const getPayloadInput = vi.fn().mockReturnValue(payloadInput);
+    const chain = {
+      config,
+      genesisTime: 0,
+      clock: new ClockStopped(1),
+      logger,
+      emitter,
+      processExecutionPayload: vi.fn().mockResolvedValue(undefined),
+      seenPayloadEnvelopeInputCache: {get: getPayloadInput},
+      beaconEngine: {
+        chainView: {getBlockHex: vi.fn().mockReturnValue(null)},
+        validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue({err: null, result: undefined}),
+        validateGossipGloasDataColumnSidecar: vi.fn().mockResolvedValue({err: null, result: undefined}),
+      },
+      serializedCache: {set: vi.fn()},
+      columnReconstructionTracker: {triggerColumnReconstruction: vi.fn()},
+    } as unknown as IBeaconChain;
+    const handlers = getGossipHandlers(
+      {
+        chain,
+        config,
+        logger,
+        metrics: null,
+        core: {reportPeer: vi.fn()} as unknown as INetworkCore,
+        events: new NetworkEventBus(),
+      },
+      {}
+    );
+    const envelopeHandler = handlers[
+      GossipType.execution_payload
+    ] as SequentialGossipHandler<GossipType.execution_payload>;
+    const columnHandler = handlers[
+      GossipType.data_column_sidecar
+    ] as SequentialGossipHandler<GossipType.data_column_sidecar>;
+
+    async function sendEnvelope(): Promise<void> {
+      const envelope = forkTypes.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.beaconBlockRoot = blockRoot;
+      envelope.message.payload.slotNumber = 1;
+      await envelopeHandler({
+        gossipData: {serializedData: forkTypes.SignedExecutionPayloadEnvelope.serialize(envelope)},
+        topic: {boundary: {fork, epoch: 0}, type: GossipType.execution_payload},
+        peerIdStr,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    async function sendColumn(index: number): Promise<void> {
+      const column = forkTypes.DataColumnSidecar.defaultValue();
+      column.beaconBlockRoot = blockRoot;
+      column.slot = 1;
+      column.index = index;
+      await columnHandler({
+        gossipData: {serializedData: forkTypes.DataColumnSidecar.serialize(column)},
+        topic: {boundary: {fork, epoch: 0}, type: GossipType.data_column_sidecar, subnet: 0},
+        peerIdStr,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    return {config, payloadInput, onIncomplete, getPayloadInput, peerIdStr, sendEnvelope, sendColumn};
+  }
+
+  it("requests missing columns at the configured payload deadline when only the envelope arrives", async () => {
+    const {config, payloadInput, onIncomplete, peerIdStr, sendEnvelope} = setup();
+    await sendEnvelope();
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork) - 1);
+    expect(onIncomplete).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledExactlyOnceWith({
+      payloadInput,
+      peer: peerIdStr,
+      source: BlockInputSource.gossip,
+    });
+  });
+
+  it("emits once for multiple columns, including arrivals after the deadline", async () => {
+    const {config, onIncomplete, sendColumn} = setup();
+    await sendColumn(0);
+    await sendColumn(1);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork) - 1);
+    expect(onIncomplete).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledOnce();
+    await sendColumn(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledOnce();
+  });
+
+  it.each(["envelope", "column"])("shares one deadline when %s arrives first", async (first) => {
+    const {config, onIncomplete, sendEnvelope, sendColumn} = setup();
+    if (first === "envelope") {
+      await sendEnvelope();
+      await sendColumn(0);
+    } else {
+      await sendColumn(0);
+      await sendEnvelope();
+    }
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork));
+    expect(onIncomplete).toHaveBeenCalledOnce();
+  });
+
+  it("does not emit if gossip completes the payload before the deadline", async () => {
+    const {config, payloadInput, onIncomplete, sendEnvelope, sendColumn} = setup();
+    await sendEnvelope();
+    await sendColumn(0);
+    await sendColumn(1);
+    expect(payloadInput.isComplete()).toBe(true);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork));
+    expect(onIncomplete).not.toHaveBeenCalled();
+  });
+
+  it("does not arm a timeout for an envelope without blobs", async () => {
+    const {config, payloadInput, onIncomplete, sendEnvelope} = setup(0);
+    await sendEnvelope();
+    expect(payloadInput.isComplete()).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork));
+    expect(onIncomplete).not.toHaveBeenCalled();
+  });
+
+  it("emits once when the first message arrives after the deadline", async () => {
+    const {config, onIncomplete, sendEnvelope, sendColumn} = setup();
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork) + 1);
+    await sendEnvelope();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledOnce();
+    await sendColumn(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onIncomplete).toHaveBeenCalledOnce();
+  });
+
+  it("does not enqueue an input removed from the cache while waiting", async () => {
+    const {config, onIncomplete, getPayloadInput, sendColumn} = setup();
+    await sendColumn(0);
+    getPayloadInput.mockReturnValue(undefined);
+    await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork));
+    expect(onIncomplete).not.toHaveBeenCalled();
+  });
+});
+
 describe("getGossipHandlers", () => {
   const denebConfig = createBeaconConfig(
     {
@@ -57,6 +255,19 @@ describe("getGossipHandlers", () => {
       ELECTRA_FORK_EPOCH: Infinity,
       FULU_FORK_EPOCH: Infinity,
       GLOAS_FORK_EPOCH: Infinity,
+    },
+    Buffer.alloc(32, 0)
+  );
+  const gloasConfig = createBeaconConfig(
+    {
+      ...defaultConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
     },
     Buffer.alloc(32, 0)
   );
@@ -139,6 +350,12 @@ describe("getGossipHandlers", () => {
 
   it("does not report the gossip peer when the local signed candidate was evicted", async () => {
     const {core} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED);
+
+    expect(core.reportPeer).not.toHaveBeenCalled();
+  });
+
+  it("does not report the gossip peer when block data is unavailable", async () => {
+    const {core} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.DATA_UNAVAILABLE);
 
     expect(core.reportPeer).not.toHaveBeenCalled();
   });
@@ -365,6 +582,37 @@ describe("getGossipHandlers", () => {
     expect(threw).toBe(true);
   });
 
+  it("imports a signature-verified REPEAT_PROPOSAL gloas block whose parent payload is known", async () => {
+    const {processBlock, threw} = await runBeaconBlockRepeatProposal(gloasConfig, {
+      recorded: true,
+    });
+
+    expect(processBlock).toHaveBeenCalledOnce();
+    expect(threw).toBe(true);
+  });
+
+  it("does not import a signature-verified REPEAT_PROPOSAL gloas block whose parent conflicts with finalization", async () => {
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(gloasConfig, {
+      recorded: true,
+      parentKnown: false,
+    });
+    expect(getByBlock).not.toHaveBeenCalled();
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
+  });
+
+  it("does not import a signature-verified REPEAT_PROPOSAL gloas block whose parent payload is unknown", async () => {
+    const {processBlock, threw, getByBlock} = await runBeaconBlockRepeatProposal(gloasConfig, {
+      recorded: true,
+      parentPayloadKnown: false,
+    });
+    expect(getByBlock).not.toHaveBeenCalled();
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
+  });
+
   it.each<PayloadErrorType>([
     {code: PayloadErrorCode.INVALID_SIGNATURE},
     {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
@@ -377,6 +625,12 @@ describe("getGossipHandlers", () => {
     const {removeInvalid, payloadInput} = await runExecutionPayloadProcessingError(errorType);
 
     expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
+  });
+
+  it("keeps the cached envelope when payload data is unavailable", async () => {
+    const {removeInvalid} = await runExecutionPayloadProcessingError({code: PayloadErrorCode.DATA_UNAVAILABLE});
+
+    expect(removeInvalid).not.toHaveBeenCalled();
   });
 
   it("keeps the cached envelope when payload processing hits an execution engine error", async () => {
@@ -480,6 +734,7 @@ async function runBeaconBlockProcessingError(
     | BlockErrorCode.EXECUTION_ENGINE_ERROR
     | BlockErrorCode.EXECUTION_ENGINE_INVALID
     | BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED
+    | BlockErrorCode.DATA_UNAVAILABLE
 ): Promise<{
   core: Pick<INetworkCore, "reportPeer">;
   peerIdStr: PeerIdStr;
@@ -568,7 +823,12 @@ async function runBeaconBlockProcessingError(
 
 async function runBeaconBlockRepeatProposal(
   config: BeaconConfig,
-  {recorded, reject = false, parentKnown = true}: {recorded: boolean; reject?: boolean; parentKnown?: boolean}
+  {
+    recorded,
+    reject = false,
+    parentKnown = true,
+    parentPayloadKnown = true,
+  }: {recorded: boolean; reject?: boolean; parentKnown?: boolean; parentPayloadKnown?: boolean}
 ): Promise<{
   processBlock: ReturnType<typeof vi.fn>;
   threw: boolean;
@@ -576,19 +836,35 @@ async function runBeaconBlockRepeatProposal(
 }> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
-  const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
-  signedBlock.message.slot = 1;
-  signedBlock.message.proposerIndex = 3;
-  const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message));
-  const blockInput = BlockInputBlobs.createFromBlock({
-    block: signedBlock,
-    blockRootHex,
-    forkName: ForkName.deneb,
+  const fork = config.getForkName(1);
+  const blockInputMeta = {
     daOutOfRange: false,
     source: BlockInputSource.gossip,
     seenTimestampSec: 0,
     peerIdStr,
-  });
+  };
+  let signedBlock: SignedBeaconBlock;
+  let blockRootHex: RootHex;
+  let serializedData: Uint8Array;
+  let blockInput: BlockInputBlobs | BlockInputNoData;
+  if (fork === ForkName.gloas) {
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    block.message.slot = 1;
+    block.message.proposerIndex = 3;
+    block.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
+    blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
+    serializedData = ssz.gloas.SignedBeaconBlock.serialize(block);
+    blockInput = BlockInputNoData.createFromBlock({...blockInputMeta, block, blockRootHex, forkName: ForkName.gloas});
+    signedBlock = block;
+  } else {
+    const block = ssz.deneb.SignedBeaconBlock.defaultValue();
+    block.message.slot = 1;
+    block.message.proposerIndex = 3;
+    blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
+    serializedData = ssz.deneb.SignedBeaconBlock.serialize(block);
+    blockInput = BlockInputBlobs.createFromBlock({...blockInputMeta, block, blockRootHex, forkName: ForkName.deneb});
+    signedBlock = block;
+  }
 
   const processBlock = vi.fn().mockResolvedValue(undefined);
   const getByBlock = vi.fn().mockReturnValue(blockInput);
@@ -614,7 +890,8 @@ async function runBeaconBlockRepeatProposal(
           code: blockErrorType.code,
         },
         blockErrorType,
-        shouldProcessRepeatProposalBlock: !reject && recorded && parentKnown,
+        shouldProcessRepeatProposalBlock:
+          !reject && recorded && parentKnown && (fork !== ForkName.gloas || parentPayloadKnown),
       } satisfies GossipBlockResult),
       chainView: {
         hasBlockHex: vi.fn().mockReturnValue(false),
@@ -648,11 +925,11 @@ async function runBeaconBlockRepeatProposal(
   const beaconBlockHandler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
 
   const result = await beaconBlockHandler({
-    gossipData: {serializedData: ssz.deneb.SignedBeaconBlock.serialize(signedBlock)},
+    gossipData: {serializedData: serializedData},
     peerIdStr,
     seenTimestampSec: 0,
     topic: {
-      boundary: {fork: ForkName.deneb, epoch: 0},
+      boundary: {fork, epoch: 0},
       type: GossipType.beacon_block,
     },
   });
@@ -666,7 +943,8 @@ async function runBeaconBlockRepeatProposal(
   expect(result.err?.error).toMatchObject({
     action: reject ? GossipAction.REJECT : GossipAction.IGNORE,
     type: blockErrorType,
-    shouldProcessRepeatProposalBlock: !reject && recorded && parentKnown,
+    shouldProcessRepeatProposalBlock:
+      !reject && recorded && parentKnown && (fork !== ForkName.gloas || parentPayloadKnown),
   });
   const threw = result.err !== null;
   // The handler is now deferred via callInNextEventLoop (setTimeout 0), and it kicks off
@@ -684,8 +962,10 @@ function getExecutionBlockError(
     | BlockErrorCode.EXECUTION_ENGINE_ERROR
     | BlockErrorCode.EXECUTION_ENGINE_INVALID
     | BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED
+    | BlockErrorCode.DATA_UNAVAILABLE
 ): BlockError {
-  if (code === BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED) return new BlockError(signedBlock, {code});
+  if (code === BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED || code === BlockErrorCode.DATA_UNAVAILABLE)
+    return new BlockError(signedBlock, {code});
   if (code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
     return new BlockError(signedBlock, {
       code,

@@ -53,6 +53,7 @@ async function setup() {
     syncCommitteeMessagePool: {prune: vi.fn()},
     seenSyncCommitteeMessages: {prune: vi.fn()},
     payloadAttestationPool: {prune: vi.fn()},
+    inclusionListStore: {prune: vi.fn()},
     executionPayloadBidPool: {prune: vi.fn()},
     seenExecutionPayloadBids: {prune: vi.fn()},
     proposerPreferencesPool: {prune: vi.fn()},

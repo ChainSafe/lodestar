@@ -1,4 +1,4 @@
-import {Type} from "@chainsafe/ssz";
+import {SerializedList, Type} from "@chainsafe/ssz";
 import {
   BUILDER_DEPOSIT_REQUEST_TYPE,
   BUILDER_EXIT_REQUEST_TYPE,
@@ -54,6 +54,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
   engine_newPayloadV5: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
+  engine_newPayloadV6: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc, InclusionListRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -72,6 +73,10 @@ export type EngineApiRpcParamTypes = {
     payloadAttributes?: PayloadAttributesRpc,
   ];
   engine_forkchoiceUpdatedV4: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
+  ];
+  engine_forkchoiceUpdatedV5: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
   ];
@@ -97,12 +102,16 @@ export type EngineApiRpcParamTypes = {
 
   engine_getBlobsV1: [DATA[]];
   engine_getBlobsV2: [DATA[]];
+
+  engine_getInclusionListV1: [];
 };
 
 export type PayloadStatus = {
   status: ExecutionPayloadStatus;
   latestValidHash: DATA | null;
   validationError: string | null;
+  /** PayloadStatusV2: whether a VALID payload satisfied the inclusion list constraints, null otherwise */
+  inclusionListSatisfied?: boolean | null;
 };
 
 export type EngineApiRpcReturnTypes = {
@@ -115,6 +124,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV3: PayloadStatus;
   engine_newPayloadV4: PayloadStatus;
   engine_newPayloadV5: PayloadStatus;
+  engine_newPayloadV6: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -128,6 +138,10 @@ export type EngineApiRpcReturnTypes = {
     payloadId: QUANTITY | null;
   };
   engine_forkchoiceUpdatedV4: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
+  engine_forkchoiceUpdatedV5: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
@@ -147,6 +161,8 @@ export type EngineApiRpcReturnTypes = {
 
   engine_getBlobsV1: (BlobAndProofRpc | null)[];
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
+
+  engine_getInclusionListV1: InclusionListRpc;
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -165,7 +181,7 @@ export type ExecutionPayloadBodyRpc = {
 };
 
 export type ExecutionPayloadBody = {
-  transactions: bellatrix.Transaction[];
+  transactions: bellatrix.Transactions;
   withdrawals: capella.Withdrawals | null;
 };
 
@@ -261,7 +277,12 @@ export type PayloadAttributesRpc = {
   slotNumber?: QUANTITY;
   /** QUANTITY, 64 Bits - target value for the gasLimit field of the new payload (GLOAS, execution-apis#796) */
   targetGasLimit?: QUANTITY;
+  /** Array of DATA - transactions that the built payload must include (PayloadAttributesV5, HEZE) */
+  inclusionListTransactions?: InclusionListRpc;
 };
+
+/** Array of DATA - array of transaction objects */
+export type InclusionListRpc = DATA[];
 
 export type ClientVersionRpc = {
   /** ClientCode */
@@ -295,7 +316,7 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
     extraData: bytesToData(data.extraData),
     baseFeePerGas: numToQuantity(data.baseFeePerGas),
     blockHash: bytesToData(data.blockHash),
-    transactions: data.transactions.map((tran) => bytesToData(tran)),
+    transactions: Array.from(data.transactions, (tran) => bytesToData(tran)),
   };
 
   // Capella adds withdrawals to the ExecutionPayload
@@ -379,7 +400,7 @@ export function parseExecutionPayload(
     extraData: dataToBytes(data.extraData, null),
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+    transactions: SerializedList.fromArray(data.transactions.map((tran) => dataToBytes(tran, null))),
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
@@ -442,11 +463,22 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
     slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? numToQuantity(data.targetGasLimit) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions
+      ? serializeInclusionList(data.inclusionListTransactions)
+      : undefined,
   };
 }
 
 export function serializeBeaconBlockRoot(data: Root): DATA {
   return bytesToData(data);
+}
+
+export function serializeInclusionList(data: bellatrix.Transactions): InclusionListRpc {
+  return Array.from(data, (transaction) => bytesToData(transaction));
+}
+
+export function deserializeInclusionList(data: InclusionListRpc): bellatrix.Transactions {
+  return SerializedList.fromArray(data.map((transaction) => dataToBytes(transaction, null)));
 }
 
 export function deserializePayloadAttributes(data: PayloadAttributesRpc): PayloadAttributes {
@@ -460,6 +492,9 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
     slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? quantityToBigint(data.targetGasLimit) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions
+      ? deserializeInclusionList(data.inclusionListTransactions)
+      : undefined,
   };
 }
 
@@ -635,7 +670,7 @@ export function deserializeExecutionRequests(fork: ForkName, serialized: Executi
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
   return data
     ? {
-        transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+        transactions: SerializedList.fromArray(data.transactions.map((tran) => dataToBytes(tran, null))),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
       }
     : null;
@@ -658,7 +693,7 @@ export function serializeExecutionPayloadBodyV2(data: ExecutionPayloadBodyV2 | n
 export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null): ExecutionPayloadBodyRpc | null {
   return data
     ? {
-        transactions: data.transactions.map((tran) => bytesToData(tran)),
+        transactions: Array.from(data.transactions, (tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
       }
     : null;

@@ -2,13 +2,13 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
   BUILDER_INDEX_SELF_BUILD,
-  ForkName,
   ForkPostBellatrix,
   ForkPreGloas,
   ForkSeq,
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkPostFulu,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   beaconBlockToBlinded,
@@ -31,9 +31,10 @@ import {
 } from "@lodestar/types";
 import {ErrorAborted, byteArrayEquals, fromHex, toPrintableUrl, toRootHex} from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
-import {GossipValidationStatus} from "../../../chain/beaconEngine/gossipValidationResult.js";
+import {GossipValidationResult, GossipValidationStatus} from "../../../chain/beaconEngine/gossipValidationResult.js";
 import {BeaconEngineErrorCode, ProductionResponse} from "../../../chain/beaconEngine/interface.js";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
+import {InclusionListSource} from "../../../chain/blocks/types.js";
 import {
   AttestationErrorCode,
   ProposerPreferencesErrorCode,
@@ -869,7 +870,7 @@ export function getValidatorApi(
             // Engine inserted into its (internal) proposerPreferencesPool on Accept above.
             await network.publishProposerPreferences(signed);
             chain.emitter.emit(routes.events.EventType.proposerPreferences, {
-              version: ForkName.gloas,
+              version: config.getForkName(signed.message.proposalSlot),
               data: signed,
             });
           } catch (e) {
@@ -926,6 +927,98 @@ export function getValidatorApi(
       if (failures.length > 0) {
         throw new IndexedError("Error submitting builder preferences", failures);
       }
+    },
+
+    async produceInclusionList({slot}) {
+      notWhileSyncing(chain, sync.state);
+
+      if (!isForkPostHeze(chain.config.getForkName(slot))) {
+        throw new ApiError(400, `Producing inclusion list for pre-heze slot: ${slot}`);
+      }
+
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      const timer = metrics?.getInclusionListV1RequestsDuration.startTimer();
+      const transactions = await chain.executionEngine.getInclusionList();
+      timer?.();
+      metrics?.getInclusionListV1Requests.inc();
+
+      return {data: transactions, meta: {version: chain.config.getForkName(slot)}};
+    },
+
+    async getInclusionListCommitteeDuties({epoch, indices}) {
+      notWhileSyncing(chain, sync.state);
+
+      if (indices.length === 0) {
+        throw new ApiError(400, "No validator to get inclusion list committee duties");
+      }
+
+      if (!isForkPostHeze(chain.config.getForkName(computeStartSlotAtEpoch(epoch)))) {
+        throw new ApiError(400, `Requesting pre-heze inclusion list committee duties epoch: ${epoch}`);
+      }
+
+      // May request for an epoch that's in the future
+      await waitForNextClosestEpoch();
+
+      if (epoch > chain.clock.currentEpoch + 1) {
+        throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
+      }
+
+      const {
+        data: duties,
+        dependentRoot,
+        head,
+      } = await chain.beaconEngine.getInclusionListCommitteeDuties(epoch, indices, chain.clock.currentEpoch);
+
+      return {
+        data: duties,
+        meta: {
+          dependentRoot: toRootHex(dependentRoot),
+          executionOptimistic: isOptimisticBlock(head),
+        },
+      };
+    },
+
+    async publishInclusionList({signedInclusionList}) {
+      notWhileSyncing(chain, sync.state);
+
+      const {slot} = signedInclusionList.message;
+      if (!isForkPostHeze(chain.config.getForkName(slot))) {
+        throw new ApiError(400, `Publishing pre-heze inclusion list slot: ${slot}`);
+      }
+
+      // Timeliness is judged on receipt, as for gossip, so a list submitted in time stays timely if validation is slow
+      const seenTimestampSec = Date.now() / 1000;
+      metrics?.inclusionListsReceived.inc({source: InclusionListSource.api});
+      metrics?.inclusionListTransactionsReceived.inc(
+        {source: InclusionListSource.api},
+        signedInclusionList.message.transactions.length
+      );
+
+      const timer = metrics?.inclusionListsValidationTime.startTimer();
+      let validationResult: GossipValidationResult<{totalBytes: number}>;
+      try {
+        validationResult = await chain.beaconEngine.validateGossipInclusionList(
+          ssz.heze.SignedInclusionList.serialize(signedInclusionList),
+          signedInclusionList,
+          seenTimestampSec
+        );
+      } finally {
+        timer?.({source: InclusionListSource.api});
+      }
+      if (validationResult.err !== null)
+        throw validationResult.err.error ?? new ApiError(400, validationResult.err.code);
+      const {totalBytes} = validationResult.result;
+      metrics?.inclusionListsValid.inc({source: InclusionListSource.api});
+      metrics?.inclusionListsValidSize.inc(totalBytes);
+
+      chain.emitter.emit(routes.events.EventType.inclusionList, {
+        version: chain.config.getForkName(slot),
+        data: signedInclusionList,
+      });
+
+      await network.publishInclusionList(signedInclusionList);
+      metrics?.inclusionListsPublished.inc();
     },
 
     async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {

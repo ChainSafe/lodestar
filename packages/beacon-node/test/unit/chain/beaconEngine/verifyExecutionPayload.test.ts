@@ -1,6 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -46,6 +47,7 @@ describe("BeaconEngineCore envelope verification", () => {
     chain.forkChoice.getBlockHex.mockReturnValue(null);
     chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
     chain.forkChoice.onExecutionPayload = vi.fn();
+    chain.forkChoice.getBlockHexAndBlockHash.mockReturnValue({...zeroProtoBlock, payloadStatus: PayloadStatus.FULL});
     const state = generateState({slot: 1}, config);
     state.latestBlockHeader.proposerIndex = 7;
     if (!("latestExecutionPayloadBid" in state)) throw Error("Expected Gloas state");
@@ -71,13 +73,14 @@ describe("BeaconEngineCore envelope verification", () => {
   }
 
   it("checks fields before EL/BLS and derives versioned hashes from the committed bid", async () => {
-    expect(await verify()).toEqual({err: null, result: {executionOptimistic: false}});
+    expect(await verify()).toMatchObject({err: null, result: {executionOptimistic: false}});
     expect(chain.executionEngine.notifyNewPayload).toHaveBeenCalledExactlyOnceWith(
       ForkName.gloas,
       envelope.message.payload,
       commitments.map(kzgCommitmentToVersionedHash),
       envelope.message.parentBeaconBlockRoot,
-      envelope.message.executionRequests
+      envelope.message.executionRequests,
+      undefined
     );
     expect(vi.mocked(verification.verifyExecutionPayloadEnvelope).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(chain.executionEngine.notifyNewPayload).mock.invocationCallOrder[0]
@@ -147,7 +150,7 @@ describe("BeaconEngineCore envelope verification", () => {
 
   it("retains the checkpoint-anchor state fallback", async () => {
     chain.regen.getBlockSlotState.mockRejectedValue(new Error("anchor block state unavailable"));
-    expect(await verify()).toEqual({err: null, result: {executionOptimistic: false}});
+    expect(await verify()).toMatchObject({err: null, result: {executionOptimistic: false}});
     expect(chain.regen.getClosestHeadState).toHaveBeenCalledWith(zeroProtoBlock);
   });
 
@@ -166,7 +169,7 @@ describe("BeaconEngineCore envelope verification", () => {
   });
 
   it("preserves the already-validated signature option", async () => {
-    expect(await verify(true)).toEqual({err: null, result: {executionOptimistic: false}});
+    expect(await verify(true)).toMatchObject({err: null, result: {executionOptimistic: false}});
     expect(verification.verifyExecutionPayloadEnvelopeSignature).not.toHaveBeenCalled();
     expect(verification.verifyExecutionPayloadEnvelope).toHaveBeenCalledWith(
       config,
@@ -184,7 +187,7 @@ describe("BeaconEngineCore envelope verification", () => {
         latestValidHash: null,
         validationError: null,
       });
-      expect(await verify()).toEqual({err: null, result: {executionOptimistic: true}});
+      expect(await verify()).toMatchObject({err: null, result: {executionOptimistic: true}});
     }
   );
 

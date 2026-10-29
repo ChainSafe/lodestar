@@ -226,7 +226,7 @@ describe("downloadByRoot.ts", () => {
         blockRoot,
         missing,
         // biome-ignore lint/style/noNonNullAssertion: its there
-        indicesInPossession: [0, denebBlockWithColumns.blobSidecars.at(-1)?.index!],
+        indicesInPossession: [0, denebBlockWithColumns.blobSidecars.at(-1)!.index],
       });
       expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledOnce();
       expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledWith(peerIdStr, blobMeta.slice(1, -1));

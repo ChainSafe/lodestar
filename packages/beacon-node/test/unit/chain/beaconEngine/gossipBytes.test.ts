@@ -1,10 +1,10 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {BitArray, Type} from "@chainsafe/ssz";
+import {BitArray, SerializedList, Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
@@ -23,6 +23,7 @@ import * as blsChangeValidation from "../../../../src/chain/validation/blsToExec
 import * as columnValidation from "../../../../src/chain/validation/dataColumnSidecar.js";
 import * as bidValidation from "../../../../src/chain/validation/executionPayloadBid.js";
 import * as envelopeValidation from "../../../../src/chain/validation/executionPayloadEnvelope.js";
+import * as inclusionListValidation from "../../../../src/chain/validation/inclusionList.js";
 import * as payloadAttestationValidation from "../../../../src/chain/validation/payloadAttestationMessage.js";
 import * as preferencesValidation from "../../../../src/chain/validation/proposerPreferences.js";
 import * as proposerSlashingValidation from "../../../../src/chain/validation/proposerSlashing.js";
@@ -82,6 +83,7 @@ describe("BeaconEngineCore gossip bytes", () => {
       "validateGossipPayloadAttestationMessageBytes",
       "validateGossipExecutionPayloadBidBytes",
       "validateGossipProposerPreferencesBytes",
+      "validateGossipInclusionListBytes",
     ] as const) {
       Object.defineProperty(engine, method, {value: BeaconEngineCore.prototype[method], configurable: true});
     }
@@ -436,6 +438,17 @@ describe("BeaconEngineCore gossip bytes", () => {
         BeaconEngineCore.prototype.validateGossipExecutionPayloadBidBytes.call(engine, bytes, ForkName.gloas, 1),
     },
     {
+      name: "inclusion list",
+      createMessage: () =>
+        createObjectMessage(
+          ssz.heze.SignedInclusionList,
+          (value) => BeaconEngineCore.prototype.validateGossipInclusionList.call(engine, value, 1),
+          (facade, value, bytes) => facade.validateGossipInclusionList(bytes, value, 1)
+        ),
+      validate: () => vi.spyOn(inclusionListValidation, "validateGossipInclusionList"),
+      invoke: (bytes: Uint8Array) => BeaconEngineCore.prototype.validateGossipInclusionListBytes.call(engine, bytes, 1),
+    },
+    {
       name: "proposer preferences",
       createMessage: () =>
         createObjectMessage(
@@ -563,6 +576,33 @@ describe("BeaconEngineCore gossip bytes", () => {
       },
     });
     expect(engine.logger.error).toHaveBeenCalledWith(expect.any(String), {code: "UNEXPECTED_ERROR"}, error);
+  });
+
+  it.each([-0.001, 0, 0.999, 1])("stores inclusion lists received %s seconds into their slot", async (secFromSlot) => {
+    const list = ssz.heze.SignedInclusionList.defaultValue();
+    list.message.transactions = SerializedList.fromArray([Uint8Array.of(1)]);
+    vi.spyOn(inclusionListValidation, "validateGossipInclusionList").mockResolvedValue({
+      committeeIndices: [0],
+      totalBytes: 1,
+    });
+    vi.spyOn(engine.clock, "secFromSlot").mockReturnValue(secFromSlot);
+    vi.spyOn(engine.config, "getInclusionListDueMs").mockReturnValue(1000);
+
+    expect(await BeaconEngineCore.prototype.validateGossipInclusionList.call(engine, list, 1)).toEqual({
+      err: null,
+      result: {totalBytes: 1},
+    });
+    expect(
+      engine.inclusionListStore.getInclusionListTransactions(0, toRootHex(list.message.dependentRoot), true).length
+    ).toBe(secFromSlot >= 0 && secFromSlot < 1 ? 1 : 0);
+    expect(
+      await BeaconEngineCore.prototype.getInclusionListsByIndices.call(
+        engine,
+        0,
+        list.message.dependentRoot,
+        BitArray.fromSingleBit(INCLUSION_LIST_COMMITTEE_SIZE, 0).uint8Array
+      )
+    ).toEqual([ssz.heze.SignedInclusionList.serialize(list)]);
   });
 
   it("returns an ignore for every attestation if the batch unexpectedly fails", async () => {

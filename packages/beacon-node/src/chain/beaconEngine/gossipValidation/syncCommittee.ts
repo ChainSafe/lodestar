@@ -2,7 +2,8 @@ import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
 import {SubnetID, ValidatorIndex, altair, ssz} from "@lodestar/types";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
-import {GossipActionError} from "../../errors/gossipValidation.js";
+import {GossipAction, GossipActionError} from "../../errors/gossipValidation.js";
+import {SyncCommitteeError, SyncCommitteeErrorCode} from "../../errors/index.js";
 import * as syncCommitteeValidation from "../../validation/syncCommittee.js";
 import * as syncCommitteeContributionAndProofValidation from "../../validation/syncCommitteeContributionAndProof.js";
 import type {BeaconEngineCore} from "../beaconEngineCore.js";
@@ -66,12 +67,14 @@ export function validateApiSyncCommittee(
 ): Promise<GossipValidationResult<{subnets: number[]}>> {
   return runGossipValidation(async () => {
     const state = this.getHeadState();
-    // The node's own validators — skip silently if this validator isn't in the sync committee.
     const indexesInCommittee = isStatePostAltair(state)
       ? state.getIndexedSyncCommittee(syncCommittee.slot).validatorIndexMap.get(syncCommittee.validatorIndex)
       : undefined;
     if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
-      return {subnets: []};
+      throw new SyncCommitteeError(GossipAction.REJECT, {
+        code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
+        validatorIndex: syncCommittee.validatorIndex,
+      });
     }
     // Verify signature only, all other data is very likely correct since this node produced the signature.
     await syncCommitteeValidation.validateApiSyncCommittee.call(this, syncCommittee);

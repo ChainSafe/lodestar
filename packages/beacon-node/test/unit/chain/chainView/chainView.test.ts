@@ -27,6 +27,18 @@ function update(initial: ChainViewSnapshot, changes: Partial<ChainViewSnapshot>)
 }
 
 describe("ChainView", () => {
+  it("returns one summary per block across the Gloas transition", () => {
+    const a = block(1, 0, 0);
+    const pending = block(2, 1, 1, {parentBlockHash: root(3), payloadStatus: PayloadStatus.PENDING});
+    const empty = {...pending, payloadStatus: PayloadStatus.EMPTY};
+    const full = {...pending, payloadStatus: PayloadStatus.FULL, executionPayloadBlockHash: root(4)};
+    const view = new ReplicateChainView(snapshot([a, pending, empty, full], full));
+
+    expect(view.getBlockSummariesAtSlot(0)).toEqual([a]);
+    expect(view.getBlockSummariesAtSlot(1)).toEqual([pending]);
+    expect(view.getBlockSummariesByParentRoot(a.blockRoot)).toEqual([pending]);
+  });
+
   it("applies imported blocks and checkpoint metadata", () => {
     const a = block(1, 0, 0);
     const b = block(2, SLOTS_PER_EPOCH - 1, 1);

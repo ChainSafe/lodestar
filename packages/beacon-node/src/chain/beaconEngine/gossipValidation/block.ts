@@ -1,6 +1,6 @@
 import {ForkName, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, SubnetID, WithBytes, deneb, ssz} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, SubnetID, WithBytes, deneb, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {deserializeBlock} from "../../blocks/blockSerializedCache.js";
@@ -118,7 +118,12 @@ async function doValidateGossipBlock(
       result.err?.status === GossipValidationStatus.Ignore &&
       result.err.code === BlockErrorCode.REPEAT_PROPOSAL &&
       this.seenBlockProposers.hasBlockRoot(block.message.slot, block.message.proposerIndex, blockRootHex) &&
-      this.forkChoice.getBlockHexDefaultStatus(toRootHex(block.message.parentRoot)) !== null;
+      this.forkChoice.getBlockHexDefaultStatus(toRootHex(block.message.parentRoot)) !== null &&
+      (!isGloasBeaconBlock(block.message) ||
+        this.forkChoice.getBlockHexAndBlockHash(
+          toRootHex(block.message.parentRoot),
+          toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+        ) !== null);
     const retained =
       result.err === null ||
       shouldProcessRepeatProposalBlock ||

@@ -1,12 +1,17 @@
 import {describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {getConfig} from "@lodestar/config/test-utils";
+import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
 import type {StateTransitionOpts} from "../../../src/stateTransition.js";
+import {BeaconStateView} from "../../../src/stateView/beaconStateView.js";
 import {computeNewStateRootStateTransitionOpts} from "../../../src/stateView/computeNewStateRoot.js";
 import type {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
+import {createBeaconStateView} from "../../../src/stateView/stateViewFactory.js";
+import {generateValidators} from "../../utils/validator.js";
 
 describe("NativeBeaconStateView", () => {
   const genesisValidatorsRoot = new Uint8Array(32);
@@ -16,15 +21,112 @@ describe("NativeBeaconStateView", () => {
     genesisValidatorsRoot
   );
 
-  it("throws for Gloas-only fields while native Gloas is unsupported", () => {
-    const binding = {} as IBeaconStateViewNative;
+  it.each([
+    {fork: ForkName.phase0, executionState: false},
+    {fork: ForkName.altair, executionState: false},
+    {fork: ForkName.bellatrix, executionState: true},
+    {fork: ForkName.capella, executionState: true},
+    {fork: ForkName.deneb, executionState: true},
+    {fork: ForkName.electra, executionState: true},
+    {fork: ForkName.fulu, executionState: true},
+    {fork: ForkName.gloas, executionState: true},
+  ])("matches TypeScript execution predicates for a $fork state", ({fork, executionState}) => {
+    const config = createBeaconConfig(getConfig(fork), genesisValidatorsRoot);
+    const slot = 3 * SLOTS_PER_EPOCH;
+    const stateType = config.getForkTypes(slot).BeaconState;
+    const state = stateType.defaultValue();
+    state.slot = slot;
+    state.validators = generateValidators(16, {
+      activation: 0,
+      exit: FAR_FUTURE_EPOCH,
+      withdrawableEpoch: FAR_FUTURE_EPOCH,
+      balance: MAX_EFFECTIVE_BALANCE,
+    });
+    state.balances = state.validators.map(() => MAX_EFFECTIVE_BALANCE);
+    if ("inactivityScores" in state) {
+      state.inactivityScores = state.validators.map(() => 0);
+      state.previousEpochParticipation = state.validators.map(() => 0);
+      state.currentEpochParticipation = state.validators.map(() => 0);
+      state.currentSyncCommittee.pubkeys.fill(state.validators[0].pubkey);
+      state.nextSyncCommittee.pubkeys.fill(state.validators[0].pubkey);
+    }
+    if ("latestExecutionPayloadHeader" in state) {
+      state.latestExecutionPayloadHeader.blockHash = new Uint8Array(32).fill(7);
+    }
+    if ("latestBlockHash" in state) state.latestBlockHash = new Uint8Array(32).fill(7);
+    pubkeyCache.ensureCapacity(state.validators.length);
+    const stateBytes = stateType.serialize(state);
+    const tree = createBeaconStateView({nativeStateTransition: false, config, stateBytes});
+    const native = createBeaconStateView({nativeStateTransition: true, config, stateBytes});
+    try {
+      if (!(tree instanceof BeaconStateView) || !(native instanceof NativeBeaconStateView)) {
+        throw Error("Expected TypeScript and native state views");
+      }
+      expect(tree.isExecutionStateType).toBe(executionState);
+      expect(native.isExecutionStateType).toBe(tree.isExecutionStateType);
+      expect(native.isMergeTransitionComplete).toBe(tree.isMergeTransitionComplete);
+      const block = config.getForkTypes(state.slot).BeaconBlock.defaultValue();
+      expect(native.isExecutionEnabled(block)).toBe(tree.isExecutionEnabled(block));
+    } finally {
+      native.release();
+      tree.release();
+    }
+  });
+
+  it("rejects Heze before invoking native slot processing or state loading", () => {
+    const hezeConfig = createBeaconConfig(
+      {
+        ...defaultChainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        HEZE_FORK_EPOCH: 0,
+      },
+      genesisValidatorsRoot
+    );
+    const binding = {processSlots: vi.fn(), loadOtherState: vi.fn()} as unknown as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(hezeConfig, binding);
+    expect(() => view.processSlots(0)).toThrow("does not support heze");
+    expect(() => view.loadOtherState(ssz.gloas.BeaconState.serialize(ssz.gloas.BeaconState.defaultValue()))).toThrow(
+      "does not support heze"
+    );
+    expect(binding.processSlots).not.toHaveBeenCalled();
+    expect(binding.loadOtherState).not.toHaveBeenCalled();
+  });
+
+  it("preserves Gloas availability bits and repeated PTC membership", () => {
+    const availability = {uint8Array: new Uint8Array([0b10000101]), bitLen: 8};
+    const binding = {
+      executionPayloadAvailability: availability,
+      getIndicesInPayloadTimelinessCommittee: () => [0, 3, 7],
+    } as unknown as IBeaconStateViewNative;
     const view = new NativeBeaconStateView(config, binding);
 
-    expect(() => view.executionPayloadAvailability).toThrow("NativeBeaconStateView does not support Gloas");
-    expect(() => view.latestBlockHash).toThrow("NativeBeaconStateView does not support Gloas");
-    expect(() => view.getIndicesInPayloadTimelinessCommittee(0, 0)).toThrow(
-      "NativeBeaconStateView does not support Gloas"
-    );
+    expect(view.executionPayloadAvailability.getTrueBitIndexes()).toEqual([0, 2, 7]);
+    expect(view.executionPayloadAvailability).toBe(view.executionPayloadAvailability);
+    expect(view.getIndicesInPayloadTimelinessCommittee(0, 0)).toEqual([0, 3, 7]);
+  });
+
+  it("serializes all parent request lists and returns a separately owned view", () => {
+    const requests = ssz.gloas.ExecutionRequests.defaultValue();
+    requests.builderDeposits.push(ssz.gloas.BuilderDepositRequest.defaultValue());
+    requests.builderExits.push(ssz.gloas.BuilderExitRequest.defaultValue());
+    const postBinding = {forkName: "gloas", release: vi.fn()} as unknown as IBeaconStateViewNative;
+    const binding = {
+      withParentPayloadApplied: vi.fn(() => postBinding),
+      release: vi.fn(),
+    } as unknown as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(config, binding);
+    const post = view.withParentPayloadApplied(requests);
+    const [bytes] = vi.mocked(binding.withParentPayloadApplied).mock.calls[0];
+    expect(ssz.gloas.ExecutionRequests.deserialize(bytes)).toEqual(requests);
+    post.release();
+    expect(postBinding.release).toHaveBeenCalledOnce();
+    expect(binding.release).not.toHaveBeenCalled();
   });
 
   it("caches forwarded properties so the binding is hit once", () => {

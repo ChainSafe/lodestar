@@ -7,6 +7,7 @@ import {
 } from "@chainsafe/lodestar-z/metrics";
 import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
+import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {Db} from "@lodestar/db";
@@ -29,6 +30,7 @@ import {
   ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
+  INCLUSION_LIST_COMMITTEE_SIZE,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   ZERO_HASH_HEX,
@@ -84,6 +86,7 @@ import {
   fulu,
   getValidatorStatus,
   gloas,
+  heze,
   phase0,
   rewards,
   ssz,
@@ -151,6 +154,7 @@ import {
   AttestationPool,
   DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
+  InclusionListStore,
   OpPool,
   PayloadAttestationPool,
   ProposerPreferencesPool,
@@ -181,6 +185,7 @@ import {PersistentCheckpointStateCache} from "../stateCache/persistentCheckpoint
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
 import {verifyBlockProposerSignature} from "../validation/block.js";
+import {validateGossipInclusionList} from "../validation/inclusionList.js";
 import * as proposerSlashingValidation from "../validation/proposerSlashing.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {
@@ -219,6 +224,7 @@ import {
 } from "./beaconApis.js";
 import {
   getAttesterDuties,
+  getInclusionListCommitteeDuties,
   getProposerDuties,
   getPtcDuties,
   getSyncCommitteeDuties,
@@ -294,7 +300,7 @@ import {
   validateSyncCommitteeGossipContributionAndProof,
   validateSyncCommitteeGossipContributionAndProofBytes,
 } from "./gossipValidation/syncCommittee.js";
-import {GossipValidationResult, fromResult} from "./gossipValidationResult.js";
+import {GossipValidationResult, fromResult, ignore, runGossipValidation} from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
 import {importExecutionPayload, importExecutionPayloadBytes} from "./importExecutionPayload.js";
 import {AnchorSummary, EngineBootstrap, EngineBootstrapWithChainView} from "./initialization.js";
@@ -394,6 +400,7 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   syncContributionAndProofPool: SyncContributionAndProofPool;
   payloadAttestationPool: PayloadAttestationPool;
   readonly executionPayloadBidPool = new ExecutionPayloadBidPool();
+  readonly inclusionListStore: InclusionListStore;
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
   opPool: OpPool;
   beaconProposerCache: BeaconProposerCache;
@@ -533,6 +540,7 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       this.aggregatedAttestationPool = new AggregatedAttestationPool(config, metrics, logger);
       this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, opts.preaggregateSlotDistance);
       this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
+      this.inclusionListStore = new InclusionListStore(this.config);
       this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
       this.opPool = new OpPool(config);
       this.beaconProposerCache = new BeaconProposerCache(opts);
@@ -721,6 +729,7 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
+    this.inclusionListStore.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.proposerPreferencesPool.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
@@ -859,6 +868,11 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       executionOptimistic: isOptimisticBlock(block),
       blockSnapshot: {canonical: ancestors.map(toSummary), nonCanonical: nonAncestors.map(toSummary)},
     };
+  }
+
+  async getPayloadExecutionOptimistic(blockRoot: Root): Promise<boolean | null> {
+    const payload = this.forkChoice.getBlockHex(toRootHex(blockRoot), PayloadStatus.FULL);
+    return payload === null ? null : isOptimisticBlock(payload);
   }
 
   async isHeadOptimistic(): Promise<boolean> {
@@ -1338,6 +1352,64 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     return getSyncCommitteeDuties.call(this, epoch, indices);
   }
 
+  async getInclusionListCommitteeDuties(
+    epoch: Epoch,
+    indices: ValidatorIndex[],
+    currentEpoch: Epoch
+  ): Promise<{data: routes.validator.InclusionListDuty[]; dependentRoot: Root; head: ProtoBlock}> {
+    return getInclusionListCommitteeDuties.call(
+      this,
+      epoch,
+      indices,
+      currentEpoch,
+      this.getHeadStateAtEpoch.bind(this)
+    );
+  }
+
+  async getInclusionListsByIndices(slot: Slot, dependentRoot: Root, indices: Uint8Array): Promise<Uint8Array[]> {
+    return this.inclusionListStore
+      .getByIndices(slot, toRootHex(dependentRoot), new BitArray(indices, INCLUSION_LIST_COMMITTEE_SIZE))
+      .slice(0, this.config.MAX_REQUEST_INCLUSION_LIST)
+      .map((list) => ssz.heze.SignedInclusionList.serialize(list));
+  }
+
+  async validateGossipInclusionListBytes(
+    listBytes: Uint8Array,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{totalBytes: number}>> {
+    try {
+      const list = deserializeGossipMessage(ssz.heze.SignedInclusionList, listBytes);
+      return await this.validateGossipInclusionList(list, seenTimestampSec);
+    } catch (error) {
+      if (error instanceof GossipActionError) return fromResult({err: error});
+      this.logger.error("Error validating gossip inclusion list", {code: "UNEXPECTED_ERROR"}, error as Error);
+      return ignore("UNEXPECTED_ERROR");
+    }
+  }
+
+  async validateGossipInclusionList(
+    list: heze.SignedInclusionList,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{totalBytes: number}>> {
+    try {
+      return await runGossipValidation(async () => {
+        const {committeeIndices, totalBytes} = await validateGossipInclusionList.call(this, list);
+        const slot = list.message.slot;
+        const secFromSlot = this.clock.secFromSlot(slot, seenTimestampSec);
+        const isTimely =
+          secFromSlot >= 0 && secFromSlot * 1000 < this.config.getInclusionListDueMs(this.config.getForkName(slot));
+        const insertOutcome = this.inclusionListStore.process(list, committeeIndices, isTimely);
+        this.metrics?.inclusionListStore.insertOutcome.inc({insertOutcome});
+        this.metrics?.inclusionListStore.size.set(this.inclusionListStore.size);
+        return {totalBytes};
+      });
+    } catch (error) {
+      if (error instanceof GossipActionError) return fromResult({err: error});
+      this.logger.error("Error validating gossip inclusion list", {code: "UNEXPECTED_ERROR"}, error as Error);
+      return ignore("UNEXPECTED_ERROR");
+    }
+  }
+
   /** gloas: PTC duties for `validatorIndices` at `epoch`. State resolved at `currentEpoch` (passed-in clock). */
   async getPtcDuties(
     epoch: Epoch,
@@ -1698,10 +1770,17 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     return validateGossipExecutionPayloadBid.call(this, signedExecutionPayloadBid, seenTimestampSec);
   }
 
-  async validateApiExecutionPayloadBidBytes(bidBytes: Uint8Array): Promise<GossipValidationResult<void>> {
+  async validateApiExecutionPayloadBidBytes(
+    bidBytes: Uint8Array,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<void>> {
     try {
-      const signedExecutionPayloadBid = deserializeGossipMessage(ssz.gloas.SignedExecutionPayloadBid, bidBytes);
-      return this.validateApiExecutionPayloadBid(signedExecutionPayloadBid);
+      const signedExecutionPayloadBid = deserializeGossipMessage(
+        isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid,
+        bidBytes
+      );
+      return this.validateApiExecutionPayloadBid(signedExecutionPayloadBid, seenTimestampSec);
     } catch (error) {
       if (error instanceof GossipActionError) return fromResult({err: error});
       throw error;
@@ -1709,9 +1788,10 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   }
 
   validateApiExecutionPayloadBid(
-    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    seenTimestampSec = Date.now() / 1000
   ): Promise<GossipValidationResult<void>> {
-    return validateApiExecutionPayloadBid.call(this, signedExecutionPayloadBid);
+    return validateApiExecutionPayloadBid.call(this, signedExecutionPayloadBid, seenTimestampSec);
   }
 
   async validateGossipProposerPreferencesBytes(preferencesBytes: Uint8Array): Promise<GossipValidationResult<void>> {
@@ -2498,6 +2578,10 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
             unrealizedJustifiedRoot: node.unrealizedJustifiedRoot,
             unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
             unrealizedFinalizedRoot: node.unrealizedFinalizedRoot,
+            inclusionListSatisfied:
+              node.payloadStatus === PayloadStatus.FULL
+                ? forkChoice.getPayloadInclusionListSatisfaction(node.blockRoot)
+                : null,
           },
         };
       }),
@@ -2808,12 +2892,12 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   getProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.getProposerHead});
-    const secFromSlot = this.clock.secFromSlot(slot);
+    const msFromSlot = this.clock.msFromSlot(slot);
 
     try {
       const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetProposerHead,
-        secFromSlot,
+        msFromSlot,
         slot,
       });
 
@@ -2837,10 +2921,10 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
     const slot = this.clock.currentSlot;
-    const secFromSlot = this.clock.secFromSlot(slot);
+    const msFromSlot = this.clock.msFromSlot(slot);
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, secFromSlot, slot}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, msFromSlot, slot}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
