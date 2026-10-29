@@ -564,6 +564,20 @@ describe("PrepareNextSlot scheduler", () => {
 
     it("runs a re-prepare requested during the scheduled run after it", async () => {
       forkChoiceStub.shouldBuildOnFull.mockReturnValueOnce(true).mockReturnValue(false);
+      // The verdict lands while the scheduled run awaits its forkchoiceUpdated call
+      executionEngineStub.notifyForkchoiceUpdate.mockImplementationOnce(async () => {
+        emitPtcQuorum(clockSlot, false);
+        return "0x0000000000000001";
+      });
+      await runScheduled();
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([fullParentHash, emptyParentHash]);
+      expect(loggerStub.error).not.toHaveBeenCalled();
+    });
+
+    it("drops a request that arrives before the scheduled run starts", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
       const scheduled = scheduler.prepareForNextSlot(clockSlot);
       await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 3);
       emitPtcQuorum(clockSlot, false);
@@ -571,8 +585,9 @@ describe("PrepareNextSlot scheduler", () => {
       await scheduled;
       await flush();
 
-      expect(fcuParentHashes()).toEqual([fullParentHash, emptyParentHash]);
-      expect(loggerStub.error).not.toHaveBeenCalled();
+      // The scheduled run already sees the verdict, there is nothing to re-evaluate after it
+      expect(fcuParentHashes()).toEqual([emptyParentHash]);
+      expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     });
   });
 });

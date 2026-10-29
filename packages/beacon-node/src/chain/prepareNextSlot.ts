@@ -145,11 +145,13 @@ export class PrepareNextSlotScheduler {
     }
 
     try {
-      this.preparingSlot = prepareSlot;
-
       // At PREPARE_NEXT_SLOT_BPS (~67%) of the current slot we prepare payload for the next slot
       // or precompute epoch transition
       await sleep(this.config.getSlotComponentDurationMs(currentFork, PREPARE_NEXT_SLOT_BPS), this.signal);
+
+      // Re-prepare requests from here on are queued until this run is done. Earlier ones are
+      // dropped, the head computed below already reflects them.
+      this.preparingSlot = prepareSlot;
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
