@@ -199,7 +199,11 @@ describe("Fulu engine body", () => {
       feeRecipient
     );
 
-    expect(result).toEqual({prepType: PayloadPreparationType.Cached, payloadId: "0x1234"});
+    expect(result).toEqual({
+      prepType: PayloadPreparationType.Cached,
+      payloadId: "0x1234",
+      preparedAtMs: expect.any(Number),
+    });
     expect(modules.chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
   });
 });
@@ -262,6 +266,40 @@ describe("Gloas engine body", () => {
       );
     });
   }
+
+  it("waits out the remaining generation time for a payload prepared right before production", async () => {
+    const {config, state, modules, chain, attrs, common} = setupGloas(false);
+    vi.useFakeTimers();
+    try {
+      // Prepared 100ms ago, e.g. re-prepared on the PTC verdict at the end of the previous slot
+      modules.chain.executionEngine.payloadIdCache.add(
+        {
+          headBlockHash: toRootHex(state.latestExecutionPayloadBid.parentBlockHash),
+          timestamp: numToQuantity(computeTimeAtSlot(config, state.slot, state.genesisTime)),
+          prevRandao: toHex(state.getRandaoMix(state.epoch)),
+          suggestedFeeRecipient: cachedRecipient,
+        },
+        "0x1234"
+      );
+      vi.advanceTimersByTime(100);
+
+      const producing = produceBlockBody.call(chain, BlockType.Full, state, {
+        ...attrs,
+        feeRecipient: undefined,
+        proposerIndex: 0,
+        proposerPubKey: new Uint8Array(48),
+        commonBlockBodyPromise: Promise.resolve(common),
+      });
+      await vi.advanceTimersByTimeAsync(399);
+      expect(modules.chain.executionEngine.getPayload).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(modules.chain.executionEngine.getPayload).toHaveBeenCalledExactlyOnceWith(ForkName.gloas, "0x1234");
+      await producing;
+      expect(modules.chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("supported payload attributes", () => {
