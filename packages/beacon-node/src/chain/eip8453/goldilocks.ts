@@ -13,10 +13,10 @@ import {Logger, toRootHex} from "@lodestar/utils";
 import {asCachedStateEip8453} from "./state.js";
 
 /**
- * [EIP8453] Runs the Goldilocks fork choice next to the legacy ProtoArray ("shadow mode"): every imported
- * post-fork block and every head vote feed the store, the store's AC voting head and FG inputs drive the
- * validator duties, and its head, confirmed block and locks are logged each slot. The canonical head and the
- * proposal parent still come from the legacy fork choice until the store is trusted with them.
+ * [EIP8453] Runs the Goldilocks fork choice over the legacy ProtoArray: every imported post-fork block and every
+ * head vote feed the store, the store's AC voting head and FG inputs drive the validator duties, and once the store
+ * is active its head is the canonical head (`ForkChoiceOpts.headOverride`), so proposals, the engine's forkchoice
+ * and the head state follow it. The ProtoArray keeps the tree, the checkpoints and the pruning.
  */
 export class GoldilocksTracker {
   private store: GoldilocksStore | null = null;
@@ -90,6 +90,14 @@ export class GoldilocksTracker {
     this.store.processHeadVote(vote, this.now());
   }
 
+  /**
+   * The store's head now, for the legacy fork choice's `headOverride`: before `2Δ` of the current slot the previous
+   * slot's votes decide, which is also the proposer's parent at the start of a slot.
+   */
+  canonicalHeadRoot(): RootHex | null {
+    return this.store?.head(this.now()).root ?? null;
+  }
+
   /** The AC voting head recorded at Δ of `slot`, or null before activation or when the duty was not recorded */
   voteHead(slot: Slot): GoldilocksNode | null {
     return this.store?.vote(slot, this.now()) ?? null;
@@ -115,7 +123,7 @@ export class GoldilocksTracker {
     this.logger.info("Goldilocks view", {
       slot,
       head: `${head.slot}:${head.root.slice(0, 10)}`,
-      agreesWithLegacy: head.root === legacyHeadRoot,
+      canonical: head.root === legacyHeadRoot,
       confirmed: `${confirmed.slot}:${confirmed.root.slice(0, 10)}`,
       locks: store
         .liveLocks(now)

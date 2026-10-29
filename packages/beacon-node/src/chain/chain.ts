@@ -434,7 +434,8 @@ export class BeaconChain implements IBeaconChain {
       clock.currentSlot,
       anchorState,
       isAnchorStateFinalized,
-      opts,
+      // [EIP8453] the Goldilocks store, once active, names the canonical head
+      {...opts, headOverride: () => this.goldilocks.canonicalHeadRoot()},
       this.justifiedBalancesGetter.bind(this),
       forkChoiceStateGetter,
       metrics,

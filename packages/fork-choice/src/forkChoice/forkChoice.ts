@@ -76,6 +76,12 @@ export type ForkChoiceOpts = {
   proposerBoostReorg?: boolean;
   computeUnrealized?: boolean;
   fastConfirmation?: boolean;
+  /**
+   * [EIP8453] The Goldilocks store's head, as a root in this tree, or null while the store is inactive. When set and
+   * known, it is the canonical head instead of the LMD GHOST result: proposals, the engine's forkchoice and the
+   * head state all follow it (validator.md: "Let parent be the block returned by the AC proposal procedure").
+   */
+  headOverride?: () => RootHex | null;
 };
 
 const EFFECTIVE_BALANCE_INCREMENT_BIGINT = BigInt(EFFECTIVE_BALANCE_INCREMENT);
@@ -315,6 +321,8 @@ export class ForkChoice implements IForkChoice {
     const {mode} = opt;
 
     const canonicalHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
+    // [EIP8453] proposer boost reorgs are an LMD GHOST device; the Goldilocks proposal parent is the head as is
+    if (this.overriddenHead() !== null) return {head: canonicalHeadBlock};
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
         return {head: this.predictProposerHead(canonicalHeadBlock, opt.msFromSlot, opt.slot)};
@@ -697,8 +705,15 @@ export class ForkChoice implements IForkChoice {
     // findHead returns the ProtoNode representing the head
     const head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
 
-    this.head = head;
+    this.head = this.overriddenHead() ?? head;
     return this.head;
+  }
+
+  /** [EIP8453] The Goldilocks head when the store drives the canonical head and the block is in the tree */
+  private overriddenHead(): ProtoBlock | null {
+    const root = this.opts?.headOverride?.();
+    if (root === null || root === undefined) return null;
+    return this.getBlockHexDefaultStatus(root);
   }
 
   /**
