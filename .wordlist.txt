@@ -225,6 +225,7 @@ pnpm
 pre
 premined
 produceBlockV
+proofType
 protolambda
 prover
 pubsub
@@ -260,6 +261,7 @@ util
 utils
 validator
 validators
+verificationKeyPath
 verifier
 vite
 vitest
@@ -271,3 +273,4 @@ xcode
 yaml
 yamux
 yml
+zkVM
