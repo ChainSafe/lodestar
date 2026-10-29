@@ -14,12 +14,15 @@ import {
   SubnetID,
   altair,
   capella,
+  deneb,
+  fulu,
   gloas,
   heze,
   phase0,
 } from "@lodestar/types";
 import {InclusionListInsertOutcome} from "../opPools/inclusionListStore.js";
 import {InsertOutcome} from "../opPools/types.js";
+import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {AggregateAndProofValidationResult} from "../validation/aggregateAndProof.js";
 import {
   ApiAttestation,
@@ -54,6 +57,8 @@ export enum ValidationTopic {
   inclusionList = "inclusionList",
   block = "block",
   executionPayloadEnvelope = "executionPayloadEnvelope",
+  blobSidecar = "blobSidecar",
+  dataColumnSidecar = "dataColumnSidecar",
 }
 
 export type ImportAttestationOpts = {
@@ -227,4 +232,16 @@ export interface IValidationEngine {
 
   validateGossipExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void>;
   validateApiExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void>;
+
+  /**
+   * Sidecars are validated here and assembled into a `BlockInput` / `PayloadEnvelopeInput` by the caller.
+   * A native implementation needs KZG proof verification.
+   */
+  validateGossipBlobSidecar(fork: ForkName, blobSidecar: deneb.BlobSidecar, subnet: SubnetID): Promise<void>;
+  validateGossipFuluDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar, subnet: SubnetID): Promise<void>;
+  validateGossipGloasDataColumnSidecar(
+    payloadInput: PayloadEnvelopeInput,
+    dataColumnSidecar: gloas.DataColumnSidecar,
+    subnet: SubnetID
+  ): Promise<void>;
 }

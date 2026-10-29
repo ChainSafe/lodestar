@@ -60,11 +60,6 @@ import {
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
-import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {
-  validateGossipFuluDataColumnSidecar,
-  validateGossipGloasDataColumnSidecar,
-} from "../../chain/validation/dataColumnSidecar.js";
 import {InclusionListValidationResult} from "../../chain/validation/inclusionList.js";
 import {
   AggregateAndProofValidationResult,
@@ -304,7 +299,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
+      await chain.validationEngine.validateGossipBlobSidecar(fork, blobSidecar, subnet);
       const blockInput = chain.seenBlockInputCache.getByBlob({
         blockRootHex,
         blobSidecar,
@@ -424,7 +419,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipFuluDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
+      await chain.validationEngine.validateGossipFuluDataColumnSidecar(dataColumnSidecar, gossipSubnet);
       const blockInput = chain.seenBlockInputCache.getByColumn({
         blockRootHex,
         columnSidecar: dataColumnSidecar,
@@ -543,7 +538,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipGloasDataColumnSidecar(chain, payloadInput, dataColumnSidecar, gossipSubnet, metrics);
+      await chain.validationEngine.validateGossipGloasDataColumnSidecar(payloadInput, dataColumnSidecar, gossipSubnet);
 
       const addedColumn = payloadInput.addColumn({
         columnSidecar: dataColumnSidecar,

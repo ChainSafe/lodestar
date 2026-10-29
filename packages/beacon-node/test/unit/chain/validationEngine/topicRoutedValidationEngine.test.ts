@@ -3,6 +3,7 @@ import {ForkName} from "@lodestar/params";
 import {IBeaconStateView, VoluntaryExitValidity} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
+import {PayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
 import {AggregateAndProofValidationResult} from "../../../../src/chain/validation/aggregateAndProof.js";
 import {AttestationValidationResult} from "../../../../src/chain/validation/attestation.js";
 import {
@@ -63,6 +64,9 @@ function getMockedEngine(): Mocked<IValidationEngine> {
     verifyBlockProposerSignature: vi.fn(),
     validateGossipExecutionPayloadEnvelope: vi.fn(),
     validateApiExecutionPayloadEnvelope: vi.fn(),
+    validateGossipBlobSidecar: vi.fn(),
+    validateGossipFuluDataColumnSidecar: vi.fn(),
+    validateGossipGloasDataColumnSidecar: vi.fn(),
   };
 }
 
@@ -84,6 +88,9 @@ describe("chain / validationEngine / TopicRoutedValidationEngine", () => {
   const inclusionList = ssz.heze.SignedInclusionList.defaultValue();
   const block = ssz.phase0.SignedBeaconBlock.defaultValue();
   const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+  const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
+  const fuluColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+  const gloasColumn = ssz.gloas.DataColumnSidecar.defaultValue();
 
   async function callEveryMethod(engine: IValidationEngine): Promise<void> {
     await engine.validateGossipAttestationsSameAttData(fork, []);
@@ -135,6 +142,9 @@ describe("chain / validationEngine / TopicRoutedValidationEngine", () => {
     await engine.verifyBlockProposerSignature(block, "0x");
     await engine.validateGossipExecutionPayloadEnvelope(envelope);
     await engine.validateApiExecutionPayloadEnvelope(envelope);
+    await engine.validateGossipBlobSidecar(fork, blobSidecar, 0);
+    await engine.validateGossipFuluDataColumnSidecar(fuluColumn, 0);
+    await engine.validateGossipGloasDataColumnSidecar({} as PayloadEnvelopeInput, gloasColumn, 0);
   }
 
   const attestationMethods = ["validateGossipAttestationsSameAttData", "validateApiAttestation", "importAttestation"];
@@ -200,6 +210,11 @@ describe("chain / validationEngine / TopicRoutedValidationEngine", () => {
     [ValidationTopic.executionPayloadEnvelope]: [
       "validateGossipExecutionPayloadEnvelope",
       "validateApiExecutionPayloadEnvelope",
+    ],
+    [ValidationTopic.blobSidecar]: ["validateGossipBlobSidecar"],
+    [ValidationTopic.dataColumnSidecar]: [
+      "validateGossipFuluDataColumnSidecar",
+      "validateGossipGloasDataColumnSidecar",
     ],
   };
   const allTopics = Object.values(ValidationTopic);

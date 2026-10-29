@@ -21,6 +21,8 @@ import {
   SubnetID,
   altair,
   capella,
+  deneb,
+  fulu,
   gloas,
   heze,
   phase0,
@@ -29,6 +31,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../interface.js";
 import {InclusionListInsertOutcome} from "../opPools/inclusionListStore.js";
 import {InsertOutcome} from "../opPools/types.js";
+import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {
   AggregateAndProofValidationResult,
   validateApiAggregateAndProof,
@@ -43,6 +46,7 @@ import {
   validateGossipAttestationsSameAttData,
 } from "../validation/attestation.js";
 import {validateApiAttesterSlashing, validateGossipAttesterSlashing} from "../validation/attesterSlashing.js";
+import {validateGossipBlobSidecar} from "../validation/blobSidecar.js";
 import {
   GossipBlockValidationResult,
   validateGossipBlock,
@@ -53,6 +57,10 @@ import {
   validateApiBlsToExecutionChange,
   validateGossipBlsToExecutionChange,
 } from "../validation/blsToExecutionChange.js";
+import {
+  validateGossipFuluDataColumnSidecar,
+  validateGossipGloasDataColumnSidecar,
+} from "../validation/dataColumnSidecar.js";
 import {
   ExecutionPayloadBidValidationResult,
   validateGossipExecutionPayloadBid,
@@ -480,6 +488,28 @@ export class ValidationEngine implements IValidationEngine {
   validateApiExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void> {
     return validateApiExecutionPayloadEnvelope(this.chain, signedEnvelope);
   }
+
+  validateGossipBlobSidecar(fork: ForkName, blobSidecar: deneb.BlobSidecar, subnet: SubnetID): Promise<void> {
+    return validateGossipBlobSidecar(fork, this.chain, blobSidecar, subnet);
+  }
+
+  validateGossipFuluDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar, subnet: SubnetID): Promise<void> {
+    return validateGossipFuluDataColumnSidecar(this.chain, dataColumnSidecar, subnet, this.chain.metrics);
+  }
+
+  validateGossipGloasDataColumnSidecar(
+    payloadInput: PayloadEnvelopeInput,
+    dataColumnSidecar: gloas.DataColumnSidecar,
+    subnet: SubnetID
+  ): Promise<void> {
+    return validateGossipGloasDataColumnSidecar(
+      this.chain,
+      payloadInput,
+      dataColumnSidecar,
+      subnet,
+      this.chain.metrics
+    );
+  }
 }
 
 /** Sends each topic to the native engine when it is enabled for that topic, otherwise to the JS engine */
@@ -794,6 +824,29 @@ export class TopicRoutedValidationEngine implements IValidationEngine {
 
   validateApiExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void> {
     return this.engineFor(ValidationTopic.executionPayloadEnvelope).validateApiExecutionPayloadEnvelope(signedEnvelope);
+  }
+
+  validateGossipBlobSidecar(fork: ForkName, blobSidecar: deneb.BlobSidecar, subnet: SubnetID): Promise<void> {
+    return this.engineFor(ValidationTopic.blobSidecar).validateGossipBlobSidecar(fork, blobSidecar, subnet);
+  }
+
+  validateGossipFuluDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar, subnet: SubnetID): Promise<void> {
+    return this.engineFor(ValidationTopic.dataColumnSidecar).validateGossipFuluDataColumnSidecar(
+      dataColumnSidecar,
+      subnet
+    );
+  }
+
+  validateGossipGloasDataColumnSidecar(
+    payloadInput: PayloadEnvelopeInput,
+    dataColumnSidecar: gloas.DataColumnSidecar,
+    subnet: SubnetID
+  ): Promise<void> {
+    return this.engineFor(ValidationTopic.dataColumnSidecar).validateGossipGloasDataColumnSidecar(
+      payloadInput,
+      dataColumnSidecar,
+      subnet
+    );
   }
 
   private engineFor(topic: ValidationTopic): IValidationEngine {
