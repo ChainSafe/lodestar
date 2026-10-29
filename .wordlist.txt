@@ -17,7 +17,6 @@ Codespaces
 CoinCashew
 Corepack
 Customizations
-discv5
 DPoS
 DVs
 Discv
@@ -34,7 +33,6 @@ Edgington
 Erigon
 Esat
 EthPandaOps
-ethrex
 EthStaker
 EtherScan
 Ethereum
@@ -79,21 +77,18 @@ MEV
 MacOS
 Metamask
 MevBoost
-minisign
 ModuleNotFoundError
 Monorepo
 NAPI
-nimbus
 NPM
 NVM
 Nethermind
 Nim
 NodeJS
 NodeSource
-OpenVM
 OSI
+OpenVM
 PR
-provers
 PRs
 Plaintext
 PoS
@@ -121,12 +116,12 @@ UID
 UPnP
 UTF
 VM
+VPN
 Vitalik
 Vitest
-VPN
 Wagyu
-zesu
 Zig
+ZisK
 addon
 addons
 api
@@ -169,6 +164,7 @@ devcontainer
 devnet
 devnets
 devtools
+discv5
 distutils
 dropdown
 eg
@@ -178,6 +174,7 @@ env
 envs
 ephemery
 ethers
+ethrex
 fastconfirm
 feeRecipient
 flamegraph
@@ -215,6 +212,7 @@ mbps
 mdns
 merkle
 merkleization
+minisign
 misconfiguration
 mmeshsub
 monorepo
@@ -225,6 +223,7 @@ namespace
 namespaced
 namespaces
 navbar
+nimbus
 nodemodule
 orchestrator
 osx
@@ -240,6 +239,7 @@ produceBlockV
 proofType
 protolambda
 prover
+provers
 pubsub
 rebased
 recompiles
@@ -286,7 +286,7 @@ yaml
 yamux
 yml
 zapi
+zesu
 zilkworm
-ZisK
-zkboost
 zkVM
+zkboost
