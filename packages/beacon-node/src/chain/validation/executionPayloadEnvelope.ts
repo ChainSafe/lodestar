@@ -2,11 +2,12 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {isForkPostGloas} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   getExecutionPayloadEnvelopeSignatureSet,
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
-import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {computeExecutionBlockHash} from "../../execution/engine/blockHash.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -91,6 +92,18 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // [REJECT] `envelope.parent_beacon_block_root == block.parent_root`
+  const envelopeParentRoot = toRootHex(envelope.parentBeaconBlockRoot);
+  if (envelopeParentRoot !== block.parentRoot) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      envelopeParentRoot,
+      blockParentRoot: block.parentRoot,
+    });
+  }
+
   // [REJECT] `envelope.builder_index == bid.builder_index`
   if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
@@ -99,6 +112,30 @@ async function validateExecutionPayloadEnvelope(
       root: blockRootHex,
       envelopeBuilderIndex: envelope.builderIndex,
       bidBuilderIndex: payloadInput.getBuilderIndex(),
+    });
+  }
+
+  const bid = payloadInput.getBid();
+
+  // [REJECT] `payload.prev_randao == bid.prev_randao`
+  if (!byteArrayEquals(payload.prevRandao, bid.prevRandao)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      payloadPrevRandao: toHex(payload.prevRandao),
+      bidPrevRandao: toHex(bid.prevRandao),
+    });
+  }
+
+  // [REJECT] `payload.gas_limit == bid.gas_limit`
+  if (BigInt(payload.gasLimit) !== bid.gasLimit) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      payloadGasLimit: payload.gasLimit,
+      bidGasLimit: bid.gasLimit,
     });
   }
 
@@ -115,13 +152,64 @@ async function validateExecutionPayloadEnvelope(
 
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
   const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
-  if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
+  if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
       envelopeRequestsRoot: toRootHex(requestsRoot),
-      bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
+      bidRequestsRoot: toRootHex(bid.executionRequestsRoot),
+    });
+  }
+
+  // Execution request and withdrawal count limits are enforced by the SSZ list limits on decode
+
+  const blockState = await chain.regen
+    .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
+    .catch(() => {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
+        blockRoot: blockRootHex,
+        slot: payload.slotNumber,
+      });
+    });
+  if (!isStatePostGloas(blockState)) {
+    throw new Error(`Expected gloas+ state for execution payload envelope validation, got fork=${blockState.forkName}`);
+  }
+
+  // [REJECT] `payload.parent_hash == state.latest_block_hash`
+  if (!byteArrayEquals(payload.parentHash, blockState.latestBlockHash)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_HASH_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      payloadParentHash: toRootHex(payload.parentHash),
+      latestBlockHash: toRootHex(blockState.latestBlockHash),
+    });
+  }
+
+  // [REJECT] `payload.timestamp == compute_time_at_slot(state.genesis_time, block.slot)`
+  const expectedTimestamp = computeTimeAtSlot(chain.config, block.slot, blockState.genesisTime);
+  if (payload.timestamp !== expectedTimestamp) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.INVALID_TIMESTAMP,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      payloadTimestamp: payload.timestamp,
+      expectedTimestamp,
+    });
+  }
+
+  // [REJECT] `hash_tree_root(payload.withdrawals) == hash_tree_root(state.payload_expected_withdrawals)`
+  const payloadWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
+  const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(blockState.payloadExpectedWithdrawals);
+  if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      payloadWithdrawalsRoot: toRootHex(payloadWithdrawalsRoot),
+      expectedWithdrawalsRoot: toRootHex(expectedWithdrawalsRoot),
     });
   }
 
@@ -159,20 +247,6 @@ async function validateExecutionPayloadEnvelope(
       blockHash: toRootHex(payload.blockHash),
       computedBlockHash: toRootHex(computedBlockHash),
     });
-  }
-
-  // Get the block state to verify the builder's signature.
-  const blockState = await chain.regen
-    .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
-    .catch(() => {
-      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
-        blockRoot: blockRootHex,
-        slot: payload.slotNumber,
-      });
-    });
-  if (!isStatePostGloas(blockState)) {
-    throw new Error(`Expected gloas+ state for execution payload envelope validation, got fork=${blockState.forkName}`);
   }
 
   // [REJECT] `signed_execution_payload_envelope.signature` is valid as verified

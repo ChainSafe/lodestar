@@ -9,8 +9,14 @@ export enum ExecutionPayloadEnvelopeErrorCode {
   ENVELOPE_ALREADY_KNOWN = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_ALREADY_KNOWN",
   INVALID_BLOCK = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_BLOCK",
   SLOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_SLOT_MISMATCH",
+  PARENT_BEACON_BLOCK_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_BEACON_BLOCK_ROOT_MISMATCH",
   BUILDER_INDEX_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BUILDER_INDEX_MISMATCH",
+  PREV_RANDAO_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PREV_RANDAO_MISMATCH",
+  GAS_LIMIT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_GAS_LIMIT_MISMATCH",
   BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_HASH_MISMATCH",
+  PARENT_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_HASH_MISMATCH",
+  INVALID_TIMESTAMP = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_TIMESTAMP",
+  WITHDRAWALS_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_WITHDRAWALS_MISMATCH",
   ZERO_LENGTH_TRANSACTION = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_ZERO_LENGTH_TRANSACTION",
   INVALID_BLOCK_HASH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_BLOCK_HASH",
   EXECUTION_REQUESTS_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_EXECUTION_REQUESTS_ROOT_MISMATCH",
@@ -34,6 +40,48 @@ export type ExecutionPayloadEnvelopeErrorType =
       root: RootHex;
       envelopeSlot: Slot;
       blockSlot: Slot;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH;
+      slot: Slot;
+      root: RootHex;
+      envelopeParentRoot: RootHex;
+      blockParentRoot: RootHex;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH;
+      slot: Slot;
+      root: RootHex;
+      payloadPrevRandao: string;
+      bidPrevRandao: string;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH;
+      slot: Slot;
+      root: RootHex;
+      payloadGasLimit: number;
+      bidGasLimit: bigint;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_HASH_MISMATCH;
+      slot: Slot;
+      root: RootHex;
+      payloadParentHash: RootHex;
+      latestBlockHash: RootHex;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.INVALID_TIMESTAMP;
+      slot: Slot;
+      root: RootHex;
+      payloadTimestamp: number;
+      expectedTimestamp: number;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_MISMATCH;
+      slot: Slot;
+      root: RootHex;
+      payloadWithdrawalsRoot: RootHex;
+      expectedWithdrawalsRoot: RootHex;
     }
   | {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH;

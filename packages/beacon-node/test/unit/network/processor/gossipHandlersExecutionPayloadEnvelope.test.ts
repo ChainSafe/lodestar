@@ -4,7 +4,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {IBeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -37,6 +37,8 @@ describe("gossip execution payload envelope block hash", () => {
   );
   const slot = 1;
   const tx = Uint8Array.from([2, 1, 2, 3]);
+  const genesisTime = 1000;
+  const latestBlockHash = Buffer.alloc(32, 8);
 
   function setup() {
     const committed = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
@@ -44,13 +46,20 @@ describe("gossip execution payload envelope block hash", () => {
     committed.message.parentBeaconBlockRoot = Buffer.alloc(32, 6);
     committed.message.payload.slotNumber = slot;
     committed.message.payload.blockNumber = 1;
+    committed.message.payload.parentHash = latestBlockHash;
+    committed.message.payload.prevRandao = Buffer.alloc(32, 1);
+    committed.message.payload.gasLimit = 30_000_000;
+    committed.message.payload.timestamp = computeTimeAtSlot(config, slot, genesisTime);
     committed.message.payload.transactions = SerializedList.fromArray([tx]);
     const {payload, parentBeaconBlockRoot, executionRequests} = committed.message;
     payload.blockHash = computeExecutionBlockHash(ForkName.gloas, payload, parentBeaconBlockRoot, executionRequests);
 
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
+    block.message.parentRoot = parentBeaconBlockRoot;
     const bid = block.message.body.signedExecutionPayloadBid.message;
+    bid.prevRandao = payload.prevRandao;
+    bid.gasLimit = BigInt(payload.gasLimit);
     bid.builderIndex = BUILDER_INDEX_SELF_BUILD;
     bid.blockHash = payload.blockHash;
     bid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests);
@@ -76,12 +85,23 @@ describe("gossip execution payload envelope block hash", () => {
       logger,
       metrics: null,
       forkChoice: {
-        getBlockDefaultStatus: vi.fn().mockReturnValue(generateProtoBlock({slot, blockRoot: toRootHex(blockRoot)})),
+        getBlockDefaultStatus: vi
+          .fn()
+          .mockReturnValue(
+            generateProtoBlock({slot, blockRoot: toRootHex(blockRoot), parentRoot: toRootHex(parentBeaconBlockRoot)})
+          ),
         getBlockHex: vi.fn().mockReturnValue(null),
         getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0, root: Buffer.alloc(32), rootHex: ""}),
       },
       seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(payloadInput)},
-      regen: {getState: vi.fn().mockResolvedValue({forkName: ForkName.gloas} as unknown as IBeaconStateView)},
+      regen: {
+        getState: vi.fn().mockResolvedValue({
+          forkName: ForkName.gloas,
+          latestBlockHash,
+          genesisTime,
+          payloadExpectedWithdrawals: [],
+        } as unknown as IBeaconStateView),
+      },
       bls: {verifySignatureSets: vi.fn().mockResolvedValue(true)},
       processExecutionPayload: vi.fn().mockResolvedValue(undefined),
       persistInvalidSszValue: vi.fn(),
