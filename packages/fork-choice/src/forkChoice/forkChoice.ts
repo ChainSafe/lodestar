@@ -51,6 +51,7 @@ import {
   isGloasBlock,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
+import {CheckpointBalancesCache} from "./checkpointBalancesCache.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
   type FastConfirmationContext,
@@ -160,6 +161,8 @@ export class ForkChoice implements IForkChoice {
   private justifiedProposerBoostScore: bigint | null = null;
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
+  /** Effective balances of recent checkpoint block states, fed by `onBlock`, read for justified balances */
+  private readonly checkpointBalancesCache = new CheckpointBalancesCache();
   /** Optional fast confirmation rule implementation */
   private readonly fastConfirmationRule?: IFastConfirmationRule;
   private readonly fastConfirmationContext?: FastConfirmationContext;
@@ -735,6 +738,10 @@ export class ForkChoice implements IForkChoice {
     return this.fcStore.justified.checkpoint;
   }
 
+  getCheckpointBalances(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined {
+    return this.checkpointBalancesCache.get(checkpoint);
+  }
+
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -826,6 +833,7 @@ export class ForkChoice implements IForkChoice {
 
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toRootHex(blockRoot);
+    this.checkpointBalancesCache.processState(blockRootHex, state);
 
     // Decide whether this block should receive proposer boost, and whether the block is timely.
     // The store field `this.proposerBoostRoot` and `updateCheckpoints()` are mutated only after
@@ -976,18 +984,18 @@ export class ForkChoice implements IForkChoice {
     // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on
     // demand only if the justified checkpoint changes.
     this.updateCheckpoints(justifiedCheckpoint, finalizedCheckpoint, () =>
-      this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
+      this.getJustifiedBalances(justifiedCheckpoint, state)
     );
 
     // Un-realized checkpoints. Update best known unrealized justified & finalized checkpoints
     this.updateUnrealizedCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-      this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+      this.getJustifiedBalances(unrealizedJustifiedCheckpoint, state)
     );
 
     // If block is from past epochs, try to update store's justified & finalized checkpoints right away
     if (blockEpoch < computeEpochAtSlot(currentSlot)) {
       this.updateCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+        this.getJustifiedBalances(unrealizedJustifiedCheckpoint, state)
       );
     }
 
@@ -1700,6 +1708,88 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_head_weak
    * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_head_weak
    */
+  /**
+   * Must never throw: `onBlock` must accept any block that is valid with respect to the network, so a cache
+   * miss falls back to the closest cached state instead.
+   * @param blockState state that declares justified checkpoint `checkpoint`
+   */
+  private getJustifiedBalances(
+    checkpoint: CheckpointWithHex,
+    blockState: IBeaconStateView
+  ): EffectiveBalanceIncrements {
+    this.metrics?.balancesCache.requests.inc();
+
+    const effectiveBalances = this.checkpointBalancesCache.get(checkpoint);
+    if (effectiveBalances) {
+      return effectiveBalances;
+    }
+    this.metrics?.balancesCache.misses.inc();
+    this.logger?.debug("checkpointBalances cache miss", {epoch: checkpoint.epoch, root: checkpoint.rootHex});
+
+    const {state, stateId, shouldWarn} = this.closestJustifiedBalancesStateToCheckpoint(checkpoint, blockState);
+    this.metrics?.balancesCache.closestStateResult.inc({stateId});
+    if (shouldWarn) {
+      this.logger?.warn("currentJustifiedCheckpoint state not avail, using closest state", {
+        checkpointEpoch: checkpoint.epoch,
+        checkpointRoot: checkpoint.rootHex,
+        stateId,
+        stateSlot: state.slot,
+        stateRoot: toRootHex(state.hashTreeRoot()),
+      });
+    }
+
+    return state.getEffectiveBalanceIncrementsZeroInactive();
+  }
+
+  /**
+   * The state cache holds a bounded number of states, so the justified checkpoint state may already be gone.
+   * Prefer a state on the checkpoint branch at the same epoch (exact balances), then a later one (close balances),
+   * then `blockState` whatever its epoch.
+   * @param blockState state that declares justified checkpoint `checkpoint`
+   */
+  private closestJustifiedBalancesStateToCheckpoint(
+    checkpoint: CheckpointWithHex,
+    blockState: IBeaconStateView
+  ): {state: IBeaconStateView; stateId: string; shouldWarn: boolean} {
+    const state = this.fcStore.stateGetter({checkpoint});
+    if (state) {
+      return {state, stateId: "checkpoint_state", shouldWarn: false};
+    }
+
+    if (computeEpochAtSlot(blockState.slot) === checkpoint.epoch) {
+      return {state: blockState, stateId: "block_state_same_epoch", shouldWarn: true};
+    }
+
+    // A checkpoint older than the proto array (pruned or synthetic) has no descendants to walk
+    const descendants = (): IterableIterator<ProtoBlock> | ProtoBlock[] =>
+      this.hasBlockHexUnsafe(checkpoint.rootHex) ? this.forwardIterateDescendantsDefaultStatus(checkpoint.rootHex) : [];
+
+    for (const descendantBlock of descendants()) {
+      if (computeEpochAtSlot(descendantBlock.slot) === checkpoint.epoch) {
+        const descendantBlockState = this.fcStore.stateGetter({stateRoot: descendantBlock.stateRoot});
+        if (descendantBlockState) {
+          return {state: descendantBlockState, stateId: "descendant_state_same_epoch", shouldWarn: true};
+        }
+      }
+    }
+
+    if (computeEpochAtSlot(blockState.slot) === checkpoint.epoch + 1) {
+      return {state: blockState, stateId: "block_state_next_epoch", shouldWarn: true};
+    }
+
+    // Nodes are not sorted by slot, so the second pass walks the descendants again
+    for (const descendantBlock of descendants()) {
+      if (computeEpochAtSlot(descendantBlock.slot) > checkpoint.epoch) {
+        const descendantBlockState = this.fcStore.stateGetter({stateRoot: descendantBlock.stateRoot});
+        if (descendantBlockState) {
+          return {state: descendantBlockState, stateId: "descendant_state_latter_epoch", shouldWarn: true};
+        }
+      }
+    }
+
+    return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
+  }
+
   private isHeadWeak(blockRoot: RootHex): boolean {
     // The default variant is PENDING for gloas, FULL pre-gloas. PENDING is the variant gloas measures
     // support on, ie. support for the beacon block root regardless of its payload status.

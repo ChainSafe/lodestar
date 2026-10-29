@@ -1,14 +1,13 @@
 import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice, PayloadStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, ForkChoice, PayloadStatus} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
   BeaconStateView,
   DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
-  getEffectiveBalanceIncrementsZeroed,
   getTemporaryBlockHeader,
   processSlots,
 } from "@lodestar/state-transition";
@@ -45,10 +44,6 @@ describe("LodestarForkChoice", () => {
   const anchorStateView = new BeaconStateView(anchorState);
 
   // 3 validators involved
-  const justifiedBalances = getEffectiveBalanceIncrementsZeroed(3);
-  justifiedBalances[0] = 1;
-  justifiedBalances[1] = 2;
-  justifiedBalances[2] = 3;
   const executionStatus = ExecutionStatus.PreMerge;
   const dataAvailabilityStatus = DataAvailabilityStatus.PreData;
   const blockDelayMs = 0;
@@ -64,17 +59,7 @@ describe("LodestarForkChoice", () => {
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
     const currentSlot = 16;
-    forkChoice = initializeForkChoice(
-      config,
-      emitter,
-      currentSlot,
-      state,
-      true,
-      {},
-      (_: CheckpointWithHex) => justifiedBalances,
-      () => null,
-      null
-    );
+    forkChoice = initializeForkChoice(config, emitter, currentSlot, state, true, {}, () => null, null);
   });
 
   describe("forkchoice", () => {

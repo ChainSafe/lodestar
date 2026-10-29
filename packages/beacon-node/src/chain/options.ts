@@ -3,6 +3,7 @@ import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
+import {NativeComponentsOpts} from "./nativeComponents.js";
 import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {
@@ -23,7 +24,8 @@ export type IChainOptions = BlockProcessOpts &
   PersistentCheckpointStateCacheOpts &
   ShufflingCacheOpts &
   ValidatorMonitorOpts &
-  LightClientServerOpts & {
+  LightClientServerOpts &
+  NativeComponentsOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
     blacklistedBlocks?: string[];
@@ -51,7 +53,6 @@ export type IChainOptions = BlockProcessOpts &
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
-    nativeStateTransition?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
     /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */

@@ -33,7 +33,6 @@ export {
   type CheckpointWithHex,
   ForkChoiceStore,
   type IForkChoiceStore,
-  type JustifiedBalancesGetter,
 } from "./forkChoice/store.js";
 export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
 export type {

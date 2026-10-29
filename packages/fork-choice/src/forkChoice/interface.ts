@@ -136,6 +136,8 @@ export interface IForkChoice {
   getAllNodes(): ProtoNode[];
   getFinalizedCheckpoint(): CheckpointWithHex;
   getJustifiedCheckpoint(): CheckpointWithHex;
+  /** Effective balances of a recent checkpoint block state, cached by `onBlock` for justified balances */
+  getCheckpointBalances(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined;
   getUnrealizedJustifiedCheckpoint(): CheckpointWithHex;
   getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
   getProposerBoostRoot(): RootHex;
