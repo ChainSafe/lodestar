@@ -20,6 +20,8 @@ import {asCachedStateEip8453} from "./state.js";
  */
 export class GoldilocksTracker {
   private store: GoldilocksStore | null = null;
+  /** Highest slot of a post-fork block imported so far: the data the node has, as opposed to the head it chose */
+  private latestImported: Slot = 0;
 
   constructor(
     private readonly config: BeaconConfig,
@@ -48,6 +50,7 @@ export class GoldilocksTracker {
     const state = asCachedStateEip8453(postState);
     const fg = fgSummary(state);
     const slot = block.message.slot;
+    if (slot > this.latestImported) this.latestImported = slot;
     const root = toRootHex(this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
     if (this.store === null) {
       this.store = new GoldilocksStore({root: parentRoot, slot: slot - 1, fg}, this.now(), {
@@ -88,6 +91,11 @@ export class GoldilocksTracker {
       seats: countSeats(state, message.data.slot).get(message.validatorIndex) ?? 1,
     };
     this.store.processHeadVote(vote, this.now());
+  }
+
+  /** Slot of the newest imported post-fork block, 0 before the fork */
+  latestImportedSlot(): Slot {
+    return this.latestImported;
   }
 
   /**

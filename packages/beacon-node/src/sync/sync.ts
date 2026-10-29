@@ -144,7 +144,10 @@ export class BeaconSync implements IBeaconSync {
 
   get state(): SyncState {
     const currentSlot = this.chain.clock.currentSlot;
-    const headSlot = this.chain.forkChoice.getHead().slot;
+    // [EIP8453] After an outage the Goldilocks head legitimately falls back to the justified block (locks expired, no
+    // votes), so the head can sit well behind blocks this node has already imported. Being behind by choice is not
+    // being behind on data: measure the sync distance from the newest imported block.
+    const headSlot = Math.max(this.chain.forkChoice.getHead().slot, this.chain.goldilocks?.latestImportedSlot() ?? 0);
 
     if (
       // Consider node synced IF
