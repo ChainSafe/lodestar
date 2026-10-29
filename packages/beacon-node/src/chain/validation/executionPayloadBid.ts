@@ -19,6 +19,11 @@ import {RegenCaller} from "../regen/index.js";
 
 /**
  * Return the minimum value of a builder's next bid for the same slot and parent given its previous bid.
+ *
+ * The increment bounds how many bids one builder can propagate per slot and parent, with 3% laddering
+ * from 1 gwei to 1 ETH takes ~256 bids given the floor and cap, see
+ * https://github.com/ethereum/consensus-specs/pull/4792#issuecomment-3714553549. The floor covers low
+ * values where 3% is tiny, the cap keeps the raise a builder must make on high value blocks small.
  * Division before multiplication to stay within safe integer range for max gwei values.
  */
 function getMinBidValue(config: ChainConfig, previousBid: number): number {
