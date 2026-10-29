@@ -135,8 +135,8 @@ export class DecoupledConsensusService {
         ]);
         this.headVoteDuties.set(dutyEpoch, headVotes.value());
         this.attesterDuties.set(dutyEpoch, attesters.value());
-        for (const duty of attesters.value()) this.indexByPubkey.set(toRootHex(duty.pubkey), duty.validatorIndex);
-        for (const duty of headVotes.value()) this.indexByPubkey.set(toRootHex(duty.pubkey), duty.validatorIndex);
+        for (const duty of attesters.value()) this.indexByPubkey.set(toPubkeyHex(duty.pubkey), duty.validatorIndex);
+        for (const duty of headVotes.value()) this.indexByPubkey.set(toPubkeyHex(duty.pubkey), duty.validatorIndex);
       } catch (e) {
         this.logger.error("Error polling EIP-8453 duties", {epoch: dutyEpoch}, e as Error);
       }

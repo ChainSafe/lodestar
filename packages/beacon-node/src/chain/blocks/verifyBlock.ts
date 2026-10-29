@@ -6,6 +6,7 @@ import {
   IBeaconStateView,
   computeEpochAtSlot,
   computeIndexedAttestationEip8453,
+  getActiveIndicesAtEpoch,
   getIndexedAttestation,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
@@ -13,6 +14,7 @@ import {BeaconBlockBody, Epoch, IndexedAttestation, Slot, deneb, eip8453} from "
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import type {BeaconChain} from "../chain.js";
+import {asCachedStateEip8453} from "../eip8453/state.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
@@ -120,9 +122,12 @@ export async function verifyBlocksInEpoch(
         this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
         preState0.getShufflingAtEpoch(attEpoch);
       if (fork >= ForkSeq.eip8453) {
-        // [EIP8453] finality gadget attestations name their epoch and partition the active validators
+        // [EIP8453] finality gadget attestations name their epoch and partition the active validators. The spec admits
+        // epochs back to the finalized one, beyond the shuffling cache, so fall back to the state's registry.
+        const preStateEip8453 = asCachedStateEip8453(preState0);
         indexedAttestationsByBlock[i] = (block.message.body as eip8453.BeaconBlockBody).attestations.map(
-          (attestation) => computeIndexedAttestationEip8453(shufflingAt(attestation.epoch).activeIndices, attestation)
+          (attestation) =>
+            computeIndexedAttestationEip8453(getActiveIndicesAtEpoch(preStateEip8453, attestation.epoch), attestation)
         );
       } else {
         // Casper FFG attestations only exist before EIP-8453
