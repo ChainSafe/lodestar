@@ -6,7 +6,7 @@ import {IBeaconStateView} from "@lodestar/state-transition";
 import {eip8025, phase0, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
-import {ExecutionProofErrorCode} from "../../../../src/chain/errors/index.js";
+import {ExecutionProofErrorCode, GossipAction} from "../../../../src/chain/errors/index.js";
 import {validateGossipExecutionProof} from "../../../../src/chain/validation/executionProof.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
@@ -116,14 +116,26 @@ describe("validateGossipExecutionProof", () => {
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 1, 3)).toBe(false);
   });
 
-  it.each([0, 4])("rejects unsupported proof type %i before any lookup", async (proofType) => {
+  it.each([0, 8])("rejects unassigned proof type %i before any lookup", async (proofType) => {
     signedProof.message.proofType = proofType;
 
     await expect(validateGossipExecutionProof(chain, signedProof)).rejects.toMatchObject({
+      action: GossipAction.REJECT,
       type: {code: ExecutionProofErrorCode.UNSUPPORTED_PROOF_TYPE},
     });
     expect(chain.forkChoice.getBlockHexDefaultStatus).not.toHaveBeenCalled();
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, proofType, 3)).toBe(false);
+  });
+
+  it("ignores an assigned proof type this node cannot verify before any lookup", async () => {
+    signedProof.message.proofType = 4;
+
+    await expect(validateGossipExecutionProof(chain, signedProof)).rejects.toMatchObject({
+      action: GossipAction.IGNORE,
+      type: {code: ExecutionProofErrorCode.PROOF_TYPE_NOT_VERIFIABLE},
+    });
+    expect(chain.forkChoice.getBlockHexDefaultStatus).not.toHaveBeenCalled();
+    expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 4, 3)).toBe(false);
   });
 
   it("ignores a proof whose payload is not available yet", async () => {

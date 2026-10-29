@@ -5,6 +5,7 @@ import {GossipActionError} from "./gossipValidation.js";
 export enum ExecutionProofErrorCode {
   EMPTY_PROOF_DATA = "EXECUTION_PROOF_ERROR_EMPTY_PROOF_DATA",
   UNSUPPORTED_PROOF_TYPE = "EXECUTION_PROOF_ERROR_UNSUPPORTED_PROOF_TYPE",
+  PROOF_TYPE_NOT_VERIFIABLE = "EXECUTION_PROOF_ERROR_PROOF_TYPE_NOT_VERIFIABLE",
   BLOCK_ROOT_UNKNOWN = "EXECUTION_PROOF_ERROR_BLOCK_ROOT_UNKNOWN",
   PROOF_ALREADY_KNOWN = "EXECUTION_PROOF_ERROR_PROOF_ALREADY_KNOWN",
   PROOF_ALREADY_PROCESSED = "EXECUTION_PROOF_ERROR_PROOF_ALREADY_PROCESSED",
@@ -24,6 +25,7 @@ type ProverContext = ProofContext & {validatorIndex: ValidatorIndex};
 export type ExecutionProofErrorType =
   | ({code: ExecutionProofErrorCode.EMPTY_PROOF_DATA} & ProofContext)
   | ({code: ExecutionProofErrorCode.UNSUPPORTED_PROOF_TYPE} & ProofContext)
+  | ({code: ExecutionProofErrorCode.PROOF_TYPE_NOT_VERIFIABLE} & ProofContext)
   | ({code: ExecutionProofErrorCode.BLOCK_ROOT_UNKNOWN} & ProofContext)
   | ({code: ExecutionProofErrorCode.PROOF_ALREADY_KNOWN} & ProofContext)
   | ({code: ExecutionProofErrorCode.PROOF_ALREADY_PROCESSED; proofRoot: RootHex} & ProofContext)

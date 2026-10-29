@@ -3,27 +3,28 @@ import {beforeAll, describe, expect, it} from "vitest";
 import {
   EXECUTION_PROOF_MAX_SIZE,
   EXECUTION_PROOF_VERIFIER_AVAILABLE,
+  ZKVM_KIND,
   hasExecutionProofVerifier,
+  registerExecutionProofVerifier,
 } from "@chainsafe/lodestar-z/execution-proof-verifier";
-import {toHex} from "@lodestar/utils";
-import {NativeProofEngine, verifyNativeExecutionProof} from "../../src/chain/proofEngine/native.js";
+import {verifyNativeExecutionProof} from "../../src/chain/proofEngine/native.js";
 
-describe.skipIf(!EXECUTION_PROOF_VERIFIER_AVAILABLE)("NativeProofEngine native binding", () => {
+// The ere fixtures prove test programs under keys outside the EIP-8025 proof type table, so they
+// register with the binding directly instead of through NativeProofEngine
+describe.skipIf(!EXECUTION_PROOF_VERIFIER_AVAILABLE)("native execution proof verifier", () => {
   const proofType = 210;
   const expectedPublicInput = new Uint8Array(32);
-  let engine: NativeProofEngine;
 
   beforeAll(() => {
-    engine = new NativeProofEngine([{proofType, zkvm: "sp1", programVk: toHex(new Uint8Array(32))}], null);
+    registerExecutionProofVerifier(proofType, ZKVM_KIND.sp1, new Uint8Array(32));
   });
 
   it("registers the verifier through lodestar-z", () => {
     expect(hasExecutionProofVerifier(proofType)).toBe(true);
-    expect([...engine.supportedProofTypes]).toEqual([proofType]);
   });
 
   it("propagates the native error for a duplicate proof type", () => {
-    expect(() => new NativeProofEngine([{proofType, zkvm: "sp1", programVk: toHex(new Uint8Array(32))}], null)).toThrow(
+    expect(() => registerExecutionProofVerifier(proofType, ZKVM_KIND.sp1, new Uint8Array(32))).toThrow(
       "ProofTypeAlreadyRegistered"
     );
   });
@@ -62,10 +63,10 @@ describe.skipIf(!EXECUTION_PROOF_VERIFIER_AVAILABLE)("NativeProofEngine native b
           `Missing ${zkvm}/${file}. Run "pnpm download-execution-proofs-fixtures" before running native proof tests.`
         ).toBe(true);
       }
-      const programVk = toHex(readFileSync(new URL("program_vk.bin", fixtureDir)));
+      const verificationKey = Uint8Array.from(readFileSync(new URL("program_vk.bin", fixtureDir)));
       proofData = Uint8Array.from(readFileSync(new URL("proof.bin", fixtureDir)));
       publicValues = Uint8Array.from(readFileSync(new URL("public_values.bin", fixtureDir)));
-      new NativeProofEngine([{proofType, zkvm, programVk}], null);
+      registerExecutionProofVerifier(proofType, ZKVM_KIND[zkvm], verificationKey);
     });
 
     it("accepts a valid proof", async () => {

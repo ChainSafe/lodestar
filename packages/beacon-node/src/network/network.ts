@@ -177,7 +177,7 @@ export class Network implements INetwork {
     const activeValidatorCount = chain.getHeadState().activeValidatorCount;
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
-    const executionProofAware = chain.proofEngine.supportedProofTypes.size > 0;
+    const executionProofAware = chain.proofEngine.verifiableProofTypes.size > 0;
 
     if (opts.useWorker) {
       logger.info("running libp2p instance in worker thread");

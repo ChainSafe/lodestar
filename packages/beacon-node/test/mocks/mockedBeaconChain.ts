@@ -52,7 +52,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   };
   lightClientServer: Mocked<LightClientServer>;
   proofEngine: {
-    supportedProofTypes: Set<number>;
+    verifiableProofTypes: Set<number>;
     verifyExecutionProof: Mock<(proof: eip8025.ExecutionProof) => Promise<boolean>>;
   };
 };
@@ -216,7 +216,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       getParentExecutionRequests: vi.fn(),
       seenExecutionProofs: new SeenExecutionProofs(),
       proofEngine: {
-        supportedProofTypes: new Set([1, 2, 3]),
+        verifiableProofTypes: new Set([1, 2, 3]),
         verifyExecutionProof: vi.fn().mockResolvedValue(true),
       },
       shufflingCache: new ShufflingCache(),

@@ -15,10 +15,36 @@ const verifier = vi.hoisted(() => ({
   verifyExecutionProof: vi.fn<typeof verifyExecutionProof>(),
 }));
 
+/** Proof types 1-3 assigned to a key the test controls, so the engine's digest check can pass */
+const assignments = await vi.hoisted(async () => {
+  const {digest} = await import("@chainsafe/as-sha256");
+  const {toHex} = await import("@lodestar/utils");
+  const vk = Uint8Array.from([1, 2, 3, 4]);
+  const verificationKeyDigest = toHex(digest(vk));
+  const assign = (zkvm: "openvm" | "sp1" | "zisk") => ({
+    statelessValidator: "test guest",
+    zkvm,
+    zkvmVersion: "test",
+    verificationKeyDigest,
+  });
+  return {
+    vk,
+    table: new Map([
+      [1, assign("openvm")],
+      [2, assign("sp1")],
+      [3, assign("zisk")],
+    ]),
+  };
+});
+
 vi.mock("@chainsafe/lodestar-z/execution-proof-verifier", () => verifier);
+vi.mock("@lodestar/params", async (importActual) => ({
+  ...(await importActual<typeof import("@lodestar/params")>()),
+  EXECUTION_PROOF_TYPES: assignments.table,
+}));
 
 describe("NativeProofEngine", () => {
-  const vk = Uint8Array.from([1, 2, 3, 4]);
+  const {vk} = assignments;
   let proof: eip8025.ExecutionProof;
 
   beforeEach(() => {
@@ -35,13 +61,12 @@ describe("NativeProofEngine", () => {
     };
   });
 
-  it("registers one verifier per configured proof type", () => {
+  it("registers one verifier per configured proof type with its assigned zkVM", () => {
     const engine = new NativeProofEngine(
       [
-        {proofType: 1, zkvm: "openvm", programVk: toHex(vk)},
-        {proofType: 2, zkvm: "sp1", programVk: toHex(vk)},
-        {proofType: 3, zkvm: "zisk", programVk: toHex(vk)},
-        {proofType: 4, zkvm: "lambdavm", programVk: toHex(vk)},
+        {proofType: 1, verificationKey: toHex(vk)},
+        {proofType: 2, verificationKey: toHex(vk)},
+        {proofType: 3, verificationKey: toHex(vk)},
       ],
       null
     );
@@ -50,21 +75,35 @@ describe("NativeProofEngine", () => {
       [1, 0, vk],
       [2, 1, vk],
       [3, 2, vk],
-      [4, 3, vk],
     ]);
-    expect([...engine.supportedProofTypes]).toEqual([1, 2, 3, 4]);
+    expect([...engine.verifiableProofTypes]).toEqual([1, 2, 3]);
+  });
+
+  it("refuses a proof type without an assignment", () => {
+    expect(() => new NativeProofEngine([{proofType: 8, verificationKey: toHex(vk)}], null)).toThrow(
+      "EXECUTION_PROOF_TYPE_UNASSIGNED"
+    );
+    expect(verifier.registerExecutionProofVerifier).not.toHaveBeenCalled();
+  });
+
+  it("refuses a verification key whose digest does not match the assignment", () => {
+    const otherKey = toHex(Uint8Array.from([4, 3, 2, 1]));
+    expect(() => new NativeProofEngine([{proofType: 2, verificationKey: otherKey}], null)).toThrow(
+      "EXECUTION_PROOF_VERIFICATION_KEY_MISMATCH"
+    );
+    expect(verifier.registerExecutionProofVerifier).not.toHaveBeenCalled();
   });
 
   it("refuses to start on a platform without the prebuilt verifier", () => {
     verifier.EXECUTION_PROOF_VERIFIER_AVAILABLE = false;
-    expect(() => new NativeProofEngine([{proofType: 1, zkvm: "sp1", programVk: toHex(vk)}], null)).toThrow(
+    expect(() => new NativeProofEngine([{proofType: 1, verificationKey: toHex(vk)}], null)).toThrow(
       "EXECUTION_PROOF_VERIFIER_UNAVAILABLE"
     );
     expect(verifier.registerExecutionProofVerifier).not.toHaveBeenCalled();
   });
 
   it("accepts a proof whose public values are the serialized public input", async () => {
-    const engine = new NativeProofEngine([{proofType: 2, zkvm: "sp1", programVk: toHex(vk)}], null);
+    const engine = new NativeProofEngine([{proofType: 2, verificationKey: toHex(vk)}], null);
     verifier.verifyExecutionProof.mockResolvedValue(ssz.eip8025.PublicInput.serialize(proof.publicInput));
 
     await expect(engine.verifyExecutionProof(proof)).resolves.toBe(true);
@@ -72,14 +111,14 @@ describe("NativeProofEngine", () => {
   });
 
   it("rejects a proof the verifier does not accept", async () => {
-    const engine = new NativeProofEngine([{proofType: 2, zkvm: "sp1", programVk: toHex(vk)}], null);
+    const engine = new NativeProofEngine([{proofType: 2, verificationKey: toHex(vk)}], null);
     verifier.verifyExecutionProof.mockResolvedValue(null);
 
     await expect(engine.verifyExecutionProof(proof)).resolves.toBe(false);
   });
 
   it("rejects a valid proof over a different public input", async () => {
-    const engine = new NativeProofEngine([{proofType: 2, zkvm: "sp1", programVk: toHex(vk)}], null);
+    const engine = new NativeProofEngine([{proofType: 2, verificationKey: toHex(vk)}], null);
     const other = {...proof.publicInput, chainId: proof.publicInput.chainId + 1n};
     verifier.verifyExecutionProof.mockResolvedValue(ssz.eip8025.PublicInput.serialize(other));
 
@@ -87,7 +126,7 @@ describe("NativeProofEngine", () => {
   });
 
   it("propagates native verifier errors", async () => {
-    const engine = new NativeProofEngine([{proofType: 2, zkvm: "sp1", programVk: toHex(vk)}], null);
+    const engine = new NativeProofEngine([{proofType: 2, verificationKey: toHex(vk)}], null);
     const error = new LodestarError({code: "NATIVE_VERIFIER_FAILED"});
     verifier.verifyExecutionProof.mockRejectedValue(error);
 
@@ -99,7 +138,7 @@ describe("NativeProofEngine", () => {
     const timer = vi.fn();
     vi.spyOn(metrics.executionProofEngine.verifyTime, "startTimer").mockReturnValue(timer);
     const increment = vi.spyOn(metrics.executionProofEngine.verifyResult, "inc");
-    const engine = new NativeProofEngine([{proofType: 2, zkvm: "sp1", programVk: toHex(vk)}], metrics);
+    const engine = new NativeProofEngine([{proofType: 2, verificationKey: toHex(vk)}], metrics);
     verifier.verifyExecutionProof.mockResolvedValue(
       result === "invalid_proof"
         ? null
@@ -115,7 +154,7 @@ describe("NativeProofEngine", () => {
     const metrics = createMetricsTest();
     const timer = vi.fn();
     vi.spyOn(metrics.executionProofEngine.verifyTime, "startTimer").mockReturnValue(timer);
-    const engine = new NativeProofEngine([{proofType: 2, zkvm: "sp1", programVk: toHex(vk)}], metrics);
+    const engine = new NativeProofEngine([{proofType: 2, verificationKey: toHex(vk)}], metrics);
     const error = new LodestarError({code: "NATIVE_VERIFIER_FAILED"});
     verifier.verifyExecutionProof.mockRejectedValue(error);
 
