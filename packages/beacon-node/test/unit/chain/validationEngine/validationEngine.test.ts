@@ -72,8 +72,16 @@ describe("chain / validationEngine / ValidationEngine.importAttestation", () => 
 });
 
 describe("chain / validationEngine / ValidationEngine clock hooks", () => {
-  it("prunes the seen caches of its topics", () => {
+  it("prunes the pools and seen caches of its topics", () => {
     const chain = {
+      attestationPool: {prune: vi.fn()},
+      aggregatedAttestationPool: {prune: vi.fn()},
+      syncCommitteeMessagePool: {prune: vi.fn()},
+      syncContributionAndProofPool: {prune: vi.fn()},
+      payloadAttestationPool: {prune: vi.fn()},
+      executionPayloadBidPool: {prune: vi.fn()},
+      proposerPreferencesPool: {prune: vi.fn()},
+      inclusionListStore: {prune: vi.fn()},
       seenAttestationDatas: {onSlot: vi.fn()},
       seenSyncCommitteeMessages: {prune: vi.fn()},
       seenExecutionPayloadBids: {prune: vi.fn()},
@@ -90,6 +98,18 @@ describe("chain / validationEngine / ValidationEngine clock hooks", () => {
     engine.onEpoch(2);
     engine.onNewHead(32);
 
+    for (const pool of [
+      chain.attestationPool,
+      chain.aggregatedAttestationPool,
+      chain.syncCommitteeMessagePool,
+      chain.payloadAttestationPool,
+      chain.executionPayloadBidPool,
+      chain.proposerPreferencesPool,
+      chain.inclusionListStore,
+    ]) {
+      expect(pool.prune, "pool pruned on slot").toHaveBeenCalledWith(33);
+    }
+    expect(chain.syncContributionAndProofPool.prune).toHaveBeenCalledWith(32);
     expect(chain.seenAttestationDatas.onSlot).toHaveBeenCalledWith(33);
     expect(chain.seenSyncCommitteeMessages.prune).toHaveBeenCalledWith(33);
     expect(chain.seenExecutionPayloadBids.prune).toHaveBeenCalledWith(33);

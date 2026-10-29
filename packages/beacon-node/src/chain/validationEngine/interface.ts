@@ -85,6 +85,12 @@ export interface IValidationEngine {
   onEpoch(epoch: Epoch): void;
   onNewHead(headSlot: Slot): void;
   onFinalized(finalizedSlot: Slot): void;
+  /** Drop pooled operations the finalized head already includes or that are no longer valid against its state */
+  pruneOperations(headBlock: SignedBeaconBlock, headState: IBeaconStateView): void;
+  /** Load the pools persisted by `persist`. Call once, after the head state is available. */
+  init(): Promise<void>;
+  /** Persist the pools that survive a restart. Call at least once before stopping. */
+  persist(): Promise<void>;
   /** Release every cache and pool the engine holds. Nothing may be called after this. */
   close(): void;
 

@@ -23,6 +23,9 @@ function getMockedEngine(): Mocked<IValidationEngine> {
     onBlockVerified: vi.fn(),
     onBlockImported: vi.fn(),
     onBlockAttestationImported: vi.fn(),
+    pruneOperations: vi.fn(),
+    init: vi.fn().mockResolvedValue(undefined),
+    persist: vi.fn().mockResolvedValue(undefined),
     close: vi.fn(),
     validateGossipAttestationsSameAttData: vi.fn().mockResolvedValue({results: [], batchableBls: false}),
     validateApiAttestation: vi.fn(),
@@ -344,6 +347,23 @@ describe("chain / validationEngine / TopicRoutedValidationEngine", () => {
 
     expect(engine.validatorSeenAtEpoch(1, 2)).toBe(true);
     expect(js.validatorSeenAtEpoch).toHaveBeenCalledWith(1, 2);
+  });
+
+  it("forwards persistence and operation pruning to both engines", async () => {
+    const js = getMockedEngine();
+    const native = getMockedEngine();
+    const engine = new TopicRoutedValidationEngine(js, native, new Set([ValidationTopic.operations]));
+    const state = {} as IBeaconStateView;
+
+    await engine.init();
+    await engine.persist();
+    engine.pruneOperations(block, state);
+
+    for (const mock of [js, native]) {
+      expect(mock.init).toHaveBeenCalledOnce();
+      expect(mock.persist).toHaveBeenCalledOnce();
+      expect(mock.pruneOperations).toHaveBeenCalledWith(block, state);
+    }
   });
 
   it("forwards lifecycle hooks to both engines", () => {

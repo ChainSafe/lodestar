@@ -127,7 +127,7 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {IStateEngine, createStateEngine} from "./stateEngine/index.js";
-import {IValidationEngine, createValidationEngine} from "./validationEngine/index.js";
+import {IValidationEngine, createValidationCaches, createValidationEngine} from "./validationEngine/index.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -187,30 +187,30 @@ export class BeaconChain implements IBeaconChain {
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
-  readonly syncContributionAndProofPool;
+  readonly syncContributionAndProofPool: SyncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
-  readonly proposerPreferencesPool = new ProposerPreferencesPool();
+  readonly proposerPreferencesPool: ProposerPreferencesPool;
   readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;
   readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
   // Gossip seen cache
-  readonly seenAttesters = new SeenAttesters();
-  readonly seenAggregators = new SeenAggregators();
-  readonly seenPayloadAttesters = new SeenPayloadAttesters();
+  readonly seenAttesters: SeenAttesters;
+  readonly seenAggregators: SeenAggregators;
+  readonly seenPayloadAttesters: SeenPayloadAttesters;
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
-  readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
-  readonly seenBlockProposers = new SeenBlockProposers();
+  readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
+  readonly seenBlockProposers: SeenBlockProposers;
   /** Proposer indexes with an in-flight proposer slashing production */
   private readonly producingProposerSlashing = new Set<ValidatorIndex>();
-  readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
+  readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   // Seen cache for liveness checks
-  readonly seenBlockAttesters = new SeenBlockAttesters();
+  readonly seenBlockAttesters: SeenBlockAttesters;
 
   // Global state caches
   readonly pubkeyCache: PubkeyCache;
@@ -318,19 +318,28 @@ export class BeaconChain implements IBeaconChain {
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-    this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
-    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics, logger);
-    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
-    this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
-    this.executionPayloadBidPool = new ExecutionPayloadBidPool();
-    this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
-    this.opPool = new OpPool(config);
-    this.deferredVoluntaryExitPool = new DeferredVoluntaryExitPool(logger);
-    this.inclusionListStore = new InclusionListStore(config);
-
-    this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
-    this.seenContributionAndProof = new SeenContributionAndProof(metrics);
-    this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
+    // Owned by the validation engine, aliased here for the validators it runs
+    const validationCaches = createValidationCaches(opts, {config, clock, metrics, logger});
+    this.attestationPool = validationCaches.attestationPool;
+    this.aggregatedAttestationPool = validationCaches.aggregatedAttestationPool;
+    this.syncCommitteeMessagePool = validationCaches.syncCommitteeMessagePool;
+    this.syncContributionAndProofPool = validationCaches.syncContributionAndProofPool;
+    this.executionPayloadBidPool = validationCaches.executionPayloadBidPool;
+    this.payloadAttestationPool = validationCaches.payloadAttestationPool;
+    this.proposerPreferencesPool = validationCaches.proposerPreferencesPool;
+    this.inclusionListStore = validationCaches.inclusionListStore;
+    this.opPool = validationCaches.opPool;
+    this.deferredVoluntaryExitPool = validationCaches.deferredVoluntaryExitPool;
+    this.seenAttesters = validationCaches.seenAttesters;
+    this.seenAggregators = validationCaches.seenAggregators;
+    this.seenPayloadAttesters = validationCaches.seenPayloadAttesters;
+    this.seenAggregatedAttestations = validationCaches.seenAggregatedAttestations;
+    this.seenExecutionPayloadBids = validationCaches.seenExecutionPayloadBids;
+    this.seenBlockProposers = validationCaches.seenBlockProposers;
+    this.seenSyncCommitteeMessages = validationCaches.seenSyncCommitteeMessages;
+    this.seenContributionAndProof = validationCaches.seenContributionAndProof;
+    this.seenAttestationDatas = validationCaches.seenAttestationDatas;
+    this.seenBlockAttesters = validationCaches.seenBlockAttesters;
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
@@ -445,7 +454,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.clock = clock;
     this.stateEngine = stateEngine;
-    this.validationEngine = createValidationEngine(opts, this);
+    this.validationEngine = createValidationEngine(opts, this, {caches: validationCaches, db});
     this.bls = bls;
     this.emitter = emitter;
 
@@ -557,15 +566,13 @@ export class BeaconChain implements IBeaconChain {
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
     await this.stateEngine.init();
-    await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot);
-    await this.proposerPreferencesPool.fromPersisted(this.db, this.clock.currentSlot);
+    await this.validationEngine.init();
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
     await this.archiveStore.persistToDisk();
-    await this.opPool.toPersisted(this.db);
-    await this.proposerPreferencesPool.toPersisted(this.db);
+    await this.validationEngine.persist();
   }
 
   getHeadState(): IBeaconStateView {
@@ -1563,17 +1570,6 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
-    // aggregatedAttestationPool tracks metrics on its own
-    metrics.opPool.attestationPool.size.set(this.attestationPool.getAttestationCount());
-    metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
-    metrics.opPool.deferredVoluntaryExitPool.size.set(this.deferredVoluntaryExitPool.size());
-    metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
-    metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
-    metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
-    metrics.opPool.payloadAttestationPool.size.set(this.payloadAttestationPool.size);
-    metrics.opPool.executionPayloadBidPool.size.set(this.executionPayloadBidPool.size);
-    // syncContributionAndProofPool tracks metrics on its own
-    metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
     metrics.bls.pubkeyCacheSize.set(this.pubkeyCache.size);
     metrics.bls.pubkeyCacheCapacity.set(this.pubkeyCache.capacity);
@@ -1600,13 +1596,6 @@ export class BeaconChain implements IBeaconChain {
     this.emitHeadEvents(prevHead, this.forkChoice.getHead());
     this.metrics?.clockSlot.set(slot);
 
-    this.attestationPool.prune(slot);
-    this.aggregatedAttestationPool.prune(slot);
-    this.syncCommitteeMessagePool.prune(slot);
-    this.payloadAttestationPool.prune(slot);
-    this.executionPayloadBidPool.prune(slot);
-    this.proposerPreferencesPool.prune(slot);
-    this.inclusionListStore.prune(slot);
     this.validationEngine.onSlot(slot);
     this.reprocessController.onSlot(slot);
 
@@ -1634,7 +1623,6 @@ export class BeaconChain implements IBeaconChain {
   }
 
   protected onNewHead(head: ProtoBlock): void {
-    this.syncContributionAndProofPool.prune(head.slot);
     this.validationEngine.onNewHead(head.slot);
   }
 
@@ -1685,7 +1673,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     if (headState) {
-      this.opPool.pruneAll(blockResult.block, headState);
+      this.validationEngine.pruneOperations(blockResult.block, headState);
     }
 
     if (headState === null) {

@@ -124,7 +124,8 @@ export interface IBeaconChain {
   readonly pubkeyCache: PubkeyCache;
   readonly archiveStore: IArchiveStore;
 
-  // Ops pool
+  // Pools and seen caches are owned by the validation engine (constructed, pruned and persisted there) and
+  // aliased here for the validators it runs
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;

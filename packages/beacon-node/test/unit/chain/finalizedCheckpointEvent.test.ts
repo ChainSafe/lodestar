@@ -34,7 +34,7 @@ describe("BeaconChain finalized_checkpoint event", () => {
         getBlockHexDefaultStatus: vi.fn().mockReturnValue(finalizedBlock),
         getHead: vi.fn().mockReturnValue(generateProtoBlock()),
       },
-      validationEngine: {onFinalized: vi.fn()},
+      validationEngine: {onFinalized: vi.fn(), pruneOperations: vi.fn()},
       updateValidatorsCustodyRequirement: vi.fn().mockReturnValue(custodyUpdate),
       stateEngine: {getStateSync: vi.fn().mockReturnValue(null)},
       getBlockByRoot: vi.fn().mockResolvedValue({block: generateSignedBlockAtSlot(0)}),

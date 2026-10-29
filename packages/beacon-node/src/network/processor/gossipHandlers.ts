@@ -1512,7 +1512,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             isTimely,
           });
           metrics?.inclusionListStore.insertOutcome.inc({insertOutcome});
-          metrics?.inclusionListStore.size.set(chain.inclusionListStore.size);
 
           chain.emitter.emit(routes.events.EventType.inclusionList, {
             version: config.getForkName(slot),

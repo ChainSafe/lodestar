@@ -33,6 +33,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {IBeaconDb} from "../../db/index.js";
 import {BlockType, IBeaconChain} from "../interface.js";
 import {PooledExecutionPayloadBid} from "../opPools/executionPayloadBidPool.js";
 import {InclusionListInsertOutcome} from "../opPools/inclusionListStore.js";
@@ -98,38 +99,80 @@ import {
   validateApiVoluntaryExit,
   validateGossipVoluntaryExit,
 } from "../validation/voluntaryExit.js";
+import {ValidationCaches} from "./caches.js";
 import {IValidationEngine, ImportAttestationOpts, ValidationTopic} from "./interface.js";
 
+export type ValidationEngineModules = {
+  /** Defaults to the caches exposed on the chain, which tests build by hand */
+  caches?: ValidationCaches;
+  /** Without a db, `init` and `persist` are no-ops */
+  db?: IBeaconDb;
+};
+
 export class ValidationEngine implements IValidationEngine {
-  constructor(private readonly chain: IBeaconChain) {}
+  private readonly caches: ValidationCaches;
+  private readonly db: IBeaconDb | null;
+
+  constructor(
+    private readonly chain: IBeaconChain,
+    modules: ValidationEngineModules = {}
+  ) {
+    this.caches = modules.caches ?? chain;
+    this.db = modules.db ?? null;
+  }
+
+  async init(): Promise<void> {
+    if (this.db === null) return;
+    const currentSlot = this.chain.clock.currentSlot;
+    await this.caches.opPool.fromPersisted(this.db, this.chain.getHeadState(), this.chain.bls, currentSlot);
+    await this.caches.proposerPreferencesPool.fromPersisted(this.db, currentSlot);
+  }
+
+  async persist(): Promise<void> {
+    if (this.db === null) return;
+    await this.caches.opPool.toPersisted(this.db);
+    await this.caches.proposerPreferencesPool.toPersisted(this.db);
+  }
 
   onSlot(slot: Slot): void {
-    this.chain.seenAttestationDatas.onSlot(slot);
-    this.chain.seenSyncCommitteeMessages.prune(slot);
-    this.chain.seenExecutionPayloadBids.prune(slot);
+    this.caches.attestationPool.prune(slot);
+    this.caches.aggregatedAttestationPool.prune(slot);
+    this.caches.syncCommitteeMessagePool.prune(slot);
+    this.caches.payloadAttestationPool.prune(slot);
+    this.caches.executionPayloadBidPool.prune(slot);
+    this.caches.proposerPreferencesPool.prune(slot);
+    this.caches.inclusionListStore.prune(slot);
+    this.caches.seenAttestationDatas.onSlot(slot);
+    this.caches.seenSyncCommitteeMessages.prune(slot);
+    this.caches.seenExecutionPayloadBids.prune(slot);
   }
 
   onEpoch(epoch: Epoch): void {
-    this.chain.seenAttesters.prune(epoch);
-    this.chain.seenAggregators.prune(epoch);
-    this.chain.seenAggregatedAttestations.prune(epoch);
-    this.chain.seenPayloadAttesters.prune(epoch);
-    this.chain.seenBlockAttesters.prune(epoch);
+    this.caches.seenAttesters.prune(epoch);
+    this.caches.seenAggregators.prune(epoch);
+    this.caches.seenAggregatedAttestations.prune(epoch);
+    this.caches.seenPayloadAttesters.prune(epoch);
+    this.caches.seenBlockAttesters.prune(epoch);
   }
 
   onNewHead(headSlot: Slot): void {
-    this.chain.seenContributionAndProof.prune(headSlot);
+    this.caches.syncContributionAndProofPool.prune(headSlot);
+    this.caches.seenContributionAndProof.prune(headSlot);
   }
 
   onFinalized(finalizedSlot: Slot): void {
-    this.chain.seenBlockProposers.prune(finalizedSlot);
+    this.caches.seenBlockProposers.prune(finalizedSlot);
+  }
+
+  pruneOperations(headBlock: SignedBeaconBlock, headState: IBeaconStateView): void {
+    this.caches.opPool.pruneAll(headBlock, headState);
   }
 
   close(): void {}
 
   onBlockVerified(signedBlock: SignedBeaconBlock, blockRootHex: RootHex): void {
     const {slot, proposerIndex} = signedBlock.message;
-    this.chain.seenBlockProposers.observeBlockRoot(
+    this.caches.seenBlockProposers.observeBlockRoot(
       slot,
       proposerIndex,
       blockRootHex,
@@ -138,7 +181,7 @@ export class ValidationEngine implements IValidationEngine {
   }
 
   onBlockImported(block: BeaconBlock, blockRootHex: RootHex): void {
-    this.chain.seenBlockProposers.add(block.slot, block.proposerIndex, blockRootHex);
+    this.caches.seenBlockProposers.add(block.slot, block.proposerIndex, blockRootHex);
   }
 
   onBlockAttestationImported(
@@ -150,11 +193,11 @@ export class ValidationEngine implements IValidationEngine {
     attestation: Attestation,
     indexedAttestation: IndexedAttestation
   ): void {
-    this.chain.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
+    this.caches.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
     const trueBitCount = indexedAttestation.attestingIndices.length;
     if (!isForkPostElectra(fork)) {
-      this.chain.seenAggregatedAttestations.add(
+      this.caches.seenAggregatedAttestations.add(
         target.epoch,
         attestation.data.index,
         attDataRootHex,
@@ -166,7 +209,7 @@ export class ValidationEngine implements IValidationEngine {
 
     const committeeIndices = (attestation as Attestation<ForkPostElectra>).committeeBits.getTrueBitIndexes();
     if (committeeIndices.length === 1) {
-      this.chain.seenAggregatedAttestations.add(
+      this.caches.seenAggregatedAttestations.add(
         target.epoch,
         committeeIndices[0],
         attDataRootHex,
@@ -189,7 +232,7 @@ export class ValidationEngine implements IValidationEngine {
       const committee = committees[i];
       const aggregationBits = BitArray.fromBoolArray(aggregationBools.slice(offset, offset + committee.length));
       offset += committee.length;
-      this.chain.seenAggregatedAttestations.add(
+      this.caches.seenAggregatedAttestations.add(
         target.epoch,
         committeeIndices[i],
         attDataRootHex,
@@ -213,7 +256,7 @@ export class ValidationEngine implements IValidationEngine {
     let insertOutcome: InsertOutcome | null = null;
     if (opts.addToPool) {
       try {
-        insertOutcome = this.chain.attestationPool.add(
+        insertOutcome = this.caches.attestationPool.add(
           committeeIndex,
           attestation,
           attDataRootHex,
@@ -262,7 +305,7 @@ export class ValidationEngine implements IValidationEngine {
     opts: {addToForkChoice: boolean}
   ): InsertOutcome {
     const {indexedAttestation, committeeValidatorIndices, attDataRootHex} = result;
-    const insertOutcome = this.chain.aggregatedAttestationPool.add(
+    const insertOutcome = this.caches.aggregatedAttestationPool.add(
       signedAggregateAndProof.message.aggregate,
       attDataRootHex,
       indexedAttestation.attestingIndices.length,
@@ -291,7 +334,7 @@ export class ValidationEngine implements IValidationEngine {
     opts: {priority?: boolean}
   ): InsertOutcome[] {
     return result.positions.map(({subnet, indexInSubcommittee}) =>
-      this.chain.syncCommitteeMessagePool.add(subnet, message, indexInSubcommittee, opts.priority)
+      this.caches.syncCommitteeMessagePool.add(subnet, message, indexInSubcommittee, opts.priority)
     );
   }
 
@@ -312,7 +355,7 @@ export class ValidationEngine implements IValidationEngine {
     result: ContributionAndProofValidationResult,
     opts: {priority?: boolean}
   ): InsertOutcome {
-    return this.chain.syncContributionAndProofPool.add(
+    return this.caches.syncContributionAndProofPool.add(
       signedContributionAndProof.message,
       result.syncCommitteeParticipantIndices.length,
       opts.priority
@@ -333,7 +376,7 @@ export class ValidationEngine implements IValidationEngine {
     verifiedDomains: [Domain, Domain],
     opts: {addToForkChoice: boolean}
   ): void {
-    this.chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
+    this.caches.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
     if (opts.addToForkChoice) {
       this.chain.forkChoice.onAttesterSlashing(attesterSlashing);
     }
@@ -348,7 +391,7 @@ export class ValidationEngine implements IValidationEngine {
   }
 
   importProposerSlashing(proposerSlashing: phase0.ProposerSlashing, verifiedDomain: Domain): void {
-    this.chain.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
+    this.caches.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
   }
 
   validateGossipVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
@@ -360,7 +403,7 @@ export class ValidationEngine implements IValidationEngine {
   }
 
   importVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): void {
-    this.chain.opPool.insertVoluntaryExit(voluntaryExit);
+    this.caches.opPool.insertVoluntaryExit(voluntaryExit);
   }
 
   deferVoluntaryExit(
@@ -368,7 +411,7 @@ export class ValidationEngine implements IValidationEngine {
     validity: VoluntaryExitValidity,
     currentEpoch: Epoch
   ): boolean {
-    return this.chain.deferredVoluntaryExitPool.insert(voluntaryExit, validity, currentEpoch);
+    return this.caches.deferredVoluntaryExitPool.insert(voluntaryExit, validity, currentEpoch);
   }
 
   validateGossipBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void> {
@@ -383,7 +426,7 @@ export class ValidationEngine implements IValidationEngine {
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
     opts: {preCapella?: boolean}
   ): void {
-    this.chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, opts.preCapella);
+    this.caches.opPool.insertBlsToExecutionChange(blsToExecutionChange, opts.preCapella);
   }
 
   validateGossipPayloadAttestationMessage(
@@ -406,7 +449,7 @@ export class ValidationEngine implements IValidationEngine {
     let insertOutcome: InsertOutcome | null = null;
     if (opts.addToPool) {
       try {
-        insertOutcome = this.chain.payloadAttestationPool.add(
+        insertOutcome = this.caches.payloadAttestationPool.add(
           message,
           result.attDataRootHex,
           result.validatorCommitteeIndices
@@ -440,7 +483,7 @@ export class ValidationEngine implements IValidationEngine {
   }
 
   importExecutionPayloadBid(bid: gloas.SignedExecutionPayloadBid, opts: {receivedMs: number}): InsertOutcome {
-    return this.chain.executionPayloadBidPool.add(bid, opts.receivedMs);
+    return this.caches.executionPayloadBidPool.add(bid, opts.receivedMs);
   }
 
   validateGossipProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<void> {
@@ -464,7 +507,7 @@ export class ValidationEngine implements IValidationEngine {
     result: InclusionListValidationResult,
     opts: {isTimely: boolean}
   ): InclusionListInsertOutcome {
-    return this.chain.inclusionListStore.process(signedInclusionList, result.committeeIndices, opts.isTimely);
+    return this.caches.inclusionListStore.process(signedInclusionList, result.committeeIndices, opts.isTimely);
   }
 
   validateGossipBlock(fork: ForkName, signedBlock: SignedBeaconBlock): Promise<GossipBlockValidationResult> {
@@ -518,15 +561,15 @@ export class ValidationEngine implements IValidationEngine {
   }
 
   getAggregatedAttestation(slot: Slot, attDataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null {
-    return this.chain.attestationPool.getAggregate(slot, attDataRootHex, committeeIndex);
+    return this.caches.attestationPool.getAggregate(slot, attDataRootHex, committeeIndex);
   }
 
   getPooledAttestations(slot?: Slot): Attestation[] {
-    return this.chain.attestationPool.getAll(slot);
+    return this.caches.attestationPool.getAll(slot);
   }
 
   getAttestationsForBlock(fork: ForkName, state: IBeaconStateView): Attestation[] {
-    return this.chain.aggregatedAttestationPool.getAttestationsForBlock(
+    return this.caches.aggregatedAttestationPool.getAttestationsForBlock(
       fork,
       this.chain.forkChoice,
       this.chain.stateEngine,
@@ -535,7 +578,7 @@ export class ValidationEngine implements IValidationEngine {
   }
 
   getPooledAggregates(slot?: Slot): Attestation[] {
-    return this.chain.aggregatedAttestationPool.getAll(slot);
+    return this.caches.aggregatedAttestationPool.getAll(slot);
   }
 
   getSyncCommitteeContribution(
@@ -543,11 +586,11 @@ export class ValidationEngine implements IValidationEngine {
     slot: Slot,
     beaconBlockRoot: Root
   ): altair.SyncCommitteeContribution | null {
-    return this.chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
+    return this.caches.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
   }
 
   getSyncAggregate(slot: Slot, beaconBlockRoot: Root): altair.SyncAggregate {
-    return this.chain.syncContributionAndProofPool.getAggregate(slot, beaconBlockRoot);
+    return this.caches.syncContributionAndProofPool.getAggregate(slot, beaconBlockRoot);
   }
 
   getSlashingsAndExits(
@@ -559,39 +602,39 @@ export class ValidationEngine implements IValidationEngine {
     phase0.SignedVoluntaryExit[],
     capella.SignedBLSToExecutionChange[],
   ] {
-    return this.chain.opPool.getSlashingsAndExits(state, blockType, this.chain.metrics);
+    return this.caches.opPool.getSlashingsAndExits(state, blockType, this.chain.metrics);
   }
 
   getPooledAttesterSlashings(): AttesterSlashing[] {
-    return this.chain.opPool.getAllAttesterSlashings();
+    return this.caches.opPool.getAllAttesterSlashings();
   }
 
   getPooledProposerSlashings(): phase0.ProposerSlashing[] {
-    return this.chain.opPool.getAllProposerSlashings();
+    return this.caches.opPool.getAllProposerSlashings();
   }
 
   getPooledVoluntaryExits(): phase0.SignedVoluntaryExit[] {
-    return this.chain.opPool.getAllVoluntaryExits();
+    return this.caches.opPool.getAllVoluntaryExits();
   }
 
   getPooledBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[] {
-    return this.chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data);
+    return this.caches.opPool.getAllBlsToExecutionChanges().map(({data}) => data);
   }
 
   hasSeenProposerSlashing(validatorIndex: ValidatorIndex): boolean {
-    return this.chain.opPool.hasSeenProposerSlashing(validatorIndex);
+    return this.caches.opPool.hasSeenProposerSlashing(validatorIndex);
   }
 
   drainProcessableVoluntaryExits(state: IBeaconStateView): phase0.SignedVoluntaryExit[] {
-    return this.chain.deferredVoluntaryExitPool.drainProcessableExits(state);
+    return this.caches.deferredVoluntaryExitPool.drainProcessableExits(state);
   }
 
   getPayloadAttestationsForBlock(beaconBlockRootHex: RootHex, slot: Slot): gloas.PayloadAttestation[] {
-    return this.chain.payloadAttestationPool.getPayloadAttestationsForBlock(beaconBlockRootHex, slot);
+    return this.caches.payloadAttestationPool.getPayloadAttestationsForBlock(beaconBlockRootHex, slot);
   }
 
   getPooledPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[] {
-    return this.chain.payloadAttestationPool.getAll(slot);
+    return this.caches.payloadAttestationPool.getAll(slot);
   }
 
   getBestExecutionPayloadBid(
@@ -599,64 +642,64 @@ export class ValidationEngine implements IValidationEngine {
     parentBlockHash: RootHex | null,
     parentBlockRoot: RootHex
   ): PooledExecutionPayloadBid | null {
-    return this.chain.executionPayloadBidPool.getBestBid(slot, parentBlockHash, parentBlockRoot);
+    return this.caches.executionPayloadBidPool.getBestBid(slot, parentBlockHash, parentBlockRoot);
   }
 
   getProposerPreferences(slot: Slot, dependentRootHex: RootHex): gloas.SignedProposerPreferences | null {
-    return this.chain.proposerPreferencesPool.get(slot, dependentRootHex);
+    return this.caches.proposerPreferencesPool.get(slot, dependentRootHex);
   }
 
   getAllProposerPreferences(slot?: Slot, dependentRootHex?: RootHex): gloas.SignedProposerPreferences[] {
-    return this.chain.proposerPreferencesPool.getAll(slot, dependentRootHex);
+    return this.caches.proposerPreferencesPool.getAll(slot, dependentRootHex);
   }
 
   getInclusionListTransactions(slot: Slot, dependentRootHex: RootHex, onlyTimely?: boolean): bellatrix.Transactions {
-    return this.chain.inclusionListStore.getInclusionListTransactions(slot, dependentRootHex, onlyTimely);
+    return this.caches.inclusionListStore.getInclusionListTransactions(slot, dependentRootHex, onlyTimely);
   }
 
   getInclusionListBits(slot: Slot, dependentRootHex: RootHex, onlyTimely?: boolean): BitArray {
-    return this.chain.inclusionListStore.getInclusionListBits(slot, dependentRootHex, onlyTimely);
+    return this.caches.inclusionListStore.getInclusionListBits(slot, dependentRootHex, onlyTimely);
   }
 
   isInclusionListBitsInclusive(slot: Slot, dependentRootHex: RootHex, bits: BitArray): boolean {
-    return this.chain.inclusionListStore.isInclusionListBitsInclusive(slot, dependentRootHex, bits);
+    return this.caches.inclusionListStore.isInclusionListBitsInclusive(slot, dependentRootHex, bits);
   }
 
   getInclusionListsByIndices(slot: Slot, dependentRootHex: RootHex, indices: BitArray): heze.SignedInclusionList[] {
-    return this.chain.inclusionListStore.getByIndices(slot, dependentRootHex, indices);
+    return this.caches.inclusionListStore.getByIndices(slot, dependentRootHex, indices);
   }
 
   isBlockProposerKnown(slot: Slot, proposerIndex: ValidatorIndex): boolean {
-    return this.chain.seenBlockProposers.isKnown(slot, proposerIndex);
+    return this.caches.seenBlockProposers.isKnown(slot, proposerIndex);
   }
 
   hasSeenBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, blockRootHex: RootHex): boolean {
-    return this.chain.seenBlockProposers.hasBlockRoot(slot, proposerIndex, blockRootHex);
+    return this.caches.seenBlockProposers.hasBlockRoot(slot, proposerIndex, blockRootHex);
   }
 
   isProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean {
-    return this.chain.seenBlockProposers.isEquivocating(slot, proposerIndex);
+    return this.caches.seenBlockProposers.isEquivocating(slot, proposerIndex);
   }
 
   getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, blockRootHex: RootHex): RootHex[] {
-    return this.chain.seenBlockProposers.getConflictingBlockRoots(slot, proposerIndex, blockRootHex);
+    return this.caches.seenBlockProposers.getConflictingBlockRoots(slot, proposerIndex, blockRootHex);
   }
 
   getProposerEquivocationHeaders(
     slot: Slot,
     proposerIndex: ValidatorIndex
   ): [phase0.SignedBeaconBlockHeader, phase0.SignedBeaconBlockHeader] | null {
-    return this.chain.seenBlockProposers.getEquivocationHeaders(slot, proposerIndex);
+    return this.caches.seenBlockProposers.getEquivocationHeaders(slot, proposerIndex);
   }
 
   validatorSeenAtEpoch(validatorIndex: ValidatorIndex, epoch: Epoch): boolean {
     // Caller must check that epoch is not older than current epoch - 1, else the caches may already be pruned
     return (
-      this.chain.seenBlockAttesters.isKnown(epoch, validatorIndex) ||
-      this.chain.seenAttesters.isKnown(epoch, validatorIndex) ||
-      this.chain.seenAggregators.isKnown(epoch, validatorIndex) ||
-      this.chain.seenPayloadAttesters.seenAtEpoch(epoch, validatorIndex) ||
-      this.chain.seenBlockProposers.seenAtEpoch(epoch, validatorIndex)
+      this.caches.seenBlockAttesters.isKnown(epoch, validatorIndex) ||
+      this.caches.seenAttesters.isKnown(epoch, validatorIndex) ||
+      this.caches.seenAggregators.isKnown(epoch, validatorIndex) ||
+      this.caches.seenPayloadAttesters.seenAtEpoch(epoch, validatorIndex) ||
+      this.caches.seenBlockProposers.seenAtEpoch(epoch, validatorIndex)
     );
   }
 }
@@ -687,6 +730,19 @@ export class TopicRoutedValidationEngine implements IValidationEngine {
   onFinalized(finalizedSlot: Slot): void {
     this.js.onFinalized(finalizedSlot);
     this.native.onFinalized(finalizedSlot);
+  }
+
+  async init(): Promise<void> {
+    await Promise.all([this.js.init(), this.native.init()]);
+  }
+
+  async persist(): Promise<void> {
+    await Promise.all([this.js.persist(), this.native.persist()]);
+  }
+
+  pruneOperations(headBlock: SignedBeaconBlock, headState: IBeaconStateView): void {
+    this.js.pruneOperations(headBlock, headState);
+    this.native.pruneOperations(headBlock, headState);
   }
 
   onBlockVerified(signedBlock: SignedBeaconBlock, blockRootHex: RootHex): void {
