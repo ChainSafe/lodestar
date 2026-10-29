@@ -1,15 +1,16 @@
 import {ExecutionProofZkvm} from "@lodestar/params";
 import {eip8025} from "@lodestar/types";
+import {ExecutionProofInput} from "./executionProof.js";
 
 /**
- * EIP-8025 `ProofEngine`: checks that `proofData` proves `publicInput` under the proof system
- * identified by `proofType`. Supported types are the spec assignments plus any explicit ones
- * this node was configured with; verifiable types are those it holds a verification key for.
+ * EIP-8025 `ProofEngine`: checks that `proofData` proves one of the accepted public inputs under the
+ * proof system identified by `proofType`. Supported types are the spec assignments plus any explicit
+ * ones this node was configured with; verifiable types are those it holds a verification key for.
  */
 export interface ProofEngine {
   readonly supportedProofTypes: ReadonlySet<eip8025.ProofType>;
   readonly verifiableProofTypes: ReadonlySet<eip8025.ProofType>;
-  verifyExecutionProof(proof: eip8025.ExecutionProof): Promise<boolean>;
+  verifyExecutionProof(input: ExecutionProofInput): Promise<boolean>;
 }
 
 /** Verification key for one EIP-8025 proof type */

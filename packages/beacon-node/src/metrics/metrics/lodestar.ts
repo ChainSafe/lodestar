@@ -1101,10 +1101,10 @@ export function createLodestarMetrics(
         labelNames: ["proofType"],
         buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
       }),
-      verifyResult: register.counter<{proofType: number; result: string}>({
+      verifyResult: register.counter<{proofType: number; result: string; publicInput: string}>({
         name: "lodestar_execution_proof_engine_verify_result_total",
-        help: "Execution proof engine results by proof type: valid, invalid_proof or public_input_mismatch",
-        labelNames: ["proofType", "result"],
+        help: "Execution proof engine results by proof type (valid, invalid_proof or public_input_mismatch) and the public input convention a valid proof matched (spec, execution_specs or none)",
+        labelNames: ["proofType", "result", "publicInput"],
       }),
     },
     // recovery in the case of specific blob rows required

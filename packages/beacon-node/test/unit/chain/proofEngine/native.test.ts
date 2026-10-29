@@ -5,6 +5,7 @@ import type {
 } from "@chainsafe/lodestar-z/execution-proof-verifier";
 import {eip8025, ssz} from "@lodestar/types";
 import {LodestarError, toHex} from "@lodestar/utils";
+import {ExecutionProofInput} from "../../../../src/chain/proofEngine/executionProof.js";
 import {NativeProofEngine, matchesPublicInput} from "../../../../src/chain/proofEngine/native.js";
 import {createMetricsTest} from "../../metrics/utils.js";
 
@@ -46,6 +47,7 @@ vi.mock("@lodestar/params", async (importActual) => ({
 describe("NativeProofEngine", () => {
   const {vk} = assignments;
   let proof: eip8025.ExecutionProof;
+  let input: ExecutionProofInput;
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -59,6 +61,7 @@ describe("NativeProofEngine", () => {
       chainId: 9007199254740993n,
       schemaId: 0x1501,
     };
+    input = {proof, publicInputs: [{convention: "spec", publicInput: proof.publicInput}]};
   });
 
   it("registers one verifier per configured proof type with its assigned zkVM", () => {
@@ -125,7 +128,7 @@ describe("NativeProofEngine", () => {
     const engine = new NativeProofEngine([{proofType: 2, verificationKey: toHex(vk)}], null);
     verifier.verifyExecutionProof.mockResolvedValue(ssz.eip8025.PublicInput.serialize(proof.publicInput));
 
-    await expect(engine.verifyExecutionProof(proof)).resolves.toBe(true);
+    await expect(engine.verifyExecutionProof(input)).resolves.toBe(true);
     expect(verifier.verifyExecutionProof).toHaveBeenCalledWith(2, proof.proofData);
   });
 
@@ -133,7 +136,7 @@ describe("NativeProofEngine", () => {
     const engine = new NativeProofEngine([{proofType: 2, verificationKey: toHex(vk)}], null);
     verifier.verifyExecutionProof.mockResolvedValue(null);
 
-    await expect(engine.verifyExecutionProof(proof)).resolves.toBe(false);
+    await expect(engine.verifyExecutionProof(input)).resolves.toBe(false);
   });
 
   it("rejects a valid proof over a different public input", async () => {
@@ -141,7 +144,26 @@ describe("NativeProofEngine", () => {
     const other = {...proof.publicInput, chainId: proof.publicInput.chainId + 1n};
     verifier.verifyExecutionProof.mockResolvedValue(ssz.eip8025.PublicInput.serialize(other));
 
-    await expect(engine.verifyExecutionProof(proof)).resolves.toBe(false);
+    await expect(engine.verifyExecutionProof(input)).resolves.toBe(false);
+  });
+
+  it("accepts public values matching a later public input candidate and reports its convention", async () => {
+    const metrics = createMetricsTest();
+    const increment = vi.spyOn(metrics.executionProofEngine.verifyResult, "inc");
+    const engine = new NativeProofEngine([{proofType: 2, verificationKey: toHex(vk)}], metrics);
+    const other = {...proof.publicInput, newPayloadRequestRoot: Buffer.alloc(32, 8)};
+    verifier.verifyExecutionProof.mockResolvedValue(ssz.eip8025.PublicInput.serialize(other));
+
+    await expect(
+      engine.verifyExecutionProof({
+        proof,
+        publicInputs: [
+          {convention: "spec", publicInput: proof.publicInput},
+          {convention: "execution_specs", publicInput: other},
+        ],
+      })
+    ).resolves.toBe(true);
+    expect(increment).toHaveBeenCalledWith({proofType: 2, result: "valid", publicInput: "execution_specs"});
   });
 
   it("propagates native verifier errors", async () => {
@@ -149,7 +171,7 @@ describe("NativeProofEngine", () => {
     const error = new LodestarError({code: "NATIVE_VERIFIER_FAILED"});
     verifier.verifyExecutionProof.mockRejectedValue(error);
 
-    await expect(engine.verifyExecutionProof(proof)).rejects.toBe(error);
+    await expect(engine.verifyExecutionProof(input)).rejects.toBe(error);
   });
 
   it.each(["valid", "invalid_proof", "public_input_mismatch"])("records %s metrics", async (result) => {
@@ -164,8 +186,8 @@ describe("NativeProofEngine", () => {
         : ssz.eip8025.PublicInput.serialize({...proof.publicInput, successfulValidation: result === "valid"})
     );
 
-    await expect(engine.verifyExecutionProof(proof)).resolves.toBe(result === "valid");
-    expect(increment).toHaveBeenCalledWith({proofType: 2, result});
+    await expect(engine.verifyExecutionProof(input)).resolves.toBe(result === "valid");
+    expect(increment).toHaveBeenCalledWith({proofType: 2, result, publicInput: result === "valid" ? "spec" : "none"});
     expect(timer).toHaveBeenCalledOnce();
   });
 
@@ -177,7 +199,7 @@ describe("NativeProofEngine", () => {
     const error = new LodestarError({code: "NATIVE_VERIFIER_FAILED"});
     verifier.verifyExecutionProof.mockRejectedValue(error);
 
-    await expect(engine.verifyExecutionProof(proof)).rejects.toBe(error);
+    await expect(engine.verifyExecutionProof(input)).rejects.toBe(error);
     expect(timer).toHaveBeenCalledOnce();
   });
 

@@ -3,7 +3,6 @@ import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {eip8025} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
@@ -17,6 +16,7 @@ import {
   OpPool,
   SyncContributionAndProofPool,
 } from "../../src/chain/opPools/index.js";
+import {ExecutionProofInput} from "../../src/chain/proofEngine/executionProof.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenExecutionPayloadBids} from "../../src/chain/seenCache/seenExecutionPayloadBids.js";
 import {SeenExecutionProofs} from "../../src/chain/seenCache/seenExecutionProofs.js";
@@ -54,7 +54,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   proofEngine: {
     supportedProofTypes: Set<number>;
     verifiableProofTypes: Set<number>;
-    verifyExecutionProof: Mock<(proof: eip8025.ExecutionProof) => Promise<boolean>>;
+    verifyExecutionProof: Mock<(input: ExecutionProofInput) => Promise<boolean>>;
   };
 };
 
