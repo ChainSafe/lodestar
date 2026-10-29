@@ -49,36 +49,111 @@ The assignments are provisional, so the key generation they pin matters. The spe
 
 Every type you configure counts as supported on gossip. A proof for a type Lodestar does not know is rejected and penalizes the sending peer. A proof for a known type without a configured key is ignored without penalty, since Lodestar can neither confirm nor refute it.
 
-### Sepolia
+## Running a Sepolia proof-verifying node
 
-Register the spec keys for proof types 1 to 7 through the plain form, so Lodestar checks each file against the spec digest, and the newer generation's extra types explicitly. Download both key sets:
+This walkthrough was last run on 2026-10-30 against the Sepolia provers described above. It assumes a Linux host with a public address, since provers are usually outbound-only and dial you, plus Node.js 22 or newer, `pnpm`, `git` and `curl`. Pick a working directory and keep both checkouts in it:
 
 ```bash
-gh release download v0.17.0 --repo eth-act/ere-guests --pattern '*.vk' --dir keys/v0.17.0
+export WORK=$PWD L=$PWD/lodestar-8025 Z=$PWD/lodestar-z-ere
+```
+
+### 1. Build Lodestar
+
+Until the EIP-8025 branch is merged and released, build it from source:
+
+```bash
+git clone --branch bing/eip-8025 --depth 1 https://github.com/ChainSafe/lodestar.git "$L"
+cd "$L" && pnpm install --frozen-lockfile && pnpm build
+```
+
+### 2. Use a verifier built for the provers' `ere` release
+
+The published `@chainsafe/lodestar-z` 2.2.0 carries the ERE v0.19.2 verifier. Until a release with ERE v0.19.6 is out, build the bindings from the `bing/ere-0.19.6` branch with Zig 0.16.0 and point the whole monorepo at them. Skip this step once `pnpm install` brings a lodestar-z release that lists ERE v0.19.6 or newer.
+
+```bash
+cd "$WORK"
+curl -sSL -o zig.tar.xz https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
+echo "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00  zig.tar.xz" | sha256sum -c -
+tar -xJf zig.tar.xz && rm zig.tar.xz
+export PATH="$WORK/zig-x86_64-linux-0.16.0:$PATH"
 ```
 
 ```bash
-gh release download v0.19.0 --repo eth-act/ere-guests --pattern '*.vk' --dir keys/v0.19.0
+git clone --branch bing/ere-0.19.6 --depth 1 https://github.com/ChainSafe/lodestar-z.git "$Z"
+cd "$Z" && zig build build-lib:bindings -Doptimize=ReleaseSafe && pnpm install --frozen-lockfile --ignore-scripts
 ```
 
+Replace the single pnpm store entry, not one package's link. The BLS worker threads load lodestar-z as well, and two copies of the native module split the pubkey cache, after which every block batch fails with `PubkeyIndexNotFound`:
+
 ```bash
-./lodestar beacon --network sepolia --checkpointSyncUrl <url> \
+cd "$L/node_modules/.pnpm/@chainsafe+lodestar-z@2.2.0/node_modules/@chainsafe"
+mv lodestar-z lodestar-z.orig && ln -s "$Z" lodestar-z
+cd "$L" && node -e 'import("@chainsafe/lodestar-z/execution-proof-verifier").then((m) => console.log("verifier available:", m.EXECUTION_PROOF_VERIFIER_AVAILABLE))'
+```
+
+### 3. Download the verification keys
+
+Spec keys for proof types 1 to 7 come from the `ere-guests` v0.17.0 release, the extra types from v0.19.0:
+
+```bash
+mkdir -p "$WORK/keys/v0.17.0" "$WORK/keys/v0.19.0"
+for f in ethrex-openvm-v2.1.0-preview ethrex-sp1-v6.4.0 ethrex-zisk-v1.1.0-alpha reth-openvm-v2.1.0-preview reth-sp1-v6.4.0 reth-zisk-v1.1.0-alpha zesu-zisk-v1.1.0-alpha; do
+  curl -sSL -o "$WORK/keys/v0.17.0/stateless-validator-$f.vk" "https://github.com/eth-act/ere-guests/releases/download/v0.17.0/stateless-validator-$f.vk"
+done
+for f in nimbus-sp1-v6.9.0 nimbus-zisk-v1.3.2-alpha nethermind-sp1-v6.9.0 nethermind-zisk-v1.3.2-alpha zilkworm-sp1-v6.9.0; do
+  curl -sSL -o "$WORK/keys/v0.19.0/stateless-validator-$f.vk" "https://github.com/eth-act/ere-guests/releases/download/v0.19.0/stateless-validator-$f.vk"
+done
+```
+
+A spec-form key whose SHA-256 differs from the table stops the node at startup with `EXECUTION_PROOF_VERIFICATION_KEY_MISMATCH`, so a wrong download shows up immediately.
+
+### 4. Start the node
+
+Point `--execution.urls` and `--jwtSecret` at a Sepolia execution client as usual. The command below uses `--execution.engineMock` instead, which runs a verify-and-relay node that imports payloads without validating them, enough to verify and forward proofs but not a node to trust for chain validity. Sepolia has run Gloas since epoch 353024, so any checkpoint provider must serve a state at or after that epoch.
+
+```bash
+cd "$L" && K=$WORK/keys
+nohup ./lodestar beacon --network sepolia --dataDir "$WORK/sepolia-data" \
+  --execution.engineMock --checkpointSyncUrl https://beaconstate-sepolia.chainsafe.io \
+  --port 9030 --rest.port 9599 --metrics --metrics.port 8038 \
   --chain.executionProofVerifiers \
-    1:keys/v0.17.0/stateless-validator-ethrex-openvm-v2.1.0-preview.vk \
-    2:keys/v0.17.0/stateless-validator-ethrex-sp1-v6.4.0.vk \
-    3:keys/v0.17.0/stateless-validator-ethrex-zisk-v1.1.0-alpha.vk \
-    4:keys/v0.17.0/stateless-validator-reth-openvm-v2.1.0-preview.vk \
-    5:keys/v0.17.0/stateless-validator-reth-sp1-v6.4.0.vk \
-    6:keys/v0.17.0/stateless-validator-reth-zisk-v1.1.0-alpha.vk \
-    7:keys/v0.17.0/stateless-validator-zesu-zisk-v1.1.0-alpha.vk \
-    8:sp1:keys/v0.19.0/stateless-validator-nimbus-sp1-v6.9.0.vk \
-    9:zisk:keys/v0.19.0/stateless-validator-nimbus-zisk-v1.3.2-alpha.vk \
-    10:sp1:keys/v0.19.0/stateless-validator-nethermind-sp1-v6.9.0.vk \
-    11:zisk:keys/v0.19.0/stateless-validator-nethermind-zisk-v1.3.2-alpha.vk \
-    12:sp1:keys/v0.19.0/stateless-validator-zilkworm-sp1-v6.9.0.vk
+    1:$K/v0.17.0/stateless-validator-ethrex-openvm-v2.1.0-preview.vk \
+    2:$K/v0.17.0/stateless-validator-ethrex-sp1-v6.4.0.vk \
+    3:$K/v0.17.0/stateless-validator-ethrex-zisk-v1.1.0-alpha.vk \
+    4:$K/v0.17.0/stateless-validator-reth-openvm-v2.1.0-preview.vk \
+    5:$K/v0.17.0/stateless-validator-reth-sp1-v6.4.0.vk \
+    6:$K/v0.17.0/stateless-validator-reth-zisk-v1.1.0-alpha.vk \
+    7:$K/v0.17.0/stateless-validator-zesu-zisk-v1.1.0-alpha.vk \
+    8:sp1:$K/v0.19.0/stateless-validator-nimbus-sp1-v6.9.0.vk \
+    9:zisk:$K/v0.19.0/stateless-validator-nimbus-zisk-v1.3.2-alpha.vk \
+    10:sp1:$K/v0.19.0/stateless-validator-nethermind-sp1-v6.9.0.vk \
+    11:zisk:$K/v0.19.0/stateless-validator-nethermind-zisk-v1.3.2-alpha.vk \
+    12:sp1:$K/v0.19.0/stateless-validator-zilkworm-sp1-v6.9.0.vk \
+  > "$WORK/sepolia-data.log" 2>&1 &
 ```
 
-Sepolia has run Gloas since epoch 353024, so the checkpoint must be at or after that epoch. A proof type holds one key at a time, so once the provers move to the v0.19.0 keys for types 1 to 6, switch those entries to the explicit form with the new files until the spec table follows. OpenVM proofs verify across `ere` releases because its version did not change; SP1 and ZisK proofs only verify with a verifier built for the same SP1 or ZisK version the prover used.
+A proof type holds one key at a time. Once the provers move to the v0.19.0 keys for types 1 to 6, switch those entries to the explicit form with the new files until the spec table follows. OpenVM proofs verify across `ere` releases because its version did not change; SP1 and ZisK proofs only verify with a verifier built for the same SP1 or ZisK version the prover used.
+
+### 5. Check that it works
+
+```bash
+curl -s http://127.0.0.1:9599/eth/v1/node/syncing
+curl -s http://127.0.0.1:8038/metrics | grep -E 'gossipsub_topic_peer_count.*execution_proof|execution_proof_engine_verify_result_total'
+curl -s http://127.0.0.1:9599/eth/v1/node/identity | jq -r '.data.enr'
+```
+
+The node should report `is_syncing: false` within a few minutes of checkpoint sync. The topic peer count shows how many connected peers subscribe to `execution_proof`; expect a handful at most today. The verify counter grows by one per proof that reached the engine, labelled with the result. The ENR carries `eproof`, which other proof-aware nodes prefer in discovery.
+
+### 6. Get proofs flowing
+
+Provers such as the OpenVM one described above are outbound-only, so they have to dial you. Open the p2p port inbound for TCP and UDP and the next port up for UDP, which QUIC uses, then give the prover operators your ENR or peer id so they add you as a trusted peer. A node that only connects outbound still relays proofs it happens to receive from a proof-aware peer, but it waits on luck.
+
+### Troubleshooting
+
+- Discovery finds no peers behind a VPN or a high-latency link: discv5 gives up on a request after one second and the bootnodes drop out of the table. Start with `--rest.namespace '*'` and feed peers through `POST /eth/v1/lodestar/connect_peer?peerId=<id>&multiaddr=/ip4/<ip>/tcp/<port>`.
+- Every block batch fails with `PubkeyIndexNotFound`: the binding was linked for a single package. Redo the store swap in step 2.
+- `EXECUTION_PROOF_VERIFIER_UNAVAILABLE` at startup: the installed lodestar-z has no `ere` verifier for this platform. The published macOS package is one such case; build the bindings as in step 2.
+- `EXECUTION_PROOF_VERIFICATION_KEY_MISMATCH`: the file for that proof type belongs to another key generation. Use the explicit form if the provers you follow are on newer keys than the spec table.
 
 ## Submitting proofs
 

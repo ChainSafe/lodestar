@@ -17,6 +17,7 @@ Codespaces
 CoinCashew
 Corepack
 Customizations
+discv5
 DPoS
 DVs
 Discv
@@ -122,6 +123,7 @@ UTF
 VM
 Vitalik
 Vitest
+VPN
 Wagyu
 zesu
 Zig
