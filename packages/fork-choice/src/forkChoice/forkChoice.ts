@@ -713,7 +713,12 @@ export class ForkChoice implements IForkChoice {
   private overriddenHead(): ProtoBlock | null {
     const root = this.opts?.headOverride?.();
     if (root === null || root === undefined) return null;
-    return this.getBlockHexDefaultStatus(root);
+    // The head must be a payload variant, as findHead returns: FULL once the envelope is known, else EMPTY
+    return (
+      this.protoArray.getBlock(root, PayloadStatus.FULL) ??
+      this.protoArray.getBlock(root, PayloadStatus.EMPTY) ??
+      this.getBlockHexDefaultStatus(root)
+    );
   }
 
   /**
