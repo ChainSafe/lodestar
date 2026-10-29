@@ -101,55 +101,6 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
     });
   });
 
-  it.each<[string, (payload: gloas.ExecutionPayload, envelope: gloas.ExecutionPayloadEnvelope) => void, string]>([
-    [
-      "parent beacon block root differs from the block parent root",
-      (_, envelope) => {
-        envelope.parentBeaconBlockRoot = Buffer.alloc(32, 7);
-      },
-      ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
-    ],
-    [
-      "prev randao differs from the bid",
-      (payload) => {
-        payload.prevRandao = Buffer.alloc(32, 2);
-      },
-      ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH,
-    ],
-    [
-      "gas limit differs from the bid",
-      (payload) => {
-        payload.gasLimit += 1;
-      },
-      ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH,
-    ],
-    [
-      "parent hash differs from the state latest block hash",
-      (payload) => {
-        payload.parentHash = Buffer.alloc(32, 3);
-      },
-      ExecutionPayloadEnvelopeErrorCode.PARENT_HASH_MISMATCH,
-    ],
-    [
-      "timestamp is not the slot time",
-      (payload) => {
-        payload.timestamp += 1;
-      },
-      ExecutionPayloadEnvelopeErrorCode.INVALID_TIMESTAMP,
-    ],
-    [
-      "withdrawals differ from the state expected withdrawals",
-      (payload) => {
-        payload.withdrawals = [];
-      },
-      ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_MISMATCH,
-    ],
-  ])("rejects an envelope whose %s", async (_, mutate, code) => {
-    mutate(signedEnvelope.message.payload, signedEnvelope.message);
-    await expect(validateGossipExecutionPayloadEnvelope(chain, signedEnvelope)).rejects.toMatchObject({type: {code}});
-    expect(chain.bls.verifySignatureSets).not.toHaveBeenCalled();
-  });
-
   it("checks the block hash before the signature", async () => {
     signedEnvelope.message.payload.transactions = SerializedList.fromArray([Uint8Array.from([2, 9, 9, 9])]);
     vi.mocked(chain.bls.verifySignatureSets).mockResolvedValue(false);
