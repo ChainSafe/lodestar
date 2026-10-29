@@ -551,24 +551,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
-    // Caller must check that epoch is not older that current epoch - 1
-    // else the caches for that epoch may already be pruned.
-
-    return (
-      // Dedicated cache for liveness checks, registers attesters seen through blocks.
-      // Note: this check should be cheaper + overlap with counting participants of aggregates from gossip.
-      this.seenBlockAttesters.isKnown(epoch, index) ||
-      //
-      // Re-use gossip caches. Populated on validation of gossip + API messages
-      //   seenAttesters = single signer of unaggregated attestations
-      this.seenAttesters.isKnown(epoch, index) ||
-      //   seenAggregators = single aggregator index, not participants of the aggregate
-      this.seenAggregators.isKnown(epoch, index) ||
-      //   seenPayloadAttesters = single signer of payload attestation message
-      this.seenPayloadAttesters.seenAtEpoch(epoch, index) ||
-      //   seenBlockProposers = single block proposer
-      this.seenBlockProposers.seenAtEpoch(epoch, index)
-    );
+    return this.validationEngine.validatorSeenAtEpoch(index, epoch);
   }
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */
@@ -1287,7 +1270,7 @@ export class BeaconChain implements IBeaconChain {
       return;
     }
 
-    if (this.opPool.hasSeenProposerSlashing(proposerIndex)) {
+    if (this.validationEngine.hasSeenProposerSlashing(proposerIndex)) {
       this.logger.debug("Not producing proposer slashing, already in the op pool", {
         slot: blockSlot,
         proposerIndex,
@@ -1295,7 +1278,7 @@ export class BeaconChain implements IBeaconChain {
       return;
     }
 
-    const headers = this.seenBlockProposers.getEquivocationHeaders(blockSlot, proposerIndex);
+    const headers = this.validationEngine.getProposerEquivocationHeaders(blockSlot, proposerIndex);
     if (headers === null) {
       return;
     }

@@ -278,7 +278,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // The block received from the network may have established an equivocation, either by conflicting
       // with a previously observed block root (REPEAT_PROPOSAL) or with a root observed during validation
       const proposerIndex = signedBlock.message.proposerIndex;
-      if (chain.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+      if (chain.validationEngine.isProposerEquivocating(slot, proposerIndex)) {
         chain.processProposerEquivocation(slot, proposerIndex);
       }
     }
@@ -747,7 +747,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           e.type.code === BlockErrorCode.REPEAT_PROPOSAL &&
           // Only a signature-verified sibling recorded in the seen cache is imported. The cache holds at most two
           // roots per proposer and slot, which bounds full imports over gossip to one alternate
-          chain.seenBlockProposers.hasBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root) &&
+          chain.validationEngine.hasSeenBlockRoot(signedBlock.message.slot, e.type.proposerIndex, e.type.root) &&
           // A sibling with an unknown parent cannot be imported, sync fetches it if its branch becomes relevant
           chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) !== null &&
           (!isGloasBeaconBlock(signedBlock.message) ||

@@ -219,7 +219,7 @@ export async function verifyBlocksInEpoch(
       this.validationEngine.onBlockVerified(block, blockInput.blockRootHex);
       // Only produce a slashing while importing the block. A block that is verified before it is published
       // must not be treated as equivocation evidence since it may never be seen by the network
-      if (opts.verifyOnly !== true && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+      if (opts.verifyOnly !== true && this.validationEngine.isProposerEquivocating(slot, proposerIndex)) {
         callInNextEventLoop(() => this.processProposerEquivocation(slot, proposerIndex));
       }
     }

@@ -1,18 +1,24 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {IBeaconStateView, VoluntaryExitValidity} from "@lodestar/state-transition";
 import {
   Attestation,
   AttesterSlashing,
   BeaconBlock,
+  CommitteeIndex,
   Domain,
   Epoch,
   IndexedAttestation,
+  Root,
   RootHex,
   SignedAggregateAndProof,
   SignedBeaconBlock,
   Slot,
+  SubcommitteeIndex,
   SubnetID,
+  ValidatorIndex,
   altair,
+  bellatrix,
   capella,
   deneb,
   fulu,
@@ -20,6 +26,8 @@ import {
   heze,
   phase0,
 } from "@lodestar/types";
+import {BlockType} from "../interface.js";
+import {PooledExecutionPayloadBid} from "../opPools/executionPayloadBidPool.js";
 import {InclusionListInsertOutcome} from "../opPools/inclusionListStore.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
@@ -47,10 +55,8 @@ export enum ValidationTopic {
   aggregate = "aggregate",
   syncCommitteeMessage = "syncCommitteeMessage",
   contributionAndProof = "contributionAndProof",
-  attesterSlashing = "attesterSlashing",
-  proposerSlashing = "proposerSlashing",
-  voluntaryExit = "voluntaryExit",
-  blsToExecutionChange = "blsToExecutionChange",
+  /** Attester and proposer slashings, voluntary exits and BLS changes share one pool, so they move together */
+  operations = "operations",
   payloadAttestation = "payloadAttestation",
   executionPayloadBid = "executionPayloadBid",
   proposerPreferences = "proposerPreferences",
@@ -244,4 +250,66 @@ export interface IValidationEngine {
     dataColumnSidecar: gloas.DataColumnSidecar,
     subnet: SubnetID
   ): Promise<void>;
+
+  // Reads of the pools and seen caches, served by whichever engine owns them. Grouped by the topic that writes them.
+
+  getAggregatedAttestation(slot: Slot, attDataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null;
+  getPooledAttestations(slot?: Slot): Attestation[];
+
+  getAttestationsForBlock(fork: ForkName, state: IBeaconStateView): Attestation[];
+  getPooledAggregates(slot?: Slot): Attestation[];
+
+  getSyncCommitteeContribution(
+    subcommitteeIndex: SubcommitteeIndex,
+    slot: Slot,
+    beaconBlockRoot: Root
+  ): altair.SyncCommitteeContribution | null;
+
+  getSyncAggregate(slot: Slot, beaconBlockRoot: Root): altair.SyncAggregate;
+
+  getSlashingsAndExits(
+    state: IBeaconStateView,
+    blockType: BlockType
+  ): [
+    AttesterSlashing[],
+    phase0.ProposerSlashing[],
+    phase0.SignedVoluntaryExit[],
+    capella.SignedBLSToExecutionChange[],
+  ];
+  getPooledAttesterSlashings(): AttesterSlashing[];
+  getPooledProposerSlashings(): phase0.ProposerSlashing[];
+  getPooledVoluntaryExits(): phase0.SignedVoluntaryExit[];
+  getPooledBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[];
+  hasSeenProposerSlashing(validatorIndex: ValidatorIndex): boolean;
+  /** Removes and returns the deferred exits that `state` can now process, drops the ones deferred for too long */
+  drainProcessableVoluntaryExits(state: IBeaconStateView): phase0.SignedVoluntaryExit[];
+
+  getPayloadAttestationsForBlock(beaconBlockRootHex: RootHex, slot: Slot): gloas.PayloadAttestation[];
+  getPooledPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[];
+
+  getBestExecutionPayloadBid(
+    slot: Slot,
+    parentBlockHash: RootHex | null,
+    parentBlockRoot: RootHex
+  ): PooledExecutionPayloadBid | null;
+
+  getProposerPreferences(slot: Slot, dependentRootHex: RootHex): gloas.SignedProposerPreferences | null;
+  getAllProposerPreferences(slot?: Slot, dependentRootHex?: RootHex): gloas.SignedProposerPreferences[];
+
+  getInclusionListTransactions(slot: Slot, dependentRootHex: RootHex, onlyTimely?: boolean): bellatrix.Transactions;
+  getInclusionListBits(slot: Slot, dependentRootHex: RootHex, onlyTimely?: boolean): BitArray;
+  isInclusionListBitsInclusive(slot: Slot, dependentRootHex: RootHex, bits: BitArray): boolean;
+  getInclusionListsByIndices(slot: Slot, dependentRootHex: RootHex, indices: BitArray): heze.SignedInclusionList[];
+
+  isBlockProposerKnown(slot: Slot, proposerIndex: ValidatorIndex): boolean;
+  hasSeenBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, blockRootHex: RootHex): boolean;
+  isProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean;
+  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, blockRootHex: RootHex): RootHex[];
+  getProposerEquivocationHeaders(
+    slot: Slot,
+    proposerIndex: ValidatorIndex
+  ): [phase0.SignedBeaconBlockHeader, phase0.SignedBeaconBlockHeader] | null;
+
+  /** Liveness across every seen cache: a validator is live if any engine saw it attest, aggregate or propose */
+  validatorSeenAtEpoch(validatorIndex: ValidatorIndex, epoch: Epoch): boolean;
 }

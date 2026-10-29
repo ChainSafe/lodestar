@@ -212,7 +212,7 @@ export async function importExecutionPayload(
     inclusionListTransactions =
       dependentRoot === null
         ? SerializedList.empty()
-        : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
+        : this.validationEngine.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
   }
 
   // 4a. Run EL and signature verification in parallel

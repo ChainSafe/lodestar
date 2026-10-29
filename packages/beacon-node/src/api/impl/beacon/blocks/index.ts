@@ -322,7 +322,7 @@ export function getBeaconBlockApi(
     }
 
     if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
-      const conflictingRoots = chain.seenBlockProposers.getConflictingBlockRoots(
+      const conflictingRoots = chain.validationEngine.getConflictingBlockRoots(
         slot,
         signedBlock.message.proposerIndex,
         blockRoot
@@ -919,7 +919,7 @@ export function getBeaconBlockApi(
       // Keep this as the final async validation before publishing. A conflicting block may be observed while the
       // envelope, blob data, or slot timing is being validated above.
       if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
-        const conflictingRoots = chain.seenBlockProposers.getConflictingBlockRoots(
+        const conflictingRoots = chain.validationEngine.getConflictingBlockRoots(
           slot,
           payloadInput.proposerIndex,
           blockRootHex

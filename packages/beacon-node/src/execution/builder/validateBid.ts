@@ -88,8 +88,8 @@ export async function validateBuilderApiExecutionPayloadBid(
       computeEpochAtSlot(parentBlock.slot),
       parentBlock
     );
-    if (!chain.inclusionListStore.isInclusionListBitsInclusive(inclusionListSlot, dependentRoot, inclusionListBits)) {
-      const expectedBits = chain.inclusionListStore.getInclusionListBits(inclusionListSlot, dependentRoot);
+    if (!chain.validationEngine.isInclusionListBitsInclusive(inclusionListSlot, dependentRoot, inclusionListBits)) {
+      const expectedBits = chain.validationEngine.getInclusionListBits(inclusionListSlot, dependentRoot);
       throw Error(
         `Bid inclusionListBits=${toHex(inclusionListBits.uint8Array)} is not inclusive of ` +
           `timely inclusion lists expected=${toHex(expectedBits.uint8Array)}`
@@ -170,7 +170,7 @@ export async function validateBuilderApiExecutionPayloadBid(
   if (dependentRootHex === null) {
     throw Error(`Unable to resolve proposer preferences dependent root for bid slot=${bid.slot}`);
   }
-  const proposerPreferences = chain.proposerPreferencesPool.get(bid.slot, dependentRootHex);
+  const proposerPreferences = chain.validationEngine.getProposerPreferences(bid.slot, dependentRootHex);
   if (proposerPreferences === null) {
     throw Error(`No proposer preferences found for bid slot=${bid.slot} dependentRoot=${dependentRootHex}`);
   }

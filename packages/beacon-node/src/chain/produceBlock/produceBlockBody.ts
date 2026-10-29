@@ -79,7 +79,7 @@ import {kzg} from "../../util/kzg.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
-import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
+import {IValidationEngine} from "../validationEngine/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -257,7 +257,7 @@ export async function produceBlockBody<T extends BlockType>(
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = builderBid;
-    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+    gloasBody.payloadAttestations = this.validationEngine.getPayloadAttestationsForBlock(
       parentBlock.blockRoot,
       blockSlot - 1
     );
@@ -392,7 +392,7 @@ export async function produceBlockBody<T extends BlockType>(
       // Built from the full view (only_timely=False), a superset of the receiver's timely-only
       // is_inclusion_list_bits_inclusive check
       const inclusionListSlot = blockSlot - 1;
-      (bid as heze.ExecutionPayloadBid).inclusionListBits = this.inclusionListStore.getInclusionListBits(
+      (bid as heze.ExecutionPayloadBid).inclusionListBits = this.validationEngine.getInclusionListBits(
         inclusionListSlot,
         getShufflingDependentRoot(
           this.forkChoice,
@@ -411,7 +411,7 @@ export async function produceBlockBody<T extends BlockType>(
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = signedBid;
-    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+    gloasBody.payloadAttestations = this.validationEngine.getPayloadAttestationsForBlock(
       parentBlock.blockRoot,
       blockSlot - 1
     );
@@ -745,8 +745,7 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
     forkChoice: IForkChoice;
-    proposerPreferencesPool: ProposerPreferencesPool;
-    inclusionListStore: InclusionListStore;
+    validationEngine: IValidationEngine;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -861,8 +860,7 @@ export function getPayloadAttributesForSSE(
   chain: {
     config: ChainForkConfig;
     forkChoice: IForkChoice;
-    proposerPreferencesPool: ProposerPreferencesPool;
-    inclusionListStore: InclusionListStore;
+    validationEngine: IValidationEngine;
   },
   {
     prepareState,
@@ -918,8 +916,7 @@ function preparePayloadAttributes(
   chain: {
     config: ChainForkConfig;
     forkChoice: IForkChoice;
-    proposerPreferencesPool: ProposerPreferencesPool;
-    inclusionListStore: InclusionListStore;
+    validationEngine: IValidationEngine;
   },
   {
     prepareState,
@@ -999,7 +996,7 @@ function preparePayloadAttributes(
     }
     const inclusionListSlot = prepareSlot - 1;
     (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
-      chain.inclusionListStore.getInclusionListTransactions(
+      chain.validationEngine.getInclusionListTransactions(
         inclusionListSlot,
         getShufflingDependentRoot(
           chain.forkChoice,
@@ -1028,7 +1025,7 @@ function preparePayloadAttributes(
  * (EMPTY.executionPayloadGasLimit = inherited grandparent's gas_limit).
  */
 function getProposerTargetGasLimit(
-  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
+  chain: {forkChoice: IForkChoice; validationEngine: IValidationEngine},
   prepareSlot: Slot,
   parentBlockRoot: Root,
   parentBlockHash: Bytes32
@@ -1073,7 +1070,7 @@ function getProposerFeeRecipient(
  * `(slot, dependent_root)` lookup as gossip bid validation. Null if none are pooled.
  */
 export function getPooledProposerPreferences(
-  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
+  chain: {forkChoice: IForkChoice; validationEngine: IValidationEngine},
   slot: Slot,
   parentBlockRootHex: RootHex
 ): gloas.ProposerPreferences | null {
@@ -1094,7 +1091,7 @@ export function getPooledProposerPreferences(
     return null;
   }
 
-  return chain.proposerPreferencesPool.get(slot, dependentRootHex)?.message ?? null;
+  return chain.validationEngine.getProposerPreferences(slot, dependentRootHex)?.message ?? null;
 }
 
 export async function produceCommonBlockBody<T extends BlockType>(
@@ -1122,15 +1119,10 @@ export async function produceCommonBlockBody<T extends BlockType>(
   //   }
   // }
   const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
-    this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
+    this.validationEngine.getSlashingsAndExits(currentState, blockType);
 
   const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
-    fork,
-    this.forkChoice,
-    this.stateEngine,
-    currentState
-  );
+  const attestations = this.validationEngine.getAttestationsForBlock(fork, currentState);
   endAttestations?.({
     step: BlockProductionStep.attestations,
   });
@@ -1138,7 +1130,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
   const endSyncAggregate = stepsMetrics?.startTimer();
   const parentBlockRoot = fromHex(parentBlock.blockRoot);
   const previousSlot = slot - 1;
-  const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
+  const syncAggregate = this.validationEngine.getSyncAggregate(previousSlot, parentBlockRoot);
   this.metrics?.production.producedSyncAggregateParticipants.observe(
     syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
   );

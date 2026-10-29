@@ -11,15 +11,20 @@ import {
   Attestation,
   AttesterSlashing,
   BeaconBlock,
+  CommitteeIndex,
   Domain,
   Epoch,
   IndexedAttestation,
+  Root,
   RootHex,
   SignedAggregateAndProof,
   SignedBeaconBlock,
   Slot,
+  SubcommitteeIndex,
   SubnetID,
+  ValidatorIndex,
   altair,
+  bellatrix,
   capella,
   deneb,
   fulu,
@@ -28,7 +33,8 @@ import {
   phase0,
 } from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {IBeaconChain} from "../interface.js";
+import {BlockType, IBeaconChain} from "../interface.js";
+import {PooledExecutionPayloadBid} from "../opPools/executionPayloadBidPool.js";
 import {InclusionListInsertOutcome} from "../opPools/inclusionListStore.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
@@ -510,6 +516,149 @@ export class ValidationEngine implements IValidationEngine {
       this.chain.metrics
     );
   }
+
+  getAggregatedAttestation(slot: Slot, attDataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null {
+    return this.chain.attestationPool.getAggregate(slot, attDataRootHex, committeeIndex);
+  }
+
+  getPooledAttestations(slot?: Slot): Attestation[] {
+    return this.chain.attestationPool.getAll(slot);
+  }
+
+  getAttestationsForBlock(fork: ForkName, state: IBeaconStateView): Attestation[] {
+    return this.chain.aggregatedAttestationPool.getAttestationsForBlock(
+      fork,
+      this.chain.forkChoice,
+      this.chain.stateEngine,
+      state
+    );
+  }
+
+  getPooledAggregates(slot?: Slot): Attestation[] {
+    return this.chain.aggregatedAttestationPool.getAll(slot);
+  }
+
+  getSyncCommitteeContribution(
+    subcommitteeIndex: SubcommitteeIndex,
+    slot: Slot,
+    beaconBlockRoot: Root
+  ): altair.SyncCommitteeContribution | null {
+    return this.chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
+  }
+
+  getSyncAggregate(slot: Slot, beaconBlockRoot: Root): altair.SyncAggregate {
+    return this.chain.syncContributionAndProofPool.getAggregate(slot, beaconBlockRoot);
+  }
+
+  getSlashingsAndExits(
+    state: IBeaconStateView,
+    blockType: BlockType
+  ): [
+    AttesterSlashing[],
+    phase0.ProposerSlashing[],
+    phase0.SignedVoluntaryExit[],
+    capella.SignedBLSToExecutionChange[],
+  ] {
+    return this.chain.opPool.getSlashingsAndExits(state, blockType, this.chain.metrics);
+  }
+
+  getPooledAttesterSlashings(): AttesterSlashing[] {
+    return this.chain.opPool.getAllAttesterSlashings();
+  }
+
+  getPooledProposerSlashings(): phase0.ProposerSlashing[] {
+    return this.chain.opPool.getAllProposerSlashings();
+  }
+
+  getPooledVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+    return this.chain.opPool.getAllVoluntaryExits();
+  }
+
+  getPooledBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[] {
+    return this.chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data);
+  }
+
+  hasSeenProposerSlashing(validatorIndex: ValidatorIndex): boolean {
+    return this.chain.opPool.hasSeenProposerSlashing(validatorIndex);
+  }
+
+  drainProcessableVoluntaryExits(state: IBeaconStateView): phase0.SignedVoluntaryExit[] {
+    return this.chain.deferredVoluntaryExitPool.drainProcessableExits(state);
+  }
+
+  getPayloadAttestationsForBlock(beaconBlockRootHex: RootHex, slot: Slot): gloas.PayloadAttestation[] {
+    return this.chain.payloadAttestationPool.getPayloadAttestationsForBlock(beaconBlockRootHex, slot);
+  }
+
+  getPooledPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[] {
+    return this.chain.payloadAttestationPool.getAll(slot);
+  }
+
+  getBestExecutionPayloadBid(
+    slot: Slot,
+    parentBlockHash: RootHex | null,
+    parentBlockRoot: RootHex
+  ): PooledExecutionPayloadBid | null {
+    return this.chain.executionPayloadBidPool.getBestBid(slot, parentBlockHash, parentBlockRoot);
+  }
+
+  getProposerPreferences(slot: Slot, dependentRootHex: RootHex): gloas.SignedProposerPreferences | null {
+    return this.chain.proposerPreferencesPool.get(slot, dependentRootHex);
+  }
+
+  getAllProposerPreferences(slot?: Slot, dependentRootHex?: RootHex): gloas.SignedProposerPreferences[] {
+    return this.chain.proposerPreferencesPool.getAll(slot, dependentRootHex);
+  }
+
+  getInclusionListTransactions(slot: Slot, dependentRootHex: RootHex, onlyTimely?: boolean): bellatrix.Transactions {
+    return this.chain.inclusionListStore.getInclusionListTransactions(slot, dependentRootHex, onlyTimely);
+  }
+
+  getInclusionListBits(slot: Slot, dependentRootHex: RootHex, onlyTimely?: boolean): BitArray {
+    return this.chain.inclusionListStore.getInclusionListBits(slot, dependentRootHex, onlyTimely);
+  }
+
+  isInclusionListBitsInclusive(slot: Slot, dependentRootHex: RootHex, bits: BitArray): boolean {
+    return this.chain.inclusionListStore.isInclusionListBitsInclusive(slot, dependentRootHex, bits);
+  }
+
+  getInclusionListsByIndices(slot: Slot, dependentRootHex: RootHex, indices: BitArray): heze.SignedInclusionList[] {
+    return this.chain.inclusionListStore.getByIndices(slot, dependentRootHex, indices);
+  }
+
+  isBlockProposerKnown(slot: Slot, proposerIndex: ValidatorIndex): boolean {
+    return this.chain.seenBlockProposers.isKnown(slot, proposerIndex);
+  }
+
+  hasSeenBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, blockRootHex: RootHex): boolean {
+    return this.chain.seenBlockProposers.hasBlockRoot(slot, proposerIndex, blockRootHex);
+  }
+
+  isProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean {
+    return this.chain.seenBlockProposers.isEquivocating(slot, proposerIndex);
+  }
+
+  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, blockRootHex: RootHex): RootHex[] {
+    return this.chain.seenBlockProposers.getConflictingBlockRoots(slot, proposerIndex, blockRootHex);
+  }
+
+  getProposerEquivocationHeaders(
+    slot: Slot,
+    proposerIndex: ValidatorIndex
+  ): [phase0.SignedBeaconBlockHeader, phase0.SignedBeaconBlockHeader] | null {
+    return this.chain.seenBlockProposers.getEquivocationHeaders(slot, proposerIndex);
+  }
+
+  validatorSeenAtEpoch(validatorIndex: ValidatorIndex, epoch: Epoch): boolean {
+    // Caller must check that epoch is not older than current epoch - 1, else the caches may already be pruned
+    return (
+      this.chain.seenBlockAttesters.isKnown(epoch, validatorIndex) ||
+      this.chain.seenAttesters.isKnown(epoch, validatorIndex) ||
+      this.chain.seenAggregators.isKnown(epoch, validatorIndex) ||
+      this.chain.seenPayloadAttesters.seenAtEpoch(epoch, validatorIndex) ||
+      this.chain.seenBlockProposers.seenAtEpoch(epoch, validatorIndex)
+    );
+  }
 }
 
 /** Sends each topic to the native engine when it is enabled for that topic, otherwise to the JS engine */
@@ -664,11 +813,11 @@ export class TopicRoutedValidationEngine implements IValidationEngine {
   }
 
   validateGossipAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<[Domain, Domain]> {
-    return this.engineFor(ValidationTopic.attesterSlashing).validateGossipAttesterSlashing(attesterSlashing);
+    return this.engineFor(ValidationTopic.operations).validateGossipAttesterSlashing(attesterSlashing);
   }
 
   validateApiAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<[Domain, Domain]> {
-    return this.engineFor(ValidationTopic.attesterSlashing).validateApiAttesterSlashing(attesterSlashing);
+    return this.engineFor(ValidationTopic.operations).validateApiAttesterSlashing(attesterSlashing);
   }
 
   importAttesterSlashing(
@@ -677,36 +826,31 @@ export class TopicRoutedValidationEngine implements IValidationEngine {
     verifiedDomains: [Domain, Domain],
     opts: {addToForkChoice: boolean}
   ): void {
-    this.engineFor(ValidationTopic.attesterSlashing).importAttesterSlashing(
-      fork,
-      attesterSlashing,
-      verifiedDomains,
-      opts
-    );
+    this.engineFor(ValidationTopic.operations).importAttesterSlashing(fork, attesterSlashing, verifiedDomains, opts);
   }
 
   validateGossipProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<Domain> {
-    return this.engineFor(ValidationTopic.proposerSlashing).validateGossipProposerSlashing(proposerSlashing);
+    return this.engineFor(ValidationTopic.operations).validateGossipProposerSlashing(proposerSlashing);
   }
 
   validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<Domain> {
-    return this.engineFor(ValidationTopic.proposerSlashing).validateApiProposerSlashing(proposerSlashing);
+    return this.engineFor(ValidationTopic.operations).validateApiProposerSlashing(proposerSlashing);
   }
 
   importProposerSlashing(proposerSlashing: phase0.ProposerSlashing, verifiedDomain: Domain): void {
-    this.engineFor(ValidationTopic.proposerSlashing).importProposerSlashing(proposerSlashing, verifiedDomain);
+    this.engineFor(ValidationTopic.operations).importProposerSlashing(proposerSlashing, verifiedDomain);
   }
 
   validateGossipVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
-    return this.engineFor(ValidationTopic.voluntaryExit).validateGossipVoluntaryExit(voluntaryExit);
+    return this.engineFor(ValidationTopic.operations).validateGossipVoluntaryExit(voluntaryExit);
   }
 
   validateApiVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<ApiVoluntaryExitResult> {
-    return this.engineFor(ValidationTopic.voluntaryExit).validateApiVoluntaryExit(voluntaryExit);
+    return this.engineFor(ValidationTopic.operations).validateApiVoluntaryExit(voluntaryExit);
   }
 
   importVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): void {
-    this.engineFor(ValidationTopic.voluntaryExit).importVoluntaryExit(voluntaryExit);
+    this.engineFor(ValidationTopic.operations).importVoluntaryExit(voluntaryExit);
   }
 
   deferVoluntaryExit(
@@ -714,24 +858,22 @@ export class TopicRoutedValidationEngine implements IValidationEngine {
     validity: VoluntaryExitValidity,
     currentEpoch: Epoch
   ): boolean {
-    return this.engineFor(ValidationTopic.voluntaryExit).deferVoluntaryExit(voluntaryExit, validity, currentEpoch);
+    return this.engineFor(ValidationTopic.operations).deferVoluntaryExit(voluntaryExit, validity, currentEpoch);
   }
 
   validateGossipBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void> {
-    return this.engineFor(ValidationTopic.blsToExecutionChange).validateGossipBlsToExecutionChange(
-      blsToExecutionChange
-    );
+    return this.engineFor(ValidationTopic.operations).validateGossipBlsToExecutionChange(blsToExecutionChange);
   }
 
   validateApiBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void> {
-    return this.engineFor(ValidationTopic.blsToExecutionChange).validateApiBlsToExecutionChange(blsToExecutionChange);
+    return this.engineFor(ValidationTopic.operations).validateApiBlsToExecutionChange(blsToExecutionChange);
   }
 
   importBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
     opts: {preCapella?: boolean}
   ): void {
-    this.engineFor(ValidationTopic.blsToExecutionChange).importBlsToExecutionChange(blsToExecutionChange, opts);
+    this.engineFor(ValidationTopic.operations).importBlsToExecutionChange(blsToExecutionChange, opts);
   }
 
   validateGossipPayloadAttestationMessage(
@@ -846,6 +988,151 @@ export class TopicRoutedValidationEngine implements IValidationEngine {
       payloadInput,
       dataColumnSidecar,
       subnet
+    );
+  }
+
+  getAggregatedAttestation(slot: Slot, attDataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null {
+    return this.engineFor(ValidationTopic.attestation).getAggregatedAttestation(slot, attDataRootHex, committeeIndex);
+  }
+
+  getPooledAttestations(slot?: Slot): Attestation[] {
+    return this.engineFor(ValidationTopic.attestation).getPooledAttestations(slot);
+  }
+
+  getAttestationsForBlock(fork: ForkName, state: IBeaconStateView): Attestation[] {
+    return this.engineFor(ValidationTopic.aggregate).getAttestationsForBlock(fork, state);
+  }
+
+  getPooledAggregates(slot?: Slot): Attestation[] {
+    return this.engineFor(ValidationTopic.aggregate).getPooledAggregates(slot);
+  }
+
+  getSyncCommitteeContribution(
+    subcommitteeIndex: SubcommitteeIndex,
+    slot: Slot,
+    beaconBlockRoot: Root
+  ): altair.SyncCommitteeContribution | null {
+    return this.engineFor(ValidationTopic.syncCommitteeMessage).getSyncCommitteeContribution(
+      subcommitteeIndex,
+      slot,
+      beaconBlockRoot
+    );
+  }
+
+  getSyncAggregate(slot: Slot, beaconBlockRoot: Root): altair.SyncAggregate {
+    return this.engineFor(ValidationTopic.contributionAndProof).getSyncAggregate(slot, beaconBlockRoot);
+  }
+
+  getSlashingsAndExits(
+    state: IBeaconStateView,
+    blockType: BlockType
+  ): [
+    AttesterSlashing[],
+    phase0.ProposerSlashing[],
+    phase0.SignedVoluntaryExit[],
+    capella.SignedBLSToExecutionChange[],
+  ] {
+    return this.engineFor(ValidationTopic.operations).getSlashingsAndExits(state, blockType);
+  }
+
+  getPooledAttesterSlashings(): AttesterSlashing[] {
+    return this.engineFor(ValidationTopic.operations).getPooledAttesterSlashings();
+  }
+
+  getPooledProposerSlashings(): phase0.ProposerSlashing[] {
+    return this.engineFor(ValidationTopic.operations).getPooledProposerSlashings();
+  }
+
+  getPooledVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+    return this.engineFor(ValidationTopic.operations).getPooledVoluntaryExits();
+  }
+
+  getPooledBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[] {
+    return this.engineFor(ValidationTopic.operations).getPooledBlsToExecutionChanges();
+  }
+
+  hasSeenProposerSlashing(validatorIndex: ValidatorIndex): boolean {
+    return this.engineFor(ValidationTopic.operations).hasSeenProposerSlashing(validatorIndex);
+  }
+
+  drainProcessableVoluntaryExits(state: IBeaconStateView): phase0.SignedVoluntaryExit[] {
+    return this.engineFor(ValidationTopic.operations).drainProcessableVoluntaryExits(state);
+  }
+
+  getPayloadAttestationsForBlock(beaconBlockRootHex: RootHex, slot: Slot): gloas.PayloadAttestation[] {
+    return this.engineFor(ValidationTopic.payloadAttestation).getPayloadAttestationsForBlock(beaconBlockRootHex, slot);
+  }
+
+  getPooledPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[] {
+    return this.engineFor(ValidationTopic.payloadAttestation).getPooledPayloadAttestations(slot);
+  }
+
+  getBestExecutionPayloadBid(
+    slot: Slot,
+    parentBlockHash: RootHex | null,
+    parentBlockRoot: RootHex
+  ): PooledExecutionPayloadBid | null {
+    return this.engineFor(ValidationTopic.executionPayloadBid).getBestExecutionPayloadBid(
+      slot,
+      parentBlockHash,
+      parentBlockRoot
+    );
+  }
+
+  getProposerPreferences(slot: Slot, dependentRootHex: RootHex): gloas.SignedProposerPreferences | null {
+    return this.engineFor(ValidationTopic.proposerPreferences).getProposerPreferences(slot, dependentRootHex);
+  }
+
+  getAllProposerPreferences(slot?: Slot, dependentRootHex?: RootHex): gloas.SignedProposerPreferences[] {
+    return this.engineFor(ValidationTopic.proposerPreferences).getAllProposerPreferences(slot, dependentRootHex);
+  }
+
+  getInclusionListTransactions(slot: Slot, dependentRootHex: RootHex, onlyTimely?: boolean): bellatrix.Transactions {
+    return this.engineFor(ValidationTopic.inclusionList).getInclusionListTransactions(
+      slot,
+      dependentRootHex,
+      onlyTimely
+    );
+  }
+
+  getInclusionListBits(slot: Slot, dependentRootHex: RootHex, onlyTimely?: boolean): BitArray {
+    return this.engineFor(ValidationTopic.inclusionList).getInclusionListBits(slot, dependentRootHex, onlyTimely);
+  }
+
+  isInclusionListBitsInclusive(slot: Slot, dependentRootHex: RootHex, bits: BitArray): boolean {
+    return this.engineFor(ValidationTopic.inclusionList).isInclusionListBitsInclusive(slot, dependentRootHex, bits);
+  }
+
+  getInclusionListsByIndices(slot: Slot, dependentRootHex: RootHex, indices: BitArray): heze.SignedInclusionList[] {
+    return this.engineFor(ValidationTopic.inclusionList).getInclusionListsByIndices(slot, dependentRootHex, indices);
+  }
+
+  isBlockProposerKnown(slot: Slot, proposerIndex: ValidatorIndex): boolean {
+    return this.engineFor(ValidationTopic.block).isBlockProposerKnown(slot, proposerIndex);
+  }
+
+  hasSeenBlockRoot(slot: Slot, proposerIndex: ValidatorIndex, blockRootHex: RootHex): boolean {
+    return this.engineFor(ValidationTopic.block).hasSeenBlockRoot(slot, proposerIndex, blockRootHex);
+  }
+
+  isProposerEquivocating(slot: Slot, proposerIndex: ValidatorIndex): boolean {
+    return this.engineFor(ValidationTopic.block).isProposerEquivocating(slot, proposerIndex);
+  }
+
+  getConflictingBlockRoots(slot: Slot, proposerIndex: ValidatorIndex, blockRootHex: RootHex): RootHex[] {
+    return this.engineFor(ValidationTopic.block).getConflictingBlockRoots(slot, proposerIndex, blockRootHex);
+  }
+
+  getProposerEquivocationHeaders(
+    slot: Slot,
+    proposerIndex: ValidatorIndex
+  ): [phase0.SignedBeaconBlockHeader, phase0.SignedBeaconBlockHeader] | null {
+    return this.engineFor(ValidationTopic.block).getProposerEquivocationHeaders(slot, proposerIndex);
+  }
+
+  validatorSeenAtEpoch(validatorIndex: ValidatorIndex, epoch: Epoch): boolean {
+    return (
+      this.js.validatorSeenAtEpoch(validatorIndex, epoch) || this.native.validatorSeenAtEpoch(validatorIndex, epoch)
     );
   }
 

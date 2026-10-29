@@ -1,7 +1,9 @@
 import {Mocked, describe, expect, it, vi} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {IBeaconStateView, VoluntaryExitValidity} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {BlockType} from "../../../../src/chain/interface.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
 import {AggregateAndProofValidationResult} from "../../../../src/chain/validation/aggregateAndProof.js";
@@ -67,6 +69,34 @@ function getMockedEngine(): Mocked<IValidationEngine> {
     validateGossipBlobSidecar: vi.fn(),
     validateGossipFuluDataColumnSidecar: vi.fn(),
     validateGossipGloasDataColumnSidecar: vi.fn(),
+    getAggregatedAttestation: vi.fn(),
+    getPooledAttestations: vi.fn().mockReturnValue([]),
+    getAttestationsForBlock: vi.fn().mockReturnValue([]),
+    getPooledAggregates: vi.fn().mockReturnValue([]),
+    getSyncCommitteeContribution: vi.fn(),
+    getSyncAggregate: vi.fn(),
+    getSlashingsAndExits: vi.fn().mockReturnValue([[], [], [], []]),
+    getPooledAttesterSlashings: vi.fn().mockReturnValue([]),
+    getPooledProposerSlashings: vi.fn().mockReturnValue([]),
+    getPooledVoluntaryExits: vi.fn().mockReturnValue([]),
+    getPooledBlsToExecutionChanges: vi.fn().mockReturnValue([]),
+    hasSeenProposerSlashing: vi.fn().mockReturnValue(false),
+    drainProcessableVoluntaryExits: vi.fn().mockReturnValue([]),
+    getPayloadAttestationsForBlock: vi.fn().mockReturnValue([]),
+    getPooledPayloadAttestations: vi.fn().mockReturnValue([]),
+    getBestExecutionPayloadBid: vi.fn(),
+    getProposerPreferences: vi.fn(),
+    getAllProposerPreferences: vi.fn().mockReturnValue([]),
+    getInclusionListTransactions: vi.fn(),
+    getInclusionListBits: vi.fn(),
+    isInclusionListBitsInclusive: vi.fn().mockReturnValue(true),
+    getInclusionListsByIndices: vi.fn().mockReturnValue([]),
+    isBlockProposerKnown: vi.fn().mockReturnValue(false),
+    hasSeenBlockRoot: vi.fn().mockReturnValue(false),
+    isProposerEquivocating: vi.fn().mockReturnValue(false),
+    getConflictingBlockRoots: vi.fn().mockReturnValue([]),
+    getProposerEquivocationHeaders: vi.fn(),
+    validatorSeenAtEpoch: vi.fn().mockReturnValue(false),
   };
 }
 
@@ -145,67 +175,129 @@ describe("chain / validationEngine / TopicRoutedValidationEngine", () => {
     await engine.validateGossipBlobSidecar(fork, blobSidecar, 0);
     await engine.validateGossipFuluDataColumnSidecar(fuluColumn, 0);
     await engine.validateGossipGloasDataColumnSidecar({} as PayloadEnvelopeInput, gloasColumn, 0);
+    const state = {} as IBeaconStateView;
+    const root = new Uint8Array(32);
+    const bits = BitArray.fromBitLen(8);
+    engine.getAggregatedAttestation(0, "0x", 0);
+    engine.getPooledAttestations();
+    engine.getAttestationsForBlock(fork, state);
+    engine.getPooledAggregates();
+    engine.getSyncCommitteeContribution(0, 0, root);
+    engine.getSyncAggregate(0, root);
+    engine.getSlashingsAndExits(state, BlockType.Full);
+    engine.getPooledAttesterSlashings();
+    engine.getPooledProposerSlashings();
+    engine.getPooledVoluntaryExits();
+    engine.getPooledBlsToExecutionChanges();
+    engine.hasSeenProposerSlashing(0);
+    engine.drainProcessableVoluntaryExits(state);
+    engine.getPayloadAttestationsForBlock("0x", 0);
+    engine.getPooledPayloadAttestations();
+    engine.getBestExecutionPayloadBid(0, null, "0x");
+    engine.getProposerPreferences(0, "0x");
+    engine.getAllProposerPreferences();
+    engine.getInclusionListTransactions(0, "0x");
+    engine.getInclusionListBits(0, "0x");
+    engine.isInclusionListBitsInclusive(0, "0x", bits);
+    engine.getInclusionListsByIndices(0, "0x", bits);
+    engine.isBlockProposerKnown(0, 0);
+    engine.hasSeenBlockRoot(0, 0, "0x");
+    engine.isProposerEquivocating(0, 0);
+    engine.getConflictingBlockRoots(0, 0, "0x");
+    engine.getProposerEquivocationHeaders(0, 0);
   }
 
-  const attestationMethods = ["validateGossipAttestationsSameAttData", "validateApiAttestation", "importAttestation"];
+  const attestationMethods = [
+    "validateGossipAttestationsSameAttData",
+    "validateApiAttestation",
+    "importAttestation",
+    "getAggregatedAttestation",
+    "getPooledAttestations",
+  ];
   const aggregateMethods = [
     "validateGossipAggregateAndProof",
     "validateApiAggregateAndProof",
     "importAggregateAndProof",
+    "getAttestationsForBlock",
+    "getPooledAggregates",
   ];
   const syncMessageMethods = [
     "validateGossipSyncCommitteeMessage",
     "validateApiSyncCommitteeMessage",
     "importSyncCommitteeMessage",
+    "getSyncCommitteeContribution",
   ];
   const contributionMethods = [
     "validateGossipContributionAndProof",
     "validateApiContributionAndProof",
     "importContributionAndProof",
+    "getSyncAggregate",
   ];
   const methodsByTopic: Record<ValidationTopic, string[]> = {
     [ValidationTopic.attestation]: attestationMethods,
     [ValidationTopic.aggregate]: aggregateMethods,
     [ValidationTopic.syncCommitteeMessage]: syncMessageMethods,
     [ValidationTopic.contributionAndProof]: contributionMethods,
-    [ValidationTopic.attesterSlashing]: [
+    [ValidationTopic.operations]: [
       "validateGossipAttesterSlashing",
       "validateApiAttesterSlashing",
       "importAttesterSlashing",
-    ],
-    [ValidationTopic.proposerSlashing]: [
       "validateGossipProposerSlashing",
       "validateApiProposerSlashing",
       "importProposerSlashing",
-    ],
-    [ValidationTopic.voluntaryExit]: [
       "validateGossipVoluntaryExit",
       "validateApiVoluntaryExit",
       "importVoluntaryExit",
       "deferVoluntaryExit",
-    ],
-    [ValidationTopic.blsToExecutionChange]: [
       "validateGossipBlsToExecutionChange",
       "validateApiBlsToExecutionChange",
       "importBlsToExecutionChange",
+      "getSlashingsAndExits",
+      "getPooledAttesterSlashings",
+      "getPooledProposerSlashings",
+      "getPooledVoluntaryExits",
+      "getPooledBlsToExecutionChanges",
+      "hasSeenProposerSlashing",
+      "drainProcessableVoluntaryExits",
     ],
     [ValidationTopic.payloadAttestation]: [
       "validateGossipPayloadAttestationMessage",
       "validateApiPayloadAttestationMessage",
       "importPayloadAttestationMessage",
+      "getPayloadAttestationsForBlock",
+      "getPooledPayloadAttestations",
     ],
     [ValidationTopic.executionPayloadBid]: [
       "validateGossipExecutionPayloadBid",
       "validateApiExecutionPayloadBid",
       "importExecutionPayloadBid",
+      "getBestExecutionPayloadBid",
     ],
-    [ValidationTopic.proposerPreferences]: ["validateGossipProposerPreferences", "validateApiProposerPreferences"],
-    [ValidationTopic.inclusionList]: ["validateGossipInclusionList", "validateApiInclusionList", "importInclusionList"],
+    [ValidationTopic.proposerPreferences]: [
+      "validateGossipProposerPreferences",
+      "validateApiProposerPreferences",
+      "getProposerPreferences",
+      "getAllProposerPreferences",
+    ],
+    [ValidationTopic.inclusionList]: [
+      "validateGossipInclusionList",
+      "validateApiInclusionList",
+      "importInclusionList",
+      "getInclusionListTransactions",
+      "getInclusionListBits",
+      "isInclusionListBitsInclusive",
+      "getInclusionListsByIndices",
+    ],
     [ValidationTopic.block]: [
       "validateGossipBlock",
       "validateApiBlock",
       "validateGossipBlockWithUnknownParent",
       "verifyBlockProposerSignature",
+      "isBlockProposerKnown",
+      "hasSeenBlockRoot",
+      "isProposerEquivocating",
+      "getConflictingBlockRoots",
+      "getProposerEquivocationHeaders",
     ],
     [ValidationTopic.executionPayloadEnvelope]: [
       "validateGossipExecutionPayloadEnvelope",
@@ -243,6 +335,16 @@ describe("chain / validationEngine / TopicRoutedValidationEngine", () => {
       }
     });
   }
+
+  it("reports a validator as seen when either engine saw it", () => {
+    const js = getMockedEngine();
+    const native = getMockedEngine();
+    native.validatorSeenAtEpoch.mockReturnValue(true);
+    const engine = new TopicRoutedValidationEngine(js, native, new Set([ValidationTopic.attestation]));
+
+    expect(engine.validatorSeenAtEpoch(1, 2)).toBe(true);
+    expect(js.validatorSeenAtEpoch).toHaveBeenCalledWith(1, 2);
+  });
 
   it("forwards lifecycle hooks to both engines", () => {
     const js = getMockedEngine();

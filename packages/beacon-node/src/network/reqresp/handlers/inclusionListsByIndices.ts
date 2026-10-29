@@ -32,7 +32,11 @@ export async function* onInclusionListsByIndices(
     return;
   }
 
-  const signedInclusionLists = chain.inclusionListStore.getByIndices(slot, toRootHex(dependentRoot), indices);
+  const signedInclusionLists = chain.validationEngine.getInclusionListsByIndices(
+    slot,
+    toRootHex(dependentRoot),
+    indices
+  );
 
   const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot));
   for (const signedInclusionList of signedInclusionLists.slice(0, chain.config.MAX_REQUEST_INCLUSION_LIST)) {

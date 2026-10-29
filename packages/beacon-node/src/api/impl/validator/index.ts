@@ -997,14 +997,18 @@ export function getValidatorApi(
       const builderBidExpected =
         builderConfig.builders.length > 0 ||
         (!circuitBreakerActive &&
-          chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
+          chain.validationEngine.getBestExecutionPayloadBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
       // Select the p2p bid once builders had time to bid up, matching the deadline advertised
       // on builder API bid requests, unless the circuit breaker is active
       const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
         ? Promise.resolve(null)
         : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
-            const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+            const p2pBid = chain.validationEngine.getBestExecutionPayloadBid(
+              slot,
+              bidParentBlockHash,
+              parentBlockRootHex
+            );
             // Discard p2p bids below the proposer's configured floor on the total payment.
             // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
             if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
@@ -1495,7 +1499,11 @@ export function getValidatorApi(
       notOnOptimisticBlockRoot(beaconBlockRoot);
       notOnOutOfRangeData(beaconBlockRoot);
 
-      const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
+      const contribution = chain.validationEngine.getSyncCommitteeContribution(
+        subcommitteeIndex,
+        slot,
+        beaconBlockRoot
+      );
       if (!contribution) {
         throw new ApiError(
           404,
@@ -1830,7 +1838,7 @@ export function getValidatorApi(
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toRootHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex, committeeIndex);
+      const aggregate = chain.validationEngine.getAggregatedAttestation(slot, dataRootHex, committeeIndex);
 
       if (!aggregate) {
         throw new ApiError(

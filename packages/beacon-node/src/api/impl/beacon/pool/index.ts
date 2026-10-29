@@ -27,7 +27,10 @@ export function getBeaconPoolApi({
   return {
     async getPoolAttestationsV2({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = [...chain.aggregatedAttestationPool.getAll(slot), ...chain.attestationPool.getAll(slot)];
+      let attestations = [
+        ...chain.validationEngine.getPooledAggregates(slot),
+        ...chain.validationEngine.getPooledAttestations(slot),
+      ];
       const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
       const isPostElectra = isForkPostElectra(fork);
 
@@ -52,24 +55,24 @@ export function getBeaconPoolApi({
         throw new ApiError(400, `Payload attestation pool is not supported before Gloas fork=${fork}`);
       }
 
-      return {data: chain.payloadAttestationPool.getAll(slot), meta: {version: fork}};
+      return {data: chain.validationEngine.getPooledPayloadAttestations(slot), meta: {version: fork}};
     },
 
     async getPoolAttesterSlashingsV2() {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
-      return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: fork}};
+      return {data: chain.validationEngine.getPooledAttesterSlashings(), meta: {version: fork}};
     },
 
     async getPoolProposerSlashings() {
-      return {data: chain.opPool.getAllProposerSlashings()};
+      return {data: chain.validationEngine.getPooledProposerSlashings()};
     },
 
     async getPoolVoluntaryExits() {
-      return {data: chain.opPool.getAllVoluntaryExits()};
+      return {data: chain.validationEngine.getPooledVoluntaryExits()};
     },
 
     async getPoolBLSToExecutionChanges() {
-      return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
+      return {data: chain.validationEngine.getPooledBlsToExecutionChanges()};
     },
 
     async submitPoolAttestationsV2({signedAttestations}) {

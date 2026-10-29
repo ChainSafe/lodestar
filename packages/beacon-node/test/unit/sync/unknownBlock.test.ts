@@ -494,6 +494,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
           remove: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       };
+      Object.assign(chain, {validationEngine: new ValidationEngine(chain as IBeaconChain)});
 
       const setTimeoutSpy = vi.spyOn(global, "setTimeout");
       const processBlockSpy = vi.spyOn(chain, "processBlock");
@@ -743,6 +744,7 @@ describe("UnknownBlockSync", () => {
             remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         } as unknown as IBeaconChain;
+        Object.assign(chainForTest, {validationEngine: new ValidationEngine(chainForTest)});
 
         const debug = vi.fn();
         const loggerForTest = Object.assign(Object.create(logger), {debug}) as typeof logger;
@@ -858,6 +860,7 @@ describe("UnknownBlockSync", () => {
           prune: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       } as unknown as IBeaconChain;
+      Object.assign(chainForTest, {validationEngine: new ValidationEngine(chainForTest)});
 
       const svc = new BlockInputSync(minimalConfig, networkForTest, chainForTest, logger, null, defaultSyncOptions);
       svc.subscribeToNetwork();
@@ -3009,6 +3012,7 @@ describe("UnknownBlockSync", () => {
         isKnown: vi.fn().mockReturnValue(false),
       } as unknown as SeenBlockProposers,
     };
+    Object.assign(chainForTest, {validationEngine: new ValidationEngine(chainForTest as IBeaconChain)});
 
     service = new BlockInputSync(gloasConfig, network, chainForTest as IBeaconChain, logger, null, defaultSyncOptions);
     service.subscribeToNetwork();
