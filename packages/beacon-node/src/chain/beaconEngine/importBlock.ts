@@ -93,7 +93,8 @@ export async function importBlock(
 
   const blockRootHex = toRootHex(blockRoot);
 
-  // Regen must be able to read the block from DB as soon as fork choice exposes it.
+  // [beacon-engine] Core has no DA work to queue; BeaconChain queues sidecar persistence.
+  // In both modes, await the block write before exposing it to fork choice: Core regen reads directly from DB.
   this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
   await this.db.block.putBinary(blockRoot, v.blockBytes);
   // Release only the persisted signed candidate; another signature has its own cache lifecycle.

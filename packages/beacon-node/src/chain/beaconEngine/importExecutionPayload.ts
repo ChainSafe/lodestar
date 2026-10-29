@@ -229,8 +229,9 @@ export async function importExecutionPayload(
 
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
 
-  // [beacon-engine] deviation from upstream step 5: await the envelope write before FULL.
-  // Columns remain in BeaconChain's write queue, as for chain/beaconEngine/importBlock.ts.
+  // [beacon-engine] Core has no DA work to queue; BeaconChain queues column persistence.
+  // In both modes, await the envelope write before marking the payload FULL so getParentExecutionRequests()
+  // can read it from DB when slot preparation or production builds on it.
   await this.db.executionPayloadEnvelope.putBinary(blockRoot, envelopeBytes);
 
   // A VALID payload that does not satisfy the inclusion list constraints is still imported, fork choice
