@@ -112,7 +112,9 @@ export function withBeaconEngineFacade(chain: MockedBeaconChain): BeaconChain {
     emitter,
     clock: chain.clock,
     serializedCache: chain.serializedCache,
-    ...(chain.opts.beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: chain.beaconEngine.emitter} : {}),
+    ...((chain.opts.beaconEngineMode ?? BeaconEngineMode.MainThread) !== BeaconEngineMode.MainThread
+      ? {coreEmitter: chain.beaconEngine.emitter}
+      : {}),
   });
   Object.assign(beaconEngine, {chainView: chain.chainView});
   return Object.assign(Object.create(chain) as BeaconChain, {emitter, beaconEngine});

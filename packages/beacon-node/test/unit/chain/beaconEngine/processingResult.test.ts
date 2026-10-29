@@ -72,7 +72,7 @@ describe("processing failure transport", () => {
       expect(failure).not.toHaveProperty("signedBlock");
       vi.spyOn(
         chain.beaconEngine,
-        beaconEngineMode === BeaconEngineMode.Worker ? "verifyBlocksBytes" : "verifyBlocks"
+        beaconEngineMode !== BeaconEngineMode.MainThread ? "verifyBlocksBytes" : "verifyBlocks"
       ).mockResolvedValue({err: failure});
       const verification = engine.verifyBlocks(inputs, {});
       await expect(verification).rejects.toBeInstanceOf(BlockError);
@@ -103,7 +103,10 @@ describe("processing failure transport", () => {
         config,
         signedRoots
       );
-      vi.spyOn(chain.beaconEngine, beaconEngineMode === BeaconEngineMode.Worker ? "verifyBlocksBytes" : "verifyBlocks")
+      vi.spyOn(
+        chain.beaconEngine,
+        beaconEngineMode !== BeaconEngineMode.MainThread ? "verifyBlocksBytes" : "verifyBlocks"
+      )
         .mockResolvedValueOnce({err: {...failure, blockIndex: 0}})
         .mockResolvedValueOnce({err: {...failure, blockIndex: 2}});
       await expect(engine.verifyBlocks(inputs, {})).rejects.toThrow("INVALID_BLOCK_FAILURE_CONTEXT");
@@ -124,7 +127,7 @@ describe("processing failure transport", () => {
       expect(failure).toMatchObject({blockIndex: 1, blockRoot: toRootHex(roots[0])});
       vi.spyOn(
         chain.beaconEngine,
-        beaconEngineMode === BeaconEngineMode.Worker ? "verifyBlocksBytes" : "verifyBlocks"
+        beaconEngineMode !== BeaconEngineMode.MainThread ? "verifyBlocksBytes" : "verifyBlocks"
       ).mockResolvedValue({err: structuredClone(failure)});
       const verification = engine.verifyBlocks([first, second].map(createBlockInput), {});
       await expect(verification).rejects.toBeInstanceOf(BlockError);

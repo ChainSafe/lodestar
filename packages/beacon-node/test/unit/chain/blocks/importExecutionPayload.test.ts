@@ -67,7 +67,7 @@ describe("payload import error context", () => {
     expect("payloadInput" in error).toBe(false);
     const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
     expect(importPayload).toHaveBeenCalledExactlyOnceWith(
-      beaconEngineMode === BeaconEngineMode.Worker ? bytes : {data: envelope, bytes},
+      beaconEngineMode !== BeaconEngineMode.MainThread ? bytes : {data: envelope, bytes},
       DataAvailabilityStatus.Available,
       {validSignature: false, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 0}
     );

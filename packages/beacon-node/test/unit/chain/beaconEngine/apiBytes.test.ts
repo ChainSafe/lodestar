@@ -72,14 +72,14 @@ describe("BeaconEngineCore API bytes", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  function facade(beaconEngineMode?: BeaconEngineMode): BeaconEngine {
+  function facade(beaconEngineMode = BeaconEngineMode.MainThread): BeaconEngine {
     return new BeaconEngine({
       core,
       config: core.config,
       clock: core.clock,
       emitter: new ChainEventEmitter(),
       serializedCache: cache,
-      ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: core.emitter} : {}),
+      ...(beaconEngineMode !== BeaconEngineMode.MainThread ? {coreEmitter: core.emitter} : {}),
     });
   }
 
@@ -174,7 +174,7 @@ describe("BeaconEngineCore API bytes", () => {
       expect(test.validate).toHaveBeenCalledOnce();
       expect(test.validate.mock.calls[0][0]).toEqual(test.value);
       expect(test.validate.mock.calls[0][0] === test.value).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
-      expect(test.deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+      expect(test.deserialize).toHaveBeenCalledTimes(beaconEngineMode !== BeaconEngineMode.MainThread ? 1 : 0);
       expect(test.serialize).not.toHaveBeenCalled();
       expect(test.bytes).toEqual(originalBytes);
     });
@@ -220,7 +220,7 @@ describe("BeaconEngineCore API bytes", () => {
       await facade(beaconEngineMode).verifyAndObserveBlockProposer(bytes, block, "0x01");
       expect(validate).toHaveBeenCalledExactlyOnceWith(block, "0x01");
       expect(validate.mock.calls[0][0] === block).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
-      expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+      expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode !== BeaconEngineMode.MainThread ? 1 : 0);
       expect(bytes).toEqual(originalBytes);
     });
   });
@@ -276,7 +276,7 @@ describe("BeaconEngineCore API bytes", () => {
     await facade(beaconEngineMode).verifyEnvelopeForPublish(bytes, envelope, "0x01");
     expect(validate).toHaveBeenCalledExactlyOnceWith(envelope, "0x01");
     expect(validate.mock.calls[0][0] === envelope).toBe(beaconEngineMode === BeaconEngineMode.MainThread);
-    expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+    expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode !== BeaconEngineMode.MainThread ? 1 : 0);
   });
 
   it("rejects malformed envelopes before publication checks", async () => {

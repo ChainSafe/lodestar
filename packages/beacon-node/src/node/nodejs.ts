@@ -255,18 +255,18 @@ export class BeaconNode {
         opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
       isAnchorStateFinalized: stateInitialization.isFinalized,
       opts: opts.chain,
-      ...(beaconEngineMode === BeaconEngineMode.Worker
+      ...(beaconEngineMode !== BeaconEngineMode.MainThread
         ? {
             chainConfigJson: chainConfigToJson(config),
             genesisValidatorsRoot: Uint8Array.from(config.genesisValidatorsRoot),
           }
         : {config}),
-      db: beaconEngineMode === BeaconEngineMode.Worker ? undefined : db,
+      db: beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : db,
       dataDir,
       dbName: opts.db.name,
       dataColumnDir,
       logging:
-        beaconEngineMode === BeaconEngineMode.Worker
+        beaconEngineMode !== BeaconEngineMode.MainThread
           ? {type: "options", opts: logger.toOpts()}
           : {
               type: "injected",
@@ -276,8 +276,8 @@ export class BeaconNode {
             },
       metricsEnabled: metrics !== null,
       genesisTime: metadata.genesisTime,
-      clock: beaconEngineMode === BeaconEngineMode.Worker ? undefined : clock,
-      executionEngine: beaconEngineMode === BeaconEngineMode.Worker ? undefined : executionEngine,
+      clock: beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : clock,
+      executionEngine: beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : executionEngine,
       executionEngineOpts:
         executionEngineOpts.mode === "mock" ? {...executionEngineOpts, config: undefined} : executionEngineOpts,
       executionBuilderOpts: opts.executionBuilder,
@@ -290,7 +290,7 @@ export class BeaconNode {
       emitter,
       clock,
       serializedCache,
-      ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: beaconEngineCore.emitter} : {}),
+      ...(beaconEngineMode !== BeaconEngineMode.MainThread ? {coreEmitter: beaconEngineCore.emitter} : {}),
     });
     await beaconEngineCore.init();
     const {earliestAvailableSlot} = await executeStateInitialization(
@@ -332,9 +332,10 @@ export class BeaconNode {
       custodyConfig,
       anchor,
       earliestAvailableSlot,
-      // Share the engine client and its metrics in-process. Worker mode needs a facade-local client,
+      // Share the engine client and its metrics in main-thread mode. Other modes need a facade-local client,
       // with its own HTTP state, BLS verifier and metrics; only authenticated URL registrations cross owners.
-      builderApiClient: beaconEngineMode === BeaconEngineMode.Worker ? undefined : beaconEngineCore.builderApiClient,
+      builderApiClient:
+        beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : beaconEngineCore.builderApiClient,
       builderApiClientOpts,
     });
 

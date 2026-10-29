@@ -88,7 +88,7 @@ export function createTestBeaconEngine(
     executionBuilderOpts,
     builderApiClientOpts,
     opts,
-    ...(beaconEngineMode === BeaconEngineMode.Worker
+    ...(beaconEngineMode !== BeaconEngineMode.MainThread
       ? {
           chainConfigJson: chainConfigToJson(config),
           genesisValidatorsRoot: Uint8Array.from(config.genesisValidatorsRoot),
@@ -100,8 +100,8 @@ export function createTestBeaconEngine(
     dataColumnDir: dataColumnDir ?? path.join(dataDir, "data_columns"),
     metricsEnabled: metrics !== null,
     genesisTime: metadata.genesisTime,
-    clock: beaconEngineMode === BeaconEngineMode.Worker ? undefined : clock,
-    db: beaconEngineMode === BeaconEngineMode.Worker ? undefined : db,
+    clock: beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : clock,
+    db: beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : db,
     validatorMonitorOpts: modules.validatorMonitorOpts ?? null,
     isAnchorStateFinalized,
   });
@@ -112,7 +112,7 @@ export function createTestBeaconEngine(
     emitter,
     clock,
     serializedCache,
-    ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: beaconEngineCore.emitter} : {}),
+    ...(beaconEngineMode !== BeaconEngineMode.MainThread ? {coreEmitter: beaconEngineCore.emitter} : {}),
   });
   return {
     ...chainModules,

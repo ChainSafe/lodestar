@@ -88,10 +88,10 @@ async function setup(fork: ForkName.bellatrix | ForkName.gloas, beaconEngineMode
     emitter,
     logger,
     serializedCache: new SerializedCache(),
-    ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: core.emitter} : {}),
+    ...(beaconEngineMode !== BeaconEngineMode.MainThread ? {coreEmitter: core.emitter} : {}),
   });
   const view =
-    beaconEngineMode === BeaconEngineMode.Worker
+    beaconEngineMode !== BeaconEngineMode.MainThread
       ? new ReplicateChainView(await core.getChainViewSnapshot())
       : new ForkChoiceChainView(core);
   engine.chainView = view;
@@ -173,7 +173,7 @@ describe.each([
       msFromSlot: 0,
     });
     expect(produceBlockWrapper.mock.calls[0][1].parentBlock).toBe(previous);
-    expect(view.getHead()).toEqual(beaconEngineMode === BeaconEngineMode.Worker ? toChainViewBlock(head) : head);
+    expect(view.getHead()).toEqual(beaconEngineMode !== BeaconEngineMode.MainThread ? toChainViewBlock(head) : head);
     expect(view.getJustifiedCheckpoint()).toEqual(forkChoice.getJustifiedCheckpoint());
     expect(coreEmit).not.toHaveBeenCalled();
     if (change === "unchanged") {
@@ -187,13 +187,13 @@ describe.each([
         blockRoot: fromHex(previous.blockRoot),
         payloadStatus: previous.payloadStatus,
       });
-      expect(onView).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+      expect(onView).toHaveBeenCalledTimes(beaconEngineMode !== BeaconEngineMode.MainThread ? 1 : 0);
       expect(onHead).toHaveBeenCalledTimes(change === "root" ? 2 : 1);
       expect(onHead).toHaveBeenCalledWith(
         expect.objectContaining({data: expect.objectContaining({block: head.blockRoot})})
       );
       expect(order).toEqual([
-        ...(beaconEngineMode === BeaconEngineMode.Worker ? ["view"] : []),
+        ...(beaconEngineMode !== BeaconEngineMode.MainThread ? ["view"] : []),
         ...(change === "root" ? ["head"] : []),
         "head_v2",
       ]);
@@ -222,12 +222,12 @@ describe.each([
       headUpdate: true,
       code: stage === "selection" ? BeaconEngineErrorCode.API_ERROR : BeaconEngineErrorCode.INTERNAL,
     });
-    expect(view.getHead()).toEqual(beaconEngineMode === BeaconEngineMode.Worker ? toChainViewBlock(next) : next);
+    expect(view.getHead()).toEqual(beaconEngineMode !== BeaconEngineMode.MainThread ? toChainViewBlock(next) : next);
     expect(headPull).toHaveBeenCalledOnce();
     expect(coreEmit).not.toHaveBeenCalled();
     expect(onHead).toHaveBeenCalledTimes(2);
     expect(onHead).toHaveBeenCalledWith(expect.objectContaining({block: next.blockRoot}));
-    expect(order).toEqual([...(beaconEngineMode === BeaconEngineMode.Worker ? ["view"] : []), "head", "head_v2"]);
+    expect(order).toEqual([...(beaconEngineMode !== BeaconEngineMode.MainThread ? ["view"] : []), "head", "head_v2"]);
   });
 
   it("does not pull when validation fails before proposer selection", async () => {
@@ -259,8 +259,8 @@ describe.each([
 
     expect(await production).toMatchObject({ok: true, headUpdate: true});
     expect(headPull).toHaveBeenCalledOnce();
-    expect(onView).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+    expect(onView).toHaveBeenCalledTimes(beaconEngineMode !== BeaconEngineMode.MainThread ? 1 : 0);
     expect(onHead).toHaveBeenCalledTimes(2);
-    expect(order).toEqual([...(beaconEngineMode === BeaconEngineMode.Worker ? ["view"] : []), "head", "head_v2"]);
+    expect(order).toEqual([...(beaconEngineMode !== BeaconEngineMode.MainThread ? ["view"] : []), "head", "head_v2"]);
   });
 });

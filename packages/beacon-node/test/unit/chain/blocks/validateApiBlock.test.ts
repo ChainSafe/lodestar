@@ -53,7 +53,7 @@ describe("API block validation", () => {
     });
     const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
     expect(validate).toHaveBeenCalledExactlyOnceWith(
-      ...(beaconEngineMode === BeaconEngineMode.Worker
+      ...(beaconEngineMode !== BeaconEngineMode.MainThread
         ? [computeSignedBlockRoot(ForkName.phase0, block), bytes, {}]
         : [{data: block, bytes}, {}])
     );

@@ -158,7 +158,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
       ).toEqual({executionOptimistic: false});
       expect(serialize).not.toHaveBeenCalled();
       expect(lookup).not.toHaveBeenCalled();
-      expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 2 : 0);
+      expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode !== BeaconEngineMode.MainThread ? 2 : 0);
       expect(putEnvelope.mock.calls[0][1]).toBe(envelopeBytes);
     }
   );

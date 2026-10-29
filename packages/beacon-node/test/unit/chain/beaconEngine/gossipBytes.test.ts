@@ -127,7 +127,7 @@ describe("BeaconEngineCore gossip bytes", () => {
         topic: {boundary: {fork: ForkName.phase0, epoch: 0}, type: GossipType.voluntary_exit},
       })
     ).toMatchObject({err: null});
-    expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 2 : 1);
+    expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode !== BeaconEngineMode.MainThread ? 2 : 1);
     expect(observed).not.toHaveBeenCalled();
     await vi.runAllTimersAsync();
     expect(observed).toHaveBeenCalledOnce();
@@ -174,7 +174,7 @@ describe("BeaconEngineCore gossip bytes", () => {
           clock: engine.clock,
           emitter: new ChainEventEmitter(),
           serializedCache: new SerializedCache(),
-          ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: engine.emitter} : {}),
+          ...(beaconEngineMode !== BeaconEngineMode.MainThread ? {coreEmitter: engine.emitter} : {}),
         });
         const publicationBytes = originalBytes.map((bytes) => Uint8Array.from(bytes));
         const results = await Promise.all(
@@ -228,7 +228,7 @@ describe("BeaconEngineCore gossip bytes", () => {
           topic: {boundary: {fork, epoch: 0}, type: GossipType.beacon_aggregate_and_proof},
         })
       ).toMatchObject({err: {status: "ignore", code: "TEST_IGNORE"}});
-      expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 2 : 1);
+      expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode !== BeaconEngineMode.MainThread ? 2 : 1);
       expect(validate).toHaveBeenCalledExactlyOnceWith(fork, value, bytes);
       expect(bytes).toEqual(originalBytes);
       validate.mock.calls[0][1].message.aggregate.aggregationBits.set(0, true);
@@ -506,13 +506,13 @@ describe("BeaconEngineCore gossip bytes", () => {
           clock: engine.clock,
           emitter: new ChainEventEmitter(),
           serializedCache: cache,
-          ...(beaconEngineMode === BeaconEngineMode.Worker ? {coreEmitter: engine.emitter} : {}),
+          ...(beaconEngineMode !== BeaconEngineMode.MainThread ? {coreEmitter: engine.emitter} : {}),
         });
         const lookup = vi.spyOn(cache, "get");
         const error = new GossipActionError(GossipAction.IGNORE, {code: "TEST_IGNORE"});
         const validate = testCase.validate().mockRejectedValue(error);
         expect(await invokeFacade(facade)).toMatchObject({err: {status: "ignore", code: "TEST_IGNORE", error}});
-        expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode === BeaconEngineMode.Worker ? 1 : 0);
+        expect(deserialize).toHaveBeenCalledTimes(beaconEngineMode !== BeaconEngineMode.MainThread ? 1 : 0);
         expect(serialize).not.toHaveBeenCalled();
         expect(lookup).not.toHaveBeenCalled();
         expect(validate).toHaveBeenCalledOnce();
