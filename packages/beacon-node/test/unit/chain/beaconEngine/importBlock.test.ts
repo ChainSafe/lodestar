@@ -68,17 +68,24 @@ describe("BeaconEngine block persistence", () => {
       seenTimestampSec: 0,
     };
     chain.beaconEngine.blockSerializedCache.set(signedRoot, block, blockBytes);
+    chain.beaconEngine.verifiedBlocks.set(signedRoot, bundle);
   });
 
   afterEach(() => vi.restoreAllMocks());
 
-  it.each([
-    [ForkName.phase0, true],
-    [ForkName.gloas, true],
-    [ForkName.gloas, false],
-  ] as const)(
-    "returns detached %s import metadata without publishing (head changed: %s)",
-    async (fork, headChanged) => {
+  it.each(
+    (
+      [
+        [ForkName.phase0, true],
+        [ForkName.gloas, true],
+        [ForkName.gloas, false],
+      ] as const
+    ).flatMap(([fork, headChanged]) =>
+      (["importBlock", "importBlockBytes"] as const).map((method) => ({fork, headChanged, method}))
+    )
+  )(
+    "$method returns detached $fork import metadata without publishing (head changed: $headChanged)",
+    async ({fork, headChanged, method}) => {
       const config = createBeaconConfig(getConfig(fork), Buffer.alloc(32));
       Object.defineProperty(chain, "config", {value: config});
       const imported = config.getForkTypes(1).SignedBeaconBlock.defaultValue();
@@ -122,18 +129,37 @@ describe("BeaconEngine block persistence", () => {
         return summary;
       });
       const versionBefore = chain.beaconEngine.forkChoiceVersion;
-      chain.beaconEngine.verifiedBlocks.set(importedSignedRootHex, {
+      const importedBundle = {
         ...bundle,
         block: imported,
         blockBytes: config.getForkTypes(1).SignedBeaconBlock.serialize(imported),
-      });
+      };
+      const retained = chain.beaconEngine.verifiedBlocks;
+      if (method === "importBlockBytes") retained.set(importedSignedRootHex, importedBundle);
+      else {
+        for (const cache of ["verifiedBlocks", "blockSerializedCache"] as const) {
+          Object.defineProperty(chain.beaconEngine, cache, {
+            get: () => {
+              throw Error(`Object import must not access ${cache}`);
+            },
+          });
+        }
+      }
       const emit = vi.spyOn(chain.beaconEngine.emitter, "emit");
-      const result = await BeaconEngineCore.prototype.importBlock.call(
-        chain.beaconEngine,
-        importedSignedRoot,
-        DataAvailabilityStatus.PreData,
-        {}
-      );
+      const result =
+        method === "importBlockBytes"
+          ? await BeaconEngineCore.prototype.importBlockBytes.call(
+              chain.beaconEngine,
+              importedSignedRoot,
+              DataAvailabilityStatus.PreData,
+              {}
+            )
+          : await BeaconEngineCore.prototype.importBlock.call(
+              chain.beaconEngine,
+              importedBundle,
+              DataAvailabilityStatus.PreData,
+              {}
+            );
       if (result.err !== null) throw Error("Expected import success");
       const response = result.result;
       expect(response.block).toEqual(toChainViewBlockBytes(summary));
@@ -153,7 +179,7 @@ describe("BeaconEngine block persistence", () => {
       expect(response.block).not.toHaveProperty("executionStatus");
       expect(response.block).not.toHaveProperty("dataAvailabilityStatus");
       expect(emit).not.toHaveBeenCalled();
-      expect(chain.beaconEngine.verifiedBlocks.has(importedSignedRootHex)).toBe(false);
+      expect(retained.has(importedSignedRootHex)).toBe(false);
       response.block.blockRoot.fill(9);
       expect(summary.blockRoot).toBe(toRootHex(importedRoot));
     }
@@ -179,7 +205,7 @@ describe("BeaconEngine block persistence", () => {
         blockBytes: ssz.phase0.SignedBeaconBlock.serialize(otherBlock),
       };
       chain.beaconEngine.verifiedBlocks.set(otherRoot, otherBundle);
-      const importing = BeaconEngineCore.prototype.importBlock.call(
+      const importing = BeaconEngineCore.prototype.importBlockBytes.call(
         chain.beaconEngine,
         signedBlockRoot,
         DataAvailabilityStatus.PreData,
@@ -202,6 +228,22 @@ describe("BeaconEngine block persistence", () => {
       expect(chain.beaconEngine.verifiedBlocks.size).toBe(1);
     }
   );
+
+  it("rejects a missing verified bundle before persisting or importing", async () => {
+    chain.beaconEngine.verifiedBlocks.delete(signedRoot);
+    await expect(
+      BeaconEngineCore.prototype.importBlockBytes.call(
+        chain.beaconEngine,
+        signedBlockRoot,
+        DataAvailabilityStatus.PreData,
+        {}
+      )
+    ).rejects.toMatchObject({
+      type: {code: "VERIFIED_BLOCK_NOT_CACHED", signedBlockRoot: signedRoot},
+    });
+    expect(putBinary).not.toHaveBeenCalled();
+    expect(chain.forkChoice.onBlock).not.toHaveBeenCalled();
+  });
 
   it("seeds Gloas bid metadata before notifying block consumers", async () => {
     const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
@@ -240,7 +282,12 @@ describe("BeaconEngine block persistence", () => {
   it("waits for the block write before exposing the block to fork choice", async () => {
     const write = defer<void>();
     putBinary.mockReturnValue(write.promise);
-    const importing = importBlock.call(chain.beaconEngine, bundle, DataAvailabilityStatus.PreData, {});
+    const importing = BeaconEngineCore.prototype.importBlockBytes.call(
+      chain.beaconEngine,
+      signedBlockRoot,
+      DataAvailabilityStatus.PreData,
+      {}
+    );
     const result = expect(importing).rejects.toBe(reachedForkChoice);
     expect(putBinary).toHaveBeenCalledExactlyOnceWith(root, blockBytes);
     expect(chain.forkChoice.onBlock).not.toHaveBeenCalled();
@@ -256,9 +303,17 @@ describe("BeaconEngine block persistence", () => {
   it("does not import into fork choice when the block write fails", async () => {
     const error = new Error("DB write failed");
     putBinary.mockRejectedValue(error);
-    await expect(importBlock.call(chain.beaconEngine, bundle, DataAvailabilityStatus.PreData, {})).rejects.toBe(error);
+    await expect(
+      BeaconEngineCore.prototype.importBlockBytes.call(
+        chain.beaconEngine,
+        signedBlockRoot,
+        DataAvailabilityStatus.PreData,
+        {}
+      )
+    ).rejects.toBe(error);
     expect(chain.forkChoice.onBlock).not.toHaveBeenCalled();
     expect(chain.regen.processState).not.toHaveBeenCalled();
+    expect(chain.beaconEngine.verifiedBlocks.has(signedRoot)).toBe(false);
     expect(chain.beaconEngine.blockSerializedCache.get(signedRoot)?.bytes).toBe(blockBytes);
     expect(chain.beaconEngine.blockSerializedCache.get(signedRoot)?.block).toBe(block);
   });
@@ -266,7 +321,12 @@ describe("BeaconEngine block persistence", () => {
   it("retains another signed candidate when the imported candidate is persisted", async () => {
     const write = defer<void>();
     putBinary.mockReturnValue(write.promise);
-    const importing = importBlock.call(chain.beaconEngine, bundle, DataAvailabilityStatus.PreData, {});
+    const importing = BeaconEngineCore.prototype.importBlockBytes.call(
+      chain.beaconEngine,
+      signedBlockRoot,
+      DataAvailabilityStatus.PreData,
+      {}
+    );
     const result = expect(importing).rejects.toBe(reachedForkChoice);
     const replacement = ssz.phase0.SignedBeaconBlock.clone(block);
     replacement.signature = Uint8Array.from(replacement.signature);

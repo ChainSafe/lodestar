@@ -43,6 +43,7 @@ import {CommitteeSubscription} from "../network/subnets/interface.js";
 import {IClock} from "../util/clock.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {deserializeError} from "../util/serializedError.js";
+import {Result} from "../util/wrapError.js";
 import type {BeaconEngineCore} from "./beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent, FastConfirmation, HeadUpdate, IBeaconEngineEventBus} from "./beaconEngine/events.js";
 import {GossipBlockResult} from "./beaconEngine/gossipValidation/block.js";
@@ -58,6 +59,7 @@ import {
   HeadExecutionStateInfo,
   HeadParentPayload,
   IBeaconEngineCoreApi,
+  ImportBlockResponse,
   ImportBlockResult,
   ImportExecutionPayloadOpts,
   PayloadAttestationBlock,
@@ -87,7 +89,7 @@ import {ReplicateChainView} from "./chainView/replicateChainView.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {BlockError, BlockErrorCode, BlockErrorType} from "./errors/blockError.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
-import type {IBeaconEngine} from "./interface.js";
+import type {BlockImportData, IBeaconEngine} from "./interface.js";
 import {InsertOutcome} from "./opPools/types.js";
 import {RegenRequest} from "./regen/index.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "./validation/attestation.js";
@@ -240,10 +242,20 @@ export class BeaconEngine implements IBeaconEngine {
     if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
   }
 
+  /**
+   * Returns execution/timing metadata and per-block data for import.
+   * Main-thread mode returns complete bundles, including live post-states, in blockImportData.
+   * Worker mode returns {signedBlockRoot} references in blockImportData and retains the bundles in Core.
+   */
   async verifyBlocks(
     blockInputs: IBlockInput[],
     opts: VerifyBlocksOpts
-  ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}> {
+  ): Promise<{
+    segmentExecStatus: SegmentExecStatus;
+    verifyStateTime: number;
+    verifySignaturesTime: number;
+    blockImportData: BlockImportData[];
+  }> {
     const getBlocksWithBytes = () =>
       blockInputs.map((blockInput) => {
         const block = blockInput.getBlock();
@@ -255,51 +267,63 @@ export class BeaconEngine implements IBeaconEngine {
         return {data: block, bytes};
       });
 
-    // main-thread mode
+    // main-thread mode: return the complete verification bundles
     if (this.core !== null) {
       const res = await this.core.verifyBlocks(getBlocksWithBytes(), opts);
       if (res.err !== null) throw blockErrorFromFailure(res.err, blockInputs);
-      return res.result;
+      const {verifiedBlocks, ...result} = res.result;
+      return {...result, blockImportData: verifiedBlocks};
     }
+
+    // worker mode: return signed beacon block roots; Core retains the bundles
+    const blockImportData = blockInputs.map((blockInput) => ({
+      signedBlockRoot: computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()),
+    }));
 
     // worker mode, gossip path
     const isGossip = blockInputs.length === 1 && blockInputs[0].getBlockSource().source === BlockInputSource.gossip;
     if (isGossip) {
       const blockInput = blockInputs[0];
-      const block = blockInput.getBlock();
-      const result = await this.coreApi.verifyGossipBlockBytes(
-        computeSignedBlockRoot(blockInput.forkName, block),
-        opts
-      );
+      const result = await this.coreApi.verifyGossipBlockBytes(blockImportData[0].signedBlockRoot, opts);
       if (result.err !== null) {
         if ("code" in result.err) throw new BlockError(blockInput.getBlock(), result.err);
         throw blockErrorFromFailure(result.err, [blockInput]);
       }
-      return result.result;
+      return {...result.result, blockImportData};
     }
 
     // other worker mode paths
     const res = await this.coreApi.verifyBlocksBytes(
-      getBlocksWithBytes().map(({data, bytes}, i) => ({
-        signedBlockRoot: computeSignedBlockRoot(blockInputs[i].forkName, data),
+      getBlocksWithBytes().map(({bytes}, i) => ({
+        signedBlockRoot: blockImportData[i].signedBlockRoot,
         blockBytes: bytes,
       })),
       opts
     );
     if (res.err !== null) throw blockErrorFromFailure(res.err, blockInputs);
-    return res.result;
+    return {...res.result, blockImportData};
   }
 
   async importBlock(
     blockInput: IBlockInput,
+    blockImportData: BlockImportData,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult> {
-    const res = await this.coreApi.importBlock(
-      computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()),
-      dataAvailabilityStatus,
-      opts
-    );
+    let res: Result<ImportBlockResponse, BlockFailure>;
+    if (this.core !== null) {
+      // main-thread mode
+      if ("signedBlockRoot" in blockImportData) {
+        throw new LodestarError({code: "BEACON_ENGINE_INVALID_BLOCK_IMPORT_DATA"});
+      }
+      res = await this.core.importBlock(blockImportData, dataAvailabilityStatus, opts);
+    } else {
+      // other modes
+      if (!("signedBlockRoot" in blockImportData)) {
+        throw new LodestarError({code: "BEACON_ENGINE_INVALID_BLOCK_IMPORT_DATA"});
+      }
+      res = await this.coreApi.importBlockBytes(blockImportData.signedBlockRoot, dataAvailabilityStatus, opts);
+    }
     if (res.err !== null) throw blockErrorFromFailure(res.err, [blockInput]);
     const {
       justified,
@@ -379,7 +403,7 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   async discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void> {
-    return this.coreApi.discardVerifiedBlocks(signedBlockRoots);
+    if (this.core === null) await this.coreApi.discardVerifiedBlocks(signedBlockRoots);
   }
 
   verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void> {

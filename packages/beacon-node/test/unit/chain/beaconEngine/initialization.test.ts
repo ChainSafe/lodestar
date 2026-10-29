@@ -1174,7 +1174,7 @@ describe("bytes-based engine startup", () => {
     };
     const summary = toChainViewBlockBytes(block);
     const justified = {epoch: 1, root: summary.blockRoot, rootHex: block.blockRoot};
-    vi.spyOn(core, "importBlock").mockResolvedValue({
+    vi.spyOn(core, "importBlockBytes").mockResolvedValue({
       err: null,
       result: {
         block: summary,
@@ -1219,7 +1219,12 @@ describe("bytes-based engine startup", () => {
     beaconChain.emitter.on(ChainEvent.forkChoiceJustified, onJustified);
     beaconChain.emitter.on(ChainEvent.updateStatus, onStatus);
     beaconChain.emitter.on(routes.events.EventType.head, onHead);
-    await beaconChain.beaconEngine.importBlock(input, stateTransition.DataAvailabilityStatus.PreData, {});
+    await beaconChain.beaconEngine.importBlock(
+      input,
+      {signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock())},
+      stateTransition.DataAvailabilityStatus.PreData,
+      {}
+    );
     expect(onJustified).toHaveBeenCalledExactlyOnceWith(justified);
     expect(onStatus).toHaveBeenCalledOnce();
     expect(onStatus.mock.results[0].value).toMatchObject({headRoot: summary.blockRoot, headSlot: block.slot});
@@ -1233,13 +1238,18 @@ describe("bytes-based engine startup", () => {
       `beacon_head_slot ${block.slot}`
     );
     // Core reports each checkpoint change once; a later import without changes emits nothing
-    const importResponse = await vi.mocked(core.importBlock).mock.results[0].value;
+    const importResponse = await vi.mocked(core.importBlockBytes).mock.results[0].value;
     if (importResponse.err !== null) throw importResponse.err;
-    vi.mocked(core.importBlock).mockResolvedValueOnce({
+    vi.mocked(core.importBlockBytes).mockResolvedValueOnce({
       err: null,
       result: {...importResponse.result, headUpdate: null, justifiedCheckpointChanged: false},
     });
-    await beaconChain.beaconEngine.importBlock(input, stateTransition.DataAvailabilityStatus.PreData, {});
+    await beaconChain.beaconEngine.importBlock(
+      input,
+      {signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock())},
+      stateTransition.DataAvailabilityStatus.PreData,
+      {}
+    );
     expect(onJustified).toHaveBeenCalledOnce();
     expect(onStatus).toHaveBeenCalledOnce();
   });

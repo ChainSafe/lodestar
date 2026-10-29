@@ -3,7 +3,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
@@ -24,9 +24,11 @@ import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import {verifyBlocksSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
+import {BlockImportData} from "../../../../src/chain/interface.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/engine/interface.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockBlockInput} from "../../../utils/blockInput.js";
+import {generateCachedState} from "../../../utils/state.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 vi.mock("../../../../src/chain/blocks/importBlock.js", async (importActual) => {
@@ -89,9 +91,23 @@ describe("chain / blocks / processBlocks", () => {
     expect(importBlock).not.toHaveBeenCalled();
   });
 
-  it("imports the verified block without discarding its bundle", async () => {
+  it.each(["object", "bytes"])("passes %s import data through the batch without discarding it", async (mode) => {
     const discard = vi.spyOn(chain.beaconEngine, "discardVerifiedBlocks");
+    const blockImportData: BlockImportData =
+      mode === "object"
+        ? {
+            block: blockInput.getBlock(),
+            blockBytes: config.getForkTypes(blockInput.slot).SignedBeaconBlock.serialize(blockInput.getBlock()),
+            postState: new BeaconStateView(generateCachedState()),
+            executionStatus: ExecutionStatus.Valid,
+            indexedAttestations: [],
+            proposerBalanceDelta: 0,
+            parentBlockSlot: slot - 1,
+            seenTimestampSec: 0,
+          }
+        : {signedBlockRoot: computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock())};
     vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      blockImportData: [blockImportData],
       segmentExecStatus: {
         execAborted: null,
         executionStatuses: [ExecutionStatus.Valid],
@@ -103,7 +119,13 @@ describe("chain / blocks / processBlocks", () => {
 
     await processBlocks.call(chain, [blockInput], null, {});
 
-    expect(importBlock).toHaveBeenCalledExactlyOnceWith(blockInput, DataAvailabilityStatus.Available, {});
+    expect(importBlock).toHaveBeenCalledExactlyOnceWith(
+      blockInput,
+      blockImportData,
+      DataAvailabilityStatus.Available,
+      {}
+    );
+    expect(vi.mocked(importBlock).mock.calls[0][1]).toBe(blockImportData);
     expect(discard).not.toHaveBeenCalled();
   });
 
@@ -121,6 +143,9 @@ describe("chain / blocks / processBlocks", () => {
       parentBlock: generateProtoBlock({slot: slot - 1}),
     });
     vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      blockImportData: inputs.map((input) => ({
+        signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock()),
+      })),
       segmentExecStatus: {
         execAborted: null,
         executionStatuses: [ExecutionStatus.Valid, ExecutionStatus.Valid],
@@ -185,6 +210,9 @@ describe("chain / blocks / processBlocks", () => {
       parentBlock: generateProtoBlock({slot: slot - 1}),
     });
     vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      blockImportData: [gloasBlockInput].map((input) => ({
+        signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock()),
+      })),
       segmentExecStatus: {
         execAborted: null,
         executionStatuses: [ExecutionStatus.Valid],
@@ -204,7 +232,12 @@ describe("chain / blocks / processBlocks", () => {
     await processBlocks.call(chain, [gloasBlockInput], new Map([[slot, payloadInput]]), {});
 
     expect(payloadInput.isComplete()).toBe(true);
-    expect(importBlock).toHaveBeenCalledExactlyOnceWith(gloasBlockInput, DataAvailabilityStatus.NotRequired, {});
+    expect(importBlock).toHaveBeenCalledExactlyOnceWith(
+      gloasBlockInput,
+      {signedBlockRoot: computeSignedBlockRoot(gloasBlockInput.forkName, gloasBlockInput.getBlock())},
+      DataAvailabilityStatus.NotRequired,
+      {}
+    );
     if (envelopeBeforeDa) {
       expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
         validSignature: false,
@@ -267,6 +300,9 @@ describe("chain / blocks / processBlocks", () => {
       warnings: [{slot: slot - 1, payloadEnvelopeInput: parent.payloadInput}],
     });
     vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      blockImportData: [current.blockInput].map((input) => ({
+        signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock()),
+      })),
       segmentExecStatus: {
         execAborted: null,
         executionStatuses: [ExecutionStatus.Valid],

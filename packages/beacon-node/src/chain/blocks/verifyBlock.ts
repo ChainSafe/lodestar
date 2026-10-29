@@ -5,6 +5,7 @@ import {Slot, deneb} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainViewBlock} from "../chainView/interface.js";
+import {BlockImportData} from "../interface.js";
 import {BlockProcessOpts} from "../options.js";
 import {DAType, IBlockInput} from "./blockInput/index.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -38,6 +39,7 @@ export async function verifyBlocksInEpoch(
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   segmentExecStatus: SegmentExecStatus;
+  blockImportData: BlockImportData[];
   blockDAStatuses: DataAvailabilityStatus[];
   payloadDAStatuses: Map<Slot, DataAvailabilityStatus>;
 }> {
@@ -116,7 +118,7 @@ export async function verifyBlocksInEpoch(
     // batch all I/O operations to reduce overhead
     const [
       {blockDAStatuses, payloadDAStatuses, availableTime},
-      {segmentExecStatus, verifyStateTime, verifySignaturesTime},
+      {segmentExecStatus, verifyStateTime, verifySignaturesTime, blockImportData},
     ] = await Promise.all([
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
@@ -209,7 +211,7 @@ export async function verifyBlocksInEpoch(
       );
     }
 
-    return {segmentExecStatus, blockDAStatuses, payloadDAStatuses};
+    return {segmentExecStatus, blockDAStatuses, payloadDAStatuses, blockImportData};
   } catch (error) {
     abortController.abort();
     // Verification may still retain bundles after DA fails; discard only once it has settled.

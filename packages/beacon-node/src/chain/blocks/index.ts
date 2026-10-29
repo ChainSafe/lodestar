@@ -8,6 +8,7 @@ import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
+import {BlockImportData} from "../interface.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock, importsBlockAttestations} from "./importBlock.js";
@@ -109,7 +110,7 @@ export async function processBlocks(
       }
     }
 
-    const {blockDAStatuses, payloadDAStatuses} = await verifyBlocksInEpoch.call(
+    const {blockDAStatuses, payloadDAStatuses, blockImportData} = await verifyBlocksInEpoch.call(
       this,
       parentBlock,
       relevantBlocks,
@@ -119,11 +120,12 @@ export async function processBlocks(
     try {
       const verifiedBlocksBySlot = new Map<
         Slot,
-        {blockInput: IBlockInput; dataAvailabilityStatus: DataAvailabilityStatus}
+        {blockInput: IBlockInput; dataAvailabilityStatus: DataAvailabilityStatus; blockImportData: BlockImportData}
       >();
       for (let i = 0; i < relevantBlocks.length; i++) {
         verifiedBlocksBySlot.set(relevantBlocks[i].getBlock().message.slot, {
           blockInput: relevantBlocks[i],
+          blockImportData: blockImportData[i],
           dataAvailabilityStatus: blockDAStatuses[i],
         });
       }
@@ -136,7 +138,13 @@ export async function processBlocks(
         const fullyVerifiedBlock = verifiedBlocksBySlot.get(slot);
         if (fullyVerifiedBlock !== undefined) {
           // TODO: Consider batching importBlock too if it takes significant time
-          await importBlock.call(this, fullyVerifiedBlock.blockInput, fullyVerifiedBlock.dataAvailabilityStatus, opts);
+          await importBlock.call(
+            this,
+            fullyVerifiedBlock.blockInput,
+            fullyVerifiedBlock.blockImportData,
+            fullyVerifiedBlock.dataAvailabilityStatus,
+            opts
+          );
         }
 
         // PayloadEnvelopeInput is shared and may receive an envelope after the DA snapshot was taken.

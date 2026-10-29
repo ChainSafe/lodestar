@@ -362,8 +362,8 @@ const MAX_VERIFIED_PROPOSER_SIGNATURES = 3 * SLOTS_PER_EPOCH;
  * SerializedCache stays on the main-thread facade/BeaconChain; bytes entrypoints decode locally.
  *
  * Methods accepting decoded objects use them without accessing blockSerializedCache, including through
- * shared helpers or error paths. Both verification entrypoints retain live post-states in verifiedBlocks
- * until import/discard. Verification results expose only metadata; bundles never leave Core.
+ * shared helpers or error paths. Object verification returns live bundles to its caller; bytes verification
+ * retains them in verifiedBlocks until import/discard and returns only metadata.
  */
 export class BeaconEngineCore implements IBeaconEngineCoreApi {
   private readonly aggregatorTracker = new AggregatorTracker();
@@ -442,8 +442,8 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   readonly signal = this.abortController.signal;
   lightClientServer?: LightClientServer;
   /**
-   * Verification results awaiting import in either mode, keyed by the exact signed block root.
-   * Contains live post-states that must remain inside Core; both verification APIs return only metadata.
+   * Bytes verification results awaiting import, keyed by the exact signed block root.
+   * Contains live post-states that must not cross the worker boundary.
    * API broadcast validation uses validateApiBlock and never creates or discards these bundles.
    * Retain them until import settles or discardVerifiedBlocks is called, independently of BlockSerializedCache
    * eviction/replacement. Combining these stores would require
@@ -957,13 +957,13 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   }
 
   /**
-   * Main-thread object entrypoint; bypasses blockSerializedCache and retains verification bundles in Core.
-   * Each byte array must encode its paired block; both remain immutable while retained by the engine.
+   * Main-thread object entrypoint; returns bundles without accessing either temporary block cache.
+   * Each byte array must encode its paired block; both remain immutable until import settles.
    */
   async verifyBlocks(
     blocks: WithBytes<SignedBeaconBlock>[],
     opts: VerifyBlocksOpts
-  ): Promise<Result<VerifyBlocksSuccess, BlockFailure>> {
+  ): Promise<Result<VerifyBlocksSuccess & {verifiedBlocks: VerifiedBlockBundle[]}, BlockFailure>> {
     return wrapError(
       () => verifyBlocks.call(this, blocks, opts),
       (error) => {
@@ -997,29 +997,42 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   }
 
   /**
-   * Main-thread object entrypoint; bypasses blockSerializedCache and retains verification bundles in Core.
-   * The bytes must encode the block; both remain immutable while retained by the engine.
+   * Main-thread object entrypoint; returns bundles without accessing either temporary block cache.
+   * The bytes must encode the block; both remain immutable until import settles.
    */
   async verifyGossipBlock(
     block: WithBytes<SignedBeaconBlock>,
     opts: VerifyBlocksOpts
-  ): Promise<Result<VerifyBlocksSuccess, BlockFailure>> {
+  ): Promise<Result<VerifyBlocksSuccess & {verifiedBlocks: VerifiedBlockBundle[]}, BlockFailure>> {
     return this.verifyBlocks([block], opts);
   }
 
   async importBlock(
+    verifiedBlock: VerifiedBlockBundle,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportBlockOpts
+  ): Promise<Result<ImportBlockResponse, BlockFailure>> {
+    return wrapError(
+      () => importBlock.call(this, verifiedBlock, dataAvailabilityStatus, opts),
+      (error) =>
+        blockFailureFromError(error, this.config, [
+          computeSignedBlockRoot(this.config.getForkName(verifiedBlock.block.message.slot), verifiedBlock.block),
+        ])
+    );
+  }
+
+  async importBlockBytes(
     signedBlockRoot: SignedBlockRoot,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<Result<ImportBlockResponse, BlockFailure>> {
-    // Both modes import the engine-owned bundle for this exact signed candidate.
     const signedBlockRootHex = toSignedBlockRootHex(signedBlockRoot);
     const v = this.verifiedBlocks.get(signedBlockRootHex);
-    if (!v) throw Error(`No verified block found for signed root ${signedBlockRootHex}`);
+    if (!v) throw new LodestarError({code: "VERIFIED_BLOCK_NOT_CACHED", signedBlockRoot: signedBlockRootHex});
 
     try {
       return await wrapError(
-        () => importBlock.call(this, v, dataAvailabilityStatus, opts),
+        () => importBlock.call(this, v, dataAvailabilityStatus, opts, this.blockSerializedCache),
         // TODO - beacon engine: return or pull fork-choice changes if import fails after inserting the block.
         (error) => blockFailureFromError(error, this.config, [signedBlockRoot])
       );

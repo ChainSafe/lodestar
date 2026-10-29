@@ -143,7 +143,7 @@ export type BeaconEngineCoreModules = {
 
 export type VerifyBlocksOpts = BlockProcessOpts & ImportBlockOpts;
 
-/** Verification metadata only; live post-states and import bundles remain inside Core in both modes. */
+/** Verification metadata safe to return across the worker boundary. */
 export type VerifyBlocksSuccess = {
   segmentExecStatus: Extract<SegmentExecStatus, {execAborted: null}>;
   verifyStateTime: number;
@@ -341,7 +341,7 @@ export interface IBeaconEngineCoreApi {
   ): Promise<Result<void, BlockFailure>>;
   /**
    * Marks verified proposals as known independently of DA and retains bundles by signed root until
-   * importBlock or discardVerifiedBlocks releases them.
+   * importBlockBytes or discardVerifiedBlocks releases them.
    */
   verifyBlocksBytes(blocks: BlockBytes[], opts: VerifyBlocksOpts): Promise<Result<VerifyBlocksSuccess, BlockFailure>>;
   /**
@@ -351,7 +351,7 @@ export interface IBeaconEngineCoreApi {
    */
   verifyGossipBlockBytes(signedBlockRoot: SignedBlockRoot, opts: VerifyBlocksOpts): Promise<VerifyGossipBlockResult>;
   /** Import and release the verification bundle for this exact signed candidate. */
-  importBlock(
+  importBlockBytes(
     signedBlockRoot: SignedBlockRoot,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts

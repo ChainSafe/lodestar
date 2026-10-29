@@ -16,6 +16,7 @@ import {
 import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/utils.js";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
+import {computeSignedBlockRoot} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {ForkChoiceChainView} from "../../../../src/chain/chainView/forkChoiceChainView.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
@@ -116,7 +117,7 @@ describe("stale import response", () => {
       version: 5,
     });
     const imported = toChainViewBlockBytes(generateProtoBlock({blockRoot: toRootHex(Buffer.alloc(32, 9)), slot: 1}));
-    vi.spyOn(core, "importBlock").mockResolvedValue({
+    vi.spyOn(core, "importBlockBytes").mockResolvedValue({
       err: null,
       result: {
         block: imported,
@@ -156,7 +157,12 @@ describe("stale import response", () => {
       seenTimestampSec: 0,
     });
 
-    await engine.importBlock(input, DataAvailabilityStatus.PreData, {});
+    await engine.importBlock(
+      input,
+      {signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock())},
+      DataAvailabilityStatus.PreData,
+      {}
+    );
 
     expect(view.getHead()).toEqual(previousHead);
     expect(view.version).toBe(5);
@@ -203,7 +209,7 @@ describe("finalized checkpoint pull", () => {
       version: 1,
     };
     const pending = defer<ImportBlockResponse>();
-    const coreImport = vi.spyOn(core, "importBlock").mockImplementation(async () => ({
+    const coreImport = vi.spyOn(core, "importBlockBytes").mockImplementation(async () => ({
       err: null,
       result: structuredClone(await pending.promise),
     }));
@@ -237,7 +243,12 @@ describe("finalized checkpoint pull", () => {
     }
     const reorg = vi.fn();
     emitter.on(routes.events.EventType.chainReorg, reorg);
-    const importing = engine.importBlock(input, DataAvailabilityStatus.PreData, {});
+    const importing = engine.importBlock(
+      input,
+      {signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock())},
+      DataAvailabilityStatus.PreData,
+      {}
+    );
     expect(view.getHead()).toEqual(previousHead);
     expect(observed).toEqual([]);
     pending.resolve(response);
@@ -269,7 +280,14 @@ describe("finalized checkpoint pull", () => {
       err: null,
       result: {...response, finalizedCheckpointChanged: false, reorg: null},
     });
-    await expect(engine.importBlock(input, DataAvailabilityStatus.PreData, {})).resolves.toMatchObject({
+    await expect(
+      engine.importBlock(
+        input,
+        {signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock())},
+        DataAvailabilityStatus.PreData,
+        {}
+      )
+    ).resolves.toMatchObject({
       executionOptimistic: true,
     });
     expect(logger.debug).toHaveBeenCalledWith(
@@ -280,7 +298,12 @@ describe("finalized checkpoint pull", () => {
 
     const afterClose = defer<ImportBlockResponse>();
     coreImport.mockImplementationOnce(async () => ({err: null, result: await afterClose.promise}));
-    const importingAtClose = engine.importBlock(input, DataAvailabilityStatus.PreData, {});
+    const importingAtClose = engine.importBlock(
+      input,
+      {signedBlockRoot: computeSignedBlockRoot(input.forkName, input.getBlock())},
+      DataAvailabilityStatus.PreData,
+      {}
+    );
     await engine.close();
     const observedAtClose = [...observed];
     afterClose.resolve(response);

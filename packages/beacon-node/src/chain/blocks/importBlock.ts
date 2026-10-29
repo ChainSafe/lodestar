@@ -6,6 +6,7 @@ import {toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
+import {BlockImportData} from "../interface.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
@@ -21,6 +22,7 @@ const EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS = 64;
 export async function importBlock(
   this: BeaconChain,
   blockInput: IBlockInput,
+  blockImportData: BlockImportData,
   dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportBlockOpts
 ): Promise<void> {
@@ -42,11 +44,10 @@ export async function importBlock(
   });
 
   // 2-5. Delegate to engine: state transition, fork choice, head computation.
-  // Both modes resolve the verification bundle inside Core by signed root; live post-state stays engine-owned.
   // [beacon-engine] moved: consensus import, addAttestationPreElectra/addAttestationPostElectra,
   // and import FCU now live in packages/beacon-node/src/chain/beaconEngine/importBlock.ts.
   // On unstable merges, sync that logic there; retain facade side effects here.
-  const r = await this.beaconEngine.importBlock(blockInput, dataAvailabilityStatus, opts);
+  const r = await this.beaconEngine.importBlock(blockInput, blockImportData, dataAvailabilityStatus, opts);
 
   this.metrics?.importBlock.bySource.inc({source: blockInput.getBlockSource().source});
   if (isBlockInputColumns(blockInput)) {

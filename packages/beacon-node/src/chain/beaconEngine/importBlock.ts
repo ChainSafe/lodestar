@@ -47,6 +47,7 @@ import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {BlockSerializedCache} from "../blocks/blockSerializedCache.js";
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../blocks/signedBlockRoot.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../blocks/types.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
@@ -75,10 +76,11 @@ export type VerifiedBlockBundle = {
  */
 export async function importBlock(
   this: BeaconEngineCore,
-  // [beacon-engine] deviation: consume the engine-owned verification bundle and facade DA status.
+  // [beacon-engine] deviation: consume the verification bundle and facade DA status.
   v: VerifiedBlockBundle,
   dataAvailabilityStatus: DataAvailabilityStatus,
-  opts: ImportBlockOpts
+  opts: ImportBlockOpts,
+  blockSerializedCache?: BlockSerializedCache
 ): Promise<ImportBlockResponse> {
   const fullyVerifiedBlock = {...v, dataAvailabilityStatus};
   const {block, postState, parentBlockSlot, indexedAttestations} = fullyVerifiedBlock;
@@ -95,7 +97,7 @@ export async function importBlock(
   this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
   await this.db.block.putBinary(blockRoot, v.blockBytes);
   // Release only the persisted signed candidate; another signature has its own cache lifecycle.
-  this.blockSerializedCache.delete(
+  blockSerializedCache?.delete(
     toSignedBlockRootHex(computeSignedBlockRoot(this.config.getForkName(blockSlot), block)),
     undefined,
     "persisted"

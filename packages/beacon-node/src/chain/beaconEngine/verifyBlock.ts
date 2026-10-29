@@ -38,17 +38,7 @@ export async function verifyBlocksBytes(
       : this.blockSerializedCache.getOrDeserialize(signedBlockRoot, blockBytes);
     return {data: entry.block, bytes: entry.bytes};
   });
-  return verifyBlocks.call(this, entries, opts, isApiValidation);
-}
-
-export async function verifyBlocks(
-  this: BeaconEngineCore,
-  blockData: WithBytes<SignedBeaconBlock>[],
-  opts: VerifyBlocksOpts,
-  isApiValidation = false
-): Promise<VerifyBlocksSuccess> {
-  const {verifiedBlocks, ...result} = await verifyBlocksImpl.call(this, blockData, opts, isApiValidation);
-  // Both entrypoints retain live post-states in Core until import/discard; only metadata leaves verification.
+  const {verifiedBlocks, ...result} = await verifyBlocks.call(this, entries, opts, isApiValidation);
   // API broadcast validation must not overwrite bundles awaiting import for the same signed root.
   if (!isApiValidation) {
     for (const bundle of verifiedBlocks) {
@@ -59,11 +49,11 @@ export async function verifyBlocks(
   return result;
 }
 
-async function verifyBlocksImpl(
+export async function verifyBlocks(
   this: BeaconEngineCore,
   entries: WithBytes<SignedBeaconBlock>[],
   opts: VerifyBlocksOpts,
-  isApiValidation: boolean
+  isApiValidation = false
 ): Promise<VerifyBlocksSuccess & {verifiedBlocks: VerifiedBlockBundle[]}> {
   const blocks = entries.map(({data}) => data);
   const blockRoots = blocks.map((block) =>

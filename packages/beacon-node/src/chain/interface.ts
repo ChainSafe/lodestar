@@ -42,6 +42,7 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import type {GossipBlockResult} from "./beaconEngine/gossipValidation/block.js";
 import type {GossipValidationResult} from "./beaconEngine/gossipValidationResult.js";
+import type {VerifiedBlockBundle} from "./beaconEngine/importBlock.js";
 import type {EngineBootstrap} from "./beaconEngine/initialization.js";
 import type {
   BlockRootResponse,
@@ -203,6 +204,15 @@ export interface IBeaconChain {
   beaconEngineBlsThreadPoolCanAcceptWork(): boolean;
 }
 
+/**
+ * Per-block data returned by verifyBlocks() for the subsequent import.
+ * Main-thread mode carries the verified bundle, including the live post-state, through the processing
+ * batch to importBlock() without caching it in Core.
+ * Other modes carry only the signed root; importBlockBytes() resolves the bundle from Core's
+ * verifiedBlocks cache so live state does not cross the transport boundary.
+ */
+export type BlockImportData = VerifiedBlockBundle | {signedBlockRoot: SignedBlockRoot};
+
 /** Main-thread facade; processing methods reconstruct errors with their local inputs. */
 export interface IBeaconEngine
   extends Omit<
@@ -222,7 +232,7 @@ export interface IBeaconEngine
     | "validateApiBlockBytes"
     | "verifyBlocksBytes"
     | "verifyGossipBlockBytes"
-    | "importBlock"
+    | "importBlockBytes"
     | "importExecutionPayloadBytes"
     | "discardVerifiedBlocks"
     | "verifyAndObserveBlockProposerBytes"
@@ -278,12 +288,22 @@ export interface IBeaconEngine
 
   // Block processing
   validateApiBlock(blockInput: IBlockInput, opts: VerifyBlocksOpts): Promise<void>;
+  /**
+   * Returns verification metadata plus blockImportData: complete verification bundles in main-thread
+   * mode, or signed beacon block root references ({signedBlockRoot}) in worker mode.
+   */
   verifyBlocks(
     blockInputs: IBlockInput[],
     opts: VerifyBlocksOpts
-  ): Promise<{segmentExecStatus: SegmentExecStatus; verifyStateTime: number; verifySignaturesTime: number}>;
+  ): Promise<{
+    segmentExecStatus: SegmentExecStatus;
+    verifyStateTime: number;
+    verifySignaturesTime: number;
+    blockImportData: BlockImportData[];
+  }>;
   importBlock(
     blockInput: IBlockInput,
+    blockImportData: BlockImportData,
     dataAvailabilityStatus: DataAvailabilityStatus,
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult>;
