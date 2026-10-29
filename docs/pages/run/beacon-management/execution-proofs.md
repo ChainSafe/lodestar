@@ -24,7 +24,7 @@ A proof type names one immutable combination of guest program, zkVM and version.
 | 6          | reth          | ZisK   |
 | 7          | zesu          | ZisK   |
 
-The assignments are provisional and lag the provers. The digests in the spec are the `ere-guests` v0.17.0 keys. Sepolia provers running `zkboost` v0.19.1 sign proofs for the `ere-guests` v0.19.0 keys instead, with five additional proof types, and none of those keys match the spec digests:
+The assignments are provisional, so the key generation they pin matters. The spec digests are the `ere-guests` v0.17.0 keys, which is what the provers active on Sepolia in late October 2026 run: `eth-act/lighthouse` with the ERE v0.17.2 verifier and `zkboost` 0.12.0, proving with OpenVM on proof types 1 and 4. `zkboost` v0.19.1 moves to the `ere-guests` v0.19.0 keys and adds proof types 8 to 12; none of those keys match the spec digests:
 
 | Proof type | Key file in `ere-guests` v0.19.0                      |
 | ---------- | ----------------------------------------------------- |
@@ -51,29 +51,34 @@ Every type you configure counts as supported on gossip. A proof for a type Lodes
 
 ### Sepolia
 
-Download the keys the Sepolia provers use and start the node with an explicit assignment for each of them:
+Register the spec keys for proof types 1 to 7 through the plain form, so Lodestar checks each file against the spec digest, and the newer generation's extra types explicitly. Download both key sets:
 
 ```bash
-gh release download v0.19.0 --repo eth-act/ere-guests --pattern '*.vk' --pattern 'minisign.pub' --dir keys
+gh release download v0.17.0 --repo eth-act/ere-guests --pattern '*.vk' --dir keys/v0.17.0
+```
+
+```bash
+gh release download v0.19.0 --repo eth-act/ere-guests --pattern '*.vk' --dir keys/v0.19.0
 ```
 
 ```bash
 ./lodestar beacon --network sepolia --checkpointSyncUrl <url> \
   --chain.executionProofVerifiers \
-    1:openvm:keys/stateless-validator-ethrex-openvm-v2.1.0-preview.vk \
-    2:sp1:keys/stateless-validator-ethrex-sp1-v6.9.0.vk \
-    3:zisk:keys/stateless-validator-ethrex-zisk-v1.3.2-alpha.vk \
-    4:openvm:keys/stateless-validator-reth-openvm-v2.1.0-preview.vk \
-    5:sp1:keys/stateless-validator-reth-sp1-v6.9.0.vk \
-    6:zisk:keys/stateless-validator-reth-zisk-v1.3.2-alpha.vk \
-    8:sp1:keys/stateless-validator-nimbus-sp1-v6.9.0.vk \
-    9:zisk:keys/stateless-validator-nimbus-zisk-v1.3.2-alpha.vk \
-    10:sp1:keys/stateless-validator-nethermind-sp1-v6.9.0.vk \
-    11:zisk:keys/stateless-validator-nethermind-zisk-v1.3.2-alpha.vk \
-    12:sp1:keys/stateless-validator-zilkworm-sp1-v6.9.0.vk
+    1:keys/v0.17.0/stateless-validator-ethrex-openvm-v2.1.0-preview.vk \
+    2:keys/v0.17.0/stateless-validator-ethrex-sp1-v6.4.0.vk \
+    3:keys/v0.17.0/stateless-validator-ethrex-zisk-v1.1.0-alpha.vk \
+    4:keys/v0.17.0/stateless-validator-reth-openvm-v2.1.0-preview.vk \
+    5:keys/v0.17.0/stateless-validator-reth-sp1-v6.4.0.vk \
+    6:keys/v0.17.0/stateless-validator-reth-zisk-v1.1.0-alpha.vk \
+    7:keys/v0.17.0/stateless-validator-zesu-zisk-v1.1.0-alpha.vk \
+    8:sp1:keys/v0.19.0/stateless-validator-nimbus-sp1-v6.9.0.vk \
+    9:zisk:keys/v0.19.0/stateless-validator-nimbus-zisk-v1.3.2-alpha.vk \
+    10:sp1:keys/v0.19.0/stateless-validator-nethermind-sp1-v6.9.0.vk \
+    11:zisk:keys/v0.19.0/stateless-validator-nethermind-zisk-v1.3.2-alpha.vk \
+    12:sp1:keys/v0.19.0/stateless-validator-zilkworm-sp1-v6.9.0.vk
 ```
 
-Sepolia has run Gloas since epoch 353024, so the checkpoint must be at or after that epoch. Once the spec table moves to the keys the provers use, drop the `<zkvm>` part so Lodestar checks each key against the spec digest again.
+Sepolia has run Gloas since epoch 353024, so the checkpoint must be at or after that epoch. A proof type holds one key at a time, so once the provers move to the v0.19.0 keys for types 1 to 6, switch those entries to the explicit form with the new files until the spec table follows. OpenVM proofs verify across `ere` releases because its version did not change; SP1 and ZisK proofs only verify with a verifier built for the same SP1 or ZisK version the prover used.
 
 ## Submitting proofs
 
