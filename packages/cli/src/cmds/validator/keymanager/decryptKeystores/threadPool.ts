@@ -45,7 +45,7 @@ export class DecryptKeystoresThreadPool {
    */
   queue(
     args: DecryptKeystoreArgs,
-    onDecrypted: (secretKeyBytes: Uint8Array) => void,
+    onDecrypted: (secretKeyBytes: Uint8Array) => void | Promise<void>,
     onError: (e: Error) => void
   ): void {
     const task = this.pool.queue((thread) => thread.decryptKeystore(args));

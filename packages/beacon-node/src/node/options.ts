@@ -21,18 +21,17 @@ import {SyncOptions, defaultSyncOptions} from "../sync/options.js";
 
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";
-
+export type {EngineApiMode};
 // Re-export to use as default values and for validation in CLI args
 export {
-  defaultExecutionEngineHttpOpts,
-  defaultExecutionBuilderHttpOpts,
+  ArchiveMode,
   BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS,
   BUILDER_BID_LAG_BUFFER_MS,
-  engineApiModes,
-  ArchiveMode,
   DEFAULT_ARCHIVE_MODE,
+  defaultExecutionBuilderHttpOpts,
+  defaultExecutionEngineHttpOpts,
+  engineApiModes,
 };
-export type {EngineApiMode};
 
 export interface IBeaconNodeOptions {
   api: ApiOptions;

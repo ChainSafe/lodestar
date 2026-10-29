@@ -281,7 +281,7 @@ describe("sync / unknown block sync thru gloas", () => {
 
       // for incompletePayloadEnvelope the trigger is in the second switch above
       // so we have to assert payload import at the end
-      if (waitForPayloadImported) {
+      if (waitForPayloadImported !== undefined) {
         await waitForPayloadImported;
       }
     });

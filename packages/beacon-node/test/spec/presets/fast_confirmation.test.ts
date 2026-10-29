@@ -49,7 +49,7 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
-import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.ts";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -560,7 +560,7 @@ const fastConfirmationTest =
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
                 );
                 logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
@@ -625,7 +625,7 @@ const fastConfirmationTest =
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
                 );
                 if (result.shouldOverrideFcu === false) {

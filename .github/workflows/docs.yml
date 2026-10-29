@@ -72,9 +72,6 @@ jobs:
       - name: Build and collect docs
         run: pnpm docs:build
 
-      - name: Lint built docs
-        run: pnpm docs:lint:fix
-
       # Fetch versioned docs from docs-versions branch (if it exists)
       - name: Fetch versioned docs
         run: |

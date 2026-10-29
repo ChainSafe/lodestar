@@ -1770,7 +1770,10 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
+      // The fork epoch PTC is computed at the fork from effective balances updated at the end of the
+      // last pre-fork epoch, so its dependent root is one epoch later than for other epochs
+      const dependentRootEpoch = epoch === config.GLOAS_FORK_EPOCH ? epoch + 1 : epoch;
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(dependentRootEpoch));
 
       return {
         data: duties,
