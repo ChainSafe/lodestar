@@ -104,7 +104,7 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
     default: PeerAction.LowToleranceError,
     byCode: {
       [ExecutionProofErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal,
-      // Supported proof types are node-dependent, so an honest proof-aware peer may relay types we lack
+      // Proof type assignments are provisional, so a peer on a newer table may relay types we do not know
       [ExecutionProofErrorCode.UNSUPPORTED_PROOF_TYPE]: PeerAction.HighToleranceError,
     },
   },

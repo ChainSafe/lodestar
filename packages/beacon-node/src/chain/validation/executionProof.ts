@@ -1,3 +1,4 @@
+import {EXECUTION_PROOF_TYPES} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   getExecutionProofEnvelopeSignatureSet,
@@ -36,10 +37,20 @@ export async function validateGossipExecutionProof(
     });
   }
 
-  // [REJECT] The proof type is supported
-  if (!chain.proofEngine.supportedProofTypes.has(proofType)) {
+  // [REJECT] The proof type is supported (spec `get_supported_proof_types`)
+  if (!EXECUTION_PROOF_TYPES.has(proofType)) {
     throw new ExecutionProofError(GossipAction.REJECT, {
       code: ExecutionProofErrorCode.UNSUPPORTED_PROOF_TYPE,
+      blockRoot,
+      proofType,
+    });
+  }
+
+  // A supported type this node holds no verification key for can be neither confirmed nor refuted,
+  // so the proof is dropped without forwarding it or penalizing the peer
+  if (!chain.proofEngine.verifiableProofTypes.has(proofType)) {
+    throw new ExecutionProofError(GossipAction.IGNORE, {
+      code: ExecutionProofErrorCode.PROOF_TYPE_NOT_VERIFIABLE,
       blockRoot,
       proofType,
     });
