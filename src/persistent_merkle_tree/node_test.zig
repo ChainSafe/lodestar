@@ -2,6 +2,7 @@ const std = @import("std");
 
 const max_depth = @import("hashing").max_depth;
 const Depth = @import("hashing").Depth;
+const getZeroHash = @import("hashing").getZeroHash;
 
 const Node = @import("Node.zig");
 const Gindex = @import("gindex.zig").Gindex;
@@ -1230,6 +1231,60 @@ test "editChunkedLeaf invalidates computed roots without allocating" {
     const leaf_hash = leaf.getRoot(&pool).*;
     try std.testing.expectError(error.InvalidNode, leaf.editChunkedLeaf(&pool, 0, 1, u256, 0, &42, Writer.write));
     try std.testing.expectEqualSlices(u8, &leaf_hash, leaf.getRoot(&pool));
+}
+
+test "computeChunkedLeafRoots should hash lazy chunked leaves and leave other ids untouched" {
+    const allocator = std.testing.allocator;
+    // More leaves than one task takes, so several tasks share the work.
+    const leaf_count = 2 * Node.Id.chunked_leaf_roots_per_task + 1;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = leaf_count + 8,
+    });
+    defer pool.deinit();
+
+    var chunked_leaves: [leaf_count]Node.Id = undefined;
+    var expected: [leaf_count][32]u8 = undefined;
+    for (&chunked_leaves, &expected, 0..) |*chunked_leaf, *root, i| {
+        // The last leaf is partial; chunks past `len` stay zero as ChunkedLeaf requires.
+        const len: u16 = if (i == leaf_count - 1) ChunkedLeaf.K / 2 + 1 else ChunkedLeaf.K;
+        var chunks: [ChunkedLeaf.K][32]u8 align(64) = @splat(@splat(0));
+        for (chunks[0..len], 0..) |*chunk, c| chunk.* = @splat(@as(u8, @truncate(i * 31 + c)));
+
+        const reference = try pool.createChunkedLeaf(&chunks, len);
+        defer pool.unref(reference);
+
+        root.* = reference.getRoot(&pool).*;
+        chunked_leaf.* = try pool.createChunkedLeaf(&chunks, len);
+    }
+    defer for (chunked_leaves) |id| pool.unref(id);
+
+    const leaf = try pool.createLeafFromUint(7);
+    defer pool.unref(leaf);
+    const leaf_root = leaf.getRoot(&pool).*;
+
+    const branch = try pool.createBranch(
+        try pool.createLeafFromUint(1),
+        try pool.createLeafFromUint(2),
+    );
+    defer pool.unref(branch);
+
+    const zero: Node.Id = @enumFromInt(ChunkedLeaf.k_log2);
+
+    var ids: [leaf_count + 3]Node.Id = undefined;
+    ids[0..3].* = .{ leaf, branch, zero };
+    ids[3..].* = chunked_leaves;
+    try Node.Id.computeChunkedLeafRoots(&pool, std.testing.io, &ids);
+
+    const roots = pool.nodes.items(.root);
+    for (chunked_leaves, expected) |id, root| {
+        try std.testing.expectEqualSlices(u8, &root, &roots[@intFromEnum(id)]);
+    }
+    try std.testing.expectEqualSlices(u8, &leaf_root, &roots[@intFromEnum(leaf)]);
+    try std.testing.expect(branch.isBranchLazy(&pool));
+    const zero_root = getZeroHash(ChunkedLeaf.k_log2);
+    try std.testing.expectEqualSlices(u8, zero_root, &roots[@intFromEnum(zero)]);
 }
 
 test "memory_safety: batch node updates should restore the pool on exhaustion" {

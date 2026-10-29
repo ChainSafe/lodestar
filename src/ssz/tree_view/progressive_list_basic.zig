@@ -458,6 +458,32 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
             out.* = (try self.hashTreeRoot()).*;
         }
 
+        /// Commits, then hashes every ChunkedLeaf in parallel on `io` so `hashTreeRoot` only
+        /// combines cached roots. No-op for lists without chunked leaves.
+        pub fn hashChunkedLeaves(self: *Self, io: std.Io) !void {
+            if (comptime !use_chunked_leaf) return;
+            try self.commit();
+
+            const chunk_count = chunkCount(self._len);
+
+            var ids: std.ArrayList(Node.Id) = try .initCapacity(
+                self.allocator,
+                // Each ChunkedLeaf covers K chunks and starts below chunk_count, which bounds
+                // their number.
+                (chunk_count + ChunkedLeaf.K - 1) / ChunkedLeaf.K,
+            );
+            defer ids.deinit(self.allocator);
+
+            var blocks = BlockIterator.init(self, 0);
+            var chunk_index: usize = 0;
+            while (chunk_index < chunk_count) {
+                const block = try blocks.next();
+                if (block.folded_depth != 0) ids.appendAssumeCapacity(block.node);
+                chunk_index += block.chunk_count;
+            }
+            try Node.Id.computeChunkedLeafRoots(self.state.pool, io, ids.items);
+        }
+
         pub fn serializedSize(self: *Self) !usize {
             return self._len * ST.Element.fixed_size;
         }
