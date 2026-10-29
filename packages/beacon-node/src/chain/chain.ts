@@ -1439,8 +1439,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   onForkchoiceUpdated(headBlockRoot: RootHex, headBlockHash: RootHex, result: ForkchoiceUpdatedResult): void {
-    const {status, latestValidHash, validationError} = result.payloadStatus;
-    const executionStatus = this.forkChoice.getBlockHexAndBlockHash(headBlockRoot, headBlockHash)?.executionStatus;
+    const {status, latestValidHash, validationError, inclusionListSatisfied} = result.payloadStatus;
+    const node = this.forkChoice.getBlockHexAndBlockHash(headBlockRoot, headBlockHash);
+    const executionStatus = node?.executionStatus;
     try {
       if (status === ExecutionPayloadStatus.INVALID) {
         if (executionStatus === ExecutionStatus.Invalid) {
@@ -1462,6 +1463,18 @@ export class BeaconChain implements IBeaconChain {
           ExecutionInvalidSource.forkchoiceUpdated
         );
       } else if (status === ExecutionPayloadStatus.VALID && executionStatus === ExecutionStatus.Syncing) {
+        // An optimistically imported payload is recorded as satisfying the inclusion list constraints, the verdict
+        // the engine sends along with validating it replaces that record. The payload belongs to the FULL variant
+        // with this block hash, the gloas variants of its descendants only inherit the hash
+        if (inclusionListSatisfied != null) {
+          let payloadNode: ProtoBlock | null = node;
+          while (payloadNode !== null && payloadNode.payloadStatus !== PayloadStatus.FULL) {
+            payloadNode = this.forkChoice.getBlockHexAndBlockHash(payloadNode.parentRoot, headBlockHash);
+          }
+          if (payloadNode !== null) {
+            this.forkChoice.recordPayloadInclusionListSatisfaction(payloadNode.blockRoot, inclusionListSatisfied);
+          }
+        }
         this.forkChoice.validateLatestHash(
           {executionStatus: ExecutionStatus.Valid, latestValidExecHash: headBlockHash, blockRoot: headBlockRoot},
           {strict: false}
