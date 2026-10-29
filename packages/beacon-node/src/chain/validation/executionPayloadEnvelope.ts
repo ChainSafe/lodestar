@@ -124,7 +124,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // Get the block state to verify the builder's signature.
-  const blockState = await chain.regen
+  const blockState = await chain.stateEngine
     .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
     .catch(() => {
       throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {

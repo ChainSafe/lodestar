@@ -34,7 +34,7 @@ import {Logger, MapDef, assert, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
-import {ShufflingCache} from "../shufflingCache.js";
+import {BeaconCommitteeGetter} from "../shufflingCache.js";
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -211,7 +211,7 @@ export class AggregatedAttestationPool {
   getAttestationsForBlock(
     fork: ForkName,
     forkChoice: IForkChoice,
-    shufflingCache: ShufflingCache,
+    shufflingCache: BeaconCommitteeGetter,
     state: IBeaconStateView
   ): Attestation[] {
     const forkSeq = ForkSeq[fork];
@@ -228,7 +228,7 @@ export class AggregatedAttestationPool {
   getAttestationsForBlockElectra(
     fork: ForkName,
     forkChoice: IForkChoice,
-    shufflingCache: ShufflingCache,
+    shufflingCache: BeaconCommitteeGetter,
     state: IBeaconStateView
   ): electra.Attestation[] {
     const stateSlot = state.slot;
@@ -758,7 +758,7 @@ export function aggregateConsolidation({byCommittee, attData}: AttestationsConso
  */
 export function getNotSeenValidatorsFn(
   config: BeaconConfig,
-  shufflingCache: ShufflingCache,
+  shufflingCache: BeaconCommitteeGetter,
   state: IBeaconStateView
 ): GetNotSeenValidatorsFn {
   const stateSlot = state.slot;

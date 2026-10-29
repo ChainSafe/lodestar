@@ -97,7 +97,7 @@ export async function validateBuilderApiExecutionPayloadBid(
     }
   }
 
-  const state = await chain.regen
+  const state = await chain.stateEngine
     .getBlockSlotState(parentBlock, slot, {dontTransferCache: true}, RegenCaller.validateGossipExecutionPayloadBid)
     .catch((e: Error) => {
       throw Error(`Unable to regenerate state to validate bid: ${e.message}`);

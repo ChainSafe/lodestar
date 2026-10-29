@@ -1128,7 +1128,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
     fork,
     this.forkChoice,
-    this.shufflingCache,
+    this.stateEngine,
     currentState
   );
   endAttestations?.({

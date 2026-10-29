@@ -25,6 +25,7 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
+  getIndexedAttestation,
   isExecutionStateType,
   isGloasStateType,
   signedBlockToSignedHeader,
@@ -216,8 +217,12 @@ const fastConfirmationTest =
                 attHeadBlock,
                 RegenCaller.validateGossipAttestation
               );
+              const shuffling = chain.stateEngine.getShufflingSync(attEpoch, decisionRoot);
+              if (shuffling === null) {
+                throw Error(`No shuffling for epoch ${attEpoch} decisionRoot ${decisionRoot}`);
+              }
               chain.forkChoice.onAttestation(
-                chain.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, ForkSeq[fork], attestation),
+                getIndexedAttestation(shuffling, ForkSeq[fork], attestation),
                 attDataRootHex
               );
             }
@@ -439,7 +444,7 @@ const fastConfirmationTest =
                 // Verify envelope against the state
                 const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
                 if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
-                const blockState = await chain.regen.getBlockSlotState(
+                const blockState = await chain.stateEngine.getBlockSlotState(
                   protoBlock,
                   protoBlock.slot,
                   {dontTransferCache: true},

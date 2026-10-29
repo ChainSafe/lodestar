@@ -273,8 +273,8 @@ describe("validateGossipFuluDataColumnSidecar - proposer lookup", () => {
     chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: ZERO_HASH, rootHex: ""});
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue({slot: parentSlot, stateRoot: "0x00"} as ProtoBlock);
     const stateStub = {getBeaconProposer: () => wrongProposer} as unknown as IBeaconStateView;
-    chain.regen.getState.mockResolvedValue(stateStub);
-    chain.regen.getBlockSlotState.mockResolvedValue(stateStub);
+    chain.stateEngine.getState.mockResolvedValue(stateStub);
+    chain.stateEngine.getBlockSlotState.mockResolvedValue(stateStub);
     return computeSubnetForDataColumnSidecar(chain.config, sidecar);
   }
 
@@ -286,8 +286,8 @@ describe("validateGossipFuluDataColumnSidecar - proposer lookup", () => {
       DataColumnSidecarErrorCode.INCORRECT_PROPOSER
     );
 
-    expect(chain.regen.getState).toHaveBeenCalledOnce();
-    expect(chain.regen.getBlockSlotState).not.toHaveBeenCalled();
+    expect(chain.stateEngine.getState).toHaveBeenCalledOnce();
+    expect(chain.stateEngine.getBlockSlotState).not.toHaveBeenCalled();
   });
 
   it("dials via getBlockSlotState when the block is more than MIN_SEED_LOOKAHEAD epochs after its parent", async () => {
@@ -298,8 +298,8 @@ describe("validateGossipFuluDataColumnSidecar - proposer lookup", () => {
       DataColumnSidecarErrorCode.INCORRECT_PROPOSER
     );
 
-    expect(chain.regen.getBlockSlotState).toHaveBeenCalledOnce();
-    expect(chain.regen.getState).not.toHaveBeenCalled();
+    expect(chain.stateEngine.getBlockSlotState).toHaveBeenCalledOnce();
+    expect(chain.stateEngine.getState).not.toHaveBeenCalled();
   });
 
   it("dials via getBlockSlotState when the parent is pre-fulu (fork transition boundary)", async () => {
@@ -310,7 +310,7 @@ describe("validateGossipFuluDataColumnSidecar - proposer lookup", () => {
       DataColumnSidecarErrorCode.INCORRECT_PROPOSER
     );
 
-    expect(chain.regen.getBlockSlotState).toHaveBeenCalledOnce();
-    expect(chain.regen.getState).not.toHaveBeenCalled();
+    expect(chain.stateEngine.getBlockSlotState).toHaveBeenCalledOnce();
+    expect(chain.stateEngine.getState).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,5 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -11,9 +10,8 @@ import {
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, IndexedAttestation, ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
-import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
@@ -105,11 +103,7 @@ export function getLodestarApi({
 
     async getRegenQueueItems() {
       return {
-        data: (chain.regen as QueuedStateRegenerator).jobQueue.getItems().map((item) => ({
-          key: item.args[0].key,
-          args: regenRequestToJson(config, item.args[0]),
-          addedTimeMs: item.addedTimeMs,
-        })),
+        data: chain.stateEngine.dumpRegenQueue(),
       };
     },
 
@@ -128,7 +122,7 @@ export function getLodestarApi({
     },
 
     async getStateCacheItems() {
-      return {data: chain.regen.dumpCacheSummary()};
+      return {data: chain.stateEngine.dumpCacheSummary()};
     },
 
     async getGossipPeerScoreStats() {
@@ -147,7 +141,7 @@ export function getLodestarApi({
     },
 
     async dropStateCache() {
-      await chain.regen.dropCache();
+      await chain.stateEngine.dropCache();
     },
 
     async connectPeer({peerId, multiaddrs}) {
@@ -348,29 +342,6 @@ export function getLodestarApi({
       };
     },
   };
-}
-
-function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest): unknown {
-  switch (regenRequest.key) {
-    case "getBlockSlotState":
-      return {
-        root: regenRequest.args[0],
-        slot: regenRequest.args[1],
-      };
-
-    case "getPreState": {
-      const slot = regenRequest.args[0].slot;
-      return {
-        root: toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(regenRequest.args[0])),
-        slot,
-      };
-    }
-
-    case "getState":
-      return {
-        root: regenRequest.args[0],
-      };
-  }
 }
 
 const CHECKPOINT_REGEX = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;

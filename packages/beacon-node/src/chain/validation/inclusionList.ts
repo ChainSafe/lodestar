@@ -175,12 +175,12 @@ async function getShuffling(
   dependentRootHex: RootHex,
   dependentBlock: ProtoBlock
 ): Promise<EpochShuffling | null> {
-  const cached = await chain.shufflingCache.get(epoch, dependentRootHex);
+  const cached = await chain.stateEngine.getShuffling(epoch, dependentRootHex);
   if (cached !== null) {
     return cached;
   }
   try {
-    return await chain.regenStateForAttestationVerification(
+    return await chain.stateEngine.regenStateForAttestationVerification(
       epoch,
       dependentRootHex,
       dependentBlock,

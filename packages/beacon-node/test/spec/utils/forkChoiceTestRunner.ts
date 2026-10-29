@@ -277,7 +277,7 @@ export const forkChoiceTestRunner =
                 // early otherwise" — a slot mismatch is a no-op SUCCESS, not a rejection.
                 // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#on_payload_attestation_message
                 if (protoBlock.slot === payloadAttestationMessage.data.slot) {
-                  const blockState = await chain.regen.getBlockSlotState(
+                  const blockState = await chain.stateEngine.getBlockSlotState(
                     protoBlock,
                     payloadAttestationMessage.data.slot,
                     {dontTransferCache: true},
@@ -533,7 +533,7 @@ export const forkChoiceTestRunner =
                 if (protoBlock === null) {
                   throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
                 }
-                const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
+                const postState = await chain.stateEngine.getState(protoBlock.stateRoot, RegenCaller.processBlock);
                 expectValidProgressiveBalances(postState, metrics.stateTransition);
                 if (!isValid) throw Error("Expect error since this is a negative test");
                 specStoreBlockRoots.add(blockRootHex);
@@ -563,7 +563,7 @@ export const forkChoiceTestRunner =
                 // Verify envelope against the state
                 const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
                 if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
-                const blockState = await chain.regen.getBlockSlotState(
+                const blockState = await chain.stateEngine.getBlockSlotState(
                   protoBlock,
                   protoBlock.slot,
                   {dontTransferCache: true},

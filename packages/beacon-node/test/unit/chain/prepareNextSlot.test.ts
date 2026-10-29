@@ -22,7 +22,7 @@ describe("PrepareNextSlot scheduler", () => {
   let chainStub: MockedBeaconChain;
   let scheduler: PrepareNextSlotScheduler;
   let forkChoiceStub: MockedBeaconChain["forkChoice"];
-  let regenStub: MockedBeaconChain["regen"];
+  let regenStub: MockedBeaconChain["stateEngine"];
   let loggerStub: MockedLogger;
   let beaconProposerCacheStub: MockedBeaconChain["beaconProposerCache"];
   let getForkStub: MockInstance<(_: number) => ForkName>;
@@ -36,7 +36,7 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub = getMockedBeaconChain({clock: "real", genesisTime: 0});
     updateBuilderStatus = chainStub.updateBuilderStatus;
     forkChoiceStub = chainStub.forkChoice;
-    regenStub = chainStub.regen;
+    regenStub = chainStub.stateEngine;
     loggerStub = getMockedLogger();
     beaconProposerCacheStub = chainStub.beaconProposerCache;
 

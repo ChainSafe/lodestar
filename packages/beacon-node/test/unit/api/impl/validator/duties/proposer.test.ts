@@ -82,7 +82,7 @@ describe("get proposers api impl", () => {
       const nextEpoch = currentEpoch + 1;
       const boundarySlot = nextEpoch * SLOTS_PER_EPOCH;
       initializeState(boundarySlot);
-      modules.chain.regen.getCheckpointStateSync.mockReturnValue(new BeaconStateView(cachedState));
+      modules.chain.stateEngine.getCheckpointStateSync.mockReturnValue(new BeaconStateView(cachedState));
       vi.spyOn(config, "getForkName").mockImplementation((slot) =>
         slot < boundarySlot ? ForkName.fulu : ForkName.gloas
       );
@@ -92,7 +92,7 @@ describe("get proposers api impl", () => {
 
       vi.setSystemTime(boundarySlot * 12000 - 4001);
       await expect(api.getProposerDutiesV2({epoch: nextEpoch + 1})).rejects.toThrow("must not be more than 3");
-      expect(modules.chain.regen.getCheckpointStateSync).not.toHaveBeenCalled();
+      expect(modules.chain.stateEngine.getCheckpointStateSync).not.toHaveBeenCalled();
 
       vi.setSystemTime(boundarySlot * 12000 - 3999);
       const result = await api.getProposerDutiesV2({epoch: nextEpoch + 1});
@@ -101,7 +101,7 @@ describe("get proposers api impl", () => {
           expect.objectContaining({slot: (nextEpoch + 1) * SLOTS_PER_EPOCH + i})
         )
       );
-      expect(modules.chain.regen.getCheckpointStateSync).toHaveBeenCalledWith({
+      expect(modules.chain.stateEngine.getCheckpointStateSync).toHaveBeenCalledWith({
         epoch: nextEpoch,
         rootHex: zeroProtoBlock.blockRoot,
       });

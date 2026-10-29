@@ -27,7 +27,7 @@ describe("getStateValidators status filtering with ids", () => {
       rootHex: "0xbb",
       epoch: 0,
     });
-    vi.spyOn(modules.chain.regen, "getStateSync").mockReturnValue(state);
+    vi.spyOn(modules.chain.stateEngine, "getStateSync").mockReturnValue(state);
   });
 
   it("returns active_ongoing validator when filtering by group status active with ids", async () => {

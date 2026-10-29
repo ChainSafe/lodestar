@@ -327,7 +327,7 @@ export function getBeaconStateApi({
       }
 
       const decisionRoot = state.getShufflingDecisionRoot(epoch);
-      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
+      const shuffling = await chain.stateEngine.getShuffling(epoch, decisionRoot);
       if (!shuffling) {
         throw new ApiError(
           500,
