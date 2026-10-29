@@ -40,6 +40,10 @@ The assignments are provisional, so the key generation they pin matters. The spe
 | 11         | `stateless-validator-nethermind-zisk-v1.3.2-alpha.vk` |
 | 12         | `stateless-validator-zilkworm-sp1-v6.9.0.vk`          |
 
+## Public input
+
+A proof commits to a 43-byte public input: the `hash_tree_root` of the payload's `NewPayloadRequest`, a success flag, the chain id and the schema id. Two conventions for that root exist today. The consensus spec hashes `NewPayloadRequest` as a progressive container over the bounded Deneb list of versioned hashes. The execution-specs stateless validator, and with it the `ere-guests`, `zkboost` and `eth-act/lighthouse`, hash a plain container over a progressive list, and that is what the proofs on Sepolia commit to. Lodestar derives both roots from the imported payload and accepts a proof that proves either; the `publicInput` label of `lodestar_execution_proof_engine_verify_result_total` reports which one matched, so the day the two specs agree is visible in the metrics.
+
 ## Configuring verifiers
 
 `--chain.executionProofVerifiers` takes one entry per proof type in one of two forms:

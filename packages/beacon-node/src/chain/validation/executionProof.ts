@@ -153,13 +153,13 @@ export async function validateGossipExecutionProof(
     });
   }
 
-  const proof = getExecutionProof(chain.config, payloadInput, proofEnvelope);
+  const proofInput = getExecutionProof(chain.config, payloadInput, proofEnvelope);
 
   // Only authenticated proofs count against the prover, so a forged envelope cannot block a validator
   chain.seenExecutionProofs.markSeen(blockRoot, block.slot, proofRoot, proofType, validatorIndex);
 
   // [REJECT] The execution proof is valid
-  if (!(await chain.proofEngine.verifyExecutionProof(proof))) {
+  if (!(await chain.proofEngine.verifyExecutionProof(proofInput))) {
     throw new ExecutionProofError(GossipAction.REJECT, {
       code: ExecutionProofErrorCode.INVALID_PROOF,
       blockRoot,

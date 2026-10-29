@@ -4,6 +4,7 @@ import {EXECUTION_PROOF_VERIFIER_AVAILABLE} from "@chainsafe/lodestar-z/executio
 import {EXECUTION_PROOF_TYPES} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
+import {ExecutionProofInput} from "../../src/chain/proofEngine/executionProof.js";
 import {ExecutionProofVerificationKey} from "../../src/chain/proofEngine/interface.js";
 import {NativeProofEngine} from "../../src/chain/proofEngine/native.js";
 
@@ -60,14 +61,21 @@ describe.skipIf(!EXECUTION_PROOF_VERIFIER_AVAILABLE)("Sepolia execution proofs",
 
   it.each(sepoliaProofTypes)("verifies the $guest proof as type $proofType", async ({proofType, guest}) => {
     const proofData = Uint8Array.from(readFileSync(new URL(`${guest}.proof`, fixtureDir)));
+    const input = (
+      proofData: Uint8Array,
+      publicInput: ExecutionProofInput["proof"]["publicInput"]
+    ): ExecutionProofInput => ({
+      proof: {proofType, proofData, publicInput},
+      publicInputs: [{convention: "spec", publicInput}],
+    });
 
-    await expect(engine.verifyExecutionProof({proofType, proofData, publicInput})).resolves.toBe(true);
+    await expect(engine.verifyExecutionProof(input(proofData, publicInput))).resolves.toBe(true);
 
     const otherChain = {...publicInput, chainId: publicInput.chainId + 1n};
-    await expect(engine.verifyExecutionProof({proofType, proofData, publicInput: otherChain})).resolves.toBe(false);
+    await expect(engine.verifyExecutionProof(input(proofData, otherChain))).resolves.toBe(false);
 
     const corrupted = proofData.slice();
     corrupted[Math.floor(corrupted.length / 2)] ^= 1;
-    await expect(engine.verifyExecutionProof({proofType, proofData: corrupted, publicInput})).resolves.toBe(false);
+    await expect(engine.verifyExecutionProof(input(corrupted, publicInput))).resolves.toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import {EXECUTION_PROOF_TYPES, ExecutionProofZkvm} from "@lodestar/params";
 import {eip8025, ssz} from "@lodestar/types";
 import {LodestarError, fromHex, toHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
+import {ExecutionProofInput} from "./executionProof.js";
 import {ExecutionProofVerificationKey, ProofEngine} from "./interface.js";
 
 export class NativeProofEngine implements ProofEngine {
@@ -31,16 +32,24 @@ export class NativeProofEngine implements ProofEngine {
     this.supportedProofTypes = new Set([...EXECUTION_PROOF_TYPES.keys(), ...this.verifiableProofTypes]);
   }
 
-  async verifyExecutionProof(proof: eip8025.ExecutionProof): Promise<boolean> {
+  async verifyExecutionProof({proof, publicInputs}: ExecutionProofInput): Promise<boolean> {
     const {proofType} = proof;
     const timer = this.metrics?.executionProofEngine.verifyTime.startTimer({proofType});
     try {
-      const result = await verifyNativeExecutionProof(
+      const publicValues = await verifyExecutionProof(proofType, proof.proofData);
+      const matched =
+        publicValues === null
+          ? undefined
+          : publicInputs.find(({publicInput}) =>
+              matchesPublicInput(publicValues, ssz.eip8025.PublicInput.serialize(publicInput))
+            );
+      const result =
+        publicValues === null ? "invalid_proof" : matched === undefined ? "public_input_mismatch" : "valid";
+      this.metrics?.executionProofEngine.verifyResult.inc({
         proofType,
-        proof.proofData,
-        ssz.eip8025.PublicInput.serialize(proof.publicInput)
-      );
-      this.metrics?.executionProofEngine.verifyResult.inc({proofType, result});
+        result,
+        publicInput: matched?.convention ?? "none",
+      });
       return result === "valid";
     } finally {
       timer?.();
