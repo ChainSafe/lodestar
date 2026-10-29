@@ -116,7 +116,7 @@ describe("validateGossipExecutionProof", () => {
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 1, 3)).toBe(false);
   });
 
-  it.each([0, 8])("rejects unassigned proof type %i before any lookup", async (proofType) => {
+  it.each([0, 9])("rejects unsupported proof type %i before any lookup", async (proofType) => {
     signedProof.message.proofType = proofType;
 
     await expect(validateGossipExecutionProof(chain, signedProof)).rejects.toMatchObject({
@@ -127,15 +127,15 @@ describe("validateGossipExecutionProof", () => {
     expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, proofType, 3)).toBe(false);
   });
 
-  it("ignores an assigned proof type this node cannot verify before any lookup", async () => {
-    signedProof.message.proofType = 4;
+  it("ignores a supported proof type this node cannot verify before any lookup", async () => {
+    signedProof.message.proofType = 8;
 
     await expect(validateGossipExecutionProof(chain, signedProof)).rejects.toMatchObject({
       action: GossipAction.IGNORE,
       type: {code: ExecutionProofErrorCode.PROOF_TYPE_NOT_VERIFIABLE},
     });
     expect(chain.forkChoice.getBlockHexDefaultStatus).not.toHaveBeenCalled();
-    expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 4, 3)).toBe(false);
+    expect(chain.seenExecutionProofs.isProverSeen(blockRootHex, 8, 3)).toBe(false);
   });
 
   it("ignores a proof whose payload is not available yet", async () => {

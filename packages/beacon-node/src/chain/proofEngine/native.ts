@@ -5,13 +5,14 @@ import {
   registerExecutionProofVerifier,
   verifyExecutionProof,
 } from "@chainsafe/lodestar-z/execution-proof-verifier";
-import {EXECUTION_PROOF_TYPES} from "@lodestar/params";
+import {EXECUTION_PROOF_TYPES, ExecutionProofZkvm} from "@lodestar/params";
 import {eip8025, ssz} from "@lodestar/types";
 import {LodestarError, fromHex, toHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {ExecutionProofVerificationKey, ProofEngine} from "./interface.js";
 
 export class NativeProofEngine implements ProofEngine {
+  readonly supportedProofTypes: ReadonlySet<eip8025.ProofType>;
   readonly verifiableProofTypes: ReadonlySet<eip8025.ProofType>;
 
   /** Each proof type can be registered only once per process. Failed registration does not roll back earlier keys. */
@@ -22,24 +23,12 @@ export class NativeProofEngine implements ProofEngine {
     if (!EXECUTION_PROOF_VERIFIER_AVAILABLE) {
       throw new LodestarError({code: "EXECUTION_PROOF_VERIFIER_UNAVAILABLE"});
     }
-    for (const {proofType, verificationKey} of keys) {
-      const assignment = EXECUTION_PROOF_TYPES.get(proofType);
-      if (assignment === undefined) {
-        throw new LodestarError({code: "EXECUTION_PROOF_TYPE_UNASSIGNED", proofType});
-      }
+    for (const {proofType, verificationKey, zkvm} of keys) {
       const key = fromHex(verificationKey);
-      const keyDigest = toHex(digest(key));
-      if (keyDigest !== assignment.verificationKeyDigest) {
-        throw new LodestarError({
-          code: "EXECUTION_PROOF_VERIFICATION_KEY_MISMATCH",
-          proofType,
-          expected: assignment.verificationKeyDigest,
-          actual: keyDigest,
-        });
-      }
-      registerExecutionProofVerifier(proofType, ZKVM_KIND[assignment.zkvm], key);
+      registerExecutionProofVerifier(proofType, ZKVM_KIND[zkvm ?? assignedZkvm(proofType, key)], key);
     }
     this.verifiableProofTypes = new Set(keys.map((key) => key.proofType));
+    this.supportedProofTypes = new Set([...EXECUTION_PROOF_TYPES.keys(), ...this.verifiableProofTypes]);
   }
 
   async verifyExecutionProof(proof: eip8025.ExecutionProof): Promise<boolean> {
@@ -57,6 +46,23 @@ export class NativeProofEngine implements ProofEngine {
       timer?.();
     }
   }
+}
+
+function assignedZkvm(proofType: eip8025.ProofType, key: Uint8Array): ExecutionProofZkvm {
+  const assignment = EXECUTION_PROOF_TYPES.get(proofType);
+  if (assignment === undefined) {
+    throw new LodestarError({code: "EXECUTION_PROOF_TYPE_UNASSIGNED", proofType});
+  }
+  const keyDigest = toHex(digest(key));
+  if (keyDigest !== assignment.verificationKeyDigest) {
+    throw new LodestarError({
+      code: "EXECUTION_PROOF_VERIFICATION_KEY_MISMATCH",
+      proofType,
+      expected: assignment.verificationKeyDigest,
+      actual: keyDigest,
+    });
+  }
+  return assignment.zkvm;
 }
 
 export async function verifyNativeExecutionProof(

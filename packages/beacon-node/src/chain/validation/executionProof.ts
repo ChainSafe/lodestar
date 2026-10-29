@@ -1,4 +1,3 @@
-import {EXECUTION_PROOF_TYPES} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   getExecutionProofEnvelopeSignatureSet,
@@ -37,8 +36,8 @@ export async function validateGossipExecutionProof(
     });
   }
 
-  // [REJECT] The proof type is supported (spec `get_supported_proof_types`)
-  if (!EXECUTION_PROOF_TYPES.has(proofType)) {
+  // [REJECT] The proof type is supported (spec `get_supported_proof_types` plus explicit assignments)
+  if (!chain.proofEngine.supportedProofTypes.has(proofType)) {
     throw new ExecutionProofError(GossipAction.REJECT, {
       code: ExecutionProofErrorCode.UNSUPPORTED_PROOF_TYPE,
       blockRoot,
