@@ -26,6 +26,7 @@ function blockFields(overrides: {
     unrealizedFinalizedRoot: "0",
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
 

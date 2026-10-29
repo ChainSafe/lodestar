@@ -153,7 +153,7 @@ Testing of a Release Candidate involves publishing an `-rc.X` version of the cod
 
 ### Tagging an RC
 
-Checkout the `rc/v1.XX.X` branch to get ready to tag. The following must be run from an account with write-access to push a tag.
+Checkout the `rc/v1.XX.X` branch to get ready to tag. The following must be run from an account with write-access to push a tag and a configured GPG signing key whose public key and email are verified by GitHub.
 
 Simply run `pnpm release:tag-rc 1.XX.X` where `1.XX.X` corresponds to the current release version (stable or hotfix both apply). The script will look for the most recent `-rc.x`, increment to the next version and then push the tag.
 
@@ -164,7 +164,8 @@ Simply run `pnpm release:tag-rc 1.XX.X` where `1.XX.X` corresponds to the curren
 
 - Look on GitHub for the most recent version of the `-rc.x`. Assume for this example its `v1.41.0-rc.2`
 - Mentally increment the RC to `-rc.3`
-- `git tag -am "v1.41.0-rc.3" v1.41.0-rc.3`
+- `git tag -s -a -m "v1.41.0-rc.3" v1.41.0-rc.3`
+- `git tag -v v1.41.0-rc.3`
 - `git push origin v1.41.0-rc.3`
 
 </details>
@@ -206,7 +207,7 @@ If there was any cherry-picking involved in the process of creating the release 
 
 The tagging process is the final step for actually getting the code out into the world. CI handles the full process and all that is necessary is to push a tag to GitHub.
 
-There are two methods for tagging a Stable Release. The script runs some additional checks to make sure that there are not any edge conditions that will cause a failed release. Both methods must be run from a write-access account that can push a tag.
+There are two methods for tagging a Stable Release. The script runs some additional checks to make sure that there are not any edge conditions that will cause a failed release. Both methods must be run from a write-access account that can push a tag and a configured GPG signing key whose public key and email are verified by GitHub.
 
 - [All-in-one script](#all-in-one-script)
 - [Manually tagging](#manually-tagging) (not recommended)
@@ -225,7 +226,8 @@ There are two methods for tagging a Stable Release. The script runs some additio
 
 - `git checkout stable`
 - `git pull` after merging the release PR
-- `git tag -am "v1.41.0" v1.41.0`
+- `git tag -s -a -m "v1.41.0" v1.41.0`
+- `git tag -v v1.41.0`
 - `git push origin v1.41.0`
 
 </details>

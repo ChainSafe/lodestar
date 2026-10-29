@@ -95,8 +95,8 @@ export class PtcDutiesService {
   }
 
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
-    const nextEpoch = epoch + 1;
-    if (!isForkPostGloas(this.config.getForkName(nextEpoch * SLOTS_PER_EPOCH))) {
+    // PTC duties of the first Gloas epoch only exist after the fork upgrade, they can't be polled one epoch ahead
+    if (!isForkPostGloas(this.config.getForkName(epoch * SLOTS_PER_EPOCH))) {
       return;
     }
 
@@ -171,19 +171,17 @@ export class PtcDutiesService {
     } else {
       const existingDuties = dutiesAtEpoch.dutiesByIndex;
       const existingDutiesCount = existingDuties.size;
-      const discoveredNewDuties = relevantDuties.length > existingDutiesCount;
-
-      if (discoveredNewDuties) {
-        for (const duty of relevantDuties) {
-          if (!existingDuties.has(duty.validatorIndex)) {
-            existingDuties.set(duty.validatorIndex, duty);
-          }
+      for (const duty of relevantDuties) {
+        if (!existingDuties.has(duty.validatorIndex)) {
+          existingDuties.set(duty.validatorIndex, duty);
         }
+      }
 
+      if (existingDuties.size > existingDutiesCount) {
         this.logger.debug("Discovered new PTC duties", {
           epoch,
           dependentRoot,
-          count: relevantDuties.length - existingDutiesCount,
+          count: existingDuties.size - existingDutiesCount,
         });
       }
     }
@@ -209,14 +207,17 @@ export class PtcDutiesService {
     }
 
     const currentEpochDependentRoot = this.dutiesByIndexByEpoch.get(currentEpoch)?.dependentRoot;
-    if (currentEpochDependentRoot && currentEpochDependentRoot !== previousDutyDependentRoot) {
+    // The fork epoch PTC depends on the last block of the previous epoch, which is the current duty dependent root
+    const headCurrentEpochDependentRoot =
+      currentEpoch === this.config.GLOAS_FORK_EPOCH ? currentDutyDependentRoot : previousDutyDependentRoot;
+    if (currentEpochDependentRoot && currentEpochDependentRoot !== headCurrentEpochDependentRoot) {
       this.logger.warn("Potential current epoch PTC duties reorg", {
         slot,
         dutyEpoch: currentEpoch,
         priorDependentRoot: currentEpochDependentRoot,
-        newDependentRoot: previousDutyDependentRoot,
+        newDependentRoot: headCurrentEpochDependentRoot,
       });
-      await this.handlePtcDutiesReorg(currentEpoch, slot, currentEpochDependentRoot, previousDutyDependentRoot);
+      await this.handlePtcDutiesReorg(currentEpoch, slot, currentEpochDependentRoot, headCurrentEpochDependentRoot);
     }
   };
 

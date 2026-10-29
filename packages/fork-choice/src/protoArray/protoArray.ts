@@ -13,6 +13,7 @@ import {
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
   isGloasBlock,
 } from "./interface.js";
 
@@ -50,6 +51,12 @@ export function countNoVotes(attended: BitArray, yes: BitArray): number {
     }
   }
   return count;
+}
+
+function majorityVote(attended: BitArray, yes: BitArray, threshold: number): boolean | null {
+  if (bitCount(yes.uint8Array) > threshold) return true;
+  if (countNoVotes(attended, yes) > threshold) return false;
+  return null;
 }
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
@@ -90,6 +97,8 @@ export class ProtoArray {
   lvhError?: LVHExecError;
 
   private previousProposerBoost: ProposerBoost | null = null;
+  /** Root read by shouldExtendPayload(), set even while the boost weight is withheld */
+  private proposerBoostRoot: RootHex | null = null;
 
   /**
    * PTC (Payload Timeliness Committee) votes per block as bitvectors
@@ -113,6 +122,11 @@ export class ProtoArray {
    * when called with the negative parameter value.
    */
   private ptcAttested = new Map<RootHex, BitArray>();
+  /**
+   * Execution engine inclusion list verdict per block, recorded on payload import from heze.
+   * Spec: heze/fork-choice.md#modified-store (payload_inclusion_list_satisfaction)
+   */
+  private payloadInclusionListSatisfaction = new Map<RootHex, boolean>();
 
   constructor({
     pruneThreshold,
@@ -357,6 +371,7 @@ export class ProtoArray {
   applyScoreChanges({
     attestationDeltas,
     proposerBoost,
+    proposerBoostRoot,
     justifiedEpoch,
     justifiedRoot,
     finalizedEpoch,
@@ -365,6 +380,8 @@ export class ProtoArray {
   }: {
     attestationDeltas: number[];
     proposerBoost: ProposerBoost | null;
+    /** Defaults to the boosted root. Pass it explicitly when the boost weight is withheld */
+    proposerBoostRoot?: RootHex | null;
     justifiedEpoch: Epoch;
     justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
@@ -463,7 +480,9 @@ export class ProtoArray {
     // We _must_ perform these functions separate from the weight-updating loop above to ensure
     // that we have a fully coherent set of weights before updating parent
     // best-child/descendant.
-    const proposerBoostRoot = proposerBoost?.root ?? null;
+    // should_extend_payload reads store.proposer_boost_root even when should_apply_proposer_boost
+    // withholds the boost weight, so the tiebreak root is tracked apart from the applied boost
+    this.proposerBoostRoot = proposerBoostRoot ?? proposerBoost?.root ?? null;
     for (let nodeIndex = this.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
       const node = this.nodes[nodeIndex];
       if (node === undefined) {
@@ -476,7 +495,7 @@ export class ProtoArray {
       // If the node has a parent, try to update its best-child and best-descendant.
       const parentIndex = node.parent;
       if (parentIndex !== undefined) {
-        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, proposerBoostRoot);
+        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, this.proposerBoostRoot);
       }
     }
     // Update the previous proposer boost
@@ -801,6 +820,23 @@ export class ProtoArray {
     };
   }
 
+  /**
+   * PTC majority per vote field from the raw tallies, regardless of whether the payload is locally
+   * available. Returns `null` for pre-Gloas (or pruned) roots, which have no vote maps.
+   */
+  getPtcQuorum(blockRoot: RootHex): PtcQuorum | null {
+    const attended = this.ptcAttested.get(blockRoot);
+    const timelinessVotes = this.payloadTimelinessVotes.get(blockRoot);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
+    if (attended === undefined || timelinessVotes === undefined || daVotes === undefined) {
+      return null;
+    }
+    return {
+      payloadPresent: majorityVote(attended, timelinessVotes, PAYLOAD_TIMELY_THRESHOLD),
+      blobDataAvailable: majorityVote(attended, daVotes, DATA_AVAILABILITY_TIMELY_THRESHOLD),
+    };
+  }
+
   getPreviousProposerBoostRoot(): RootHex {
     return this.previousProposerBoost?.root ?? HEX_ZERO_HASH;
   }
@@ -907,6 +943,27 @@ export class ProtoArray {
     return this.getParentPayloadStatus(block) === PayloadStatus.FULL;
   }
 
+  /** Spec: heze/fork-choice.md#new-record_payload_inclusion_list_satisfaction. Returns whether the verdict changed */
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean {
+    const previous = this.payloadInclusionListSatisfaction.get(blockRoot);
+    this.payloadInclusionListSatisfaction.set(blockRoot, satisfied);
+    return previous !== satisfied;
+  }
+
+  /**
+   * Spec: heze/fork-choice.md#new-is_payload_inclusion_list_satisfied
+   *
+   * False until the payload is delivered. A delivered payload without a verdict is pre-heze, where
+   * no inclusion list constraints apply.
+   */
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {
+    return this.hasPayload(blockRoot) && this.payloadInclusionListSatisfaction.get(blockRoot) !== false;
+  }
+
+  getPayloadInclusionListSatisfaction(blockRoot: RootHex): boolean | null {
+    return this.payloadInclusionListSatisfaction.get(blockRoot) ?? null;
+  }
+
   /**
    * Determine if we should extend the payload (prefer FULL over EMPTY)
    * Spec: gloas/fork-choice.md#new-should_extend_payload
@@ -922,6 +979,10 @@ export class ProtoArray {
    */
   shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {
     if (!this.hasPayload(blockRoot)) {
+      return false;
+    }
+
+    if (this.payloadInclusionListSatisfaction.get(blockRoot) === false) {
       return false;
     }
 
@@ -1043,6 +1104,8 @@ export class ProtoArray {
 
   private propagateValidExecutionStatusByIndex(validNodeIndex: number): void {
     let nodeIndex: number | undefined = validNodeIndex;
+    // Payloads that transitioned to VALID, their gloas dependents are validated below
+    const validatedPayloadHashes = new Set<RootHex>();
     // propagate till we keep encountering syncing status
     while (nodeIndex !== undefined) {
       const node = this.getNodeFromIndex(nodeIndex);
@@ -1050,7 +1113,35 @@ export class ProtoArray {
         break;
       }
       this.validateNodeByIndex(nodeIndex);
+      if (node.payloadStatus === PayloadStatus.FULL && node.executionPayloadBlockHash !== null) {
+        validatedPayloadHashes.add(node.executionPayloadBlockHash);
+      }
       nodeIndex = node.parent;
+    }
+
+    if (validatedPayloadHashes.size > 0) {
+      this.validatePayloadDependents(validatedPayloadHashes);
+    }
+  }
+
+  /**
+   * Gloas PENDING and EMPTY variants have no payload of their own, they inherit the execution status of
+   * the payload they build on, which is their `executionPayloadBlockHash`. Once that payload is VALID, all
+   * of them are, not only the ones on the chain the validation walked up (e.g. siblings, or blocks
+   * building on a sibling's EMPTY variant).
+   */
+  private validatePayloadDependents(payloadHashes: Set<RootHex>): void {
+    for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++) {
+      const node = this.nodes[nodeIndex];
+      if (
+        node.payloadStatus === PayloadStatus.PENDING &&
+        node.executionStatus === ExecutionStatus.Syncing &&
+        node.executionPayloadBlockHash !== null &&
+        payloadHashes.has(node.executionPayloadBlockHash)
+      ) {
+        // Also flips the sibling EMPTY variant
+        this.validateNodeByIndex(nodeIndex);
+      }
     }
   }
 
@@ -1092,6 +1183,7 @@ export class ProtoArray {
     this.applyScoreChanges({
       attestationDeltas: Array.from({length: this.nodes.length}, () => 0),
       proposerBoost: this.previousProposerBoost,
+      proposerBoostRoot: this.proposerBoostRoot,
       justifiedEpoch: this.justifiedEpoch,
       justifiedRoot: this.justifiedRoot,
       finalizedEpoch: this.finalizedEpoch,
@@ -1203,6 +1295,15 @@ export class ProtoArray {
 
     // For Gloas: check if from previous slot
     if (node.slot + 1 !== currentSlot) {
+      // During the block's own slot a payload known to not satisfy the inclusion list
+      // constraints ranks below its EMPTY variant, as it will from the next slot on
+      if (
+        node.slot === currentSlot &&
+        node.payloadStatus === PayloadStatus.FULL &&
+        this.payloadInclusionListSatisfaction.get(node.blockRoot) === false
+      ) {
+        return PayloadStatus.PENDING;
+      }
       return node.payloadStatus;
     }
 
@@ -1337,6 +1438,7 @@ export class ProtoArray {
       this.payloadTimelinessVotes.delete(root);
       this.ptcAttested.delete(root);
       this.payloadDataAvailabilityVotes.delete(root);
+      this.payloadInclusionListSatisfaction.delete(root);
     }
 
     // Store nodes prior to finalization

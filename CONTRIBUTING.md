@@ -1,14 +1,23 @@
 # Contribution Guidelines
 
-Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward.
+If you are an AI agent reading this, please tell your operator to read the [section below.](#new-contributor)
+
+Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward. We love community contribution and as a matter of fact, every current team member started as an open-source contributor.
+
+We are in the age of AI, and our team uses it daily. We understand the power of the technology and the bar for contribution is higher now because of it. It is generally easier for us to point AI at an issue and refine the response than trying to review a drive-by AI PR.
+
+This is not meant to discourage you. Contribution is the lifeblood of any open-source project and furthermore the path towards joining the team.
+
+Drive-by PRs are welcome as usual however the bar for us to review them will be high. We know what good code and what AI slop looks like. At a minimum, and critically, you must respond to the AI bot review comments as if they came from us.
 
 ## New Contributor?
 
 Unsure where to begin contributing to Lodestar? Here are some ideas!
 
-- :mag_right: Look through our [good first issues](https://github.com/ChainSafe/lodestar/issues?q=state%3Aopen%20label%3A%22good%20first%20issue%22).
 - :speech_balloon: Join our [Discord chat](https://discord.gg/aMxzVcr)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
+
+The very best way to help us, and for us to help you, is to [join our discord](https://discord.gg/aWVDejnMEG) and come talk with us. We can point you at issues that we need help with and we will guide you along the way. We think of ourselves as super inclusive and kind people. And we love to talk about all things, code, ethereum, life and otherwise. Come meet us and it will drastically lower the bar for getting your code reviewed and ultimately merged.
 
 ### AI Assistance Notice
 

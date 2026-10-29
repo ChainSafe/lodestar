@@ -93,6 +93,32 @@ describe("cmds / beacon / args handler", () => {
     // Okay to hardcode, since this value will never change
     expect(network).toBe(networkName);
   });
+
+  it("accepts native Gloas and rejects a scheduled unsupported Heze fork", async () => {
+    const paramsFile = path.join(testFilesDir, "gloas_config.yaml");
+    fs.writeFileSync(paramsFile, JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100})));
+
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).resolves.toBeDefined();
+    fs.writeFileSync(
+      paramsFile,
+      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: 200}))
+    );
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).rejects.toThrow(
+      "--chain.nativeStateTransition does not support Heze"
+    );
+    await expect(runBeaconHandlerInit({paramsFile})).resolves.toBeDefined();
+    await expect(runBeaconHandlerInit({"chain.nativeStateTransition": true})).resolves.toBeDefined();
+  });
+
+  it("resolves the data column directory independently of the database directory", async () => {
+    const customDbDir = path.join(testFilesDir, "custom-db");
+    const defaultResult = await runBeaconHandlerInit({dbDir: customDbDir});
+    expect(defaultResult.beaconPaths.dataColumnDir).toBe(path.join(testFilesDir, "data_columns"));
+
+    const customDataColumnDir = path.join(testFilesDir, "custom-columns");
+    const customResult = await runBeaconHandlerInit({dataColumnDir: customDataColumnDir});
+    expect(customResult.beaconPaths.dataColumnDir).toBe(customDataColumnDir);
+  });
 });
 
 describe("Test isLocalMultiAddr", () => {

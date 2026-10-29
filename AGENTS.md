@@ -127,7 +127,7 @@ pnpm vitest run test/unit/chain/validation/block.test.ts
 
 ## Code style
 
-Lodestar uses [Biome](https://biomejs.dev/) for linting and formatting.
+Lodestar uses [Biome](https://biomejs.dev/) for linting and formatting TypeScript, Markdown and YAML.
 
 ### General conventions
 
@@ -374,8 +374,7 @@ Before pushing any commit, run only the checks relevant to the changed files and
 3. Targeted tests for the changed behavior, when applicable. Do not run the full `pnpm test:unit` suite
    by default; reserve it for broad changes that cannot be covered adequately by targeted tests or when
    explicitly requested
-4. `pnpm docs:lint` — if you edited any `.md` files, check Prettier formatting
-5. No edits in `packages/*/lib/` — these are build outputs; edit `src/` instead
+4. No edits in `packages/*/lib/` — these are build outputs; edit `src/` instead
 
 ## Common tasks
 

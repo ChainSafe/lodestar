@@ -3,9 +3,10 @@ import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/ben
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPreDeneb, SLOTS_PER_EPOCH, isForkPostDeneb} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
-import {getNetworkCachedBlock, getNetworkCachedState, rangeSyncTest} from "@lodestar/state-transition/test-utils";
+import {rangeSyncTest} from "@lodestar/state-transition/test-utils";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
@@ -16,6 +17,7 @@ import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {beforeValue} from "../../utils/beforeValueBenchmark.js";
+import {getNetworkCachedBlock, getNetworkCachedState} from "../../utils/networkCachedStateAndBlock.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -40,7 +42,10 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       throw Error("startSlot must be the first slot in the epoch");
     }
 
-    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
+    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}), {
+      dataColumnDir: ".tmpdb-data-columns",
+      logger,
+    });
   });
 
   afterAll(async () => {
@@ -53,7 +58,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       Promise.all(
         // Start at next slot, since the parent of current state's header is not known
         linspace(startSlot + 1, endSlot).map(async (slot) =>
-          getNetworkCachedBlock(network, slot, timeoutInfura).catch((e: unknown) => {
+          getNetworkCachedBlock(network, slot).catch((e: unknown) => {
             (e as Error).message = `slot ${slot} - ${(e as Error).message}`;
             throw e;
           })
@@ -63,7 +68,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
   );
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(network, startSlot, timeoutInfura);
+    const state = await getNetworkCachedState(network, startSlot);
     state.hashTreeRoot();
     return state;
   }, timeoutInfura);
@@ -101,6 +106,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           validatorMonitor: null,
           anchorState: new BeaconStateView(state),
           isAnchorStateFinalized: true,
+          earliestAvailableSlot: state.slot,
           executionEngine: new ExecutionEngineDisabled(),
         }
       );
@@ -116,8 +122,11 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
         );
         const forkName = chain.config.getForkName(block.message.slot);
+        if (isForkPostDeneb(forkName)) {
+          throw Error("This pre-Deneb range sync benchmark does not support data sidecars");
+        }
         return BlockInputPreData.createFromBlock({
-          block,
+          block: block as SignedBeaconBlock<ForkPreDeneb>,
           blockRootHex,
           forkName,
           daOutOfRange: true,

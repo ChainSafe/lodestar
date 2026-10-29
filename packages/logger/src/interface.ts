@@ -1,8 +1,8 @@
 import {LEVEL, MESSAGE} from "triple-beam";
 import {LogData, LogHandler, LogLevel, Logger} from "@lodestar/utils";
 
-export {LogLevel, LEVEL, MESSAGE};
-export type {Logger, LogHandler, LogData};
+export type {LogData, LogHandler, Logger};
+export {LEVEL, LogLevel, MESSAGE};
 
 export const logLevelNum: {[K in LogLevel]: number} = {
   [LogLevel.error]: 0,
@@ -23,6 +23,8 @@ export type EpochSlotOpts = {
   genesisTime: number;
   secondsPerSlot: number;
   slotsPerEpoch: number;
+  /** Slot durations by activation epoch, ascending */
+  slotDurations?: [epoch: number, secondsPerSlot: number][];
 };
 export enum TimestampFormatCode {
   DateRegular = "regular",

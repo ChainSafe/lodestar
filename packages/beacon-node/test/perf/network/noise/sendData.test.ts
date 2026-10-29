@@ -22,6 +22,9 @@ describe("network / noise / sendData", () => {
   ]) {
     bench({
       id: `send data - ${numberOfMessages} ${messageLength}B messages`,
+      // Large messages allocate enough short-lived buffers (~64MB at 65536B) that GC/event-loop
+      // noise on the shared runner dominates timing, causing false regressions on those sizes.
+      threshold: messageLength >= 2 ** 12 ? 10 : undefined,
       beforeEach: async () => {
         const privateKeyA = await generateKeyPair("secp256k1");
         const privateKeyB = await generateKeyPair("secp256k1");

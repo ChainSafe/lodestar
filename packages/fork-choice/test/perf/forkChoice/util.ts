@@ -162,6 +162,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionStatus: gloasBoosted ? ExecutionStatus.Valid : ExecutionStatus.PreMerge,
 
       timeliness: false,
+      importedTimely: false,
       ptcTimeliness: false,
       proposerIndex: 0,
       dataAvailabilityStatus: gloasBoosted ? DataAvailabilityStatus.Available : DataAvailabilityStatus.PreData,

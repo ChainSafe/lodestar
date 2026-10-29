@@ -74,6 +74,7 @@ export async function getNetworkForTest(
       pubkeyCache,
       db,
       dataDir: ".",
+      dataColumnDir: "data_columns",
       dbName: ".",
       logger,
       processShutdownCallback: () => {},
@@ -87,6 +88,7 @@ export async function getNetworkForTest(
       validatorMonitor: null,
       anchorState: new BeaconStateView(cachedState),
       isAnchorStateFinalized: true,
+      earliestAvailableSlot: cachedState.slot,
       executionEngine: new ExecutionEngineDisabled(),
     }
   );

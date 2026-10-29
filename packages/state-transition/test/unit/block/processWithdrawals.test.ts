@@ -1,7 +1,13 @@
 import {describe, expect, it} from "vitest";
-import {ForkSeq} from "@lodestar/params";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
+import {ForkName, ForkSeq, PAYLOAD_BUILDER_VERSION, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
+import {createCachedBeaconState} from "../../../src/index.js";
 import {numValidators} from "../../../src/testUtils/util.js";
+import {CachedBeaconStateGloas} from "../../../src/types.js";
 import {beforeValue} from "../../utils/beforeValue.js";
 import {WithdrawalOpts, getExpectedWithdrawalsTestData} from "../../utils/capella.js";
 
@@ -44,4 +50,44 @@ describe("getExpectedWithdrawals", () => {
       expect(expectedWithdrawals.length).toBe(opts.withdrawals);
     });
   }
+});
+
+describe("getExpectedWithdrawals builder sweep", () => {
+  it("sweeps the balance left after the builder's pending withdrawal in the same payload", () => {
+    const config = getConfig(ForkName.gloas);
+    const view = ssz.gloas.BeaconState.defaultViewDU();
+    view.slot = 2 * SLOTS_PER_EPOCH;
+    view.fork = ssz.phase0.Fork.toViewDU({
+      previousVersion: config.GENESIS_FORK_VERSION,
+      currentVersion: config.GLOAS_FORK_VERSION,
+      epoch: 0,
+    });
+    view.builders.push(
+      ssz.gloas.Builder.toViewDU({
+        pubkey: Buffer.alloc(48, 1),
+        version: PAYLOAD_BUILDER_VERSION,
+        executionAddress: Buffer.alloc(20, 2),
+        balance: 5_000_000_000,
+        depositEpoch: 0,
+        withdrawableEpoch: 2,
+      })
+    );
+    view.builderPendingWithdrawals.push(
+      ssz.gloas.BuilderPendingWithdrawal.toViewDU({
+        feeRecipient: Buffer.alloc(20, 5),
+        amount: 1_000_000_000,
+        builderIndex: 0,
+      })
+    );
+    view.commit();
+    const state = createCachedBeaconState(
+      view,
+      {config: createBeaconConfig(config, view.genesisValidatorsRoot), pubkeyCache},
+      {skipSyncCommitteeCache: true}
+    ) as CachedBeaconStateGloas;
+
+    const {expectedWithdrawals} = getExpectedWithdrawals(ForkSeq.gloas, state);
+
+    expect(expectedWithdrawals.map((withdrawal) => withdrawal.amount)).toEqual([1_000_000_000n, 4_000_000_000n]);
+  });
 });

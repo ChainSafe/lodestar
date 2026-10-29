@@ -77,7 +77,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   it("should send/receive signed blocks", async () => {
     const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
-    const blocks: phase0.SignedBeaconBlock[] = [];
+    const blocks: SignedBeaconBlock[] = [];
     for (let slot = req.startSlot; slot < req.count; slot++) {
       const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
       block.message.slot = slot;
@@ -101,7 +101,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     expect(returnedBlocks).toHaveLength(req.count);
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
-      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).toBe(true);
+      expect(config.getForkTypes(returnedBlock.message.slot).SignedBeaconBlock.equals(returnedBlock, blocks[i])).toBe(
+        true
+      );
     }
   });
 

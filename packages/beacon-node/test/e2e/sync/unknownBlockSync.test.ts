@@ -238,7 +238,6 @@ describe("sync / unknown block sync thru gloas", () => {
         case ChainEvent.unknownEnvelopeBlockRoot:
           bn2.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
             rootHex: headRootHex,
-            slot: headSlot,
             peer: sourcePeerId,
             source: BlockInputSource.gossip,
           });
@@ -282,7 +281,7 @@ describe("sync / unknown block sync thru gloas", () => {
 
       // for incompletePayloadEnvelope the trigger is in the second switch above
       // so we have to assert payload import at the end
-      if (waitForPayloadImported) {
+      if (waitForPayloadImported !== undefined) {
         await waitForPayloadImported;
       }
     });

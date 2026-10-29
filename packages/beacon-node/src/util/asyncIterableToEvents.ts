@@ -6,6 +6,10 @@ export type RequestEvent<T> = {
   id: number;
 };
 
+export type RequestCancelEvent = {
+  id: number;
+};
+
 export enum IteratorEventType {
   next = "iterator.next",
   done = "iterator.done",
@@ -19,8 +23,10 @@ export type IteratorEvent<V> =
 
 export type AsyncIterableEventBus<Args, Item> = {
   emitRequest(data: RequestEvent<Args>): void;
+  emitRequestCancel(data: RequestCancelEvent): void;
   emitResponse(data: IteratorEvent<Item>): void;
   onRequest(handler: (data: RequestEvent<Args>) => void): void;
+  onRequestCancel(handler: (data: RequestCancelEvent) => void): void;
   onResponse(handler: (data: IteratorEvent<Item>) => void): void;
 };
 
@@ -37,7 +43,9 @@ export class AsyncIterableBridgeCaller<Args, Item> {
   // TODO: Consider expiring the requests after no reply for long enough, t
   private readonly pending = new Map<number, PendingItem<Item>>();
 
-  constructor(private readonly events: Pick<AsyncIterableEventBus<Args, Item>, "onResponse" | "emitRequest">) {
+  constructor(
+    private readonly events: Pick<AsyncIterableEventBus<Args, Item>, "onResponse" | "emitRequest" | "emitRequestCancel">
+  ) {
     events.onResponse(this.onResponse.bind(this));
   }
 
@@ -89,7 +97,10 @@ export class AsyncIterableBridgeCaller<Args, Item> {
 
           async return() {
             // This will be reached if the consumer called 'break' or 'return' early in the loop.
-            self.pending.delete(id);
+            // Without the cancel the handler keeps producing items that cross the thread boundary just to be dropped
+            if (self.pending.delete(id)) {
+              self.events.emitRequestCancel({id});
+            }
             return {value: undefined, done: true};
           },
         };
@@ -132,20 +143,35 @@ export class AsyncIterableBridgeCaller<Args, Item> {
 }
 
 export class AsyncIterableBridgeHandler<Args, Item> {
+  private readonly iterators = new Map<number, AsyncIterator<Item>>();
+
   constructor(
-    private readonly events: Pick<AsyncIterableEventBus<Args, Item>, "onRequest" | "emitResponse">,
+    private readonly events: Pick<AsyncIterableEventBus<Args, Item>, "onRequest" | "onRequestCancel" | "emitResponse">,
     private readonly handler: (args: Args) => AsyncIterable<Item>
   ) {
     events.onRequest(this.onRequest.bind(this));
+    events.onRequestCancel(this.onRequestCancel.bind(this));
+  }
+
+  get iteratingCount(): number {
+    return this.iterators.size;
   }
 
   private async onRequest(data: RequestEvent<Args>): Promise<void> {
     try {
-      for await (const item of this.handler(data.callArgs)) {
+      const iterator = this.handler(data.callArgs)[Symbol.asyncIterator]();
+      this.iterators.set(data.id, iterator);
+
+      while (true) {
+        const result = await iterator.next();
+        if (result.done) {
+          break;
+        }
+
         this.events.emitResponse({
           type: IteratorEventType.next,
           id: data.id,
-          item,
+          item: result.value,
         });
       }
 
@@ -159,6 +185,19 @@ export class AsyncIterableBridgeHandler<Args, Item> {
         id: data.id,
         error: toThreadBoundaryError(e as Error),
       });
+    } finally {
+      this.iterators.delete(data.id);
     }
+  }
+
+  private onRequestCancel(data: RequestCancelEvent): void {
+    const iterator = this.iterators.get(data.id);
+    if (!iterator?.return) {
+      return;
+    }
+
+    // An async generator queues return() behind the next() that is in flight, so at most one more
+    // item is produced before its finally blocks run. Any error surfaces through that next() call.
+    void iterator.return().catch(() => {});
   }
 }

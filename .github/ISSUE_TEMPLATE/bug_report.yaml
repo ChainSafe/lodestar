@@ -10,7 +10,7 @@ body:
       description: A clear and concise description of what the bug is and steps to reproduce it.
       placeholder: This is what I'm seeing.
     validations:
-      required: true   
+      required: true
   - type: textarea
     id: expected
     attributes:
@@ -55,7 +55,7 @@ body:
     id: version
     attributes:
       label: Lodestar version or commit hash
-      description: Which version or commit hash of Lodestar are you running? 
+      description: Which version or commit hash of Lodestar are you running?
       placeholder: v1.8.0 or a4b29cf
     validations:
       required: true

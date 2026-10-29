@@ -273,7 +273,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.selection": {
     type: "string",
     description:
-      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `executionalways`, or pre-Gloas `executiononly`",
+      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `executionalways`, or `executiononly`",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
@@ -296,7 +296,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "builder.urls": {
     description:
-      "URL(s) of external builders to request execution payload bids from. Auth data agreed with a builder may be appended as a hex fragment, e.g. https://builder.example.com#0x0123, otherwise the UTF-8 bytes of the URL are used. Only used post-Gloas",
+      "URL(s) of external builders to request execution payload bids from. Auth data agreed with a builder may be appended as a hex fragment, e.g. https://builder.example.com#0x0123, otherwise the hostname of the URL is used. Only used post-Gloas",
     type: "array",
     string: true,
     coerce: (urls: string[]): string[] => urls.flatMap((url) => url.split(",")),
@@ -473,9 +473,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     string: true, // Ensures the pubkey string is not automatically converted to numbers
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-      pubkeys
-        .flatMap((item) => item.split(","))
-        .map(ensure0xPrefix),
+      pubkeys.flatMap((item) => item.split(",")).map(ensure0xPrefix),
     group: "externalSigner",
   },
 
@@ -575,9 +573,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "array",
     coerce: (indexes: string[]): number[] =>
       // Parse ["11..13,15..17"] to ["11..13", "15..17"]
-      indexes
-        .flatMap((item) => item.split(","))
-        .flatMap(parseRange),
+      indexes.flatMap((item) => item.split(",")).flatMap(parseRange),
   },
 
   fromMnemonic: {
@@ -592,8 +588,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "array",
     coerce: (indexes: string[]): number[] =>
       // Parse ["11..13,15..17"] to ["11..13", "15..17"]
-      indexes
-        .flatMap((item) => item.split(","))
-        .flatMap(parseRange),
+      indexes.flatMap((item) => item.split(",")).flatMap(parseRange),
   },
 };

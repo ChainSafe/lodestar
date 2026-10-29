@@ -23,6 +23,7 @@ export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
+export {ts as eip8025} from "./eip8025/index.js";
 export {ts as electra} from "./electra/index.js";
 export {ts as fulu} from "./fulu/index.js";
 export {ts as gloas} from "./gloas/index.js";
@@ -121,6 +122,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: bellatrix.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: bellatrix.SignedBlindedBeaconBlock;
     ExecutionPayload: bellatrix.ExecutionPayload;
+    NewPayloadRequest: bellatrix.NewPayloadRequest;
     ExecutionPayloadHeader: bellatrix.ExecutionPayloadHeader;
     BuilderBid: bellatrix.BuilderBid;
     SignedBuilderBid: bellatrix.SignedBuilderBid;
@@ -156,6 +158,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: capella.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: capella.SignedBlindedBeaconBlock;
     ExecutionPayload: capella.ExecutionPayload;
+    NewPayloadRequest: capella.NewPayloadRequest;
     ExecutionPayloadHeader: capella.ExecutionPayloadHeader;
     BuilderBid: capella.BuilderBid;
     SignedBuilderBid: capella.SignedBuilderBid;
@@ -191,6 +194,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: deneb.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: deneb.SignedBlindedBeaconBlock;
     ExecutionPayload: deneb.ExecutionPayload;
+    NewPayloadRequest: deneb.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: deneb.BuilderBid;
     SignedBuilderBid: deneb.SignedBuilderBid;
@@ -228,6 +232,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
     ExecutionPayload: deneb.ExecutionPayload;
+    NewPayloadRequest: electra.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
@@ -266,6 +271,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
     ExecutionPayload: deneb.ExecutionPayload;
+    NewPayloadRequest: electra.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
@@ -306,12 +312,13 @@ type TypesByFork = {
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
     ExecutionPayload: gloas.ExecutionPayload;
+    NewPayloadRequest: gloas.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: gloas.SSEPayloadAttributes;
     BlockContents: gloas.BlockContents;
-    SignedBlockContents: fulu.SignedBlockContents;
+    SignedBlockContents: gloas.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
@@ -347,12 +354,13 @@ type TypesByFork = {
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
     ExecutionPayload: gloas.ExecutionPayload;
+    NewPayloadRequest: gloas.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: heze.SSEPayloadAttributes;
     BlockContents: heze.BlockContents;
-    SignedBlockContents: fulu.SignedBlockContents;
+    SignedBlockContents: heze.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
@@ -394,6 +402,7 @@ export type SignedBlockContents<F extends ForkAll = ForkAll> = TypesByFork[F]["S
 export type SignedOrUnsignedBlockContents<F extends ForkAll = ForkAll> = BlockContents<F> | SignedBlockContents<F>;
 
 export type ExecutionPayload<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["ExecutionPayload"];
+export type NewPayloadRequest<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["NewPayloadRequest"];
 export type ExecutionPayloadHeader<F extends ForkPostBellatrix = ForkPostBellatrix> =
   TypesByFork[F]["ExecutionPayloadHeader"];
 export type ExecutionRequests<F extends ForkPostElectra = ForkPostElectra> = TypesByFork[F]["ExecutionRequests"];

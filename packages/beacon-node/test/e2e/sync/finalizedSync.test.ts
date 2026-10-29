@@ -40,6 +40,8 @@ describe("sync / finalized sync for gloas", () => {
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
+    // Cleanups run in reverse registration order. Register beacon nodes before
+    // the validator clients that depend on them so validators stop first.
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
@@ -90,9 +92,6 @@ describe("sync / finalized sync for gloas", () => {
 
     afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
 
-    // stop beacon node after validators
-    afterEachCallbacks.push(() => bn.close());
-
     await Promise.all([
       waitForEvent<phase0.Checkpoint>(
         bn.chain.emitter,
@@ -123,7 +122,6 @@ describe("sync / finalized sync for gloas", () => {
     });
     loggerNodeA.info("Node B created");
 
-    afterEachCallbacks.push(() => bn2.close());
     afterEachCallbacks.push(() => bn2.close());
 
     const headSummary = bn.chain.forkChoice.getHead();

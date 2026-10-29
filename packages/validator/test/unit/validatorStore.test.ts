@@ -5,16 +5,19 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {getConfig} from "@lodestar/config/test-utils";
 import {
   BUILDER_INDEX_SELF_BUILD,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_BUILDER_REQUEST_AUTH,
+  ForkName,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {ZERO_HASH, computeDomain, computeSigningRoot} from "@lodestar/state-transition";
+import {ZERO_HASH, computeDomain, computeEpochAtSlot, computeSigningRoot} from "@lodestar/state-transition";
 import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
-import {getApiClientStub} from "../utils/apiStub.js";
+import {InvalidBlockErrorCode} from "../../src/slashingProtection/index.js";
+import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
 import {getMockedLogger} from "../utils/logger.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
 
@@ -53,6 +56,40 @@ describe("ValidatorStore", () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+  });
+
+  describe.each([false, true])("signBlock blinded=%s", (blinded) => {
+    beforeEach(async () => {
+      validatorStore = await initValidatorStore(secretKeys, api, {
+        ...chainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+      });
+    });
+
+    for (const blockSlot of [31, 33]) {
+      it(`rejects block slot ${blockSlot} for duty slot 32`, async () => {
+        const block = blinded ? ssz.fulu.BlindedBeaconBlock.defaultValue() : ssz.fulu.BeaconBlock.defaultValue();
+        block.slot = blockSlot;
+
+        await expect(validatorStore.signBlock(pubkeys[0], block, 32)).rejects.toMatchObject({
+          type: {code: InvalidBlockErrorCode.SLOT_MISMATCH, slot: blockSlot, dutySlot: 32},
+        });
+      });
+    }
+
+    it("signs a block matching the duty slot", async () => {
+      const block = blinded ? ssz.fulu.BlindedBeaconBlock.defaultValue() : ssz.fulu.BeaconBlock.defaultValue();
+      block.slot = 32;
+
+      const signedBlock = await validatorStore.signBlock(pubkeys[0], block, 32);
+      expect(signedBlock.message).toEqual(block);
+      expect(signedBlock.signature).toHaveLength(96);
+    });
   });
 
   it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", async () => {
@@ -115,9 +152,9 @@ describe("ValidatorStore", () => {
       selection: routes.validator.BuilderSelection.Default,
       boostFactor: BigInt(90),
     });
-    // Post-gloas executiononly is a backwards-compatible alias for executionalways
+    // Post-gloas executiononly is honored to never use builder bids
     expect(gloasStore.getBuilderSelectionParams(toHexString(pubkeys[0]), gloasSlot)).toEqual({
-      selection: routes.validator.BuilderSelection.ExecutionAlways,
+      selection: routes.validator.BuilderSelection.ExecutionOnly,
       boostFactor: BigInt(0),
     });
 
@@ -261,6 +298,54 @@ describe("ValidatorStore", () => {
     expect(toHexString(otherSlot)).not.toBe(toHexString(signingRoot));
   });
 
+  it("Should only sign an attestation with a target epoch matching the attestation slot", async () => {
+    const slot = 2 * SLOTS_PER_EPOCH + 1;
+    const epoch = computeEpochAtSlot(slot);
+    const duty: routes.validator.AttesterDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: 0,
+      committeeIndex: 0,
+      committeeLength: 1,
+      committeesAtSlot: 1,
+      validatorCommitteeIndex: 0,
+      slot,
+    };
+    const data = {...ssz.phase0.AttestationData.defaultValue(), slot};
+
+    await expect(
+      validatorStore.signAttestation(duty, {...data, target: {epoch: epoch - 1, root: ZERO_HASH}}, epoch)
+    ).rejects.toThrow("Inconsistent attestation data during signing");
+    await expect(
+      validatorStore.signAttestation(duty, {...data, target: {epoch, root: ZERO_HASH}}, epoch)
+    ).resolves.toBeDefined();
+  });
+
+  it("Should not sign an aggregate for a validator that is not doppelganger safe", async () => {
+    const slot = 2 * SLOTS_PER_EPOCH + 1;
+    const duty: routes.validator.AttesterDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: 0,
+      committeeIndex: 0,
+      committeeLength: 1,
+      committeesAtSlot: 1,
+      validatorCommitteeIndex: 0,
+      slot,
+    };
+    const aggregate = ssz.phase0.Attestation.defaultValue();
+    aggregate.data = {
+      ...ssz.phase0.AttestationData.defaultValue(),
+      slot,
+      target: {epoch: computeEpochAtSlot(slot), root: ZERO_HASH},
+    };
+    const selectionProof = new Uint8Array(96);
+
+    await expect(validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)).resolves.toBeDefined();
+    vi.spyOn(validatorStore, "isDoppelgangerSafe").mockReturnValue(false);
+    await expect(validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)).rejects.toThrow(
+      "Doppelganger state"
+    );
+  });
+
   it("Should reject builder request auth data with invalid length", async () => {
     await expect(validatorStore.signBuilderRequestAuth(pubkeys[0], new Uint8Array(0), 10)).rejects.toThrow();
     await expect(validatorStore.signBuilderRequestAuth(pubkeys[0], new Uint8Array(4097), 10)).rejects.toThrow();
@@ -284,7 +369,7 @@ describe("ValidatorStore", () => {
     const entries = validatorStore.getResolvedBuilderEntries(pubkey);
     expect(entries).toHaveLength(2);
     // Omitted auth data derives from the entry url, omitted min bid takes the key default
-    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe(builderUrl);
+    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe("builder.example.com");
     expect(entries[0].minBid).toBe(10n);
     expect(entries[0].maxExecutionPayment).toBe(5n);
     // Per-entry values win over the key defaults
@@ -311,6 +396,17 @@ describe("ValidatorStore", () => {
     expect(validatorStore.getBuilderMinBid(pubkey)).toBe(0n);
   });
 
+  it("Should derive an omitted auth data from the url hostname", () => {
+    const pubkey = toHexString(pubkeys[0]);
+    validatorStore.setBuilderConfig(pubkey, {
+      builders: [{url: "https://Builder.Example.com:443/bids/?x=1"}, {url: "https://builder.example.com"}],
+    });
+
+    const entries = validatorStore.getResolvedBuilderEntries(pubkey);
+    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe("builder.example.com");
+    expect(entries[0].authData).toEqual(entries[1].authData);
+  });
+
   it("Should resolve the validator client's default builder entries with key defaults applied", async () => {
     const pubkey = toHexString(pubkeys[0]);
     const builderUrl = "https://builder.example.com";
@@ -333,7 +429,7 @@ describe("ValidatorStore", () => {
     // A key without its own builders follows the default entries, its key defaults still apply
     const entries = store.getResolvedBuilderEntries(pubkey);
     expect(entries).toHaveLength(2);
-    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe(builderUrl);
+    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe("builder.example.com");
     expect(entries[0].minBid).toBe(30n);
     expect(entries[0].builderBoostFactor).toBe(150n);
     // Explicit auth data (e.g. from a --builder.urls fragment) is used as is
@@ -343,6 +439,43 @@ describe("ValidatorStore", () => {
     // Per-key builders replace the default entries
     store.setBuilderConfig(pubkey, {builders: []});
     expect(store.getResolvedBuilderEntries(pubkey)).toEqual([]);
+  });
+
+  it("Should remove a signer whose validator index is known", async () => {
+    const pubkeyHex = toHexString(pubkeys[0]);
+    api.beacon.postStateValidators.mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            index: 0,
+            balance: 32e9,
+            status: "active_ongoing",
+            validator: {...ssz.phase0.Validator.defaultValue(), pubkey: pubkeys[0]},
+          },
+        ],
+        meta: {executionOptimistic: false, finalized: false},
+      })
+    );
+    await validatorStore.pollValidatorIndices();
+    expect(validatorStore.getPubkeyOfIndex(0)).toBe(pubkeyHex);
+
+    expect(validatorStore.removeSigner(pubkeyHex)).toBe(true);
+    expect(validatorStore.hasVotingPubkey(pubkeyHex)).toBe(false);
+    expect(validatorStore.getPubkeyOfIndex(0)).toBeUndefined();
+  });
+
+  it("signs a Heze block over the fork-specific block root", async () => {
+    const hezeChainConfig = getConfig(ForkName.heze);
+    const config = createBeaconConfig(hezeChainConfig, Buffer.alloc(32, 0xdd));
+    const store = await initValidatorStore(secretKeys, api, hezeChainConfig);
+    const block = ssz.heze.BeaconBlock.defaultValue();
+    block.slot = 32;
+    block.body.graffiti.fill(1);
+    const signedBlock = await store.signBlock(pubkeys[0], block, block.slot);
+    const domain = config.getDomain(block.slot, DOMAIN_BEACON_PROPOSER);
+    const signingRoot = computeSigningRoot(ssz.heze.BeaconBlock, block, domain);
+    expect(signedBlock.signature).toEqual(secretKeys[0].sign(signingRoot).toBytes());
+    expect(signedBlock.message).toEqual(block);
   });
 });
 

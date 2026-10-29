@@ -11,6 +11,7 @@ import {
   Slot,
   ValidatorIndex,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {
   EmptyArgs,
@@ -122,7 +123,7 @@ const HistoricalSummariesResponseType = new ContainerType(
   {
     slot: ssz.Slot,
     historicalSummaries: ssz.capella.HistoricalSummaries,
-    proof: ArrayOf(ssz.Bytes8),
+    proof: ArrayOf(ssz.Bytes32),
   },
   {jsonCase: "eth2"}
 );
@@ -687,13 +688,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           if (signedBlocks.length === 0) throw new Error("No blocks provided.");
           const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            body: ArrayOf(sszTypesFor(fork).SignedBeaconBlock).toJson(signedBlocks),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[];
+          const signedBlocks = ArrayOf(sszTypesFor(fork).SignedBeaconBlock).fromJson(body);
           assertBlocksMatchFork(signedBlocks, fork);
           return {signedBlocks};
         },
@@ -701,13 +702,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           if (signedBlocks.length === 0) throw new Error("No blocks provided.");
           const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            body: ArrayOf(sszTypesFor(fork).SignedBeaconBlock).serialize(signedBlocks),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[];
+          const signedBlocks = ArrayOf(sszTypesFor(fork).SignedBeaconBlock).deserialize(body);
           assertBlocksMatchFork(signedBlocks, fork);
           return {signedBlocks};
         },
@@ -728,35 +729,27 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({selfBuiltBlock, builderBlock, builderPeersBps}) => {
           const fork = config.getForkName(selfBuiltBlock.message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson([selfBuiltBlock, builderBlock] as SignedBeaconBlock<
-              typeof fork
-            >[]),
+            body: ArrayOf(sszTypesFor(fork).SignedBeaconBlock).toJson([selfBuiltBlock, builderBlock]),
             headers: {[MetaHeader.Version]: fork},
             query: {builder_peers_bps: builderPeersBps},
           };
         },
         parseReqJson: ({body, headers, query}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const [selfBuiltBlock, builderBlock] = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(
-            body
-          ) as SignedBeaconBlock[];
+          const [selfBuiltBlock, builderBlock] = ArrayOf(sszTypesFor(fork).SignedBeaconBlock).fromJson(body);
           return {selfBuiltBlock, builderBlock, builderPeersBps: query.builder_peers_bps};
         },
         writeReqSsz: ({selfBuiltBlock, builderBlock, builderPeersBps}) => {
           const fork = config.getForkName(selfBuiltBlock.message.slot);
           return {
-            body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize([selfBuiltBlock, builderBlock] as SignedBeaconBlock<
-              typeof fork
-            >[]),
+            body: ArrayOf(sszTypesFor(fork).SignedBeaconBlock).serialize([selfBuiltBlock, builderBlock]),
             headers: {[MetaHeader.Version]: fork},
             query: {builder_peers_bps: builderPeersBps},
           };
         },
         parseReqSsz: ({body, headers, query}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const [selfBuiltBlock, builderBlock] = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(
-            body
-          ) as SignedBeaconBlock[];
+          const [selfBuiltBlock, builderBlock] = ArrayOf(sszTypesFor(fork).SignedBeaconBlock).deserialize(body);
           return {selfBuiltBlock, builderBlock, builderPeersBps: query.builder_peers_bps};
         },
         schema: {

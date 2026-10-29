@@ -18,8 +18,8 @@ import {
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
 import {phase0State} from "../../../src/testUtils/params.js";
-import {getNetworkCachedState} from "../../../src/testUtils/testFileCache.js";
 import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
+import {getNetworkCachedState} from "../../utils/networkCachedState.js";
 import {StateEpoch} from "../types.js";
 
 const slot = computeStartSlotAtEpoch(phase0State.epoch) - 1;
@@ -32,7 +32,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(phase0State.network, slot, 300_000);
+    const state = await getNetworkCachedState(phase0State.network, slot);
     state.hashTreeRoot();
     return state;
   }, 300_000);
@@ -118,7 +118,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   bench({
     id: `${stateId} - phase0 processEth1DataReset`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEth1DataReset(state, cache.value),
+    fn: (state) => processEth1DataReset(state as CachedBeaconStatePhase0, cache.value),
   });
 
   bench({

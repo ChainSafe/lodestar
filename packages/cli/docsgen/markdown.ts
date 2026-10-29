@@ -1,5 +1,6 @@
 import {CliOptionDefinition, CliCommand, CliExample, CliCommandOptions} from "@lodestar/utils";
 import {toKebab} from "./changeCase.js";
+import {formatDefault} from "./manifest.js";
 
 const DEFAULT_SEPARATOR = "\n\n";
 const LINE_BREAK = "\n\n";
@@ -122,19 +123,8 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
     commandOption.push(`choices: ${option.choices.map((c) => `"${c}"`).join(", ")}`);
   }
 
-  let defaultValue = String(option.defaultDescription || option.default || "");
-  if (defaultValue) {
-    if (option.type === "string" || option.string) {
-      defaultValue = `"${defaultValue}"`;
-    }
-    if (option.type === "array") {
-      if (!defaultValue.includes(`"`)) {
-        defaultValue = `"${defaultValue}"`;
-      }
-      if (!defaultValue.startsWith("[")) {
-        defaultValue = `[ ${defaultValue} ]`;
-      }
-    }
+  const defaultValue = formatDefault(option);
+  if (defaultValue !== null) {
     commandOption.push(`default: \`${defaultValue}\``);
   }
 

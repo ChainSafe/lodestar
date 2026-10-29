@@ -3,10 +3,10 @@ import type {Endpoints} from "./routes/index.js";
 // NOTE: Don't export server here so it's not bundled to all consumers
 
 import * as routes from "./routes/index.js";
-export {routes};
 
 export {type ApiClient, getClient} from "./client/index.js";
 export type {Endpoints};
+export {routes};
 
 // Declare namespaces for CLI options
 export type ApiNamespace = keyof Endpoints;

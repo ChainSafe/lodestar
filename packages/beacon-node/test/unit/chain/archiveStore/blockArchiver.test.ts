@@ -4,10 +4,13 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {LogLevel} from "@lodestar/utils";
+import {LateCanonicalBlockReason, archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
+import type {Metrics} from "../../../../src/metrics/metrics.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
@@ -15,7 +18,7 @@ import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 function toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
   return {
     async *[Symbol.asyncIterator]() {
-      for (const it of items) yield it;
+      for (const item of items) yield item;
     },
   };
 }
@@ -35,13 +38,10 @@ describe("block archiver task", () => {
 
     vi.spyOn(dbStub.blockArchive, "batchPutBinary");
     vi.spyOn(dbStub.block, "batchDelete");
-    vi.spyOn(dbStub.blobSidecarsArchive, "batchPutBinary");
-    vi.spyOn(dbStub.blobSidecars, "batchDelete");
     vi.spyOn(dbStub.dataColumnSidecarArchive, "putManyBinary");
     vi.spyOn(dbStub.dataColumnSidecar, "deleteMany");
-    // Mock keys() to return empty array by default
     vi.spyOn(dbStub.blobSidecarsArchive, "keys").mockResolvedValue([]);
-    // vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
+    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -54,7 +54,11 @@ describe("block archiver task", () => {
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(Buffer.from(blockBytes));
     // block i has slot i+1
     const blocks = Array.from({length: 5}, (_, i) =>
-      generateProtoBlock({slot: i + 1, blockRoot: toHexString(Buffer.alloc(32, i + 1))})
+      generateProtoBlock({
+        slot: i + 1,
+        blockRoot: toHexString(Buffer.alloc(32, i + 1)),
+        payloadStatus: PayloadStatus.FULL,
+      })
     );
     const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
     const nonCanonicalBlocks = [blocks[2]];
@@ -70,7 +74,9 @@ describe("block archiver task", () => {
       lightclientServer,
       logger,
       {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
-      currentEpoch
+      currentEpoch,
+      null,
+      false
     );
 
     const expectedData = canonicalBlocks
@@ -95,18 +101,21 @@ describe("block archiver task", () => {
     );
     // delete non canonical blocks
     expect(dbStub.block.batchDelete).toBeCalledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)));
+    expect(dbStub.dataColumns.deleteMany).not.toHaveBeenCalled();
   });
 
-  it("should archive data column sidecars for finalized blocks", async () => {
+  it.each(["fulu", "gloas"] as const)("archives %s blocks without legacy columns", async (fork) => {
     const config = createChainForkConfig({
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: fork === "gloas" ? 0 : Infinity,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
+      MIN_BLOB_DATA_RETENTION_MS: 2 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
-
-    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
-
+    const blockType = config.getForkTypes(0).SignedBeaconBlock;
+    const block = blockType.defaultValue();
+    const blockBytes = blockType.serialize(block);
+    vi.spyOn(dbStub.executionPayloadEnvelope, "getBinary").mockResolvedValue(null);
     const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
     const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(dataColumn);
 
@@ -115,27 +124,18 @@ describe("block archiver task", () => {
       toAsyncIterable([{id: dataColumn.index, prefix: block.message.stateRoot, value: dataColumnBytes}])
     );
 
-    // Create blocks after fulu fork
     const blocks = Array.from({length: 5}, (_, i) =>
       generateProtoBlock({
-        slot: i + 1 + config.FULU_FORK_EPOCH * 32,
+        slot: i + 1,
         blockRoot: toHexString(Buffer.alloc(32, i + 1)),
         payloadStatus: PayloadStatus.FULL,
       })
     );
     const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
-    const nonCanonicalBlocks = [blocks[2]];
-
-    const currentEpoch = 2;
-
     vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
       ancestors: canonicalBlocks,
-      nonAncestors: nonCanonicalBlocks,
+      nonAncestors: [],
     });
-
-    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue(
-      nonCanonicalBlocks.map((block) => ({prefix: block.slot, id: 0}))
-    );
 
     await archiveBlocks(
       config,
@@ -143,55 +143,35 @@ describe("block archiver task", () => {
       forkChoiceStub,
       lightclientServer,
       logger,
-      {
-        epoch: config.FULU_FORK_EPOCH + 1,
-        root: fromHexString(ZERO_HASH_HEX),
-        rootHex: ZERO_HASH_HEX,
-      },
-      currentEpoch
+      {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+      2,
+      null,
+      false
     );
 
-    // Verify data column sidecars are archived
-    for (const block of canonicalBlocks) {
-      expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(block.slot, [
-        {
-          key: 0,
-          value: dataColumnBytes,
-        },
-      ]);
-    }
-
-    // Verify canonical data column sidecars are deleted from hot storage
-    expect(dbStub.dataColumnSidecar.deleteMany).toBeCalledWith(
-      canonicalBlocks.map((block) => fromHexString(block.blockRoot))
+    expect(dbStub.blockArchive.batchPutBinary).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(dbStub.blockArchive.batchPutBinary).mock.calls[0][0].map(({slot}) => slot)).toEqual(
+      canonicalBlocks.map(({slot}) => slot)
     );
-
-    // Verify non-canonical data column sidecars are deleted
-    expect(dbStub.dataColumnSidecar.deleteMany).toBeCalledWith(
-      nonCanonicalBlocks.map((block) => fromHexString(block.blockRoot))
-    );
-
-    expect(dbStub.dataColumnSidecarArchive.keys).toBeCalledWith({
-      lt: {prefix: computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS), id: 0},
-    });
+    expect(dbStub.dataColumnSidecar.valuesStreamBinary).not.toHaveBeenCalled();
+    expect(dbStub.dataColumnSidecar.deleteMany).not.toHaveBeenCalled();
+    expect(dbStub.dataColumnSidecarArchive.putManyBinary).not.toHaveBeenCalled();
   });
 
-  it("tolerates already-archived boundary block and still migrates its data columns", async () => {
-    // Setup: fork-choice returns the full walk including the previous finalized block as the last
-    // ancestor (slot 2). Its SignedBeaconBlock was archived on the previous run so `db.block.getBinary`
-    // returns null for it. The block migrator must skip rather than throw, while the data-column
-    // migrator still ships columns for that boundary block.
+  it.each(["fulu", "gloas"] as const)("skips legacy columns for the archived %s boundary", async (fork) => {
     const config = createChainForkConfig({
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: fork === "gloas" ? 0 : Infinity,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
+      MIN_BLOB_DATA_RETENTION_MS: 4 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
-
-    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+    const blockType = config.getForkTypes(0).SignedBeaconBlock;
+    const block = blockType.defaultValue();
+    const blockBytes = blockType.serialize(block);
+    vi.spyOn(dbStub.executionPayloadEnvelope, "getBinary").mockResolvedValue(null);
     const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
     const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(dataColumn);
-
     const newAncestor = generateProtoBlock({
       slot: 4,
       blockRoot: toHexString(Buffer.alloc(32, 4)),
@@ -203,15 +183,12 @@ describe("block archiver task", () => {
       payloadStatus: PayloadStatus.FULL,
     });
 
-    // Only the new ancestor is in hot db; boundary already migrated last run.
-    vi.spyOn(dbStub.block, "getBinary").mockImplementation(async (root: Uint8Array) => {
-      return toHexString(root) === newAncestor.blockRoot ? Buffer.from(blockBytes) : null;
-    });
+    vi.spyOn(dbStub.block, "getBinary").mockImplementation(async (root: Uint8Array) =>
+      toHexString(root) === newAncestor.blockRoot ? Buffer.from(blockBytes) : null
+    );
     vi.spyOn(dbStub.dataColumnSidecar, "valuesStreamBinary").mockReturnValue(
       toAsyncIterable([{id: dataColumn.index, prefix: block.message.stateRoot, value: dataColumnBytes}])
     );
-    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
-
     vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
       ancestors: [newAncestor, boundary],
       nonAncestors: [],
@@ -224,22 +201,213 @@ describe("block archiver task", () => {
       lightclientServer,
       logger,
       {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
-      1
+      1,
+      null,
+      false
     );
 
-    // Block migration writes only the new ancestor (boundary skipped because its hot-db entry is null)
     expect(dbStub.blockArchive.batchPutBinary).toHaveBeenCalledTimes(1);
-    const batchedBlocks = (dbStub.blockArchive.batchPutBinary as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(batchedBlocks).toHaveLength(1);
-    expect(batchedBlocks[0].slot).toBe(4);
-    expect(dbStub.block.batchDelete).toHaveBeenCalledWith([fromHexString(newAncestor.blockRoot)]);
+    expect(vi.mocked(dbStub.blockArchive.batchPutBinary).mock.calls[0][0]).toHaveLength(1);
+    expect(vi.mocked(dbStub.blockArchive.batchPutBinary).mock.calls[0][0][0].slot).toBe(newAncestor.slot);
+    expect(dbStub.dataColumnSidecar.valuesStreamBinary).not.toHaveBeenCalled();
+    expect(dbStub.dataColumnSidecar.deleteMany).not.toHaveBeenCalled();
+    expect(dbStub.dataColumnSidecarArchive.putManyBinary).not.toHaveBeenCalled();
+  });
 
-    // Data-column migration runs for BOTH ancestors — boundary still needs its columns shipped.
-    expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(4, [{key: 0, value: dataColumnBytes}]);
-    expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(2, [{key: 0, value: dataColumnBytes}]);
-    expect(dbStub.dataColumnSidecar.deleteMany).toHaveBeenCalledWith([
-      fromHexString(newAncestor.blockRoot),
-      fromHexString(boundary.blockRoot),
+  it("does not treat sibling payload variants of canonical blocks as non-canonical", async () => {
+    // Post-gloas a block has three fork choice nodes (PENDING/EMPTY/FULL) sharing one blockRoot. Fork choice drops
+    // PENDING from nonAncestors, and only one of EMPTY/FULL is on the ancestor walk, so the other sibling shows up in
+    // nonAncestors. Block-level data (block, light client witness/header) must not be pruned for it, while
+    // payload-level data (sidecars, execution payload envelopes) of the losing variant must still be pruned.
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
+    });
+    const blockBytes = ssz.gloas.SignedBeaconBlock.serialize(ssz.gloas.SignedBeaconBlock.defaultValue());
+    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
+    vi.spyOn(dbStub.dataColumnSidecar, "valuesStreamBinary").mockReturnValue(toAsyncIterable([]));
+    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
+    vi.spyOn(dbStub.executionPayloadEnvelope, "batchDelete");
+    const pruneSpy = vi.spyOn(lightclientServer, "pruneNonCheckpointData").mockResolvedValue(undefined);
+
+    const root = (i: number): string => toHexString(Buffer.alloc(32, i));
+    // The finalized checkpoint at slot 64 builds on the EMPTY variant at slot 32 after skipped slots.
+    // This finalizes the EMPTY payload choice while slot 32 remains a checkpoint block.
+    const finalizedPending = generateProtoBlock({
+      slot: 64,
+      blockRoot: root(4),
+      parentRoot: root(1),
+      parentBlockHash: ZERO_HASH_HEX,
+      payloadStatus: PayloadStatus.PENDING,
+    });
+    const boundaryEmpty = generateProtoBlock({
+      slot: 32,
+      blockRoot: root(1),
+      parentRoot: root(2),
+      parentBlockHash: ZERO_HASH_HEX,
+      payloadStatus: PayloadStatus.EMPTY,
+    });
+    const boundaryFull = generateProtoBlock({
+      slot: 32,
+      blockRoot: root(1),
+      parentRoot: root(2),
+      parentBlockHash: ZERO_HASH_HEX,
+      payloadStatus: PayloadStatus.FULL,
+    });
+    const parentFull = generateProtoBlock({
+      slot: 31,
+      blockRoot: root(2),
+      parentBlockHash: ZERO_HASH_HEX,
+      payloadStatus: PayloadStatus.FULL,
+    });
+    const parentEmpty = {...parentFull, payloadStatus: PayloadStatus.EMPTY};
+    const orphan = generateProtoBlock({
+      slot: 30,
+      blockRoot: root(3),
+      parentBlockHash: ZERO_HASH_HEX,
+      payloadStatus: PayloadStatus.FULL,
+    });
+    const orphanEmpty = {...orphan, payloadStatus: PayloadStatus.EMPTY};
+    const canonicalBlocks = [finalizedPending, boundaryEmpty, parentFull];
+    const nonCanonicalBlocks = [boundaryFull, parentEmpty, orphan, orphanEmpty];
+
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: canonicalBlocks,
+      nonAncestors: nonCanonicalBlocks,
+    });
+
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 2, root: fromHexString(finalizedPending.blockRoot), rootHex: finalizedPending.blockRoot},
+      3,
+      null,
+      false
+    );
+
+    // Block-level: delete only the orphan as non-canonical
+    expect(dbStub.block.batchDelete).toBeCalledWith([fromHexString(root(3))]);
+    for (const [i, [roots]] of vi.mocked(dbStub.block.batchDelete).mock.calls.entries()) {
+      const hexes = roots.map((r) => toHexString(r));
+      if (hexes.includes(root(3))) {
+        expect(hexes, `block.batchDelete call ${i} deletes more than the orphan`).toEqual([root(3)]);
+      }
+    }
+
+    // Payload-level: the losing FULL payload of the EMPTY-finalized block and the orphan are pruned
+    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith([
+      {slot: boundaryFull.slot, blockRoot: boundaryFull.blockRoot},
+      {slot: orphan.slot, blockRoot: orphan.blockRoot},
+    ]);
+    // root(1) is EMPTY-finalized, so its losing FULL envelope is deleted.
+    // Only root(2), the canonical FULL parent, is eligible for envelope migration to cold storage.
+    expect(dbStub.executionPayloadEnvelope.batchDelete).toHaveBeenCalledTimes(1);
+    expect(dbStub.executionPayloadEnvelope.batchDelete).toBeCalledWith([
+      fromHexString(boundaryFull.blockRoot),
+      fromHexString(orphan.blockRoot),
+    ]);
+
+    // Keep light client data of canonical blocks, prune the orphan and the canonical non-checkpoint block
+    expect(pruneSpy).toHaveBeenCalledTimes(1);
+    const pruned = pruneSpy.mock.calls[0][0].map((r) => toHexString(r));
+    expect(pruned).toContain(root(3)); // orphan
+    expect(pruned).toContain(root(2)); // canonical but not an epoch boundary block
+    expect(pruned).not.toContain(root(1)); // canonical epoch boundary block
+  });
+
+  it("prunes a dangling Gloas FULL payload without pruning its block or light client data", async () => {
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    // An earlier archive run handled this root's block data and pruned its PENDING/EMPTY nodes.
+    const danglingFull = generateProtoBlock({
+      slot: 32,
+      blockRoot: toHexString(Buffer.alloc(32, 1)),
+      parentBlockHash: ZERO_HASH_HEX,
+      payloadStatus: PayloadStatus.FULL,
+    });
+    const previousFinalized = generateProtoBlock({
+      slot: 64,
+      blockRoot: toHexString(Buffer.alloc(32, 2)),
+      parentBlockHash: ZERO_HASH_HEX,
+      payloadStatus: PayloadStatus.EMPTY,
+    });
+    const finalizedPending = generateProtoBlock({
+      slot: 96,
+      blockRoot: toHexString(Buffer.alloc(32, 3)),
+      parentRoot: previousFinalized.blockRoot,
+      parentBlockHash: ZERO_HASH_HEX,
+      payloadStatus: PayloadStatus.PENDING,
+    });
+    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(null);
+    vi.spyOn(dbStub.executionPayloadEnvelope, "batchDelete");
+    const pruneSpy = vi.spyOn(lightclientServer, "pruneNonCheckpointData").mockResolvedValue(undefined);
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: [finalizedPending, previousFinalized],
+      nonAncestors: [danglingFull],
+    });
+
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 3, root: fromHexString(finalizedPending.blockRoot), rootHex: finalizedPending.blockRoot},
+      4,
+      null,
+      false,
+      undefined,
+      true
+    );
+
+    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith([
+      {slot: danglingFull.slot, blockRoot: danglingFull.blockRoot},
+    ]);
+    expect(dbStub.executionPayloadEnvelope.batchDelete).toHaveBeenCalledWith([fromHexString(danglingFull.blockRoot)]);
+    expect(dbStub.block.batchDelete).not.toHaveBeenCalled();
+    expect(dbStub.block.getBinary).not.toHaveBeenCalledWith(fromHexString(danglingFull.blockRoot));
+    expect(pruneSpy).toHaveBeenCalledExactlyOnceWith([]);
+  });
+
+  it("should delete sidecars only for non-canonical FULL payload variants", async () => {
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      DENEB_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+    });
+    const fullRoot = toHexString(Buffer.alloc(32, 1));
+    const emptyRoot = toHexString(Buffer.alloc(32, 2));
+    const canonicalFull = generateProtoBlock({slot: 3, blockRoot: fullRoot, payloadStatus: PayloadStatus.FULL});
+    const nonCanonicalEmpty = generateProtoBlock({slot: 3, blockRoot: fullRoot, payloadStatus: PayloadStatus.EMPTY});
+    const canonicalEmpty = generateProtoBlock({slot: 4, blockRoot: emptyRoot, payloadStatus: PayloadStatus.EMPTY});
+    const nonCanonicalFull = generateProtoBlock({slot: 4, blockRoot: emptyRoot, payloadStatus: PayloadStatus.FULL});
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: [canonicalFull, canonicalEmpty],
+      nonAncestors: [nonCanonicalEmpty, nonCanonicalFull],
+    });
+
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+      8,
+      null,
+      false
+    );
+
+    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith([
+      {slot: nonCanonicalFull.slot, blockRoot: nonCanonicalFull.blockRoot},
     ]);
   });
 
@@ -248,14 +416,13 @@ describe("block archiver task", () => {
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
+      MIN_BLOB_DATA_RETENTION_MS: 4 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
 
     vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
       ancestors: [],
       nonAncestors: [],
     });
-    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
-
     await archiveBlocks(
       config,
       dbStub,
@@ -263,10 +430,199 @@ describe("block archiver task", () => {
       lightclientServer,
       logger,
       {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
-      1
+      1,
+      null,
+      false
     );
 
     expect(dbStub.blockArchive.batchPutBinary).not.toHaveBeenCalled();
-    expect(dbStub.dataColumnSidecarArchive.putManyBinary).not.toHaveBeenCalled();
+  });
+
+  it("should retain non-canonical blocks when flat file cleanup fails", async () => {
+    const config = createChainForkConfig({...defaultConfig, FULU_FORK_EPOCH: 0});
+    const block = generateProtoBlock({
+      slot: 3,
+      blockRoot: toHexString(Buffer.alloc(32, 3)),
+      payloadStatus: PayloadStatus.FULL,
+    });
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: [],
+      nonAncestors: [block],
+    });
+    const deleteError = new Error("flat file cleanup failed");
+    vi.mocked(dbStub.dataColumns.deleteMany).mockRejectedValueOnce(deleteError);
+
+    await expect(
+      archiveBlocks(
+        config,
+        dbStub,
+        forkChoiceStub,
+        lightclientServer,
+        logger,
+        {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+        8,
+        null,
+        false
+      )
+    ).rejects.toBe(deleteError);
+
+    expect(dbStub.dataColumns.deleteMany).toHaveBeenCalledWith([{slot: block.slot, blockRoot: block.blockRoot}]);
+    expect(dbStub.block.batchDelete).not.toHaveBeenCalled();
+  });
+
+  it.each([{prunedSlots: []}, {prunedSlots: [96, 98, 99]}])(
+    "should report pruned column slots $prunedSlots for the retained window",
+    async ({prunedSlots}) => {
+      const config = createChainForkConfig({
+        ...defaultConfig,
+        DENEB_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
+        MIN_BLOB_DATA_RETENTION_MS: 2 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
+      });
+
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+      vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
+
+      const blocks = Array.from({length: 3}, (_, i) =>
+        generateProtoBlock({
+          slot: 100 + i,
+          blockRoot: toHexString(Buffer.alloc(32, i + 1)),
+          payloadStatus: PayloadStatus.FULL,
+        })
+      );
+      const canonicalBlocks = [blocks[2], blocks[1], blocks[0]];
+
+      vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+        ancestors: canonicalBlocks,
+        nonAncestors: [],
+      });
+
+      const currentEpoch = 10;
+      const verbose = vi.spyOn(logger, LogLevel.verbose);
+      vi.mocked(dbStub.dataColumns.pruneBefore).mockResolvedValue(prunedSlots);
+      await archiveBlocks(
+        config,
+        dbStub,
+        forkChoiceStub,
+        lightclientServer,
+        logger,
+        {
+          epoch: currentEpoch,
+          root: fromHexString(ZERO_HASH_HEX),
+          rootHex: ZERO_HASH_HEX,
+        },
+        currentEpoch,
+        null,
+        false
+      );
+
+      const columnsPruneSlot = computeStartSlotAtEpoch(
+        currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+      );
+      expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(columnsPruneSlot);
+      if (prunedSlots.length > 0) {
+        expect(verbose).toHaveBeenCalledWith(
+          "dataColumnSidecars prune",
+          expect.objectContaining({slotRange: "[96, 98-99]", numOfSlots: 3})
+        );
+      } else {
+        expect(verbose).toHaveBeenCalledWith(
+          "dataColumnSidecars prune: no entries before slot",
+          expect.objectContaining({slot: columnsPruneSlot})
+        );
+      }
+    }
+  );
+
+  describe("audit late-imported-but-canonical blocks", () => {
+    // newest -> oldest; last element is the previous-finalized boundary (excluded). Late =
+    // importedTimely === false. Invariant: timeliness === false implies importedTimely === false.
+    //   slot 10: late import, received late     => late_receive
+    //   slot  9: imported on time               => not late
+    //   slot  8: late import, received on time   => slow_import
+    //   slot  7: boundary, excluded
+    function getCanonicalBlocksWithLateImports() {
+      return [
+        generateProtoBlock({
+          slot: 10,
+          blockRoot: toHexString(Buffer.alloc(32, 10)),
+          importedTimely: false,
+          timeliness: false,
+        }),
+        generateProtoBlock({
+          slot: 9,
+          blockRoot: toHexString(Buffer.alloc(32, 9)),
+          importedTimely: true,
+          timeliness: true,
+        }),
+        generateProtoBlock({
+          slot: 8,
+          blockRoot: toHexString(Buffer.alloc(32, 8)),
+          importedTimely: false,
+          timeliness: true,
+        }),
+        generateProtoBlock({
+          slot: 7,
+          blockRoot: toHexString(Buffer.alloc(32, 7)),
+          importedTimely: false,
+          timeliness: false,
+        }),
+      ];
+    }
+
+    function getMetricsWithIncSpy() {
+      const inc = vi.fn();
+      const metrics = {importBlock: {lateCanonicalBlock: {inc}}} as unknown as Metrics;
+      return {metrics, inc};
+    }
+
+    it("counts non-boundary late-imported canonical blocks by reason when synced", async () => {
+      vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+        ancestors: getCanonicalBlocksWithLateImports(),
+        nonAncestors: [],
+      });
+      const {metrics, inc} = getMetricsWithIncSpy();
+
+      await archiveBlocks(
+        defaultConfig,
+        dbStub,
+        forkChoiceStub,
+        lightclientServer,
+        logger,
+        {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+        8,
+        metrics,
+        true // isNodeSynced
+      );
+
+      // one inc per late non-boundary block: slot 10 (late_receive), slot 8 (slow_import)
+      expect(inc).toHaveBeenCalledTimes(2);
+      expect(inc).toHaveBeenCalledWith({reason: LateCanonicalBlockReason.LateReceive});
+      expect(inc).toHaveBeenCalledWith({reason: LateCanonicalBlockReason.SlowImport});
+    });
+
+    it("does not count late-imported blocks when not synced", async () => {
+      vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+        ancestors: getCanonicalBlocksWithLateImports(),
+        nonAncestors: [],
+      });
+      const {metrics, inc} = getMetricsWithIncSpy();
+
+      await archiveBlocks(
+        defaultConfig,
+        dbStub,
+        forkChoiceStub,
+        lightclientServer,
+        logger,
+        {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+        8,
+        metrics,
+        false // isNodeSynced
+      );
+
+      expect(inc).not.toHaveBeenCalled();
+    });
   });
 });

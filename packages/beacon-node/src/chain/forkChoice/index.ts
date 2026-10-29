@@ -124,6 +124,7 @@ export function initializeForkChoiceFromFinalizedState(
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
         onFastConfirmation: ({block, slot, currentSlot}) =>
           emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+        onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
       }
     ),
 
@@ -135,6 +136,7 @@ export function initializeForkChoiceFromFinalizedState(
         blockRoot: toRootHex(checkpoint.root),
         timeliness: true, // Optimistically assume is timely
         ptcTimeliness: true, // Spec: block_timeliness for anchor = [True, True]
+        importedTimely: true, // Optimistically assume is timely
         proposerIndex: blockHeader.proposerIndex,
 
         justifiedEpoch: justifiedCheckpoint.epoch,
@@ -221,6 +223,7 @@ export function initializeForkChoiceFromUnfinalizedState(
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
       onFastConfirmation: ({block, slot, currentSlot}) =>
         emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+      onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
     }
   );
 
@@ -233,6 +236,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     targetRoot: headRoot,
     timeliness: true, // Optimistically assume is timely
     ptcTimeliness: true, // Spec: block_timeliness for anchor = [True, True]
+    importedTimely: true, // Optimistically assume is timely
     proposerIndex: blockHeader.proposerIndex,
 
     justifiedEpoch: justifiedCheckpoint.epoch,

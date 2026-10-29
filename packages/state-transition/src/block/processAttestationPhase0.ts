@@ -10,7 +10,7 @@ import {isValidIndexedAttestation} from "./index.js";
  * state.previousEpochAttestations to be processed in bulk at the epoch transition.
  *
  * PERF: Work depends on number of Attestation per block. On mainnet the average is 89.7 / block, with 87.8 participant
- * true bits on average. See `packages/state-transition/test/perf/analyzeBlocks.ts`
+ * true bits on average.
  */
 export function processAttestationPhase0(
   state: CachedBeaconStatePhase0,

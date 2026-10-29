@@ -36,6 +36,9 @@ packages/**/lib
 # Tests artifacts
 .__testdb
 packages/*/spec-tests
+packages/*/spec-tests-ssz
+packages/*/spec-tests-bls
+packages/*/spec-tests-comptests
 packages/*/benchmark_data
 packages/beacon-node/test-logs/
 packages/cli/test-logs/

@@ -107,12 +107,16 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
   [ReqRespMethod.LightClientFinalityUpdate]: {
     // Finality updates should not be requested more than once per epoch.
     // Allow 2 per slot and a very safe bound until there's more testing of real usage.
-    byPeer: {quota: 2, quotaTimeMs: 12_000},
+    byPeer: {quota: 2, quotaTimeMs: config.getSlotDurationMs(fork)},
+  },
+  [ReqRespMethod.InclusionListsByIndices]: {
+    // Peers only backfill what gossip missed, so a small per-slot allowance is enough
+    byPeer: {quota: 5, quotaTimeMs: config.getSlotDurationMs(fork)},
   },
   [ReqRespMethod.LightClientOptimisticUpdate]: {
     // Optimistic updates should not be requested more than once per slot.
     // Allow 2 per slot and a very safe bound until there's more testing of real usage.
-    byPeer: {quota: 2, quotaTimeMs: 12_000},
+    byPeer: {quota: 2, quotaTimeMs: config.getSlotDurationMs(fork)},
   },
 });
 
@@ -126,7 +130,8 @@ function getRequestCountFn<T extends ReqRespMethod>(
   const type = requestSszTypeByMethod(fork, config)[method];
   return (reqData: Uint8Array) => {
     try {
-      return (type && fn(type.deserialize(reqData))) ?? 1;
+      // A schema-valid request can cost 0 tokens; floor to 1 so it stays charged and bannable, not free.
+      return Math.max(1, (type && fn(type.deserialize(reqData))) ?? 1);
     } catch (_e) {
       return 1;
     }

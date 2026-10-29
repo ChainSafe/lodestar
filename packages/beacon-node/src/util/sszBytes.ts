@@ -1,14 +1,17 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BYTES_PER_CELL,
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
   ForkPostDeneb,
+  ForkPostGloas,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 
@@ -56,6 +59,8 @@ const ATTESTATION_DATA_SIZE = 128;
 // MAX_COMMITTEES_PER_SLOT is in bit, need to convert to byte
 const COMMITTEE_BITS_SIZE = Math.max(Math.ceil(MAX_COMMITTEES_PER_SLOT / 8), 1);
 const SIGNATURE_SIZE = 96;
+// SyncAggregate is a fixed-size container, so minSize is its serialized size
+const SYNC_AGGREGATE_SIZE = ssz.altair.SyncAggregate.minSize;
 const SINGLE_ATTESTATION_ATTDATA_OFFSET = 8 + 8;
 const SINGLE_ATTESTATION_SLOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET;
 const SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET = 0;
@@ -446,30 +451,39 @@ export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): 
  * BeaconBlockBody (GLOAS) fixed section before signedExecutionPayloadBid offset pointer:
  *   randaoReveal(96) + eth1Data(72) + graffiti(32)
  *   + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + deposits(4) + voluntaryExits(4)
- *   + syncAggregate(160) + blsToExecutionChanges(4) = 384 bytes
+ *   + syncAggregate(SyncAggregate.minSize) + blsToExecutionChanges(4) = 384 bytes (mainnet preset)
  *
- * The 4-byte pointer at byte 568 (= 184+384) gives the offset of SignedExecutionPayloadBid
+ * Heze body: randaoReveal(96) + graffiti(32) + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + voluntaryExits(4) + syncAggregate(SyncAggregate.minSize) + blsToExecutionChanges(4) = 308 bytes (mainnet preset)
+ *
+ * The 4-byte pointer at byte 568 (= 184+384) for Gloas and 492 (= 184+308) for Heze (mainnet preset) gives the offset of SignedExecutionPayloadBid
  * within BeaconBlockBody. parentBlockHash is at that bid's byte 100 (after offset+sig).
  */
 // BeaconBlock body starts after: msg_offset(4) + sig(96) + slot(8) + proposer_index(8) + parent_root(32) + state_root(32) + body_offset_ptr(4)
 const GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK =
   VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + SLOT_SIZE + 8 + ROOT_SIZE + ROOT_SIZE + VARIABLE_FIELD_OFFSET; // = 184
-const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY = 96 + 72 + 32 + 4 + 4 + 4 + 4 + 4 + 160 + 4; // = 384
-const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK =
-  GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY; // = 568
+const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY = 96 + 72 + 32 + 4 + 4 + 4 + 4 + 4 + SYNC_AGGREGATE_SIZE + 4; // = 384 at mainnet preset
+// Heze removes eth1Data (72 B) and the deposits offset (4 B) from the body fixed section
+const HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY = GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY - 72 - VARIABLE_FIELD_OFFSET; // = 308
 // Within SignedExecutionPayloadBid, parentBlockHash is at byte 100 (msg_offset:4 + sig:96)
 const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // = 100
 
-// CAUTION: update offsets if BeaconBlockBody fixed fields change after Gloas
-export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(data: Uint8Array): RootHex | null {
-  if (data.length < GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + VARIABLE_FIELD_OFFSET) {
+// CAUTION: update offsets if BeaconBlockBody fixed fields change after Heze
+export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(
+  data: Uint8Array,
+  fork: ForkPostGloas
+): RootHex | null {
+  const bidOffsetPointer =
+    GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK +
+    (isForkPostHeze(fork) ? HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY : GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY);
+  if (data.length < bidOffsetPointer + VARIABLE_FIELD_OFFSET) {
     return null;
   }
   const bidOffset =
-    data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK] |
-    (data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + 1] << 8) |
-    (data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + 2] << 16) |
-    (data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + 3] << 24);
+    (data[bidOffsetPointer] |
+      (data[bidOffsetPointer + 1] << 8) |
+      (data[bidOffsetPointer + 2] << 16) |
+      (data[bidOffsetPointer + 3] << 24)) >>>
+    0;
 
   const parentBlockHashStart =
     GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + bidOffset + PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID;
@@ -549,6 +563,23 @@ export function getBeaconBlockRootFromDataColumnSidecarSerialized(data: Uint8Arr
     )
   );
   return "0x" + blockRootBuf.toString("hex");
+}
+
+// beaconBlockRoot is the last fixed field in the Gloas layout
+const DATA_COLUMN_SIDECAR_GLOAS_FIXED_SIZE = BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE; // 56 bytes
+const KZG_PROOF_SIZE = 48; // Bytes48
+const DATA_COLUMN_SIDECAR_GLOAS_PER_BLOB_SIZE = BYTES_PER_CELL + KZG_PROOF_SIZE; // 2048 + 48 = 2096 bytes
+
+/**
+ * Gloas sidecar size bound uses the largest blob limit across the entire schedule, including future entries.
+ * https://github.com/ethereum/consensus-specs/pull/5613
+ */
+export function computeMaxGloasDataColumnSidecarSize(config: ChainForkConfig): number {
+  const maxBlobs = config.BLOB_SCHEDULE.reduce(
+    (max, entry) => Math.max(max, entry.MAX_BLOBS_PER_BLOCK),
+    config.MAX_BLOBS_PER_BLOCK_ELECTRA
+  );
+  return DATA_COLUMN_SIDECAR_GLOAS_FIXED_SIZE + maxBlobs * DATA_COLUMN_SIDECAR_GLOAS_PER_BLOB_SIZE;
 }
 
 /**
@@ -754,7 +785,7 @@ export function getParentBlockRootFromSignedExecutionPayloadBidSerialized(data: 
  *
  * If the high bytes are not zero, return null
  */
-function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
+export function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
   return checkSlotHighBytes(data, offset) ? getSlotFromOffsetTrusted(data, offset) : null;
 }
 
@@ -823,7 +854,7 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
 
     const start = bidMsgStart + commitmentsRange.start;
     const end = bidMsgStart + commitmentsRange.end;
-    return Math.round(((end > blockBytes.byteLength ? blockBytes.byteLength : end) - start) / commitmentSize);
+    return Math.round((Math.min(end, blockBytes.byteLength) - start) / commitmentSize);
   }
 
   const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody, KZGCommitment} = ssz[forkName as ForkPostDeneb];
@@ -849,5 +880,5 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
   const end = messageRange.end + bodyRange.end + kzgCommitmentsRange.end;
   const start = messageRange.start + bodyRange.start + kzgCommitmentsRange.start;
 
-  return Math.round(((end > blockBytes.byteLength ? blockBytes.byteLength : end) - start) / commitmentSize);
+  return Math.round((Math.min(end, blockBytes.byteLength) - start) / commitmentSize);
 }

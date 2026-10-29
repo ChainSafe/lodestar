@@ -1,6 +1,6 @@
-import {ForkPostDeneb, isForkPostDeneb} from "@lodestar/params";
+import {ForkPostDeneb, ForkPostFulu, isForkPostDeneb} from "@lodestar/params";
 import {SignedBeaconBlock} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {BeaconChain} from "../chain.js";
 import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
@@ -76,7 +76,6 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
  */
 export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataColumnsInput): Promise<void> {
   const {slot, blockRootHex} = blockInput;
-  const blockRoot = fromHex(blockRootHex);
 
   if (!blockInput.hasComputedAllData()) {
     // Supernodes may only have a subset of the data columns by the time the block begins to be imported
@@ -89,25 +88,19 @@ export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataC
 
   const {custodyColumns} = this.custodyConfig;
   const dataColumnSidecars = blockInput.getCustodyColumns();
+  const dataColumnSidecarType = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar;
 
-  const binaryPuts: {key: number; value: Uint8Array}[] = [];
-  const nonbinaryPuts = [];
+  const binaryColumns: {index: number; data: Uint8Array}[] = [];
   for (const dataColumnSidecar of dataColumnSidecars) {
-    // skip reserializing column if we already have it
     const serialized = this.serializedCache.get(dataColumnSidecar);
-    if (serialized) {
-      binaryPuts.push({key: dataColumnSidecar.index, value: serialized});
-    } else {
-      nonbinaryPuts.push(dataColumnSidecar);
-    }
+    binaryColumns.push({
+      index: dataColumnSidecar.index,
+      data: serialized ?? dataColumnSidecarType.serialize(dataColumnSidecar),
+    });
   }
+  await this.db.dataColumns.putManyBinary({slot, blockRoot: blockRootHex}, binaryColumns);
 
-  await Promise.all([
-    this.db.dataColumnSidecar.putManyBinary(blockRoot, binaryPuts),
-    this.db.dataColumnSidecar.putMany(blockRoot, nonbinaryPuts),
-  ]);
-
-  this.logger.debug("Persisted dataColumnSidecars to hot DB", {
+  this.logger.debug("Persisted dataColumnSidecars", {
     slot,
     root: blockRootHex,
     dataColumnSidecars: dataColumnSidecars.length,

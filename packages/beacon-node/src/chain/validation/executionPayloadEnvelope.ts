@@ -1,12 +1,5 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {
-  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
-  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
-  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-  MAX_WITHDRAWALS_PER_PAYLOAD,
-  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
-} from "@lodestar/params";
-import {
   computeStartSlotAtEpoch,
   getExecutionPayloadEnvelopeSignatureSet,
   isStatePostGloas,
@@ -89,6 +82,8 @@ async function validateExecutionPayloadEnvelope(
   if (block.slot !== payload.slotNumber) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeSlot: payload.slotNumber,
       blockSlot: block.slot,
     });
@@ -98,6 +93,8 @@ async function validateExecutionPayloadEnvelope(
   if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBuilderIndex: envelope.builderIndex,
       bidBuilderIndex: payloadInput.getBuilderIndex(),
     });
@@ -107,6 +104,8 @@ async function validateExecutionPayloadEnvelope(
   if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBlockHash: toRootHex(payload.blockHash),
       bidBlockHash: payloadInput.getBlockHashHex(),
     });
@@ -117,38 +116,10 @@ async function validateExecutionPayloadEnvelope(
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
-    });
-  }
-
-  // [REJECT] The counts of `execution_requests` are within their respective limits.
-  // New in Gloas:EIP7688 — progressive lists are unbounded at the type level, so bounds
-  // are enforced here in gossip validation.
-  const {executionRequests} = envelope;
-  const requestCountLimits: [string, number, number][] = [
-    ["withdrawals", executionRequests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
-    ["consolidations", executionRequests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD],
-    ["builderDeposits", executionRequests.builderDeposits.length, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD],
-    ["builderExits", executionRequests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD],
-  ];
-  for (const [name, count, limit] of requestCountLimits) {
-    if (count > limit) {
-      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-        code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_COUNT_EXCEEDED,
-        name,
-        count,
-        limit,
-      });
-    }
-  }
-
-  // [REJECT] The number of withdrawals is within the limit.
-  if (payload.withdrawals.length > MAX_WITHDRAWALS_PER_PAYLOAD) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_COUNT_EXCEEDED,
-      count: payload.withdrawals.length,
-      limit: MAX_WITHDRAWALS_PER_PAYLOAD,
     });
   }
 
@@ -178,6 +149,8 @@ async function validateExecutionPayloadEnvelope(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      slot: payload.slotNumber,
+      root: blockRootHex,
     });
   }
 }

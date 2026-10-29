@@ -5,7 +5,7 @@ import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
-import {ProducedBlockSource, ssz} from "@lodestar/types";
+import {ProducedBlockSource, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
@@ -104,10 +104,9 @@ describe("BlockDutiesService", () => {
     const {signature} = ssz.gloas.SignedBeaconBlock.defaultValue();
 
     validatorStore.signRandao.mockResolvedValue(block.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_pubkey, signableBlock) => ({
-      message: signableBlock,
-      signature,
-    }));
+    validatorStore.signBlock.mockImplementation(
+      async (_pubkey, signableBlock) => ({message: signableBlock, signature}) as SignedBeaconBlock
+    );
     validatorStore.signExecutionPayloadEnvelope.mockResolvedValue({message: envelope, signature});
     validatorStore.getBuilderSelectionParams.mockReturnValue({
       selection: routes.validator.BuilderSelection.ExecutionOnly,
@@ -165,10 +164,7 @@ describe("BlockDutiesService", () => {
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
-      signature: signedBlock.signature,
-    }));
+    validatorStore.signBlock.mockResolvedValue(signedBlock);
     validatorStore.getBuilderSelectionParams.mockReturnValue({
       selection: routes.validator.BuilderSelection.MaxProfit,
       boostFactor: BigInt(100),
@@ -198,6 +194,8 @@ describe("BlockDutiesService", () => {
     // Resolve all promises
     await sleep(20, controller.signal);
 
+    expect(validatorStore.signBlock).toHaveBeenCalledOnce();
+    expect(validatorStore.signBlock.mock.calls[0][1]).toBe(signedBlock.message);
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlockV2.mock.calls[0]).toEqual([
@@ -248,10 +246,7 @@ describe("BlockDutiesService", () => {
 
     const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
-      signature: signedBlock.signature,
-    }));
+    validatorStore.signBlock.mockResolvedValue(signedBlock);
     api.validator.produceBlockV3.mockResolvedValue(
       mockApiResponse({
         data: signedBlock.message,
@@ -273,6 +268,8 @@ describe("BlockDutiesService", () => {
     // Resolve all promises
     await sleep(20, controller.signal);
 
+    expect(validatorStore.signBlock).toHaveBeenCalledOnce();
+    expect(validatorStore.signBlock.mock.calls[0][1]).toBe(signedBlock.message);
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlindedBlockV2).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlindedBlockV2.mock.calls[0]).toEqual([
@@ -317,14 +314,12 @@ describe("BlockDutiesService", () => {
     const {signature} = ssz.gloas.SignedBeaconBlock.defaultValue();
 
     validatorStore.signRandao.mockResolvedValue(builderBlock.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_pubkey, signableBlock) => ({
-      message: signableBlock,
-      signature,
-    }));
-    validatorStore.signBlockForEquivocation.mockImplementation(async (_pubkey, conflictingBlock) => ({
-      message: conflictingBlock,
-      signature,
-    }));
+    validatorStore.signBlock.mockImplementation(
+      async (_pubkey, signableBlock) => ({message: signableBlock, signature}) as SignedBeaconBlock
+    );
+    validatorStore.signBlockForEquivocation.mockImplementation(
+      async (_pubkey, conflictingBlock) => ({message: conflictingBlock, signature}) as SignedBeaconBlock
+    );
     validatorStore.getBuilderSelectionParams.mockReturnValue({
       selection: routes.validator.BuilderSelection.MaxProfit,
       boostFactor: BigInt(100),
@@ -450,7 +445,7 @@ describe("BlockDutiesService", () => {
         adversarialDelayExecutionPayload: true,
         adversarialDelayExecutionPayloadBps: delayBps,
       });
-      const targetMs = config.getSlotComponentDurationMs(delayBps);
+      const targetMs = config.getSlotComponentDurationMs(config.getForkName(slot), delayBps);
       vi.spyOn(clock, "msFromSlot").mockReturnValue(targetMs - 1000);
 
       const proposal = blockService["createAndPublishBlockGloas"](pubkeys[0], slot);
@@ -469,8 +464,12 @@ describe("BlockDutiesService", () => {
     }
   });
 
-  it("Should pass strict fee recipient check when producing a Gloas block", async () => {
-    const gloasConfig = createChainForkConfig({...mainnetConfig, GLOAS_FORK_EPOCH: 0});
+  it.each([ForkName.gloas, ForkName.heze] as const)("checks fee recipient for a %s block", async (fork) => {
+    const config = createChainForkConfig({
+      ...mainnetConfig,
+      GLOAS_FORK_EPOCH: 0,
+      HEZE_FORK_EPOCH: fork === ForkName.heze ? 0 : Infinity,
+    });
     const slot = 0;
     api.validator.getProposerDuties.mockResolvedValue(
       mockApiResponse({
@@ -481,7 +480,7 @@ describe("BlockDutiesService", () => {
 
     const clock = new ClockMock();
     const dutiesService = new BlockDutiesService(
-      gloasConfig,
+      config,
       loggerVc,
       api,
       clock,
@@ -489,29 +488,17 @@ describe("BlockDutiesService", () => {
       chainHeaderTracker,
       null
     );
-    const blockService = new BlockProposingService(
-      gloasConfig,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      dutiesService,
-      null,
-      {
-        broadcastValidation: routes.beacon.BroadcastValidation.consensus,
-        blindedLocal: false,
-        payloadLocal: false,
-      }
-    );
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
+      broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+      blindedLocal: false,
+      payloadLocal: false,
+    });
 
-    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz[fork].SignedBeaconBlock.defaultValue();
     signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = 1;
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
     validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.mockImplementation(async (_, block) => ({
-      message: block,
-      signature: signedBlock.signature,
-    }));
+    validatorStore.signBlock.mockResolvedValue(signedBlock);
     validatorStore.getBuilderSelectionParams.mockReturnValue({
       selection: routes.validator.BuilderSelection.ExecutionAlways,
       boostFactor: BigInt(0),
@@ -526,7 +513,7 @@ describe("BlockDutiesService", () => {
       mockApiResponse({
         data: signedBlock.message,
         meta: {
-          version: ForkName.gloas,
+          version: fork,
           executionPayloadValue: BigInt(1),
           consensusBlockValue: BigInt(1),
           executionPayloadIncluded: false,
@@ -539,6 +526,10 @@ describe("BlockDutiesService", () => {
     notifyBlockProductionFn(1, [pubkeys[0]]);
     await sleep(20, controller.signal);
 
+    expect(validatorStore.signBlock).toHaveBeenCalledOnce();
+    expect(validatorStore.signBlock.mock.calls[0][1]).toBe(signedBlock.message);
+    expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+    expect(api.beacon.publishBlockV2.mock.calls[0][0]).toMatchObject({signedBlockContents: {signedBlock}});
     expect(api.validator.produceBlockV4).toHaveBeenCalledWith({
       slot: 1,
       randaoReveal: signedBlock.message.body.randaoReveal,
@@ -549,4 +540,90 @@ describe("BlockDutiesService", () => {
       builderConfig: {minBid: 0n, builderBoostFactor: 0n, builders: []},
     });
   });
+
+  it.each([
+    {builderIndex: 1, published: false},
+    {builderIndex: BUILDER_INDEX_SELF_BUILD, published: true},
+  ])(
+    "Should not use builder bids when producing a Gloas block with executiononly builderIndex=$builderIndex",
+    async ({builderIndex, published}) => {
+      const gloasConfig = createChainForkConfig({...mainnetConfig, GLOAS_FORK_EPOCH: 0});
+      api.validator.getProposerDuties.mockResolvedValue(
+        mockApiResponse({
+          data: [{slot: 0, validatorIndex: 0, pubkey: pubkeys[0]}],
+          meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+        })
+      );
+
+      const clock = new ClockMock();
+      const dutiesService = new BlockDutiesService(
+        gloasConfig,
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        chainHeaderTracker,
+        null
+      );
+      const blockService = new BlockProposingService(
+        gloasConfig,
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        dutiesService,
+        null,
+        {
+          broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+          blindedLocal: false,
+          payloadLocal: false,
+        }
+      );
+
+      const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = builderIndex;
+      const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
+      validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
+      validatorStore.signBlock.mockResolvedValue(signedBlock);
+      validatorStore.getBuilderSelectionParams.mockReturnValue({
+        selection: routes.validator.BuilderSelection.ExecutionOnly,
+        boostFactor: BigInt(0),
+      });
+      validatorStore.getBuilderMinBid.mockReturnValue(0n);
+      validatorStore.getGraffiti.mockReturnValue("aaaa");
+      validatorStore.getFeeRecipient.mockReturnValue(feeRecipient);
+      validatorStore.strictFeeRecipientCheck.mockReturnValue(true);
+
+      api.validator.produceBlockV4.mockResolvedValue(
+        mockApiResponse({
+          data: signedBlock.message,
+          meta: {
+            version: ForkName.gloas,
+            executionPayloadValue: BigInt(1),
+            consensusBlockValue: BigInt(1),
+            executionPayloadIncluded: false,
+          },
+        })
+      );
+
+      api.beacon.publishBlockV2.mockResolvedValue(mockApiResponse({}));
+
+      const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
+      notifyBlockProductionFn(1, [pubkeys[0]]);
+      await sleep(20, controller.signal);
+
+      expect(validatorStore.getResolvedBuilderEntries).not.toHaveBeenCalled();
+      expect(api.validator.produceBlockV4).toHaveBeenCalledWith({
+        slot: 1,
+        randaoReveal: signedBlock.message.body.randaoReveal,
+        graffiti: "aaaa",
+        feeRecipient,
+        strictFeeRecipientCheck: true,
+        includePayload: true,
+        builderConfig: {minBid: 2n ** 64n - 1n, builderBoostFactor: 0n, builders: []},
+      });
+      expect(validatorStore.signBlock).toHaveBeenCalledTimes(published ? 1 : 0);
+      expect(api.beacon.publishBlockV2).toHaveBeenCalledTimes(published ? 1 : 0);
+    }
+  );
 });

@@ -107,7 +107,7 @@ function createBeaconNodeStats(): ClientStats {
       metricName: "lodestar_db_size_bytes_total",
       jsonType: JsonType.Number,
       defaultValue: 0,
-      description: "Amount of bytes consumed on disk by the beacon node's database",
+      description: "Amount of bytes consumed on disk by the beacon node's LevelDB database",
     }),
     networkLibp2pBytesTotalReceive: new MetricProperty({
       jsonKey: "network_libp2p_bytes_total_receive",

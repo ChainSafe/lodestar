@@ -3,12 +3,14 @@ import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} f
 import {ValidatorMonitorOpts, defaultValidatorMonitorOpts} from "../chain/validatorMonitor.js";
 import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
 import {
+  EngineApiMode,
   ExecutionBuilderOpts,
   ExecutionEngineOpts,
   defaultExecutionBuilderHttpOpts,
   defaultExecutionBuilderOpts,
   defaultExecutionEngineHttpOpts,
   defaultExecutionEngineOpts,
+  engineApiModes,
 } from "../execution/index.js";
 import {MetricsOptions, defaultMetricsOptions} from "../metrics/options.js";
 import {MonitoringOptions, defaultMonitoringOptions} from "../monitoring/options.js";
@@ -17,9 +19,15 @@ import {SyncOptions, defaultSyncOptions} from "../sync/options.js";
 
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";
-
+export type {EngineApiMode};
 // Re-export to use as default values in CLI args
-export {defaultExecutionEngineHttpOpts, defaultExecutionBuilderHttpOpts, ArchiveMode, DEFAULT_ARCHIVE_MODE};
+export {
+  ArchiveMode,
+  DEFAULT_ARCHIVE_MODE,
+  defaultExecutionBuilderHttpOpts,
+  defaultExecutionEngineHttpOpts,
+  engineApiModes,
+};
 
 export interface IBeaconNodeOptions {
   api: ApiOptions;

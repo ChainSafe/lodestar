@@ -11,6 +11,7 @@ import {
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_BUILDER_REQUEST_AUTH,
   DOMAIN_CONTRIBUTION_AND_PROOF,
+  DOMAIN_INCLUSION_LIST_COMMITTEE,
   DOMAIN_PROPOSER_PREFERENCES,
   DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
@@ -46,12 +47,13 @@ import {
   altair,
   bellatrix,
   gloas,
+  heze,
   phase0,
   ssz,
 } from "@lodestar/types";
 import {fromHex, isValidAsciiHttpUrl, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ISlashingProtection} from "../slashingProtection/index.js";
+import {ISlashingProtection, InvalidBlockError, InvalidBlockErrorCode} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {SignableMessage, SignableMessageType, externalSignerPostSignature} from "../util/externalSignerClient.js";
 import {isValidatePubkeyHex} from "../util/format.js";
@@ -359,14 +361,10 @@ export class ValidatorStore {
     }
 
     // Post-Gloas block production uses standard builder boost factor. Need to normalize the
-    // gloas-deprecated "builderonly" and "executiononly" to the gloas fallback "builderalways"
-    // and "executionalways" equivalent before deriving the boost factor.
-    if (isPostGloas) {
-      if (selection === routes.validator.BuilderSelection.BuilderOnly) {
-        selection = routes.validator.BuilderSelection.BuilderAlways;
-      } else if (selection === routes.validator.BuilderSelection.ExecutionOnly) {
-        selection = routes.validator.BuilderSelection.ExecutionAlways;
-      }
+    // gloas-deprecated "builderonly" to the gloas fallback "builderalways" equivalent before
+    // deriving the boost factor.
+    if (isPostGloas && selection === routes.validator.BuilderSelection.BuilderOnly) {
+      selection = routes.validator.BuilderSelection.BuilderAlways;
     }
 
     const boostFactor = getBuilderBoostFactor(
@@ -475,7 +473,7 @@ export class ValidatorStore {
   /**
    * Resolve the builder entries for this key. Per-key entries replace the validator client's
    * builders. A value omitted on an entry takes this key's default, then the validator
-   * client's configuration, while omitted auth data is derived from the entry url instead.
+   * client's configuration, while omitted auth data is derived from the entry url hostname instead.
    */
   getResolvedBuilderEntries(pubkeyHex: PubkeyHex, boostFactor?: bigint): ResolvedBuilderEntry[] {
     const validatorData = this.validators.get(pubkeyHex);
@@ -493,7 +491,8 @@ export class ValidatorStore {
     const builders = validatorData.builder?.builders ?? this.defaultProposerConfig.builder.builders ?? [];
     return builders.map((entry) => ({
       url: entry.url,
-      authData: entry.authData !== undefined ? fromHex(entry.authData) : new TextEncoder().encode(entry.url),
+      authData:
+        entry.authData !== undefined ? fromHex(entry.authData) : new TextEncoder().encode(new URL(entry.url).hostname),
       builderPubkeys: (entry.builderPubkeys ?? []).map(fromHex),
       maxExecutionPayment: entry.maxExecutionPayment ?? keyMaxExecutionPayment,
       minBid: entry.minBid ?? keyMinBid,
@@ -544,7 +543,9 @@ export class ValidatorStore {
         throw Error(`Invalid builder url: ${entry.url}`);
       }
       const authData =
-        entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(new TextEncoder().encode(entry.url));
+        entry.authData !== undefined
+          ? toHex(fromHex(entry.authData))
+          : toHex(new TextEncoder().encode(new URL(entry.url).hostname));
       const entryKey = `${entry.url}|${authData}`;
       if (seenEntries.has(entryKey)) {
         throw Error(`Duplicate builder entry url=${entry.url} authData=${authData}`);
@@ -634,7 +635,8 @@ export class ValidatorStore {
   removeSigner(pubkeyHex: PubkeyHex): boolean {
     this.doppelgangerService?.unregisterValidator(pubkeyHex);
 
-    return this.indicesService.removeForKey(pubkeyHex) || this.validators.delete(pubkeyHex);
+    this.indicesService.removeForKey(pubkeyHex);
+    return this.validators.delete(pubkeyHex);
   }
 
   /** Return true if there is at least 1 pubkey registered */
@@ -663,12 +665,11 @@ export class ValidatorStore {
   async signBlock(
     pubkey: BLSPubkey,
     blindedOrFull: BeaconBlock | BlindedBeaconBlock,
-    currentSlot: Slot,
+    dutySlot: Slot,
     logger?: LoggerVc
   ): Promise<SignedBeaconBlock | SignedBlindedBeaconBlock> {
-    // Make sure the block slot is not higher than the current slot to avoid potential attacks.
-    if (blindedOrFull.slot > currentSlot) {
-      throw Error(`Not signing block with slot ${blindedOrFull.slot} greater than current slot ${currentSlot}`);
+    if (blindedOrFull.slot !== dutySlot) {
+      throw new InvalidBlockError({code: InvalidBlockErrorCode.SLOT_MISMATCH, slot: blindedOrFull.slot, dutySlot});
     }
 
     // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
@@ -733,7 +734,7 @@ export class ValidatorStore {
       signingRoot: toRootHex(signingRoot),
     });
 
-    return {message: block, signature: signer.secretKey.sign(signingRoot).toBytes()};
+    return {message: block, signature: signer.secretKey.sign(signingRoot).toBytes()} as SignedBeaconBlock;
   }
 
   async signExecutionPayloadEnvelope(
@@ -843,6 +844,8 @@ export class ValidatorStore {
   ): Promise<SignedAggregateAndProof> {
     this.validateAttestationDuty(duty, aggregate.data);
 
+    this.assertDoppelgangerSafe(duty.pubkey);
+
     const aggregateAndProof: AggregateAndProof = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
@@ -941,7 +944,7 @@ export class ValidatorStore {
     });
 
     const signableMessage: SignableMessage = {
-      type: SignableMessageType.PAYLOAD_ATTESTATION,
+      type: SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE,
       data,
     };
 
@@ -963,8 +966,6 @@ export class ValidatorStore {
       throw Error(`Not signing proposer preferences for past slot ${duty.slot} (current ${currentSlot})`);
     }
 
-    this.assertDoppelgangerSafe(duty.pubkey);
-
     const message: gloas.ProposerPreferences = {
       dependentRoot,
       proposalSlot: duty.slot,
@@ -984,6 +985,38 @@ export class ValidatorStore {
 
     return {
       message,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  async signInclusionList(
+    duty: routes.validator.InclusionListDuty,
+    inclusionList: heze.InclusionList
+  ): Promise<heze.SignedInclusionList> {
+    if (duty.slot !== inclusionList.slot) {
+      throw Error(
+        `Inconsistent duties during signing: duty.slot ${duty.slot} != inclusionList.slot ${inclusionList.slot}`
+      );
+    }
+    if (duty.validatorIndex !== inclusionList.validatorIndex) {
+      throw Error(
+        `Inconsistent duties during signing: duty.validatorIndex ${duty.validatorIndex} != inclusionList.validatorIndex ${inclusionList.validatorIndex}`
+      );
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+
+    const signingSlot = inclusionList.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_INCLUSION_LIST_COMMITTEE);
+    const signingRoot = computeSigningRoot(ssz.heze.InclusionList, inclusionList, domain);
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.INCLUSION_LIST,
+      data: inclusionList,
+    };
+
+    return {
+      message: inclusionList,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
     };
   }
@@ -1217,6 +1250,11 @@ export class ValidatorStore {
     if (duty.slot !== data.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
+    if (data.target.epoch !== computeEpochAtSlot(data.slot)) {
+      throw Error(
+        `Inconsistent attestation data during signing: att.target.epoch ${data.target.epoch} != epoch of att.slot ${data.slot}`
+      );
+    }
 
     const forkSeq = this.config.getForkSeq(data.slot);
     const isPostElectra = forkSeq >= ForkSeq.electra;
@@ -1243,6 +1281,11 @@ export class ValidatorStore {
     }
   }
 
+  /**
+   * Required before signing a message that is slashable or that the beacon node counts as validator
+   * liveness (see `validatorSeenAtEpoch`), otherwise doppelganger detection would flag our own messages.
+   * Skip it for anything else.
+   */
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
     const pubkeyHex = typeof pubKey === "string" ? pubKey : toPubkeyHex(pubKey);
     if (!this.isDoppelgangerSafe(pubkeyHex)) {

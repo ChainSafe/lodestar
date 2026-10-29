@@ -267,8 +267,65 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
         expect(returnedAttestation.aggregationBits.bitLen).toStrictEqual(packedAggregationBitsLen[attIndex]);
         expect(returnedAttestation.aggregationBits.uint8Array).toStrictEqual(packedAggregationBitsUint8Array[attIndex]);
       }
+
+      // missing shuffling skips the committees instead of failing block production
+      expect(pool.getAttestationsForBlock(fork, forkchoiceStub, new ShufflingCache(), stateView)).toEqual([]);
     });
   }
+
+  it("should skip committees with missing shuffling and still pack attestations of other epochs", () => {
+    // all validators are not seen
+    const epochParticipation = ssz.altair.EpochParticipation.toViewDU(newFilledArray(vc, 0b000));
+    (electraState as CachedBeaconStateElectra).previousEpochParticipation = epochParticipation;
+    (electraState as CachedBeaconStateElectra).currentEpochParticipation = epochParticipation.clone();
+    electraState.commit();
+
+    // previous epoch attestations, their shuffling is cached
+    for (const committeeIndex of committeeIndices) {
+      const aggregationBits = new BitArray(new Uint8Array(committeeLength / 8).fill(255), committeeLength);
+      pool.add(
+        {
+          ...attestation,
+          aggregationBits,
+          committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, committeeIndex),
+        },
+        attDataRootHex,
+        committeeLength,
+        committees[committeeIndex]
+      );
+    }
+
+    // current epoch attestation, its shuffling is not cached. Slots are scanned in descending order so this is
+    // scanned first and must not stop packing attestations of the previous epoch
+    const currentEpochAttestation = ssz.electra.Attestation.clone(attestation);
+    currentEpochAttestation.data.slot = currentSlot;
+    const currentEpochCommittee = originalState.epochCtx.getBeaconCommittees(currentSlot, [0])[0];
+    pool.add(
+      {
+        ...currentEpochAttestation,
+        aggregationBits: BitArray.fromBoolArray(newFilledArray(currentEpochCommittee.length, true)),
+        committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0),
+      },
+      toHexString(ssz.phase0.AttestationData.hashTreeRoot(currentEpochAttestation.data)),
+      currentEpochCommittee.length,
+      currentEpochCommittee
+    );
+
+    forkchoiceStub.getBlockHexDefaultStatus.mockReturnValue(generateProtoBlock());
+    forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
+
+    const stateView = new BeaconStateView(electraState);
+    const shufflingCache = new ShufflingCache(null, null, {}, [
+      {shuffling: stateView.getPreviousShuffling(), decisionRoot: stateView.previousDecisionRoot},
+    ]);
+    const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, shufflingCache, stateView);
+
+    expect(blockAttestations.length).toBe(1);
+    expect(blockAttestations[0].data.slot).toBe(attestation.data.slot);
+    expect((blockAttestations[0] as Attestation<ForkPostElectra>).committeeBits.getTrueBitIndexes()).toStrictEqual(
+      committeeIndices
+    );
+  });
 });
 
 describe("AggregatedAttestationPool.getAll", () => {

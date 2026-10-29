@@ -1,12 +1,7 @@
 import {gloas} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
-import {CachedBeaconStateGloas} from "../types.js";
-import {
-  findBuilderIndexByPubkey,
-  getPendingBalanceToWithdrawForBuilder,
-  initiateBuilderExit,
-  isActiveBuilder,
-} from "../util/gloas.js";
+import {getPendingBalanceToWithdrawForBuilder, initiateBuilderExit, isActiveBuilder} from "../util/gloas.js";
+import {IndexedBuilderState} from "./indexedBuilderState.js";
 
 /**
  * Apply a builder exit request. Authorizes the exit via `source_address` (the builder's
@@ -17,8 +12,9 @@ import {
  *
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#new-process_builder_exit_request
  */
-export function processBuilderExitRequest(state: CachedBeaconStateGloas, request: gloas.BuilderExitRequest): void {
-  const builderIndex = findBuilderIndexByPubkey(state, request.pubkey);
+export function processBuilderExitRequest(indexedState: IndexedBuilderState, request: gloas.BuilderExitRequest): void {
+  const {state} = indexedState;
+  const builderIndex = indexedState.findBuilderIndexByPubkey(request.pubkey);
   if (builderIndex === null) {
     return;
   }

@@ -23,9 +23,9 @@ jobs:
       - name: Build and collect docs
         run: pnpm docs:build
 
-      # Run prettier check after generating the docs
-      - name: Check docs format
-        run: pnpm docs:lint
+      - name: Test and build documentation site
+        working-directory: docs
+        run: pnpm install --frozen-lockfile && pnpm test && pnpm build
 
       # Run spellcheck AFTER building docs, in case the CLI reference has issues
       - name: Spellcheck

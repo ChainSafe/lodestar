@@ -57,6 +57,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -85,6 +86,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
 
@@ -115,6 +117,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    importedTimely: false,
     ptcTimeliness: false,
     proposerIndex: 0,
     weight: 212, // 240 - 29 + 1
@@ -325,14 +328,14 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
         protoArr.onBlock(siblingBlock, siblingBlock.slot, null);
       }
 
-      const secFromSlot = 0;
+      const msFromSlot = 0;
       const currentSlot = blockSeenSlot ?? headBlock.slot;
       const forkChoice = new ForkChoice(forkChoiceConfig ?? config, fcStore, protoArr, validatorCount, null, {
         proposerBoost: true,
         proposerBoostReorg: true,
       });
 
-      const result = forkChoice.shouldOverrideForkChoiceUpdate(headBlock, secFromSlot, currentSlot);
+      const result = forkChoice.shouldOverrideForkChoiceUpdate(headBlock, msFromSlot, currentSlot);
 
       expect(result.shouldOverrideFcu).toBe(expectReorg);
 

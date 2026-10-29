@@ -1,4 +1,5 @@
 import {
+  computeEpochAtSlot,
   createIndexedSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
   isStatePostGloas,
@@ -7,7 +8,6 @@ import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import {RegenCaller} from "../regen/index.js";
 
 export type PayloadAttestationValidationResult = {
   attDataRootHex: RootHex;
@@ -35,6 +35,14 @@ async function validatePayloadAttestationMessage(
   prioritizeBls = false
 ): Promise<PayloadAttestationValidationResult> {
   const {data, validatorIndex} = payloadAttestationMessage;
+
+  // [REJECT] The payload attestation slot is at or after the Gloas fork.
+  if (computeEpochAtSlot(data.slot) < chain.config.GLOAS_FORK_EPOCH) {
+    throw new PayloadAttestationError(GossipAction.REJECT, {
+      code: PayloadAttestationErrorCode.PRE_GLOAS_SLOT,
+      slot: data.slot,
+    });
+  }
 
   // [IGNORE] The message's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance), i.e. `data.slot == current_slot`.
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(data.slot)) {
@@ -82,15 +90,15 @@ async function validatePayloadAttestationMessage(
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
 
-  // Use the referenced block's branch state for the PTC committee check
-  const state = await chain.regen
-    .getBlockSlotState(block, data.slot, {dontTransferCache: true}, RegenCaller.validateGossipPayloadAttestationMessage)
-    .catch(() => {
-      throw new PayloadAttestationError(GossipAction.IGNORE, {
-        code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
-        blockRoot: toRootHex(data.beaconBlockRoot),
-      });
+  // block.slot === data.slot is enforced above, so use the block's post-state directly to avoid
+  // getting through regen queue
+  const state = chain.regen.getStateSync(block.stateRoot);
+  if (state == null) {
+    throw new PayloadAttestationError(GossipAction.IGNORE, {
+      code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
+      blockRoot: toRootHex(data.beaconBlockRoot),
     });
+  }
 
   if (!isStatePostGloas(state)) {
     throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);

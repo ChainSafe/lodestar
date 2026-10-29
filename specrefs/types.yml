@@ -155,7 +155,9 @@
     </spec>
 
 - name: NodeID#phase0
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/network/subnets/interface.ts
+      search: export type NodeId =
   spec: |
     <spec custom_type="NodeID" fork="phase0" hash="7bee022b">
     NodeID = Uint256
@@ -171,21 +173,27 @@
     </spec>
 
 - name: PayloadId#bellatrix
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/execution/engine/payloadIdCache.ts
+      search: export type PayloadId =
   spec: |
     <spec custom_type="PayloadId" fork="bellatrix" hash="0787a76c">
     PayloadId = Bytes8
     </spec>
 
 - name: PayloadStatus#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: export enum PayloadStatus {
   spec: |
     <spec custom_type="PayloadStatus" fork="gloas" hash="164e15bf">
     PayloadStatus = Uint8
     </spec>
 
 - name: PayloadValidationStatus#bellatrix
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: export enum ExecutionStatus {
   spec: |
     <spec custom_type="PayloadValidationStatus" fork="bellatrix" hash="82f4a1dd">
     PayloadValidationStatus = Uint8
@@ -219,7 +227,9 @@
     </spec>
 
 - name: SubnetID#phase0
-  sources: []
+  sources:
+    - file: packages/types/src/primitive/types.ts
+      search: export type SubnetID =
   spec: |
     <spec custom_type="SubnetID" fork="phase0" hash="24b97fd7">
     SubnetID = Uint64

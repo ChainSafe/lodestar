@@ -5,6 +5,7 @@ export enum ExecutionPayloadBidErrorCode {
   BUILDER_NOT_ELIGIBLE = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_NOT_ELIGIBLE",
   INVALID_BUILDER_VERSION = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_BUILDER_VERSION",
   NON_ZERO_EXECUTION_PAYMENT = "EXECUTION_PAYLOAD_BID_ERROR_NON_ZERO_EXECUTION_PAYMENT",
+  BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH = "EXECUTION_PAYLOAD_BID_ERROR_BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH",
   INCOMPATIBLE_WITH_HEAD = "EXECUTION_PAYLOAD_BID_ERROR_INCOMPATIBLE_WITH_HEAD",
   BID_ALREADY_KNOWN = "EXECUTION_PAYLOAD_BID_ERROR_BID_ALREADY_KNOWN",
   BID_TOO_LOW = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_LOW",
@@ -20,6 +21,8 @@ export enum ExecutionPayloadBidErrorCode {
   NO_MATCHING_PROPOSER_PREFERENCES = "EXECUTION_PAYLOAD_BID_ERROR_NO_MATCHING_PROPOSER_PREFERENCES",
   PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH",
   PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH",
+  INCLUSION_LIST_BITS_NOT_INCLUSIVE = "EXECUTION_PAYLOAD_BID_ERROR_INCLUSION_LIST_BITS_NOT_INCLUSIVE",
+  BEFORE_INCLUSION_LIST_DEADLINE = "EXECUTION_PAYLOAD_BID_ERROR_BEFORE_INCLUSION_LIST_DEADLINE",
 }
 
 export type ExecutionPayloadBidErrorType =
@@ -63,6 +66,7 @@ export type ExecutionPayloadBidErrorType =
     }
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT; parentBlockRoot: RootHex}
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH; parentBlockHash: RootHex}
+  | {code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH; blockHash: RootHex}
   | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; builderIndex: BuilderIndex; slot: Slot}
   | {code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {
@@ -83,6 +87,16 @@ export type ExecutionPayloadBidErrorType =
       builderIndex: BuilderIndex;
       bidFeeRecipient: string;
       expectedFeeRecipient: string;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE;
+      builderIndex: BuilderIndex;
+      slot: Slot;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.BEFORE_INCLUSION_LIST_DEADLINE;
+      builderIndex: BuilderIndex;
+      slot: Slot;
     }
   | {
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH;

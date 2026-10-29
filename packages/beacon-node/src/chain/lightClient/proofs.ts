@@ -2,11 +2,13 @@ import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {
   BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
   CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS,
+  EXECUTION_BLOCK_HASH_GINDEX_GLOAS,
   FINALIZED_ROOT_GINDEX,
   FINALIZED_ROOT_GINDEX_ELECTRA,
   FINALIZED_ROOT_GINDEX_GLOAS,
   ForkName,
   ForkPostBellatrix,
+  ForkPostGloas,
   NEXT_SYNC_COMMITTEE_GINDEX_GLOAS,
   isForkPostElectra,
   isForkPostGloas,
@@ -115,4 +117,12 @@ export function getBlockBodyExecutionHeaderProof(
 ): Uint8Array[] {
   const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostBellatrix, "BeaconBlockBody">).toView(body);
   return new Tree(bodyView.node).getSingleProof(BigInt(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX));
+}
+
+export function getBlockBodyExecutionBlockHashProof(
+  fork: ForkPostGloas,
+  body: BeaconBlockBody<ForkPostGloas>
+): Uint8Array[] {
+  const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostGloas, "BeaconBlockBody">).toView(body);
+  return new Tree(bodyView.node).getSingleProof(BigInt(EXECUTION_BLOCK_HASH_GINDEX_GLOAS));
 }

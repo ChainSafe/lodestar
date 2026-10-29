@@ -31,6 +31,7 @@ describe("ProtoArray", () => {
         unrealizedFinalizedRoot: stateRoot,
 
         timeliness: false,
+        importedTimely: false,
         ptcTimeliness: false,
         proposerIndex: 0,
 
@@ -62,6 +63,7 @@ describe("ProtoArray", () => {
         unrealizedFinalizedRoot: stateRoot,
 
         timeliness: false,
+        importedTimely: false,
         ptcTimeliness: false,
         proposerIndex: 0,
 
@@ -94,6 +96,7 @@ describe("ProtoArray", () => {
         unrealizedFinalizedRoot: stateRoot,
 
         timeliness: false,
+        importedTimely: false,
         ptcTimeliness: false,
         proposerIndex: 0,
 

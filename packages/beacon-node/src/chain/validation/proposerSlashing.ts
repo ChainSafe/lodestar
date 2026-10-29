@@ -1,12 +1,13 @@
 import {assertValidProposerSlashing, getProposerSlashingSignatureSets} from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
+import {Domain, phase0} from "@lodestar/types";
 import {GossipAction, ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {getProposerSlashingSignatureDomain} from "../opPools/utils.js";
 
 export async function validateApiProposerSlashing(
   chain: IBeaconChain,
   proposerSlashing: phase0.ProposerSlashing
-): Promise<void> {
+): Promise<Domain> {
   const prioritizeBls = true;
   return validateProposerSlashing(chain, proposerSlashing, prioritizeBls);
 }
@@ -14,7 +15,7 @@ export async function validateApiProposerSlashing(
 export async function validateGossipProposerSlashing(
   chain: IBeaconChain,
   proposerSlashing: phase0.ProposerSlashing
-): Promise<void> {
+): Promise<Domain> {
   return validateProposerSlashing(chain, proposerSlashing);
 }
 
@@ -22,7 +23,7 @@ async function validateProposerSlashing(
   chain: IBeaconChain,
   proposerSlashing: phase0.ProposerSlashing,
   prioritizeBls = false
-): Promise<void> {
+): Promise<Domain> {
   // [IGNORE] The proposer slashing is the first valid proposer slashing received for the proposer with index
   // proposer_slashing.signed_header_1.message.proposer_index.
   if (chain.opPool.hasSeenProposerSlashing(proposerSlashing.signedHeader1.message.proposerIndex)) {
@@ -46,10 +47,11 @@ async function validateProposerSlashing(
   }
 
   const signatureSets = getProposerSlashingSignatureSets(chain.config, state.slot, proposerSlashing);
+  const verifiedDomain = getProposerSlashingSignatureDomain(chain.config, state.slot, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
-      code: ProposerSlashingErrorCode.INVALID,
-      error: Error("Invalid signature"),
+      code: ProposerSlashingErrorCode.INVALID_SIGNATURE,
     });
   }
+  return verifiedDomain;
 }

@@ -9,22 +9,42 @@ import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 
 export type Metrics = BeaconMetrics &
   ForkChoiceMetrics &
-  BeaconStateTransitionMetrics &
-  LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
+  LodestarMetrics & {
+    /** Null when we use native state transition metrics instead */
+    stateTransition: BeaconStateTransitionMetrics | null;
+    register: RegistryMetricCreator;
+    close: () => void;
+  };
 
-export function createMetrics(opts: MetricsOptions, genesisTime: number, externalRegistries: Registry[] = []): Metrics {
+export type CreateMetricsOptions = {
+  /*
+   * Toggle inclusion of state transition metrics.
+   *
+   * False when native state transition is used, so we
+   * can grab metrics from the native implementation instead.
+   * */
+  includeStateTransitionMetrics?: boolean;
+  collectNodeMetrics?: boolean;
+};
+
+export function createMetrics(
+  opts: MetricsOptions,
+  genesisTime: number,
+  externalRegistries: Registry[] = [],
+  createOpts: CreateMetricsOptions = {}
+): Metrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const forkChoice = getForkChoiceMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
-  const stateTransition = getMetrics(register);
+  const stateTransition = createOpts.includeStateTransitionMetrics === false ? null : getMetrics(register);
 
   const onUnhandledRejection = (_error: unknown): void => {
     lodestar.unhandledPromiseRejections.inc();
   };
   process.on("unhandledRejection", onUnhandledRejection);
 
-  const nodeJsMetricsClose = collectNodeJSMetrics(register);
+  const nodeJsMetricsClose = createOpts.collectNodeMetrics === false ? (): void => {} : collectNodeJSMetrics(register);
   const close = (): void => {
     process.removeListener("unhandledRejection", onUnhandledRejection);
     nodeJsMetricsClose();
@@ -41,7 +61,7 @@ export function createMetrics(opts: MetricsOptions, genesisTime: number, externa
     ...beacon,
     ...forkChoice,
     ...lodestar,
-    ...stateTransition,
+    stateTransition,
     register,
     close,
   };

@@ -14,6 +14,8 @@ import {FastifyRoute} from "../../../../src/utils/server/index.js";
 import {WireFormat} from "../../../../src/utils/wireFormat.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 
+const root = (fill: number): Uint8Array => new Uint8Array(32).fill(fill);
+
 describe("beacon / lodestar", () => {
   describe("route responses", () => {
     const mockApi = getMockApi<Endpoints>(getDefinitions(config));
@@ -34,7 +36,6 @@ describe("beacon / lodestar", () => {
     });
 
     it("getFastConfirmationInfo", async () => {
-      const root = (fill: number): Uint8Array => new Uint8Array(32).fill(fill);
       const data = {
         confirmed: {root: root(0xaa), slot: 100},
         head: {root: root(0xbb), slot: 102},
@@ -75,27 +76,39 @@ describe("beacon / lodestar", () => {
     });
 
     it("getHistoricalSummaries", async () => {
+      const proof = [root(0xaa), root(0xbb), root(0xcc), root(0xdd), root(0xee)];
+      const data = {
+        slot: 1,
+        historicalSummaries: [{blockSummaryRoot: root(0x01), stateSummaryRoot: root(0x02)}],
+        proof,
+      };
+      const proofHex = proof.map((node) => toHexString(node));
       mockApi.getHistoricalSummaries.mockResolvedValue({
-        data: {
-          slot: 0,
-          historicalSummaries: [],
-          proof: [],
-        },
+        data,
         meta: {version: ForkName.electra, executionOptimistic: false, finalized: false},
       });
 
       const httpClient = new HttpClient({baseUrl});
       const client = getClient(config, httpClient);
 
-      const res = await client.getHistoricalSummaries({stateId: "head"}, {responseWireFormat: WireFormat.json});
+      const resJson = await client.getHistoricalSummaries({stateId: "head"}, {responseWireFormat: WireFormat.json});
 
-      expect(res.ok).toBe(true);
-      expect(res.wireFormat()).toBe(WireFormat.json);
-      expect(res.json().data).toStrictEqual({
-        slot: "0",
-        historical_summaries: [],
-        proof: [],
+      expect(resJson.ok).toBe(true);
+      expect(resJson.wireFormat()).toBe(WireFormat.json);
+      expect(resJson.json().data).toStrictEqual({
+        slot: "1",
+        historical_summaries: [
+          {block_summary_root: toHexString(root(0x01)), state_summary_root: toHexString(root(0x02))},
+        ],
+        proof: proofHex,
       });
+      expect(resJson.value().proof.map((node) => toHexString(node))).toStrictEqual(proofHex);
+
+      const resSsz = await client.getHistoricalSummaries({stateId: "head"}, {responseWireFormat: WireFormat.ssz});
+
+      expect(resSsz.ok, `status ${resSsz.status}: ${resSsz.error()?.message}`).toBe(true);
+      expect(resSsz.wireFormat()).toBe(WireFormat.ssz);
+      expect(resSsz.value().proof.map((node) => toHexString(node))).toStrictEqual(proofHex);
     });
   });
 

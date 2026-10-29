@@ -14,7 +14,7 @@ import {
 import {lockFilepath} from "../../../util/lockfile.js";
 import {IPersistedKeysBackend, LocalKeystoreDefinition} from "./interface.js";
 
-export {ImportStatus, DeletionStatus};
+export {DeletionStatus, ImportStatus};
 
 type PathArgs = {
   keystoresDir: string;
@@ -123,7 +123,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     persistIfDuplicate: boolean;
   }): boolean {
     // Validate Keystore JSON + pubkey format.
-    // Note: while this is currently redundant, it's free to check that format is correct before writting
+    // Note: while this is currently redundant, it's free to check that format is correct before writing
     const keystore = Keystore.parse(keystoreStr);
     const pubkeyHex = getPubkeyHexFromKeystore(keystore);
 

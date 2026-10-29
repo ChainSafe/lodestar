@@ -1,3 +1,4 @@
+import {SerializedList, Type} from "@chainsafe/ssz";
 import {
   BUILDER_DEPOSIT_REQUEST_TYPE,
   BUILDER_EXIT_REQUEST_TYPE,
@@ -20,7 +21,6 @@ import {
   bellatrix,
   capella,
   deneb,
-  electra,
   gloas,
   ssz,
 } from "@lodestar/types";
@@ -54,6 +54,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
   engine_newPayloadV5: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
+  engine_newPayloadV6: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc, InclusionListRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -75,6 +76,10 @@ export type EngineApiRpcParamTypes = {
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
   ];
+  engine_forkchoiceUpdatedV5: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
+  ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
@@ -88,13 +93,7 @@ export type EngineApiRpcParamTypes = {
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
-  engine_getPayloadBodiesByHashV1: DATA[][];
-
-  /**
-   *  1. start: QUANTITY, 64 bits - Starting block number
-   *  2. count: QUANTITY, 64 bits - Number of blocks to return
-   */
-  engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
+  engine_getPayloadBodiesByHashV2: DATA[][];
 
   /**
    * Object - Instance of ClientVersion
@@ -103,12 +102,16 @@ export type EngineApiRpcParamTypes = {
 
   engine_getBlobsV1: [DATA[]];
   engine_getBlobsV2: [DATA[]];
+
+  engine_getInclusionListV1: [];
 };
 
 export type PayloadStatus = {
   status: ExecutionPayloadStatus;
   latestValidHash: DATA | null;
   validationError: string | null;
+  /** PayloadStatusV2: whether a VALID payload satisfied the inclusion list constraints, null otherwise */
+  inclusionListSatisfied?: boolean | null;
 };
 
 export type EngineApiRpcReturnTypes = {
@@ -121,6 +124,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV3: PayloadStatus;
   engine_newPayloadV4: PayloadStatus;
   engine_newPayloadV5: PayloadStatus;
+  engine_newPayloadV6: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -137,6 +141,10 @@ export type EngineApiRpcReturnTypes = {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
+  engine_forkchoiceUpdatedV5: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
@@ -147,14 +155,14 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV5: ExecutionPayloadResponse;
   engine_getPayloadV6: ExecutionPayloadResponse;
 
-  engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
-
-  engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
+  engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyV2Rpc | null)[];
 
   engine_getClientVersionV1: ClientVersionRpc[];
 
   engine_getBlobsV1: (BlobAndProofRpc | null)[];
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
+
+  engine_getInclusionListV1: InclusionListRpc;
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -173,8 +181,17 @@ export type ExecutionPayloadBodyRpc = {
 };
 
 export type ExecutionPayloadBody = {
-  transactions: bellatrix.Transaction[];
+  transactions: bellatrix.Transactions;
   withdrawals: capella.Withdrawals | null;
+};
+
+/** engine_getPayloadBodiesByHashV2 (Amsterdam): adds the RLP-encoded block access list, or null if the EL has pruned it */
+export type ExecutionPayloadBodyV2Rpc = ExecutionPayloadBodyRpc & {
+  blockAccessList?: DATA | null;
+};
+
+export type ExecutionPayloadBodyV2 = ExecutionPayloadBody & {
+  blockAccessList: Uint8Array | null;
 };
 
 export type ExecutionPayloadRpc = {
@@ -260,7 +277,12 @@ export type PayloadAttributesRpc = {
   slotNumber?: QUANTITY;
   /** QUANTITY, 64 Bits - target value for the gasLimit field of the new payload (GLOAS, execution-apis#796) */
   targetGasLimit?: QUANTITY;
+  /** Array of DATA - transactions that the built payload must include (PayloadAttributesV5, HEZE) */
+  inclusionListTransactions?: InclusionListRpc;
 };
+
+/** Array of DATA - array of transaction objects */
+export type InclusionListRpc = DATA[];
 
 export type ClientVersionRpc = {
   /** ClientCode */
@@ -294,7 +316,7 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
     extraData: bytesToData(data.extraData),
     baseFeePerGas: numToQuantity(data.baseFeePerGas),
     blockHash: bytesToData(data.blockHash),
-    transactions: data.transactions.map((tran) => bytesToData(tran)),
+    transactions: Array.from(data.transactions, (tran) => bytesToData(tran)),
   };
 
   // Capella adds withdrawals to the ExecutionPayload
@@ -378,7 +400,7 @@ export function parseExecutionPayload(
     extraData: dataToBytes(data.extraData, null),
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+    transactions: SerializedList.fromArray(data.transactions.map((tran) => dataToBytes(tran, null))),
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
@@ -441,11 +463,22 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
     slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? numToQuantity(data.targetGasLimit) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions
+      ? serializeInclusionList(data.inclusionListTransactions)
+      : undefined,
   };
 }
 
 export function serializeBeaconBlockRoot(data: Root): DATA {
   return bytesToData(data);
+}
+
+export function serializeInclusionList(data: bellatrix.Transactions): InclusionListRpc {
+  return Array.from(data, (transaction) => bytesToData(transaction));
+}
+
+export function deserializeInclusionList(data: InclusionListRpc): bellatrix.Transactions {
+  return SerializedList.fromArray(data.map((transaction) => dataToBytes(transaction, null)));
 }
 
 export function deserializePayloadAttributes(data: PayloadAttributesRpc): PayloadAttributes {
@@ -459,6 +492,9 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
     slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? quantityToBigint(data.targetGasLimit) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions
+      ? deserializeInclusionList(data.inclusionListTransactions)
+      : undefined,
   };
 }
 
@@ -500,63 +536,15 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
 }
 
 /**
- * Prepend a single-byte requestType to requestsBytes
+ * Serialize requests prefixed with a single-byte requestType in one allocation
  */
-function prefixRequests(requestsBytes: Uint8Array, requestType: ExecutionRequestType): Uint8Array {
-  const prefixedRequests = new Uint8Array(1 + requestsBytes.length);
-  prefixedRequests[0] = requestType;
-  prefixedRequests.set(requestsBytes, 1);
+function serializePrefixedRequests<T>(type: Type<T>, requests: T, requestType: ExecutionRequestType): Uint8Array {
+  const uint8Array = new Uint8Array(1 + type.value_serializedSize(requests));
+  const dataView = new DataView(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
+  uint8Array[0] = requestType;
+  type.value_serializeToBytes({uint8Array, dataView}, 1, requests);
 
-  return prefixedRequests;
-}
-
-function serializeDepositRequests(depositRequests: electra.DepositRequests): DepositRequestsRpc {
-  const requestsBytes = ssz.electra.DepositRequests.serialize(depositRequests);
-  return bytesToData(prefixRequests(requestsBytes, DEPOSIT_REQUEST_TYPE));
-}
-
-function deserializeDepositRequests(serialized: DepositRequestsRpc): electra.DepositRequests {
-  return ssz.electra.DepositRequests.deserialize(dataToBytes(serialized, null));
-}
-
-function serializeWithdrawalRequests(withdrawalRequests: electra.WithdrawalRequests): WithdrawalRequestsRpc {
-  const requestsBytes = ssz.electra.WithdrawalRequests.serialize(withdrawalRequests);
-  return bytesToData(prefixRequests(requestsBytes, WITHDRAWAL_REQUEST_TYPE));
-}
-
-function deserializeWithdrawalRequests(serialized: WithdrawalRequestsRpc): electra.WithdrawalRequests {
-  return ssz.electra.WithdrawalRequests.deserialize(dataToBytes(serialized, null));
-}
-
-function serializeConsolidationRequests(
-  consolidationRequests: electra.ConsolidationRequests
-): ConsolidationRequestsRpc {
-  const requestsBytes = ssz.electra.ConsolidationRequests.serialize(consolidationRequests);
-  return bytesToData(prefixRequests(requestsBytes, CONSOLIDATION_REQUEST_TYPE));
-}
-
-function deserializeConsolidationRequests(serialized: ConsolidationRequestsRpc): electra.ConsolidationRequests {
-  return ssz.electra.ConsolidationRequests.deserialize(dataToBytes(serialized, null));
-}
-
-function serializeBuilderDepositRequests(
-  builderDepositRequests: gloas.BuilderDepositRequests
-): BuilderDepositRequestsRpc {
-  const requestsBytes = ssz.gloas.BuilderDepositRequests.serialize(builderDepositRequests);
-  return bytesToData(prefixRequests(requestsBytes, BUILDER_DEPOSIT_REQUEST_TYPE));
-}
-
-function deserializeBuilderDepositRequests(serialized: BuilderDepositRequestsRpc): gloas.BuilderDepositRequests {
-  return ssz.gloas.BuilderDepositRequests.deserialize(dataToBytes(serialized, null));
-}
-
-function serializeBuilderExitRequests(builderExitRequests: gloas.BuilderExitRequests): BuilderExitRequestsRpc {
-  const requestsBytes = ssz.gloas.BuilderExitRequests.serialize(builderExitRequests);
-  return bytesToData(prefixRequests(requestsBytes, BUILDER_EXIT_REQUEST_TYPE));
-}
-
-function deserializeBuilderExitRequests(serialized: BuilderExitRequestsRpc): gloas.BuilderExitRequests {
-  return ssz.gloas.BuilderExitRequests.deserialize(dataToBytes(serialized, null));
+  return uint8Array;
 }
 
 /**
@@ -566,62 +554,65 @@ function deserializeBuilderExitRequests(serialized: BuilderExitRequestsRpc): glo
  * Gloas extends the list with builder deposits (0x03) and builder exits (0x04) per
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#modified-get_execution_requests_list
  */
-export function serializeExecutionRequests(fork: ForkName, executionRequests: ExecutionRequests): ExecutionRequestsRpc {
+export function serializeExecutionRequestsToBytes(fork: ForkName, executionRequests: ExecutionRequests): Uint8Array[] {
   const {deposits, withdrawals, consolidations} = executionRequests;
-  const result: ExecutionRequestsRpc = [];
+  const result: Uint8Array[] = [];
 
   if (deposits.length !== 0) {
-    result.push(serializeDepositRequests(deposits));
+    result.push(serializePrefixedRequests(ssz.electra.DepositRequests, deposits, DEPOSIT_REQUEST_TYPE));
   }
 
   if (withdrawals.length !== 0) {
-    result.push(serializeWithdrawalRequests(withdrawals));
+    result.push(serializePrefixedRequests(ssz.electra.WithdrawalRequests, withdrawals, WITHDRAWAL_REQUEST_TYPE));
   }
 
   if (consolidations.length !== 0) {
-    result.push(serializeConsolidationRequests(consolidations));
+    result.push(
+      serializePrefixedRequests(ssz.electra.ConsolidationRequests, consolidations, CONSOLIDATION_REQUEST_TYPE)
+    );
   }
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
     const {builderDeposits, builderExits} = executionRequests as gloas.ExecutionRequests;
 
     if (builderDeposits.length !== 0) {
-      result.push(serializeBuilderDepositRequests(builderDeposits));
+      result.push(
+        serializePrefixedRequests(ssz.gloas.BuilderDepositRequests, builderDeposits, BUILDER_DEPOSIT_REQUEST_TYPE)
+      );
     }
 
     if (builderExits.length !== 0) {
-      result.push(serializeBuilderExitRequests(builderExits));
+      result.push(serializePrefixedRequests(ssz.gloas.BuilderExitRequests, builderExits, BUILDER_EXIT_REQUEST_TYPE));
     }
   }
 
   return result;
 }
 
-export function deserializeExecutionRequests(fork: ForkName, serialized: ExecutionRequestsRpc): ExecutionRequests {
+export function serializeExecutionRequests(fork: ForkName, executionRequests: ExecutionRequests): ExecutionRequestsRpc {
+  return serializeExecutionRequestsToBytes(fork, executionRequests).map(bytesToData);
+}
+
+export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized: Uint8Array[]): ExecutionRequests {
   const result: ExecutionRequests =
     ForkSeq[fork] >= ForkSeq.gloas
       ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: []}
       : {deposits: [], withdrawals: [], consolidations: []};
 
-  if (serialized.length === 0) {
-    return result;
-  }
-
   let prevRequestType: ExecutionRequestType | undefined;
 
-  for (let prefixedRequests of serialized) {
-    // Slice out 0x so it is easier to extract request type
-    if (prefixedRequests.startsWith("0x")) {
-      prefixedRequests = prefixedRequests.slice(2);
+  for (const prefixedRequests of serialized) {
+    if (prefixedRequests.length === 0) {
+      throw Error("Invalid request type, request must be prefixed with its type");
     }
 
-    const currentRequestType = parseInt(prefixedRequests.substring(0, 2), 16);
+    const currentRequestType = prefixedRequests[0];
 
     if (!isExecutionRequestType(currentRequestType)) {
-      throw Error(`Invalid request type currentRequestType=${prefixedRequests.substring(0, 2)}`);
+      throw Error(`Invalid request type currentRequestType=${currentRequestType}`);
     }
 
-    const requests = prefixedRequests.slice(2);
+    const requests = prefixedRequests.subarray(1);
 
     if (requests.length === 0) {
       throw Error(
@@ -637,29 +628,29 @@ export function deserializeExecutionRequests(fork: ForkName, serialized: Executi
 
     switch (currentRequestType) {
       case DEPOSIT_REQUEST_TYPE: {
-        result.deposits = deserializeDepositRequests(requests);
+        result.deposits = ssz.electra.DepositRequests.deserialize(requests);
         break;
       }
       case WITHDRAWAL_REQUEST_TYPE: {
-        result.withdrawals = deserializeWithdrawalRequests(requests);
+        result.withdrawals = ssz.electra.WithdrawalRequests.deserialize(requests);
         break;
       }
       case CONSOLIDATION_REQUEST_TYPE: {
-        result.consolidations = deserializeConsolidationRequests(requests);
+        result.consolidations = ssz.electra.ConsolidationRequests.deserialize(requests);
         break;
       }
       case BUILDER_DEPOSIT_REQUEST_TYPE: {
         if (ForkSeq[fork] < ForkSeq.gloas) {
           throw Error(`Builder deposit request is not supported pre-gloas fork=${fork}`);
         }
-        (result as gloas.ExecutionRequests).builderDeposits = deserializeBuilderDepositRequests(requests);
+        (result as gloas.ExecutionRequests).builderDeposits = ssz.gloas.BuilderDepositRequests.deserialize(requests);
         break;
       }
       case BUILDER_EXIT_REQUEST_TYPE: {
         if (ForkSeq[fork] < ForkSeq.gloas) {
           throw Error(`Builder exit request is not supported pre-gloas fork=${fork}`);
         }
-        (result as gloas.ExecutionRequests).builderExits = deserializeBuilderExitRequests(requests);
+        (result as gloas.ExecutionRequests).builderExits = ssz.gloas.BuilderExitRequests.deserialize(requests);
         break;
       }
     }
@@ -669,19 +660,40 @@ export function deserializeExecutionRequests(fork: ForkName, serialized: Executi
   return result;
 }
 
+export function deserializeExecutionRequests(fork: ForkName, serialized: ExecutionRequestsRpc): ExecutionRequests {
+  return deserializeExecutionRequestsFromBytes(
+    fork,
+    serialized.map((data) => dataToBytes(data, null))
+  );
+}
+
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
   return data
     ? {
-        transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+        transactions: SerializedList.fromArray(data.transactions.map((tran) => dataToBytes(tran, null))),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
       }
     : null;
 }
 
+export function deserializeExecutionPayloadBodyV2(
+  data: ExecutionPayloadBodyV2Rpc | null
+): ExecutionPayloadBodyV2 | null {
+  const body = deserializeExecutionPayloadBody(data);
+  return body
+    ? {...body, blockAccessList: data?.blockAccessList ? dataToBytes(data.blockAccessList, null) : null}
+    : null;
+}
+
+export function serializeExecutionPayloadBodyV2(data: ExecutionPayloadBodyV2 | null): ExecutionPayloadBodyV2Rpc | null {
+  const body = serializeExecutionPayloadBody(data);
+  return body ? {...body, blockAccessList: data?.blockAccessList ? bytesToData(data.blockAccessList) : null} : null;
+}
+
 export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null): ExecutionPayloadBodyRpc | null {
   return data
     ? {
-        transactions: data.transactions.map((tran) => bytesToData(tran)),
+        transactions: Array.from(data.transactions, (tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
       }
     : null;

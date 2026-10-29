@@ -17,6 +17,7 @@ export * from "./execution.js";
 export * from "./finality.js";
 export * from "./genesis.js";
 export * from "./gloas.js";
+export * from "./inclusionListCommittee.js";
 export * from "./interop.js";
 export * from "./loadState/index.js";
 export * from "./pendingDepositsLookup.js";
@@ -28,6 +29,12 @@ export * from "./signatureSets.js";
 export * from "./signingRoot.js";
 export * from "./slot.js";
 export * from "./ssz.js";
+export {
+  type StateBytesMetadata,
+  getValidatorCountFromStateBytes,
+  getValidatorPubkeyFromStateBytes,
+  readBeaconStateBytesMetadata,
+} from "./sszBytes.js";
 export * from "./syncCommittee.js";
 export * from "./validator.js";
 export * from "./weakSubjectivity.js";

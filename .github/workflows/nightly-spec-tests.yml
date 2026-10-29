@@ -12,13 +12,13 @@ permissions:
 on:
   schedule:
     # 06:00 UTC. ethereum/consensus-specs `tests.yml` cron fires at 00:00 UTC
-    # and takes ~5h to publish all artifacts. Earlier risks falling back to the
-    # previous day's run.
+    # and takes ~5h to publish all artifacts. Earlier runs can fail because
+    # today's artifacts are not yet available.
     - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
       date:
-        description: "'latest' or YYYY-MM-DD"
+        description: "'latest' (today, UTC) or YYYY-MM-DD"
         required: false
         default: "latest"
       repo:
@@ -100,7 +100,7 @@ jobs:
           steps.spec_minimal.outcome == 'failure' ||
           steps.spec_mainnet.outcome == 'failure' ||
           steps.spec_validator.outcome == 'failure'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: spec-test-logs
           path: |

@@ -1,4 +1,5 @@
 import {beforeAll, describe, expect, it} from "vitest";
+import {ForkName} from "@lodestar/params";
 import {chainConfig} from "../../src/default.js";
 import {ChainConfig, createChainConfig, createForkConfig} from "../../src/index.js";
 
@@ -10,6 +11,25 @@ describe("createChainConfig", () => {
         GAS_LIMIT_SCHEDULE: [{EPOCH: 9, GAS_LIMIT: 60_000_000}],
       })
     ).toThrow("must be greater than or equal to GLOAS_FORK_EPOCH 10");
+  });
+});
+
+describe("getSlotComponentDurationMs", () => {
+  it.each([
+    {slotDurationMs: 12_000, basisPoints: 3333, expected: 4000},
+    {slotDurationMs: 12_000, basisPoints: 6667, expected: 8000},
+    {slotDurationMs: 12_000, basisPoints: 1667, expected: 2000},
+    {slotDurationMs: 12_000, basisPoints: 2500, expected: 3000},
+    {slotDurationMs: 6_000, basisPoints: 3333, expected: 2000},
+    {slotDurationMs: 6_000, basisPoints: 6667, expected: 4000},
+    // every mainnet basis-point value is exact at a 10 s slot
+    {slotDurationMs: 10_000, basisPoints: 3333, expected: 3333},
+    {slotDurationMs: 10_000, basisPoints: 1667, expected: 1667},
+    {slotDurationMs: 10_000, basisPoints: 2500, expected: 2500},
+  ])("$basisPoints bps of a $slotDurationMs ms slot is $expected ms", ({slotDurationMs, basisPoints, expected}) => {
+    const config = createForkConfig({...chainConfig, SLOT_DURATION_MS: slotDurationMs});
+
+    expect(config.getSlotComponentDurationMs(ForkName.phase0, basisPoints)).toBe(expected);
   });
 });
 

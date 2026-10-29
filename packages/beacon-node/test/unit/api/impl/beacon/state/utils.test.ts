@@ -1,8 +1,15 @@
-import {describe, expect, it} from "vitest";
+import {Mock, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView} from "@lodestar/state-transition";
-import {getStateResponseWithRegen, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {BeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {
+  getBuilderIndexByPubkey,
+  getStateBuilderIndex,
+  getStateResponseWithRegen,
+  getStateValidatorIndex,
+} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {NodeIsSyncing} from "../../../../../../src/api/impl/errors.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {IBeaconSync, SyncState} from "../../../../../../src/sync/index.js";
@@ -66,6 +73,47 @@ describe("beacon state api utils", () => {
     });
   });
 
+  describe("getStateBuilderIndex", () => {
+    const builders = Array.from({length: 4}, (_, i) => ({
+      ...ssz.gloas.Builder.defaultValue(),
+      pubkey: new Uint8Array(48).fill(i + 1),
+    }));
+    const getBuilder = vi.fn((index: number) => builders[index]);
+    const state = {getBuilder, getBuildersLength: () => builders.length} as unknown as IBeaconStateViewGloas;
+
+    it("should resolve builder indices and pubkeys", () => {
+      const getBuilderIndexByPubkeyMap = () => getBuilderIndexByPubkey(state);
+      expect(getStateBuilderIndex("2", state, getBuilderIndexByPubkeyMap)).toEqual({valid: true, builderIndex: 2});
+      expect(getStateBuilderIndex(toHexString(builders[3].pubkey), state, getBuilderIndexByPubkeyMap)).toEqual({
+        valid: true,
+        builderIndex: 3,
+      });
+      expect(getStateBuilderIndex(builders[0].pubkey, state, getBuilderIndexByPubkeyMap)).toEqual({
+        valid: true,
+        builderIndex: 0,
+      });
+    });
+
+    it("should return valid: false on builder indices / pubkeys not in the state", () => {
+      const getBuilderIndexByPubkeyMap = () => getBuilderIndexByPubkey(state);
+      expect(getStateBuilderIndex(String(builders.length), state, getBuilderIndexByPubkeyMap).valid).toBe(false);
+      expect(getStateBuilderIndex(new Uint8Array(48).fill(9), state, getBuilderIndexByPubkeyMap).valid).toBe(false);
+      expect(getStateBuilderIndex("0xfoo", state, getBuilderIndexByPubkeyMap).valid).toBe(false);
+    });
+
+    it("should read each builder once to resolve many pubkeys", () => {
+      getBuilder.mockClear();
+      const builderIndexByPubkey = getBuilderIndexByPubkey(state);
+      for (const [i, builder] of builders.entries()) {
+        expect(
+          getStateBuilderIndex(builder.pubkey, state, () => builderIndexByPubkey),
+          `builder ${i}`
+        ).toEqual({valid: true, builderIndex: i});
+      }
+      expect(getBuilder).toHaveBeenCalledTimes(builders.length);
+    });
+  });
+
   describe("getStateResponseWithRegen", () => {
     // Node far behind head and syncing. Chain getters return a dummy response so the resolved
     // "already-available" state ids don't blow up; the regen paths are never reached in these tests.
@@ -78,6 +126,7 @@ describe("beacon state api utils", () => {
         getJustifiedCheckpoint: () => ({rootHex: "0x00", epoch: 0}),
         getFinalizedBlock: () => ({slot: 0}),
       },
+      regen: {getStateSync: () => servedResponse.state},
       getStateByStateRoot: () => Promise.resolve(servedResponse),
       getStateOrBytesByCheckpoint: () => Promise.resolve(servedResponse),
       getStateBySlot: () => Promise.resolve(servedResponse),
@@ -94,6 +143,44 @@ describe("beacon state api utils", () => {
       for (const stateId of ["head", "finalized", "justified", "genesis"] as const) {
         await expect(getStateResponseWithRegen(syncingChain, sync, stateId), stateId).resolves.toBeDefined();
       }
+    });
+  });
+
+  describe("getStateResponseWithRegen head", () => {
+    const head = {slot: 15902, stateRoot: "0xaa", executionStatus: ExecutionStatus.Valid};
+    const headPostState = {epoch: 496, slot: 15902};
+    // Anchor state at the epoch boundary after the head block, slots 15903-15904 skipped
+    const anchorState = {epoch: 497, slot: 15904};
+    const sync = {state: SyncState.Synced} as unknown as IBeaconSync;
+
+    function getChain(cachedState: unknown): {chain: IBeaconChain; getHeadState: Mock} {
+      const getHeadState = vi.fn(() => anchorState);
+      const chain = {
+        forkChoice: {
+          getHead: () => head,
+          getFinalizedCheckpoint: () => ({rootHex: "0xbb", epoch: 497}),
+        },
+        regen: {getStateSync: (stateRoot: string) => (stateRoot === head.stateRoot ? cachedState : null)},
+        getHeadState,
+      } as unknown as IBeaconChain;
+      return {chain, getHeadState};
+    }
+
+    it("serves the head block's post-state from the block state cache", async () => {
+      const {chain, getHeadState} = getChain(headPostState);
+      const res = await getStateResponseWithRegen(chain, sync, "head");
+      expect(res.state).toBe(headPostState);
+      expect(res.finalized).toBe(true);
+      expect(res.executionOptimistic).toBe(false);
+      expect(getHeadState).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the closest head state if the head block's post-state is not cached (anchor at skipped boundary slot)", async () => {
+      const {chain, getHeadState} = getChain(null);
+      const res = await getStateResponseWithRegen(chain, sync, "head");
+      expect(res.state).toBe(anchorState);
+      expect(res.finalized).toBe(true);
+      expect(getHeadState).toHaveBeenCalledOnce();
     });
   });
 });
