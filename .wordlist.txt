@@ -229,6 +229,7 @@ pnpm
 pre
 premined
 produceBlockV
+proofType
 protolambda
 prover
 pubsub
@@ -264,6 +265,7 @@ util
 utils
 validator
 validators
+verificationKeyPath
 verifier
 vite
 vitest
@@ -276,3 +278,4 @@ yaml
 yamux
 yml
 zapi
+zkVM
