@@ -1,12 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {
-  ForkPostElectra,
-  ForkPreElectra,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostElectra,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ForkPostElectra, ForkPreElectra, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
 import {Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -17,15 +11,8 @@ import {
   PayloadAttestationError,
   PayloadAttestationErrorCode,
   SyncCommitteeError,
-  SyncCommitteeErrorCode,
 } from "../../../../chain/errors/index.js";
-import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
-import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
-import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
-import {validateApiPayloadAttestationMessage} from "../../../../chain/validation/payloadAttestationMessage.js";
-import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
-import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
-import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
+import {toElectraSingleAttestation} from "../../../../chain/validation/index.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
@@ -97,30 +84,32 @@ export function getBeaconPoolApi({
       await Promise.all(
         signedAttestations.map(async (attestation, i) => {
           try {
-            const validateFn = () => validateApiAttestation(fork, chain, {attestation, serializedData: null});
+            const validateFn = () =>
+              chain.validationEngine.validateApiAttestation(fork, {attestation, serializedData: null});
             const {slot, beaconBlockRoot} = attestation.data;
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
-              await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+            const validationResult = await validateGossipFnRetryUnknownRoot(
+              validateFn,
+              network,
+              chain,
+              slot,
+              beaconBlockRoot
+            );
+            const {indexedAttestation, subnet} = validationResult;
 
-            try {
-              // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
-              // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548
-              const insertOutcome = chain.attestationPool.add(
-                committeeIndex,
-                attestation,
-                attDataRootHex,
-                validatorCommitteeIndex,
-                committeeSize,
-                priority
-              );
+            // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
+            // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548.
+            // A pool insertion failure is logged by the engine and must not stop us from publishing a validated
+            // attestation, which the route requires us to do.
+            const insertOutcome = chain.validationEngine.importAttestation(validationResult, {
+              addToPool: true,
+              addToForkChoice: false,
+              priority,
+            });
+            if (insertOutcome !== null) {
               metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
-            } catch (e) {
-              // The pool is a local optimization, failing to insert must not stop us from publishing a
-              // validated attestation, which the route requires us to do. Same handling as the gossip path
-              logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
             if (isForkPostElectra(fork)) {
@@ -171,24 +160,24 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
-      const verifiedDomains = await validateApiAttesterSlashing(chain, attesterSlashing);
+      const verifiedDomains = await chain.validationEngine.validateApiAttesterSlashing(attesterSlashing);
       const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
-      chain.opPool.insertAttesterSlashing(fork, attesterSlashing, verifiedDomains);
+      chain.validationEngine.importAttesterSlashing(fork, attesterSlashing, verifiedDomains, {addToForkChoice: false});
       await network.publishAttesterSlashing(attesterSlashing);
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {
-      const verifiedDomain = await validateApiProposerSlashing(chain, proposerSlashing);
-      chain.opPool.insertProposerSlashing(proposerSlashing, verifiedDomain);
+      const verifiedDomain = await chain.validationEngine.validateApiProposerSlashing(proposerSlashing);
+      chain.validationEngine.importProposerSlashing(proposerSlashing, verifiedDomain);
       await network.publishProposerSlashing(proposerSlashing);
     },
 
     async submitPoolVoluntaryExit({signedVoluntaryExit}) {
-      const result = await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+      const result = await chain.validationEngine.validateApiVoluntaryExit(signedVoluntaryExit);
 
       if (result.status === "deferred") {
         const currentEpoch = chain.clock.currentEpoch;
-        const inserted = chain.deferredVoluntaryExitPool.insert(signedVoluntaryExit, result.validity, currentEpoch);
+        const inserted = chain.validationEngine.deferVoluntaryExit(signedVoluntaryExit, result.validity, currentEpoch);
         if (!inserted) {
           throw new ApiError(400, "Deferred voluntary exit pool is full or already contains this validator");
         }
@@ -199,7 +188,7 @@ export function getBeaconPoolApi({
         return;
       }
 
-      chain.opPool.insertVoluntaryExit(signedVoluntaryExit);
+      chain.validationEngine.importVoluntaryExit(signedVoluntaryExit);
       chain.emitter.emit(routes.events.EventType.voluntaryExit, signedVoluntaryExit);
       await network.publishVoluntaryExit(signedVoluntaryExit);
     },
@@ -211,9 +200,9 @@ export function getBeaconPoolApi({
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
             // Ignore even if the change exists and reprocess
-            await validateApiBlsToExecutionChange(chain, blsToExecutionChange);
+            await chain.validationEngine.validateApiBlsToExecutionChange(blsToExecutionChange);
             const preCapella = chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH;
-            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
+            chain.validationEngine.importBlsToExecutionChange(blsToExecutionChange, {preCapella});
 
             chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
 
@@ -243,9 +232,10 @@ export function getBeaconPoolApi({
       await Promise.all(
         payloadAttestationMessages.map(async (payloadAttestationMessage, i) => {
           try {
-            const validateFn = () => validateApiPayloadAttestationMessage(chain, payloadAttestationMessage);
+            const validateFn = () =>
+              chain.validationEngine.validateApiPayloadAttestationMessage(payloadAttestationMessage);
             const {slot, beaconBlockRoot} = payloadAttestationMessage.data;
-            const {attDataRootHex, validatorCommitteeIndices} = await validateGossipFnRetryUnknownRoot(
+            const validationResult = await validateGossipFnRetryUnknownRoot(
               validateFn,
               network,
               chain,
@@ -256,20 +246,14 @@ export function getBeaconPoolApi({
             const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
             metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
 
-            const insertOutcome = chain.payloadAttestationPool.add(
+            const insertOutcome = chain.validationEngine.importPayloadAttestationMessage(
               payloadAttestationMessage,
-              attDataRootHex,
-              validatorCommitteeIndices
+              validationResult,
+              {addToPool: true, addToForkChoice: true}
             );
-            metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
-
-            chain.forkChoice.notifyPtcMessages(
-              toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-              payloadAttestationMessage.data.slot,
-              validatorCommitteeIndices,
-              payloadAttestationMessage.data.payloadPresent,
-              payloadAttestationMessage.data.blobDataAvailable
-            );
+            if (insertOutcome !== null) {
+              metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
+            }
 
             chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
               version: chain.config.getForkName(slot),
@@ -338,33 +322,16 @@ export function getBeaconPoolApi({
       await Promise.all(
         signatures.map(async (signature, i) => {
           try {
-            const synCommittee = state.getIndexedSyncCommittee(signature.slot);
-            const indexesInCommittee = synCommittee.validatorIndexMap.get(signature.validatorIndex);
-            if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
-              throw new SyncCommitteeError(GossipAction.REJECT, {
-                code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
-                validatorIndex: signature.validatorIndex,
-              });
-            }
+            const validationResult = await chain.validationEngine.validateApiSyncCommitteeMessage(signature);
 
-            // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
-            // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
-            await validateApiSyncCommittee(chain, state, signature);
-
-            // The same validator can appear multiple times in the sync committee. It can appear multiple times per
-            // subnet even. First compute on which subnet the signature must be broadcasted to.
-            const subnets: number[] = [];
             // same to api attestation, we allow api SyncCommittee to be added to pool even when it's late
             // see https://github.com/ChainSafe/lodestar/issues/7548
-            const priority = true;
+            chain.validationEngine.importSyncCommitteeMessage(signature, validationResult, {priority: true});
 
-            for (const indexInCommittee of indexesInCommittee) {
-              // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
-              const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
-              const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-              chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee, priority);
-
-              // Cheap de-duplication code to avoid using a Set. indexesInCommittee is always sorted
+            // The same validator can appear multiple times in the sync committee. It can appear multiple times per
+            // subnet even. Positions are sorted by subnet, so adjacent de-duplication is enough.
+            const subnets: number[] = [];
+            for (const {subnet} of validationResult.positions) {
               if (subnets.length === 0 || subnets.at(-1) !== subnet) {
                 subnets.push(subnet);
               }

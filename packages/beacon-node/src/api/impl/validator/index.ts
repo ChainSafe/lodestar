@@ -86,13 +86,7 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
-import {
-  InclusionListValidationResult,
-  validateApiAggregateAndProof,
-  validateGossipInclusionList,
-} from "../../../chain/validation/index.js";
-import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
+import {InclusionListValidationResult} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {BUILDER_BID_DEADLINE_MS, BuilderApiBid, decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
@@ -360,7 +354,7 @@ export function getValidatorApi(
    *              prepareNextSlot (4s before next slot)
    */
   async function waitForCheckpointState(cpHex: CheckpointHex): Promise<IBeaconStateView | null> {
-    const cpState = chain.regen.getCheckpointStateSync(cpHex);
+    const cpState = chain.stateEngine.getCheckpointStateSync(cpHex);
     if (cpState) {
       return cpState;
     }
@@ -388,7 +382,7 @@ export function getValidatorApi(
     }
 
     if (foundCPState === true) {
-      return chain.regen.getCheckpointStateSync(cpHex);
+      return chain.stateEngine.getCheckpointStateSync(cpHex);
     }
 
     return null;
@@ -1586,7 +1580,7 @@ export function getValidatorApi(
         case stateEpoch + 1: {
           // make sure shuffling is calculated and ready for next call to calculate nextProposers
           const nextEpoch = state.epoch + 1;
-          await chain.shufflingCache.get(nextEpoch, state.nextDecisionRoot);
+          await chain.stateEngine.getShuffling(nextEpoch, state.nextDecisionRoot);
           // Requesting duties for next epoch is allowed since they can be predicted with high probabilities.
           // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
           indexes = state.nextProposers;
@@ -1687,7 +1681,7 @@ export function getValidatorApi(
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state, indices);
       const decisionRoot = state.getShufflingDecisionRoot(epoch);
-      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
+      const shuffling = await chain.stateEngine.getShuffling(epoch, decisionRoot);
       if (!shuffling) {
         throw new ApiError(
           500,
@@ -1864,19 +1858,24 @@ export function getValidatorApi(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
             // TODO: Validate in batch
-            const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
+            const validateFn = () => chain.validationEngine.validateApiAggregateAndProof(fork, signedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, committeeValidatorIndices, attDataRootHex} =
-              await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+            const validationResult = await validateGossipFnRetryUnknownRoot(
+              validateFn,
+              network,
+              chain,
+              slot,
+              beaconBlockRoot
+            );
+            const {indexedAttestation} = validationResult;
 
-            const insertOutcome = chain.aggregatedAttestationPool.add(
-              signedAggregateAndProof.message.aggregate,
-              attDataRootHex,
-              indexedAttestation.attestingIndices.length,
-              committeeValidatorIndices
+            const insertOutcome = chain.validationEngine.importAggregateAndProof(
+              signedAggregateAndProof,
+              validationResult,
+              {addToForkChoice: false}
             );
             metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
@@ -1923,15 +1922,11 @@ export function getValidatorApi(
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
-              chain,
+            const validationResult = await chain.validationEngine.validateApiContributionAndProof(contributionAndProof);
+            const insertOutcome = chain.validationEngine.importContributionAndProof(
               contributionAndProof,
-              true // skip known participants check
-            );
-            const insertOutcome = chain.syncContributionAndProofPool.add(
-              contributionAndProof.message,
-              syncCommitteeParticipantIndices.length,
-              true
+              validationResult,
+              {priority: true}
             );
             metrics?.opPool.syncContributionAndProofPool.apiInsertOutcome.inc({insertOutcome});
             await network.publishContributionAndProof(contributionAndProof);
@@ -2127,10 +2122,9 @@ export function getValidatorApi(
       await Promise.all(
         signedProposerPreferences.map(async (signed, i) => {
           try {
-            await validateGossipProposerPreferences(chain, signed);
+            await chain.validationEngine.validateApiProposerPreferences(signed);
             attachedValidatorIndices.push(signed.message.validatorIndex);
 
-            chain.proposerPreferencesPool.add(signed);
             await network.publishProposerPreferences(signed);
             chain.emitter.emit(routes.events.EventType.proposerPreferences, {
               version: config.getForkName(signed.message.proposalSlot),
@@ -2302,17 +2296,17 @@ export function getValidatorApi(
       const timer = metrics?.inclusionListsValidationTime.startTimer();
       let validationResult: InclusionListValidationResult;
       try {
-        validationResult = await validateGossipInclusionList(chain, signedInclusionList);
+        validationResult = await chain.validationEngine.validateApiInclusionList(signedInclusionList);
       } finally {
         timer?.({source: InclusionListSource.api});
       }
-      const {committeeIndices, totalBytes} = validationResult;
+      const {totalBytes} = validationResult;
       metrics?.inclusionListsValid.inc({source: InclusionListSource.api});
       metrics?.inclusionListsValidSize.inc(totalBytes);
 
       const isTimely =
         secFromSlot >= 0 && secFromSlot * 1000 < chain.config.getInclusionListDueMs(chain.config.getForkName(slot));
-      chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
+      chain.validationEngine.importInclusionList(signedInclusionList, validationResult, {isTimely});
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {
         version: chain.config.getForkName(slot),

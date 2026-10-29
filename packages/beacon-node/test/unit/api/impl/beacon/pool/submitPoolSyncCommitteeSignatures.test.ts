@@ -1,23 +1,17 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import {createChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {BeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool/index.js";
 import {IndexedError} from "../../../../../../src/api/impl/errors.js";
 import {SyncCommitteeErrorCode} from "../../../../../../src/chain/errors/index.js";
+import {ZERO_HASH} from "../../../../../../src/constants/index.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
-vi.mock("../../../../../../src/chain/validation/syncCommittee.js", async (importActual) => {
-  const mod = await importActual<typeof import("../../../../../../src/chain/validation/syncCommittee.js")>();
-  return {...mod, validateApiSyncCommittee: vi.fn()};
-});
-
-const {validateApiSyncCommittee} = await import("../../../../../../src/chain/validation/syncCommittee.js");
-
 describe("api - beacon - submitPoolSyncCommitteeSignatures", () => {
-  const config = createChainForkConfig({...configDef, ALTAIR_FORK_EPOCH: 0});
+  const config = createBeaconConfig(createChainForkConfig({...configDef, ALTAIR_FORK_EPOCH: 0}), ZERO_HASH);
 
   let modules: ApiTestModules;
   let api: ReturnType<typeof getBeaconPoolApi>;
@@ -32,7 +26,6 @@ describe("api - beacon - submitPoolSyncCommitteeSignatures", () => {
     syncCommitteeMessagePoolAdd = vi.fn();
     Object.defineProperty(modules.chain, "syncCommitteeMessagePool", {value: {add: syncCommitteeMessagePoolAdd}});
     modules.network.publishSyncCommitteeSignature = vi.fn().mockResolvedValue(1);
-    vi.mocked(validateApiSyncCommittee).mockResolvedValue(undefined);
 
     api = getBeaconPoolApi(modules);
   });
@@ -58,7 +51,7 @@ describe("api - beacon - submitPoolSyncCommitteeSignatures", () => {
     expect((err as IndexedError).failures).toEqual([
       {index: 0, message: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE},
     ]);
-    expect(validateApiSyncCommittee).not.toHaveBeenCalled();
+    expect(modules.chain.bls.verifySignatureSets).not.toHaveBeenCalled();
     expect(syncCommitteeMessagePoolAdd).not.toHaveBeenCalled();
     expect(modules.network.publishSyncCommitteeSignature).not.toHaveBeenCalled();
   });

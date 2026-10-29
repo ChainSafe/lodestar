@@ -5,7 +5,6 @@ import {
   IBeaconStateView,
   computeEpochAtSlot,
   getIndexedAttestation,
-  signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
@@ -75,7 +74,7 @@ export async function verifyBlocksInEpoch(
 
   // TODO: Skip in process chain segment
   // Retrieve preState from cache (regen)
-  const preState0 = await this.regen
+  const preState0 = await this.stateEngine
     // transfer cache to process faster, postState will be in block state cache
     .getPreState(block0.message, {dontTransferCache: false}, RegenCaller.processBlocksInEpoch)
     .catch((e) => {
@@ -117,7 +116,7 @@ export async function verifyBlocksInEpoch(
         // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
         // we should have the shuffling inside ShufflingCache most of the time
         const shuffling =
-          this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
+          this.stateEngine.getShufflingSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
           preState0.getShufflingAtEpoch(attEpoch);
         return getIndexedAttestation(shuffling, fork, attestation);
       });
@@ -217,8 +216,7 @@ export async function verifyBlocksInEpoch(
     for (const blockInput of blockInputs) {
       const block = blockInput.getBlock();
       const {slot, proposerIndex} = block.message;
-      const signedBlockHeader = signedBlockToSignedHeader(this.config, block);
-      this.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex, signedBlockHeader);
+      this.validationEngine.onBlockVerified(block, blockInput.blockRootHex);
       // Only produce a slashing while importing the block. A block that is verified before it is published
       // must not be treated as equivocation evidence since it may never be seen by the network
       if (opts.verifyOnly !== true && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {

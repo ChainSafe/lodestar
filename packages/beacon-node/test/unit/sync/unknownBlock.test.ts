@@ -21,6 +21,7 @@ import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposer
 import {SeenBlockInput} from "../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGloasBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validation/executionPayloadEnvelope.js";
+import {ValidationEngine} from "../../../src/chain/validationEngine/index.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
@@ -1038,6 +1039,7 @@ describe("UnknownBlockSync", () => {
         } as unknown as IForkChoice,
         ...chainOverrides,
       } as IBeaconChain;
+      Object.assign(chain, {validationEngine: new ValidationEngine(chain)});
 
       const network = {
         events: networkEvents,

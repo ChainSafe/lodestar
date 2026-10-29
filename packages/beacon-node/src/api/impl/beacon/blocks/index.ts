@@ -61,9 +61,6 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
-import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
-import {validateGossipExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
-import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
   computePreFuluKzgCommitmentsInclusionProof,
@@ -217,7 +214,7 @@ export function getBeaconBlockApi(
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
           try {
-            await validateGossipBlock(config, chain, signedBlock, fork);
+            await chain.validationEngine.validateApiBlock(fork, signedBlock);
           } catch (error) {
             if (error instanceof BlockGossipError) {
               switch (error.type.code) {
@@ -291,13 +288,8 @@ export function getBeaconBlockApi(
         // Verify that signature and observe the block root here
         if (blockLocallyProduced) {
           try {
-            await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
-            chain.seenBlockProposers.observeBlockRoot(
-              slot,
-              signedBlock.message.proposerIndex,
-              blockRoot,
-              signedBlockToSignedHeader(config, signedBlock)
-            );
+            await chain.validationEngine.verifyBlockProposerSignature(signedBlock, blockRoot);
+            chain.validationEngine.onBlockVerified(signedBlock, blockRoot);
           } catch (e) {
             chain.logger.error(
               "Proposer signature validation failed while publishing the block",
@@ -793,16 +785,16 @@ export function getBeaconBlockApi(
       try {
         switch (broadcastValidation) {
           case routes.beacon.BroadcastValidation.gossip: {
-            await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+            await chain.validationEngine.validateApiExecutionPayloadEnvelope(signedExecutionPayloadEnvelope);
             break;
           }
 
           case routes.beacon.BroadcastValidation.consensusAndEquivocation:
           case routes.beacon.BroadcastValidation.consensus: {
-            await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+            await chain.validationEngine.validateApiExecutionPayloadEnvelope(signedExecutionPayloadEnvelope);
 
             // Verify the envelope against the post-block state
-            const blockState = await chain.regen
+            const blockState = await chain.stateEngine
               .getBlockSlotState(block, block.slot, {dontTransferCache: true}, RegenCaller.restApi)
               .catch((e) => {
                 chain.logger.debug("Failed to regenerate block state for consensus checks", valLogMeta, e as Error);
@@ -1060,15 +1052,14 @@ export function getBeaconBlockApi(
 
       if (!opts.disableBidValidation) {
         const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
-        const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, signedExecutionPayloadBid);
+        const {proposerIndex} = await chain.validationEngine.validateApiExecutionPayloadBid(signedExecutionPayloadBid);
         validationTimer?.();
 
         // Gossip does not deliver our own messages back to us, so a validated bid is added to the
         // pool here to allow a proposer on this node to select it
-        const insertOutcome = chain.executionPayloadBidPool.add(
-          signedExecutionPayloadBid,
-          Math.floor(elapsedSec * 1000)
-        );
+        const insertOutcome = chain.validationEngine.importExecutionPayloadBid(signedExecutionPayloadBid, {
+          receivedMs: Math.floor(elapsedSec * 1000),
+        });
         metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
 
         chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.api, proposerIndex, bid);

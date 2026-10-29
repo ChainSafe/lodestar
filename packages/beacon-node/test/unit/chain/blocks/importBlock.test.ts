@@ -52,7 +52,6 @@ describe("chain / blocks / importBlock", () => {
         waitForSpace: vi.fn().mockResolvedValue(undefined),
         push: vi.fn().mockResolvedValue(undefined),
       },
-      checkpointBalancesCache: {processState: vi.fn()},
     } as unknown as BeaconChain;
 
     const fullyVerifiedBlock: FullyVerifiedBlock = {

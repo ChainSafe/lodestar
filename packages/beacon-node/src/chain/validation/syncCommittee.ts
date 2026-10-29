@@ -8,6 +8,11 @@ import {getSyncCommitteeSignatureSet} from "./signatureSets/index.js";
 
 type IndexInSubcommittee = number;
 
+export type SyncCommitteePosition = {subnet: SubnetID; indexInSubcommittee: IndexInSubcommittee};
+
+/** Every subcommittee position the validator holds: one subnet for gossip, all subnets for the API */
+export type SyncCommitteeMessageValidationResult = {positions: SyncCommitteePosition[]};
+
 /**
  * Spec v1.1.0-alpha.8
  */
@@ -15,7 +20,7 @@ export async function validateGossipSyncCommittee(
   chain: IBeaconChain,
   syncCommittee: altair.SyncCommitteeMessage,
   subnet: SubnetID
-): Promise<{indicesInSubcommittee: IndexInSubcommittee[]}> {
+): Promise<SyncCommitteeMessageValidationResult> {
   const {slot, validatorIndex, beaconBlockRoot} = syncCommittee;
   const messageRoot = toRootHex(beaconBlockRoot);
 
@@ -68,16 +73,38 @@ export async function validateGossipSyncCommittee(
   // Register this valid item as seen
   chain.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex, messageRoot);
 
-  return {indicesInSubcommittee};
+  return {positions: indicesInSubcommittee.map((indexInSubcommittee) => ({subnet, indexInSubcommittee}))};
 }
 
+/**
+ * Verifies membership and signature only, all other data is very likely to be correct since the message is
+ * created by a validator attached to this node. Worst case gossip peers will drop it and slightly downscore us.
+ */
 export async function validateApiSyncCommittee(
   chain: IBeaconChain,
-  headState: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage
-): Promise<void> {
+): Promise<SyncCommitteeMessageValidationResult> {
+  const headState = chain.getHeadState();
+  const indexesInCommittee = isStatePostAltair(headState)
+    ? headState.getIndexedSyncCommittee(syncCommittee.slot).validatorIndexMap.get(syncCommittee.validatorIndex)
+    : undefined;
+  if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
+    throw new SyncCommitteeError(GossipAction.REJECT, {
+      code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
+      validatorIndex: syncCommittee.validatorIndex,
+    });
+  }
+
   const prioritizeBls = true;
-  return validateSyncCommitteeSigOnly(chain, headState, syncCommittee, prioritizeBls);
+  await validateSyncCommitteeSigOnly(chain, headState, syncCommittee, prioritizeBls);
+
+  // Sync committee subnet members are sequential in the order they appear in the sync committee
+  return {
+    positions: indexesInCommittee.map((indexInCommittee) => ({
+      subnet: Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE),
+      indexInSubcommittee: indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE,
+    })),
+  };
 }
 
 /**

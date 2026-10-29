@@ -30,7 +30,7 @@ export function startDeferredVoluntaryExitPublisher({
       const exits = chain.deferredVoluntaryExitPool.drainProcessableExits(state);
       for (const exit of exits) {
         try {
-          chain.opPool.insertVoluntaryExit(exit);
+          chain.validationEngine.importVoluntaryExit(exit);
           chain.emitter.emit(routes.events.EventType.voluntaryExit, exit);
           await network.publishVoluntaryExit(exit);
           logger.info("Voluntary exit successfully published for validator", {
