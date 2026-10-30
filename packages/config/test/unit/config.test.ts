@@ -158,17 +158,19 @@ describe("getScheduledGasLimit", () => {
 });
 
 describe("getMinEpochsForBlockRequests", () => {
-  it("returns MIN_EPOCHS_FOR_BLOCK_REQUESTS pre-gloas", () => {
-    const config = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 10});
+  it("returns MIN_EPOCHS_FOR_BLOCK_REQUESTS pre-heze", () => {
+    const mainnetConfig = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 5, HEZE_FORK_EPOCH: 10});
+    const minimalConfig = createForkConfig({...minimalChainConfig, GLOAS_FORK_EPOCH: 5, HEZE_FORK_EPOCH: 10});
 
-    expect(config.getMinEpochsForBlockRequests(9)).toBe(33024);
+    expect(mainnetConfig.getMinEpochsForBlockRequests(9)).toBe(33024);
+    expect(minimalConfig.getMinEpochsForBlockRequests(9)).toBe(272);
   });
 
-  it("returns the value derived from the gloas churn limits post-gloas", () => {
-    const mainnetConfig = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 10});
-    const minimalConfig = createForkConfig({...minimalChainConfig, GLOAS_FORK_EPOCH: 10});
+  it("returns MIN_EPOCHS_FOR_BLOCK_REQUESTS_HEZE from heze", () => {
+    const mainnetConfig = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 5, HEZE_FORK_EPOCH: 10});
+    const minimalConfig = createForkConfig({...minimalChainConfig, GLOAS_FORK_EPOCH: 5, HEZE_FORK_EPOCH: 10});
 
-    expect(mainnetConfig.getMinEpochsForBlockRequests(10)).toBe(14299);
-    expect(minimalConfig.getMinEpochsForBlockRequests(10)).toBe(262);
+    expect(mainnetConfig.getMinEpochsForBlockRequests(10)).toBe(8192);
+    expect(minimalConfig.getMinEpochsForBlockRequests(10)).toBe(8192);
   });
 });

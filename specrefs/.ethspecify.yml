@@ -149,7 +149,6 @@ exceptions:
     - compute_max_request_blob_sidecars#deneb
     - compute_max_request_blob_sidecars#electra
     - compute_max_request_data_column_sidecars#fulu
-    - compute_min_epochs_for_block_requests#phase0
     # The pre-Gloas retention minimum exceeds the reduced Gloas minimum.
     - compute_min_epochs_for_block_requests#gloas
 

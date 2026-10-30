@@ -72,12 +72,12 @@ describe("chain / archiveStore / pruneHistory", () => {
     expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
   });
 
-  it("prunes blocks older than the reduced retention window post-gloas", async () => {
-    const gloasConfig = createChainForkConfig({...config, GLOAS_FORK_EPOCH: 0});
-    const minEpochsForBlockRequests = gloasConfig.getMinEpochsForBlockRequests(0);
-    expect(minEpochsForBlockRequests).toBeLessThan(config.MIN_EPOCHS_FOR_BLOCK_REQUESTS);
+  it("prunes blocks older than the heze retention window", async () => {
+    const hezeConfig = createChainForkConfig({...config, GLOAS_FORK_EPOCH: 0, HEZE_FORK_EPOCH: 0});
+    const minEpochsForBlockRequests = hezeConfig.getMinEpochsForBlockRequests(0);
+    expect(minEpochsForBlockRequests).toBe(config.MIN_EPOCHS_FOR_BLOCK_REQUESTS_HEZE);
 
-    const currentEpoch = config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 10;
+    const currentEpoch = minEpochsForBlockRequests + 10;
     const finalizedEpoch = currentEpoch - 2;
     const cutoffSlot = computeStartSlotAtEpoch(currentEpoch - minEpochsForBlockRequests);
     const slots = [0, cutoffSlot - 1, cutoffSlot];
@@ -91,7 +91,7 @@ describe("chain / archiveStore / pruneHistory", () => {
     );
 
     await pruneHistory(
-      gloasConfig,
+      hezeConfig,
       db,
       testLogger(),
       null,
