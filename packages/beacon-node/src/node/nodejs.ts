@@ -297,6 +297,7 @@ export class BeaconNode {
         : undefined,
       builderApiClientOpts: {
         timeout: opts.executionBuilder.timeout,
+        bidDeadline: opts.executionBuilder.bidDeadline,
         // Sent with all builder api requests, unless the node runs in private mode
         userAgent: opts.executionBuilder.userAgent,
       },

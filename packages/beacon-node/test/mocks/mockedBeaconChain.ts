@@ -20,7 +20,7 @@ import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenExecutionPayloadBids} from "../../src/chain/seenCache/seenExecutionPayloadBids.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
-import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
+import {BuilderApiClient, DEFAULT_BUILDER_BID_DEADLINE_MS} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
@@ -180,6 +180,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         toPersisted: vi.fn(),
       },
       builderApiClient: {
+        bidDeadline: DEFAULT_BUILDER_BID_DEADLINE_MS,
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
         submitBuilderPreferences: vi.fn(),
         submitSignedBeaconBlock: vi.fn(),
