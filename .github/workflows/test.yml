@@ -53,7 +53,6 @@ jobs:
           filters: |
             zig:
               - "src/**"
-              - "bench/**"
               - "test/**"
               - "bindings/**"
               - "build.zig"
