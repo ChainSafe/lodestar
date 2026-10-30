@@ -103,11 +103,28 @@ export type FastConfirmationRule = (
 
 export type BalanceSourceKey = "current" | "previous";
 
+/**
+ * Committees of the slots ending at a fixed slot, swept backwards one slot at a time over the head
+ * state shuffling. A validator is recorded at the latest slot it is assigned to, so the committees of
+ * any range ending at that slot are a prefix of `order` with no duplicates, even when the range
+ * crosses an epoch boundary and the two epochs' committees overlap.
+ */
+export type CommitteeSweep = {
+  /** Marks validators already placed in `order`, indexed by validator index */
+  seen: Uint8Array;
+  /** Validators of the end slot, then those first seen one slot earlier, and so on */
+  order: Uint32Array;
+  /** Length of the `order` prefix covering the last `i + 1` slots, for each swept slot `i` */
+  lengths: number[];
+  /** Committee weight of the last `i + 1` slots, per balance source, filled on demand */
+  weightsByKey: Map<TotalActiveBalanceCacheKey, number[]>;
+};
+
 // This cache is created once per slot
 export type FastConfirmationCache = {
   blockByRoot: Map<RootHex, ProtoBlock | null>;
   ancestorRoots: Map<string, RootHex[] | null>;
-  committeeBySlot: Map<Slot, Set<ValidatorIndex>>;
+  committeeSweepByEndSlot: Map<Slot, CommitteeSweep>;
   isDescendantByRootPair: Map<string, boolean>;
   /** voteRoot -> totalWeight, keyed by sourceKey */
   voteWeightBySource: Map<BalanceSourceKey, Map<RootHex, number>>;

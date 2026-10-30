@@ -20,6 +20,8 @@ exceptions:
     # phase0
     - UINT64_MAX#phase0
     - UINT64_MAX_SQRT#phase0
+    # removed by consensus-specs#5670 (exact fast confirmation committee weight)
+    - COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
 
     # fulu
     - UINT256_MAX#fulu
@@ -104,6 +106,9 @@ exceptions:
     # optional fast confirmation restart recovery (not implemented)
     - block_should_be_finalized#phase0
     - get_restart_resilient_confirmed_root#phase0
+
+    # removed by consensus-specs#5670 (exact fast confirmation committee weight)
+    - adjust_committee_weight_estimate_to_ensure_safety#phase0
 
     # altair
     - apply_light_client_update#altair
