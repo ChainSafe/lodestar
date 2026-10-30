@@ -280,7 +280,7 @@ jobs:
         working-directory: packages/beacon-node
 
   bindings-test:
-    name: bindings - test
+    name: Native bindings tests
     runs-on: warp-ubuntu-2204-x64-4x
     needs: build
     steps:
@@ -306,7 +306,7 @@ jobs:
           pnpm --filter @lodestar/native test
 
   check-native-portability:
-    name: Check native module portability
+    name: Native portability
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -323,7 +323,7 @@ jobs:
         run: node scripts/ci/check_native_portability.mjs
 
   zig-build-test:
-    name: build & test (${{ matrix.os }})
+    name: Zig build and tests (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -440,7 +440,7 @@ jobs:
           zig build build-lib:bindings -Dpreset=gnosis
 
   zig-build-test-slow:
-    name: slow tests
+    name: Zig integration tests
     # It takes time to download and run these tests, so we only run them on ubuntu-latest
     runs-on: ubuntu-latest
     steps:
@@ -463,7 +463,7 @@ jobs:
           zig build test:int
 
   zig-spec-test-prep:
-    name: spec tests - prepare
+    name: Zig spec preparation
     runs-on: ubuntu-latest
     outputs:
       spec-test-version: ${{ steps.spec-test-version.outputs.version }}
@@ -513,7 +513,7 @@ jobs:
           overwrite: true
 
   zig-spec-test-general:
-    name: spec tests - ${{ matrix.name }}
+    name: Zig spec tests (${{ matrix.name }})
     runs-on: ubuntu-latest
     needs: zig-spec-test-prep
     strategy:
@@ -553,7 +553,7 @@ jobs:
         run: zig build test:bls_spec_tests
 
   zig-spec-test-ssz-static:
-    name: spec tests - ssz static ${{ matrix.preset }}
+    name: Zig spec tests (SSZ static, ${{ matrix.preset }})
     runs-on: ubuntu-latest
     needs: zig-spec-test-prep
     strategy:
@@ -590,7 +590,7 @@ jobs:
           zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }}
 
   zig-spec-tests:
-    name: spec tests - ${{ matrix.preset }} (${{ matrix.runner }})
+    name: Zig spec tests (${{ matrix.preset }}, ${{ matrix.runner }})
     runs-on: ubuntu-latest
     needs: zig-spec-test-prep
     strategy:
@@ -638,7 +638,7 @@ jobs:
           zig build test:spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }} -Dspec_tests.filters=${{ matrix.runner }}
 
   zig-build-fuzz:
-    name: build fuzz harnesses
+    name: Zig fuzz build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -669,7 +669,7 @@ jobs:
           cd test/fuzz && zig build -Doptimize=ReleaseSafe
 
   bindings-artifacts:
-    name: bindings - build artifacts
+    name: Native platform builds
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
