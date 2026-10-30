@@ -80,13 +80,13 @@ describe("validateGossipExecutionPayloadBid", () => {
     expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex});
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
     expect(
-      chain.seenExecutionPayloadBids.isKnown(
+      chain.seenExecutionPayloadBids.getValue(
         signedBid.message.slot,
         signedBid.message.builderIndex,
         toRootHex(parentBlockHash),
         toRootHex(parentBlockRoot)
       )
-    ).toBe(true);
+    ).toBe(signedBid.message.value);
   });
 
   it("rejects a bid whose block hash equals its parent block hash", async () => {
@@ -112,11 +112,27 @@ describe("validateGossipExecutionPayloadBid", () => {
     });
   });
 
-  it("ignores an already known bid", async () => {
+  async function expectMinIncrementOverPreviousBid(previousBid: number, increment: number): Promise<void> {
+    signedBid.message.value = previousBid;
     await validateGossipExecutionPayloadBid(chain, signedBid);
+    signedBid.message.value = previousBid + increment - 1;
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
-      type: {code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN},
+      type: {code: ExecutionPayloadBidErrorCode.BID_BELOW_MIN_INCREMENT, previousBid},
     });
+    signedBid.message.value = previousBid + increment;
+    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).resolves.toEqual({proposerIndex});
+  }
+
+  it("requires a builder's later bid to exceed its previous bid by the relative increment", async () => {
+    await expectMinIncrementOverPreviousBid(100_000_000, 3_000_000);
+  });
+
+  it("requires a builder's later bid to exceed its previous bid by at least the floor", async () => {
+    await expectMinIncrementOverPreviousBid(1_000_000, config.MIN_BID_INCREMENT_FLOOR);
+  });
+
+  it("requires a builder's later bid to exceed its previous bid by at most the cap", async () => {
+    await expectMinIncrementOverPreviousBid(500_000_000, config.MIN_BID_INCREMENT_CAP);
   });
 
   it("rejects if the parent block is unknown", async () => {
@@ -181,6 +197,16 @@ describe("validateGossipExecutionPayloadBid", () => {
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW},
     });
+  });
+
+  it("accepts a bid from another builder that exceeds the current best bid by any amount", async () => {
+    const bestBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    bestBid.message.value = 100;
+    chain.executionPayloadBidPool.getBestBid.mockReturnValue({signedBid: bestBid, receivedMs: 0} as ReturnType<
+      typeof chain.executionPayloadBidPool.getBestBid
+    >);
+    signedBid.message.value = 101;
+    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).resolves.toEqual({proposerIndex});
   });
 
   it("rejects a wrong randao mix", async () => {
