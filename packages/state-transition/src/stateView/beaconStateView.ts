@@ -197,6 +197,12 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     // slot, several per epoch, so report the boundary block of the finalized chain and let the finalized epoch
     // lag the gadget by at most an epoch.
     const boundarySlot = Math.min(computeStartSlotAtEpoch(epoch), state.slot - 1);
+    // block_roots only reaches SLOTS_PER_HISTORICAL_ROOT back; when the gadget has been stuck longer than that (64 slots
+    // on minimal) fall back to the finalized block itself. The legacy store only moves on an epoch change, so the root
+    // swap within the same epoch is never applied; this keeps block import alive.
+    if (state.slot - boundarySlot >= SLOTS_PER_HISTORICAL_ROOT) {
+      return {epoch, root: state.finalizedCheckpoint.root};
+    }
     return {epoch, root: getBlockRootAtSlot(state, boundarySlot)};
   }
 
