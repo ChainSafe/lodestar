@@ -30,6 +30,7 @@ export * from "./processBuilderDepositRequest.js";
 export * from "./processBuilderExitRequest.js";
 export * from "./processDepositRequest.js";
 export * from "./processOperations.js";
+export * from "./processSetSweepThresholdRequest.js";
 // Spec tests
 export {
   processBlockHeader,

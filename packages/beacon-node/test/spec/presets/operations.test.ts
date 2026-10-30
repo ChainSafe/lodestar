@@ -10,13 +10,25 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
   CachedBeaconStatePreHeze,
   ExecutionPayloadStatus,
   IndexedBuilderState,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {
+  AttesterSlashing,
+  altair,
+  bellatrix,
+  capella,
+  electra,
+  gloas,
+  heze,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -145,6 +157,10 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
       testCase.builder_exit_request
     );
   },
+
+  set_sweep_threshold_request: (state, testCase: {set_sweep_threshold_request: heze.SetSweepThresholdRequest}) => {
+    blockFns.processSetSweepThresholdRequest(state as CachedBeaconStateHeze, testCase.set_sweep_threshold_request);
+  },
 };
 
 export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => T | void;
@@ -213,6 +229,8 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
           : ssz.gloas.SignedExecutionPayloadBid,
         builder_deposit_request: ssz.gloas.BuilderDepositRequest,
         builder_exit_request: ssz.gloas.BuilderExitRequest,
+        // Heze
+        set_sweep_threshold_request: ssz.heze.SetSweepThresholdRequest,
       },
       shouldError: (testCase) => testCase.post === undefined,
       // Only an ssz list limit violation is an expected input error, anything else is a decode bug
