@@ -82,7 +82,7 @@ const unimported_file_allowlist = [_][]const u8{
 ///     static analysis.
 ///   - The inline test limit is about keeping implementation files readable, so
 ///     it does not apply to trees that are themselves tests.
-const dead_file_scope = [_][]const u8{ "src/", "packages/native/" };
+const dead_file_scope = [_][]const u8{ "src/", "bindings/" };
 const inline_test_scope = [_][]const u8{"src/"};
 
 // -------------------------------------------------------------------------

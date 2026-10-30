@@ -54,6 +54,8 @@
     "includes": [
       "**/packages/**/*/src/**/*.ts",
       "**/packages/**/*/test/**/*.ts",
+      "bindings/src/**/*.ts",
+      "bindings/test/**/*.ts",
       "**/configs/**/*.ts",
       "vitest.config.ts",
       "scripts/release/publish.mjs",

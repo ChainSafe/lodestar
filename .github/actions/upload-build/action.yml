@@ -13,10 +13,10 @@ runs:
     - name: Archive build outputs
       shell: bash
       run: |
-        test -f packages/native/zig-out/lib/bindings.node
+        test -f bindings/zig-out/lib/bindings.node
         shopt -s nullglob
         paths=()
-        for path in lib packages/*/lib packages/native/zig-out packages/*/.git-data.json; do
+        for path in lib packages/*/lib bindings/zig-out packages/*/.git-data.json; do
           if [[ -e "$path" ]]; then
             paths+=("$path")
           fi

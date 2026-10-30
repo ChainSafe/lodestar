@@ -23,13 +23,13 @@ pnpm test:native
 ```
 
 For native-only changes, rebuild with `pnpm build:native`. The output is
-`packages/native/zig-out/lib/bindings.node`. Use
+`bindings/zig-out/lib/bindings.node`. Use
 `pnpm --filter @lodestar/native prepare-minimal` or `prepare-gnosis` to select another
 preset. Rebuild before switching presets; they share an output directory.
 
 Bindings use their own Vitest configuration and the root workspace lockfile.
-Consensus spec vectors are pinned in [`build.zig.zon`](../../build.zig.zon).
-See [contributing](../../CONTRIBUTING.md).
+Consensus spec vectors are pinned in [`build.zig.zon`](../build.zig.zon).
+See [contributing](../CONTRIBUTING.md).
 
 ## Publishing
 

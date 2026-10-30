@@ -38,7 +38,7 @@ importers:
         version: link:packages/cli
       '@lodestar/native':
         specifier: workspace:^
-        version: link:packages/native
+        version: link:bindings
     devDependencies:
       '@actions/core':
         specifier: ^1.11.1
@@ -148,6 +148,19 @@ importers:
       wait-port:
         specifier: ^1.1.0
         version: 1.1.0
+
+  bindings:
+    dependencies:
+      '@chainsafe/zapi':
+        specifier: 4.2.0
+        version: 4.2.0
+    devDependencies:
+      '@chainsafe/benchmark':
+        specifier: 2.1.0
+        version: 2.1.0(encoding@0.1.13)
+      '@chainsafe/ssz':
+        specifier: ^1.9.0
+        version: 1.9.0
 
   packages/api:
     dependencies:
@@ -286,7 +299,7 @@ importers:
         version: link:../logger
       '@lodestar/native':
         specifier: workspace:^
-        version: link:../native
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -404,7 +417,7 @@ importers:
         version: link:../config
       '@lodestar/native':
         specifier: workspace:^
-        version: link:../native
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -477,7 +490,7 @@ importers:
         version: link:../logger
       '@lodestar/native':
         specifier: workspace:^
-        version: link:../native
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -617,7 +630,7 @@ importers:
         version: link:../config
       '@lodestar/native':
         specifier: workspace:^
-        version: link:../native
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -682,19 +695,6 @@ importers:
       '@types/triple-beam':
         specifier: ^1.3.2
         version: 1.3.2
-
-  packages/native:
-    dependencies:
-      '@chainsafe/zapi':
-        specifier: 4.2.0
-        version: 4.2.0
-    devDependencies:
-      '@chainsafe/benchmark':
-        specifier: 2.1.0
-        version: 2.1.0(encoding@0.1.13)
-      '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
 
   packages/params:
     devDependencies:
@@ -797,7 +797,7 @@ importers:
         version: link:../config
       '@lodestar/native':
         specifier: workspace:^
-        version: link:../native
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -828,7 +828,7 @@ importers:
         version: link:../config
       '@lodestar/native':
         specifier: workspace:^
-        version: link:../native
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -908,7 +908,7 @@ importers:
         version: link:../db
       '@lodestar/native':
         specifier: workspace:^
-        version: link:../native
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params

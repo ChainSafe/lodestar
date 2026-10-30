@@ -41,9 +41,9 @@
     }
   },
   "scripts": {
-    "prepare-mainnet": "cd ../.. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=mainnet --prefix packages/native/zig-out",
-    "prepare-minimal": "cd ../.. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=minimal --prefix packages/native/zig-out",
-    "prepare-gnosis": "cd ../.. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=gnosis --prefix packages/native/zig-out",
+    "prepare-mainnet": "cd .. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=mainnet --prefix bindings/zig-out",
+    "prepare-minimal": "cd .. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=minimal --prefix bindings/zig-out",
+    "prepare-gnosis": "cd .. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=gnosis --prefix bindings/zig-out",
     "lint": "biome check",
     "test": "NODE_OPTIONS='--expose-gc' vitest run",
     "benchmark": "NODE_OPTIONS='--import tsx' benchmark 'perf/**/*.test.ts' --isolate --config .benchrc.yaml --defaultBranch unstable",
@@ -60,7 +60,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ChainSafe/lodestar.git",
-    "directory": "packages/native"
+    "directory": "bindings"
   },
   "zapi": {
     "binaryName": "bindings",

@@ -8,7 +8,7 @@
         "build.zig",
         "build.zig.zon",
         "bench",
-        "packages/native",
+        "bindings",
         "scripts",
         "src",
         "test",
@@ -403,7 +403,7 @@
     .libraries = .{
         .bindings = .{
             .root_module = .{
-                .root_source_file = "packages/native/napi/root.zig",
+                .root_source_file = "bindings/napi/root.zig",
                 .imports = .{
                     .bls,
                     .bls_options,
@@ -452,7 +452,7 @@
         .ere_verifier = .{ .root_module = .ere_verifier },
         .bindings_allocator = .{
             .root_module = .{
-                .root_source_file = "packages/native/napi/tracked_allocator.zig",
+                .root_source_file = "bindings/napi/tracked_allocator.zig",
                 .imports = .{.persistent_merkle_tree},
             },
         },

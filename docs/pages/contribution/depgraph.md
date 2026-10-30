@@ -114,7 +114,7 @@ graph TD
     click utils "https://github.com/ChainSafe/lodestar/tree/unstable/packages/utils"
     click config "https://github.com/ChainSafe/lodestar/tree/unstable/packages/config"
     click ssz "https://github.com/ChainSafe/ssz"
-    click native "https://github.com/ChainSafe/lodestar/tree/unstable/packages/native"
+    click native "https://github.com/ChainSafe/lodestar/tree/unstable/bindings"
     click discv5 "https://github.com/ChainSafe/discv5"
     click libp2p "https://github.com/libp2p/js-libp2p"
     click libp2p-gossipsub "https://github.com/ChainSafe/js-libp2p-gossipsub"
@@ -136,7 +136,7 @@ Below is a brief summary of each package in alphabetical order.
 
 ### `@lodestar/native`
 
-[`@lodestar/native`](https://github.com/ChainSafe/lodestar/tree/unstable/packages/native) provides Lodestar's Zig implementations, including BLS12-381 signature verification backed by [supranational/blst](https://github.com/supranational/blst).
+[`@lodestar/native`](https://github.com/ChainSafe/lodestar/tree/unstable/bindings) provides Lodestar's Zig implementations, including BLS12-381 signature verification backed by [supranational/blst](https://github.com/supranational/blst).
 
 ### `@lodestar/api`
 

@@ -31,6 +31,7 @@ docker-compose.yml
 
 # Tests
 packages/**/test
+bindings/test
 packages/**/lib
 
 # Tests artifacts
@@ -76,8 +77,8 @@ docs/site
 .zig-cache
 zig-pkg
 zig-out
-packages/native/zig-out
-packages/native/artifacts
+bindings/zig-out
+bindings/artifacts
 fixtures
 test/spec/spec_tests
 test/spec/test_case

@@ -5,7 +5,7 @@ import {fileURLToPath} from "node:url";
 import {parseArgs} from "node:util";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
-const native = path.join(root, "packages/native");
+const native = path.join(root, "bindings");
 const args = process.argv.slice(2);
 if (args.length > 16) throw new Error("Too many release arguments");
 const {values} = parseArgs({
@@ -47,7 +47,7 @@ if (isPublished(`${name}@${version}`)) {
     "--optimize",
     "ReleaseSafe",
     "--zig-cwd",
-    "../..",
+    "..",
     "--artifacts-dir",
     path.join(native, "artifacts"),
   ]);

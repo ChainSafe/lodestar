@@ -40,7 +40,7 @@ COPY packages/db/package.json packages/db/
 COPY packages/era/package.json packages/era/
 COPY packages/fork-choice/package.json packages/fork-choice/
 COPY packages/logger/package.json packages/logger/
-COPY packages/native/package.json packages/native/
+COPY bindings/package.json bindings/
 COPY packages/params/package.json packages/params/
 COPY packages/reqresp/package.json packages/reqresp/
 COPY packages/spec-test-util/package.json packages/spec-test-util/

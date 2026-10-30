@@ -7,7 +7,7 @@ import * as path from "node:path";
  * Returns the full paths to available era files.
  */
 export function getEraFilePaths(projectRoot?: string): string[] {
-  const root = projectRoot ?? path.resolve(import.meta.dirname, "../../..");
+  const root = projectRoot ?? path.resolve(import.meta.dirname, "../..");
   const zonPath = path.join(root, "build.zig.zon");
 
   const content = fs.readFileSync(zonPath, "utf-8");

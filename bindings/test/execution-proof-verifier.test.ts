@@ -12,7 +12,7 @@ import {
 } from "../src/execution-proof-verifier.js";
 
 /** Populated by `zig build run:download_ere_fixtures`; fixture tests skip when absent. */
-const FIXTURE_DIR = join(import.meta.dirname, "../../../test/fixtures/ere");
+const FIXTURE_DIR = join(import.meta.dirname, "../../test/fixtures/ere");
 
 /** Eight zero KoalaBear words pack to a canonical SP1 verifying key. */
 const SP1_ZERO_VK = new Uint8Array(32);

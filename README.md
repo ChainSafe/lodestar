@@ -42,7 +42,7 @@ pnpm build
 ## Architecture Overview
 
 Zig modules live in `src/`, with their build files at the repository root.
-`packages/` contains the TypeScript monorepo, and `packages/native/` contains the native
+`packages/` contains the TypeScript monorepo, and `bindings/` contains the native
 Node.js package.
 
 - :package: This mono-repository contains a suite of Ethereum Consensus packages.

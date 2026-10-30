@@ -7,7 +7,7 @@
 //! along the cgroup ancestor chain — the kernel enforces every level, but each
 //! level's quota file reports only its own limit.
 //!
-//! Consumed at NAPI thread-pool init (`packages/native/napi/root.zig`) to size the BLS
+//! Consumed at NAPI thread-pool init (`bindings/napi/root.zig`) to size the BLS
 //! verification thread pool (`src/bls/ThreadPool.zig`) in CPU-limited
 //! (`docker --cpus` / k8s `limits.cpu`) deployments.
 

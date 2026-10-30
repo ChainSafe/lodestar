@@ -111,7 +111,7 @@ Contributing to tests:
 ## Zig and Native Bindings
 
 Zig modules live in `src/`, and the Node.js addon, wrappers, and binding tests live in
-`packages/native/`. Use Zig 0.16.0.
+`bindings/`. Use Zig 0.16.0.
 Run Zig commands from the repository root. The native package uses the root pnpm
 lockfile and shared monorepo version.
 

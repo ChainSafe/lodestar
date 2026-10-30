@@ -320,7 +320,7 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: native-platform-bindings
-          path: packages/native/artifacts
+          path: bindings/artifacts
 
       - name: Install binutils
         run: sudo apt-get install -y binutils
@@ -679,12 +679,12 @@ jobs:
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       - name: Build release artifacts
         run: |
-          pnpm --filter @lodestar/native exec zapi build-artifacts --optimize ReleaseSafe --zig-cwd ../.. --artifacts-dir "$PWD/packages/native/artifacts"
+          pnpm --filter @lodestar/native exec zapi build-artifacts --optimize ReleaseSafe --zig-cwd .. --artifacts-dir "$PWD/bindings/artifacts"
       - name: Upload platform bindings
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-platform-bindings
-          path: packages/native/artifacts/*/bindings.node
+          path: bindings/artifacts/*/bindings.node
           if-no-files-found: error
           overwrite: true
           retention-days: 3

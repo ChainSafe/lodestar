@@ -27,7 +27,7 @@ RUN corepack enable && corepack prepare --activate && \
   pnpm build && \
   pnpm clean:nm && \
   pnpm install --frozen-lockfile --prod && \
-  rm -rf .zig-cache zig-pkg zig-out packages/native/artifacts
+  rm -rf .zig-cache zig-pkg zig-out bindings/artifacts
 
 # To have access to the specific branch and commit used to build this source,
 # a git-data.json file is created by persisting git data at build time. Then,

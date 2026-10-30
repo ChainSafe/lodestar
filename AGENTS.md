@@ -16,7 +16,7 @@
 ## Zig and native bindings
 
 Zig sources live in `src/`, the TypeScript monorepo in `packages/`, and the Node.js
-addon in `packages/native/`. Run Zig commands from the repository root.
+addon in `bindings/`. Run Zig commands from the repository root.
 `@lodestar/native` uses the root lockfile and shared Lerna version. Run its package commands with `pnpm --filter @lodestar/native`.
 
 - Use Zig 0.16.0.
@@ -60,7 +60,6 @@ and serves as:
   era/              # Era file handling for historical data
   fork-choice/      # Fork choice implementation (proto-array)
   logger/           # Logging utilities
-  native/           # Zig NAPI bindings, wrappers, and binding tests
   params/           # Consensus parameters and presets
   reqresp/          # libp2p request/response protocol
   spec-test-util/   # Test harness for consensus spec tests
@@ -70,6 +69,7 @@ and serves as:
   utils/            # Shared utilities
   validator/        # Validator client
 
+/bindings/         # Zig NAPI bindings, wrappers, and binding tests
 /configs/          # Network configuration files
 /docs/             # Documentation source
 /scripts/          # Build and release scripts

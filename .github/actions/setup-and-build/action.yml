@@ -42,7 +42,7 @@ runs:
         path: |
           lib/
           packages/*/lib
-          packages/native/zig-out
+          bindings/zig-out
           packages/*/.git-data.json
         key: ${{ steps.build-cache.outputs.key }}
 
@@ -67,6 +67,6 @@ runs:
         path: |
           lib/
           packages/*/lib
-          packages/native/zig-out
+          bindings/zig-out
           packages/*/.git-data.json
         key: ${{ steps.build-cache.outputs.key }}
