@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {BitArray} from "@chainsafe/ssz";
+import {BitArray, SerializedList} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -56,6 +56,7 @@ import {
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromSignedExecutionPayloadBidSerialized,
   getSlotFromSingleAttestationSerialized,
+  getTransactionCountFromExecutionPayloadEnvelopeSerialized,
 } from "../../../src/util/sszBytes.js";
 import {generateRandomBlob} from "../../utils/kzg.js";
 
@@ -607,6 +608,46 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
     for (const size of invalidSizes) {
       expect(getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
     }
+  });
+
+  for (const count of [0, 1, 3, 1000]) {
+    it(`getTransactionCountFromExecutionPayloadEnvelopeSerialized - ${count} transactions`, () => {
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.payload.extraData = new Uint8Array(5);
+      envelope.message.payload.transactions = SerializedList.fromArray(
+        Array.from({length: count}, (_, i) => new Uint8Array(i + 1))
+      );
+      const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+
+      expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(count);
+    });
+  }
+
+  it("getTransactionCountFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
+    // withdrawals offset is at offset 688, need at least 692 bytes
+    const invalidSizes = [0, 100, 691];
+    for (const size of invalidSizes) {
+      expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
+    }
+
+    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    envelope.message.payload.transactions = SerializedList.fromArray([new Uint8Array(1), new Uint8Array(1)]);
+    const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const transactionsOffset = view.getUint32(684, true);
+    const transactionsStart = 180 + transactionsOffset;
+
+    const firstOffsetNotAligned = Uint8Array.from(bytes);
+    new DataView(firstOffsetNotAligned.buffer).setUint32(transactionsStart, 6, true);
+    expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(firstOffsetNotAligned)).toBeNull();
+
+    const firstOffsetPastList = Uint8Array.from(bytes);
+    new DataView(firstOffsetPastList.buffer).setUint32(transactionsStart, 400, true);
+    expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(firstOffsetPastList)).toBeNull();
+
+    const transactionsAfterWithdrawals = Uint8Array.from(bytes);
+    new DataView(transactionsAfterWithdrawals.buffer).setUint32(684, transactionsOffset + 100, true);
+    expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(transactionsAfterWithdrawals)).toBeNull();
   });
 });
 

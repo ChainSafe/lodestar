@@ -6,6 +6,11 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {
+  getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
+  getSlotFromExecutionPayloadEnvelopeSerialized,
+  getTransactionCountFromExecutionPayloadEnvelopeSerialized,
+} from "../../util/sszBytes.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -22,6 +27,39 @@ export async function validateGossipExecutionPayloadEnvelope(
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+}
+
+/**
+ * Applies the transaction count check to the serialized envelope so that an oversized envelope is rejected
+ * before it is deserialized. Defers to validateGossipExecutionPayloadEnvelope if the data is malformed
+ * or the bid is not known.
+ */
+export function validateGossipExecutionPayloadEnvelopeSerialized(
+  chain: IBeaconChain,
+  serializedData: Uint8Array
+): void {
+  const blockRootHex = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(serializedData);
+  const slot = getSlotFromExecutionPayloadEnvelopeSerialized(serializedData);
+  const transactionCount = getTransactionCountFromExecutionPayloadEnvelopeSerialized(serializedData);
+  if (blockRootHex === null || slot === null || transactionCount === null) {
+    return;
+  }
+
+  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+  if (!payloadInput) {
+    return;
+  }
+
+  const maxTransactionCount = payloadInput.getBid().gasLimit / BigInt(chain.config.MIN_TRANSACTION_GAS);
+  if (BigInt(transactionCount) > maxTransactionCount) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+      slot,
+      root: blockRootHex,
+      transactionCount,
+      maxTransactionCount: Number(maxTransactionCount),
+    });
+  }
 }
 
 async function validateExecutionPayloadEnvelope(
@@ -120,6 +158,18 @@ async function validateExecutionPayloadEnvelope(
       root: blockRootHex,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
+    });
+  }
+
+  // [REJECT] `len(payload.transactions) <= bid.gas_limit // MIN_TRANSACTION_GAS`
+  const maxTransactionCount = payloadInput.getBid().gasLimit / BigInt(chain.config.MIN_TRANSACTION_GAS);
+  if (BigInt(payload.transactions.length) > maxTransactionCount) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      transactionCount: payload.transactions.length,
+      maxTransactionCount: Number(maxTransactionCount),
     });
   }
 

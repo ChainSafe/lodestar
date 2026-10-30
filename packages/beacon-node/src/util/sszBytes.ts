@@ -652,6 +652,46 @@ export function getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(data: U
   return "0x" + blockRootBuf.toString("hex");
 }
 
+// transactions offset within ExecutionPayload fixed portion, see SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD:
+// everything up to and including blockHash(32) = 504, followed by withdrawals_offset(4)
+const PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE; // 180
+const TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 504; // 684
+const WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 4; // 688
+
+/**
+ * Transaction count of the payload, read from the SSZ offsets without deserializing the envelope.
+ * Returns null on malformed offsets, deserialization reports the exact error.
+ */
+export function getTransactionCountFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): number | null {
+  if (data.length < WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 4) {
+    return null;
+  }
+
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const transactionsOffset = view.getUint32(TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE, true);
+  const withdrawalsOffset = view.getUint32(WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE, true);
+  if (transactionsOffset > withdrawalsOffset) {
+    return null;
+  }
+  if (transactionsOffset === withdrawalsOffset) {
+    return 0;
+  }
+
+  const transactionsStart = PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + transactionsOffset;
+  if (transactionsStart + 4 > data.length) {
+    return null;
+  }
+  // first offset of a non-empty list is the size of its offset table, 4 bytes per element
+  const firstTransactionOffset = view.getUint32(transactionsStart, true);
+  if (firstTransactionOffset % 4 !== 0 || firstTransactionOffset > withdrawalsOffset - transactionsOffset) {
+    return null;
+  }
+  return firstTransactionOffset / 4;
+}
+
 /**
  * BeaconState of all forks (up until Electra, check with new forks)
  * class BeaconState(Container):
