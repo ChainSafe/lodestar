@@ -16,6 +16,7 @@ test "memory_safety: processRewardsAndPenalties - sanity" {
 
     try processRewardsAndPenalties(
         .electra,
+        std.testing.io,
         test_state.cached_state.config,
         test_state.cached_state.epoch_cache,
         test_state.cached_state.state.castToFork(.electra),
@@ -26,6 +27,7 @@ test "memory_safety: processRewardsAndPenalties - sanity" {
     // Verify replacing the old cached balances does not leak.
     try processRewardsAndPenalties(
         .electra,
+        std.testing.io,
         test_state.cached_state.config,
         test_state.cached_state.epoch_cache,
         test_state.cached_state.state.castToFork(.electra),
@@ -55,6 +57,7 @@ test "processRewardsAndPenalties maps compact slashing penalties to validator in
 
     try processRewardsAndPenalties(
         .electra,
+        std.testing.io,
         test_state.cached_state.config,
         test_state.cached_state.epoch_cache,
         state,

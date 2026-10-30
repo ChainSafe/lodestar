@@ -824,6 +824,55 @@ pub const Id = enum(u32) {
         @panic("getRoot exceeded the pool traversal bound");
     }
 
+    /// Chunked leaves hashed per task by `computeChunkedLeafRoots`. A mainnet balances list
+    /// (~9k leaves) splits into ~140 tasks: enough to keep cores of unequal speed busy, few enough
+    /// that per-task scheduling cost stays negligible. Sizes from 32 to 256 measured the same on
+    /// process_epoch.
+    pub const chunked_leaf_roots_per_task: usize = 64;
+
+    /// Computes the uncached roots of the chunked_leaf nodes in `ids` in parallel on `io`; ids of
+    /// other kinds are ignored. Nothing may mutate `pool` until this returns, and each
+    /// chunked_leaf id may appear at most once, since two tasks writing one root would race.
+    pub fn computeChunkedLeafRoots(
+        pool: *Pool,
+        io: std.Io,
+        ids: []const Id,
+    ) std.Io.Cancelable!void {
+        if (ids.len <= chunked_leaf_roots_per_task) {
+            computeChunkedLeafRootsTask(pool, ids);
+            return;
+        }
+
+        var group: std.Io.Group = .init;
+        var start: usize = 0;
+        while (start < ids.len) : (start += chunked_leaf_roots_per_task) {
+            const end = @min(start + chunked_leaf_roots_per_task, ids.len);
+            group.async(io, computeChunkedLeafRootsTask, .{ pool, ids[start..end] });
+        }
+        try group.await(io);
+    }
+
+    // Runs on several threads at once, so it hashes into a stack scratch, not the shared
+    // `pool.chunked_leaf_scratch`, and writes only its own ids' roots.
+    fn computeChunkedLeafRootsTask(pool: *Pool, ids: []const Id) void {
+        std.debug.assert(ids.len <= chunked_leaf_roots_per_task);
+        const states = pool.nodes.items(.state);
+        const roots = pool.nodes.items(.root);
+        const payloads = pool.nodes.items(.payload);
+        var scratch: [ChunkedLeaf.K / 2][32]u8 align(64) = undefined;
+        for (ids) |node_id| {
+            const idx = @intFromEnum(node_id);
+            const kind = states[idx].kind();
+            std.debug.assert(kind != .free);
+            if (kind != .chunked_leaf) continue;
+            if (!std.mem.eql(u8, &roots[idx], &lazy_sentinel)) continue;
+
+            var hash: [32]u8 = undefined;
+            chunkedLeafPtr(payloads, idx).computeRoot(&scratch, &hash);
+            roots[idx] = hash;
+        }
+    }
+
     pub fn getLeft(node_id: Id, pool: *Pool) Error!Id {
         const idx = @intFromEnum(node_id);
         const kind = pool.nodes.items(.state)[idx].kind();

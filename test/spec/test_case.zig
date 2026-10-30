@@ -298,7 +298,7 @@ test "spec metadata and negative fixtures reject malformed data and resource fai
     try std.testing.checkAllAllocationFailures(allocator, Failure.parse, .{fixture});
     try std.testing.checkAllAllocationFailures(allocator, Failure.parseBls, .{"{blocks_count: 2, bls_setting: 1}\n"});
 
-    inline for (.{ error.OutOfMemory, error.PoolExhausted, error.RefCountOverflow, error.InvalidPoolCapacity, error.SystemResources, error.ThreadQuotaExceeded, error.ConcurrencyUnavailable, error.SkipZigTest }) |infrastructure_error| {
+    inline for (.{ error.OutOfMemory, error.PoolExhausted, error.RefCountOverflow, error.InvalidPoolCapacity, error.SystemResources, error.ThreadQuotaExceeded, error.ConcurrencyUnavailable, error.Canceled, error.SkipZigTest }) |infrastructure_error| {
         try std.testing.expectError(infrastructure_error, expectConsensusInvalid(infrastructure_error));
     }
     try expectConsensusInvalid(error.InvalidSignature);
@@ -327,6 +327,7 @@ pub fn expectConsensusInvalid(err: anyerror) !void {
         error.SystemResources,
         error.ThreadQuotaExceeded,
         error.ConcurrencyUnavailable,
+        error.Canceled,
         => return err,
         else => {},
     }
