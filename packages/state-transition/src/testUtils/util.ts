@@ -1,8 +1,8 @@
-import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {PublicKey, SecretKey} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   BUILDER_WITHDRAWAL_PREFIX,
   DOMAIN_DEPOSIT,

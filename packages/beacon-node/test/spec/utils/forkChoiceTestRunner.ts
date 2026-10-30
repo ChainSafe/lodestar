@@ -1,11 +1,11 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   ForkPostDeneb,
   ForkPostFulu,

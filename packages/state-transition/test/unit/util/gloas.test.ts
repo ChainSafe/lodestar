@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {FAR_FUTURE_EPOCH, ForkName, MIN_DEPOSIT_AMOUNT, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {IndexedBuilderState} from "../../../src/block/indexedBuilderState.js";

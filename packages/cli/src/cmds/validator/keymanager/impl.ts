@@ -1,5 +1,4 @@
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {
   BuilderBoostFactorData,
   BuilderConfigData,
@@ -20,6 +19,7 @@ import {
 } from "@lodestar/api/keymanager";
 import {KeymanagerApiMethods as Api} from "@lodestar/api/keymanager/server";
 import {ApiError} from "@lodestar/api/server";
+import {SecretKey} from "@lodestar/native/blst";
 import {Epoch} from "@lodestar/types";
 import {fromHex, isValidHttpUrl} from "@lodestar/utils";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";

@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {Attestation, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";

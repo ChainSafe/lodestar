@@ -1,9 +1,9 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {Mocked, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {SerializedList} from "@chainsafe/ssz";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ValidatorEvent, ValidatorEventEmitter} from "../../../src/services/emitter.js";

@@ -1,5 +1,5 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig} from "@lodestar/config";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {getValidatorPubkeyFromStateBytes} from "@lodestar/state-transition";
 import {Logger, byteArrayEquals} from "@lodestar/utils";
 

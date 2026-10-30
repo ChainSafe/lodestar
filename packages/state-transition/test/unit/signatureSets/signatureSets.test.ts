@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
 import {describe, expect, it} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,

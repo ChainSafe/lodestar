@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EPOCHS_PER_SLASHINGS_VECTOR,
   FAR_FUTURE_EPOCH,
