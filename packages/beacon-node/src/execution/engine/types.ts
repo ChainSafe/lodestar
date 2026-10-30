@@ -628,7 +628,9 @@ export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized
 
     switch (currentRequestType) {
       case DEPOSIT_REQUEST_TYPE: {
-        result.deposits = ssz.electra.DepositRequests.deserialize(requests);
+        const depositRequestsType =
+          ForkSeq[fork] >= ForkSeq.gloas ? ssz.gloas.DepositRequests : ssz.electra.DepositRequests;
+        result.deposits = depositRequestsType.deserialize(requests);
         break;
       }
       case WITHDRAWAL_REQUEST_TYPE: {
