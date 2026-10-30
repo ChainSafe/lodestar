@@ -55,6 +55,7 @@ jobs:
               - "src/**"
               - "test/**"
               - "bindings/**"
+              - "pkg/**"
               - "build.zig"
               - "build.zig.zon"
               - "scripts/*.zig"
