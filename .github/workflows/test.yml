@@ -586,7 +586,7 @@ jobs:
           path: test/spec
       - name: Run ssz_static spec tests
         run: |
-          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=Debug
+          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=ReleaseSafe
 
   zig-spec-tests:
     name: Zig spec tests (${{ matrix.preset }}, ${{ matrix.runner }})

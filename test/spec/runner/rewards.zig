@@ -5,8 +5,9 @@ const ssz = @import("ssz");
 const ForkSeq = @import("config").ForkSeq;
 const state_transition = @import("state_transition");
 const TestCachedBeaconState = state_transition.test_utils.TestCachedBeaconState;
-const TestCaseUtils = @import("../test_case.zig").TestCaseUtils;
-const loadSszValue = @import("../test_case.zig").loadSszSnappyValue;
+const test_case = @import("../test_case.zig");
+const TestCaseUtils = test_case.TestCaseUtils;
+const loadSszValue = test_case.loadSszSnappyValue;
 
 const EpochTransitionCache = state_transition.EpochTransitionCache;
 const getRewardsAndPenaltiesFn = state_transition.getRewardsAndPenalties;
@@ -41,10 +42,10 @@ pub fn TestCase(comptime fork: ForkSeq) type {
 
         pub fn execute(allocator: std.mem.Allocator, dir: std.Io.Dir) !void {
             const pool_size = if (active_preset == .mainnet) 10_000_000 else 1_000_000;
-            var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = pool_size });
-            defer pool.deinit();
+            const pool = try test_case.acquirePool(allocator, pool_size);
+            defer test_case.releasePool();
 
-            var tc = try Self.init(allocator, &pool, dir);
+            var tc = try Self.init(allocator, pool, dir);
             defer {
                 tc.deinit();
                 state_transition.deinitReusedEpochTransitionCache();

@@ -24,6 +24,31 @@ const fulu = types.fulu;
 const gloas = types.gloas;
 const heze = types.heze;
 
+/// Share one pool across tests to avoid reallocating per test case
+var shared_pool: ?Node.Pool = null;
+var shared_pool_idle_nodes: usize = 0;
+
+pub fn acquirePool(allocator: Allocator, pool_size: u32) !*Node.Pool {
+    if (shared_pool == null) {
+        shared_pool = try Node.Pool.init(.{
+            .page_allocator = std.heap.page_allocator,
+            .allocator = allocator,
+            .pool_size = pool_size,
+        });
+        shared_pool_idle_nodes = shared_pool.?.nodes_in_use;
+    }
+    return &shared_pool.?;
+}
+
+/// Drops the pool when a case leaves nodes behind, so every case starts from an empty pool.
+pub fn releasePool() void {
+    if (shared_pool) |*pool| {
+        if (pool.nodes_in_use == shared_pool_idle_nodes) return;
+        pool.deinit();
+        shared_pool = null;
+    }
+}
+
 pub const BlsSetting = enum {
     default,
     required,
