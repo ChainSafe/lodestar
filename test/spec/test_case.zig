@@ -24,8 +24,7 @@ const fulu = types.fulu;
 const gloas = types.gloas;
 const heze = types.heze;
 
-// Cases share one pool: allocating a pool per case dominated runtime, since safe builds fill the
-// whole node buffer on every allocation and free.
+/// Share one pool across tests to avoid reallocating per test case
 var shared_pool: ?Node.Pool = null;
 var shared_pool_idle_nodes: usize = 0;
 
