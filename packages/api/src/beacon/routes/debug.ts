@@ -52,6 +52,7 @@ const DebugChainHeadType = new ContainerType(
     slot: ssz.Slot,
     root: stringType,
     executionOptimistic: ssz.Boolean,
+    payloadStatus: new StringType<"empty" | "full">(),
   },
   {jsonCase: "eth2"}
 );
