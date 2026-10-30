@@ -147,7 +147,9 @@ describe("FlatFileStore reqresp handler integration", () => {
         getSlotByRoot: vi.fn(async (root: Uint8Array) => archivedSlotsByRoot.get(toRootHex(root)) ?? null),
       };
       const db = {
-        lastLegacyArchiveSlot: null,
+        dataColumnSidecarArchive: {
+          getManyBinary: opts.getArchivedDataColumnSidecars ?? (async (_slot, indices) => indices.map(() => undefined)),
+        },
         dataColumns: makeDataColumnStore({
           getHot: opts.getHotDataColumnSidecars,
           getArchived: opts.getArchivedDataColumnSidecars,
@@ -285,6 +287,30 @@ describe("FlatFileStore reqresp handler integration", () => {
         onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
       );
       expect(responses).toEqual([]);
+      expect(chain.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
+      expect(db.blockArchive.getBinary).not.toHaveBeenCalled();
+    });
+
+    it("should serve legacy archived columns without a block-root index and skip empty slots", async () => {
+      const column = new Uint8Array([1, 2, 3]);
+      const getArchivedDataColumnSidecars = vi.fn(async (slot: number, indices: number[]) =>
+        indices.map((index) => (slot === 10 && index === 0 ? column : undefined))
+      );
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 100,
+        custodyColumns: [0],
+        getRootBySlot: async () => null,
+        getArchivedDataColumnSidecars,
+      });
+
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 2, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses.map(({data}) => new Uint8Array(data))).toEqual([column]);
+      expect(getArchivedDataColumnSidecars).toHaveBeenCalledTimes(2);
+      expect(getArchivedDataColumnSidecars).toHaveBeenNthCalledWith(1, 10, [0]);
+      expect(getArchivedDataColumnSidecars).toHaveBeenNthCalledWith(2, 11, [0]);
       expect(chain.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
       expect(db.blockArchive.getBinary).not.toHaveBeenCalled();
     });
