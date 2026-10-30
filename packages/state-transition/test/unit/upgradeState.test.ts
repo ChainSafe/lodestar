@@ -8,7 +8,8 @@ import {CachedBeaconStateFulu, createCachedBeaconState} from "../../src/cache/st
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
 import {upgradeStateToGloas} from "../../src/slot/upgradeStateToGloas.js";
-import {generateBuilderPendingDeposits} from "../../src/testUtils/util.js";
+import {generateBuilderPendingDeposits, generateValidatorPendingDeposit} from "../../src/testUtils/util.js";
+import {interopSecretKey} from "../../src/util/interop.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -215,6 +216,82 @@ describe("upgradeState", () => {
     expect(gloasState.pendingDeposits.length).toBe(0);
     // (d) the fork transition does NOT clear the cache — prepareNextSlot drops it on finalization
     expect(cache.cachedDepositCount).toBe(2);
+  });
+
+  it("upgradeStateToGloas routes pending deposits by withdrawal credentials", () => {
+    const forkConfig = getConfig(ForkName.fulu);
+    const beaconConfig = createBeaconConfig(forkConfig, ZERO_HASH);
+
+    // Validators with real interop pubkeys so the pubkey index can resolve them
+    const fuluStateView = ssz.fulu.BeaconState.defaultViewDU();
+    for (let i = 0; i < 64; i++) {
+      const validator = ssz.phase0.Validator.defaultValue();
+      validator.pubkey = interopSecretKey(i).toPublicKey().toBytes();
+      validator.withdrawalCredentials = Buffer.alloc(32, i + 1);
+      validator.effectiveBalance = 32e9;
+      validator.activationEligibilityEpoch = 0;
+      validator.activationEpoch = 0;
+      validator.exitEpoch = FAR_FUTURE_EPOCH;
+      validator.withdrawableEpoch = FAR_FUTURE_EPOCH;
+      fuluStateView.validators.push(ssz.phase0.Validator.toViewDU(validator));
+      fuluStateView.balances.push(32e9);
+    }
+
+    const [builder2000] = generateBuilderPendingDeposits(beaconConfig, 1, 2000);
+    const validator2000 = generateValidatorPendingDeposit(beaconConfig, 2000);
+    const validator2001 = generateValidatorPendingDeposit(beaconConfig, 2001);
+    const [builder2001] = generateBuilderPendingDeposits(beaconConfig, 1, 2001);
+    const [builderForValidator5] = generateBuilderPendingDeposits(beaconConfig, 1, 5);
+    const invalidBuilderForValidator6 = {
+      ...generateBuilderPendingDeposits(beaconConfig, 1, 6)[0],
+      signature: Buffer.alloc(96),
+    };
+    const invalidBuilder2002 = {
+      ...generateBuilderPendingDeposits(beaconConfig, 1, 2002)[0],
+      signature: Buffer.alloc(96),
+    };
+    const queue = [
+      // builder deposit first, validator deposit for the same key must not fund the builder
+      builder2000,
+      validator2000,
+      // validator deposit first, the builder deposit still registers a builder
+      validator2001,
+      builder2001,
+      // a valid builder deposit may use an existing validator's key
+      builderForValidator5,
+      // an invalid builder deposit on a validator's key stays queued as a top-up
+      invalidBuilderForValidator6,
+      // an invalid builder deposit with no validator to fall back to is dropped
+      invalidBuilder2002,
+    ];
+    for (const deposit of queue) {
+      fuluStateView.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(deposit));
+    }
+    fuluStateView.commit();
+
+    const fuluState = createCachedBeaconState(
+      fuluStateView,
+      {config: beaconConfig, pubkeyCache},
+      {skipSyncCommitteeCache: true}
+    ) as CachedBeaconStateFulu;
+
+    const gloasState = upgradeStateToGloas(fuluState);
+
+    const builders = gloasState.builders.getAllReadonlyValues();
+    expect(builders.map((b) => Buffer.from(b.pubkey).toString("hex"))).toEqual(
+      [builder2000, builder2001, builderForValidator5].map((d) => Buffer.from(d.pubkey).toString("hex"))
+    );
+    expect(builders.map((b) => b.balance)).toEqual([
+      builder2000.amount,
+      builder2001.amount,
+      builderForValidator5.amount,
+    ]);
+    expect(gloasState.pendingDeposits.getAllReadonlyValues()).toEqual([
+      validator2000,
+      validator2001,
+      invalidBuilderForValidator6,
+    ]);
+    expect(gloasState.validators.length).toBe(64);
   });
 });
 
