@@ -144,7 +144,11 @@ const ReusedEpochTransitionCache = struct {
     current_epoch_participation: U8Array,
     rewards: U64Array,
     penalties: U64Array,
+    inactivity_scores_buffer: U64Array,
     slashing_penalties: U64Array,
+    /// Backing memory for `EpochTransitionCache.balances`. `items` stays empty; only its
+    /// capacity is borrowed, through `allocatedSlice()`.
+    balances_buffer: U64Array,
 
     /// Holds a ref into the node pool. Teardown this struct before the pool.
     validator_flat_cache: ValidatorFlatCache,
@@ -171,7 +175,14 @@ const ReusedEpochTransitionCache = struct {
         errdefer self.rewards.deinit(allocator);
         self.penalties = try U64Array.initCapacity(allocator, validator_count);
         errdefer self.penalties.deinit(allocator);
+        self.inactivity_scores_buffer = try U64Array.initCapacity(allocator, validator_count);
+        errdefer self.inactivity_scores_buffer.deinit(allocator);
         self.slashing_penalties = .empty;
+        self.balances_buffer = try U64Array.initCapacity(
+            allocator,
+            validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
+        );
+        errdefer self.balances_buffer.deinit(allocator);
     }
 
     pub fn resize(self: *ReusedEpochTransitionCache, validator_count: usize) !void {
@@ -182,6 +193,12 @@ const ReusedEpochTransitionCache = struct {
         try self.next_epoch_shuffling_active_validator_indices.resize(self.allocator, validator_count);
         try self.rewards.resize(self.allocator, validator_count);
         try self.penalties.resize(self.allocator, validator_count);
+        try self.inactivity_scores_buffer.resize(self.allocator, validator_count);
+        std.debug.assert(self.balances_buffer.items.len == 0);
+        try self.balances_buffer.ensureTotalCapacity(
+            self.allocator,
+            validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
+        );
 
         @memset(self.is_active_prev_epoch.items, true);
         @memset(self.is_active_current_epoch.items, true);
@@ -202,7 +219,9 @@ const ReusedEpochTransitionCache = struct {
         self.current_epoch_participation.deinit(self.allocator);
         self.rewards.deinit(self.allocator);
         self.penalties.deinit(self.allocator);
+        self.inactivity_scores_buffer.deinit(self.allocator);
         self.slashing_penalties.deinit(self.allocator);
+        self.balances_buffer.deinit(self.allocator);
         self.* = undefined;
     }
 };
@@ -265,7 +284,12 @@ pub const EpochTransitionCache = struct {
     compounding_validator_flags: CompoundingValidatorFlags,
     rewards: []u64,
     penalties: []u64,
+    /// Scratch for processInactivityUpdates(), which leaves the pre-update scores in it.
+    inactivity_scores_buffer: []u64,
     slashing_penalties: []u64,
+    /// Borrowed from `ReusedEpochTransitionCache` as the backing memory of `balances`.
+    balances_buffer: []u64,
+    /// Allocator-taking methods are illegal on this list: the reused cache owns its memory.
     balances: ?U64Array,
     next_shuffling_active_indices: []const u32,
     next_shuffling: ?*EpochShufflingRc,
@@ -629,7 +653,9 @@ pub const EpochTransitionCache = struct {
             .compounding_validator_flags = .{ .base = reused_cache.is_compounding_validator_arr.items },
             .rewards = reused_cache.rewards.items,
             .penalties = reused_cache.penalties.items,
+            .inactivity_scores_buffer = reused_cache.inactivity_scores_buffer.items,
             .slashing_penalties = reused_cache.slashing_penalties.items,
+            .balances_buffer = reused_cache.balances_buffer.allocatedSlice(),
             // Will be assigned in processRewardsAndPenalties()
             .balances = null,
         };
@@ -661,10 +687,6 @@ pub const EpochTransitionCache = struct {
         self.indices_eligible_for_activation_queue.deinit(self.allocator);
         self.indices_eligible_for_activation.deinit(self.allocator);
         self.indices_to_eject.deinit(self.allocator);
-        // rewards and penalties are from reused_cache
-        if (self.balances) |*balances| {
-            balances.deinit(self.allocator);
-        }
     }
 };
 

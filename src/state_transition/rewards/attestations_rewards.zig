@@ -65,7 +65,7 @@ pub fn computeAttestationsRewards(
         inline else => |_, state_fork| {
             const fork_state = state.state.castToFork(state_fork);
             try processJustificationAndFinalization(state_fork, fork_state, &cache);
-            try processInactivityUpdates(state_fork, allocator, state.config, state.epoch_cache, fork_state, &cache);
+            try processInactivityUpdates(state_fork, state.config, state.epoch_cache, fork_state, &cache);
         },
     }
 
