@@ -1,41 +1,41 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
-import {
-  init as initNativeMetrics,
-  registerLocalValidator as registerNativeLocalValidator,
-  scrapeMetrics as scrapeNativeMetrics,
-  unregisterLocalValidator as unregisterNativeLocalValidator,
-} from "@chainsafe/lodestar-z/metrics";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {
-  IBeaconStateView,
-  computeStartSlotAtEpoch,
-  isStatePostBellatrix,
-  isStatePostGloas,
-} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch, readBeaconStateBytesMetadata} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {LodestarError, sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {getDataColumnSidecarsMinEpoch} from "../chain/archiveStore/utils/archiveBlocks.js";
-import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
-import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
+import {BeaconEngineCore} from "../chain/beaconEngine/index.js";
+import {AnchorSummary} from "../chain/beaconEngine/initialization.js";
+import {BeaconEngineMode, assertSupportedBeaconEngineMode} from "../chain/beaconEngine/options.js";
+import {BeaconEngine} from "../chain/beaconEngine.js";
+import {ChainEventEmitter} from "../chain/emitter.js";
+import {BeaconChain, IBeaconChain} from "../chain/index.js";
+import {initBeaconMetrics} from "../chain/initState.js";
+import type {IBeaconEngine} from "../chain/interface.js";
+import {StateInitialization} from "../chain/stateInitialization.js";
 import {IBeaconDb} from "../db/index.js";
-import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
+import {initializeExecutionEngine} from "../execution/index.js";
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
+import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
+import {CustodyConfig} from "../util/dataColumns.js";
+import {SerializedCache} from "../util/serializedCache.js";
 import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
+import {getAnchorExecutionBlockHash} from "./utils/anchorState.js";
 
 export * from "./options.js";
 
@@ -44,7 +44,6 @@ export type BeaconNodeModules = {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
-  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -57,7 +56,6 @@ export type BeaconNodeModules = {
 
 export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
-  config: BeaconConfig;
   pubkeyCache: PubkeyCache;
   db: IBeaconDb;
   logger: LoggerNode;
@@ -66,9 +64,7 @@ export type BeaconNodeInitModules = {
   dataDir: string;
   dataColumnDir: string;
   peerStoreDir?: string;
-  anchorState: IBeaconStateView;
-  isAnchorStateFinalized: boolean;
-  earliestAvailableSlot: Slot;
+  stateInitialization: StateInitialization;
   metricsRegistries?: Registry[];
 };
 
@@ -108,7 +104,6 @@ export class BeaconNode {
   metrics: Metrics | null;
   metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
-  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -125,7 +120,6 @@ export class BeaconNode {
     metrics,
     metricsServer,
     monitoring,
-    validatorMonitor,
     network,
     chain,
     api,
@@ -138,7 +132,6 @@ export class BeaconNode {
     this.metrics = metrics;
     this.metricsServer = metricsServer;
     this.monitoring = monitoring;
-    this.validatorMonitor = validatorMonitor;
     this.db = db;
     this.chain = chain;
     this.api = api;
@@ -156,7 +149,6 @@ export class BeaconNode {
    */
   static async init<T extends BeaconNode = BeaconNode>({
     opts,
-    config,
     pubkeyCache,
     db,
     logger,
@@ -165,11 +157,15 @@ export class BeaconNode {
     dataDir,
     dataColumnDir,
     peerStoreDir,
-    anchorState,
-    isAnchorStateFinalized,
-    earliestAvailableSlot,
+    stateInitialization,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
+    const beaconEngineMode = opts.chain.beaconEngineMode ?? BeaconEngineMode.MainThread;
+    assertSupportedBeaconEngineMode(beaconEngineMode);
+
+    const {config, activeValidatorCount} = stateInitialization;
+    const metadata = readBeaconStateBytesMetadata(stateInitialization.stateBytes);
+    if (!metadata) throw new LodestarError({code: "ANCHOR_STATE_BYTES_INVALID"});
     if (hasher.name !== "hashtree") {
       logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
     }
@@ -186,37 +182,13 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      if (opts.chain.nativeStateTransition) {
-        initNativeMetrics();
-      }
-
-      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
-        includeStateTransitionMetrics: !opts.chain.nativeStateTransition,
-      });
-      initBeaconMetrics(metrics, anchorState);
+      metrics = createMetrics(opts.metrics, metadata.genesisTime, metricsRegistries);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db, metrics.flatFileStore);
       signal.addEventListener("abort", metrics.close, {once: true});
     }
 
-    const validatorMonitor =
-      opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs
-        ? createValidatorMonitor(
-            metrics?.register ?? null,
-            config,
-            anchorState.genesisTime,
-            logger.child({module: LoggerModule.vmon}),
-            opts.validatorMonitor,
-            opts.chain.nativeStateTransition
-              ? {
-                  registerLocalValidator: registerNativeLocalValidator,
-                  unregisterLocalValidator: unregisterNativeLocalValidator,
-                }
-              : null
-          )
-        : null;
-
-    const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
+    const clock = new Clock({config, genesisTime: metadata.genesisTime, signal});
 
     // Before any lookup into the legacy column buckets, which can be slow until compacted
     const columnsMinEpoch =
@@ -231,9 +203,104 @@ export class BeaconNode {
 
     await db.init();
 
-    // Prune hot db repos
-    // TODO: Should this call be awaited?
+    const monitoring = opts.monitoring.endpoint
+      ? new MonitoringService(
+          "beacon",
+          {...opts.monitoring, endpoint: opts.monitoring.endpoint},
+          {register: (metrics as Metrics).register, logger: logger.child({module: LoggerModule.monitoring})}
+        )
+      : null;
+
+    let executionEngineOpts = opts.executionEngine;
+    if (opts.executionEngine.mode === "mock") {
+      const latestEth1BlockHash = getAnchorExecutionBlockHash(config, stateInitialization.stateBytes, metadata.slot);
+      executionEngineOpts = {
+        ...opts.executionEngine,
+        genesisBlockHash: ZERO_HASH_HEX,
+        eth1BlockHash: opts.executionEngine.eth1BlockHash ?? latestEth1BlockHash,
+        genesisTime: metadata.genesisTime,
+        config,
+      };
+    }
+
+    const chainLogger = logger.child({module: LoggerModule.chain});
+    const executionEngineLogger = logger.child({module: LoggerModule.execution});
+    const emitter = new ChainEventEmitter();
+
+    const nodeId = computeNodeIdFromPrivateKey(privateKey);
+    const initialCustodyGroupCount = opts.chain.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
+    metrics?.peerDas.custodyGroupCount.set(initialCustodyGroupCount);
+    // TODO: backfill not implemented yet
+    metrics?.peerDas.custodyGroupsBackfilled.set(0);
+    const custodyConfig = new CustodyConfig({
+      nodeId,
+      config,
+      initialCustodyGroupCount,
+    });
+
+    // TODO - beacon engine: share mock backend state across worker and main-thread clients.
+    // Separate mock backends prevent BeaconChain's getPayloadBodiesByHashV2 from seeing engine-imported payloads.
+    const executionEngine = initializeExecutionEngine(executionEngineOpts, {
+      metrics,
+      signal,
+      logger: executionEngineLogger,
+    });
+    const builderApiClientOpts = {
+      timeout: opts.executionBuilder.timeout,
+      userAgent: opts.executionBuilder.userAgent,
+    };
+    const serializedCache = new SerializedCache();
+    const beaconEngineCore = new BeaconEngineCore({
+      validatorMonitorOpts:
+        opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs ? opts.validatorMonitor : null,
+      isAnchorStateFinalized: stateInitialization.isFinalized,
+      opts: opts.chain,
+      ...(beaconEngineMode !== BeaconEngineMode.MainThread
+        ? {
+            chainConfigJson: chainConfigToJson(config),
+            genesisValidatorsRoot: Uint8Array.from(config.genesisValidatorsRoot),
+          }
+        : {config}),
+      db: beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : db,
+      dataDir,
+      dbName: opts.db.name,
+      dataColumnDir,
+      logging:
+        beaconEngineMode !== BeaconEngineMode.MainThread
+          ? {type: "options", opts: logger.toOpts()}
+          : {
+              type: "injected",
+              logger: chainLogger,
+              executionEngineLogger,
+              validatorMonitorLogger: logger.child({module: LoggerModule.vmon}),
+            },
+      metricsEnabled: metrics !== null,
+      genesisTime: metadata.genesisTime,
+      clock: beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : clock,
+      executionEngine: beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : executionEngine,
+      executionEngineOpts:
+        executionEngineOpts.mode === "mock" ? {...executionEngineOpts, config: undefined} : executionEngineOpts,
+      executionBuilderOpts: opts.executionBuilder,
+      builderApiClientOpts,
+    });
+    const beaconEngine = new BeaconEngine({
+      logger,
+      core: beaconEngineCore,
+      config,
+      emitter,
+      clock,
+      serializedCache,
+      ...(beaconEngineMode !== BeaconEngineMode.MainThread ? {coreEmitter: beaconEngineCore.emitter} : {}),
+    });
+    await beaconEngineCore.init();
+    const {earliestAvailableSlot} = await executeStateInitialization(
+      beaconEngine,
+      stateInitialization,
+      opts.chain.nativeStateTransition ?? false
+    );
     await db.pruneHotDb();
+    const anchor = await beaconEngine.initializeFromAnchor();
+    if (metrics) initBeaconMetrics(metrics, anchor);
 
     // Delete deprecated eth1 data to free up disk space for users
     logger.debug("Deleting deprecated eth1 data from database");
@@ -246,60 +313,30 @@ export class BeaconNode {
         logger.error("Failed to delete deprecated eth1 data", {}, e);
       });
 
-    const monitoring = opts.monitoring.endpoint
-      ? new MonitoringService(
-          "beacon",
-          {...opts.monitoring, endpoint: opts.monitoring.endpoint},
-          {register: (metrics as Metrics).register, logger: logger.child({module: LoggerModule.monitoring})}
-        )
-      : null;
-
-    let executionEngineOpts = opts.executionEngine;
-    if (opts.executionEngine.mode === "mock") {
-      const latestEth1BlockHash =
-        isStatePostBellatrix(anchorState) && anchorState.isExecutionStateType
-          ? isStatePostGloas(anchorState)
-            ? toRootHex(anchorState.latestBlockHash)
-            : toRootHex(anchorState.latestExecutionPayloadHeader.blockHash)
-          : undefined;
-      executionEngineOpts = {
-        ...opts.executionEngine,
-        genesisBlockHash: ZERO_HASH_HEX,
-        eth1BlockHash: opts.executionEngine.eth1BlockHash ?? latestEth1BlockHash,
-        genesisTime: anchorState.genesisTime,
-        config,
-      };
-    }
-
+    const parentPayload = await beaconEngine.getHeadParentPayload();
     const chain = new BeaconChain(opts.chain, {
-      privateKey,
+      serializedCache,
       config,
-      clock,
       pubkeyCache,
-      dataDir,
-      dataColumnDir,
       db,
       dbName: opts.db.name,
-      logger: logger.child({module: LoggerModule.chain}),
+      dataDir,
+      dataColumnDir,
+      logger: chainLogger,
       processShutdownCallback,
       metrics,
-      validatorMonitor,
-      anchorState,
-      isAnchorStateFinalized,
+      executionEngine,
+      beaconEngine,
+      clock,
+      emitter,
+      custodyConfig,
+      anchor,
       earliestAvailableSlot,
-      executionEngine: initializeExecutionEngine(executionEngineOpts, {
-        metrics,
-        signal,
-        logger: logger.child({module: LoggerModule.execution}),
-      }),
-      executionBuilder: opts.executionBuilder.enabled
-        ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
-        : undefined,
-      builderApiClientOpts: {
-        timeout: opts.executionBuilder.timeout,
-        // Sent with all builder api requests, unless the node runs in private mode
-        userAgent: opts.executionBuilder.userAgent,
-      },
+      // Share the engine client and its metrics in main-thread mode. Other modes need a facade-local client,
+      // with its own HTTP state, BLS verifier and metrics; only authenticated URL registrations cross owners.
+      builderApiClient:
+        beaconEngineMode !== BeaconEngineMode.MainThread ? undefined : beaconEngineCore.builderApiClient,
+      builderApiClientOpts,
     });
 
     // Load persisted data from disk to in-memory caches
@@ -310,6 +347,7 @@ export class BeaconNode {
     const network = await Network.init({
       opts: opts.network,
       config,
+      activeValidatorCount,
       logger: logger.child({module: LoggerModule.network}),
       metrics,
       chain,
@@ -323,6 +361,7 @@ export class BeaconNode {
       config,
       db,
       chain,
+      parentPayload,
       metrics,
       network,
       logger: logger.child({module: LoggerModule.sync}),
@@ -342,17 +381,7 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async () => {
-            const otherMetrics = await Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]);
-            if (opts.chain.nativeStateTransition) {
-              try {
-                otherMetrics.push(scrapeNativeMetrics());
-              } catch (e) {
-                logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
-              }
-            }
-            return otherMetrics;
-          },
+          getOtherMetrics: () => Promise.all([network.scrapeMetrics(), chain.beaconEngine.scrapeMetrics()]),
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;
@@ -379,7 +408,6 @@ export class BeaconNode {
       metrics,
       metricsServer,
       monitoring,
-      validatorMonitor,
       network,
       chain,
       api,
@@ -411,4 +439,17 @@ export class BeaconNode {
       this.status = BeaconNodeStatus.closed;
     }
   }
+}
+
+export async function executeStateInitialization(
+  beaconEngine: IBeaconEngine,
+  stateInitialization: StateInitialization,
+  nativeStateTransition = false
+): Promise<AnchorSummary & {earliestAvailableSlot: Slot}> {
+  const anchor = await beaconEngine.prepareAnchorState(stateInitialization.stateBytes);
+  stateInitialization.validate(anchor);
+  const earliestAvailableSlot = await stateInitialization.initializeEarliestAvailableSlot(anchor);
+  if (stateInitialization.shouldPersist) await beaconEngine.persistAnchorState();
+  stateInitialization.log(anchor, nativeStateTransition);
+  return {...anchor, earliestAvailableSlot};
 }

@@ -2,16 +2,16 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
+import {createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {BeaconChain} from "../../src/chain/chain.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
 import {ArchiveMode} from "../../src/index.js";
 import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from "../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
+import {createBeaconChain} from "./chain.js";
 import {ClockStatic} from "./clock.js";
 import {generateState} from "./state.js";
 
@@ -56,7 +56,7 @@ export async function getNetworkForTest(
   const db = getMockedBeaconDb();
   const privateKey = await generateKeyPair("secp256k1");
 
-  const chain = new BeaconChain(
+  const chain = await createBeaconChain(
     {
       archiveStateEpochFrequency: 0,
       suggestedFeeRecipient: "",
@@ -85,8 +85,8 @@ export async function getNetworkForTest(
         Math.floor(Date.now() / 1000) - startSlot * (beaconConfig.SLOT_DURATION_MS / 1000)
       ),
       metrics: null,
-      validatorMonitor: null,
-      anchorState: new BeaconStateView(cachedState),
+      validatorMonitorOpts: null,
+      anchorStateBytes: cachedState.serialize(),
       isAnchorStateFinalized: true,
       earliestAvailableSlot: cachedState.slot,
       executionEngine: new ExecutionEngineDisabled(),
@@ -95,6 +95,7 @@ export async function getNetworkForTest(
 
   const modules: Omit<NetworkInitModules, "opts" | "logger"> = {
     config: beaconConfig,
+    activeValidatorCount: cachedState.epochCtx.currentShuffling.activeIndices.length,
     chain,
     db,
     getReqRespHandler: opts.getReqRespHandler ?? getReqRespHandlers({db, chain}),

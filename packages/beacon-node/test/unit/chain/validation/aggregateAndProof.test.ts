@@ -6,8 +6,8 @@ import {DOMAIN_AGGREGATE_AND_PROOF, ForkName, SLOTS_PER_EPOCH, ZERO_HASH} from "
 import {computeSigningRoot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {phase0, ssz} from "@lodestar/types";
+import type {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
-import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {getAggregateAndProofSigningRoot} from "../../../../src/chain/validation/signatureSets/index.js";
 import {memoOnce} from "../../../utils/cache.js";
@@ -16,6 +16,7 @@ import {
   AggregateAndProofValidDataOpts,
   getAggregateAndProofValidData,
 } from "../../../utils/validationData/aggregateAndProof.js";
+import {ValidationTestChain} from "../../../utils/validationData/attestation.js";
 
 describe("chain / validation / aggregateAndProof", () => {
   const vc = 8192;
@@ -44,7 +45,7 @@ describe("chain / validation / aggregateAndProof", () => {
     const {chain, signedAggregateAndProof} = getValidData({});
 
     const fork = chain.config.getForkName(stateSlot);
-    await validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
+    await validateApiAggregateAndProof.call(chain.beaconEngine as BeaconEngineCore, fork, signedAggregateAndProof);
   });
 
   it("BAD_TARGET_EPOCH", async () => {
@@ -213,14 +214,19 @@ describe("chain / validation / aggregateAndProof", () => {
 
   /** Alias to reduce code duplication */
   async function expectError(
-    chain: IBeaconChain,
+    chain: ValidationTestChain,
     signedAggregateAndProof: phase0.SignedAggregateAndProof,
     errorCode: AttestationErrorCode
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
     const serializedData = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
     await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData),
+      validateGossipAggregateAndProof.call(
+        chain.beaconEngine as BeaconEngineCore,
+        fork,
+        signedAggregateAndProof,
+        serializedData
+      ),
       errorCode
     );
   }

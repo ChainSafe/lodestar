@@ -2,32 +2,17 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
 import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {BeaconEngineDb} from "./beaconEngine.js";
 import {Bucket} from "./buckets.js";
 import {type IDataColumnStore, LegacyDataColumnStore} from "./dataColumnStore.js";
 import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
 import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {IBeaconDb} from "./interface.js";
-import {CheckpointStateRepository} from "./repositories/checkpointState.js";
-import {EarliestAvailableSlotRepository} from "./repositories/earliestAvailableSlot.js";
 import {
-  AttesterSlashingRepository,
-  BLSToExecutionChangeRepository,
-  BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
-  BlockArchiveRepository,
-  BlockRepository,
-  CheckpointHeaderRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
-  ExecutionPayloadEnvelopeArchiveRepository,
-  ExecutionPayloadEnvelopeRepository,
-  ProposerPreferencesRepository,
-  ProposerSlashingRepository,
-  StateArchiveRepository,
-  SyncCommitteeRepository,
-  SyncCommitteeWitnessRepository,
-  VoluntaryExitRepository,
 } from "./repositories/index.js";
 
 /** Below this size, seeks over leftover legacy column data stay cheap */
@@ -39,70 +24,23 @@ export type BeaconDbOpts = {
   metrics?: FlatFileStoreMetrics | null;
 };
 
-export class BeaconDb implements IBeaconDb {
-  block: BlockRepository;
-  blockArchive: BlockArchiveRepository;
-
+export class BeaconDb extends BeaconEngineDb implements IBeaconDb {
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
   dataColumnSidecar: DataColumnSidecarRepository;
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
-
-  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
-  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
-
-  stateArchive: StateArchiveRepository;
-  checkpointState: CheckpointStateRepository;
-  earliestAvailableSlot: EarliestAvailableSlotRepository;
-
-  voluntaryExit: VoluntaryExitRepository;
-  proposerSlashing: ProposerSlashingRepository;
-  proposerPreferences: ProposerPreferencesRepository;
-  attesterSlashing: AttesterSlashingRepository;
-  blsToExecutionChange: BLSToExecutionChangeRepository;
-
-  // lightclient
-  bestLightClientUpdate: BestLightClientUpdateRepository;
-  checkpointHeader: CheckpointHeaderRepository;
-  syncCommittee: SyncCommitteeRepository;
-  syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   readonly dataColumns: IDataColumnStore;
   lastLegacyArchiveSlot: Slot | null = null;
   private readonly flatFileStore: FlatFileStore;
   private readonly logger: Logger;
 
-  constructor(
-    config: ChainForkConfig,
-    protected readonly db: Db,
-    opts: BeaconDbOpts
-  ) {
-    // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
-    this.block = new BlockRepository(config, db);
-    this.blockArchive = new BlockArchiveRepository(config, db);
-
+  constructor(config: ChainForkConfig, db: Db, opts: BeaconDbOpts) {
+    super(config, db);
     this.blobSidecars = new BlobSidecarsRepository(config, db);
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
     this.dataColumnSidecar = new DataColumnSidecarRepository(config, db);
     this.dataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, db);
-
-    this.executionPayloadEnvelope = new ExecutionPayloadEnvelopeRepository(config, db);
-    this.executionPayloadEnvelopeArchive = new ExecutionPayloadEnvelopeArchiveRepository(config, db);
-
-    this.stateArchive = new StateArchiveRepository(config, db);
-    this.checkpointState = new CheckpointStateRepository(config, db);
-    this.earliestAvailableSlot = new EarliestAvailableSlotRepository(db);
-    this.voluntaryExit = new VoluntaryExitRepository(config, db);
-    this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);
-    this.proposerSlashing = new ProposerSlashingRepository(config, db);
-    this.proposerPreferences = new ProposerPreferencesRepository(config, db);
-    this.attesterSlashing = new AttesterSlashingRepository(config, db);
-
-    // lightclient
-    this.bestLightClientUpdate = new BestLightClientUpdateRepository(config, db);
-    this.checkpointHeader = new CheckpointHeaderRepository(config, db);
-    this.syncCommittee = new SyncCommitteeRepository(config, db);
-    this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
 
     this.logger = opts.logger;
     this.flatFileStore = new FlatFileStore(opts.dataColumnDir, config, opts.logger, opts.metrics);

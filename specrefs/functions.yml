@@ -4899,8 +4899,8 @@
 
 - name: get_inclusion_list_store#heze
   sources:
-    - file: packages/beacon-node/src/chain/chain.ts
-      search: this.inclusionListStore = new InclusionListStore(config);
+    - file: packages/beacon-node/src/chain/beaconEngine/beaconEngineCore.ts
+      search: this.inclusionListStore = new InclusionListStore(this.config);
   spec: |
     <spec fn="get_inclusion_list_store" fork="heze" hash="73075f19">
     def get_inclusion_list_store() -> InclusionListStore:
@@ -7181,7 +7181,7 @@
   sources:
     - file: packages/state-transition/src/cache/epochCache.ts
       search: "getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache {"
-    - file: packages/beacon-node/src/api/impl/validator/index.ts
+    - file: packages/beacon-node/src/chain/beaconEngine/duties.ts
       search: const validatorSyncCommitteeIndices = validatorSyncCommitteeIndexMap.get(validatorIndex);
   spec: |
     <spec fn="is_assigned_to_sync_committee" fork="altair" hash="b83187d8">
@@ -8051,7 +8051,7 @@
 - name: is_past_slot#gloas
   sources:
     - file: packages/beacon-node/src/chain/validation/proposerPreferences.ts
-      search: "if (chain.clock.msFromSlot(proposalSlot) > chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {"
+      search: "if (this.clock.msFromSlot(proposalSlot) > this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {"
   spec: |
     <spec fn="is_past_slot" fork="gloas" hash="ad519271">
     def is_past_slot(
@@ -8830,7 +8830,7 @@
 
 - name: notify_ptc_messages#gloas
   sources:
-    - file: packages/beacon-node/src/chain/blocks/importBlock.ts
+    - file: packages/beacon-node/src/chain/beaconEngine/importBlock.ts
       search: for (const payloadAttestation of block.message.body.payloadAttestations) {
   spec: |
     <spec fn="notify_ptc_messages" fork="gloas" hash="f28f190f">
@@ -9312,7 +9312,7 @@
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: '^\s+onExecutionPayload\('
       regex: true
-    - file: packages/beacon-node/src/chain/blocks/importExecutionPayload.ts
+    - file: packages/beacon-node/src/chain/beaconEngine/importExecutionPayload.ts
       search: this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, satisfied);
   spec: |
     <spec fn="on_execution_payload_envelope" fork="heze" hash="afd9bdaf">

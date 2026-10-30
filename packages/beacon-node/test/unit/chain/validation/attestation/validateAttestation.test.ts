@@ -4,8 +4,8 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
+import type {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../../src/chain/errors/index.js";
-import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {
   ApiAttestation,
   GossipAttestation,
@@ -17,7 +17,11 @@ import {
 import {getAttDataFromAttestationSerialized} from "../../../../../src/util/sszBytes.js";
 import {memoOnce} from "../../../../utils/cache.js";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
-import {AttestationValidDataOpts, getAttestationValidData} from "../../../../utils/validationData/attestation.js";
+import {
+  AttestationValidDataOpts,
+  ValidationTestChain,
+  getAttestationValidData,
+} from "../../../../utils/validationData/attestation.js";
 
 // TODO: more tests for electra
 describe("validateAttestation", () => {
@@ -47,7 +51,10 @@ describe("validateAttestation", () => {
     const {chain, attestation} = getValidData();
 
     const fork = chain.config.getForkName(stateSlot);
-    await validateApiAttestation(fork, chain, {attestation, serializedData: null});
+    await validateApiAttestation.call(chain.beaconEngine as BeaconEngineCore, fork, {
+      attestation,
+      serializedData: null,
+    });
   });
 
   it("INVALID_SERIALIZED_BYTES_ERROR_CODE", async () => {
@@ -297,21 +304,26 @@ describe("validateAttestation", () => {
 
   /** Alias to reduce code duplication */
   async function expectApiError(
-    chain: IBeaconChain,
+    chain: ValidationTestChain,
     attestationOrBytes: ApiAttestation,
     errorCode: string
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
-    await expectRejectedWithLodestarError(validateApiAttestation(fork, chain, attestationOrBytes), errorCode);
+    await expectRejectedWithLodestarError(
+      validateApiAttestation.call(chain.beaconEngine as BeaconEngineCore, fork, attestationOrBytes),
+      errorCode
+    );
   }
 
   async function expectGossipError(
-    chain: IBeaconChain,
+    chain: ValidationTestChain,
     attestationOrBytes: GossipAttestation,
     errorCode: string
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
-    const {results} = await validateGossipAttestationsSameAttData(fork, chain, [attestationOrBytes]);
+    const {results} = await validateGossipAttestationsSameAttData.call(chain.beaconEngine as BeaconEngineCore, fork, [
+      attestationOrBytes,
+    ]);
     expect(results.length).toEqual(1);
     expect((results[0].err as LodestarError<{code: string}>).type.code).toEqual(errorCode);
   }

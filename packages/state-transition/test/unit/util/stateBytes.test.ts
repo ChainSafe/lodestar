@@ -192,7 +192,12 @@ describe("state bytes weak subjectivity", () => {
       });
       const summary = computeWeakSubjectivitySummaryFromStateBytes(config, input, metadata);
       assert(summary !== null, `${fork}: weak subjectivity summary should be computable`);
-      expect(summary, fork).toEqual({checkpointEpoch: 4, genesisTime: state.genesisTime, period});
+      expect(summary, fork).toEqual({
+        checkpointEpoch: 4,
+        genesisTime: state.genesisTime,
+        period,
+        activeValidatorCount: 3,
+      });
       for (const [epoch, expected] of [
         [-1, true],
         [4, true],
@@ -218,6 +223,7 @@ describe("state bytes weak subjectivity", () => {
     assert(metadata !== null, `${fork}: metadata should be readable`);
     const summary = computeWeakSubjectivitySummaryFromStateBytes(config, bytes, metadata);
     assert(summary !== null, `${fork}: weak subjectivity summary should be computable`);
+    expect(summary.activeValidatorCount).toBe(0);
     expect(summary.period).toBe(computeWeakSubjectivityPeriod(config, state));
   });
 
@@ -285,7 +291,7 @@ describe("state bytes weak subjectivity", () => {
 
   it("includes the expiry epoch and uses the current time by default", () => {
     const config = createChainForkConfig({});
-    const summary = {checkpointEpoch: 4, genesisTime: 1000, period: 2};
+    const summary = {checkpointEpoch: 4, genesisTime: 1000, period: 2, activeValidatorCount: 1};
     const firstExpiredTime = summary.genesisTime + (7 * SLOTS_PER_EPOCH * config.SLOT_DURATION_MS) / 1000;
 
     expect(isWithinWeakSubjectivityPeriodFromSummary(config, summary, summary.genesisTime - 1)).toBe(true);

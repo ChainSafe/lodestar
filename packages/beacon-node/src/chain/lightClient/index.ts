@@ -1,5 +1,4 @@
 import {BitArray} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkName,
@@ -46,11 +45,11 @@ import {
 } from "@lodestar/types";
 import {Logger, MapDef, byteArrayEquals, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../../constants/index.js";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconEngineDb} from "../../db/index.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
-import {ChainEventEmitter} from "../emitter.js";
+import {BeaconEngineEvent, IBeaconEngineEventBus} from "../beaconEngine/events.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {
   getBlockBodyExecutionBlockHashProof,
@@ -86,9 +85,9 @@ export type SyncAttestedData = {
 type LightClientServerModules = {
   config: ChainForkConfig;
   clock: IClock;
-  db: IBeaconDb;
-  metrics: Metrics | null;
-  emitter: ChainEventEmitter;
+  db: IBeaconEngineDb;
+  metrics: BeaconEngineMetrics | null;
+  emitter: IBeaconEngineEventBus;
   logger: Logger;
   signal: AbortSignal;
 };
@@ -197,10 +196,10 @@ const MAX_PREV_HEAD_DATA = 32;
  * Storing 4 witness per epoch costs `6848 * 4 * 32 = 876544 ~ 0.9 MB/m`.
  */
 export class LightClientServer {
-  private readonly db: IBeaconDb;
+  private readonly db: IBeaconEngineDb;
   private readonly config: ChainForkConfig;
-  private readonly metrics: Metrics | null;
-  private readonly emitter: ChainEventEmitter;
+  private readonly metrics: BeaconEngineMetrics | null;
+  private readonly emitter: IBeaconEngineEventBus;
   private readonly logger: Logger;
   private readonly clock: IClock;
   private readonly signal: AbortSignal;
@@ -540,9 +539,11 @@ export class LightClientServer {
     if (!isStaleLightClientUpdate) {
       // Emit update
       // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
-      this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
-        version: attestedFork,
-        data: headerUpdate,
+      this.emitter.emit(BeaconEngineEvent.lightClientOptimisticUpdate, {
+        data: this.config
+          .getPostAltairForkTypes(attestedHeader.beacon.slot)
+          .LightClientOptimisticUpdate.serialize(headerUpdate),
+        slot: attestedHeader.beacon.slot,
       });
     } else {
       this.metrics?.lightclientServer.staleLightClientUpdates.inc();
@@ -579,9 +580,11 @@ export class LightClientServer {
 
         if (!isStaleLightClientUpdate) {
           // Note: Ignores gossip rule to always emit finality_update with higher finalized_header.slot, for simplicity
-          this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
-            version: attestedFork,
-            data: this.finalized,
+          this.emitter.emit(BeaconEngineEvent.lightClientFinalityUpdate, {
+            data: this.config
+              .getPostAltairForkTypes(attestedHeader.beacon.slot)
+              .LightClientFinalityUpdate.serialize(this.finalized),
+            slot: attestedHeader.beacon.slot,
           });
         }
       }

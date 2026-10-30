@@ -83,7 +83,8 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       blsToExecutionChange: vi.mocked(new BLSToExecutionChangeRepository({} as any, {} as any)),
       proposerSlashing: vi.mocked(new ProposerSlashingRepository({} as any, {} as any)),
       attesterSlashing: vi.mocked(new AttesterSlashingRepository({} as any, {} as any)),
-      proposerPreferences: vi.mocked(new ProposerPreferencesRepository({} as any, {} as any)),
+      proposerPreferences: vi.mocked(new ProposerPreferencesRepository(minimalConfig, {} as Db)),
+      earliestAvailableSlot: {get: vi.fn().mockResolvedValue(null), set: vi.fn().mockResolvedValue(undefined)},
 
       dataColumns,
       init: vi.fn().mockResolvedValue(undefined),

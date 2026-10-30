@@ -4,16 +4,16 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {RootHex, Slot, gloas} from "@lodestar/types";
+import {RootHex, Slot, gloas, ssz} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {BeaconEngineMode} from "../chain/beaconEngine/options.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
-import {PayloadError, PayloadErrorCode} from "../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
+import {PayloadError, PayloadErrorCode} from "../chain/blocks/payloadError.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";
-import {validateGossipExecutionPayloadEnvelope} from "../chain/validation/executionPayloadEnvelope.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
@@ -374,7 +374,7 @@ export class BlockInputSync {
   private pruneFinalized = (checkpoint: CheckpointWithHex): void => {
     // Use the actual finalized block slot, not computeStartSlotAtEpoch(checkpoint.epoch)
     // because the payload at the finalized block is not finalized
-    const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
+    const finalizedSlot = this.chain.beaconEngine.chainView.getFinalizedBlock().slot;
     const nowSec = Date.now() / 1000;
     const maxSecInCache = (PRUNE_UNRESOLVED_SLOT_EPOCHS * SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000;
 
@@ -599,7 +599,7 @@ export class BlockInputSync {
     }
 
     // the block is in fork choice
-    const forkChoiceSlot = this.chain.forkChoice.getBlockHexDefaultStatus(rootHex)?.slot;
+    const forkChoiceSlot = this.chain.beaconEngine.chainView.getBlockHexDefaultStatus(rootHex)?.slot;
     if (forkChoiceSlot !== undefined) {
       return forkChoiceSlot;
     }
@@ -677,7 +677,7 @@ export class BlockInputSync {
     | {kind: "parentPayload"; rootHex: RootHex; slot: Slot}
     | {kind: "invalidParentPayload"; parentRootHex: RootHex; parentBlockHashHex: RootHex} {
     const parentRootHex = blockInput.parentRootHex;
-    const parentBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRootHex);
+    const parentBlock = this.chain.beaconEngine.chainView.getBlockHexDefaultStatus(parentRootHex);
     if (!parentBlock) {
       return {kind: "parentBlock", rootHex: parentRootHex};
     }
@@ -692,12 +692,11 @@ export class BlockInputSync {
 
     const block = blockInput.getBlock() as gloas.SignedBeaconBlock;
     const parentBlockHashHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-    if (this.chain.forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHashHex) !== null) {
+    if (this.chain.beaconEngine.chainView.getBlockHexAndBlockHash(parentRootHex, parentBlockHashHex) !== null) {
       return {kind: "ready"};
     }
 
-    // The parent's payload is known but does not match `parentBlockHashHex`
-    if (this.chain.forkChoice.hasPayloadHexUnsafe(parentRootHex)) {
+    if (this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(parentRootHex)) {
       return {kind: "invalidParentPayload", parentRootHex, parentBlockHashHex};
     }
 
@@ -911,7 +910,7 @@ export class BlockInputSync {
     // entries from an earlier slot is not polled
     for (const [rootHex, {slot: deferredSlot, source, peer}] of this.deferredPayloadRoots) {
       if (deferredSlot < slot) {
-        if (!this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
+        if (!this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(rootHex)) {
           this.addDeferredPayloadRoot(rootHex, deferredSlot, source, peer);
         }
         this.deferredPayloadRoots.delete(rootHex);
@@ -943,7 +942,7 @@ export class BlockInputSync {
       for (polls = 0; polls < tickCount; polls++) {
         let importedCount = 0;
         for (const [rootHex, {slot: deferredSlot, source, peer}] of this.deferredPayloadRoots) {
-          if (this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
+          if (this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(rootHex)) {
             importedCount++;
             continue;
           }
@@ -1044,11 +1043,11 @@ export class BlockInputSync {
       }
       this.pendingBlocks.set(rootHex, pending);
       const blockSlot = pending.blockInput.slot;
-      const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
+      const finalizedSlot = this.chain.beaconEngine.chainView.getFinalizedBlock().slot;
       const delaySec = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.chain.genesisTime);
       this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
-      const parentInForkChoice = this.chain.forkChoice.hasBlockHex(pending.blockInput.parentRootHex);
+      const parentInForkChoice = this.chain.beaconEngine.chainView.hasBlockHex(pending.blockInput.parentRootHex);
       const logCtx2 = {
         ...logCtx,
         slot: blockSlot,
@@ -1141,7 +1140,8 @@ export class BlockInputSync {
     const proposerBoostWindowMs = this.config.getAttestationDueMs(fork);
     if (
       this.chain.clock.msFromSlot(blockSlot) < proposerBoostWindowMs &&
-      this.chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)
+      // TODO - beacon engine: how to avoid this beaconEngine call?
+      (await this.chain.beaconEngine.isBlockProposerSeen(blockSlot, proposerIndex))
     ) {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
       // eligible for proposer boost to prevent unbundling attack
@@ -1256,12 +1256,12 @@ export class BlockInputSync {
   private async reconcilePayloadEnvelope(pendingPayload: PendingPayloadEnvelope): Promise<void> {
     const rootHex = getPayloadSyncCacheItemRootHex(pendingPayload);
 
-    if (this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
+    if (this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(rootHex)) {
       this.pendingPayloads.delete(rootHex);
       return;
     }
 
-    if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+    if (!this.chain.beaconEngine.chainView.hasBlockHex(rootHex)) {
       // Block not in fork choice yet. payloadInput may be seeded from the block body during download, so a
       // non-null payloadInput does not imply the block is imported; defer regardless and pull the block first.
       // onBlockImported re-triggers the search to resume this envelope.
@@ -1288,8 +1288,19 @@ export class BlockInputSync {
     }
 
     if (!payloadInput.hasPayloadEnvelope()) {
-      const validationResult = await wrapError(
-        validateGossipExecutionPayloadEnvelope(this.chain, pendingPayload.envelope)
+      const envelopeBytes =
+        this.chain.serializedCache.get(pendingPayload.envelope) ??
+        ssz.gloas.SignedExecutionPayloadEnvelope.serialize(pendingPayload.envelope);
+      if ((this.chain.opts.beaconEngineMode ?? BeaconEngineMode.MainThread) === BeaconEngineMode.MainThread) {
+        this.chain.serializedCache.set(pendingPayload.envelope, envelopeBytes);
+      }
+      const validationResult = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(
+        envelopeBytes,
+        pendingPayload.envelope,
+        {
+          source: PayloadEnvelopeInputSource.byRoot,
+          seenTimestampSec: pendingPayload.timeAddedSec,
+        }
       );
       if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
         return;
@@ -1298,7 +1309,7 @@ export class BlockInputSync {
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
           {slot: pendingPayload.envelope.message.payload.slotNumber, root: rootHex},
-          validationResult.err
+          validationResult.err.error
         );
 
         const pendingPayloadByRoot: PendingPayloadRootHex = {
@@ -1335,7 +1346,7 @@ export class BlockInputSync {
     }
 
     const rootHex = getPayloadSyncCacheItemRootHex(payload);
-    if (this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
+    if (this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(rootHex)) {
       this.pendingPayloads.delete(rootHex);
       return;
     }
@@ -1371,7 +1382,7 @@ export class BlockInputSync {
       this.pendingPayloads.set(resultRootHex, pendingPayload);
       const result = isPendingPayloadEnvelope(pendingPayload)
         ? DownloadResult.WaitingForBlock
-        : this.chain.forkChoice.hasPayloadHexUnsafe(resultRootHex)
+        : this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(resultRootHex)
           ? DownloadResult.Late
           : DownloadResult.Resolved;
       this.metrics?.blockInputSync.downloadedPayloadsResult.inc({result});
@@ -1418,13 +1429,13 @@ export class BlockInputSync {
       return;
     }
 
-    if (this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
+    if (this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(rootHex)) {
       this.logger.debug("Payload already imported while processing unknown payload", logCtx);
       this.pendingPayloads.delete(rootHex);
       return;
     }
 
-    if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+    if (!this.chain.beaconEngine.chainView.hasBlockHex(rootHex)) {
       this.logger.debug("Payload input is ready before its block is in fork choice", logCtx);
       const added = this.addByRootHex(rootHex);
       pendingPayload.status = PendingPayloadInputStatus.downloaded;
@@ -1573,7 +1584,7 @@ export class BlockInputSync {
         }
 
         payloadInput ??= await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
-        if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+        if (!this.chain.beaconEngine.chainView.hasBlockHex(rootHex)) {
           // Block not in fork choice yet. Validating now would throw BLOCK_ROOT_UNKNOWN, so keep the downloaded
           // envelope and wait for the block body; reconcilePayloadEnvelope validates once the block lands.
           // payloadInput may be seeded from the block body during download, so a non-null payloadInput does not
@@ -1597,7 +1608,19 @@ export class BlockInputSync {
         }
 
         if (!payloadInput.hasPayloadEnvelope()) {
-          await validateGossipExecutionPayloadEnvelope(this.chain, envelope);
+          const envelopeBytes =
+            this.chain.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+          if ((this.chain.opts.beaconEngineMode ?? BeaconEngineMode.MainThread) === BeaconEngineMode.MainThread) {
+            this.chain.serializedCache.set(envelope, envelopeBytes);
+          }
+          const res = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(envelopeBytes, envelope, {
+            source: PayloadEnvelopeInputSource.byRoot,
+            seenTimestampSec: Date.now() / 1000,
+            peerIdStr: peerId,
+          });
+          if (res.err !== null) {
+            throw res.err.error ?? new Error(`Execution payload envelope validation failed: ${res.err.code}`);
+          }
         }
 
         let pendingPayload = this.toPendingPayloadInput(payloadInput, cacheItem, envelope);
@@ -1636,7 +1659,7 @@ export class BlockInputSync {
 
         if (pendingPayload.status === PendingPayloadInputStatus.downloaded) {
           // late = the payload got imported (via gossip) while we were downloading, same as the block path
-          const result = this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)
+          const result = this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(rootHex)
             ? FetchResult.SuccessLate
             : FetchResult.SuccessResolved;
           this.metrics?.blockInputSync.payloadFetchTime.observe({result}, Date.now() / 1000 - fetchStartSec);
@@ -1884,9 +1907,9 @@ export class BlockInputSync {
 
       if (cacheItem.status === PendingBlockInputStatus.downloaded) {
         // download was successful, no need to go with another peer, return
-        const result = this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.blockRootHex)
+        const result = this.chain.beaconEngine.chainView.hasBlockHex(cacheItem.blockInput.blockRootHex)
           ? FetchResult.SuccessLate
-          : this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.parentRootHex)
+          : this.chain.beaconEngine.chainView.hasBlockHex(cacheItem.blockInput.parentRootHex)
             ? FetchResult.SuccessResolved
             : FetchResult.SuccessMissingParent;
         this.metrics?.blockInputSync.fetchTime.observe({result}, Date.now() / 1000 - fetchStartSec);
@@ -1987,7 +2010,7 @@ export class BlockInputSync {
     for (const badBlock of this.removeAllDescendants(block, headReason, DroppedItemReason.invalidParent)) {
       const rootHex = getBlockInputSyncCacheItemRootHex(badBlock);
       // a gossip import may race a failing sync path, never ban a root fork choice has imported
-      if (this.chain.forkChoice.hasBlockHex(rootHex)) {
+      if (this.chain.beaconEngine.chainView.hasBlockHex(rootHex)) {
         continue;
       }
       this.knownBadBlocks.add(rootHex);

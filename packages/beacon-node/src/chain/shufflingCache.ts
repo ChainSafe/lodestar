@@ -8,7 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import {Attestation, CommitteeIndex, Epoch, IndexedAttestation, RootHex, Slot} from "@lodestar/types";
 import {LodestarError, Logger, MapDef} from "@lodestar/utils";
-import {Metrics} from "../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../metrics/beaconEngineMetrics.js";
 
 /**
  * Lookahead duties, gossip validation, and block production need epochs n-1, n, and n+1 for current epoch n.
@@ -65,7 +65,7 @@ export class ShufflingCache {
   private readonly maxEpochs: number;
 
   constructor(
-    readonly metrics: Metrics | null = null,
+    readonly metrics: BeaconEngineMetrics | null = null,
     readonly logger: Logger | null = null,
     opts: ShufflingCacheOpts = {},
     precalculatedShufflings?: {shuffling: EpochShuffling | null; decisionRoot: RootHex}[]

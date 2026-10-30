@@ -10,6 +10,7 @@ import {
   GossipAction,
 } from "../../../../../../src/chain/errors/index.js";
 import {validateGossipExecutionPayloadBid} from "../../../../../../src/chain/validation/executionPayloadBid.js";
+import {withBeaconEngineFacade} from "../../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 
 vi.mock("../../../../../../src/chain/validation/executionPayloadBid.js", () => ({
@@ -40,16 +41,19 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
   });
 
   it("validates the bid before publishing by default", async () => {
-    const api = getBeaconBlockApi(defaultApiOptions, modules);
+    const api = getBeaconBlockApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
     await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
 
-    expect(validateGossipExecutionPayloadBid).toHaveBeenCalledWith(modules.chain, signedBid);
+    expect(validateGossipExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
     expect(modules.chain.executionPayloadBidPool.add).toHaveBeenCalledWith(signedBid, expect.any(Number));
     expect(modules.network.publishSignedExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
   });
 
   it("publishes the bid without validation if disabled", async () => {
-    const api = getBeaconBlockApi({...defaultApiOptions, disableBidValidation: true}, modules);
+    const api = getBeaconBlockApi(
+      {...defaultApiOptions, disableBidValidation: true},
+      {...modules, chain: withBeaconEngineFacade(modules.chain)}
+    );
     await api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid});
 
     expect(validateGossipExecutionPayloadBid).not.toHaveBeenCalled();
@@ -65,7 +69,7 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
         slot: 1,
       })
     );
-    const api = getBeaconBlockApi(defaultApiOptions, modules);
+    const api = getBeaconBlockApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
     await expect(api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid})).rejects.toThrow(
       ExecutionPayloadBidError
     );

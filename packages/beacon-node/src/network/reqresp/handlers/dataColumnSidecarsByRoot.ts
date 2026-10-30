@@ -4,7 +4,7 @@ import {computeEpochAtSlot, getBlobDataRetentionStartEpoch} from "@lodestar/stat
 import {ColumnIndex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
 import {prettyPrintPeerId} from "../../util.js";
 import {
@@ -15,7 +15,7 @@ import {
 export async function* onDataColumnSidecarsByRoot(
   requestBody: DataColumnSidecarsByRootRequest,
   chain: IBeaconChain,
-  db: IBeaconDb,
+  db: IBeaconChainDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
@@ -34,7 +34,7 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+    const block = chain.beaconEngine.chainView.getBlockHexDefaultStatus(blockRootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
     const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(blockRoot);
 

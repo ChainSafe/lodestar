@@ -28,21 +28,18 @@ import {
 /**
  * The DB service manages the data layer of the beacon chain
  * The exposed methods do not refer to the underlying data engine,
- * but instead expose relevant beacon chain objects
+ * but instead expose relevant beacon chain objects.
+ *
+ * Ownership is split by owner (BeaconEngine seam): `IBeaconEngineDb` holds the consensus stores the
+ * engine owns (blocks, states, checkpoint states, envelopes, op-pool persistence, light-client data); `IBeaconChainDb`
+ * retains read access to blocks and envelopes, plus the DA stores the facade owns. `IBeaconDb` is their composition, held
+ * only by the bootstrap (CLI / `BeaconNode`).
  */
-export interface IBeaconDb {
+export interface IBeaconEngineDb {
   // unfinalized blocks
   block: BlockRepository;
   // finalized blocks
   blockArchive: BlockArchiveRepository;
-
-  blobSidecars: BlobSidecarsRepository;
-  blobSidecarsArchive: BlobSidecarsArchiveRepository;
-  dataColumnSidecar: DataColumnSidecarRepository;
-  dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
-
-  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
-  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
 
   // finalized states
   stateArchive: StateArchiveRepository;
@@ -50,7 +47,10 @@ export interface IBeaconDb {
   checkpointState: CheckpointStateRepository;
   earliestAvailableSlot: EarliestAvailableSlotRepository;
 
-  // op pool
+  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
+  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
+
+  // op pool persistence (the OpPool is engine-owned)
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
   proposerPreferences: ProposerPreferencesRepository;
@@ -62,20 +62,49 @@ export interface IBeaconDb {
   checkpointHeader: CheckpointHeaderRepository;
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
+}
+
+export interface IBeaconChainDb {
+  block: Pick<BlockRepository, "get" | "getBinary">;
+  blockArchive: Pick<
+    BlockArchiveRepository,
+    | "getBinary"
+    | "firstKey"
+    | "keys"
+    | "getBinaryEntryByRoot"
+    | "getRootBySlot"
+    | "getSlotByRoot"
+    | "getSlotByParentRoot"
+    | "binaryEntriesStream"
+    | "decodeKey"
+  >;
+
+  executionPayloadEnvelope: Pick<ExecutionPayloadEnvelopeRepository, "get" | "getBinary">;
+  executionPayloadEnvelopeArchive: Pick<
+    ExecutionPayloadEnvelopeArchiveRepository,
+    "getBinary" | "binaryEntriesStream" | "decodeKey"
+  >;
+
+  blobSidecars: BlobSidecarsRepository;
+  blobSidecarsArchive: BlobSidecarsArchiveRepository;
+  dataColumnSidecar: DataColumnSidecarRepository;
+  dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
   dataColumns: IDataColumnStore;
   /** Highest legacy column slot at startup; later archival writes the block-root index first. */
   readonly lastLegacyArchiveSlot: Slot | null;
-  init(): Promise<void>;
-
-  compactLegacyDataColumns(prunedBeforeSlot: Slot, minSizeBytes?: number): Promise<void>;
-
-  pruneHotDb(): Promise<void>;
-
-  deleteDeprecatedEth1Data(): Promise<void>;
-
-  /**  Close the connection to the db instance and close the db store. */
-  close(): Promise<void>;
-  /** To inject metrics after CLI initialization */
-  setMetrics(metrics: LevelDbControllerMetrics, flatFileStoreMetrics?: FlatFileStoreMetrics | null): void;
 }
+
+export type IBeaconDb = IBeaconChainDb &
+  IBeaconEngineDb & {
+    init(): Promise<void>;
+    compactLegacyDataColumns(prunedBeforeSlot: Slot, minSizeBytes?: number): Promise<void>;
+    pruneHotDb(): Promise<void>;
+
+    deleteDeprecatedEth1Data(): Promise<void>;
+
+    /**  Close the connection to the db instance and close the db store. */
+    close(): Promise<void>;
+    /** To inject metrics after CLI initialization */
+    setMetrics(metrics: LevelDbControllerMetrics, flatFileStoreMetrics?: FlatFileStoreMetrics | null): void;
+  };

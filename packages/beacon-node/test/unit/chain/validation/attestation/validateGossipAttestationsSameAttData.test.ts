@@ -4,9 +4,9 @@ import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import type {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
-import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {SeenAttesters} from "../../../../../src/chain/seenCache/seenAttesters.js";
 import {Step0Result, validateGossipAttestationsSameAttData} from "../../../../../src/chain/validation/index.js";
 
@@ -62,18 +62,18 @@ describe("validateGossipAttestationsSameAttData", () => {
     pubkeyCache.append(i, getKeypair(i).publicKey.toBytes());
   }
 
-  let chain: IBeaconChain;
+  let engine: BeaconEngineCore;
   const signingRoot = Buffer.alloc(32, 1);
 
   beforeEach(() => {
-    chain = {
+    engine = {
       bls: new BlsSingleThreadVerifier({metrics: null}),
       seenAttesters: new SeenAttesters(),
       pubkeyCache,
       opts: {
         minSameMessageSignatureSetsToBatch: 2,
-      } as IBeaconChain["opts"],
-    } as Partial<IBeaconChain> as IBeaconChain;
+      } as BeaconEngineCore["opts"],
+    } as Partial<BeaconEngineCore> as BeaconEngineCore;
   });
 
   afterEach(() => {
@@ -122,12 +122,17 @@ describe("validateGossipAttestationsSameAttData", () => {
         callIndex++;
         return result;
       };
-      await validateGossipAttestationsSameAttData(ForkName.phase0, chain, new Array(5).fill({}), phase0ValidationFn);
+      await validateGossipAttestationsSameAttData.call(
+        engine,
+        ForkName.phase0,
+        new Array(5).fill({}),
+        phase0ValidationFn
+      );
       for (let validatorIndex = 0; validatorIndex < phase0Result.length; validatorIndex++) {
         if (seenAttesters.includes(validatorIndex)) {
-          expect(chain.seenAttesters.isKnown(0, validatorIndex)).toBe(true);
+          expect(engine.seenAttesters.isKnown(0, validatorIndex)).toBe(true);
         } else {
-          expect(chain.seenAttesters.isKnown(0, validatorIndex)).toBe(false);
+          expect(engine.seenAttesters.isKnown(0, validatorIndex)).toBe(false);
         }
       }
     }); // end test case

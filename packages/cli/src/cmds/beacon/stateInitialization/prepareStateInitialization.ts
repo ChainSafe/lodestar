@@ -10,12 +10,13 @@ import {ArchivedStateBytes, StateInitialization, StateInitializationOptions, Sta
 import {assertAnchorStateForkMatchesConfig} from "./validation.js";
 
 export function prepareArchivedStateInitialization(
-  {stateBytes, metadata, isWithinWeakSubjectivityPeriod}: ArchivedStateBytes,
+  {stateBytes, metadata, weakSubjectivity, isWithinWeakSubjectivityPeriod}: ArchivedStateBytes,
   {chainForkConfig, db, logger}: StatePreparationContext
 ): StateInitialization {
   const config = createBeaconConfig(chainForkConfig, metadata.genesisValidatorsRoot);
   return {
     stateBytes,
+    activeValidatorCount: weakSubjectivity.activeValidatorCount,
     config,
     isFinalized: true,
     validate(state) {
@@ -24,7 +25,7 @@ export function prepareArchivedStateInitialization(
         slot: state.slot,
         epoch: computeEpochAtSlot(state.slot),
         stateSize: formatBytes(stateBytes.length),
-        stateRoot: toRootHex(state.hashTreeRoot()),
+        stateRoot: toRootHex(state.stateRoot),
         isWithinWeakSubjectivityPeriod,
       };
       if (isWithinWeakSubjectivityPeriod) {
@@ -34,6 +35,7 @@ export function prepareArchivedStateInitialization(
         logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
       }
     },
+    shouldPersist: false,
     async initializeEarliestAvailableSlot(state) {
       const stored = await db.earliestAvailableSlot.get();
       // we bootstrap the node with archived db, use the previous earliestAvailableSLot
@@ -48,12 +50,11 @@ export function prepareArchivedStateInitialization(
       await db.earliestAvailableSlot.set(state.slot);
       return state.slot;
     },
-    persist: null,
     log(state, nativeStateTransition) {
       logger.info("Initialized state from db", {
         slot: state.slot,
         epoch: computeEpochAtSlot(state.slot),
-        stateRoot: toRootHex(state.hashTreeRoot()),
+        stateRoot: toRootHex(state.stateRoot),
         isFinalized: true,
         nativeStateTransition,
       });

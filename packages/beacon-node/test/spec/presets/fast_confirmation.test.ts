@@ -20,7 +20,6 @@ import {
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
-  BeaconStateView,
   DataAvailabilityStatus,
   IBeaconStateViewGloas,
   computeEpochAtSlot,
@@ -55,7 +54,7 @@ import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
-import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {getShufflingForAttestationVerification} from "../../../src/chain/validation/attestation.js";
@@ -69,6 +68,8 @@ import {ClockEvent} from "../../../src/util/clock.js";
 import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {createBeaconChain} from "../../utils/chain.js";
+import {getBeaconEngineCore} from "../../utils/engine.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
@@ -135,7 +136,7 @@ const fastConfirmationTest =
           {skipSyncPubkeys: true}
         );
 
-        const chain = new BeaconChain(
+        const chain = await createBeaconChain(
           {
             ...defaultChainOptions,
             // Do not start workers
@@ -166,18 +167,18 @@ const fastConfirmationTest =
             processShutdownCallback: () => {},
             clock,
             metrics: null,
-            validatorMonitor: null,
-            anchorState: new BeaconStateView(cachedState),
+            validatorMonitorOpts: null,
+            anchorStateBytes: cachedState.serialize(),
             isAnchorStateFinalized: true,
             earliestAvailableSlot: cachedState.slot,
             executionEngine,
-            executionBuilder: undefined,
           }
         );
 
         // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
         chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
+        const engine = getBeaconEngineCore(chain.beaconEngine);
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
 
@@ -199,25 +200,25 @@ const fastConfirmationTest =
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               const attEpoch = computeEpochAtSlot(attestation.data.slot);
-              const attHeadBlock = chain.forkChoice.getBlockHexDefaultStatus(toHex(attestation.data.beaconBlockRoot));
+              const attHeadBlock = engine.forkChoice.getBlockHexDefaultStatus(toHex(attestation.data.beaconBlockRoot));
               if (attHeadBlock === null) {
                 throw Error(`No attested block ${toHexString(attestation.data.beaconBlockRoot)}`);
               }
               const attHeadBlockEpoch = computeEpochAtSlot(attHeadBlock.slot);
               const decisionRoot = getShufflingDependentRoot(
-                chain.forkChoice,
+                engine.forkChoice,
                 attEpoch,
                 attHeadBlockEpoch,
                 attHeadBlock
               );
-              await getShufflingForAttestationVerification(
-                chain,
+              await getShufflingForAttestationVerification.call(
+                engine,
                 attEpoch,
                 attHeadBlock,
                 RegenCaller.validateGossipAttestation
               );
-              chain.forkChoice.onAttestation(
-                chain.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, ForkSeq[fork], attestation),
+              engine.forkChoice.onAttestation(
+                engine.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, ForkSeq[fork], attestation),
                 attDataRootHex
               );
             }
@@ -230,7 +231,7 @@ const fastConfirmationTest =
               });
               const attesterSlashing = testcase.attesterSlashings.get(step.attester_slashing);
               if (!attesterSlashing) throw Error(`No attester slashing ${step.attester_slashing}`);
-              chain.forkChoice.onAttesterSlashing(attesterSlashing);
+              engine.forkChoice.onAttesterSlashing(attesterSlashing);
             }
 
             // block step
@@ -437,9 +438,9 @@ const fastConfirmationTest =
                 const gasLimit = envelope.message.payload.gasLimit;
 
                 // Verify envelope against the state
-                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
+                const protoBlock = engine.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
                 if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
-                const blockState = await chain.regen.getBlockSlotState(
+                const blockState = await engine.regen.getBlockSlotState(
                   protoBlock,
                   protoBlock.slot,
                   {dontTransferCache: true},
@@ -455,7 +456,7 @@ const fastConfirmationTest =
                     blockState as IBeaconStateViewGloas,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
-                    chain.bls
+                    engine.bls
                   );
                   if (!sigValid) throw Error("Invalid execution payload envelope signature");
                 }
@@ -468,9 +469,9 @@ const fastConfirmationTest =
                 });
 
                 // The vectors carry no inclusion lists, so every payload satisfies the empty constraint set
-                (chain.forkChoice as ForkChoice).recordPayloadInclusionListSatisfaction(beaconBlockRoot, true);
+                (engine.forkChoice as ForkChoice).recordPayloadInclusionListSatisfaction(beaconBlockRoot, true);
 
-                (chain.forkChoice as ForkChoice).onExecutionPayload(
+                (engine.forkChoice as ForkChoice).onExecutionPayload(
                   beaconBlockRoot,
                   blockHash,
                   blockNumber,
@@ -503,11 +504,11 @@ const fastConfirmationTest =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = (chain.forkChoice as ForkChoice).updateHead();
-              const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
-              const justifiedCheckpoint = chain.forkChoice.getJustifiedCheckpoint();
-              const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-              const confirmedRoot = chain.forkChoice.getConfirmedRoot();
+              const head = (engine.forkChoice as ForkChoice).updateHead();
+              const proposerBootRoot = (engine.forkChoice as ForkChoice).getProposerBoostRoot();
+              const justifiedCheckpoint = engine.forkChoice.getJustifiedCheckpoint();
+              const finalizedCheckpoint = engine.forkChoice.getFinalizedCheckpoint();
+              const confirmedRoot = engine.forkChoice.getConfirmedRoot();
 
               if (step.checks.head) {
                 expect({slot: head.slot, root: head.blockRoot}).toEqualWithMessage(
@@ -537,7 +538,7 @@ const fastConfirmationTest =
               // Compare in slots because proposer boost steps doesn't always come on
               // slot boundary.
               if (step.checks.time && step.checks.time > 0)
-                expect(chain.forkChoice.getTime()).toEqualWithMessage(
+                expect(engine.forkChoice.getTime()).toEqualWithMessage(
                   Math.floor(bnToNum(step.checks.time) / (config.SLOT_DURATION_MS / 1000)),
                   `Invalid forkchoice time at step ${i}`
                 );
@@ -558,7 +559,7 @@ const fastConfirmationTest =
 
               if (step.checks.get_proposer_head) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
+                const {proposerHead, notReorgedReason} = (engine.forkChoice as ForkChoice).getProposerHead(
                   head,
                   (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
@@ -570,7 +571,7 @@ const fastConfirmationTest =
                 );
               }
 
-              const fcrStore = chain.forkChoice.getFastConfirmationStore();
+              const fcrStore = engine.forkChoice.getFastConfirmationStore();
 
               if (step.checks.previous_epoch_observed_justified_checkpoint) {
                 expect(toSpecTestCheckpoint(fcrStore.previousEpochObservedJustifiedCheckpoint)).toEqualWithMessage(
@@ -615,7 +616,7 @@ const fastConfirmationTest =
               }
 
               if (step.checks.safe_execution_block_hash !== undefined) {
-                expect(getSafeExecutionBlockHash(chain.forkChoice)).toEqualWithMessage(
+                expect(getSafeExecutionBlockHash(engine.forkChoice)).toEqualWithMessage(
                   step.checks.safe_execution_block_hash,
                   `Invalid safe execution block hash at step ${i}`
                 );
@@ -623,7 +624,7 @@ const fastConfirmationTest =
 
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
+                const result = engine.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
                   (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot

@@ -1,7 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {CommitteeIndex, Epoch, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 
 /**
@@ -47,7 +47,7 @@ export class SeenAggregatedAttestations {
   );
   private lowestPermissibleEpoch: Epoch = 0;
 
-  constructor(private readonly metrics: Metrics | null) {}
+  constructor(private readonly metrics: BeaconEngineMetrics | null) {}
 
   isKnown(
     targetEpoch: Epoch,

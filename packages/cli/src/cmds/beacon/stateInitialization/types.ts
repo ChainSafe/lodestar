@@ -1,7 +1,6 @@
 import {IBeaconDb} from "@lodestar/beacon-node";
-import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {IBeaconStateView, StateBytesMetadata, WeakSubjectivitySummary} from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {StateBytesMetadata, WeakSubjectivitySummary} from "@lodestar/state-transition";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger} from "@lodestar/utils";
 import {GlobalArgs} from "../../../options/globalOptions.js";
@@ -48,13 +47,4 @@ export type CheckpointStartupPolicy = {
   ignoreWeakSubjectivityCheck: boolean;
 };
 
-/** Selected state bytes and source-specific initialization steps. */
-export type StateInitialization = {
-  stateBytes: Uint8Array;
-  config: BeaconConfig;
-  isFinalized: boolean;
-  validate: (state: IBeaconStateView) => void;
-  initializeEarliestAvailableSlot: (state: IBeaconStateView) => Promise<Slot>;
-  persist: ((state: IBeaconStateView, stateBytes: Uint8Array) => Promise<void>) | null;
-  log: (state: IBeaconStateView, nativeStateTransition: boolean) => void;
-};
+export type {StateInitialization} from "@lodestar/beacon-node";

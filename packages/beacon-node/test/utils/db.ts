@@ -31,7 +31,7 @@ export async function startTmpBeaconDb(config: ChainForkConfig): Promise<BeaconD
 export async function startIsolatedTmpBeaconDb(
   config: ChainForkConfig,
   prefix = "lodestar-test-db-"
-): Promise<{db: BeaconDb; close: () => Promise<void>}> {
+): Promise<{db: BeaconDb; dbName: string; dataDir: string; close: () => Promise<void>}> {
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), prefix));
   const logger = testLogger();
   const db = new BeaconDb(config, await LevelDbController.create({name: path.join(tmpDir, "leveldb")}, {logger}), {
@@ -40,6 +40,8 @@ export async function startIsolatedTmpBeaconDb(
   });
   return {
     db,
+    dbName: path.join(tmpDir, "leveldb"),
+    dataDir: tmpDir,
     close: async () => {
       await db.close();
       await rm(tmpDir, {recursive: true, force: true});

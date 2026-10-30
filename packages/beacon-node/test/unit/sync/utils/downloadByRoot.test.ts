@@ -37,7 +37,7 @@ describe("downloadByRoot.ts", () => {
   let network: INetwork;
 
   describe("fetchAndValidateBlock", () => {
-    let capellaBlock: ReturnType<typeof generateBlock>;
+    let capellaBlock: ReturnType<typeof generateBlock<ForkName.capella>>;
     beforeAll(() => {
       capellaBlock = generateBlock({forkName: ForkName.capella});
     });
@@ -47,11 +47,14 @@ describe("downloadByRoot.ts", () => {
 
     it("should successfully fetch and validate block with matching root", async () => {
       network = {
-        sendBeaconBlocksByRoot: vi.fn(() => [capellaBlock.block]),
+        sendBeaconBlocksByRoot: vi.fn(() => [
+          {block: capellaBlock.block, bytes: ssz.capella.SignedBeaconBlock.serialize(capellaBlock.block)},
+        ]),
       } as unknown as INetwork;
 
       const response = await fetchAndValidateBlock({
         config,
+        chain: null,
         network,
         peerIdStr,
         blockRoot: capellaBlock.blockRoot,
@@ -68,6 +71,7 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateBlock({
           config,
+          chain: null,
           network,
           peerIdStr,
           blockRoot: capellaBlock.blockRoot,
@@ -77,7 +81,9 @@ describe("downloadByRoot.ts", () => {
 
     it("should throw error when block root doesn't match requested root", async () => {
       network = {
-        sendBeaconBlocksByRoot: vi.fn(() => [capellaBlock.block]),
+        sendBeaconBlocksByRoot: vi.fn(() => [
+          {block: capellaBlock.block, bytes: ssz.capella.SignedBeaconBlock.serialize(capellaBlock.block)},
+        ]),
       } as unknown as INetwork;
 
       const invalidRoot = randomBytes(ROOT_SIZE);
@@ -85,6 +91,7 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateBlock({
           config,
+          chain: null,
           network,
           peerIdStr,
           blockRoot: invalidRoot,
@@ -329,7 +336,14 @@ describe("downloadByRoot.ts", () => {
 
     it("does not fetch columns for bare-root gloas block sync", async () => {
       const gloasBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.gloas});
-      const sendBeaconBlocksByRoot = vi.fn(() => Promise.resolve([gloasBlockWithColumns.block]));
+      const sendBeaconBlocksByRoot = vi.fn(() =>
+        Promise.resolve([
+          {
+            block: gloasBlockWithColumns.block,
+            bytes: ssz.gloas.SignedBeaconBlock.serialize(gloasBlockWithColumns.block),
+          },
+        ])
+      );
       const sendDataColumnSidecarsByRoot = vi.fn();
       network = {
         sendBeaconBlocksByRoot,

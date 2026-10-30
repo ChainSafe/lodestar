@@ -3,10 +3,18 @@ import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {IBeaconStateView} from "@lodestar/state-transition";
+import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {BeaconEngineCore} from "../../src/chain/beaconEngine/beaconEngineCore.js";
+import {BeaconEngineCoreEventBus, BeaconEngineEventBus} from "../../src/chain/beaconEngine/events.js";
+import {BeaconEngineMode} from "../../src/chain/beaconEngine/options.js";
+import {BeaconEngine} from "../../src/chain/beaconEngine.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
+import {BlockSerializedCache} from "../../src/chain/blocks/blockSerializedCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
+import {IChainView} from "../../src/chain/chainView/interface.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
@@ -16,40 +24,101 @@ import {
   OpPool,
   SyncContributionAndProofPool,
 } from "../../src/chain/opPools/index.js";
+import {ProposerPreferencesPool} from "../../src/chain/opPools/proposerPreferencesPool.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
-import {SeenExecutionPayloadBids} from "../../src/chain/seenCache/seenExecutionPayloadBids.js";
+import {
+  SeenAggregators,
+  SeenAttesters,
+  SeenBlockProposers,
+  SeenContributionAndProof,
+  SeenExecutionPayloadBids,
+  SeenPayloadAttesters,
+  SeenSyncCommitteeMessages,
+} from "../../src/chain/seenCache/index.js";
+import {SeenAggregatedAttestations} from "../../src/chain/seenCache/seenAggregateAndProof.js";
+import {SeenAttestationDatas} from "../../src/chain/seenCache/seenAttestationData.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
+import {SerializedCache} from "../../src/util/serializedCache.js";
 import {getMockedClock} from "./clock.js";
 import {getMockedLogger} from "./loggerMock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
+  // The facade narrows `beaconEngine` to `IBeaconEngine`, but the flat mock doubles as the concrete
+  // engine (`chain.beaconEngine = chain`), so tests invoke the `this: BeaconEngineCore` phantom validators
+  // and reach engine internals (regen/bls/getHeadState) through it. Keep the concrete type here.
+  beaconEngine: BeaconEngineCore & {chainView: MockedChainView};
+  chainView: MockedChainView;
+  produceBlockWrapper: Mock<BeaconEngineCore["produceBlockWrapper"]>;
   forkChoice: MockedForkChoice;
+  // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
+  // real `prepareForNextSlot` bound onto it call `this.recomputeForkChoiceHeadSync`
+  // etc.). No longer on the facade — stubbed here so tests can control head selection.
+  recomputeForkChoiceHead: Mock<BeaconEngineCore["recomputeForkChoiceHead"]>;
+  recomputeForkChoiceHeadSync: Mock<BeaconEngineCore["recomputeForkChoiceHeadSync"]>;
+  updateBuilderStatus: Mock<(slot: Slot) => void>;
+  predictProposerHead: Mock<() => ProtoBlock>;
+  getProposerHead: Mock<() => ProtoBlock>;
   executionEngine: Mocked<ExecutionEngineHttp>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
   builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
+  proposerPreferencesPool: ProposerPreferencesPool;
   executionPayloadBidPool: Mocked<ExecutionPayloadBidPool>;
   builderApiClient: Mocked<BuilderApiClient>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
   syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
   beaconProposerCache: Mocked<BeaconProposerCache>;
+  // Engine-internal seen-caches surfaced on the flat mock (the mock doubles as the engine).
+  seenAttesters: SeenAttesters;
+  seenAggregators: SeenAggregators;
+  seenPayloadAttesters: SeenPayloadAttesters;
+  seenAggregatedAttestations: SeenAggregatedAttestations;
+  seenExecutionPayloadBids: SeenExecutionPayloadBids;
+  seenBlockProposers: SeenBlockProposers;
+  seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
+  seenContributionAndProof: SeenContributionAndProof;
+  seenAttestationDatas: SeenAttestationDatas;
   seenBlockInputCache: Mocked<SeenBlockInput>;
   shufflingCache: Mocked<ShufflingCache>;
   regen: Mocked<QueuedStateRegenerator>;
+  // Engine state-read methods surfaced on the flat mock (the mock doubles as the engine). No longer on
+  // the facade after BLK-3 — stubbed here so validation tests can control the head state.
+  getHeadState: Mock<() => IBeaconStateView>;
+  getCanonicalBlockAtSlot: Mock<BeaconEngineCore["getCanonicalBlockAtSlot"]>;
+  getBlockByRoot: Mock<BeaconEngineCore["getBlockByRoot"]>;
+  getHeadStateAtCurrentEpoch: Mock<() => Promise<IBeaconStateView>>;
   bls: {
-    verifySignatureSets: Mock<() => boolean>;
+    verifySignatureSets: Mock<BeaconEngineCore["bls"]["verifySignatureSets"]>;
     verifySignatureSetsSameMessage: Mock<() => boolean>;
     close: Mock;
     canAcceptWork: Mock<() => boolean>;
   };
   lightClientServer: Mocked<LightClientServer>;
 };
+
+/** Wrap the flat core mock with the real main-thread engine for chain processing tests. */
+export function withBeaconEngineFacade(chain: MockedBeaconChain): BeaconChain {
+  const emitter = new ChainEventEmitter();
+  const beaconEngine = new BeaconEngine({
+    logger: chain.logger,
+    core: chain.beaconEngine,
+    config: chain.config,
+    emitter,
+    clock: chain.clock,
+    serializedCache: chain.serializedCache,
+    ...((chain.opts.beaconEngineMode ?? BeaconEngineMode.MainThread) !== BeaconEngineMode.MainThread
+      ? {coreEmitter: chain.beaconEngine.emitter}
+      : {}),
+  });
+  Object.assign(beaconEngine, {chainView: chain.chainView});
+  return Object.assign(Object.create(chain) as BeaconChain, {emitter, beaconEngine});
+}
 
 vi.mock("@lodestar/fork-choice", async (importActual) => {
   const mod = await importActual<typeof import("@lodestar/fork-choice")>();
@@ -61,6 +130,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getFinalizedBlock: vi.fn(),
       getHead: vi.fn(),
       getHeadRoot: vi.fn(),
+      getSlotsPresent: vi.fn(),
       getDependentRoot: vi.fn(),
       recordPayloadInclusionListSatisfaction: vi.fn(),
       isPayloadInclusionListSatisfied: vi.fn(),
@@ -80,10 +150,12 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getCanonicalBlockClosestLteSlot: vi.fn(),
       getCanonicalBlockByRoot: vi.fn(),
       getFinalizedCheckpoint: vi.fn(),
+      getJustifiedCheckpoint: vi.fn(),
       getConfirmedRoot: vi.fn(),
       getConfirmedBlock: vi.fn(),
       resumeFastConfirmation: vi.fn(),
       pauseFastConfirmation: vi.fn(),
+      isDescendant: vi.fn(),
       hasBlock: vi.fn(),
       hasBlockHex: vi.fn(),
       getBlockSummariesAtSlot: vi.fn(),
@@ -150,18 +222,25 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
     const clock =
       clockParam === "real" ? new Clock({config, genesisTime, signal: new AbortController().signal}) : getMockedClock();
 
+    const serializedCache = new SerializedCache();
     return {
       config,
       opts: {},
+      blockProductionCache: new Map(),
+      getStatus: vi.fn().mockReturnValue({...ssz.phase0.Status.defaultValue(), earliestAvailableSlot: 0}),
       genesisTime,
       clock,
       forkChoice: getMockedForkChoice(),
+      serializedCache,
+      blockSerializedCache: new BlockSerializedCache(config),
+      verifiedBlocks: new Map(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
         getPayload: vi.fn(),
         getClientVersion: vi.fn(),
       },
       executionBuilder: {},
+      proposerPreferencesPool: new ProposerPreferencesPool(),
       builderCircuitBreaker: {
         isActive: vi.fn(),
         update: vi.fn(),
@@ -170,25 +249,30 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         add: vi.fn(),
         getBestBid: vi.fn(),
       },
-      proposerPreferencesPool: {
-        add: vi.fn(),
-        get: vi.fn(),
-        getAll: vi.fn(),
-        isKnown: vi.fn(),
-        prune: vi.fn(),
-        fromPersisted: vi.fn(),
-        toPersisted: vi.fn(),
-      },
       builderApiClient: {
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
         submitBuilderPreferences: vi.fn(),
         submitSignedBeaconBlock: vi.fn(),
+        registerAuthenticatedBuilder: vi.fn(),
         checkStatus: vi.fn().mockResolvedValue(undefined),
       },
       opPool: new OpPool(config as BeaconConfig),
       inclusionListStore: new InclusionListStore(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
+      // Engine-internal gossip seen-caches; the flat mock doubles as the engine, so validators read
+      // these via `engine.seenX` and tests reach them via `chain.beaconEngine.seenX`.
+      seenAttesters: new SeenAttesters(),
+      seenAggregators: new SeenAggregators(),
+      seenPayloadAttesters: new SeenPayloadAttesters(),
+      seenAggregatedAttestations: new SeenAggregatedAttestations(null),
+      seenExecutionPayloadBids: new SeenExecutionPayloadBids(),
+      seenBlockProposers: new SeenBlockProposers(),
+      isVerifiedProposerSignature: vi.fn().mockReturnValue(false),
+      markVerifiedProposerSignature: vi.fn(),
+      seenSyncCommitteeMessages: new SeenSyncCommitteeMessages(),
+      seenContributionAndProof: new SeenContributionAndProof(null),
+      seenAttestationDatas: new SeenAttestationDatas(null),
       payloadAttestationPool: {
         add: vi.fn(),
         getAll: vi.fn(),
@@ -199,23 +283,30 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       // @ts-expect-error
       seenBlockInputCache: new SeenBlockInput(),
       seenPayloadEnvelopeInputCache: {
+        add: vi.fn(),
         get: vi.fn(),
         getOrReload: vi.fn(),
         remove: vi.fn(),
         removeInvalid: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
-      seenExecutionPayloadBids: new SeenExecutionPayloadBids(),
       getParentExecutionRequests: vi.fn(),
       shufflingCache: new ShufflingCache(),
       pubkeyCache,
       produceCommonBlockBody: vi.fn(),
+      produceBlockV4: vi.fn(),
+      produceBlockWrapper: vi.fn(),
       getProposerHead: vi.fn(),
       produceBlock: vi.fn(),
-      produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
       getBlockByRoot: vi.fn(),
+      getSerializedBlockByRoot: vi.fn(),
+      getSerializedFinalizedBlockBySlot: vi.fn(),
+      getCanonicalBlockRootSlotsByRange: vi.fn(),
+      getFinalizedBlockSlotByRoot: vi.fn(),
+      getSerializedFinalizedBlockByParentRoot: vi.fn(),
       recomputeForkChoiceHead: vi.fn(),
+      recomputeForkChoiceHeadSync: vi.fn(),
       predictProposerHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),
       getHeadState: vi.fn(),
@@ -223,7 +314,6 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       updateBuilderStatus: vi.fn(),
       updateAttachedValidators: vi.fn(),
       processBlock: vi.fn(),
-      processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),
       persistExecutionPayloadEnvelope: vi.fn(),
       persistInvalidSszBytes: vi.fn(),
@@ -238,7 +328,9 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         close: vi.fn().mockResolvedValue(true),
         canAcceptWork: vi.fn().mockReturnValue(true),
       },
-      emitter: new ChainEventEmitter(),
+      emitter: new BeaconEngineEventBus(),
+      engineEmitter: new BeaconEngineCoreEventBus(),
+      forkChoiceVersion: 0,
     };
   });
 
@@ -257,20 +349,168 @@ export type MockedBeaconChainOptions = {
 export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): MockedBeaconChain {
   const {clock, genesisTime, config} = opts ?? {};
   // @ts-expect-error
-  return new BeaconChain({
+  const chain = new BeaconChain({
     clock: clock ?? "fake",
     genesisTime: genesisTime ?? 0,
     config: config ?? defaultConfig,
   }) as MockedBeaconChain;
+  // The gossip validators are now BeaconEngineCore methods that read engine collaborators. In this flat
+  // mock the facade doubles as the engine, so `chain.beaconEngine.forkChoice === chain.forkChoice` etc.
+  (chain as {beaconEngine: unknown}).beaconEngine = chain;
+  // Duty flows are real BeaconEngineCore methods; bind the real implementations (and the private helpers
+  // they call) so duty tests exercise real logic against the mock's collaborators.
+  // `prepareForNextSlot` is a real BeaconEngineCore method too; `recomputeForkChoiceHeadSync` / `predictProposerHead`
+  // stay as mock fns above so tests can control head selection.
+  for (const name of [
+    "reportIrrecoverableError",
+    "isHeadChanged",
+    "getPayloadExecutionOptimistic",
+    "getInclusionListCommitteeDuties",
+    "getInclusionListsByIndices",
+    "validateGossipInclusionList",
+    "validateGossipInclusionListBytes",
+    "getLightClientServer",
+    "getLightClientBootstrap",
+    "getLightClientUpdate",
+    "getLightClientOptimisticUpdate",
+    "getLightClientFinalityUpdate",
+    "getLightClientCommitteeRoot",
+    "pruneLightClientNonCheckpointData",
+    "validateGossipLightClientOptimisticUpdateBytes",
+    "validateGossipLightClientFinalityUpdateBytes",
+    "verifyBlocksBytes",
+    "verifyBlocks",
+    "verifyGossipBlockBytes",
+    "verifyGossipBlock",
+    "validateApiBlockBytes",
+    "validateGossipLightClientOptimisticUpdate",
+    "validateGossipLightClientFinalityUpdate",
+    "validateGossipBlock",
+    "validateGossipSyncCommittee",
+    "validateApiSyncCommittee",
+    "validateSyncCommitteeGossipContributionAndProof",
+    "validateApiSyncCommitteeContributionAndProof",
+    "validateGossipBlobSidecar",
+    "validateGossipFuluDataColumnSidecar",
+    "validateGossipGloasDataColumnSidecar",
+    "validateGossipPayloadAttestationMessage",
+    "validateApiPayloadAttestationMessage",
+    "validateGossipAggregateAndProof",
+    "validateApiAggregateAndProof",
+    "validateGossipExecutionPayloadEnvelope",
+    "validateApiExecutionPayloadEnvelope",
+    "validateGossipExecutionPayloadBid",
+    "validateApiExecutionPayloadBid",
+    "validateGossipProposerPreferences",
+    "validateGossipAttesterSlashing",
+    "validateGossipProposerSlashing",
+    "validateGossipVoluntaryExit",
+    "validateGossipBlsToExecutionChange",
+    "validateApiBlock",
+    "importExecutionPayload",
+    "verifyAndObserveBlockProposer",
+    "verifyEnvelopeForPublish",
+    "validateApiExecutionPayloadBidBytes",
+    "discardVerifiedBlocks",
+    "getProposerDuties",
+    "getAttesterDuties",
+    "getSyncCommitteeDuties",
+    "getPtcDuties",
+    "getHeadStateAtEpoch",
+    "getHeadProposerPubkey",
+    "prepareForNextSlot",
+    "getProposerTargetGasLimit",
+    "registerValidatorBytes",
+    "registerValidator",
+    "submitBlindedBlockBytes",
+    "submitBlindedBlock",
+    "submitBlindedBlockNoResponseBytes",
+    "submitBlindedBlockNoResponse",
+    // Proposer cache + finalized balances bridges (forward to the mock's collaborators).
+    "getProposerFeeRecipient",
+    "updateProposerPreparation",
+    "trackAttachedValidators",
+    "getProposerCacheValidatorIndices",
+    "getCheckpointEffectiveBalances",
+    // Op-pool add/read bridges (forward to the mock's pools).
+    "addAttestationToPool",
+    "getAttestationAggregate",
+    "getPoolAggregatedAttestations",
+    "produceAttestationData",
+    "produceSyncCommitteeContribution",
+    "getPayloadAttestationBlock",
+    "getBlockRoot",
+    "isHeadOptimistic",
+    "getPoolPayloadAttestations",
+    "getPoolProposerPreferences",
+    "registerLocalValidators",
+    "registerLocalValidatorsInSyncCommittee",
+    "registerApiBlock",
+    "registerApiExecutionPayloadEnvelope",
+    "onPoolSubmitUnaggregatedAttestation",
+    "onPoolSubmitAggregatedAttestation",
+    "getMonitoredValidatorIndices",
+    "scrapeMetrics",
+    // Fork-choice write wrappers (forward to the mock's forkChoice).
+    "updateTime",
+    // Developer API diagnostics (forward to the engine-owned fork choice).
+    "getHeads",
+    "getDebugForkChoice",
+    "getDebugForkChoiceV2",
+    "getFastConfirmationInfo",
+    "getProtoArrayNodes",
+  ] as const) {
+    (chain as unknown as Record<string, unknown>)[name] = (
+      BeaconEngineCore.prototype as unknown as Record<string, unknown>
+    )[name];
+  }
+  vi.spyOn(chain.proposerPreferencesPool, "get");
+  chain.beaconEngine.prepareBeaconCommitteeSubnets = vi.fn().mockResolvedValue(undefined);
+  // ChainView reads forward to the mocked fork choice; writes are no-ops.
+  const chainView = {
+    applyFinalizedCheckpoint: () => false,
+    prune: () => {},
+  } as unknown as Record<string, unknown>;
+  for (const [name, forkChoiceName] of Object.entries({
+    isDescendant: "isDescendant",
+    getHead: "getHead",
+    getHeadRoot: "getHeadRoot",
+    getFinalizedCheckpoint: "getFinalizedCheckpoint",
+    getJustifiedCheckpoint: "getJustifiedCheckpoint",
+    getFinalizedBlock: "getFinalizedBlock",
+    getJustifiedBlock: "getJustifiedBlock",
+    hasBlock: "hasBlock",
+    hasBlockHex: "hasBlockHex",
+    hasBlockHexUnsafe: "hasBlockHexUnsafe",
+    hasPayloadHexUnsafe: "hasPayloadHexUnsafe",
+    getBlockDefaultStatus: "getBlockDefaultStatus",
+    getBlockHexDefaultStatus: "getBlockHexDefaultStatus",
+    getBlockHex: "getBlockHex",
+    getBlockHexAndBlockHash: "getBlockHexAndBlockHash",
+    getCanonicalProtoBlockAtSlot: "getCanonicalBlockAtSlot",
+    getCanonicalBlockClosestLteSlot: "getCanonicalBlockClosestLteSlot",
+    getCanonicalBlockByRoot: "getCanonicalBlockByRoot",
+    getBlockSummariesAtSlot: "getBlockSummariesAtSlot",
+    getBlockSummariesByParentRoot: "getBlockSummariesByParentRoot",
+    getAllAncestorBlocks: "getAllAncestorBlocks",
+  })) {
+    chainView[name] = (...args: unknown[]) => {
+      const fn = (chain.forkChoice as unknown as Record<string, (...args: unknown[]) => unknown>)[forkChoiceName];
+      return fn.apply(chain.forkChoice, args);
+    };
+  }
+  chain.chainView = chainView as unknown as MockedChainView;
+  return chain;
 }
 
 export type MockedForkChoice = Mocked<ForkChoice>;
+export type MockedChainView = IChainView;
 
 export function getMockedForkChoice(): MockedForkChoice {
   // ForkChoice package is mocked globally
   return vi.mocked(new ForkChoice({} as any, {} as any, {} as any, {} as any, {} as any));
 }
 
-// To avoid loading the package in test while mocked, exporting frequently used types and constants
 export type {ProtoBlock};
+// To avoid loading the package in test while mocked, exporting frequently used types and constants
 export {EpochDifference};

@@ -19,7 +19,7 @@ describe("validate proposer slashing", () => {
     opPool = chainStub.opPool;
 
     const state = new BeaconStateView(generateCachedState());
-    vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
+    chainStub.getHeadState.mockReturnValue(state);
     vi.spyOn(opPool, "hasSeenProposerSlashing");
   });
 
@@ -32,7 +32,7 @@ describe("validate proposer slashing", () => {
     opPool.hasSeenProposerSlashing.mockReturnValue(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipProposerSlashing(chainStub, proposerSlashing),
+      validateGossipProposerSlashing.call(chainStub.beaconEngine, proposerSlashing),
       ProposerSlashingErrorCode.ALREADY_EXISTS
     );
   });
@@ -44,7 +44,7 @@ describe("validate proposer slashing", () => {
     proposerSlashing.signedHeader2.message.slot = BigInt(0);
 
     await expectRejectedWithLodestarError(
-      validateGossipProposerSlashing(chainStub, proposerSlashing),
+      validateGossipProposerSlashing.call(chainStub.beaconEngine, proposerSlashing),
       ProposerSlashingErrorCode.INVALID
     );
   });
@@ -60,6 +60,6 @@ describe("validate proposer slashing", () => {
       signedHeader2: signedHeader2,
     };
 
-    await validateGossipProposerSlashing(chainStub, proposerSlashing);
+    await validateGossipProposerSlashing.call(chainStub.beaconEngine, proposerSlashing);
   });
 });

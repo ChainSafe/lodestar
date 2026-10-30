@@ -1,22 +1,18 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {LightClientOptimisticUpdate} from "@lodestar/types";
-import {assertLightClientServer} from "../../node/utils/lightclient.js";
 import {IClock} from "../../util/clock.js";
 import {GossipAction} from "../errors/index.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
-import {IBeaconChain} from "../interface.js";
 
 // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
 export function validateLightClientOptimisticUpdate(
   config: ChainForkConfig,
-  chain: IBeaconChain,
+  clock: IClock,
+  localOptimisticUpdate: LightClientOptimisticUpdate | null,
   gossipedOptimisticUpdate: LightClientOptimisticUpdate
 ): void {
-  assertLightClientServer(chain.lightClientServer);
-
   // [IGNORE] No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
   const gossipedAttestedSlot = gossipedOptimisticUpdate.attestedHeader.beacon.slot;
-  const localOptimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
 
   if (localOptimisticUpdate && gossipedAttestedSlot <= localOptimisticUpdate.attestedHeader.beacon.slot) {
     throw new LightClientError(GossipAction.IGNORE, {
@@ -28,7 +24,7 @@ export function validateLightClientOptimisticUpdate(
   // through the network -- i.e. validate that `get_sync_message_due_ms(epoch)`
   // milliseconds (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance) has
   // transpired since the start of `signature_slot`.
-  if (updateReceivedTooEarly(config, chain.clock, gossipedOptimisticUpdate)) {
+  if (updateReceivedTooEarly(config, clock, gossipedOptimisticUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY,
     });

@@ -4,7 +4,6 @@ import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkPreDeneb, SLOTS_PER_EPOCH, isForkPostDeneb} from "@lodestar/params";
-import {BeaconStateView} from "@lodestar/state-transition";
 import {rangeSyncTest} from "@lodestar/state-transition/test-utils";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
@@ -12,11 +11,11 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
-import {BeaconChain} from "../../../src/chain/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {beforeValue} from "../../utils/beforeValueBenchmark.js";
+import {createBeaconChain} from "../../utils/chain.js";
 import {getNetworkCachedBlock, getNetworkCachedState} from "../../utils/networkCachedStateAndBlock.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
@@ -81,7 +80,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     timeoutBench: 10 * 60 * 1000 + 16_000 * 5,
     beforeEach: async () => {
       const state = stateOg.value.clone();
-      const chain = new BeaconChain(
+      const chain = await createBeaconChain(
         {
           proposerBoost: true,
           proposerBoostReorg: true,
@@ -103,8 +102,8 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           logger,
           processShutdownCallback: () => {},
           metrics: null,
-          validatorMonitor: null,
-          anchorState: new BeaconStateView(state),
+          validatorMonitorOpts: null,
+          anchorStateBytes: state.serialize(),
           isAnchorStateFinalized: true,
           earliestAvailableSlot: state.slot,
           executionEngine: new ExecutionEngineDisabled(),

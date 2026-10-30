@@ -22,9 +22,10 @@ export class LightClientError extends GossipActionError<LightClientErrorType> {}
 // Errors for the light client server
 
 export enum LightClientServerErrorCode {
+  DISABLED = "DISABLED",
   RESOURCE_UNAVAILABLE = "RESOURCE_UNAVAILABLE",
 }
 
-export type LightClientServerErrorType = {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE};
+export type LightClientServerErrorType = {code: LightClientServerErrorCode};
 
 export class LightClientServerError extends LodestarError<LightClientServerErrorType> {}

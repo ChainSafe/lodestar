@@ -58,6 +58,12 @@ export enum OpSource {
   gossip = "gossip",
 }
 
+export type ValidatorMonitorBlock = Pick<BeaconBlock, "slot" | "proposerIndex"> & {blockRoot: RootHex};
+
+export type ValidatorMonitorAttestation = Pick<IndexedAttestation, "attestingIndices"> & {
+  data: Pick<IndexedAttestation["data"], "slot" | "index" | "target">;
+};
+
 export type ValidatorMonitor = {
   registerLocalValidator(index: number): void;
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
@@ -69,7 +75,7 @@ export type ValidatorMonitor = {
     isActivePrevEpoch: boolean[],
     balances?: number[]
   ): void;
-  registerBeaconBlock(src: OpSource, delaySec: Seconds, block: BeaconBlock): void;
+  registerBeaconBlock(src: OpSource, delaySec: Seconds, block: ValidatorMonitorBlock): void;
   registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
   registerExecutionPayloadEnvelope(
     src: OpSource,
@@ -80,13 +86,13 @@ export type ValidatorMonitor = {
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
-    indexedAttestation: IndexedAttestation,
+    indexedAttestation: ValidatorMonitorAttestation,
     subnet: SubnetID,
     sentPeers: number
   ): void;
   onPoolSubmitAggregatedAttestation(
     seenTimestampSec: number,
-    indexedAttestation: IndexedAttestation,
+    indexedAttestation: ValidatorMonitorAttestation,
     sentPeers: number
   ): void;
   registerGossipUnaggregatedAttestation(seenTimestampSec: Seconds, indexedAttestation: IndexedAttestation): void;
@@ -426,7 +432,7 @@ export function createValidatorMonitor(
 
         const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
         summary.blockProposals.push({
-          blockRoot: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+          blockRoot: block.blockRoot,
           blockSlot: block.slot,
           poolSubmitDelaySec: delaySec,
           successfullyImported: false,

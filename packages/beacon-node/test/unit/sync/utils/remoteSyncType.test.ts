@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice} from "@lodestar/fork-choice";
 import {Root, phase0} from "@lodestar/types";
+import {IChainView} from "../../../../src/chain/chainView/interface.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {
   PeerSyncType,
@@ -72,8 +72,8 @@ describe("network / peers / remoteSyncType", () => {
       it(id, () => {
         const local = {...status, ...localPartial};
         const remote = {...status, ...remotePartial};
-        const forkChoice = getMockForkChoice(blocks || []);
-        expect(getPeerSyncType(local, remote, forkChoice, slotImportTolerance)).toBe(syncType);
+        const beaconEngine = getMockBeaconEngine(blocks || []);
+        expect(getPeerSyncType(local, remote, beaconEngine, slotImportTolerance)).toBe(syncType);
       });
     }
   });
@@ -117,16 +117,16 @@ describe("network / peers / remoteSyncType", () => {
       it(id, () => {
         const local = {...status, ...localPartial};
         const remote = {...status, ...remotePartial};
-        const forkChoice = getMockForkChoice(blocks || []);
-        expect(getRangeSyncType(local, remote, forkChoice)).toBe(syncType);
+        const beaconEngine = getMockBeaconEngine(blocks || []);
+        expect(getRangeSyncType(local, remote, beaconEngine)).toBe(syncType);
       });
     }
   });
 });
 
-function getMockForkChoice(blocks: Root[]): IForkChoice {
+function getMockBeaconEngine(blocks: Root[]): IChainView {
   const blockSet = new Set(blocks.map((blockRoot) => toHexString(blockRoot)));
   return {
     hasBlock: (blockRoot: Root) => blockSet.has(toHexString(blockRoot)),
-  } as IForkChoice;
+  } as IChainView;
 }

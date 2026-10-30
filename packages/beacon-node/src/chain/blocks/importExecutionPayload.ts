@@ -1,94 +1,24 @@
-import {SerializedList} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {
-  ExecutionStatus,
-  PayloadExecutionStatus,
-  getFinalizedExecutionBlockHash,
-  getSafeExecutionBlockHash,
-} from "@lodestar/fork-choice";
-import {
-  DataAvailabilityStatus,
-  computeEpochAtSlot,
-  isStatePostGloas,
-  isStatePostHeze,
-} from "@lodestar/state-transition";
-import {RootHex, bellatrix} from "@lodestar/types";
-import {isErrorAborted} from "@lodestar/utils";
-import {ExecutionPayloadStatus} from "../../execution/index.js";
-import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
-import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
-import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
+import {PayloadError, PayloadErrorType} from "./payloadError.js";
 import {ImportPayloadOpts} from "./types.js";
-import {
-  verifyExecutionPayloadEnvelope,
-  verifyExecutionPayloadEnvelopeSignature,
-} from "./verifyExecutionPayloadEnvelope.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
+
+export {PayloadError, PayloadErrorCode} from "./payloadError.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
-export enum PayloadErrorCode {
-  EXECUTION_ENGINE_INVALID = "PAYLOAD_ERROR_EXECUTION_ENGINE_INVALID",
-  EXECUTION_ENGINE_ERROR = "PAYLOAD_ERROR_EXECUTION_ENGINE_ERROR",
-  BLOCK_NOT_IN_FORK_CHOICE = "PAYLOAD_ERROR_BLOCK_NOT_IN_FORK_CHOICE",
-  MISS_BLOCK_STATE = "PAYLOAD_ERROR_MISS_BLOCK_STATE",
-  ENVELOPE_VERIFICATION_ERROR = "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR",
-  INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
-  DATA_UNAVAILABLE = "PAYLOAD_ERROR_DATA_UNAVAILABLE",
-}
-
-export type PayloadErrorType =
-  | {
-      code: PayloadErrorCode.EXECUTION_ENGINE_INVALID;
-      execStatus: ExecutionPayloadStatus;
-      errorMessage: string;
-    }
-  | {
-      code: PayloadErrorCode.EXECUTION_ENGINE_ERROR;
-      execStatus: ExecutionPayloadStatus;
-      errorMessage: string;
-    }
-  | {
-      code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE;
-      blockRootHex: string;
-    }
-  | {
-      code: PayloadErrorCode.MISS_BLOCK_STATE;
-      blockRootHex: string;
-    }
-  | {
-      code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR;
-      message: string;
-    }
-  | {
-      code: PayloadErrorCode.INVALID_SIGNATURE;
-    }
-  | {
-      code: PayloadErrorCode.DATA_UNAVAILABLE;
-    };
-
-export class PayloadError extends Error {
+export class PayloadImportError extends PayloadError {
   constructor(
     readonly payloadInput: PayloadEnvelopeInput,
-    readonly type: PayloadErrorType,
+    type: PayloadErrorType,
     message?: string
   ) {
-    super(message ?? type.code);
-  }
-}
-
-function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExecutionStatus {
-  switch (status) {
-    case ExecutionPayloadStatus.VALID:
-      return ExecutionStatus.Valid;
-    case ExecutionPayloadStatus.SYNCING:
-    case ExecutionPayloadStatus.ACCEPTED:
-      return ExecutionStatus.Syncing;
-    default:
-      throw new Error(`Unexpected execution payload status for fork choice: ${status}`);
+    super(type, message);
   }
 }
 
@@ -101,16 +31,10 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * The DA wait must have run upstream (range sync awaits DA in `verifyBlocksInEpoch` for the
  * whole segment; gossip / API path uses the `processExecutionPayload` wrapper below).
  *
- * Steps:
- * 1. Emit `execution_payload_available` event for payload attestation
- * 2. Get the ProtoBlock from fork choice
- * 3. Regenerate state for envelope verification
- * 4. Verify envelope (fields against state, signature, and EL in parallel where possible)
- * 5. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
- * 6. Update fork choice (transitions the block's PENDING variant to FULL)
- * 7. Queue notifyForkchoiceUpdate to engine api
- * 8. Record metrics for payload envelope and column sources
- * 9. Emit `execution_payload` event
+ * [beacon-engine] moved from unstable@1bf214377e chain/blocks/importExecutionPayload.ts:
+ * consensus/EL verification, envelope persistence, fork choice and FCU live in
+ * chain/beaconEngine/importExecutionPayload.ts. Sync upstream steps 2-7 there;
+ * keep DA, column writes and source metrics here. The main-thread BeaconEngine attaches input error context.
  */
 export async function importExecutionPayload(
   this: BeaconChain,
@@ -123,7 +47,6 @@ export async function importExecutionPayload(
   const slot = envelope.payload.slotNumber;
   const blockRootHex = payloadInput.blockRootHex;
   const blockHashHex = payloadInput.getBlockHashHex();
-  const fork = this.config.getForkName(slot);
 
   // 1. Emit `execution_payload_available` event at the start of import. At this point the
   // payload input is already complete, so the payload and required data are available for
@@ -136,153 +59,20 @@ export async function importExecutionPayload(
     });
   }
 
-  // 2. Get ProtoBlock for parent root lookup
-  const protoBlock = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
-  if (!protoBlock) {
-    throw new PayloadError(payloadInput, {
-      code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE,
-      blockRootHex,
-    });
-  }
-
-  // 3. Regenerate state for envelope verification
-  const blockState = await this.regen
-    .getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.importExecutionPayload)
-    .catch(() =>
-      // only happen at the 1st batch of skipped slot checkpoint sync
-      this.regen.getClosestHeadState(protoBlock)
-    );
-
-  if (blockState == null) {
-    throw new PayloadError(payloadInput, {
-      code: PayloadErrorCode.MISS_BLOCK_STATE,
-      blockRootHex: protoBlock.blockRoot,
-    });
-  }
-  if (!isStatePostGloas(blockState)) {
-    throw new PayloadError(payloadInput, {
-      code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
-      message: `Expected gloas+ state for payload import, got fork=${blockState.forkName}`,
-    });
-  }
-
-  // 4. Verify envelope fields against state first to fail fast before the EL + BLS work.
-  // When validSignature is true, gossip/API has already verified both the signature and the
-  // executionRequestsRoot, so we skip those checks here.
-  try {
-    verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
-      verifyExecutionRequestsRoot: !opts.validSignature,
-    });
-  } catch (e) {
-    throw new PayloadError(
-      payloadInput,
-      {
-        code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
-        message: (e as Error).message,
-      },
-      `Envelope verification error: ${(e as Error).message}`
-    );
-  }
-
-  // Timely inclusion lists of the preceding slot, keyed by that slot's dependent root on the block's branch and
-  // resolved from the parent, which is at or before that slot. Gossip validation only accepts lists whose dependent
-  // block is in fork choice, so a dependent root fork choice cannot resolve (below the anchor after checkpoint sync)
-  // keys no stored list
-  let inclusionListTransactions: bellatrix.Transactions | undefined;
-  if (isStatePostHeze(blockState)) {
-    const inclusionListSlot = protoBlock.slot - 1;
-    let dependentRoot: RootHex | null = null;
-    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(protoBlock.parentRoot);
-    if (parentBlock !== null) {
-      try {
-        dependentRoot = getShufflingDependentRoot(
-          this.forkChoice,
-          computeEpochAtSlot(inclusionListSlot),
-          computeEpochAtSlot(parentBlock.slot),
-          parentBlock
-        );
-      } catch (e) {
-        this.logger.debug(
-          "Inclusion list dependent root not in fork choice, importing payload without lists",
-          {slot, root: blockRootHex},
-          e as Error
-        );
-      }
-    }
-    inclusionListTransactions =
-      dependentRoot === null
-        ? SerializedList.empty()
-        : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
-  }
-
-  // 4a. Run EL and signature verification in parallel
-  const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};
-  this.logger.debug("Call engine api newPayload", logCtx);
-  const verifyStartSec = Date.now() / 1000;
-  const [execResult, signatureValid] = await Promise.all([
-    this.executionEngine.notifyNewPayload(
-      fork,
-      envelope.payload,
-      payloadInput.getVersionedHashes(),
-      envelope.parentBeaconBlockRoot,
-      envelope.executionRequests,
-      inclusionListTransactions
-    ),
-
-    opts.validSignature === true
-      ? Promise.resolve(true)
-      : verifyExecutionPayloadEnvelopeSignature(
-          this.config,
-          blockState,
-          signedEnvelope,
-          payloadInput.proposerIndex,
-          this.bls
-        ),
-  ]);
-  this.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
-  this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
-
-  // 4b. Check signature verification result
-  if (!signatureValid) {
-    throw new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE});
-  }
-
-  // 4c. Handle EL response
-  switch (execResult.status) {
-    case ExecutionPayloadStatus.VALID:
-      break;
-
-    case ExecutionPayloadStatus.INVALID:
-      throw new PayloadError(payloadInput, {
-        code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError ?? "",
-      });
-
-    case ExecutionPayloadStatus.ACCEPTED:
-    case ExecutionPayloadStatus.SYNCING:
-      break;
-
-    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
-    case ExecutionPayloadStatus.ELERROR:
-    case ExecutionPayloadStatus.UNAVAILABLE:
-      throw new PayloadError(payloadInput, {
-        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError ?? "",
-      });
-  }
+  // Per-envelope SSZ bytes for engine persistence. Gossip
+  // populates serializedCache; fall back to serializing on a cache miss so all call sites pass real bytes.
+  const envelopeBytes =
+    this.serializedCache.get(signedEnvelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope);
 
   const {source, seenTimestampSec} = payloadInput.getPayloadEnvelopeSource();
-  if (execResult.status === ExecutionPayloadStatus.VALID && source === PayloadEnvelopeInputSource.gossip) {
-    const nowSec = Date.now() / 1000;
-    this.metrics?.gossipExecutionPayloadEnvelope.executionPayload.recvToValidation.observe(nowSec - seenTimestampSec);
-    // same metric as pre-gloas, it tracks EL verification time regardless of fork
-    this.metrics?.gossipBlock.executionPayload.validationTime.observe(nowSec - verifyStartSec);
-  }
+  await this.beaconEngine.importExecutionPayload(payloadInput, envelopeBytes, dataAvailabilityStatus, {
+    validSignature: opts.validSignature === true,
+    source,
+    seenTimestampSec,
+  });
 
-  // 5. Persist payload envelope to hot DB. Wait for write-queue space here to apply backpressure
-  // on the import pipeline during sync, then perform the write asynchronously to avoid blocking.
+  // [beacon-engine] Upstream step 5 writes envelopes and columns together. Queue only columns
+  // after the engine has verified and imported the envelope, retaining write-queue backpressure.
   await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
@@ -294,62 +84,7 @@ export async function importExecutionPayload(
     }
   });
 
-  // A VALID payload that does not satisfy the inclusion list constraints is still imported, fork choice
-  // only records the verdict so should_extend_payload moves the head to the EMPTY variant, which the next
-  // proposer builds on.
-  // Recorded before the payload enters fork choice. A VALID response must carry a verdict, an
-  // optimistically imported payload counts as satisfied until the engine validates it, anything else as
-  // unsatisfied. A VALID response without a verdict violates the engine API, it is logged and treated as
-  // satisfied so a non-compliant engine does not orphan every payload
-  if (inclusionListTransactions !== undefined) {
-    if (execResult.status === ExecutionPayloadStatus.VALID && execResult.inclusionListSatisfied == null) {
-      this.logger.warn("Execution engine reported no inclusion list verdict, not enforcing inclusion lists", logCtx);
-    }
-    const satisfied =
-      execResult.status === ExecutionPayloadStatus.VALID
-        ? (execResult.inclusionListSatisfied ?? true)
-        : execResult.status === ExecutionPayloadStatus.SYNCING || execResult.status === ExecutionPayloadStatus.ACCEPTED;
-    this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, satisfied);
-    if (!satisfied) {
-      this.logger.verbose("Payload did not satisfy inclusion list constraints", {
-        ...logCtx,
-        blockHash: blockHashHex,
-        status: execResult.status,
-        inclusionListTransactions: inclusionListTransactions.length,
-      });
-    }
-  }
-
-  // 6. Update fork choice, transitions the block's PENDING variant to FULL
-  const execStatus = toForkChoiceExecutionStatus(execResult.status);
-  this.forkChoice.onExecutionPayload(
-    blockRootHex,
-    blockHashHex,
-    envelope.payload.blockNumber,
-    envelope.payload.gasLimit,
-    execStatus,
-    dataAvailabilityStatus
-  );
-
-  // 7. Queue notifyForkchoiceUpdate to engine api
-  const head = this.forkChoice.getHead();
-  if (
-    !this.opts.disableImportExecutionFcU &&
-    blockRootHex === head.blockRoot &&
-    // Skip a payload that does not satisfy the inclusion list constraints, fork choice keeps the EMPTY
-    // variant as head and the next prepare fcU keeps the engine on the parent payload
-    this.forkChoice.isPayloadInclusionListSatisfied(blockRootHex)
-  ) {
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
-    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
-    this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
-      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-        this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
-      }
-    });
-  }
-
-  // 8. Record metrics for payload envelope and column sources
+  // 6. Record metrics for payload envelope and column sources
   const delaySec = this.clock.secFromSlot(slot);
   this.metrics?.importPayload.elapsedTimeTillImported.observe(
     {source: payloadInput.getPayloadEnvelopeSource().source},
@@ -357,17 +92,6 @@ export async function importExecutionPayload(
   );
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
-  }
-
-  // 9. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
-  if (this.clock.currentSlot - slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
-    this.emitter.emit(routes.events.EventType.executionPayload, {
-      slot,
-      builderIndex: envelope.builderIndex,
-      blockHash: blockHashHex,
-      blockRoot: blockRootHex,
-      executionOptimistic: execStatus === ExecutionStatus.Syncing,
-    });
   }
 
   this.logger.verbose("Execution payload imported", {

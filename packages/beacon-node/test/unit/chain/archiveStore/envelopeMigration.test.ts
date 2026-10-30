@@ -1,10 +1,12 @@
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
-import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {migrateExecutionPayloadEnvelopesFromHotToColdDb} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {fromHex, toRootHex} from "@lodestar/utils";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {migrateExecutionPayloadEnvelopesFromHotToColdDb} from "../../../../src/chain/beaconEngine/processFinalizedCheckpoint.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {ArchivedEnvelope, decodeArchivedEnvelope} from "../../../../src/db/repositories/index.js";
 import {toSignedHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
@@ -44,6 +46,68 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
       executionStatus,
     });
   }
+
+  it.each([undefined, false])(
+    "engine selects retained ancestors and owns dedupePayloads=%s",
+    async (dedupePayloads) => {
+      let parent = generateProtoBlock({
+        executionStatus: ExecutionStatus.Valid,
+        executionPayloadBlockHash: toRootHex(new Uint8Array(32)),
+        executionPayloadNumber: 0,
+        executionPayloadGasLimit: 30_000_000,
+      });
+      const protoArray = ProtoArray.initialize(parent, 0);
+      const roots: string[] = [];
+      for (const slot of [10, 11, 12]) {
+        const block = await seedHot(slot);
+        block.parentRoot = parent.blockRoot;
+        block.parentBlockHash = parent.executionPayloadBlockHash;
+        protoArray.onBlock(block, slot, null);
+        const payload = generateSignedExecutionPayloadEnvelope(slot).message.payload;
+        protoArray.onExecutionPayload(
+          block.blockRoot,
+          slot,
+          toRootHex(payload.blockHash),
+          payload.blockNumber,
+          payload.gasLimit,
+          null,
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
+        );
+        const full = protoArray.getNode(block.blockRoot, PayloadStatus.FULL);
+        if (full === undefined) throw Error("expected FULL node");
+        parent = full;
+        roots.push(block.blockRoot);
+      }
+
+      let finalized = {epoch: 1, root: fromHex(roots[1]), rootHex: roots[1]};
+      const engine = {
+        config,
+        db,
+        logger,
+        clock: {currentEpoch: 3},
+        opts: {dedupePayloads},
+        forkChoice: {
+          getFinalizedCheckpoint: () => finalized,
+          getAllAncestorAndNonAncestorBlocksDefaultStatus: (root: string) =>
+            protoArray.getAllAncestorAndNonAncestorNodes(root, PayloadStatus.PENDING),
+        },
+      } as unknown as BeaconEngineCore;
+
+      expect(await BeaconEngineCore.prototype.migrateExecutionPayloadEnvelopes.call(engine)).toEqual([10]);
+      expect(await db.executionPayloadEnvelope.get(fromHex(roots[1]))).not.toBeNull();
+      protoArray.maybePrune(finalized.rootHex);
+      expect(protoArray.getNode(roots[0], PayloadStatus.FULL)).toBeUndefined();
+      expect(protoArray.getNode(roots[1], PayloadStatus.FULL)).toBeDefined();
+
+      finalized = {epoch: 2, root: fromHex(roots[2]), rootHex: roots[2]};
+      expect(await BeaconEngineCore.prototype.migrateExecutionPayloadEnvelopes.call(engine)).toEqual([11]);
+      const archived = await readArchived(11);
+      if (dedupePayloads === false) expect(archived.envelopeBytes).toBeDefined();
+      else expect(archived.headerEnvelope).toBeDefined();
+      expect(await db.executionPayloadEnvelope.get(fromHex(roots[2]))).not.toBeNull();
+    }
+  );
 
   it("archives header envelopes by default (dedupePayloads=true) and removes them from hot", async () => {
     const blocks = [await seedHot(10), await seedHot(11)];

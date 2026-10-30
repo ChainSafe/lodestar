@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkPostGloas, ForkPreDeneb, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
@@ -9,6 +9,7 @@ import {toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
+import {ChainViewBlock, IChainView} from "../../../../src/chain/chainView/interface.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -26,14 +27,22 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     block = ssz.phase0.SignedBeaconBlock.defaultValue();
     block.message.slot = currentSlot;
 
-    forkChoice = getMockedBeaconChain().forkChoice;
+    // The flat mock doubles as the engine; its read methods forward to the mocked forkChoice, so stub via forkChoice.
+    const chain = getMockedBeaconChain();
+    forkChoice = chain.forkChoice;
     forkChoice.getFinalizedCheckpoint.mockReturnValue({
       epoch: 0,
       root: Buffer.alloc(32),
       rootHex: "",
     });
     clock = new ClockStopped(currentSlot);
-    modules = {config, forkChoice, clock, opts: {} as IChainOptions, blacklistedBlocks: new Map()};
+    modules = {
+      config,
+      beaconEngine: {chainView: chain.chainView},
+      clock,
+      opts: {} as IChainOptions,
+      blacklistedBlocks: new Map(),
+    };
     // On first call, parentRoot is known
     forkChoice.getBlockHexDefaultStatus.mockReturnValue({} as ProtoBlock);
   });
@@ -106,7 +115,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     // allBlocks[0] = Genesis, not submitted
     // allBlocks[1] = OK
     // allBlocks[2] = OK
-    modules.forkChoice = getForkChoice([blocks[0]]);
+    modules.beaconEngine.chainView = getChainView([blocks[0]]);
     clock.setSlot(3);
 
     const {relevantBlocks, parentSlots} = verifyBlocksSanityChecks(modules, blocksToProcess, null, {
@@ -126,7 +135,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     // allBlocks[1] = ALREADY_KNOWN
     // allBlocks[2] = OK
     // allBlocks[3] = OK
-    modules.forkChoice = getForkChoice([blocks[0], blocks[1]]);
+    modules.beaconEngine.chainView = getChainView([blocks[0], blocks[1]]);
     clock.setSlot(4);
 
     const {relevantBlocks} = verifyBlocksSanityChecks(modules, blocksToProcess, null, {
@@ -146,7 +155,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     // allBlocks[1] = WOULD_REVERT_FINALIZED_SLOT + ALREADY_KNOWN
     // allBlocks[2] = OK
     // allBlocks[3] = OK
-    modules.forkChoice = getForkChoice([blocks[0], blocks[1]], finalizedEpoch);
+    modules.beaconEngine.chainView = getChainView([blocks[0], blocks[1]], finalizedEpoch);
     clock.setSlot(finalizedSlot + 4);
 
     const {relevantBlocks} = verifyBlocksSanityChecks(modules, blocksToProcess, null, {
@@ -165,7 +174,7 @@ function verifyBlocksSanityChecks(
   blocks: SignedBeaconBlock[],
   payloadEnvelopes: Parameters<typeof verifyBlocksImportSanityChecks>[2],
   opts: Parameters<typeof verifyBlocksImportSanityChecks>[3]
-): {relevantBlocks: SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
+): {relevantBlocks: SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ChainViewBlock | null} {
   const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
     modules,
     blocks.map((block) => {
@@ -216,7 +225,7 @@ function getValidChain(count: number, initialSlot = 0): phase0.SignedBeaconBlock
   return blocks;
 }
 
-function getForkChoice(knownBlocks: phase0.SignedBeaconBlock[], finalizedEpoch = 0): IForkChoice {
+function getChainView(knownBlocks: phase0.SignedBeaconBlock[], finalizedEpoch = 0): IChainView {
   const blocks = new Map<string, ProtoBlock>();
   for (const block of knownBlocks) {
     const protoBlock = toProtoBlock(block);
@@ -233,7 +242,7 @@ function getForkChoice(knownBlocks: phase0.SignedBeaconBlock[], finalizedEpoch =
     getFinalizedCheckpoint() {
       return {epoch: finalizedEpoch, root: Buffer.alloc(32), rootHex: ""};
     },
-  } as Partial<IForkChoice> as IForkChoice;
+  } as Partial<IChainView> as IChainView;
 }
 
 function toProtoBlock(block: phase0.SignedBeaconBlock): ProtoBlock {

@@ -1,12 +1,11 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {runNodeNotifier} from "../../../src/node/notifier.js";
 import {SyncState} from "../../../src/sync/interface.js";
 import {getApiTestModules} from "../../utils/api.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {generateState, zeroProtoBlock} from "../../utils/state.js";
+import {zeroProtoBlock} from "../../utils/state.js";
 
 // mocked so slot durations can differ across the fork boundary
 vi.mock("@lodestar/state-transition", async (importActual) => ({
@@ -44,13 +43,23 @@ describe("node notifier", () => {
           (slot < boundarySlot ? slot * slotDuration : boundaryTime + (slot - boundarySlot) * nextDuration) / 1000
       );
       chain.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
-      chain.getHeadState.mockReturnValue(
-        new BeaconStateView(createCachedBeaconStateTest(generateState({}, config), config))
-      );
+      chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({
+        epoch: 0,
+        root: Buffer.alloc(32),
+        rootHex: `0x${"00".repeat(32)}`,
+      });
+      chain.beaconEngine.getHeadExecutionStateInfo = vi.fn().mockResolvedValue({
+        executionStatus: zeroProtoBlock.executionStatus,
+        executionPayloadBlockHash: zeroProtoBlock.executionPayloadBlockHash,
+        isExecutionStateType: false,
+        isMergeTransitionComplete: false,
+      });
       const controller = new AbortController();
       const notifying = runNodeNotifier({...modules, config, signal: controller.signal});
 
       try {
+        await vi.advanceTimersByTimeAsync(0);
+        expect(logger.error).not.toHaveBeenCalled();
         expect(logger.info).toHaveBeenCalledOnce();
         logger.info.mockClear();
         const midpoints = [

@@ -168,10 +168,14 @@ export function getGossipSSZMaxSize(topic: GossipTopic, config: ChainForkConfig,
 /**
  * Deserialize a gossip serialized data into an ssz object.
  */
-export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: Uint8Array): SSZTypeOfGossipTopic<T> {
+export function sszDeserialize<T extends GossipTopic>(
+  topic: T,
+  serializedData: Uint8Array,
+  opts?: {reuseBytes?: boolean}
+): SSZTypeOfGossipTopic<T> {
   const sszType = getGossipSSZType(topic);
   try {
-    return sszType.deserialize(serializedData) as SSZTypeOfGossipTopic<T>;
+    return sszType.deserialize(serializedData, opts) as SSZTypeOfGossipTopic<T>;
   } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }

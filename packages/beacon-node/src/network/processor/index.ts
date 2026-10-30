@@ -8,7 +8,7 @@ import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/interface.js";
-import {IBeaconDb} from "../../db/interface.js";
+import {IBeaconChainDb} from "../../db/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {ClockEvent} from "../../util/clock.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -33,7 +33,7 @@ import {
 } from "../gossip/interface.js";
 import {MAX_PEERS_PER_ROOT} from "./constants.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
-import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
+import {ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
 import {
   ValidatorFnModules,
@@ -48,7 +48,7 @@ export * from "./types.js";
 export type NetworkProcessorModules = ValidatorFnsModules &
   ValidatorFnModules & {
     chain: IBeaconChain;
-    db: IBeaconDb;
+    db: IBeaconChainDb;
     events: NetworkEventBus;
     logger: Logger;
     metrics: Metrics | null;
@@ -56,7 +56,7 @@ export type NetworkProcessorModules = ValidatorFnsModules &
     gossipHandlers?: GossipHandlers;
   };
 
-export type NetworkProcessorOpts = GossipHandlerOpts & {
+export type NetworkProcessorOpts = {
   maxGossipTopicConcurrency?: number;
 };
 
@@ -287,12 +287,12 @@ export class NetworkProcessor {
     this.gossipQueues = createGossipQueues();
     this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
     this.gossipValidatorFn = getGossipValidatorFn(
-      modules.gossipHandlers ?? getGossipHandlers(modules, opts),
+      modules.gossipHandlers ?? getGossipHandlers(modules),
       modules,
       this.onFatalPeer
     );
     this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
-      modules.gossipHandlers ?? getGossipHandlers(modules, opts),
+      modules.gossipHandlers ?? getGossipHandlers(modules),
       modules,
       this.onFatalPeer
     );
@@ -510,8 +510,11 @@ export class NetworkProcessor {
     // this determines whether this message needs to wait for a Block or Envelope
     // a message should only wait for what it voted for, hence we don't want to put it on both queues.
     let preprocessResult: PreprocessResult = {action: PreprocessAction.PushToQueue};
+    // TODO - beacon engine: hot path (per gossip message) — the beaconEngine membership reads below
+    // (hasBlockHexUnsafe / hasPayloadHexUnsafe / getBlockHexAndBlockHash / getBlockHexDefaultStatus) are
+    // cached in NativeBeaconEngine so they don't cross FFI. See BLK-1 plan §2b.
     // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
-    if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
+    if (root && !this.chain.beaconEngine.chainView.hasBlockHexUnsafe(root)) {
       // starting from GLOAS, unknown root from data_column_sidecar also falls into this case
       this.searchUnknownRoot({slot, root}, peerId, {target: SearchTarget.Block});
       // for beacon_attestation and beacon_aggregate_and_proof messages, this is only temporary.
@@ -532,8 +535,11 @@ export class NetworkProcessor {
         if (isForkPostGloas(fork)) {
           // GLOAS: also check parent envelope, same logic as execution_payload_bid
           const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data, fork);
-          if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
-            const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+          if (
+            parentBlockHash &&
+            !this.chain.beaconEngine.chainView.getBlockHexAndBlockHash(parentRoot, parentBlockHash)
+          ) {
+            const protoBlock = this.chain.beaconEngine.chainView.getBlockHexDefaultStatus(parentRoot);
             if (protoBlock === null) {
               search = {target: SearchTarget.Block};
             } else if (
@@ -544,7 +550,7 @@ export class NetworkProcessor {
               search = {target: SearchTarget.PayloadEnvelope, slotIsPayloadSlot: false};
             }
           }
-        } else if (!this.chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
+        } else if (!this.chain.beaconEngine.chainView.hasBlockHexUnsafe(parentRoot)) {
           search = {target: SearchTarget.Block};
         }
         if (search !== null) {
@@ -566,7 +572,7 @@ export class NetworkProcessor {
             topicType === GossipType.beacon_attestation
               ? getDataIndexFromSingleAttestationSerialized(fork, message.msg.data)
               : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
-          if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+          if (attIndex === 1 && !this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(root)) {
             // attestation votes that the payload is available but it is not yet known
             this.searchUnknownRoot({slot, root}, peerId, {
               target: SearchTarget.PayloadEnvelope,
@@ -579,7 +585,7 @@ export class NetworkProcessor {
         case GossipType.payload_attestation_message: {
           if (root == null) break;
           const payloadPresent = getPayloadPresentFromPayloadAttestationMessageSerialized(message.msg.data);
-          if (payloadPresent && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+          if (payloadPresent && !this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(root)) {
             // payload attestation votes that the payload is available but it is not yet known.
             // this is optimistic search, the peer may not have the payload (only the ptc committee had).
             // the PTC vote's slot is the payload's slot
@@ -594,7 +600,7 @@ export class NetworkProcessor {
         }
         case GossipType.data_column_sidecar: {
           if (root == null) break;
-          if (!this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+          if (!this.chain.beaconEngine.chainView.hasPayloadHexUnsafe(root)) {
             // this is optimistic search, the peer may not have the payload.
             // the sidecar's slot is the block's (and so the payload's) slot
             this.searchUnknownRoot({slot, root}, undefined, {
@@ -610,7 +616,7 @@ export class NetworkProcessor {
           // extractBlockSlotRootFn does not return a root for this topic.
           // Extract beacon_block_root directly
           const blockRoot = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(message.msg.data);
-          if (blockRoot && !this.chain.forkChoice.hasBlockHexUnsafe(blockRoot)) {
+          if (blockRoot && !this.chain.beaconEngine.chainView.hasBlockHexUnsafe(blockRoot)) {
             this.searchUnknownRoot({slot, root: blockRoot}, peerId, {target: SearchTarget.Block});
             // We always want to await the block
             // This allows us to properly forward the payload envelope
@@ -626,9 +632,9 @@ export class NetworkProcessor {
           if (
             parentBlockRoot &&
             parentBlockHash &&
-            !this.chain.forkChoice.getBlockHexAndBlockHash(parentBlockRoot, parentBlockHash)
+            !this.chain.beaconEngine.chainView.getBlockHexAndBlockHash(parentBlockRoot, parentBlockHash)
           ) {
-            const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentBlockRoot);
+            const protoBlock = this.chain.beaconEngine.chainView.getBlockHexDefaultStatus(parentBlockRoot);
             if (protoBlock === null) {
               this.searchUnknownRoot({slot, root: parentBlockRoot}, peerId, {target: SearchTarget.Block});
               preprocessResult = {action: PreprocessAction.AwaitBlock, root: parentBlockRoot};
@@ -1095,11 +1101,11 @@ export class NetworkProcessor {
    * Return null if chain can accept work, otherwise return the reason why it cannot accept work
    */
   private checkAcceptWork(): null | CannotAcceptWorkReason {
-    if (!this.chain.blsThreadPoolCanAcceptWork()) {
+    if (!this.chain.beaconEngineBlsThreadPoolCanAcceptWork()) {
       return CannotAcceptWorkReason.bls;
     }
 
-    if (!this.chain.regenCanAcceptWork()) {
+    if (!this.chain.beaconEngineRegenCanAcceptWork()) {
       return CannotAcceptWorkReason.regen;
     }
 

@@ -1,21 +1,15 @@
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
-import {
-  DataAvailabilityStatus,
-  IBeaconStateView,
-  computeEpochAtSlot,
-  getIndexedAttestation,
-  signedBlockToSignedHeader,
-} from "@lodestar/state-transition";
-import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
+import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
+import {Slot, deneb} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {ChainViewBlock} from "../chainView/interface.js";
+import {BlockImportData} from "../interface.js";
 import {BlockProcessOpts} from "../options.js";
-import {RegenCaller} from "../regen/index.js";
 import {DAType, IBlockInput} from "./blockInput/index.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {computeSignedBlockRoot} from "./signedBlockRoot.js";
 import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
@@ -23,9 +17,7 @@ import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {GLOAS_POLAR_BEAR_BANNER} from "./utils/polarBearBanner.js";
 import {FULU_ZEBRA_BANNER} from "./utils/zebraBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
-import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
-import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
-import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
+import {SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 /**
@@ -37,21 +29,19 @@ import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.j
  * - Verify all block's signatures in parallel
  * - Submit execution payloads to EL in sequence
  *
- * If there's an error during one of the steps, the rest are aborted with an AbortController.
+ * Engine failures abort the DA wait. DA failures wait for engine verification before discarding its bundles.
  */
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
-  parentBlock: ProtoBlock,
+  parentBlock: ChainViewBlock,
   blockInputs: IBlockInput[],
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
-  postStates: IBeaconStateView[];
-  proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
+  blockImportData: BlockImportData[];
   blockDAStatuses: DataAvailabilityStatus[];
   payloadDAStatuses: Map<Slot, DataAvailabilityStatus>;
-  indexedAttestationsByBlock: IndexedAttestation[][];
 }> {
   const blocks = blockInputs.map((blockInput) => blockInput.getBlock());
   const lastBlock = blocks.at(-1);
@@ -73,56 +63,10 @@ export async function verifyBlocksInEpoch(
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
 
-  // TODO: Skip in process chain segment
-  // Retrieve preState from cache (regen)
-  const preState0 = await this.regen
-    // transfer cache to process faster, postState will be in block state cache
-    .getPreState(block0.message, {dontTransferCache: false}, RegenCaller.processBlocksInEpoch)
-    .catch((e) => {
-      throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
-    });
-
-  if (!preState0.isStateValidatorsNodesPopulated()) {
-    this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
-      slot: preState0.slot,
-      cache: preState0.isStateValidatorsNodesPopulated(),
-      clonedCount: preState0.clonedCount,
-      clonedCountWithTransferCache: preState0.clonedCountWithTransferCache,
-      createdWithTransferCache: preState0.createdWithTransferCache,
-    });
-  }
-
-  // Ensure the state is in the same epoch as block0
-  if (block0Epoch !== computeEpochAtSlot(preState0.slot)) {
-    throw Error(`preState at slot ${preState0.slot} must be dialed to block epoch ${block0Epoch}`);
-  }
-
   const abortController = new AbortController();
+  const verificationPromise = this.beaconEngine.verifyBlocks(blockInputs, opts);
 
   try {
-    // Start execution payload verification first (async request to execution client)
-    const verifyExecutionPayloadsPromise =
-      opts.skipVerifyExecutionPayload !== true
-        ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, abortController.signal, opts)
-        : Promise.resolve({
-            execAborted: null,
-            executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
-          } as SegmentExecStatus);
-
-    // Store indexed attestations for each block to avoid recomputing them during import
-    const indexedAttestationsByBlock: IndexedAttestation[][] = [];
-    for (const [i, block] of blocks.entries()) {
-      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
-        const attEpoch = computeEpochAtSlot(attestation.data.slot);
-        // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
-        // we should have the shuffling inside ShufflingCache most of the time
-        const shuffling =
-          this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
-          preState0.getShufflingAtEpoch(attEpoch);
-        return getIndexedAttestation(shuffling, fork, attestation);
-      });
-    }
-
     // Pick the data-availability source by fork:
     // - Pre-Gloas: blob/Fulu-column data lives in IBlockInput → verifyBlocksDataAvailability.
     // - Post-Gloas: verifyPayloadsDataAvailability (payload-level DA, keyed by slot).
@@ -173,107 +117,63 @@ export async function verifyBlocksInEpoch(
 
     // batch all I/O operations to reduce overhead
     const [
-      segmentExecStatus,
       {blockDAStatuses, payloadDAStatuses, availableTime},
-      {postStates, proposerBalanceDeltas, verifyStateTime},
-      {verifySignaturesTime},
+      {segmentExecStatus, verifyStateTime, verifySignaturesTime, blockImportData},
     ] = await Promise.all([
-      verifyExecutionPayloadsPromise,
-
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
 
-      // Run state transition only
-      // TODO: Ensure it yields to allow flushing to workers and engine API
-      verifyBlocksStateTransitionOnly(
-        preState0,
-        blockInputs,
-        // hack availability for state transition eval as availability is separately determined
-        blocks.map(() => DataAvailabilityStatus.Available),
-        this.serializedCache,
-        this.logger,
-        this.metrics,
-        this.validatorMonitor,
-        abortController.signal,
-        opts
-      ),
-
-      // All signatures at once
-      verifyBlocksSignatures(
-        this.config,
-        this.bls,
-        this.logger,
-        this.metrics,
-        preState0,
-        blocks,
-        indexedAttestationsByBlock,
-        opts
-      ),
-
-      // TODO GLOAS: can verify payload signatures in batch too
-      // maybe chain with the above verifyBlocksSignatures()
+      // [beacon-engine] moved: verifyBlocksInEpoch state-transition/signature/EL verification now lives in
+      // packages/beacon-node/src/chain/beaconEngine/verifyBlock.ts#verifyBlocks.
+      // On unstable merges, sync that logic there; retain DA verification here.
+      verificationPromise,
     ]);
 
-    for (const blockInput of blockInputs) {
-      const block = blockInput.getBlock();
-      const {slot, proposerIndex} = block.message;
-      const signedBlockHeader = signedBlockToSignedHeader(this.config, block);
-      this.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex, signedBlockHeader);
-      // Only produce a slashing while importing the block. A block that is verified before it is published
-      // must not be treated as equivocation evidence since it may never be seen by the network
-      if (opts.verifyOnly !== true && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
-        callInNextEventLoop(() => this.processProposerEquivocation(slot, proposerIndex));
+    const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
+    const toForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(lastBlock.message.slot));
+
+    // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
+    if (toForkBoundary.fork !== fromForkBoundary.fork) {
+      switch (toForkBoundary.fork) {
+        case ForkName.capella:
+          this.logger.info(CAPELLA_OWL_BANNER);
+          this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
+          break;
+
+        case ForkName.deneb:
+          this.logger.info(DENEB_BLOWFISH_BANNER);
+          this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
+          break;
+
+        case ForkName.electra:
+          this.logger.info(ELECTRA_GIRAFFE_BANNER);
+          this.logger.info("Activating maxEB", {epoch: this.config.ELECTRA_FORK_EPOCH});
+          break;
+
+        case ForkName.fulu:
+          this.logger.info(FULU_ZEBRA_BANNER);
+          this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
+          break;
+
+        case ForkName.gloas:
+          this.logger.info(GLOAS_POLAR_BEAR_BANNER);
+          this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
+          break;
+
+        default:
       }
     }
 
-    if (opts.verifyOnly !== true) {
-      const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
-      const toForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(lastBlock.message.slot));
+    if (isForkPostFulu(fromForkBoundary.fork)) {
+      const fromBlobParameters = this.config.getBlobParameters(fromForkBoundary.epoch);
+      const toBlobParameters = this.config.getBlobParameters(toForkBoundary.epoch);
 
-      // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
-      if (toForkBoundary.fork !== fromForkBoundary.fork) {
-        switch (toForkBoundary.fork) {
-          case ForkName.capella:
-            this.logger.info(CAPELLA_OWL_BANNER);
-            this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
-            break;
+      if (toBlobParameters.epoch !== fromBlobParameters.epoch) {
+        const {epoch, maxBlobsPerBlock} = toBlobParameters;
 
-          case ForkName.deneb:
-            this.logger.info(DENEB_BLOWFISH_BANNER);
-            this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
-            break;
-
-          case ForkName.electra:
-            this.logger.info(ELECTRA_GIRAFFE_BANNER);
-            this.logger.info("Activating maxEB", {epoch: this.config.ELECTRA_FORK_EPOCH});
-            break;
-
-          case ForkName.fulu:
-            this.logger.info(FULU_ZEBRA_BANNER);
-            this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
-            break;
-
-          case ForkName.gloas:
-            this.logger.info(GLOAS_POLAR_BEAR_BANNER);
-            this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
-            break;
-
-          default:
-        }
-      }
-
-      if (isForkPostFulu(fromForkBoundary.fork)) {
-        const fromBlobParameters = this.config.getBlobParameters(fromForkBoundary.epoch);
-        const toBlobParameters = this.config.getBlobParameters(toForkBoundary.epoch);
-
-        if (toBlobParameters.epoch !== fromBlobParameters.epoch) {
-          const {epoch, maxBlobsPerBlock} = toBlobParameters;
-
-          this.logger.info("Activating BPO fork", {epoch, maxBlobsPerBlock});
-        }
+        this.logger.info("Activating BPO fork", {epoch, maxBlobsPerBlock});
       }
     }
-
     if (segmentExecStatus.execAborted === null) {
       const {executionStatuses, executionTime} = segmentExecStatus;
       if (
@@ -311,14 +211,15 @@ export async function verifyBlocksInEpoch(
       );
     }
 
-    return {
-      postStates,
-      blockDAStatuses,
-      payloadDAStatuses,
-      proposerBalanceDeltas,
-      segmentExecStatus,
-      indexedAttestationsByBlock,
-    };
+    return {segmentExecStatus, blockDAStatuses, payloadDAStatuses, blockImportData};
+  } catch (error) {
+    abortController.abort();
+    // Verification may still retain bundles after DA fails; discard only once it has settled.
+    await verificationPromise.catch(() => {});
+    await this.beaconEngine.discardVerifiedBlocks(
+      blockInputs.map((blockInput) => computeSignedBlockRoot(blockInput.forkName, blockInput.getBlock()))
+    );
+    throw error;
   } finally {
     abortController.abort();
   }

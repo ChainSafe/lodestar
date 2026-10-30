@@ -39,11 +39,8 @@ describe("Sync Committee Signature validation", () => {
 
   beforeEach(() => {
     chain = getMockedBeaconChain({config});
-    (
-      chain as {
-        seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
-      }
-    ).seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
+    (chain as {seenSyncCommitteeMessages: SeenSyncCommitteeMessages}).seenSyncCommitteeMessages =
+      new SeenSyncCommitteeMessages();
     clockStub = chain.clock;
     forkchoiceStub = chain.forkChoice;
     vi.spyOn(clockStub, "isCurrentSlotGivenGossipDisparity").mockReturnValue(true);
@@ -59,7 +56,7 @@ describe("Sync Committee Signature validation", () => {
 
     const syncCommittee = getSyncCommitteeSignature(1, 0);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, syncCommittee, 0),
+      validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, 0),
       SyncCommitteeErrorCode.NOT_CURRENT_SLOT
     );
   });
@@ -70,7 +67,7 @@ describe("Sync Committee Signature validation", () => {
     chain.getHeadState.mockReturnValue(headState);
     chain.seenSyncCommitteeMessages.get = () => toHexString(syncCommittee.beaconBlockRoot);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, syncCommittee, 0),
+      validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, 0),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_MESSAGE_KNOWN
     );
   });
@@ -83,7 +80,7 @@ describe("Sync Committee Signature validation", () => {
     chain.seenSyncCommitteeMessages.get = () => prevRoot;
     forkchoiceStub.getHeadRoot.mockReturnValue(prevRoot);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, syncCommittee, 0),
+      validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, 0),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_MESSAGE_KNOWN
     );
   });
@@ -94,7 +91,7 @@ describe("Sync Committee Signature validation", () => {
     chain.getHeadState.mockReturnValue(headState);
 
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, syncCommittee, 0),
+      validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, 0),
       SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE
     );
   });
@@ -108,7 +105,7 @@ describe("Sync Committee Signature validation", () => {
     const headState = new BeaconStateView(generateCachedAltairState({slot: currentSlot}, altairForkEpoch));
     chain.getHeadState.mockReturnValue(headState);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, syncCommittee, 0),
+      validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SUBCOMMITTEE_INDEX
     );
   });
@@ -118,9 +115,9 @@ describe("Sync Committee Signature validation", () => {
     const headState = new BeaconStateView(generateCachedAltairState({slot: currentSlot}, altairForkEpoch));
 
     chain.getHeadState.mockReturnValue(headState);
-    chain.bls.verifySignatureSets.mockReturnValue(false);
+    chain.bls.verifySignatureSets.mockResolvedValue(false);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, syncCommittee, 0),
+      validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SIGNATURE
     );
   });
@@ -134,14 +131,14 @@ describe("Sync Committee Signature validation", () => {
     chain.getHeadState.mockReturnValue(headState);
     // "should be null"
     expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBeNull();
-    await validateGossipSyncCommittee(chain, syncCommittee, subnet);
+    await validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, subnet);
     expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(
       toHexString(syncCommittee.beaconBlockRoot)
     );
 
     // receive same message again
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, syncCommittee, subnet),
+      validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, subnet),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_MESSAGE_KNOWN
     );
   });
@@ -159,7 +156,7 @@ describe("Sync Committee Signature validation", () => {
     expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(prevRoot);
     // but forkchoice head is message root
     forkchoiceStub.getHeadRoot.mockReturnValue(toHexString(syncCommittee.beaconBlockRoot));
-    await validateGossipSyncCommittee(chain, syncCommittee, subnet);
+    await validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, subnet);
     // should accept the message and overwrite prevRoot
     expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(
       toHexString(syncCommittee.beaconBlockRoot)
@@ -167,7 +164,7 @@ describe("Sync Committee Signature validation", () => {
 
     // receive same message again
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, syncCommittee, subnet),
+      validateGossipSyncCommittee.call(chain.beaconEngine, syncCommittee, subnet),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_MESSAGE_KNOWN
     );
   });

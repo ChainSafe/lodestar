@@ -1,26 +1,21 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconChainDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
-import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
+import {FinalizedBlockSnapshot, FinalizedCheckpointSnapshot} from "../beaconEngine/interface.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH} from "./constants.js";
-import {HistoricalStateRegen} from "./historicalState/historicalStateRegen.js";
-import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.js";
-import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
+import {ArchiveStoreOpts, ArchiveStoreTask} from "./interface.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
-import {pruneHistory} from "./utils/pruneHistory.js";
 
 type ArchiveStoreModules = {
   chain: IBeaconChain;
-  db: IBeaconDb;
+  db: IBeaconChainDb;
   logger: LoggerNode;
   metrics: Metrics | null;
 };
@@ -31,34 +26,20 @@ type ArchiveStoreInitOpts = ArchiveStoreOpts & {
   anchorState: {finalizedCheckpoint: Checkpoint};
 };
 
-export enum ArchiveStoreTask {
-  ArchiveBlocks = "archive_blocks",
-  PruneHistory = "prune_history",
-  OnFinalizedCheckpoint = "on_finalized_checkpoint",
-  MaybeArchiveState = "maybe_archive_state",
-  ForkchoicePrune = "forkchoice_prune",
-}
-
 /**
  * Used for running tasks that depends on some events or are executed
  * periodically.
  */
 export class ArchiveStore {
-  private archiveMode: ArchiveMode;
-  private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
+  private jobQueue: JobItemQueue<[CheckpointWithHex, FinalizedBlockSnapshot], void>;
 
   private archiveDataEpochs?: number;
-  // Finalized state writes are monotonic; reset on restart to include the newly persisted anchor.
-  private statePruneFromSlot: Slot = 0;
-  private readonly statesArchiverStrategy: StateArchiveStrategy;
   private readonly chain: IBeaconChain;
-  private readonly db: IBeaconDb;
+  private readonly db: IBeaconChainDb;
   private readonly logger: LoggerNode;
   private readonly metrics: Metrics | null;
   private readonly opts: ArchiveStoreInitOpts;
   private readonly signal: AbortSignal;
-
-  private historicalStateRegen?: HistoricalStateRegen;
 
   constructor(modules: ArchiveStoreModules, opts: ArchiveStoreInitOpts, signal: AbortSignal) {
     this.chain = modules.chain;
@@ -67,35 +48,26 @@ export class ArchiveStore {
     this.metrics = modules.metrics;
     this.opts = opts;
     this.signal = signal;
-    this.archiveMode = opts.archiveMode;
     this.archiveDataEpochs = opts.archiveDataEpochs;
 
-    this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
-      maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
-      signal,
-    });
+    this.jobQueue = new JobItemQueue<[CheckpointWithHex, FinalizedBlockSnapshot], void>(
+      this.processFinalizedCheckpoint,
+      {
+        maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
+        signal,
+      }
+    );
 
-    if (opts.archiveMode === ArchiveMode.Frequency) {
-      this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(
-        this.chain.regen,
-        this.db,
-        this.logger,
-        opts,
-        this.chain.bufferPool
-      );
-    } else {
-      throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
-    }
+    // State archival is engine-owned. ArchiveStore coordinates it with BeaconChain's DA/light-client cleanup
+    // and keeps fork choice and ChainView available until all dependent work completes.
 
     if (!opts.disableArchiveOnCheckpoint) {
       this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-      this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
 
       this.signal.addEventListener(
         "abort",
         () => {
           this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-          this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
         },
         {once: true}
       );
@@ -106,101 +78,40 @@ export class ArchiveStore {
     if (this.opts.pruneHistory) {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
-      const {stateCutoffSlot} = await callFnWhenAwait(
-        pruneHistory(
-          this.chain.config,
-          this.db,
-          this.logger,
-          this.metrics,
+      // Block, state and envelope DB writes are engine-owned; prune through the engine.
+      const blockCutoffSlot = await callFnWhenAwait(
+        this.chain.beaconEngine.pruneHistory(
           this.opts.anchorState.finalizedCheckpoint.epoch,
-          this.chain.clock.currentEpoch,
-          this.statePruneFromSlot,
-          this.advanceEarliestAvailableSlot
+          this.chain.clock.currentEpoch
         ),
         () => this.logger.info("Still pruning historical data, please wait..."),
         30_000,
         this.signal
       );
-      this.statePruneFromSlot = stateCutoffSlot;
+      this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
     }
-
-    if (this.opts.serveHistoricalState) {
-      this.historicalStateRegen = await HistoricalStateRegen.init({
-        opts: {
-          genesisTime: this.chain.clock.genesisTime,
-          dbLocation: this.opts.dbName,
-          dataColumnDir: this.opts.dataColumnDir,
-          nativeStateTransition: this.opts.nativeStateTransition ?? false,
-        },
-        config: this.chain.config,
-        metrics: this.metrics,
-        logger: this.logger,
-        signal: this.signal,
-      });
-    }
-  }
-
-  /**
-   * The CLI owns the initial value; this only advances it during pruneHistory.
-   * Persisted before any deletion so a crash mid-prune never leaves the floor below deleted data.
-   */
-  private advanceEarliestAvailableSlot = async (blockCutoffSlot: Slot): Promise<void> => {
-    const earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
-    if (earliestAvailableSlot !== this.chain.earliestAvailableSlot) {
-      await this.db.earliestAvailableSlot.set(earliestAvailableSlot);
-      this.chain.earliestAvailableSlot = earliestAvailableSlot;
-    }
-  };
-
-  async close(): Promise<void> {
-    await this.historicalStateRegen?.close();
-  }
-
-  async scrapeMetrics(): Promise<string> {
-    return this.historicalStateRegen?.scrapeMetrics() ?? "";
-  }
-
-  async getHistoricalStateBySlot(
-    slot: number
-  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.chain.forkChoice.getFinalizedBlock();
-
-    if (slot >= finalizedBlock.slot) {
-      return null;
-    }
-
-    // request for finalized state using historical state regen
-    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
-    if (!stateSerialized) {
-      return null;
-    }
-
-    return {state: stateSerialized, executionOptimistic: isOptimisticBlock(finalizedBlock), finalized: true};
   }
 
   /**
    * Archive latest finalized state
    * */
   async persistToDisk(): Promise<void> {
-    return this.statesArchiverStrategy.archiveState(this.chain.forkChoice.getFinalizedCheckpoint());
+    return this.chain.beaconEngine.persistFinalizedStateToDisk();
   }
 
   //-------------------------------------------------------------------------
   // Event handlers
   //-------------------------------------------------------------------------
-  private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
-    // Decouple finalized-checkpoint processing from block import. This handler runs synchronously
-    // inside the `ChainEvent.forkChoiceFinalized` emit from `forkChoice.onBlock()` during
-    // `importBlock()`; deferring the work to the next event-loop tick keeps any failure here off the
-    // import call stack, so it can't abort `importBlock()` before `regen.processState()` caches the
-    // head post-state — the deep-sync wedge this PR fixes (#9716).
-    //
+  private onFinalizedCheckpoint = (snapshot: FinalizedCheckpointSnapshot & CheckpointWithHex): void => {
+    const {epoch, root, rootHex, blockSnapshot} = snapshot;
+    const finalized = {epoch, root, rootHex};
+    // Decouple archival from finalization notification delivery so queue failures cannot interrupt other listeners.
     // `jobQueue.push()` can throw synchronously (queue aborted / full) or reject asynchronously;
     // awaiting it inside the deferred callback funnels both failure modes into the one catch.
     // biome-ignore lint/nursery/noMisusedPromises: the callback catches all errors itself
     callInNextEventLoop(async () => {
       try {
-        await this.jobQueue.push(finalized);
+        await this.jobQueue.push(finalized, blockSnapshot);
       } catch (e) {
         if (!isQueueErrorAborted(e)) {
           this.logger.error(
@@ -213,79 +124,52 @@ export class ArchiveStore {
     });
   };
 
-  private onCheckpoint = (): void => {
-    const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.onCheckpoint(
-      this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-      this.chain.forkChoice.getJustifiedCheckpoint().epoch,
-      headStateRoot
-    );
-
-    this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
-      this.logger.error("Error during state archive", {archiveMode: this.archiveMode}, err);
-    });
-  };
-
-  private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
+  /**
+   * The facade orchestrates finalization because blocks, envelopes, states, fork choice and ChainView belong to
+   * BeaconEngine, while columns belong to BeaconChain. Keep these steps awaited in the checkpoint queue:
+   * finish archival and cleanup before pruning fork choice and ChainView. The detailed cross-owner ordering
+   * is documented in beaconEngine/processFinalizedCheckpoint.ts.
+   */
+  private processFinalizedCheckpoint = async (
+    finalized: CheckpointWithHex,
+    blockSnapshot: FinalizedBlockSnapshot
+  ): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
-
-      // we want to track late imported canonical blocks, but it's not nice to do it at syncig time
-      const isNodeSynced = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot <= SLOTS_PER_EPOCH;
 
       let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await archiveBlocks(
         this.chain.config,
         this.db,
-        this.chain.forkChoice,
-        this.chain.lightClientServer,
+        this.chain.beaconEngine,
+        blockSnapshot,
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,
-        this.metrics,
-        isNodeSynced,
         this.archiveDataEpochs,
         this.chain.opts.persistOrphanedBlocks,
-        this.chain.opts.persistOrphanedBlocksDir,
-        this.chain.opts.dedupePayloads
+        this.chain.opts.persistOrphanedBlocksDir
       );
       timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
       if (this.opts.pruneHistory) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-        const {stateCutoffSlot} = await pruneHistory(
-          this.chain.config,
-          this.db,
-          this.logger,
-          this.metrics,
+        const blockCutoffSlot = await this.chain.beaconEngine.pruneHistory(
           finalizedEpoch,
-          this.chain.clock.currentEpoch,
-          this.statePruneFromSlot,
-          this.advanceEarliestAvailableSlot
+          this.chain.clock.currentEpoch
         );
-        this.statePruneFromSlot = stateCutoffSlot;
+        this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await this.statesArchiverStrategy.onFinalizedCheckpoint(finalized, this.metrics);
-      timer?.({source: ArchiveStoreTask.OnFinalizedCheckpoint});
-
-      // should be after ArchiveBlocksTask to handle restart cleanly
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
-      timer?.({source: ArchiveStoreTask.MaybeArchiveState});
-
-      // tasks rely on extended fork choice
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
-      timer?.({source: ArchiveStoreTask.ForkchoicePrune});
+      // Prune fork choice and ChainView last, after archival and cleanup above succeed.
+      const prunedBlockCount = await this.chain.beaconEngine.completeFinalization(finalized);
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,
         rootHex: finalized.rootHex,
-        prunedBlocks: prunedBlocks.length,
+        prunedBlocks: prunedBlockCount,
       });
     } catch (e) {
       if (!this.signal.aborted) {

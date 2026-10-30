@@ -8,6 +8,7 @@ import {
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {
   ColumnIndex,
   DataColumnSidecar,
@@ -32,6 +33,8 @@ import {
 } from "../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/types.js";
+import {IChainView} from "../../chain/chainView/interface.js";
+import {IBeaconChain} from "../../chain/interface.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {SeenPayloadEnvelopeInput} from "../../chain/seenCache/seenPayloadEnvelopeInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
@@ -43,6 +46,7 @@ import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {INetwork} from "../../network/index.js";
 import {CustodyConfig, getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {BlockWithBytes} from "../../util/types.js";
 import {WarnResult} from "../../util/wrapError.js";
 
 export type DownloadByRangeRequests = {
@@ -63,7 +67,7 @@ export type DownloadByRangeRequests = {
 };
 
 /**
- * The head block when the `SyncChain` was created. The first block of the first batch may build on its FULL variant
+ * The head block at node startup. The first block of the first batch may build on its FULL variant
  * while the payload is not imported yet, the batch then downloads the payload by root as its dangling parent.
  */
 export type ParentPayload = {
@@ -76,7 +80,7 @@ export type ParentPayload = {
 };
 
 export type DownloadByRangeResponses = {
-  blocks?: SignedBeaconBlock[];
+  blocks?: BlockWithBytes[];
   blobSidecars?: deneb.BlobSidecars;
   columnSidecars?: DataColumnSidecar[];
   payloadEnvelopes?: gloas.SignedExecutionPayloadEnvelope[];
@@ -84,6 +88,9 @@ export type DownloadByRangeResponses = {
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   config: ChainForkConfig;
+  chain: Pick<IBeaconChain, "serializedCache"> & {
+    beaconEngine: {chainView: Pick<IChainView, "getFinalizedCheckpoint" | "hasBlockHex">};
+  };
   network: INetwork;
   logger: Logger;
   peerIdStr: string;
@@ -126,7 +133,7 @@ export type ValidatedColumnSidecars = {
 };
 
 export type ValidatedResponses = {
-  validatedBlocks?: ValidatedBlock[];
+  validatedBlocks?: (ValidatedBlock & BlockWithBytes)[];
   validatedBlobSidecars?: ValidatedBlobSidecars[];
   validatedColumnSidecars?: ValidatedColumnSidecars[];
 };
@@ -346,6 +353,7 @@ export function cacheByRangeResponses({
 
 export async function downloadByRange({
   config,
+  chain,
   network,
   peerIdStr,
   batchBlocks,
@@ -381,7 +389,7 @@ export async function downloadByRange({
     });
   }
 
-  return validateResponses({
+  const result = await validateResponses({
     config,
     batchBlocks,
     blocksRequest,
@@ -393,6 +401,18 @@ export async function downloadByRange({
     peerDasMetrics,
     ...response,
   });
+
+  // Reuse the roots computed during response validation, without repopulating persisted blocks.
+  const finalizedSlot = computeStartSlotAtEpoch(chain.beaconEngine.chainView.getFinalizedCheckpoint().epoch);
+  for (const {block, blockRoot, bytes} of result.result.responses.validatedBlocks ?? []) {
+    const rootHex = toRootHex(blockRoot);
+    if (block.message.slot > finalizedSlot && !chain.beaconEngine.chainView.hasBlockHex(rootHex)) {
+      // Source: unstable@708700cdf6 network/reqresp/utils/collectSequentialBlocksInRange.ts.
+      // [beacon-engine] Retain original response bytes after validation for engine verification and persistence.
+      chain.serializedCache.set(block, bytes);
+    }
+  }
+  return result;
 }
 
 /**
@@ -410,7 +430,7 @@ export async function requestByRange({
   network: INetwork;
   peerIdStr: PeerIdStr;
 }): Promise<DownloadByRangeResponses> {
-  let blocks: undefined | SignedBeaconBlock[];
+  let blocks: undefined | BlockWithBytes[];
   let blobSidecars: undefined | deneb.BlobSidecars;
   const columnSidecars: DataColumnSidecar[] = [];
   const payloadEnvelopes: gloas.SignedExecutionPayloadEnvelope[] = [];
@@ -683,8 +703,8 @@ async function validateParentPayloadColumns(
 export function validateBlockByRangeResponse(
   config: ChainForkConfig,
   blocksRequest: phase0.BeaconBlocksByRangeRequest,
-  blocks: SignedBeaconBlock[]
-): WarnResult<ValidatedBlock[], DownloadByRangeError> {
+  blocks: BlockWithBytes[]
+): WarnResult<(ValidatedBlock & BlockWithBytes)[], DownloadByRangeError> {
   const {startSlot, count} = blocksRequest;
 
   // An error was thrown here by @twoeths in #8150 but it breaks for epochs with 0 blocks during chain
@@ -722,7 +742,7 @@ export function validateBlockByRangeResponse(
 
   const lastValidSlot = startSlot + count - 1;
   for (let i = 0; i < blocks.length; i++) {
-    const slot = blocks[i].message.slot;
+    const slot = blocks[i].block.message.slot;
 
     if (slot < startSlot || slot > lastValidSlot) {
       throw new DownloadByRangeError(
@@ -736,7 +756,7 @@ export function validateBlockByRangeResponse(
 
     // do not check for out of order on first block, and for subsequent blocks make sure that
     // the current block in a later slot than the one prior
-    if (i !== 0 && slot <= blocks[i - 1].message.slot) {
+    if (i !== 0 && slot <= blocks[i - 1].block.message.slot) {
       throw new DownloadByRangeError(
         {
           code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS,
@@ -748,22 +768,22 @@ export function validateBlockByRangeResponse(
 
   // assumes all blocks are from the same fork. Batch only generated epoch-wise requests starting at slot
   // 0 of the epoch
-  const type = config.getForkTypes(blocks[0].message.slot).BeaconBlock;
-  const response: {block: SignedBeaconBlock; blockRoot: Uint8Array}[] = [];
+  const type = config.getForkTypes(blocks[0].block.message.slot).BeaconBlock;
+  const response: (ValidatedBlock & BlockWithBytes)[] = [];
 
   for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i];
+    const {block, bytes} = blocks[i];
     const blockRoot = type.hashTreeRoot(block.message);
-    response.push({block, blockRoot});
+    response.push({block, blockRoot, bytes});
 
     if (i < blocks.length - 1) {
       // compare the block root against the next block's parent root
-      const parentRoot = blocks[i + 1].message.parentRoot;
+      const parentRoot = blocks[i + 1].block.message.parentRoot;
       if (!byteArrayEquals(blockRoot, parentRoot)) {
         throw new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH,
-            slot: blocks[i].message.slot,
+            slot: block.message.slot,
             expected: toRootHex(blockRoot),
             actual: toRootHex(parentRoot),
           },

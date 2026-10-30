@@ -19,7 +19,7 @@ describe("GossipMessageValidator", () => {
     opPool = chainStub.opPool;
 
     const state = new BeaconStateView(generateCachedState());
-    vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
+    chainStub.getHeadState.mockReturnValue(state);
     vi.spyOn(opPool, "hasSeenAttesterSlashing");
   });
 
@@ -33,7 +33,7 @@ describe("GossipMessageValidator", () => {
       opPool.hasSeenAttesterSlashing.mockReturnValue(true);
 
       await expectRejectedWithLodestarError(
-        validateGossipAttesterSlashing(chainStub, attesterSlashing),
+        validateGossipAttesterSlashing.call(chainStub.beaconEngine, attesterSlashing),
         AttesterSlashingErrorCode.ALREADY_EXISTS
       );
     });
@@ -42,7 +42,7 @@ describe("GossipMessageValidator", () => {
       const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
 
       await expectRejectedWithLodestarError(
-        validateGossipAttesterSlashing(chainStub, attesterSlashing),
+        validateGossipAttesterSlashing.call(chainStub.beaconEngine, attesterSlashing),
         AttesterSlashingErrorCode.INVALID
       );
     });
@@ -62,7 +62,7 @@ describe("GossipMessageValidator", () => {
         },
       };
 
-      await validateGossipAttesterSlashing(chainStub, attesterSlashing);
+      await validateGossipAttesterSlashing.call(chainStub.beaconEngine, attesterSlashing);
     });
   });
 });

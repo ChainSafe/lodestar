@@ -12,7 +12,7 @@ import {
   EnvelopeReconstructionError,
   EnvelopeReconstructionErrorCode,
 } from "../chain/errors/envelopeReconstructionError.js";
-import {IBeaconDb} from "../db/index.js";
+import {IBeaconChainDb} from "../db/index.js";
 import {ArchivedEnvelope, decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -288,7 +288,7 @@ export type RebuildMiss = {slot: Slot; reason: "unavailable" | "mismatch"; error
  * Throws ENGINE_UNAVAILABLE if the EL call fails. Either may surface after envelopes were yielded.
  */
 export async function* reconstructExecutionPayloadEnvelopesByRange(
-  db: IBeaconDb,
+  db: IBeaconChainDb,
   executionEngine: IExecutionEngine,
   logger: Logger,
   metrics: Metrics | null,

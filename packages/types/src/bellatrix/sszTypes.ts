@@ -102,7 +102,7 @@ export const SignedBeaconBlock = new ContainerType(
     message: BeaconBlock,
     signature: BLSSignature,
   },
-  {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+  {typeName: "SignedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const PowBlock = new ContainerType(

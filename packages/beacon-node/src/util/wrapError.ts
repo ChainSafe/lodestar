@@ -1,7 +1,7 @@
-export type Result<T> = {err: null; result: T} | {err: Error};
+export type Result<T, E = Error> = {err: null; result: T} | {err: E};
 
 /**
- * Wraps a promise to return either an error or result
+ * Wraps an operation to return either an error or result
  * Useful for SyncChain code that must ensure in a sample code
  * ```ts
  * try {
@@ -13,11 +13,16 @@ export type Result<T> = {err: null; result: T} | {err: Error};
  * only EITHER fn A() and fn B() are called, but never both. In the snipped above
  * if A() throws, B() would be called.
  */
-export async function wrapError<T>(promise: Promise<T>): Promise<Result<T>> {
+export function wrapError<T>(promise: Promise<T>): Promise<Result<T>>;
+export function wrapError<T, E>(fn: () => T | Promise<T>, mapError: (error: unknown) => E): Promise<Result<T, E>>;
+export async function wrapError<T, E>(
+  input: Promise<T> | (() => T | Promise<T>),
+  mapError?: (error: unknown) => E
+): Promise<Result<T, E | Error>> {
   try {
-    return {err: null, result: await promise};
+    return {err: null, result: await (typeof input === "function" ? input() : input)};
   } catch (err) {
-    return {err: err as Error};
+    return {err: mapError ? mapError(err) : (err as Error)};
   }
 }
 

@@ -6,6 +6,7 @@ import {ssz} from "@lodestar/types";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool/index.js";
 import {IndexedError} from "../../../../../../src/api/impl/errors.js";
 import {SyncCommitteeErrorCode} from "../../../../../../src/chain/errors/index.js";
+import {withBeaconEngineFacade} from "../../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
@@ -34,7 +35,7 @@ describe("api - beacon - submitPoolSyncCommitteeSignatures", () => {
     modules.network.publishSyncCommitteeSignature = vi.fn().mockResolvedValue(1);
     vi.mocked(validateApiSyncCommittee).mockResolvedValue(undefined);
 
-    api = getBeaconPoolApi(modules);
+    api = getBeaconPoolApi({...modules, chain: withBeaconEngineFacade(modules.chain)});
   });
 
   function getNonMemberIndex(): number {

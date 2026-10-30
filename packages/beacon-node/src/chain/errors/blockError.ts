@@ -1,4 +1,3 @@
-import {IBeaconStateView} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
@@ -8,6 +7,8 @@ import {GossipActionError} from "./gossipValidation.js";
 export enum BlockErrorCode {
   /** The prestate cannot be fetched */
   PRESTATE_MISSING = "BLOCK_ERROR_PRESTATE_MISSING",
+  /** A gossip candidate was evicted before root-only verification; this is a local cache failure. */
+  GOSSIP_BLOCK_NOT_CACHED = "BLOCK_ERROR_GOSSIP_BLOCK_NOT_CACHED",
   /**
    * The first block of a chain segment references a parentRoot unknown to fork-choice.
    */
@@ -110,6 +111,7 @@ type ExecutionEngineErrorStatus = Exclude<ExecutionErrorStatus, ExecutionPayload
 
 export type BlockErrorType =
   | {code: BlockErrorCode.PRESTATE_MISSING; error: Error}
+  | {code: BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED}
   | {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN; parentRoot: RootHex}
   | {code: BlockErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlockErrorCode.STATE_ROOT_MISMATCH}
@@ -121,13 +123,11 @@ export type BlockErrorType =
   | {code: BlockErrorCode.INCORRECT_PROPOSER; slot: Slot; root: RootHex; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; slot: Slot; root: RootHex}
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; slot: Slot; root: RootHex; proposerIndex: ValidatorIndex}
-  | {code: BlockErrorCode.INVALID_SIGNATURE; state: IBeaconStateView}
+  | {code: BlockErrorCode.INVALID_SIGNATURE; stateSlot: Slot}
   | {
       code: BlockErrorCode.INVALID_STATE_ROOT;
       root: Uint8Array;
       expectedRoot: Uint8Array;
-      preState: IBeaconStateView;
-      postState: IBeaconStateView;
     }
   | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
   | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; slot: Slot; root: RootHex; parentSlot: Slot}
@@ -167,7 +167,9 @@ export type BlockErrorType =
   | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex}
   | {code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS; parentBlockHash: RootHex; expectedBlockHash: RootHex};
 
-export class BlockGossipError extends GossipActionError<BlockErrorType> {}
+export class BlockGossipError extends GossipActionError<BlockErrorType> {
+  shouldProcessRepeatProposalBlock = false;
+}
 
 export class BlockError extends LodestarError<BlockErrorType> {
   constructor(
@@ -209,13 +211,12 @@ export function renderBlockErrorType(type: BlockErrorType): Record<string, strin
     case BlockErrorCode.INVALID_SIGNATURE:
       return {
         code: type.code,
-        slot: type.state.slot,
+        slot: type.stateSlot,
       };
 
     case BlockErrorCode.INVALID_STATE_ROOT:
       return {
         code: type.code,
-        slot: type.postState.slot,
         root: toRootHex(type.root),
         expectedRoot: toRootHex(type.expectedRoot),
       };

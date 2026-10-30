@@ -49,8 +49,8 @@ import {
   getSignatureFromSingleAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {Result, wrapError} from "../../util/wrapError.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
-import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
 import {
   AttestationDataCacheEntry,
@@ -101,10 +101,9 @@ export type Step0Result = AttestationValidationResult & {
  *   - do not prioritize bls signature set
  */
 export async function validateGossipAttestationsSameAttData(
+  this: BeaconEngineCore,
   fork: ForkName,
-  chain: IBeaconChain,
   attestationOrBytesArr: GossipAttestation[],
-  // for unit test, consumers do not need to pass this
   step0ValidationFn = validateAttestationNoSignatureCheck
 ): Promise<BatchResult> {
   if (attestationOrBytesArr.length === 0) {
@@ -118,7 +117,7 @@ export async function validateGossipAttestationsSameAttData(
   const step0ResultOrErrors: Result<Step0Result>[] = [];
   for (const attestationOrBytes of attestationOrBytesArr) {
     const {subnet} = attestationOrBytes;
-    const resultOrError = await wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnet));
+    const resultOrError = await wrapError(step0ValidationFn.call(this, fork, attestationOrBytes, subnet));
     step0ResultOrErrors.push(resultOrError);
   }
 
@@ -139,14 +138,14 @@ export async function validateGossipAttestationsSameAttData(
   }
 
   let signatureValids: boolean[];
-  const batchableBls = signatureSets.length >= chain.opts.minSameMessageSignatureSetsToBatch;
+  const batchableBls = signatureSets.length >= this.opts.minSameMessageSignatureSetsToBatch;
   if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
-    signatureValids = await chain.bls.verifySignatureSetsSameMessage(signatureSets, signatureSets[0].signingRoot);
+    signatureValids = await this.bls.verifySignatureSetsSameMessage(signatureSets, signatureSets[0].signingRoot);
   } else {
     // don't want to block the main thread if there are too few signatures
     signatureValids = await Promise.all(
-      signatureSets.map((set) => chain.bls.verifySignatureSets([set], {batchable: true}))
+      signatureSets.map((set) => this.bls.verifySignatureSets([set], {batchable: true}))
     );
   }
 
@@ -166,7 +165,7 @@ export async function validateGossipAttestationsSameAttData(
       // It's important to double check that the attestation still hasn't been observed, since
       // there can be a race-condition if we receive two attestations at the same time and
       // process them in different threads.
-      if (chain.seenAttesters.isKnown(targetEpoch, validatorIndex)) {
+      if (this.seenAttesters.isKnown(targetEpoch, validatorIndex)) {
         step0ResultOrErrors[oldIndex] = {
           err: new AttestationError(GossipAction.IGNORE, {
             code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
@@ -177,7 +176,7 @@ export async function validateGossipAttestationsSameAttData(
       }
 
       // valid
-      chain.seenAttesters.add(targetEpoch, validatorIndex);
+      this.seenAttesters.add(targetEpoch, validatorIndex);
     } else {
       step0ResultOrErrors[oldIndex] = {
         err: new AttestationError(GossipAction.REJECT, {
@@ -200,21 +199,21 @@ export async function validateGossipAttestationsSameAttData(
  * - prioritize bls signature set
  */
 export async function validateApiAttestation(
+  this: BeaconEngineCore,
   fork: ForkName,
-  chain: IBeaconChain,
   attestationOrBytes: ApiAttestation
 ): Promise<AttestationValidationResult> {
   const prioritizeBls = true;
   const subnet = null;
 
   try {
-    const step0Result = await validateAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
+    const step0Result = await validateAttestationNoSignatureCheck.call(this, fork, attestationOrBytes, subnet);
     const {attestation, signatureSet, validatorIndex} = step0Result;
-    const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
+    const isValid = await this.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
 
     if (isValid) {
       const targetEpoch = attestation.data.target.epoch;
-      chain.seenAttesters.add(targetEpoch, validatorIndex);
+      this.seenAttesters.add(targetEpoch, validatorIndex);
       return step0Result;
     }
 
@@ -236,10 +235,9 @@ export async function validateApiAttestation(
  * This is to avoid deserializing similar attestation multiple times which could help the gc
  */
 async function validateAttestationNoSignatureCheck(
+  this: BeaconEngineCore,
   fork: ForkName,
-  chain: IBeaconChain,
   attestationOrBytes: AttestationOrBytes,
-  /** Optional, to allow verifying attestations through API with unknown subnet */
   subnet: SubnetID | null
 ): Promise<Step0Result> {
   // Do checks in this order:
@@ -264,7 +262,7 @@ async function validateAttestationNoSignatureCheck(
       ? (getCommitteeIndexFromAttestationOrBytes(fork, attestationOrBytes) ?? 0)
       : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX;
     const cachedAttData =
-      attDataKey !== null ? chain.seenAttestationDatas.get(attSlot, committeeIndexForLookup, attDataKey) : null;
+      attDataKey !== null ? this.seenAttestationDatas.get(attSlot, committeeIndexForLookup, attDataKey) : null;
     if (cachedAttData === null) {
       const attestation = sszDeserializeSingleAttestation(fork, attestationOrBytes.serializedData);
       // only deserialize on the first AttestationData that's not cached
@@ -301,7 +299,7 @@ async function validateAttestationNoSignatureCheck(
         }
 
         // [REJECT] `attestation.data.index == 0` if `block.slot == attestation.data.slot`.
-        const block = chain.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
+        const block = this.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
 
         // block being null will be handled by `verifyHeadBlockAndTargetRoot`
         if (block !== null && block.slot === attSlot && attData.index !== 0) {
@@ -321,7 +319,7 @@ async function validateAttestationNoSignatureCheck(
         if (
           block !== null &&
           attData.index === 1 &&
-          !chain.forkChoice.hasPayloadHexUnsafe(toRootHex(attData.beaconBlockRoot))
+          !this.forkChoice.hasPayloadHexUnsafe(toRootHex(attData.beaconBlockRoot))
         ) {
           throw new AttestationError(GossipAction.IGNORE, {
             code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
@@ -343,9 +341,9 @@ async function validateAttestationNoSignatureCheck(
     committeeIndex = attestationOrCache.cache.committeeIndex;
   }
 
-  chain.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(
+  this.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(
     {caller: RegenCaller.validateGossipAttestation},
-    chain.clock.currentSlot - attSlot
+    this.clock.currentSlot - attSlot
   );
 
   if (!attestationOrCache.cache) {
@@ -367,7 +365,7 @@ async function validateAttestationNoSignatureCheck(
     // [IGNORE] the epoch of `attestation.data.slot` is either the current or previous epoch
     //   (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance)
     // -- i.e. `compute_epoch_at_slot(attestation.data.slot) in (get_previous_epoch(state), get_current_epoch(state))`
-    verifyPropagationSlotRange(fork, chain, attestationOrCache.attestation.data.slot);
+    verifyPropagationSlotRange.call(this, fork, attestationOrCache.attestation.data.slot);
   }
 
   let aggregationBits: BitArray | null = null;
@@ -410,18 +408,19 @@ async function validateAttestationNoSignatureCheck(
 
     // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
     // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
-    const attHeadBlock = verifyHeadBlockAndTargetRoot(
-      chain,
+    const attHeadBlock = verifyHeadBlockAndTargetRoot.call(
+      this,
+
       attestationOrCache.attestation.data.beaconBlockRoot,
       attestationOrCache.attestation.data.target.root,
       attSlot,
       attEpoch,
       RegenCaller.validateGossipAttestation,
-      chain.opts.maxSkipSlots
+      this.opts.maxSkipSlots
     );
 
     // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
-    // > Altready check in `verifyHeadBlockAndTargetRoot()`
+    // > Altready check in `verifyHeadBlockAndTargetRoot.call(this, )`
 
     // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by attestation.data.beacon_block_root
     // -- i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
@@ -431,8 +430,8 @@ async function validateAttestationNoSignatureCheck(
     //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
     // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-    const shuffling = await getShufflingForAttestationVerification(
-      chain,
+    const shuffling = await getShufflingForAttestationVerification.call(
+      this,
       attEpoch,
       attHeadBlock,
       RegenCaller.validateGossipAttestation
@@ -441,7 +440,7 @@ async function validateAttestationNoSignatureCheck(
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
     committeeValidatorIndices = getCommitteeValidatorIndices(shuffling, attSlot, committeeIndex);
-    getSigningRoot = () => getAttestationDataSigningRoot(chain.config, attData);
+    getSigningRoot = () => getAttestationDataSigningRoot(this.config, attData);
     expectedSubnet = computeSubnetForSlot(shuffling, attSlot, committeeIndex);
   }
 
@@ -504,7 +503,7 @@ async function validateAttestationNoSignatureCheck(
 
   // [IGNORE] There has been no other valid attestation seen on an attestation subnet that has an
   // identical attestation.data.target.epoch and participating validator index.
-  if (chain.seenAttesters.isKnown(targetEpoch, validatorIndex)) {
+  if (this.seenAttesters.isKnown(targetEpoch, validatorIndex)) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
       targetEpoch,
@@ -545,7 +544,7 @@ async function validateAttestationNoSignatureCheck(
       const committeeIndexKey = isForkPostElectra(fork)
         ? committeeIndex
         : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX;
-      chain.seenAttestationDatas.add(attSlot, committeeIndexKey, attDataKey, {
+      this.seenAttestationDatas.add(attSlot, committeeIndexKey, attDataKey, {
         committeeValidatorIndices,
         committeeIndex,
         signingRoot: signatureSet.signingRoot,
@@ -601,9 +600,9 @@ async function validateAttestationNoSignatureCheck(
  * Accounts for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
  * Note: We do not queue future attestations for later processing
  */
-export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, attestationSlot: Slot): void {
+export function verifyPropagationSlotRange(this: BeaconEngineCore, fork: ForkName, attestationSlot: Slot): void {
   // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY
-  const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000);
+  const latestPermissibleSlot = this.clock.slotWithFutureTolerance(this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000);
   if (attestationSlot > latestPermissibleSlot) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.FUTURE_SLOT,
@@ -617,14 +616,14 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   //
   // see: https://github.com/ethereum/consensus-specs/pull/3360
   if (ForkSeq[fork] < ForkSeq.deneb) {
-    const currentSlot = chain.clock.currentSlot;
-    const withinPastDisparity = currentSlot > 0 && chain.clock.isCurrentSlotGivenGossipDisparity(currentSlot - 1);
+    const currentSlot = this.clock.currentSlot;
+    const withinPastDisparity = currentSlot > 0 && this.clock.isCurrentSlotGivenGossipDisparity(currentSlot - 1);
     const earliestPermissibleSlot = Math.max(
       // Pre-Deneb propagation is time-bounded: an attestation remains valid at the exact old
       // boundary `compute_time_at_slot(slot + range + 1) + MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
       // Model that boundary by extending the lower slot bound by one additional slot only while
       // the clock still considers the previous slot current given gossip disparity.
-      currentSlot - chain.config.ATTESTATION_PROPAGATION_SLOT_RANGE - (withinPastDisparity ? 1 : 0),
+      currentSlot - this.config.ATTESTATION_PROPAGATION_SLOT_RANGE - (withinPastDisparity ? 1 : 0),
       0
     );
 
@@ -650,7 +649,7 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
 
     // lower bound for previous epoch is same as epoch of earliestPermissibleSlot
     const currentEpochWithPastTolerance = computeEpochAtSlot(
-      chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000)
+      this.clock.slotWithPastTolerance(this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000)
     );
 
     const earliestPermissiblePreviousEpoch = Math.max(currentEpochWithPastTolerance - 1, 0);
@@ -670,7 +669,7 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
  * 2. attestation's target block is an ancestor of the block named in the LMD vote
  */
 export function verifyHeadBlockAndTargetRoot(
-  chain: IBeaconChain,
+  this: BeaconEngineCore,
   beaconBlockRoot: Root,
   targetRoot: Root,
   attestationSlot: Slot,
@@ -678,13 +677,13 @@ export function verifyHeadBlockAndTargetRoot(
   caller: RegenCaller,
   maxSkipSlots?: number
 ): ProtoBlock {
-  const headBlock = verifyHeadBlockIsKnown(chain, beaconBlockRoot);
+  const headBlock = verifyHeadBlockIsKnown.call(this, beaconBlockRoot);
   // Lighthouse rejects the attestation, however Lodestar only ignores considering it's not against the spec
   // it's more about a DOS protection to us
   // With verifyPropagationSlotRange() and maxSkipSlots = 32, it's unlikely we have to regenerate states in queue
   // to validate beacon_attestation and aggregate_and_proof
   const slotDistance = attestationSlot - headBlock.slot;
-  chain.metrics?.gossipAttestation.headSlotToAttestationSlot.observe({caller}, slotDistance);
+  this.metrics?.gossipAttestation.headSlotToAttestationSlot.observe({caller}, slotDistance);
 
   if (maxSkipSlots !== undefined && slotDistance > maxSkipSlots) {
     throw new AttestationError(GossipAction.IGNORE, {
@@ -710,34 +709,29 @@ export function verifyHeadBlockAndTargetRoot(
  * see https://github.com/ChainSafe/lodestar/blob/v1.11.3/packages/beacon-node/src/chain/validation/attestation.ts#L566
  */
 export async function getShufflingForAttestationVerification(
-  chain: IBeaconChain,
+  this: BeaconEngineCore,
   attEpoch: Epoch,
   attHeadBlock: ProtoBlock,
   regenCaller: RegenCaller
 ): Promise<EpochShuffling> {
   const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
-  const shufflingDependentRoot = getShufflingDependentRoot(chain.forkChoice, attEpoch, blockEpoch, attHeadBlock);
+  const shufflingDependentRoot = getShufflingDependentRoot(this.forkChoice, attEpoch, blockEpoch, attHeadBlock);
 
-  const shuffling = await chain.shufflingCache.get(attEpoch, shufflingDependentRoot);
+  const shuffling = await this.shufflingCache.get(attEpoch, shufflingDependentRoot);
   if (shuffling) {
     // most of the time, we should get the shuffling from cache
-    chain.metrics?.gossipAttestation.shufflingCacheHit.inc({caller: regenCaller});
+    this.metrics?.gossipAttestation.shufflingCacheHit.inc({caller: regenCaller});
     return shuffling;
   }
 
-  chain.metrics?.gossipAttestation.shufflingCacheMiss.inc({caller: regenCaller});
+  this.metrics?.gossipAttestation.shufflingCacheMiss.inc({caller: regenCaller});
   try {
     // for the 1st time of the same epoch and dependent root, it awaits for the regen state
     // from the 2nd time, it should use the same cached promise and it should reach the above code
-    chain.metrics?.gossipAttestation.shufflingCacheRegenHit.inc({caller: regenCaller});
-    return await chain.regenStateForAttestationVerification(
-      attEpoch,
-      shufflingDependentRoot,
-      attHeadBlock,
-      regenCaller
-    );
+    this.metrics?.gossipAttestation.shufflingCacheRegenHit.inc({caller: regenCaller});
+    return await this.regenStateForAttestationVerification(attEpoch, shufflingDependentRoot, attHeadBlock, regenCaller);
   } catch (e) {
-    chain.metrics?.gossipAttestation.shufflingCacheRegenMiss.inc({caller: regenCaller});
+    this.metrics?.gossipAttestation.shufflingCacheRegenMiss.inc({caller: regenCaller});
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION,
       error: e as Error,
@@ -770,10 +764,10 @@ export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0
  * it's still fine to ignore here because there's no need for us to handle attestations that are
  * already finalized.
  */
-function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): ProtoBlock {
+function verifyHeadBlockIsKnown(this: BeaconEngineCore, beaconBlockRoot: Root): ProtoBlock {
   // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
-  const headBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
+  const headBlock = this.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,

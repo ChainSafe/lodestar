@@ -58,20 +58,19 @@ export async function collectMaxResponseTyped<T>(
  * ```
  * Collects a bounded list of responses up to `maxResponses`
  */
-export async function collectMaxResponseTypedWithBytes<T>(
+export async function collectMaxResponseTypedWithBytes<T, R>(
   source: AsyncIterable<ResponseIncoming>,
   maxResponses: number,
   typeFn: ResponseTypeGetter<T>,
-  serializedCache?: SerializedCache
-): Promise<T[]> {
+  mapResponse: (data: T, bytes: Uint8Array) => R
+): Promise<R[]> {
   // else: zero or more responses
-  const responses: T[] = [];
+  const responses: R[] = [];
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    const data = sszDeserializeResponse(type, chunk.data);
-    responses.push(data);
-    // optionally cache the serialized response if the cache is available
-    serializedCache?.set(data as object, chunk.data);
+    // TODO - beacon engine: revisit reuseBytes after https://github.com/ChainSafe/ssz/issues/559 is fixed.
+    const data = sszDeserializeResponse(type, chunk.data, {reuseBytes: false});
+    responses.push(mapResponse(data, chunk.data));
 
     if (maxResponses !== undefined && responses.length >= maxResponses) {
       break;
@@ -81,9 +80,9 @@ export async function collectMaxResponseTypedWithBytes<T>(
 }
 
 /** Light wrapper on type to wrap deserialize errors */
-export function sszDeserializeResponse<T>(type: Type<T>, bytes: Uint8Array): T {
+export function sszDeserializeResponse<T>(type: Type<T>, bytes: Uint8Array, opts?: {reuseBytes?: boolean}): T {
   try {
-    return type.deserialize(bytes);
+    return type.deserialize(bytes, opts);
   } catch (e) {
     throw new RequestError({code: RequestErrorCode.INVALID_RESPONSE_SSZ, errorMessage: (e as Error).message});
   }

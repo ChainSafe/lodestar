@@ -3,7 +3,7 @@ import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {TimeoutError} from "@lodestar/utils";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
-import {PayloadError, PayloadErrorCode} from "./importExecutionPayload.js";
+import {PayloadErrorCode, PayloadImportError} from "./importExecutionPayload.js";
 
 /**
  * Verifies that all payload envelope inputs have their data columns available.
@@ -28,7 +28,7 @@ export async function verifyPayloadsDataAvailability(
       promises.push(
         payloadInput.waitForAllData(config.getSlotDurationMs(payloadInput.forkName), signal).catch((e) => {
           if (e instanceof TimeoutError) {
-            throw new PayloadError(payloadInput, {code: PayloadErrorCode.DATA_UNAVAILABLE});
+            throw new PayloadImportError(payloadInput, {code: PayloadErrorCode.DATA_UNAVAILABLE});
           }
           throw e;
         })

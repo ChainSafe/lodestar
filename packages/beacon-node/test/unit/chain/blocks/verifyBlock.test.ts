@@ -16,7 +16,7 @@ import {verifyBlocksExecutionPayload} from "../../../../src/chain/blocks/verifyB
 import {verifyBlocksSignatures} from "../../../../src/chain/blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../../../../src/chain/blocks/verifyBlocksStateTransitionOnly.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
-import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 vi.mock("../../../../src/chain/blocks/verifyBlocksExecutionPayloads.js");
@@ -50,6 +50,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
   ])("$name", async ({hasEnvelope, blobCount, expectedPayloadDA}) => {
     const config = createChainForkConfig({...configDef, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     const chain = getMockedBeaconChain({config});
+    chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(generateProtoBlock({slot: 0}));
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
     block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>
@@ -127,16 +128,22 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     vi.mocked(verifyBlocksSignatures).mockResolvedValue({verifySignaturesTime: 0});
 
     const result = await verifyBlocksInEpoch.call(
-      chain,
+      withBeaconEngineFacade(chain),
       generateProtoBlock({slot: 0}),
       [blockInput],
       new Map([[block.message.slot, payloadInput]]),
-      {verifyOnly: true}
+      {}
     );
 
-    expect(result.indexedAttestationsByBlock).toEqual([
-      [{data: attestation.data, signature: attestation.signature, attestingIndices: [10, 30]}],
+    const bundle = result.blockImportData[0];
+    if ("signedBlockRoot" in bundle) throw Error("Expected an object verification bundle");
+    expect(bundle.postState).toBe(preState);
+    expect(bundle.indexedAttestations).toEqual([
+      {data: attestation.data, signature: attestation.signature, attestingIndices: [10, 30]},
     ]);
+    expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
+    expect(result).not.toHaveProperty("verifiedBlocks");
+    expect(result).not.toHaveProperty("postStates");
     expect(chain.shufflingCache.processState).not.toHaveBeenCalled();
     expect(chain.shufflingCache.getIndexedAttestation).not.toHaveBeenCalled();
     expect(result.blockDAStatuses).toEqual([DataAvailabilityStatus.NotRequired]);

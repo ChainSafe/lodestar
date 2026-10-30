@@ -1,8 +1,8 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
+import {GossipValidationResult, GossipValidationStatus} from "../../chain/beaconEngine/gossipValidationResult.js";
 import {
-  AttestationError,
   AttestationErrorCode,
   AttesterSlashingErrorCode,
   BlobSidecarErrorCode,
@@ -11,8 +11,6 @@ import {
   DataColumnSidecarErrorCode,
   ExecutionPayloadBidErrorCode,
   ExecutionPayloadEnvelopeErrorCode,
-  GossipAction,
-  GossipActionError,
   InclusionListErrorCode,
   PayloadAttestationErrorCode,
   ProposerPreferencesErrorCode,
@@ -153,47 +151,43 @@ export function getGossipValidatorBatchFn(
         }))
       );
 
-      return results.map((e, i) => {
-        if (e == null) {
+      return results.map((res, i): TopicValidatorResult => {
+        if (res.err === null) {
           return TopicValidatorResult.Accept;
         }
 
         const {clientAgent, clientVersion, propagationSource} = messageInfos[i];
+        const failure = res.err;
 
-        if (!(e instanceof AttestationError)) {
-          logger.debug(
-            `Gossip batch validation ${type} threw a non-AttestationError`,
-            {peerId: prettyPrintPeerIdStr(propagationSource), clientAgent, clientVersion},
-            e as Error
-          );
-          metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
-          return TopicValidatorResult.Ignore;
-        }
-
-        switch (e.action) {
-          case GossipAction.IGNORE:
+        switch (failure.status) {
+          case GossipValidationStatus.Ignore:
             metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
             // only beacon_attestation topic is validated in batch
-            metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({reason: e.type.code});
+            metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({
+              reason: failure.code as AttestationErrorCode,
+            });
             return TopicValidatorResult.Ignore;
-          case GossipAction.REJECT: {
+          case GossipValidationStatus.Reject: {
             metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
             // only beacon_attestation topic is validated in batch
-            metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
-            const peerAction = rejectPeerAction(type, e.type.code);
-            core.reportPeer(propagationSource, peerAction, e.type.code);
+            metrics?.networkProcessor.gossipAttestationRejectByReason.inc({
+              reason: failure.code as AttestationErrorCode,
+            });
+            const peerAction = rejectPeerAction(type, failure.code);
+            core.reportPeer(propagationSource, peerAction, failure.code);
             if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
             logger.debug(
               `Gossip validation ${type} rejected`,
               {peer: propagationSource, clientAgent, clientVersion, peerAction},
-              e
+              failure.error
             );
             return TopicValidatorResult.Reject;
           }
         }
       });
     } catch (e) {
-      // Don't expect error here
+      // Handlers return a verdict per message and no longer throw on validation failure, so this is only a
+      // safety net for an unexpected throw (handler bug). Map the whole batch to Ignore as before.
       logger.debug(`Gossip batch validation ${type} threw an error`, {}, e as Error);
       const results: TopicValidatorResult[] = [];
       for (let i = 0; i < messageInfos.length; i++) {
@@ -236,52 +230,50 @@ export function getGossipValidatorFn(
   }) {
     const type = topic.type;
 
+    let result: GossipValidationResult<void>;
     try {
-      await (gossipHandlers[type] as GossipHandlerFn)({
+      result = await (gossipHandlers[type] as GossipHandlerFn)({
         gossipData: {serializedData: msg.data, msgSlot},
         topic,
         peerIdStr: propagationSource,
         seenTimestampSec,
       });
-
-      metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});
-
-      return TopicValidatorResult.Accept;
     } catch (e) {
-      if (!(e instanceof GossipActionError)) {
-        // not deserve to log error here, it looks too dangerous to users
-        logger.debug(
-          `Gossip validation ${type} threw a non-GossipActionError`,
-          {peerId: prettyPrintPeerIdStr(propagationSource), clientAgent, clientVersion},
-          e as Error
-        );
+      // Handlers should not throw — they return a verdict. An unexpected throw maps to Ignore (mirrors the
+      // previous "non-GossipActionError → Ignore" behavior). Not logged as error: too noisy/dangerous.
+      logger.debug(
+        `Gossip validation ${type} threw an unexpected error`,
+        {peerId: prettyPrintPeerIdStr(propagationSource), clientAgent, clientVersion},
+        e as Error
+      );
+      return TopicValidatorResult.Ignore;
+    }
+
+    if (result.err === null) {
+      metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});
+      return TopicValidatorResult.Accept;
+    }
+
+    const failure = result.err;
+    switch (failure.status) {
+      case GossipValidationStatus.Ignore:
+        // Note: LodestarError.code are bounded pre-declared error messages, not from arbitrary error.message
+        metrics?.networkProcessor.gossipValidationError.inc({topic: type, error: failure.code});
+        metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
         return TopicValidatorResult.Ignore;
-      }
 
-      // Metrics on specific error reason
-      // Note: LodestarError.code are bounded pre-declared error messages, not from arbitrary error.message
-      metrics?.networkProcessor.gossipValidationError.inc({
-        topic: type,
-        error: (e as GossipActionError<{code: string}>).type.code,
-      });
-
-      switch (e.action) {
-        case GossipAction.IGNORE:
-          metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
-          return TopicValidatorResult.Ignore;
-
-        case GossipAction.REJECT: {
-          metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
-          const peerAction = rejectPeerAction(type, e.type.code);
-          core.reportPeer(propagationSource, peerAction, e.type.code);
-          if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
-          logger.debug(
-            `Gossip validation ${type} rejected`,
-            {peer: propagationSource, clientAgent, clientVersion, peerAction},
-            e
-          );
-          return TopicValidatorResult.Reject;
-        }
+      case GossipValidationStatus.Reject: {
+        metrics?.networkProcessor.gossipValidationError.inc({topic: type, error: failure.code});
+        metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
+        const peerAction = rejectPeerAction(type, failure.code);
+        core.reportPeer(propagationSource, peerAction, failure.code);
+        if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
+        logger.debug(
+          `Gossip validation ${type} rejected`,
+          {peer: propagationSource, clientAgent, clientVersion, peerAction},
+          failure.error
+        );
+        return TopicValidatorResult.Reject;
       }
     }
   };

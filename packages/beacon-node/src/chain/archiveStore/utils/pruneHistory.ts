@@ -2,14 +2,14 @@ import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, prettyPrintIndices} from "@lodestar/utils";
-import {IBeaconDb} from "../../../db/interface.js";
-import {Metrics} from "../../../metrics/index.js";
+import {IBeaconEngineDb} from "../../../db/interface.js";
+import {BeaconEngineMetrics} from "../../../metrics/index.js";
 
 export async function pruneHistory(
   config: ChainConfig,
-  db: IBeaconDb,
+  db: IBeaconEngineDb,
   logger: Logger,
-  metrics: Metrics | null | undefined,
+  metrics: BeaconEngineMetrics | null | undefined,
   finalizedEpoch: Epoch,
   currentEpoch: Epoch,
   statePruneFromSlot: Slot,
@@ -35,9 +35,8 @@ export async function pruneHistory(
   });
 
   const step0 = metrics?.pruneHistory.fetchKeys.startTimer();
-  const [blocks, envelopes, states] = await Promise.all([
+  const [blocks, states] = await Promise.all([
     db.blockArchive.keys({gte: 0, lt: blockCutoffSlot}),
-    db.executionPayloadEnvelopeArchive.keys({gte: 0, lt: blockCutoffSlot}),
     stateCutoffSlot > statePruneFromSlot ? db.stateArchive.keys({gte: statePruneFromSlot, lt: stateCutoffSlot}) : [],
   ]);
   step0?.();
@@ -45,10 +44,8 @@ export async function pruneHistory(
   logger.debug("Pruning history", {
     currentEpoch,
     blocksToPrune: blocks.length,
-    envelopesToPrune: envelopes.length,
     statesToPrune: states.length,
     blockSlots: prettyPrintIndices(blocks),
-    envelopeSlots: prettyPrintIndices(envelopes),
     stateSlots: prettyPrintIndices(states),
   });
 
@@ -58,7 +55,6 @@ export async function pruneHistory(
   await Promise.all([
     // ->
     db.blockArchive.batchDeleteRange(blocks),
-    db.executionPayloadEnvelopeArchive.batchDelete(envelopes),
     db.stateArchive.batchDelete(states),
   ]);
   step1?.();

@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
 import {Slot, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {ChainViewBlock} from "../../chainView/interface.js";
 import {BlockError, BlockErrorCode} from "../../errors/index.js";
 import {IBlockInput} from "../blockInput/types.js";
 import {PayloadEnvelopeInput} from "../payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -29,7 +29,7 @@ export function assertLinearChainSegment(
   config: ChainForkConfig,
   blocks: IBlockInput[],
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
-  parentBlock: ProtoBlock | null
+  parentBlock: ChainViewBlock | null
 ): ChainSegmentResult {
   if (blocks.length === 0) {
     return {warnings: null};

@@ -19,7 +19,7 @@ describe("gossip block validation", () => {
   let chain: MockedBeaconChain;
   let forkChoice: MockedBeaconChain["forkChoice"];
   let regen: Mocked<QueuedStateRegenerator>;
-  let verifySignature: Mock<() => boolean>;
+  let verifySignature: Mock<MockedBeaconChain["beaconEngine"]["bls"]["verifySignatureSets"]>;
   let job: SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;
@@ -85,7 +85,7 @@ describe("gossip block validation", () => {
     const signedBlock = {signature, message: {...block, slot: clockSlot + 1}};
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, signedBlock, ForkName.phase0),
+      validateGossipBlock.call(chain.beaconEngine, signedBlock, ForkName.phase0),
       BlockErrorCode.FUTURE_SLOT
     );
   });
@@ -99,7 +99,7 @@ describe("gossip block validation", () => {
     });
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.phase0),
+      validateGossipBlock.call(chain.beaconEngine, job, ForkName.phase0),
       BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT
     );
   });
@@ -109,7 +109,7 @@ describe("gossip block validation", () => {
     forkChoice.getBlockHexDefaultStatus.mockReturnValue({} as ProtoBlock);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.phase0),
+      validateGossipBlock.call(chain.beaconEngine, job, ForkName.phase0),
       BlockErrorCode.ALREADY_KNOWN
     );
   });
@@ -135,7 +135,7 @@ describe("gossip block validation", () => {
 
       // Re-submitting the SAME block (same root) is a benign duplicate, not an equivocation
       await expectRejectedWithLodestarError(
-        validateGossipBlock(gloasConfig, chain, signedBlock, ForkName.gloas),
+        validateGossipBlock.call(chain.beaconEngine, signedBlock, ForkName.gloas),
         BlockErrorCode.ALREADY_KNOWN
       );
     });
@@ -159,7 +159,7 @@ describe("gossip block validation", () => {
       const conflictingBlockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(conflictingBlock.message));
 
       await expectRejectedWithLodestarError(
-        validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
+        validateGossipBlock.call(chain.beaconEngine, conflictingBlock, ForkName.gloas),
         BlockErrorCode.REPEAT_PROPOSAL
       );
 
@@ -193,7 +193,7 @@ describe("gossip block validation", () => {
       verifySignature.mockResolvedValue(false);
 
       await expectRejectedWithLodestarError(
-        validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
+        validateGossipBlock.call(chain.beaconEngine, conflictingBlock, ForkName.gloas),
         BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
       );
 
@@ -224,7 +224,7 @@ describe("gossip block validation", () => {
       additionalBlock.message.stateRoot = Buffer.alloc(32, 2);
 
       await expectRejectedWithLodestarError(
-        validateGossipBlock(gloasConfig, chain, additionalBlock, ForkName.gloas),
+        validateGossipBlock.call(chain.beaconEngine, additionalBlock, ForkName.gloas),
         BlockErrorCode.REPEAT_PROPOSAL
       );
 
@@ -250,7 +250,7 @@ describe("gossip block validation", () => {
         vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
 
         const validation = expectRejectedWithLodestarError(
-          validateGossipBlock(gloasConfig, chain, signedBlock, ForkName.gloas),
+          validateGossipBlock.call(chain.beaconEngine, signedBlock, ForkName.gloas),
           BlockErrorCode.REPEAT_PROPOSAL
         );
         await vi.advanceTimersByTimeAsync(0);
@@ -273,7 +273,7 @@ describe("gossip block validation", () => {
     forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.phase0),
+      validateGossipBlock.call(chain.beaconEngine, job, ForkName.phase0),
       BlockErrorCode.PARENT_BLOCK_UNKNOWN
     );
   });
@@ -285,7 +285,7 @@ describe("gossip block validation", () => {
     forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot + 1} as ProtoBlock);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.phase0),
+      validateGossipBlock.call(chain.beaconEngine, job, ForkName.phase0),
       BlockErrorCode.NOT_LATER_THAN_PARENT
     );
   });
@@ -300,7 +300,7 @@ describe("gossip block validation", () => {
     regen.getPreState.mockRejectedValue(undefined);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.phase0),
+      validateGossipBlock.call(chain.beaconEngine, job, ForkName.phase0),
       BlockErrorCode.PARENT_BLOCK_UNKNOWN
     );
   });
@@ -316,7 +316,7 @@ describe("gossip block validation", () => {
     verifySignature.mockResolvedValue(false);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.phase0),
+      validateGossipBlock.call(chain.beaconEngine, job, ForkName.phase0),
       BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
     );
   });
@@ -335,7 +335,7 @@ describe("gossip block validation", () => {
     vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex + 1);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.phase0),
+      validateGossipBlock.call(chain.beaconEngine, job, ForkName.phase0),
       BlockErrorCode.INCORRECT_PROPOSER
     );
   });
@@ -353,7 +353,7 @@ describe("gossip block validation", () => {
     // Force proposer shuffling cache to return correct value
     vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
 
-    await validateGossipBlock(config, chain, job, ForkName.phase0);
+    await validateGossipBlock.call(chain.beaconEngine, job, ForkName.phase0);
 
     expect(regen.getState).toHaveBeenCalledOnce();
     expect(regen.getPreState).not.toHaveBeenCalled();
@@ -369,7 +369,7 @@ describe("gossip block validation", () => {
     verifySignature.mockResolvedValue(true);
     vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
 
-    await validateGossipBlock(config, chain, job, ForkName.phase0);
+    await validateGossipBlock.call(chain.beaconEngine, job, ForkName.phase0);
 
     expect(regen.getState).toHaveBeenCalledOnce();
     expect(regen.getPreState).toHaveBeenCalledOnce();
@@ -391,13 +391,14 @@ describe("gossip block validation", () => {
     verifySignature.mockResolvedValue(true);
     vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
 
-    await validateGossipBlock(config, chain, deepJob, ForkName.phase0);
+    await validateGossipBlock.call(chain.beaconEngine, deepJob, ForkName.phase0);
 
     expect(regen.getPreState).toHaveBeenCalledOnce();
     expect(regen.getState).not.toHaveBeenCalled();
   });
 
   it("deneb - TOO_MANY_KZG_COMMITMENTS", async () => {
+    (chain as {config: typeof config}).config = createBeaconConfig(denebConfig, Buffer.alloc(32, 0xaa));
     // Fill up with kzg commitments
     block.body.blobKzgCommitments = Array.from(
       {length: denebConfig.getMaxBlobsPerBlock(denebConfig.DENEB_FORK_EPOCH)},
@@ -418,12 +419,13 @@ describe("gossip block validation", () => {
     (job as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>).message.body.blobKzgCommitments.push(new Uint8Array([0]));
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(denebConfig, chain, job, ForkName.deneb),
+      validateGossipBlock.call(chain.beaconEngine, job, ForkName.deneb),
       BlockErrorCode.TOO_MANY_KZG_COMMITMENTS
     );
   });
 
   it("deneb - valid", async () => {
+    (chain as {config: typeof config}).config = createBeaconConfig(denebConfig, Buffer.alloc(32, 0xaa));
     // Fill up with kzg commitments
     block.body.blobKzgCommitments = Array.from(
       {length: denebConfig.getMaxBlobsPerBlock(denebConfig.DENEB_FORK_EPOCH)},
@@ -442,6 +444,6 @@ describe("gossip block validation", () => {
     vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
     // Keep number of kzg commitments as is so it stays within the limit
 
-    await validateGossipBlock(denebConfig, chain, job, ForkName.deneb);
+    await validateGossipBlock.call(chain.beaconEngine, job, ForkName.deneb);
   });
 });

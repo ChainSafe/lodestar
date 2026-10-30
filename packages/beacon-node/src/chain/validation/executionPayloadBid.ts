@@ -12,8 +12,8 @@ import {
 import {RootHex, Slot, ValidatorIndex, gloas, heze} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
-import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
 /**
@@ -51,7 +51,7 @@ function getMinBidValue(currentHighestBid: number): number {
  * Otherwise the bid must build on the local head's full or empty payload variant, as selected for its slot.
  */
 function isBidCompatibleWithHead(
-  chain: IBeaconChain,
+  this: BeaconEngineCore,
   head: ProtoBlock,
   bidSlot: Slot,
   bidParentBlockRoot: RootHex,
@@ -67,7 +67,7 @@ function isBidCompatibleWithHead(
     // Epoch-boundary reorgs are allowed, but only propagate the bid if its parent matches the block
     // we predict a proposer would reorg onto — predictProposerHead returns the strong parent only
     // when the head is weak.
-    return chain.predictProposerHead().blockRoot === bidParentBlockRoot;
+    return this.predictProposerHead().blockRoot === bidParentBlockRoot;
   }
 
   if (bidParentBlockRoot !== head.blockRoot) {
@@ -76,7 +76,7 @@ function isBidCompatibleWithHead(
 
   const buildsOnHeadPayload = bidParentBlockHash === head.executionPayloadBlockHash;
 
-  if (chain.forkChoice.shouldBuildOnFull(head, bidSlot)) {
+  if (this.forkChoice.shouldBuildOnFull(head, bidSlot)) {
     return buildsOnHeadPayload;
   }
 
@@ -84,14 +84,14 @@ function isBidCompatibleWithHead(
 }
 
 export async function validateGossipExecutionPayloadBid(
-  chain: IBeaconChain,
+  this: BeaconEngineCore,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<{proposerIndex: ValidatorIndex}> {
-  return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
+  return validateExecutionPayloadBid.call(this, signedExecutionPayloadBid);
 }
 
 async function validateExecutionPayloadBid(
-  chain: IBeaconChain,
+  this: BeaconEngineCore,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<{proposerIndex: ValidatorIndex}> {
   const bid = signedExecutionPayloadBid.message;
@@ -120,7 +120,7 @@ async function validateExecutionPayloadBid(
   // consensus layer -- i.e. validate that
   // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
   const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
-  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  const maxBlobsPerBlock = this.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
   if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
@@ -131,8 +131,8 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
   if (
-    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
-    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
+    !this.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
+    !this.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
@@ -143,8 +143,8 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] The bid is received after the inclusion list deadline of `bid.slot - 1`
   if (
-    isForkPostHeze(chain.config.getForkName(bid.slot)) &&
-    chain.clock.msFromSlot(bid.slot - 1) < chain.config.getInclusionListDueMs(chain.config.getForkName(bid.slot - 1))
+    isForkPostHeze(this.config.getForkName(bid.slot)) &&
+    this.clock.msFromSlot(bid.slot - 1) < this.config.getInclusionListDueMs(this.config.getForkName(bid.slot - 1))
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BEFORE_INCLUSION_LIST_DEADLINE,
@@ -154,8 +154,8 @@ async function validateExecutionPayloadBid(
   }
 
   // [IGNORE] The bid is compatible with the current head branch.
-  const head = chain.forkChoice.getHead();
-  if (!isBidCompatibleWithHead(chain, head, bid.slot, bidParentBlockRoot, bidParentBlockHash)) {
+  const head = this.forkChoice.getHead();
+  if (!isBidCompatibleWithHead.call(this, head, bid.slot, bidParentBlockRoot, bidParentBlockHash)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD,
       slot: bid.slot,
@@ -169,7 +169,7 @@ async function validateExecutionPayloadBid(
   // the tuple `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
   // Entries are only added after signature verification, so known tuples can be dropped before
   // state regeneration and the other expensive validation steps.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
+  if (this.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
       builderIndex: bid.builderIndex,
@@ -182,7 +182,7 @@ async function validateExecutionPayloadBid(
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
   // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
   // proposer-preferences lookup below from a known fork-choice block.
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(bidParentBlockRoot);
+  const parentBlock = this.forkChoice.getBlockHexDefaultStatus(bidParentBlockRoot);
   if (parentBlock === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
@@ -203,17 +203,17 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] bid.inclusionListBits is inclusive of our timely inclusion lists for
   // (bid.slot - 1, get_shuffling_dependent_root(store, bid.parent_block_root, epoch)).
-  if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
+  if (isForkPostHeze(this.config.getForkName(bid.slot))) {
     const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
     const inclusionListSlot = bid.slot - 1;
     const inclusionListDependentRoot = getShufflingDependentRoot(
-      chain.forkChoice,
+      this.forkChoice,
       computeEpochAtSlot(inclusionListSlot),
       computeEpochAtSlot(parentBlock.slot),
       parentBlock
     );
     if (
-      !chain.inclusionListStore.isInclusionListBitsInclusive(
+      !this.inclusionListStore.isInclusionListBitsInclusive(
         inclusionListSlot,
         inclusionListDependentRoot,
         inclusionListBits
@@ -239,7 +239,7 @@ async function validateExecutionPayloadBid(
   // letting a raw `ForkChoiceError` escape the `GossipActionError` contract.
   const dependentRootHex = (() => {
     try {
-      return getShufflingDependentRoot(chain.forkChoice, bidEpoch, computeEpochAtSlot(parentBlock.slot), parentBlock);
+      return getShufflingDependentRoot(this.forkChoice, bidEpoch, computeEpochAtSlot(parentBlock.slot), parentBlock);
     } catch {
       return null;
     }
@@ -256,7 +256,7 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  const proposerPreferences = chain.proposerPreferencesPool.get(bid.slot, dependentRootHex);
+  const proposerPreferences = this.proposerPreferencesPool.get(bid.slot, dependentRootHex);
   if (proposerPreferences === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES,
@@ -267,7 +267,7 @@ async function validateExecutionPayloadBid(
   }
 
   // Use the bid's parent branch state for builder checks
-  const state = await chain.regen
+  const state = await this.regen
     .getBlockSlotState(parentBlock, bid.slot, {dontTransferCache: true}, RegenCaller.validateGossipExecutionPayloadBid)
     .catch(() => {
       throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
@@ -328,7 +328,7 @@ async function validateExecutionPayloadBid(
   // payload's hash) and EMPTY parents (EMPTY/PENDING variants carry the inherited parent
   // payload's hash, since the new block doesn't have its own payload). Variant carries the
   // executed payload's gas_limit, which we use as `parent_gas_limit` below.
-  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(bidParentBlockRoot, bidParentBlockHash);
+  const parentPayloadVariant = this.forkChoice.getBlockHexAndBlockHash(bidParentBlockRoot, bidParentBlockHash);
   if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
@@ -357,7 +357,7 @@ async function validateExecutionPayloadBid(
   // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
   // increment, see https://github.com/ethereum/consensus-specs/pull/4831. This prevents spam
   // from builders submitting numerous bids with minimal value increments.
-  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHash, bidParentBlockRoot);
+  const bestBid = this.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHash, bidParentBlockRoot);
   if (bestBid !== null && bid.value < getMinBidValue(bestBid.signedBid.message.value)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
@@ -389,7 +389,7 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] The parent's payload does not try to exit the builder
   if (byteArrayEquals(bid.parentBlockHash, state.latestExecutionPayloadBid.blockHash)) {
-    const requests = await chain.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot).catch(() => {
+    const requests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot).catch(() => {
       throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
         code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
         parentBlockHash: bidParentBlockHash,
@@ -413,11 +413,11 @@ async function validateExecutionPayloadBid(
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
     builder.pubkey,
-    getExecutionPayloadBidSigningRoot(chain.config, bid),
+    getExecutionPayloadBidSigningRoot(this.config, bid),
     signedExecutionPayloadBid.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+  if (!(await this.bls.verifySignatureSets([signatureSet]))) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
       builderIndex: bid.builderIndex,
@@ -427,7 +427,7 @@ async function validateExecutionPayloadBid(
 
   // Repeat the seen check after the awaited signature verification to prevent concurrent bids
   // for the same builder and tuple from both passing validation.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
+  if (this.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
       builderIndex: bid.builderIndex,
@@ -438,7 +438,7 @@ async function validateExecutionPayloadBid(
   }
 
   // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot);
+  this.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }

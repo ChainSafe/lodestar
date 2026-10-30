@@ -61,7 +61,8 @@ export function createSpecTestBeaconMetrics(genesisTime: number): Metrics {
 
 export async function expectNoProgressiveBalancesMismatches(
   register: RegistryMetricCreator,
-  testCaseName: string
+  testCaseName: string,
+  nativeBaselineRegister: RegistryMetricCreator = register
 ): Promise<void> {
   const metrics = await register.getMetricsAsJSON();
   const metric = metrics.find(({name}) => name === progressiveBalancesMismatchesMetricName);
@@ -70,7 +71,7 @@ export async function expectNoProgressiveBalancesMismatches(
 
   expect(mismatches, `${testCaseName} incremented ${progressiveBalancesMismatchesMetricName}`).toBe(0);
   if (nativeStateTransition) {
-    const baseline = nativeBaselines.get(register);
+    const baseline = nativeBaselines.get(nativeBaselineRegister);
     if (baseline === undefined) throw Error("Native mismatch counter baseline was not captured");
     const current = readNativeProgressiveBalancesMismatches(nativeMetrics.scrapeMetrics());
     expect(current - baseline, `${testCaseName} incremented native ${progressiveBalancesMismatchesMetricName}`).toBe(0);

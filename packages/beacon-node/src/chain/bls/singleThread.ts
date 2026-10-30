@@ -4,9 +4,14 @@ import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier, SameMessageSignatureSet} from "./interface.js";
 import {chunkSameMessageSignatureSets, getAggregatedPubkeysCount, verifySignatureSetsInBatches} from "./utils.js";
 
+type BlsSingleThreadMetrics = {
+  bls: Pick<Metrics["bls"], "aggregatedPubkeys">;
+  blsThreadPool: Pick<Metrics["blsThreadPool"], "mainThreadDurationInThreadPool">;
+};
+
 export class BlsSingleThreadVerifier implements IBlsVerifier {
-  private readonly metrics: Metrics | null;
-  constructor({metrics = null}: {metrics: Metrics | null}) {
+  private readonly metrics: BlsSingleThreadMetrics | null;
+  constructor({metrics = null}: {metrics: BlsSingleThreadMetrics | null}) {
     this.metrics = metrics;
   }
 

@@ -1,32 +1,16 @@
 import {routes} from "@lodestar/api";
-import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice} from "@lodestar/fork-choice";
-import {blockToHeader} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
+import {IChainView} from "../../../../chain/chainView/interface.js";
 import {IBeaconChain} from "../../../../chain/interface.js";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {rootHexRegex} from "../../../../execution/engine/utils.js";
 import {ApiError, ValidationError} from "../../errors.js";
 
-export function toBeaconHeaderResponse(
-  config: ChainForkConfig,
-  block: SignedBeaconBlock,
-  canonical = false
-): routes.beacon.BlockHeaderResponse {
-  return {
-    root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
-    canonical,
-    header: {
-      message: blockToHeader(config, block.message),
-      signature: block.signature,
-    },
-  };
-}
-
-export function resolveBlockId(forkChoice: IForkChoice, blockId: routes.beacon.BlockId): RootHex | Slot {
+export function resolveBlockId(chainView: IChainView, blockId: routes.beacon.BlockId): RootHex | Slot {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
-    return forkChoice.getHead().blockRoot;
+    return chainView.getHead().blockRoot;
   }
 
   if (blockId === "genesis") {
@@ -34,11 +18,11 @@ export function resolveBlockId(forkChoice: IForkChoice, blockId: routes.beacon.B
   }
 
   if (blockId === "finalized") {
-    return forkChoice.getFinalizedBlock().blockRoot;
+    return chainView.getFinalizedBlock().blockRoot;
   }
 
   if (blockId === "justified") {
-    return forkChoice.getJustifiedBlock().blockRoot;
+    return chainView.getJustifiedBlock().blockRoot;
   }
 
   if (blockId.startsWith("0x")) {
@@ -60,12 +44,12 @@ export async function getBlockResponse(
   chain: IBeaconChain,
   blockId: routes.beacon.BlockId
 ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
-  const rootOrSlot = resolveBlockId(chain.forkChoice, blockId);
+  const rootOrSlot = resolveBlockId(chain.beaconEngine.chainView, blockId);
 
   const res =
     typeof rootOrSlot === "string"
-      ? await chain.getBlockByRoot(rootOrSlot)
-      : await chain.getCanonicalBlockAtSlot(rootOrSlot);
+      ? await chain.beaconEngine.getBlockByRoot(fromHex(rootOrSlot))
+      : await chain.beaconEngine.getCanonicalBlockAtSlot(rootOrSlot);
 
   if (!res) {
     throw new ApiError(404, `Block not found for id '${blockId}'`);

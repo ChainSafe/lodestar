@@ -533,11 +533,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
   }
 
   getSerializedCacheKeys(): object[] {
-    const objects: object[] = [];
-
-    if (this.state.hasBlock) {
-      objects.push(this.state.block);
-    }
+    const objects: object[] = this.state.hasBlock ? [this.state.block] : [];
 
     for (const {blobSidecar} of this.blobsCache.values()) {
       objects.push(blobSidecar);
@@ -930,11 +926,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   }
 
   getSerializedCacheKeys(): object[] {
-    const objects: object[] = [];
-
-    if (this.state.hasBlock) {
-      objects.push(this.state.block);
-    }
+    const objects: object[] = this.state.hasBlock ? [this.state.block] : [];
 
     objects.push(...this.getAllColumns());
 

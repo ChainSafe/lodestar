@@ -5,13 +5,13 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, deneb} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
 
 export async function* onBlobSidecarsByRange(
   request: deneb.BlobSidecarsByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconChainDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of blobs
   const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, chain.clock.currentEpoch, request);
@@ -19,7 +19,7 @@ export async function* onBlobSidecarsByRange(
 
   const finalized = db.blobSidecarsArchive;
   const unfinalized = db.blobSidecars;
-  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  const finalizedSlot = chain.beaconEngine.chainView.getFinalizedBlock().slot;
   // Blobs are migrated to blobSidecarsArchive at finalization (including the finalized block
   // itself), so the archive loop serves up to AND INCLUDING finalizedSlot and the headChain
   // loop starts above it to avoid duplicate yields. See archiveBlocks.ts for the migration logic.
@@ -38,10 +38,10 @@ export async function* onBlobSidecarsByRange(
 
   // Non-finalized range of blobs
   if (endSlot > archiveMaxSlot) {
-    const headBlock = chain.forkChoice.getHead();
+    const headBlock = chain.beaconEngine.chainView.getHead();
     const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+    const headChain = chain.beaconEngine.chainView.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
     // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
 
     // Iterate head chain with ascending block numbers

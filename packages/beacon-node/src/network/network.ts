@@ -34,7 +34,7 @@ import {prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
-import {IBeaconDb} from "../db/interface.js";
+import {IBeaconChainDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
@@ -43,6 +43,7 @@ import {promiseAllMaybeAsync} from "../util/promises.js";
 import {
   BeaconBlocksByRootRequest,
   BlobSidecarsByRootRequest,
+  BlockWithBytes,
   DataColumnSidecarsByRootRequest,
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
@@ -60,7 +61,6 @@ import {INetwork} from "./interface.js";
 import {NetworkOptions} from "./options.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {PeerSyncMeta} from "./peers/peersData.js";
-import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
 import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
@@ -80,7 +80,6 @@ type NetworkModules = {
   logger: LoggerNode;
   chain: IBeaconChain;
   networkEventBus: NetworkEventBus;
-  aggregatorTracker: AggregatorTracker;
   networkProcessor: NetworkProcessor;
   core: INetworkCore;
 };
@@ -88,12 +87,13 @@ type NetworkModules = {
 export type NetworkInitModules = {
   opts: NetworkOptions;
   config: BeaconConfig;
+  activeValidatorCount: number;
   privateKey: PrivateKey;
   peerStoreDir?: string;
   logger: LoggerNode;
   metrics: Metrics | null;
   chain: IBeaconChain;
-  db: IBeaconDb;
+  db: IBeaconChainDb;
   getReqRespHandler: GetReqRespHandlerFn;
   // Optionally pass custom GossipHandlers, for testing
   gossipHandlers?: GossipHandlers;
@@ -123,7 +123,6 @@ export class Network implements INetwork {
   // TODO: Review
   private readonly networkProcessor: NetworkProcessor;
   private readonly core: INetworkCore;
-  private readonly aggregatorTracker: AggregatorTracker;
 
   private subscribedToCoreTopics = false;
   private connectedPeersSyncMeta = new Map<PeerIdStr, Omit<PeerSyncMeta, "peerId">>();
@@ -139,11 +138,9 @@ export class Network implements INetwork {
     this.events = modules.networkEventBus;
     this.networkProcessor = modules.networkProcessor;
     this.core = modules.core;
-    this.aggregatorTracker = modules.aggregatorTracker;
 
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
-    this.chain.emitter.on(routes.events.EventType.head, this.onHead);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) =>
       this.onLightClientFinalityUpdate(data)
     );
@@ -160,6 +157,7 @@ export class Network implements INetwork {
   static async init({
     opts,
     config,
+    activeValidatorCount,
     logger,
     metrics,
     chain,
@@ -170,9 +168,7 @@ export class Network implements INetwork {
     getReqRespHandler,
   }: NetworkInitModules): Promise<Network> {
     const events = new NetworkEventBus();
-    const aggregatorTracker = new AggregatorTracker();
 
-    const activeValidatorCount = chain.getHeadState().activeValidatorCount;
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
 
@@ -214,7 +210,7 @@ export class Network implements INetwork {
         });
 
     const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
+      {chain, db, config, logger, metrics, events, gossipHandlers, core},
       opts
     );
 
@@ -229,7 +225,6 @@ export class Network implements INetwork {
       logger,
       chain,
       networkEventBus: events,
-      aggregatorTracker,
       networkProcessor,
       core,
     });
@@ -245,7 +240,6 @@ export class Network implements INetwork {
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
-    this.chain.emitter.off(routes.events.EventType.head, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
@@ -268,13 +262,6 @@ export class Network implements INetwork {
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
-    for (const subscription of subscriptions) {
-      if (subscription.isAggregator) {
-        this.aggregatorTracker.addAggregator(subscription.subnet, subscription.slot);
-      }
-    }
-    this.aggregatorTracker.prune();
-
     return this.core.prepareBeaconCommitteeSubnets(subscriptions);
   }
 
@@ -346,10 +333,6 @@ export class Network implements INetwork {
 
   isSubscribedToGossipCoreTopics(): boolean {
     return this.subscribedToCoreTopics;
-  }
-
-  shouldAggregate(subnet: SubnetID, slot: number): boolean {
-    return this.aggregatorTracker.shouldAggregate(subnet, slot);
   }
 
   // Gossip
@@ -574,10 +557,13 @@ export class Network implements INetwork {
 
   // ReqResp
 
+  /**
+   * Return decoded blocks and original bytes so the caller can retain them in SerializedCache after response validation.
+   */
   async sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<SignedBeaconBlock[]> {
+  ): Promise<BlockWithBytes[]> {
     return collectSequentialBlocksInRange(
       this.sendReqRespRequest(
         peerId,
@@ -587,11 +573,11 @@ export class Network implements INetwork {
         request
       ),
       request,
-      this.chain.serializedCache
+      (block, bytes) => ({block, bytes})
     );
   }
 
-  async sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]> {
+  async sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<BlockWithBytes[]> {
     return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(
         peerId,
@@ -602,19 +588,16 @@ export class Network implements INetwork {
       ),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
-      this.chain.serializedCache
+      (block, bytes) => ({block, bytes})
     );
   }
 
-  async sendBeaconBlocksByHead(
-    peerId: PeerIdStr,
-    request: fulu.BeaconBlocksByHeadRequest
-  ): Promise<SignedBeaconBlock[]> {
+  async sendBeaconBlocksByHead(peerId: PeerIdStr, request: fulu.BeaconBlocksByHeadRequest): Promise<BlockWithBytes[]> {
     return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlocksByHead, [Version.V1], request),
       Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
-      this.chain.serializedCache
+      (block, bytes) => ({block, bytes})
     );
   }
 
@@ -828,10 +811,6 @@ export class Network implements INetwork {
     const fork = this.config.getForkName(slot);
     const msToCutoffTime = this.config.getSyncMessageDueMs(fork) - this.chain.clock.msFromSlot(slot);
     await sleep(msToCutoffTime, this.controller.signal);
-  };
-
-  private onHead = async (): Promise<void> => {
-    await this.onUpdateStatus();
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {

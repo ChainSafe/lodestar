@@ -1,4 +1,4 @@
-import {EpochDifference, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {EpochDifference, IForkChoiceRead, ProtoBlock} from "@lodestar/fork-choice";
 import {Epoch, RootHex} from "@lodestar/types";
 
 /**
@@ -9,7 +9,7 @@ import {Epoch, RootHex} from "@lodestar/types";
  * a dependent root of a proposal duties is 1-epoch look ahead (instead of 0 as of pre-fulu)
  */
 export function getShufflingDependentRoot(
-  forkChoice: IForkChoice,
+  forkChoice: IForkChoiceRead,
   msgEpoch: Epoch,
   protoBlockEpoch: Epoch,
   protoBlock: ProtoBlock

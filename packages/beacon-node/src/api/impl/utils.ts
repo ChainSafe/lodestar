@@ -34,7 +34,7 @@ export function notWhileSyncing(chain: IBeaconChain, syncState: SyncState): void
     case SyncState.SyncingFinalized:
     case SyncState.SyncingHead: {
       const currentSlot = chain.clock.currentSlot;
-      const headSlot = chain.forkChoice.getHead().slot;
+      const headSlot = chain.beaconEngine.chainView.getHead().slot;
       if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
         throw new NodeIsSyncing(`headSlot ${headSlot} currentSlot ${currentSlot}`);
       }

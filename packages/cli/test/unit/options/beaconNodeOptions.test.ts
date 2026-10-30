@@ -1,7 +1,9 @@
 import os from "node:os";
 import {describe, expect, it} from "vitest";
-import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import yargs from "yargs";
+import {ArchiveMode, BeaconEngineMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
+import {options as chainOptions} from "../../../src/options/beaconNodeOptions/chain.js";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {
   NetworkArgs,
@@ -11,6 +13,35 @@ import {
 } from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
+  describe("beacon engine mode", () => {
+    function parseMode(args: string[]) {
+      return yargs(args)
+        .parserConfiguration({"dot-notation": false})
+        .option("chain.beaconEngineMode", chainOptions["chain.beaconEngineMode"])
+        .exitProcess(false)
+        .fail((message) => {
+          throw new Error(message);
+        })
+        .parseSync()["chain.beaconEngineMode"];
+    }
+
+    it("defaults to main-thread", () => {
+      expect(parseMode([])).toBe(BeaconEngineMode.MainThread);
+      expect(parseBeaconNodeArgs({} as BeaconNodeArgs).chain?.beaconEngineMode).toBe(BeaconEngineMode.MainThread);
+    });
+
+    it.each(Object.values(BeaconEngineMode))("accepts %s", (mode) => {
+      expect(parseMode(["--chain.beaconEngineMode", mode])).toBe(mode);
+      expect(parseBeaconNodeArgs({"chain.beaconEngineMode": mode} as BeaconNodeArgs).chain?.beaconEngineMode).toBe(
+        mode
+      );
+    });
+
+    it("rejects an unknown mode", () => {
+      expect(() => parseMode(["--chain.beaconEngineMode", "unknown"])).toThrow("Invalid values");
+    });
+  });
+
   it("Should parse BeaconNodeArgs", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
@@ -25,6 +56,7 @@ describe("options / beaconNodeOptions", () => {
       "rest.bodyLimit": 30e6,
       "rest.stacktraces": true,
 
+      "chain.beaconEngineMode": BeaconEngineMode.Worker,
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
@@ -43,6 +75,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.disableProposerSlashings": true,
       "chain.archiveStateEpochFrequency": 1024,
       "chain.minSameMessageSignatureSetsToBatch": 32,
+      "chain.dontSendGossipAttestationsToForkchoice": true,
       "chain.maxShufflingCacheEpochs": 100,
       "chain.archiveDataEpochs": 10000,
       "chain.nHistoricalStatesFileDataStore": true,
@@ -94,7 +127,6 @@ describe("options / beaconNodeOptions", () => {
       "network.blockCountTotalLimit": 1000,
       "network.blockCountPeerLimit": 500,
       "network.rateTrackerTimeoutMs": 60000,
-      "network.dontSendGossipAttestationsToForkchoice": true,
       "network.allowPublishToZeroPeers": true,
       "network.gossipsubD": 4,
       "network.gossipsubDLow": 2,
@@ -128,6 +160,7 @@ describe("options / beaconNodeOptions", () => {
         },
       },
       chain: {
+        beaconEngineMode: BeaconEngineMode.Worker,
         blsVerifyAllMultiThread: true,
         blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
@@ -147,6 +180,7 @@ describe("options / beaconNodeOptions", () => {
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
         minSameMessageSignatureSetsToBatch: 32,
+        dontSendGossipAttestationsToForkchoice: true,
         maxShufflingCacheEpochs: 100,
         archiveDataEpochs: 10000,
         archiveMode: ArchiveMode.Frequency,
@@ -202,7 +236,6 @@ describe("options / beaconNodeOptions", () => {
         disablePeerScoring: true,
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
-        dontSendGossipAttestationsToForkchoice: true,
         allowPublishToZeroPeers: true,
         gossipsubD: 4,
         gossipsubDLow: 2,

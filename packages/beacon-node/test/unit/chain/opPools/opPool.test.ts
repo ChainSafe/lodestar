@@ -96,13 +96,8 @@ function makeChain(state: BeaconStateView, beaconConfig: BeaconConfig = config) 
   const chain = getMockedBeaconChain({config: beaconConfig});
   chain.getHeadState.mockReturnValue(state);
   const bls = new BlsSingleThreadVerifier({metrics: null});
-  return {
-    ...chain,
-    bls: {
-      ...chain.bls,
-      verifySignatureSets: vi.fn((sets: ISignatureSet[]) => bls.verifySignatureSets(sets)),
-    },
-  };
+  chain.bls.verifySignatureSets.mockImplementation((sets: ISignatureSet[]) => bls.verifySignatureSets(sets));
+  return chain;
 }
 
 function makeProposerSlashing(headerSlot: number, signingStateSlot: number, beaconConfig = config, validatorIndex = 0) {
@@ -146,7 +141,7 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
   it("excludes proposer slashings with future-slot headers that become invalid at the fork", async () => {
     const chain = makeChain(makeState(beforeSlot, beaconConfig), beaconConfig);
     const slashing = makeProposerSlashing(afterSlot, beforeSlot, beaconConfig);
-    const verifiedDomain = await validateGossipProposerSlashing(chain, slashing);
+    const verifiedDomain = await validateGossipProposerSlashing.call(chain.beaconEngine, slashing);
     const pool = new OpPool(beaconConfig);
     pool.insertProposerSlashing(slashing, verifiedDomain);
 
@@ -163,7 +158,7 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
   it("excludes attester slashings with future target epochs that become invalid at the fork", async () => {
     const chain = makeChain(makeState(beforeSlot, beaconConfig), beaconConfig);
     const slashing = makeAttesterSlashing(1, beforeSlot, beaconConfig);
-    const verifiedDomains = await validateGossipAttesterSlashing(chain, slashing);
+    const verifiedDomains = await validateGossipAttesterSlashing.call(chain.beaconEngine, slashing);
     const pool = new OpPool(beaconConfig);
     pool.insertAttesterSlashing(beaconConfig.getForkName(beforeSlot), slashing, verifiedDomains);
 
@@ -185,11 +180,14 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
     const proposerSlashing = makeProposerSlashing(beforeSlot, beforeSlot, beaconConfig);
     const attesterSlashing = makeAttesterSlashing(0, beforeSlot, beaconConfig, 1);
     const pool = new OpPool(beaconConfig);
-    pool.insertProposerSlashing(proposerSlashing, await validateGossipProposerSlashing(chain, proposerSlashing));
+    pool.insertProposerSlashing(
+      proposerSlashing,
+      await validateGossipProposerSlashing.call(chain.beaconEngine, proposerSlashing)
+    );
     pool.insertAttesterSlashing(
       beaconConfig.getForkName(beforeSlot),
       attesterSlashing,
-      await validateGossipAttesterSlashing(chain, attesterSlashing)
+      await validateGossipAttesterSlashing.call(chain.beaconEngine, attesterSlashing)
     );
     chain.bls.verifySignatureSets.mockClear();
 
@@ -211,11 +209,14 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
     const proposerSlashing = makeProposerSlashing(afterSlot, beforeSlot, beaconConfig);
     const attesterSlashing = makeAttesterSlashing(0, beforeSlot, beaconConfig);
     const pool = new OpPool(beaconConfig);
-    pool.insertProposerSlashing(proposerSlashing, await validateGossipProposerSlashing(chain, proposerSlashing));
+    pool.insertProposerSlashing(
+      proposerSlashing,
+      await validateGossipProposerSlashing.call(chain.beaconEngine, proposerSlashing)
+    );
     pool.insertAttesterSlashing(
       beaconConfig.getForkName(beforeSlot),
       attesterSlashing,
-      await validateGossipAttesterSlashing(chain, attesterSlashing)
+      await validateGossipAttesterSlashing.call(chain.beaconEngine, attesterSlashing)
     );
 
     const [attesterSlashings, proposerSlashings] = pool.getSlashingsAndExits(
@@ -236,7 +237,7 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
       pool.insertAttesterSlashing(
         beaconConfig.getForkName(beforeSlot),
         slashing,
-        await validateGossipAttesterSlashing(chain, slashing)
+        await validateGossipAttesterSlashing.call(chain.beaconEngine, slashing)
       );
     }
 
@@ -250,11 +251,14 @@ describe("slashing verification context", () => {
     const proposerSlashing = makeProposerSlashing(beforeSlot, beforeSlot);
     const attesterSlashing = makeAttesterSlashing(0, beforeSlot, config, 1);
     const pool = new OpPool(config);
-    pool.insertProposerSlashing(proposerSlashing, await validateGossipProposerSlashing(chain, proposerSlashing));
+    pool.insertProposerSlashing(
+      proposerSlashing,
+      await validateGossipProposerSlashing.call(chain.beaconEngine, proposerSlashing)
+    );
     pool.insertAttesterSlashing(
       config.getForkName(beforeSlot),
       attesterSlashing,
-      await validateGossipAttesterSlashing(chain, attesterSlashing)
+      await validateGossipAttesterSlashing.call(chain.beaconEngine, attesterSlashing)
     );
 
     const [attesterSlashings, proposerSlashings] = pool.getSlashingsAndExits(
@@ -274,7 +278,7 @@ describe("slashing verification context", () => {
     const before = makeState(3 * SLOTS_PER_EPOCH, beaconConfig);
     const chain = makeChain(before, beaconConfig);
     const slashing = makeAttesterSlashing(3, before.slot, beaconConfig, 0, 2);
-    const verifiedDomains = await validateGossipAttesterSlashing(chain, slashing);
+    const verifiedDomains = await validateGossipAttesterSlashing.call(chain.beaconEngine, slashing);
     expect(verifiedDomains[0]).not.toEqual(verifiedDomains[1]);
     const pool = new OpPool(beaconConfig);
     pool.insertAttesterSlashing(beaconConfig.getForkName(before.slot), slashing, verifiedDomains);
@@ -305,12 +309,14 @@ describe("slashing verification context", () => {
       const attesterSlashing = makeAttesterSlashing(1, beforeSlot);
       const validation =
         kind === "proposer"
-          ? validateGossipProposerSlashing(chain, proposerSlashing).then((domain) =>
-              pool.insertProposerSlashing(proposerSlashing, domain)
-            )
-          : validateGossipAttesterSlashing(chain, attesterSlashing).then((domains) =>
-              pool.insertAttesterSlashing(config.getForkName(beforeSlot), attesterSlashing, domains)
-            );
+          ? validateGossipProposerSlashing
+              .call(chain.beaconEngine, proposerSlashing)
+              .then((domain) => pool.insertProposerSlashing(proposerSlashing, domain))
+          : validateGossipAttesterSlashing
+              .call(chain.beaconEngine, attesterSlashing)
+              .then((domains) =>
+                pool.insertAttesterSlashing(config.getForkName(beforeSlot), attesterSlashing, domains)
+              );
       await validation;
 
       const [attesterSlashings, proposerSlashings] = pool.getSlashingsAndExits(after, BlockType.Full, null);
@@ -328,11 +334,14 @@ describe("persisted slashings", () => {
     const proposerSlashing = makeProposerSlashing(afterSlot, afterSlot);
     const attesterSlashing = makeAttesterSlashing(1, afterSlot, config, 1);
     const pool = new OpPool(config);
-    pool.insertProposerSlashing(proposerSlashing, await validateGossipProposerSlashing(chain, proposerSlashing));
+    pool.insertProposerSlashing(
+      proposerSlashing,
+      await validateGossipProposerSlashing.call(chain.beaconEngine, proposerSlashing)
+    );
     pool.insertAttesterSlashing(
       config.getForkName(afterSlot),
       attesterSlashing,
-      await validateGossipAttesterSlashing(chain, attesterSlashing)
+      await validateGossipAttesterSlashing.call(chain.beaconEngine, attesterSlashing)
     );
     const {db, close} = await startIsolatedTmpBeaconDb(config);
     try {
@@ -360,7 +369,7 @@ describe("persisted slashings", () => {
     const chain = makeChain(head);
     const slashing = makeProposerSlashing(head.slot, head.slot);
     const pool = new OpPool(config);
-    pool.insertProposerSlashing(slashing, await validateGossipProposerSlashing(chain, slashing));
+    pool.insertProposerSlashing(slashing, await validateGossipProposerSlashing.call(chain.beaconEngine, slashing));
     const {db, close} = await startIsolatedTmpBeaconDb(config);
     try {
       await pool.toPersisted(db);
@@ -384,7 +393,7 @@ describe("persisted slashings", () => {
     const chain = makeChain(unslashed);
     const slashing = makeProposerSlashing(beforeSlot, beforeSlot);
     const pool = new OpPool(config);
-    pool.insertProposerSlashing(slashing, await validateGossipProposerSlashing(chain, slashing));
+    pool.insertProposerSlashing(slashing, await validateGossipProposerSlashing.call(chain.beaconEngine, slashing));
     const {db, close} = await startIsolatedTmpBeaconDb(config);
     try {
       await pool.toPersisted(db);
@@ -409,13 +418,16 @@ describe("persisted slashings", () => {
     const stale = makeProposerSlashing(afterSlot, beforeSlot);
     const replacement = makeProposerSlashing(afterSlot, afterSlot);
     const pool = new OpPool(config);
-    pool.insertProposerSlashing(stale, await validateGossipProposerSlashing(chain, stale));
+    pool.insertProposerSlashing(stale, await validateGossipProposerSlashing.call(chain.beaconEngine, stale));
     const {db, close} = await startIsolatedTmpBeaconDb(config);
     try {
       await pool.toPersisted(db);
       pool.getSlashingsAndExits(after, BlockType.Full, null);
       chain.getHeadState.mockReturnValue(after);
-      pool.insertProposerSlashing(replacement, await validateGossipProposerSlashing(chain, replacement));
+      pool.insertProposerSlashing(
+        replacement,
+        await validateGossipProposerSlashing.call(chain.beaconEngine, replacement)
+      );
       await pool.toPersisted(db);
 
       const restored = new OpPool(config);
@@ -442,13 +454,13 @@ describe("persisted slashings", () => {
       const validAttester = makeAttesterSlashing(0, beforeSlot, config, 1);
       const invalidAttester = makeAttesterSlashing(1, beforeSlot, config, 3);
       for (const slashing of [validProposer, invalidProposer]) {
-        pool.insertProposerSlashing(slashing, await validateGossipProposerSlashing(chain, slashing));
+        pool.insertProposerSlashing(slashing, await validateGossipProposerSlashing.call(chain.beaconEngine, slashing));
       }
       for (const slashing of [validAttester, invalidAttester]) {
         pool.insertAttesterSlashing(
           config.getForkName(beforeSlot),
           slashing,
-          await validateGossipAttesterSlashing(chain, slashing)
+          await validateGossipAttesterSlashing.call(chain.beaconEngine, slashing)
         );
       }
       const {db, close} = await startIsolatedTmpBeaconDb(config);

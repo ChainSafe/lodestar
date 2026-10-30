@@ -11,6 +11,7 @@ import {NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lo
 import {ssz} from "@lodestar/types";
 import {fromAsync, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
+import type {IChainView} from "../../../../src/chain/chainView/interface.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {encodeArchivedHeaderEnvelope} from "../../../../src/db/repositories/index.js";
@@ -91,18 +92,20 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
     return {
       config,
       clock: {currentEpoch: Math.floor(headSlot / SLOTS_PER_EPOCH)},
-      getHeadState: () => ({slot: headSlot}),
-      forkChoice: {
-        getFinalizedBlock: () => ({slot: headSlot - SLOTS_PER_EPOCH}),
-        getHead: () => ({blockRoot: "0x" + "00".repeat(32), payloadStatus: PayloadStatus.FULL}),
-        getAllAncestorBlocks: () => [],
+      beaconEngine: {
+        getFinalizedBlockRootBySlot: (slot: number) => db.blockArchive.getRootBySlot(slot),
+        getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range serving must not load blocks")),
+        chainView: {
+          getFinalizedBlock: () => ({slot: headSlot - SLOTS_PER_EPOCH}),
+          getHead: () => ({blockRoot: "0x" + "00".repeat(32), payloadStatus: PayloadStatus.FULL}),
+          getAllAncestorBlocks: () => [],
+        },
       },
       custodyConfig: {custodyColumns: [0, 1], custodyColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS).fill(1)},
       earliestAvailableSlot: 0,
       seenPayloadEnvelopeInputCache: {hasPayload: () => false},
       logger,
       metrics: null,
-      getCanonicalBlockAtSlot: vi.fn().mockRejectedValue(new Error("range serving must not load blocks")),
       getSerializedDataColumnSidecars: (slot: number, root: string, indices: number[]) =>
         BeaconChain.prototype.getSerializedDataColumnSidecars.call(fallbackChain, slot, root, indices),
     } as unknown as IBeaconChain;
@@ -162,20 +165,17 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
     expect(await requestRange(20, 1)).toEqual(columns);
   });
 
-  it.each(["fork choice", "head state"])("should preserve skipped slots known to %s", async (source) => {
+  it.each(["fork choice", "archive"])("should preserve skipped slots known to %s", async (source) => {
     await writeColumns(12, "legacy");
     await db.init();
     const chain = makeChain();
     if (source === "fork choice") {
-      vi.spyOn(chain.forkChoice, "getAllAncestorBlocks").mockReturnValue([
+      vi.spyOn(chain.beaconEngine.chainView, "getAllAncestorBlocks").mockReturnValue([
         {slot: 11, blockRoot: "0x" + "11".repeat(32), payloadStatus: PayloadStatus.FULL},
         {slot: 9, blockRoot: "0x" + "09".repeat(32), payloadStatus: PayloadStatus.FULL},
-      ] as ReturnType<IBeaconChain["forkChoice"]["getAllAncestorBlocks"]>);
+      ] as ReturnType<IChainView["getAllAncestorBlocks"]>);
     } else {
-      vi.spyOn(chain, "getHeadState").mockReturnValue({
-        slot: 100,
-        getBlockRootAtSlot: () => new Uint8Array(32),
-      } as unknown as ReturnType<IBeaconChain["getHeadState"]>);
+      await writeColumns(9, "flat");
     }
     const archiveRead = vi.spyOn(db.dataColumnSidecarArchive, "getManyBinary");
     expect(await requestRange(10, 1, chain)).toEqual([]);

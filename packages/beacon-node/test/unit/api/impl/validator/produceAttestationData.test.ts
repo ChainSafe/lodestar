@@ -1,7 +1,9 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
-import {toRootHex} from "@lodestar/utils";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {IBeaconStateView} from "@lodestar/state-transition";
+import {fromHex, toRootHex} from "@lodestar/utils";
+import {NodeIsSyncing} from "../../../../../src/api/impl/errors.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {
@@ -10,7 +12,9 @@ import {
 } from "../../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
+import {withBeaconEngineFacade} from "../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
+import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 
 describe("api - validator - produceAttestationData", () => {
   let modules: ApiTestModules;
@@ -43,6 +47,49 @@ describe("api - validator - produceAttestationData", () => {
     );
   });
 
+  it("produces attestation data from Core when the local view is stale", async () => {
+    const head = generateProtoBlock({
+      blockRoot: toRootHex(Buffer.alloc(32, 4)),
+      executionStatus: ExecutionStatus.Valid,
+    });
+    const source = {epoch: 0, root: new Uint8Array(32).fill(5)};
+    modules.forkChoice.getHead.mockReturnValue(head);
+    modules.forkChoice.getBlockDefaultStatus.mockReturnValue(head);
+    vi.mocked(modules.chain.beaconEngine.getHeadState).mockReturnValue({
+      slot: 0,
+      currentJustifiedCheckpoint: source,
+    } as IBeaconStateView);
+    vi.spyOn(modules.chain.beaconEngine.chainView, "getHead").mockImplementation(() => {
+      throw Error("Stale ChainView head");
+    });
+    vi.spyOn(modules.chain.beaconEngine.chainView, "getBlockDefaultStatus").mockImplementation(() => {
+      throw Error("Stale ChainView block");
+    });
+
+    const response = await api.produceAttestationData({slot: 0, committeeIndex: 2});
+    expect(response.data).toEqual({
+      slot: 0,
+      index: 2,
+      beaconBlockRoot: fromHex(head.blockRoot),
+      source,
+      target: {epoch: 0, root: fromHex(head.blockRoot)},
+    });
+  });
+
+  it("rejects an optimistic contribution using Core despite a locally known block", async () => {
+    const head = generateProtoBlock({executionStatus: ExecutionStatus.Syncing});
+    modules.forkChoice.hasBlock.mockReturnValue(true);
+    modules.forkChoice.getBlockDefaultStatus.mockReturnValue(head);
+    vi.spyOn(modules.chain.beaconEngine.chainView, "getBlockDefaultStatus").mockReturnValue(
+      generateProtoBlock({executionStatus: ExecutionStatus.Valid})
+    );
+    api = getValidatorApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
+
+    await expect(
+      api.produceSyncCommitteeContribution({slot: 0, subcommitteeIndex: 0, beaconBlockRoot: fromHex(head.blockRoot)})
+    ).rejects.toBeInstanceOf(NodeIsSyncing);
+  });
+
   describe("producePayloadAttestationData", () => {
     it("Should throw before Gloas", async () => {
       await expect(api.producePayloadAttestationData({slot: 0})).rejects.toThrow(
@@ -50,7 +97,11 @@ describe("api - validator - produceAttestationData", () => {
       );
     });
 
-    it("Should produce payload attestation data for the canonical block", async () => {
+    it.each([
+      [-0.001, true],
+      [0, false],
+      [0.001, false],
+    ] as const)("uses Core's canonical block and the envelope deadline offset %s", async (offset, expectedPresent) => {
       const gloasConfig = createChainForkConfig({
         ...defaultChainConfig,
         ALTAIR_FORK_EPOCH: 0,
@@ -69,7 +120,12 @@ describe("api - validator - produceAttestationData", () => {
         slot: 0,
         blockRoot: ZERO_HASH_HEX,
       } as ProtoBlock);
-      vi.mocked(modules.chain.clock.secFromSlot).mockReturnValue(0);
+      vi.spyOn(modules.chain.beaconEngine.chainView, "getCanonicalProtoBlockAtSlot").mockImplementation(() => {
+        throw Error("Stale ChainView canonical block");
+      });
+      vi.mocked(modules.chain.clock.secFromSlot).mockReturnValue(
+        gloasConfig.getPayloadDueMs(gloasConfig.getForkName(0)) / 1000 + offset
+      );
       vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue({
         hasPayloadEnvelope: () => true,
         getPayloadEnvelopeSource: () => ({source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0}),
@@ -83,7 +139,8 @@ describe("api - validator - produceAttestationData", () => {
 
       expect(toRootHex(res.data.beaconBlockRoot)).toBe(ZERO_HASH_HEX);
       expect(res.data.slot).toBe(0);
-      expect(res.data.payloadPresent).toBe(true);
+      expect(res.data.payloadPresent).toBe(expectedPresent);
+      expect(modules.chain.seenPayloadEnvelopeInputCache.get).toHaveBeenCalledWith(ZERO_HASH_HEX);
       expect(res.data.blobDataAvailable).toBe(true);
     });
 

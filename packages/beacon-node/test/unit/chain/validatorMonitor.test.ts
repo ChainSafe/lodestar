@@ -6,6 +6,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {OpSource, RootHexCache, ValidatorMonitor, createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
 import {RegistryMetricCreator} from "../../../src/metrics/index.js";
 import {getMockedLogger} from "../../mocks/loggerMock.js";
@@ -60,7 +61,10 @@ describe("ValidatorMonitor", () => {
     const block = timingConfig.getForkTypes(slot).BeaconBlock.defaultValue();
     block.slot = slot;
     block.proposerIndex = 1;
-    monitor.registerBeaconBlock(OpSource.api, 2, block);
+    monitor.registerBeaconBlock(OpSource.api, 2, {
+      ...block,
+      blockRoot: toRootHex(timingConfig.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+    });
     const indexedAttestation = ssz.phase0.IndexedAttestation.defaultValue();
     indexedAttestation.attestingIndices = [1];
     indexedAttestation.data.slot = slot;

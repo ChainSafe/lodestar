@@ -116,7 +116,7 @@ export const SignedBeaconBlock = new ContainerType(
     message: BeaconBlock, // Modified in DENEB
     signature: BLSSignature,
   },
-  {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+  {typeName: "SignedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const KzgCommitmentInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENT_INCLUSION_PROOF_DEPTH);

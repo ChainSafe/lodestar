@@ -37,7 +37,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   ) {
     this.metrics = metrics ?? null;
 
-    if (this.metrics) {
+    if (this.metrics?.dbSizeTotal) {
       this.collectDbSizeMetric();
     }
   }
@@ -81,7 +81,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     }
 
     this.metrics = metrics;
-    if (this.status === Status.started) {
+    if (this.status === Status.started && this.metrics.dbSizeTotal) {
       this.collectDbSizeMetric();
     }
   }
@@ -230,13 +230,13 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 
   /** Capture metric for db size */
   private dbSizeMetric(): void {
-    const timer = this.metrics?.dbApproximateSizeTime.startTimer();
+    const timer = this.metrics?.dbApproximateSizeTime?.startTimer();
     const minKey = Buffer.from([0x00]);
     const maxKey = Buffer.from([0xff]);
 
     this.approximateSize(minKey, maxKey)
       .then((dbSize) => {
-        this.metrics?.dbSizeTotal.set(dbSize);
+        this.metrics?.dbSizeTotal?.set(dbSize);
       })
       .catch((e) => {
         this.logger.debug("Error approximating db size", {}, e);

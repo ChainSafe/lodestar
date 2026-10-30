@@ -35,6 +35,10 @@ import {
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
 import {
+  GossipValidationResult,
+  GossipValidationStatus,
+} from "../../../src/chain/beaconEngine/gossipValidationResult.js";
+import {
   BlockInputBlobs,
   BlockInputColumns,
   BlockInputNoData,
@@ -48,14 +52,7 @@ import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
 import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../../src/chain/validation/attestation.js";
-import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
-import {validateGossipBlock} from "../../../src/chain/validation/block.js";
-import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
 import {validateGossipInclusionList} from "../../../src/chain/validation/inclusionList.js";
-import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
-import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
-import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
@@ -63,6 +60,8 @@ import {GossipType} from "../../../src/network/gossip/interface.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {createBeaconChain} from "../../utils/chain.js";
+import {getBeaconEngineCore} from "../../utils/engine.js";
 import {loadSpecTestConfig} from "./loadSpecTestConfig.js";
 
 /**
@@ -251,7 +250,7 @@ function setFinalizedCheckpoint(chain: BeaconChain, checkpoint: FinalizedCheckpo
     rootHex: checkpoint.rootHex,
   };
 
-  const forkChoice = chain.forkChoice as unknown as {
+  const forkChoice = getBeaconEngineCore(chain.beaconEngine).forkChoice as unknown as {
     fcStore: {
       finalizedCheckpoint: typeof checkpointWithHex;
       unrealizedFinalizedCheckpoint: typeof checkpointWithHex;
@@ -302,16 +301,16 @@ function computePostState(
 }
 
 function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, parentRootHex: RootHex): void {
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRootHex);
+  const parentBlock = getBeaconEngineCore(chain.beaconEngine).forkChoice.getBlockHexDefaultStatus(parentRootHex);
   if (!parentBlock?.executionPayloadBlockHash) {
     throw new Error(`Cannot invalidate ${blockRootHex}: parent ${parentRootHex} has no latest valid execution hash`);
   }
-  const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  const block = getBeaconEngineCore(chain.beaconEngine).forkChoice.getBlockHexDefaultStatus(blockRootHex);
   if (!block?.executionPayloadBlockHash) {
     throw new Error(`Cannot invalidate ${blockRootHex}: block has no execution payload hash`);
   }
 
-  chain.forkChoice.validateLatestHash({
+  getBeaconEngineCore(chain.beaconEngine).forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
     invalidateFromParentBlockRoot: blockRootHex,
@@ -326,10 +325,23 @@ function isDescendantAtFinalizedCheckpoint(
 ): boolean {
   try {
     const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    return chain.forkChoice.getAncestor(blockRootHex, finalizedSlot).blockRoot === checkpoint.rootHex;
+    return (
+      getBeaconEngineCore(chain.beaconEngine).forkChoice.getAncestor(blockRootHex, finalizedSlot).blockRoot ===
+      checkpoint.rootHex
+    );
   } catch {
     return false;
   }
+}
+
+/**
+ * Engine validate methods now return a GossipValidationResult instead of throwing. Re-throw the failure
+ * (as a GossipActionError keyed on status/code) so the surrounding throw-based test flow is preserved.
+ */
+function assertAccepted(res: GossipValidationResult<unknown>): void {
+  if (res.err === null) return;
+  const action = res.err.status === GossipValidationStatus.Reject ? GossipAction.REJECT : GossipAction.IGNORE;
+  throw new GossipActionError(action, {code: res.err.code});
 }
 
 function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
@@ -380,7 +392,7 @@ export async function runGossipValidationTest(
   );
   const anchorStateView = new BeaconStateView(cachedState);
 
-  const chain = new BeaconChain(
+  const chain = await createBeaconChain(
     {
       ...defaultChainOptions,
       // Disable non-spec maxSkipSlots check for conformance tests
@@ -404,12 +416,11 @@ export async function runGossipValidationTest(
       processShutdownCallback: () => {},
       clock,
       metrics: null,
-      validatorMonitor: null,
-      anchorState: anchorStateView,
+      validatorMonitorOpts: null,
+      anchorStateBytes: anchorStateView.serialize(),
       isAnchorStateFinalized: true,
       earliestAvailableSlot: anchorStateView.slot,
       executionEngine,
-      executionBuilder: undefined,
     }
   );
 
@@ -467,8 +478,8 @@ export async function runGossipValidationTest(
         if (blockEntry.failed) {
           // payload_status === "VALID" (filtered above)
           clock.setSlot(slot);
-          chain.forkChoice.updateTime(slot);
-          chain.forkChoice.onBlock(
+          getBeaconEngineCore(chain.beaconEngine).forkChoice.updateTime(slot);
+          getBeaconEngineCore(chain.beaconEngine).forkChoice.onBlock(
             signedBlock.message,
             postState,
             0,
@@ -483,8 +494,8 @@ export async function runGossipValidationTest(
 
         if (blockEntry.payload_status === "INVALIDATED") {
           clock.setSlot(slot);
-          chain.forkChoice.updateTime(slot);
-          chain.forkChoice.onBlock(
+          getBeaconEngineCore(chain.beaconEngine).forkChoice.updateTime(slot);
+          getBeaconEngineCore(chain.beaconEngine).forkChoice.onBlock(
             signedBlock.message,
             postState,
             0,
@@ -499,7 +510,7 @@ export async function runGossipValidationTest(
         }
 
         clock.setSlot(slot);
-        chain.forkChoice.updateTime(slot);
+        getBeaconEngineCore(chain.beaconEngine).forkChoice.updateTime(slot);
 
         const blockProps = {
           forkName: fork,
@@ -620,12 +631,9 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
-      await validateGossipBlock(chain.config, chain, signedBlock, fork);
-      chain.seenBlockProposers.add(
-        signedBlock.message.slot,
-        signedBlock.message.proposerIndex,
-        toRootHex(sszTypesFor(fork).BeaconBlock.hashTreeRoot(signedBlock.message))
-      );
+      // validateGossipBlock registers the proposer in the (engine-internal) seenBlockProposers on Accept.
+      chain.serializedCache.set(signedBlock, bytes);
+      assertAccepted(await chain.beaconEngine.validateGossipBlock(signedBlock, bytes, fork));
       break;
     }
 
@@ -646,7 +654,7 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
-      await validateGossipAggregateAndProof(fork, chain, aggregate, bytes);
+      await validateGossipAggregateAndProof.call(getBeaconEngineCore(chain.beaconEngine), fork, aggregate, bytes);
       break;
     }
 
@@ -679,71 +687,93 @@ async function validateMessageForTopic(
         subnet: Number(message.subnet_id ?? 0),
       };
 
-      const batchResult = await validateGossipAttestationsSameAttData(fork, chain, [gossipAttestation]);
+      const batchResult = await validateGossipAttestationsSameAttData.call(
+        getBeaconEngineCore(chain.beaconEngine),
+        fork,
+        [gossipAttestation]
+      );
       const first = batchResult.results[0];
       if (first?.err) throw first.err;
       break;
     }
 
     case GossipType.proposer_slashing: {
-      const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).ProposerSlashing.deserialize(bytes));
-      const verifiedDomain = await validateGossipProposerSlashing(chain, slashing);
-      // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertProposerSlashing(slashing, verifiedDomain);
+      // Engine validates + inserts into its (internal) opPool (mirrors the gossip handler).
+      assertAccepted(
+        await chain.beaconEngine.validateGossipProposerSlashing(
+          bytes,
+          rejectOnInvalidSerializedBytes(() => ssz.phase0.ProposerSlashing.deserialize(bytes))
+        )
+      );
       break;
     }
 
     case GossipType.attester_slashing: {
-      const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes));
-      const verifiedDomains = await validateGossipAttesterSlashing(chain, slashing);
-      // Mirror gossip handler: insert into opPool + fork choice
-      chain.opPool.insertAttesterSlashing(fork, slashing, verifiedDomains);
-      chain.forkChoice.onAttesterSlashing(slashing);
+      // Engine validates + inserts into opPool + fork choice (mirrors the gossip handler).
+      assertAccepted(
+        await chain.beaconEngine.validateGossipAttesterSlashing(
+          bytes,
+          rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes)),
+          fork
+        )
+      );
       break;
     }
 
     case GossipType.voluntary_exit: {
-      const exit = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).SignedVoluntaryExit.deserialize(bytes));
-      await validateGossipVoluntaryExit(chain, exit);
-      // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertVoluntaryExit(exit);
+      assertAccepted(
+        await chain.beaconEngine.validateGossipVoluntaryExit(
+          bytes,
+          rejectOnInvalidSerializedBytes(() => ssz.phase0.SignedVoluntaryExit.deserialize(bytes))
+        )
+      );
       break;
     }
 
     case GossipType.sync_committee: {
-      const syncCommitteeMessage = rejectOnInvalidSerializedBytes(() =>
-        ssz.altair.SyncCommitteeMessage.deserialize(bytes)
+      assertAccepted(
+        await chain.beaconEngine.validateGossipSyncCommittee(
+          bytes,
+          rejectOnInvalidSerializedBytes(() => ssz.altair.SyncCommitteeMessage.deserialize(bytes)),
+          Number(message.subnet_id ?? 0)
+        )
       );
-      await validateGossipSyncCommittee(chain, syncCommitteeMessage, Number(message.subnet_id ?? 0));
       break;
     }
 
     case GossipType.sync_committee_contribution_and_proof: {
-      const signedContributionAndProof = rejectOnInvalidSerializedBytes(() =>
-        ssz.altair.SignedContributionAndProof.deserialize(bytes)
+      assertAccepted(
+        await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(
+          bytes,
+          rejectOnInvalidSerializedBytes(() => ssz.altair.SignedContributionAndProof.deserialize(bytes))
+        )
       );
-      await validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof);
       break;
     }
 
     case GossipType.bls_to_execution_change: {
-      const blsToExecutionChange = rejectOnInvalidSerializedBytes(() =>
-        ssz.capella.SignedBLSToExecutionChange.deserialize(bytes)
-      );
       if (chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH) {
+        rejectOnInvalidSerializedBytes(() => ssz.capella.SignedBLSToExecutionChange.deserialize(bytes));
         throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_PRE_CAPELLA"});
       }
-      await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
-      // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      // Engine validates + inserts into its (internal) opPool (mirrors the gossip handler).
+      assertAccepted(
+        await chain.beaconEngine.validateGossipBlsToExecutionChange(
+          bytes,
+          rejectOnInvalidSerializedBytes(() => ssz.capella.SignedBLSToExecutionChange.deserialize(bytes))
+        )
+      );
       break;
     }
 
     case GossipType.inclusion_list: {
       const signedInclusionList = rejectOnInvalidSerializedBytes(() => ssz.heze.SignedInclusionList.deserialize(bytes));
-      const {committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList);
+      const {committeeIndices} = await validateGossipInclusionList.call(
+        getBeaconEngineCore(chain.beaconEngine),
+        signedInclusionList
+      );
       // Mirror gossip handler: store the list so later vectors see it
-      chain.inclusionListStore.process(signedInclusionList, committeeIndices, true);
+      getBeaconEngineCore(chain.beaconEngine).inclusionListStore.process(signedInclusionList, committeeIndices, true);
       break;
     }
 

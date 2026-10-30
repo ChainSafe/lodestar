@@ -1,0 +1,87 @@
+import {ForkName, ForkPostAltair} from "@lodestar/params";
+import {LightClientFinalityUpdate, LightClientOptimisticUpdate, sszTypesFor} from "@lodestar/types";
+import {GossipActionError} from "../../errors/gossipValidation.js";
+import {validateLightClientFinalityUpdate} from "../../validation/lightClientFinalityUpdate.js";
+import {validateLightClientOptimisticUpdate} from "../../validation/lightClientOptimisticUpdate.js";
+import type {BeaconEngineCore} from "../beaconEngineCore.js";
+import {GossipValidationResult, accept, fromResult, ignore} from "../gossipValidationResult.js";
+import {deserializeGossipMessage} from "./deserialize.js";
+
+export async function validateGossipLightClientOptimisticUpdateBytes(
+  this: BeaconEngineCore,
+  bytes: Uint8Array,
+  fork: ForkName
+): Promise<GossipValidationResult<void>> {
+  try {
+    const update = deserializeGossipMessage(sszTypesFor(fork as ForkPostAltair, "LightClientOptimisticUpdate"), bytes);
+    return await validateGossipLightClientOptimisticUpdate.call(this, update);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error(
+      "Error validating gossip light client optimistic update",
+      {code: "UNEXPECTED_ERROR"},
+      error as Error
+    );
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipLightClientOptimisticUpdate(
+  this: BeaconEngineCore,
+  update: LightClientOptimisticUpdate
+): Promise<GossipValidationResult<void>> {
+  try {
+    validateLightClientOptimisticUpdate(
+      this.config,
+      this.clock,
+      this.getLightClientServer().getOptimisticUpdate(),
+      update
+    );
+    return accept(undefined);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error(
+      "Error validating gossip light client optimistic update",
+      {code: "UNEXPECTED_ERROR"},
+      error as Error
+    );
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipLightClientFinalityUpdateBytes(
+  this: BeaconEngineCore,
+  bytes: Uint8Array,
+  fork: ForkName
+): Promise<GossipValidationResult<void>> {
+  try {
+    const update = deserializeGossipMessage(sszTypesFor(fork as ForkPostAltair, "LightClientFinalityUpdate"), bytes);
+    return await validateGossipLightClientFinalityUpdate.call(this, update);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error(
+      "Error validating gossip light client finality update",
+      {code: "UNEXPECTED_ERROR"},
+      error as Error
+    );
+    return ignore("UNEXPECTED_ERROR");
+  }
+}
+
+export async function validateGossipLightClientFinalityUpdate(
+  this: BeaconEngineCore,
+  update: LightClientFinalityUpdate
+): Promise<GossipValidationResult<void>> {
+  try {
+    validateLightClientFinalityUpdate(this.config, this.clock, this.getLightClientServer().getFinalityUpdate(), update);
+    return accept(undefined);
+  } catch (error) {
+    if (error instanceof GossipActionError) return fromResult({err: error});
+    this.logger.error(
+      "Error validating gossip light client finality update",
+      {code: "UNEXPECTED_ERROR"},
+      error as Error
+    );
+    return ignore("UNEXPECTED_ERROR");
+  }
+}

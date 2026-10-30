@@ -63,7 +63,6 @@ export type NetworkArgs = {
   "network.maxPeers"?: number;
   "network.connectToDiscv5Bootnodes"?: boolean;
   "network.discv5FirstQueryDelayMs"?: number;
-  "network.dontSendGossipAttestationsToForkchoice"?: boolean;
   "network.allowPublishToZeroPeers"?: boolean;
   "network.gossipsubD"?: number;
   "network.gossipsubDLow"?: number;
@@ -220,7 +219,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     tcp,
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
-    dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
     allowPublishToZeroPeers: args["network.allowPublishToZeroPeers"],
     gossipsubD: args["network.gossipsubD"],
     gossipsubDLow: args["network.gossipsubDLow"],
@@ -436,13 +434,6 @@ export const options: CliCommandOptions<NetworkArgs> = {
     hidden: true,
     group: "network",
     deprecated: true,
-  },
-
-  "network.dontSendGossipAttestationsToForkchoice": {
-    hidden: true,
-    type: "boolean",
-    description: "Pass gossip attestations to forkchoice or not",
-    group: "network",
   },
 
   "network.allowPublishToZeroPeers": {

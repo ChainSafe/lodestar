@@ -1,81 +1,78 @@
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
+import type {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
+import type {ForkName, ForkPostBellatrix, ForkPreGloas} from "@lodestar/params";
+import type {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {
+  type AttesterSlashing,
   BeaconBlock,
   BlindedBeaconBlock,
   DataColumnSidecar,
   Epoch,
+  type IndexedAttestation,
   Root,
   RootHex,
-  SignedBeaconBlock,
+  type SignedAggregateAndProof,
+  type SignedBeaconBlock,
+  type SignedBlindedBeaconBlock,
   Slot,
   Status,
+  type SubcommitteeIndex,
+  type SubnetID,
   UintNum64,
   ValidatorIndex,
-  Wei,
   altair,
+  type bellatrix,
   capella,
   deneb,
+  type fulu,
   gloas,
+  heze,
   phase0,
-  rewards,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BuilderApiClient} from "../execution/builder/apiClient.js";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
-import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {ReconstructMissPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
-import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
+import type {GossipBlockResult} from "./beaconEngine/gossipValidation/block.js";
+import type {GossipValidationResult} from "./beaconEngine/gossipValidationResult.js";
+import type {VerifiedBlockBundle} from "./beaconEngine/importBlock.js";
+import type {EngineBootstrap} from "./beaconEngine/initialization.js";
+import type {
+  BlockRootResponse,
+  IBeaconEngineCoreApi,
+  ImportBlockResult,
+  ImportExecutionPayloadOpts,
+  PayloadAttestationBlock,
+  PrepareNextSlotOpts,
+  PrepareNextSlotResponse,
+  ProductionResponse,
+  SubmitBlindedBlockResponse,
+  VerifyBlocksOpts,
+} from "./beaconEngine/interface.js";
+import {ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
+import type {SourceMeta} from "./blocks/payloadEnvelopeInput/types.js";
+import type {SignedBlockRoot} from "./blocks/signedBlockRoot.js";
 import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
+import type {SegmentExecStatus} from "./blocks/verifyBlocksExecutionPayloads.js";
 import {IBlsVerifier} from "./bls/index.js";
-import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
+import type {IChainView} from "./chainView/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
-import {ForkchoiceCaller} from "./forkChoice/index.js";
+import type {ForkchoiceCaller} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
-import {LightClientServer} from "./lightClient/index.js";
-import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {
-  AttestationPool,
-  DeferredVoluntaryExitPool,
-  ExecutionPayloadBidPool,
-  InclusionListStore,
-  OpPool,
-  PayloadAttestationPool,
-  ProposerPreferencesPool,
-  SyncCommitteeMessagePool,
-  SyncContributionAndProofPool,
-} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
-import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
-import {IStateRegenerator, RegenCaller} from "./regen/index.js";
+import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {ReprocessController} from "./reprocess.js";
-import {
-  SeenAggregators,
-  SeenAttesters,
-  SeenBlockProposers,
-  SeenContributionAndProof,
-  SeenExecutionPayloadBids,
-  SeenPayloadAttesters,
-  SeenSyncCommitteeMessages,
-} from "./seenCache/index.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
-import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
-import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
-import {ShufflingCache} from "./shufflingCache.js";
-import {ValidatorMonitor} from "./validatorMonitor.js";
 
 export {type AssembledBlockType, BlockType, type ProposerPreparationData};
 export type BlockHash = RootHex;
@@ -99,63 +96,34 @@ export interface IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   earliestAvailableSlot: Slot;
   readonly executionEngine: IExecutionEngine;
-  readonly executionBuilder?: IExecutionBuilder;
-  readonly builderCircuitBreaker: BuilderCircuitBreaker;
+
   readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
-  readonly validatorMonitor: ValidatorMonitor | null;
-  readonly bufferPool: BufferPool | null;
 
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;
 
+  readonly beaconEngine: IBeaconEngine;
   readonly bls: IBlsVerifier;
-  readonly forkChoice: IForkChoice;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
-  readonly regen: IStateRegenerator;
-  readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly pubkeyCache: PubkeyCache;
   readonly archiveStore: IArchiveStore;
 
-  // Ops pool
-  readonly attestationPool: AttestationPool;
-  readonly aggregatedAttestationPool: AggregatedAttestationPool;
-  readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
-  readonly syncContributionAndProofPool: SyncContributionAndProofPool;
-  readonly executionPayloadBidPool: ExecutionPayloadBidPool;
-  readonly payloadAttestationPool: PayloadAttestationPool;
-  readonly proposerPreferencesPool: ProposerPreferencesPool;
-  readonly inclusionListStore: InclusionListStore;
-  readonly opPool: OpPool;
-  readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
-
-  // Gossip seen cache
-  readonly seenAttesters: SeenAttesters;
-  readonly seenAggregators: SeenAggregators;
-  readonly seenPayloadAttesters: SeenPayloadAttesters;
-  readonly seenAggregatedAttestations: SeenAggregatedAttestations;
-  readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
-  readonly seenBlockProposers: SeenBlockProposers;
-  readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
-  readonly seenContributionAndProof: SeenContributionAndProof;
-  readonly seenAttestationDatas: SeenAttestationDatas;
+  // Op pools are engine-internal (add/read via the engine); not on the facade.
+  // Gossip seen caches are engine-internal (pruned + read via the engine); not on the facade.
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
-  // Seen cache for liveness checks
-  readonly seenBlockAttesters: SeenBlockAttesters;
 
-  readonly beaconProposerCache: BeaconProposerCache;
-  readonly checkpointBalancesCache: CheckpointBalancesCache;
+  // beaconProposerCache + checkpointBalancesCache are engine-internal (read/written via the engine).
 
   readonly blockProductionCache: Map<RootHex, ProduceResult>;
 
-  readonly shufflingCache: ShufflingCache;
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
   // Cache for serialized objects
   readonly serializedCache: SerializedCache;
@@ -178,57 +146,13 @@ export interface IBeaconChain {
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   persistToDisk(): Promise<void>;
 
-  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
-
-  getHeadState(): IBeaconStateView;
-  getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<IBeaconStateView>;
-  getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<IBeaconStateView>;
-
-  getHistoricalStateBySlot(
-    slot: Slot
-  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
-
-  /** Returns a local state canonical at `slot` */
-  getStateBySlot(
-    slot: Slot,
-    opts?: StateGetOpts
-  ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null>;
-  /** Returns a local state by state root */
-  getStateByStateRoot(
-    stateRoot: RootHex,
-    opts?: StateGetOpts
-  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
-  /** Return serialized bytes of a persisted checkpoint state */
-  getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
-  /** Returns a cached state by checkpoint */
-  getStateByCheckpoint(
-    checkpoint: CheckpointWithHex
-  ): {state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null;
-  /** Return state bytes by checkpoint */
-  getStateOrBytesByCheckpoint(
-    checkpoint: CheckpointWithHex
-  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): Promise<boolean>;
 
   /**
-   * Since we can have multiple parallel chains,
-   * this methods returns blocks in current chain head according to
-   * forkchoice. Works for finalized slots as well
+   * Get local serialized block by root (bytes-first), does not fetch from the network
    */
-  getCanonicalBlockAtSlot(
-    slot: Slot
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
-  /**
-   * Get local block by root, does not fetch from the network
-   */
-  getSerializedBlockByRoot(
-    root: RootHex
-  ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null>;
-  /**
-   * Get local block by root, does not fetch from the network
-   */
-  getBlockByRoot(
-    root: RootHex
-  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  getSerializedBlockByRoot(root: Uint8Array): Promise<{block: Uint8Array; slot: Slot} | null>;
+  getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
   getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]>;
@@ -246,20 +170,8 @@ export interface IBeaconChain {
     blockSlot: Slot,
     blockRootHex: string
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
-  getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
-
-  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
-    block: BeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-    shouldOverrideBuilder?: boolean;
-  }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
-    block: BlindedBeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-  }>;
+  // [beacon-engine] moved to BeaconEngine.getParentExecutionRequests; sync future unstable changes there.
+  // getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
 
   /** Process a block until complete */
   processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
@@ -274,17 +186,8 @@ export interface IBeaconChain {
   processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
 
   /** Produce and publish a proposer slashing from an observed equivocation. Does not throw, only logs errors */
-  processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void;
 
   getStatus(): Status;
-
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
-
-  /** When proposerBoostReorg is enabled, predict (as of the current slot) the head block a proposer would build on next slot */
-  predictProposerHead(): ProtoBlock;
-
-  /** When proposerBoostReorg is enabled and we are proposing a block, this is called to determine which head block to build on */
-  getProposerHead(slot: Slot): ProtoBlock;
 
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 
@@ -294,33 +197,283 @@ export interface IBeaconChain {
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
   persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void;
-  persistInvalidStateRoot(
-    preState: IBeaconStateView,
-    postState: IBeaconStateView,
-    block: SignedBeaconBlock
-  ): Promise<void>;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
-  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void;
-  regenStateForAttestationVerification(
-    attEpoch: Epoch,
-    shufflingDependentRoot: RootHex,
-    attHeadBlock: ProtoBlock,
-    regenCaller: RegenCaller
-  ): Promise<EpochShuffling>;
-  updateBuilderStatus(clockSlot: Slot): void;
+  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
 
+  beaconEngineRegenCanAcceptWork(): boolean;
+  beaconEngineBlsThreadPoolCanAcceptWork(): boolean;
+}
+
+/**
+ * Per-block data returned by verifyBlocks() for the subsequent import.
+ * Main-thread mode carries the verified bundle, including the live post-state, through the processing
+ * batch to importBlock() without caching it in Core.
+ * Other modes carry only the signed root; importBlockBytes() resolves the bundle from Core's
+ * verifiedBlocks cache so live state does not cross the transport boundary.
+ */
+export type BlockImportData = VerifiedBlockBundle | {signedBlockRoot: SignedBlockRoot};
+
+/** Main-thread facade; processing methods reconstruct errors with their local inputs. */
+export interface IBeaconEngine
+  extends Omit<
+    IBeaconEngineCoreApi,
+    | "init"
+    | "initializeFromAnchor"
+    | "onSlot"
+    | "onEpoch"
+    | "prepareForNextSlot"
+    | "recomputeForkChoiceHead"
+    | "getHeadSnapshot"
+    | "getChainViewSnapshot"
+    | "getFinalizedCheckpointSnapshot"
+    | "isHeadOptimistic"
+    | "pauseFastConfirmation"
+    | "resumeFastConfirmation"
+    | "validateApiBlockBytes"
+    | "verifyBlocksBytes"
+    | "verifyGossipBlockBytes"
+    | "importBlockBytes"
+    | "importExecutionPayloadBytes"
+    | "discardVerifiedBlocks"
+    | "verifyAndObserveBlockProposerBytes"
+    | "verifyEnvelopeForPublishBytes"
+    | "registerValidatorBytes"
+    | "submitBlindedBlockBytes"
+    | "submitBlindedBlockNoResponseBytes"
+    | "produceSyncCommitteeContribution"
+    | "getPayloadAttestationBlock"
+    | "validateGossipBlockBytes"
+    | "validateGossipInclusionListBytes"
+    | "validateGossipAggregateAndProofBytes"
+    | "validateApiAggregateAndProofBytes"
+    | "validateGossipSyncCommitteeBytes"
+    | "validateApiSyncCommitteeBytes"
+    | "validateSyncCommitteeGossipContributionAndProofBytes"
+    | "validateApiSyncCommitteeContributionAndProofBytes"
+    | "validateGossipBlobSidecarBytes"
+    | "validateGossipFuluDataColumnSidecarBytes"
+    | "validateGossipGloasDataColumnSidecarBytes"
+    | "validateGossipPayloadAttestationMessageBytes"
+    | "validateApiPayloadAttestationMessageBytes"
+    | "validateGossipExecutionPayloadEnvelopeBytes"
+    | "validateApiExecutionPayloadEnvelopeBytes"
+    | "validateGossipExecutionPayloadBidBytes"
+    | "validateApiExecutionPayloadBidBytes"
+    | "validateGossipProposerPreferencesBytes"
+    | "validateGossipAttesterSlashingBytes"
+    | "validateGossipProposerSlashingBytes"
+    | "validateGossipVoluntaryExitBytes"
+    | "validateGossipBlsToExecutionChangeBytes"
+    | "validateGossipLightClientOptimisticUpdateBytes"
+    | "validateGossipLightClientFinalityUpdateBytes"
+    | "getBlockRoot"
+    | "getCanonicalBlockAtSlot"
+    | "getBlockByRoot"
+    | "getBlockHeaders"
+  > {
+  readonly config: BeaconConfig;
+  readonly chainView: IChainView;
+
+  // Lifecycle
+  initializeFromAnchor(): Promise<EngineBootstrap>;
+
+  // Clock / fork choice / head
+  onSlot(slot: Slot): Promise<void>;
+  onEpoch(epoch: Epoch): Promise<void>;
+  prepareForNextSlot(clockSlot: Slot, opts: PrepareNextSlotOpts): Promise<PrepareNextSlotResponse>;
+  recomputeForkChoiceHead(caller: ForkchoiceCaller): Promise<void>;
+  isHeadOptimistic(): Promise<boolean>;
+  pauseFastConfirmation(): Promise<void>;
+  resumeFastConfirmation(): Promise<void>;
+
+  // Block processing
+  validateApiBlock(blockInput: IBlockInput, opts: VerifyBlocksOpts): Promise<void>;
+  /**
+   * Returns verification metadata plus blockImportData: complete verification bundles in main-thread
+   * mode, or signed beacon block root references ({signedBlockRoot}) in worker mode.
+   */
+  verifyBlocks(
+    blockInputs: IBlockInput[],
+    opts: VerifyBlocksOpts
+  ): Promise<{
+    segmentExecStatus: SegmentExecStatus;
+    verifyStateTime: number;
+    verifySignaturesTime: number;
+    blockImportData: BlockImportData[];
+  }>;
+  importBlock(
+    blockInput: IBlockInput,
+    blockImportData: BlockImportData,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportBlockOpts
+  ): Promise<ImportBlockResult>;
+  importExecutionPayload(
+    payloadInput: PayloadEnvelopeInput,
+    envelopeBytes: Uint8Array,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportExecutionPayloadOpts
+  ): Promise<{executionOptimistic: boolean}>;
+  discardVerifiedBlocks(signedBlockRoots: SignedBlockRoot[]): Promise<void>;
+  verifyAndObserveBlockProposer(bytes: Uint8Array, block: SignedBeaconBlock, root: RootHex): Promise<void>;
+  verifyEnvelopeForPublish(
+    bytes: Uint8Array,
+    envelope: gloas.SignedExecutionPayloadEnvelope,
+    blockRootHex: RootHex
+  ): Promise<void>;
+
+  // Block production / builder
+  registerValidator(
+    epoch: Epoch,
+    registrationsBytes: Uint8Array,
+    registrations: bellatrix.SignedValidatorRegistrationV1[]
+  ): Promise<void>;
+  submitBlindedBlock(
+    signedBlindedBlockBytes: Uint8Array,
+    signedBlindedBlock: SignedBlindedBeaconBlock,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<SubmitBlindedBlockResponse>;
+  submitBlindedBlockNoResponse(
+    signedBlindedBlockBytes: Uint8Array,
+    signedBlindedBlock: SignedBlindedBeaconBlock,
+    fork: ForkPostBellatrix & ForkPreGloas
+  ): Promise<void>;
+  produceSyncCommitteeContribution(
+    subnet: SubcommitteeIndex,
+    slot: Slot,
+    blockRoot: Root
+  ): Promise<ProductionResponse<altair.SyncCommitteeContribution | null>>;
+  getPayloadAttestationBlock(slot: Slot): Promise<PayloadAttestationBlock | null>;
+
+  // Gossip / API validation
+  validateGossipInclusionList(
+    listBytes: Uint8Array,
+    list: heze.SignedInclusionList,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{totalBytes: number}>>;
+  validateGossipBlock(
+    signedBlock: SignedBeaconBlock,
+    blockBytes: Uint8Array,
+    fork: ForkName,
+    seenTimestampSec?: number
+  ): Promise<GossipBlockResult>;
+  validateGossipAggregateAndProof(
+    aggregateBytes: Uint8Array,
+    signedAggregateAndProof: SignedAggregateAndProof,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
+  validateApiAggregateAndProof(
+    aggregateBytes: Uint8Array,
+    fork: ForkName,
+    signedAggregateAndProof: SignedAggregateAndProof
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
+  validateGossipSyncCommittee(
+    syncCommitteeBytes: Uint8Array,
+    syncCommittee: altair.SyncCommitteeMessage,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateApiSyncCommittee(
+    syncCommitteeBytes: Uint8Array,
+    syncCommittee: altair.SyncCommitteeMessage
+  ): Promise<GossipValidationResult<{subnets: number[]}>>;
+  validateSyncCommitteeGossipContributionAndProof(
+    contributionBytes: Uint8Array,
+    signedContributionAndProof: altair.SignedContributionAndProof,
+    skipValidationKnownParticipants?: boolean
+  ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>>;
+  validateApiSyncCommitteeContributionAndProof(
+    contributionBytes: Uint8Array,
+    signedContributionAndProof: altair.SignedContributionAndProof
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipBlobSidecar(
+    blobBytes: Uint8Array,
+    blobSidecar: deneb.BlobSidecar,
+    fork: ForkName,
+    subnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipFuluDataColumnSidecar(
+    dataColumnBytes: Uint8Array,
+    dataColumnSidecar: fulu.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipGloasDataColumnSidecar(
+    dataColumnBytes: Uint8Array,
+    dataColumnSidecar: gloas.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipPayloadAttestationMessage(
+    payloadAttestationBytes: Uint8Array,
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<GossipValidationResult<void>>;
+  validateApiPayloadAttestationMessage(
+    payloadAttestationBytes: Uint8Array,
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    source: SourceMeta
+  ): Promise<GossipValidationResult<void>>;
+  validateApiExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipExecutionPayloadBid(
+    bidBytes: Uint8Array,
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    fork: ForkName,
+    seenTimestampSec: number
+  ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
+  validateApiExecutionPayloadBid(
+    bidBytes: Uint8Array,
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+    seenTimestampSec?: number
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipProposerPreferences(
+    preferencesBytes: Uint8Array,
+    signedProposerPreferences: gloas.SignedProposerPreferences
+  ): Promise<GossipValidationResult<void>>;
+
+  // Op pools
+  validateGossipAttesterSlashing(
+    attesterSlashingBytes: Uint8Array,
+    attesterSlashing: AttesterSlashing,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipProposerSlashing(
+    proposerSlashingBytes: Uint8Array,
+    proposerSlashing: phase0.ProposerSlashing
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipVoluntaryExit(
+    voluntaryExitBytes: Uint8Array,
+    voluntaryExit: phase0.SignedVoluntaryExit
+  ): Promise<GossipValidationResult<void>>;
+  validateGossipBlsToExecutionChange(
+    blsToExecutionChangeBytes: Uint8Array,
+    blsToExecutionChange: capella.SignedBLSToExecutionChange
+  ): Promise<GossipValidationResult<void>>;
+
+  // Light client
+  validateGossipLightClientOptimisticUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
+  validateGossipLightClientFinalityUpdate(bytes: Uint8Array, fork: ForkName): Promise<GossipValidationResult<void>>;
+
+  // API block reads
+  getBlockRoot(blockId: routes.beacon.BlockId): Promise<BlockRootResponse>;
+  getCanonicalBlockAtSlot(
+    slot: Slot
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  getBlockByRoot(
+    root: Root
+  ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  getBlockHeaders(opts: {slot?: Slot; parentRoot?: Root}): Promise<{
+    data: routes.beacon.BlockHeaderResponse[];
+    meta: {executionOptimistic: boolean; finalized: boolean};
+  }>;
+
+  // Debug / metrics
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
-
-  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
-  getAttestationsRewards(
-    epoch: Epoch,
-    validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
-  getSyncCommitteeRewards(
-    blockRef: BeaconBlock | BlindedBeaconBlock,
-    validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<rewards.SyncCommitteeRewards>;
 }
 
 export type SSZObjectType =

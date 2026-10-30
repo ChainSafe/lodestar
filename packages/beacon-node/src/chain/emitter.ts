@@ -1,10 +1,10 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex, PtcQuorumEvent} from "@lodestar/fork-choice";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {DataColumnSidecar, RootHex, Slot, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
+import type {FinalizedCheckpointSnapshot} from "./beaconEngine/interface.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 
@@ -17,13 +17,7 @@ import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelop
  * - Checkpointing: the chain processes epoch boundaries
  */
 export enum ChainEvent {
-  /**
-   * This event signals that the chain has processed (or reprocessed) a checkpoint.
-   *
-   * This event is not tied to clock events, but rather tied to generation (or regeneration) of state.
-   * This event is guaranteed to be called after _any_ checkpoint is processed, including skip-slot checkpoints, checkpoints that are formed as a result of processing blocks, etc.
-   */
-  checkpoint = "checkpoint",
+  fatalError = "fatalError",
   /**
    * This event signals that the fork choice store has been updated.
    *
@@ -33,14 +27,9 @@ export enum ChainEvent {
   /**
    * This event signals that the fork choice store has been updated.
    *
-   * This event is guaranteed to be triggered whenever the fork choice finalized checkpoint is updated. This is either in response to a newly processed block or a new clock tick.
+   * Emitted after updating ChainView and pulling the finalized checkpoint from Core.
    */
   forkChoiceFinalized = "forkChoice:finalized",
-  /**
-   * This event signals that the PTC verdict on a block was decided: a majority against payload presence or blob data
-   * availability, or a majority for both.
-   */
-  forkChoicePtcQuorum = "forkChoice:ptcQuorum",
   /**
    * This event signals that dependent services (e.g. custody sampling) should update to account for the new target group count.
    */
@@ -61,7 +50,7 @@ export enum ChainEvent {
    */
   publishProposerSlashing = "publishProposerSlashing",
   /**
-   * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
+   * Refresh peer status after the head, finalized checkpoint, or earliestAvailableSlot changes.
    */
   updateStatus = "updateStatus",
   /**
@@ -113,11 +102,10 @@ export type ChainEventData = {
 };
 
 export type IChainEvents = ApiEvents & {
-  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: IBeaconStateView) => void;
+  [ChainEvent.fatalError]: (error: Error) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
-  [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
-  [ChainEvent.forkChoicePtcQuorum]: (data: PtcQuorumEvent) => void;
+  [ChainEvent.forkChoiceFinalized]: (checkpoint: FinalizedCheckpointSnapshot & {rootHex: RootHex}) => void;
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 

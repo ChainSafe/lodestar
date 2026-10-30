@@ -594,7 +594,7 @@ export const SignedBeaconBlock = new ContainerType(
     message: BeaconBlock, // Modified in GLOAS
     signature: BLSSignature,
   },
-  {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+  {typeName: "SignedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 // Full block production response for self-builds, enables stateless envelope publishing

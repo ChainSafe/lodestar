@@ -11,29 +11,25 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconBlock, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
-import {IBeaconDb} from "../../db/index.js";
-import {Metrics} from "../../metrics/index.js";
+import {IBeaconEngineDb} from "../../db/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
-import {SerializedCache} from "../../util/serializedCache.js";
+import {BeaconEngineCoreEvent, IBeaconEngineCoreEventBus} from "../beaconEngine/events.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
-import {ChainEvent, ChainEventEmitter} from "../emitter.js";
-import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {IStateRegeneratorInternal, RegenCaller, StateRegenerationOpts} from "./interface.js";
 
 export type RegenModules = {
-  db: IBeaconDb;
+  db: IBeaconEngineDb;
   forkChoice: IForkChoice;
   blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;
-  seenBlockInputCache: SeenBlockInput;
-  serializedCache: SerializedCache;
   config: ChainForkConfig;
-  emitter: ChainEventEmitter;
+  emitter: IBeaconEngineCoreEventBus;
   logger: Logger;
-  metrics: Metrics | null;
+  metrics: BeaconEngineMetrics | null;
   validatorMonitor: ValidatorMonitor | null;
 };
 
@@ -196,10 +192,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const protoBlocksAsc = blocksToReplay.reverse();
     for (const [i, protoBlock] of protoBlocksAsc.entries()) {
       replaySlots[i] = protoBlock.slot;
-      const blockInput = this.modules.seenBlockInputCache.get(protoBlock.blockRoot);
-      blockPromises[i] = blockInput?.hasBlock()
-        ? Promise.resolve(blockInput.getBlock())
-        : this.modules.db.block.get(fromHex(protoBlock.blockRoot));
+      blockPromises[i] = this.modules.db.block.get(fromHex(protoBlock.blockRoot));
     }
 
     const logCtx = {stateRoot, caller, replaySlots: replaySlots.join(",")};
@@ -236,8 +229,9 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         // Only advances state trusting block's signture and hashes.
         // We are only running the state transition to get a specific state's data.
         // stateTransition() does the clone() inside, transfer cache to make the regen faster
+        // [beacon-engine] DB replay has no facade SerializedCache; native STF serializes the decoded block.
         state = state.stateTransition(
-          {block, ssz: this.modules.serializedCache.get(block)},
+          {block},
           {
             // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -305,9 +299,9 @@ export class StateRegenerator implements IStateRegeneratorInternal {
 async function processSlotsByCheckpoint(
   modules: {
     checkpointStateCache: CheckpointStateCache;
-    metrics: Metrics | null;
+    metrics: BeaconEngineMetrics | null;
     validatorMonitor: ValidatorMonitor | null;
-    emitter: ChainEventEmitter;
+    emitter: IBeaconEngineCoreEventBus;
     config: ChainForkConfig;
     logger: Logger;
   },
@@ -336,9 +330,9 @@ async function processSlotsByCheckpoint(
 export async function processSlotsToNearestCheckpoint(
   modules: {
     checkpointStateCache: CheckpointStateCache;
-    metrics: Metrics | null;
+    metrics: BeaconEngineMetrics | null;
     validatorMonitor: ValidatorMonitor | null;
-    emitter: ChainEventEmitter | null;
+    emitter: IBeaconEngineCoreEventBus | null;
     config: ChainForkConfig;
     logger: Logger | null;
   },
@@ -380,7 +374,7 @@ export async function processSlotsToNearestCheckpoint(
     const cp = getCheckpointFromState(checkpointState);
     checkpointStateCache.add(cp, checkpointState);
     // consumers should not mutate state ever
-    emitter?.emit(ChainEvent.checkpoint, cp, checkpointState);
+    emitter?.emit(BeaconEngineCoreEvent.checkpoint, cp);
 
     if (count >= 1) {
       // in normal condition, we only process 1 epoch so never reach this

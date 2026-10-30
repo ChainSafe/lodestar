@@ -75,16 +75,17 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   // BeaconNode setup
   try {
-    const {
-      anchorState,
-      config: beaconConfig,
-      isFinalized,
-      earliestAvailableSlot,
-    } = await initBeaconState(args, beaconPaths.dataDir, beaconPaths.pubkeysFile, config, db, logger);
+    const stateInitialization = await initBeaconState(
+      args,
+      beaconPaths.dataDir,
+      beaconPaths.pubkeysFile,
+      config,
+      db,
+      logger
+    );
 
     const node = await BeaconNode.init({
       opts: options,
-      config: beaconConfig,
       pubkeyCache,
       db,
       logger,
@@ -93,9 +94,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       dataDir: beaconPaths.dataDir,
       dataColumnDir: beaconPaths.dataColumnDir,
       peerStoreDir: beaconPaths.peerStoreDir,
-      anchorState,
-      isAnchorStateFinalized: isFinalized,
-      earliestAvailableSlot,
+      stateInitialization,
     });
 
     // dev debug option to have access to the BN instance

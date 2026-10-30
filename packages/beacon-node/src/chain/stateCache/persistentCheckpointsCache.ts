@@ -3,7 +3,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
 import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {AllocSource, BufferPool, BufferWithKey} from "../../util/bufferPool.js";
 import {IClock} from "../../util/clock.js";
 import {serializeState} from "../serializeState.js";
@@ -24,7 +24,7 @@ export type PersistentCheckpointStateCacheOpts = {
 
 type PersistentCheckpointStateCacheModules = {
   config: BeaconConfig;
-  metrics?: Metrics | null;
+  metrics?: BeaconEngineMetrics | null;
   logger: Logger;
   clock?: IClock | null;
   signal?: AbortSignal;
@@ -120,7 +120,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<RootHex>>(() => new Set<string>());
   private readonly config: BeaconConfig;
-  private readonly metrics: Metrics | null | undefined;
+  private readonly metrics: BeaconEngineMetrics | null | undefined;
   private readonly logger: Logger;
   private readonly clock: IClock | null | undefined;
   private readonly signal: AbortSignal | undefined;

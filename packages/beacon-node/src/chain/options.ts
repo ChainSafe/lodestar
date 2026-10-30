@@ -1,48 +1,27 @@
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
-import {ForkChoiceOpts} from "./forkChoice/index.js";
-import {LightClientServerOpts} from "./lightClient/index.js";
-import {ShufflingCacheOpts} from "./shufflingCache.js";
-import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
+import {BeaconEngineMode, IBeaconEngineOptions} from "./beaconEngine/options.js";
+import {DEFAULT_MAX_BLOCK_STATES} from "./stateCache/fifoBlockStateCache.js";
 import {
   DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   DEFAULT_MAX_CP_STATE_ON_DISK,
-  PersistentCheckpointStateCacheOpts,
 } from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
-export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
+export {ArchiveMode, BeaconEngineMode, DEFAULT_ARCHIVE_MODE};
 
-export type IChainOptions = BlockProcessOpts &
-  PoolOpts &
-  SeenCacheOpts &
-  ForkChoiceOpts &
+export type IChainOptions = IBeaconEngineOptions &
+  BlockProcessOpts &
   ArchiveStoreOpts &
-  FIFOBlockStateCacheOpts &
-  PersistentCheckpointStateCacheOpts &
-  ShufflingCacheOpts &
-  ValidatorMonitorOpts &
-  LightClientServerOpts & {
-    blsVerifyAllMainThread?: boolean;
-    blsVerifyAllMultiThread?: boolean;
+  ValidatorMonitorOpts & {
+    /** Worker mode uses separate resources and bytes methods; worker transport and native mode are pending. */
+    beaconEngineMode?: BeaconEngineMode;
     blacklistedBlocks?: string[];
     persistProducedBlocks?: boolean;
     persistProducedPayloadEnvelopes?: boolean;
-    /** Archive finalized Gloas payload envelopes as headers (bodies reconstructed from the EL on read) */
-    dedupePayloads?: boolean;
-    persistInvalidSszObjects?: boolean;
-    persistInvalidSszObjectsDir?: string;
-    persistOrphanedBlocks?: boolean;
-    persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
-    suggestedFeeRecipient: string;
     graffitiAppend?: boolean;
-    maxSkipSlots?: number;
-    /** Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks */
-    disableProposerSlashings?: boolean;
-    /** Ensure blobs returned by the execution engine are valid */
-    sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
@@ -50,8 +29,6 @@ export type IChainOptions = BlockProcessOpts &
     initialCustodyGroupCount?: number;
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
-    nHistoricalStatesFileDataStore?: boolean;
-    nativeStateTransition?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
     /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
@@ -68,38 +45,14 @@ export type BlockProcessOpts = {
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
   disablePrepareNextSlot?: boolean;
-  /**
-   * Used to connect beacon in follow mode to an EL,
-   * will still issue fcU for block proposal
-   */
-  disableImportExecutionFcU?: boolean;
   emitPayloadAttributes?: boolean;
 
-  /**
-   * Used to specify to specify to run verifications only and not
-   * to save the block or log transitions for e.g. doing
-   * broadcastValidation while publishing the block
-   */
-  verifyOnly?: boolean;
   /** Used to specify to skip execution payload validation */
   skipVerifyExecutionPayload?: boolean;
 };
 
-export type PoolOpts = {
-  /**
-   * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
-   */
-  preaggregateSlotDistance?: number;
-};
-
-export type SeenCacheOpts = {
-  /**
-   * Slot distance from current slot to cache AttestationData
-   */
-  attDataCacheSlotDistance?: number;
-};
-
 export const defaultChainOptions: IChainOptions = {
+  beaconEngineMode: BeaconEngineMode.MainThread,
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
   blacklistedBlocks: [],

@@ -11,10 +11,12 @@ import {
 import {BeaconBlock, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, mapValues, toRootHex} from "@lodestar/utils";
-import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
+import {BeaconEngineCoreEvent} from "../../../src/chain/beaconEngine/events.js";
+import {HeadEventData} from "../../../src/chain/index.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {BeaconNode} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
+import {getBeaconEngineCore} from "../engine.js";
 
 export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   let lastSeenEpoch = 0;
@@ -29,7 +31,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
 
     // For each block
     // Check if there was a proposed block and how many attestations it includes
-    const block = await bn.chain.getCanonicalBlockAtSlot(head.slot);
+    const block = await bn.chain.beaconEngine.getCanonicalBlockAtSlot(head.slot);
     if (block) {
       const bits = sumAttestationBits(block.block.message);
       const inclDelay = avgInclusionDelay(block.block.message);
@@ -68,7 +70,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     if (checkpoint.epoch <= lastSeenEpoch) return;
     lastSeenEpoch = checkpoint.epoch;
 
-    const checkpointState = bn.chain.regen.getCheckpointStateSync({
+    const checkpointState = getBeaconEngineCore(bn.chain.beaconEngine).regen.getCheckpointStateSync({
       epoch: checkpoint.epoch,
       rootHex: toRootHex(checkpoint.root),
     });
@@ -77,16 +79,19 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     }
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.getStateRootAtSlot(lastSlot);
-    const lastState = await bn.chain.regen.getState(toRootHex(lastStateRoot), RegenCaller.onForkChoiceFinalized);
+    const lastState = await getBeaconEngineCore(bn.chain.beaconEngine).regen.getState(
+      toRootHex(lastStateRoot),
+      RegenCaller.onForkChoiceFinalized
+    );
     logParticipation(lastState);
   }
 
   bn.chain.emitter.on(routes.events.EventType.head, onHead);
-  bn.chain.emitter.on(ChainEvent.checkpoint, onCheckpoint);
+  getBeaconEngineCore(bn.chain.beaconEngine).engineEmitter.on(BeaconEngineCoreEvent.checkpoint, onCheckpoint);
 
   return function stop() {
     bn.chain.emitter.off(routes.events.EventType.head, onHead);
-    bn.chain.emitter.off(ChainEvent.checkpoint, onCheckpoint);
+    getBeaconEngineCore(bn.chain.beaconEngine).engineEmitter.off(BeaconEngineCoreEvent.checkpoint, onCheckpoint);
 
     // Write report
     console.log("\nEnd of sim test report\n");

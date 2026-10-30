@@ -2,11 +2,9 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
-import {RequiredSelective} from "@lodestar/utils";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
-import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateLightClientOptimisticUpdate} from "../../../../src/chain/validation/lightClientOptimisticUpdate.js";
-import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
 describe("Light Client Optimistic Update validation", () => {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -30,7 +28,7 @@ describe("Light Client Optimistic Update validation", () => {
     }
   });
 
-  function mockChain(): RequiredSelective<IBeaconChain, "lightClientServer"> {
+  function mockChain(): MockedBeaconChain {
     const chain = getMockedBeaconChain({config});
     vi.spyOn(chain.lightClientServer, "getOptimisticUpdate");
     return chain;
@@ -51,7 +49,12 @@ describe("Light Client Optimistic Update validation", () => {
     });
 
     expect(() => {
-      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+      validateLightClientOptimisticUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getOptimisticUpdate(),
+        lightclientOptimisticUpdate
+      );
     }).toThrow(LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED);
   });
 
@@ -70,7 +73,12 @@ describe("Light Client Optimistic Update validation", () => {
     vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(0);
 
     expect(() => {
-      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+      validateLightClientOptimisticUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getOptimisticUpdate(),
+        lightclientOptimisticUpdate
+      );
     }).toThrow(LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY);
   });
 
@@ -85,14 +93,19 @@ describe("Light Client Optimistic Update validation", () => {
     vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // make lightclientserver return another update with different value from gossiped
-    chain.lightClientServer.getOptimisticUpdate = () => {
+    vi.spyOn(chain.lightClientServer, "getOptimisticUpdate").mockImplementation(() => {
       const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
       defaultValue.attestedHeader.beacon.slot = 1;
       return defaultValue;
-    };
+    });
 
     expect(() => {
-      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+      validateLightClientOptimisticUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getOptimisticUpdate(),
+        lightclientOptimisticUpdate
+      );
     }).toThrow(LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL);
   });
 
@@ -102,7 +115,9 @@ describe("Light Client Optimistic Update validation", () => {
     lightclientOptimisticUpdate.attestedHeader.beacon.slot = 42;
 
     const chain = mockChain();
-    chain.lightClientServer.getOptimisticUpdate = () => ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    vi.spyOn(chain.lightClientServer, "getOptimisticUpdate").mockReturnValue(
+      ssz.altair.LightClientOptimisticUpdate.defaultValue()
+    );
 
     // make update not too early
     vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(config.getSyncMessageDueMs(ForkName.altair) + 1000);
@@ -111,7 +126,12 @@ describe("Light Client Optimistic Update validation", () => {
     // localOptimisticUpdate will be null
     // latestForwardedOptimisticSlot will be -1
     expect(() => {
-      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+      validateLightClientOptimisticUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getOptimisticUpdate(),
+        lightclientOptimisticUpdate
+      );
     }).toThrow(LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL);
   });
 
@@ -132,12 +152,17 @@ describe("Light Client Optimistic Update validation", () => {
 
     // satisfy:
     // [IGNORE] The received optimistic_update matches the locally computed one exactly
-    chain.lightClientServer.getOptimisticUpdate = () => {
+    vi.spyOn(chain.lightClientServer, "getOptimisticUpdate").mockImplementation(() => {
       return lightclientOptimisticUpdate;
-    };
+    });
 
     expect(() => {
-      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+      validateLightClientOptimisticUpdate(
+        config,
+        chain.clock,
+        chain.lightClientServer.getOptimisticUpdate(),
+        lightclientOptimisticUpdate
+      );
     }).not.toThrow("Expected validateLightclientOptimisticUpdate not to throw");
   });
 });

@@ -12,7 +12,7 @@ describe("api/validator - submitBuilderPreferences", () => {
   beforeEach(() => {
     modules = getApiTestModules();
     modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
-    vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getPubkeyBytesOrThrow").mockReturnValue(new Uint8Array(48));
     api = getValidatorApi(defaultApiOptions, modules);
   });
 

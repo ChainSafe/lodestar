@@ -1,0 +1,83 @@
+import {LodestarError} from "@lodestar/utils";
+import {StatesArchiveOpts} from "../archiveStore/interface.js";
+import {BlsMultiThreadWorkerPoolOptions} from "../bls/index.js";
+import {ForkChoiceOpts} from "../forkChoice/index.js";
+import {LightClientServerOpts} from "../lightClient/index.js";
+import {ShufflingCacheOpts} from "../shufflingCache.js";
+import {FIFOBlockStateCacheOpts} from "../stateCache/fifoBlockStateCache.js";
+import {PersistentCheckpointStateCacheOpts} from "../stateCache/persistentCheckpointsCache.js";
+
+export enum BeaconEngineMode {
+  MainThread = "main-thread",
+  Worker = "worker",
+  Native = "native",
+}
+
+export function assertSupportedBeaconEngineMode(mode: BeaconEngineMode): void {
+  if (mode === BeaconEngineMode.Native) {
+    throw new LodestarError({code: "BEACON_ENGINE_NATIVE_NOT_IMPLEMENTED"}, "Native BeaconEngine is not implemented");
+  }
+}
+
+export type PoolOpts = {
+  /**
+   * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
+   */
+  preaggregateSlotDistance?: number;
+};
+
+export type SeenCacheOpts = {
+  /**
+   * Slot distance from current slot to cache AttestationData
+   */
+  attDataCacheSlotDistance?: number;
+};
+
+/**
+ * Options consumed by the consensus engine and its collaborators. `IChainOptions` extends this;
+ * the BeaconEngine module references only `IBeaconEngineOptions` so the seam stays self-contained.
+ */
+export type IBeaconEngineOptions = ShufflingCacheOpts &
+  PoolOpts &
+  SeenCacheOpts &
+  FIFOBlockStateCacheOpts &
+  PersistentCheckpointStateCacheOpts &
+  ForkChoiceOpts &
+  StatesArchiveOpts &
+  LightClientServerOpts &
+  BlsMultiThreadWorkerPoolOptions & {
+    /**
+     * Used to connect beacon in follow mode to an EL,
+     * will still issue fcU for block proposal
+     */
+    disableImportExecutionFcU?: boolean;
+    disableProposerSlashings?: boolean;
+    faultInspectionWindow?: number;
+    allowedFaults?: number;
+    /** Ensure blobs returned by the execution engine are valid */
+    sanityCheckExecutionEngineBlobs?: boolean;
+    blsVerifyAllMainThread?: boolean;
+    /** Serve historical (below-finalized) states via the engine-owned worker thread */
+    serveHistoricalState?: boolean;
+    nHistoricalStatesFileDataStore?: boolean;
+    /** Use native state transition */
+    nativeStateTransition?: boolean;
+    /** Gossip block/blob/data-column validation observes (no longer gates) skipped slots */
+    maxSkipSlots?: number;
+    /** Min number of same-message signature sets to batch in gossip attestation validation */
+    minSameMessageSignatureSetsToBatch: number;
+    /** By default the engine passes gossip-validated attestations to fork choice; set to skip that write */
+    dontSendGossipAttestationsToForkchoice?: boolean;
+    /** Default fee recipient used by the engine-owned beaconProposerCache */
+    suggestedFeeRecipient: string;
+    /** Emit an SSE payloadAttributes event every slot (not only when proposing) */
+    emitPayloadAttributes?: boolean;
+    /** Persist orphaned (non-canonical finalized) blocks to disk before deleting them on finalization */
+    persistOrphanedBlocks?: boolean;
+    persistOrphanedBlocksDir?: string;
+    /** Archive execution-valid envelopes as headers. */
+    dedupePayloads?: boolean;
+    /** Persist invalid pre/post states to disk on state-transition failure (STF), for investigation */
+    persistInvalidSszObjects?: boolean;
+    persistInvalidSszObjectsDir?: string;
+  };

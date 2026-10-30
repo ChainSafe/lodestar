@@ -124,7 +124,7 @@ describe("SeenBlockInputCache", async () => {
       expect(cache.get(rootHex)).toBeUndefined();
     });
 
-    it("should remove serialized cache entries for the evicted BlockInput", () => {
+    it("should remove block cache entries for the evicted BlockInput", () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.capella});
       cache.getByBlock({
         block,
@@ -198,7 +198,7 @@ describe("SeenBlockInputCache", async () => {
       expect(cache.get(parentRootHex)).toBeUndefined();
     });
 
-    it("should remove serialized cache entries for the pruned BlockInputs", () => {
+    it("should remove block cache entries for the pruned BlockInputs", () => {
       const blocks = generateChainOfBlocks({forkName: ForkName.capella, count: 2});
       const parentBlock = blocks[0].block;
       const parentRootHex = blocks[0].rootHex;
@@ -268,6 +268,10 @@ describe("SeenBlockInputCache", async () => {
         epoch: config.DENEB_FORK_EPOCH,
         root,
         rootHex,
+        slot: 0,
+        stateRoot: root,
+        executionOptimistic: false,
+        blockSnapshot: {canonical: [], nonCanonical: []},
       });
       expect(cache.get(childRootHex)).toBeUndefined();
       expect(cache.get(parentRootHex)).toBeUndefined();
@@ -280,6 +284,10 @@ describe("SeenBlockInputCache", async () => {
         epoch: config.CAPELLA_FORK_EPOCH,
         root,
         rootHex,
+        slot: 0,
+        stateRoot: root,
+        executionOptimistic: false,
+        blockSnapshot: {canonical: [], nonCanonical: []},
       });
       expect(cache.get(childRootHex)).toBe(childBlockInput);
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);

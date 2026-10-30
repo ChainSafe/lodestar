@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {wrapError} from "../../../src/util/wrapError.js";
 
 describe("util / wrapError", () => {
@@ -30,5 +30,39 @@ describe("util / wrapError", () => {
 
     expect(resErr).toEqual({err: error});
     expect(resOk).toEqual({err: null, result: true});
+  });
+
+  it.each([false, true])("maps callback failures with async=%s", async (async) => {
+    const failure = {code: "TEST_ERROR"};
+    const mapError = vi.fn(() => failure);
+    const fn = () => {
+      if (async) return Promise.reject(error);
+      throw error;
+    };
+
+    expect(await wrapError(fn, mapError)).toEqual({err: failure});
+    expect(mapError).toHaveBeenCalledExactlyOnceWith(error);
+  });
+
+  it.each([false, true])("preserves callback success with async=%s", async (async) => {
+    const mapError = vi.fn();
+    const value = {slot: 1};
+    const result = await wrapError(() => (async ? Promise.resolve(value) : value), mapError);
+
+    expect(result).toEqual({err: null, result: value});
+    expect(mapError).not.toHaveBeenCalled();
+  });
+
+  it("lets the mapper propagate an unexpected failure", async () => {
+    await expect(
+      wrapError(
+        () => {
+          throw error;
+        },
+        (caught) => {
+          throw caught;
+        }
+      )
+    ).rejects.toBe(error);
   });
 });

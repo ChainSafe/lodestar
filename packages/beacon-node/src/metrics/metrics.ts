@@ -1,29 +1,22 @@
 import {Metric, Registry} from "prom-client";
-import {ForkChoiceMetrics, getForkChoiceMetrics} from "@lodestar/fork-choice";
-import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
 import {LodestarMetrics, createLodestarMetrics} from "./metrics/lodestar.js";
 import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
 import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 
+/**
+ * [beacon-engine] Main-thread metrics, retaining the upstream name for BeaconChain and its callers.
+ * BeaconEngine owns BeaconEngineMetrics. Shared families have independent recorders on each side
+ * and are aggregated only when serving /metrics; never pass this registry into the engine.
+ */
 export type Metrics = BeaconMetrics &
-  ForkChoiceMetrics &
   LodestarMetrics & {
-    /** Null when we use native state transition metrics instead */
-    stateTransition: BeaconStateTransitionMetrics | null;
     register: RegistryMetricCreator;
     close: () => void;
   };
 
 export type CreateMetricsOptions = {
-  /*
-   * Toggle inclusion of state transition metrics.
-   *
-   * False when native state transition is used, so we
-   * can grab metrics from the native implementation instead.
-   * */
-  includeStateTransitionMetrics?: boolean;
   collectNodeMetrics?: boolean;
 };
 
@@ -35,9 +28,7 @@ export function createMetrics(
 ): Metrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
-  const forkChoice = getForkChoiceMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
-  const stateTransition = createOpts.includeStateTransitionMetrics === false ? null : getMetrics(register);
 
   const onUnhandledRejection = (_error: unknown): void => {
     lodestar.unhandledPromiseRejections.inc();
@@ -59,9 +50,7 @@ export function createMetrics(
 
   return {
     ...beacon,
-    ...forkChoice,
     ...lodestar,
-    stateTransition,
     register,
     close,
   };

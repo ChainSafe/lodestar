@@ -1,9 +1,16 @@
-import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {
+  ArchiveMode,
+  BeaconEngineMode,
+  DEFAULT_ARCHIVE_MODE,
+  IBeaconNodeOptions,
+  defaultOptions,
+} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
 import {CircuitBreakerArgs} from "./builder.js";
 
 export type ChainArgs = {
+  "chain.beaconEngineMode"?: BeaconEngineMode;
   suggestedFeeRecipient: string;
   graffitiAppend?: boolean;
   serveHistoricalState?: boolean;
@@ -30,6 +37,7 @@ export type ChainArgs = {
   "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
+  "chain.dontSendGossipAttestationsToForkchoice"?: boolean;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
   "chain.archiveDataEpochs"?: number;
@@ -45,6 +53,7 @@ export type ChainArgs = {
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
   return {
+    beaconEngineMode: args["chain.beaconEngineMode"] ?? defaultOptions.chain.beaconEngineMode,
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,
     serveHistoricalState: args.serveHistoricalState,
@@ -73,6 +82,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     emitPayloadAttributes: args.emitPayloadAttributes,
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
+    dontSendGossipAttestationsToForkchoice: args["chain.dontSendGossipAttestationsToForkchoice"],
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveDataEpochs: args["chain.archiveDataEpochs"],
@@ -259,6 +269,13 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.dontSendGossipAttestationsToForkchoice": {
+    hidden: true,
+    type: "boolean",
+    description: "Pass gossip attestations to forkchoice or not",
+    group: "chain",
+  },
+
   "chain.disableProposerSlashings": {
     hidden: true,
     type: "boolean",
@@ -312,6 +329,15 @@ Will double processing times. Use only for debugging purposes.",
     description: "Use fs to store checkpoint state for PersistentCheckpointStateCache or not",
     type: "boolean",
     default: defaultOptions.chain.nHistoricalStatesFileDataStore,
+    group: "chain",
+  },
+
+  "chain.beaconEngineMode": {
+    hidden: true,
+    description: "BeaconEngine mode: main-thread, worker (transport pending), native (not implemented)",
+    type: "string",
+    choices: Object.values(BeaconEngineMode),
+    default: defaultOptions.chain.beaconEngineMode,
     group: "chain",
   },
 

@@ -1,6 +1,6 @@
-import {IForkChoice} from "@lodestar/fork-choice";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, Status} from "@lodestar/types";
+import {IChainView} from "../../chain/chainView/interface.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {ChainTarget} from "../range/utils/index.js";
 
@@ -24,7 +24,7 @@ function withinRangeOf(value: number, target: number, range: number): boolean {
 export function getPeerSyncType(
   local: Status,
   remote: Status,
-  forkChoice: IForkChoice,
+  chainView: IChainView,
   slotImportTolerance: number
 ): PeerSyncType {
   // Aux vars: Inclusive boundaries of the range to consider a peer's head synced to ours.
@@ -56,7 +56,7 @@ export function getPeerSyncType(
       (local.finalizedEpoch + 1 === remote.finalizedEpoch &&
         withinRangeOf(remote.headSlot, local.headSlot, slotImportTolerance)) ||
       // Peer's head is known => SYNCED
-      forkChoice.hasBlock(remote.headRoot)
+      chainView.hasBlock(remote.headRoot)
     ) {
       return PeerSyncType.FullySynced;
     }
@@ -71,7 +71,7 @@ export function getPeerSyncType(
     return PeerSyncType.Behind;
   }
 
-  if (remote.headSlot > nearRangeEnd && !forkChoice.hasBlock(remote.headRoot)) {
+  if (remote.headSlot > nearRangeEnd && !chainView.hasBlock(remote.headRoot)) {
     // This peer has a head ahead enough of ours and we have no knowledge of their best block.
     return PeerSyncType.Advanced;
   }
@@ -94,8 +94,8 @@ export const rangeSyncTypes = Object.keys(RangeSyncType) as RangeSyncType[];
  * - The remotes finalized epoch is greater than our current finalized epoch and we have
  *   not seen the finalized hash before
  */
-export function getRangeSyncType(local: Status, remote: Status, forkChoice: IForkChoice): RangeSyncType {
-  if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {
+export function getRangeSyncType(local: Status, remote: Status, chainView: IChainView): RangeSyncType {
+  if (remote.finalizedEpoch > local.finalizedEpoch && !chainView.hasBlock(remote.finalizedRoot)) {
     return RangeSyncType.Finalized;
   }
   return RangeSyncType.Head;
@@ -106,17 +106,17 @@ export function getRangeSyncTarget(
   remote: Status,
   chain: IBeaconChain
 ): {syncType: RangeSyncType; startEpoch: Slot; target: ChainTarget} {
-  const forkChoice = chain.forkChoice;
+  const {chainView} = chain.beaconEngine;
 
   // finalized sync
-  if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {
+  if (remote.finalizedEpoch > local.finalizedEpoch && !chainView.hasBlock(remote.finalizedRoot)) {
     return {
       // If  RangeSyncType.Finalized, the range of blocks fetchable from startEpoch and target must allow to switch
       // to RangeSyncType.Head
       //
       // finalizedRoot is a block with slot <= computeStartSlotAtEpoch(finalizedEpoch).
       // If finalizedEpoch does not start with a skipped slot, the SyncChain with this target MUST process the
-      // first block of the next epoch in order to trigger the condition above `forkChoice.hasBlock(remote.finalizedRoot)`
+      // first block of the next epoch in order to trigger the condition above `chainView.hasBlock(remote.finalizedRoot)`
       // and do a Head sync.
       //
       // When doing a finalized sync, we'll process blocks up to the finalized checkpoint, which does not allow to

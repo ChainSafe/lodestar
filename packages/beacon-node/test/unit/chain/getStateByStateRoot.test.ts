@@ -4,12 +4,12 @@ import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
-import {BeaconChain} from "../../../src/chain/chain.js";
+import {BeaconEngineCore} from "../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {RegenCaller} from "../../../src/chain/regen/interface.js";
 import {generateCachedState} from "../../utils/state.js";
 import {generateProtoBlock} from "../../utils/typeGenerator.js";
 
-describe("BeaconChain getStateByStateRoot", () => {
+describe("BeaconEngineCore state-root lookup", () => {
   const rootHex = `0x${"aa".repeat(32)}`;
   const checkpointState = new BeaconStateView(generateCachedState({slot: 2 * SLOTS_PER_EPOCH}));
   const stateRoot = toRootHex(checkpointState.hashTreeRoot());
@@ -53,8 +53,8 @@ describe("BeaconChain getStateByStateRoot", () => {
       },
     };
 
-    const getStateByStateRoot = (root: string) =>
-      BeaconChain.prototype.getStateByStateRoot.call(chain as unknown as BeaconChain, root, {allowRegen: true});
+    const engine = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, chain);
+    const getStateByStateRoot = (root: string) => engine.getSerializedState(root);
     return {chain, getStateByStateRoot};
   }
 
@@ -73,7 +73,7 @@ describe("BeaconChain getStateByStateRoot", () => {
       const {chain, getStateByStateRoot} = setup(checkpointState, {finalizedBlock});
 
       expect(await getStateByStateRoot(stateRoot)).toEqual({
-        state: checkpointState,
+        state: checkpointState.serialize(),
         executionOptimistic,
         finalized: true,
       });
@@ -90,7 +90,7 @@ describe("BeaconChain getStateByStateRoot", () => {
     const {chain, getStateByStateRoot} = setup(blockState, {finalizedBlock});
 
     expect(await getStateByStateRoot(blockStateRoot)).toEqual({
-      state: blockState,
+      state: blockState.serialize(),
       executionOptimistic: false,
       finalized: true,
     });
@@ -105,7 +105,11 @@ describe("BeaconChain getStateByStateRoot", () => {
     chain.db.blockArchive.get.mockResolvedValue(genesisBlock);
     chain.db.stateArchive.getBinary.mockResolvedValue(genesisStateBytes);
 
-    expect(await getStateByStateRoot(root)).toEqual({state, executionOptimistic: false, finalized: false});
+    expect(await getStateByStateRoot(root)).toEqual({
+      state: state.serialize(),
+      executionOptimistic: false,
+      finalized: false,
+    });
     expect(chain.regen.getCheckpointStateSync).not.toHaveBeenCalled();
     expect(chain.regen.getState).toHaveBeenCalledWith(root, RegenCaller.restApi);
     expect(chain.db.stateArchive.getBinary).not.toHaveBeenCalled();
@@ -115,7 +119,7 @@ describe("BeaconChain getStateByStateRoot", () => {
     const {chain, getStateByStateRoot} = setup(checkpointState, {cachedCheckpointState: null});
 
     expect(await getStateByStateRoot(stateRoot)).toEqual({
-      state: checkpointState,
+      state: checkpointState.serialize(),
       executionOptimistic: false,
       finalized: true,
     });
@@ -133,7 +137,11 @@ describe("BeaconChain getStateByStateRoot", () => {
       finalizedEpoch: 0,
     });
 
-    expect(await getStateByStateRoot(root)).toEqual({state, executionOptimistic: false, finalized: false});
+    expect(await getStateByStateRoot(root)).toEqual({
+      state: state.serialize(),
+      executionOptimistic: false,
+      finalized: false,
+    });
     expect(chain.regen.getCheckpointStateSync).toHaveBeenCalledWith({epoch: 0, rootHex});
     expect(chain.regen.getState).not.toHaveBeenCalled();
   });
@@ -159,7 +167,7 @@ describe("BeaconChain getStateByStateRoot", () => {
     chain.db.blockArchive.get.mockResolvedValue(genesisBlock);
 
     expect(await getStateByStateRoot(genesisStateRoot)).toEqual({
-      state: genesisState,
+      state: genesisStateBytes,
       executionOptimistic: false,
       finalized: true,
     });

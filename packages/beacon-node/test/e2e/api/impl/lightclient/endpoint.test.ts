@@ -8,6 +8,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Validator} from "@lodestar/validator";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
+import {getBeaconEngineCore} from "../../../../utils/engine.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
 import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
@@ -131,7 +132,7 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
     // Get the actual sync committee root from the head state
     // The sync committee is computed using a weighted random shuffle, not simple alternation
     // Since the test starts at Electra, headState is always post-Altair and has currentSyncCommittee
-    const headState = bn.chain.getHeadState();
+    const headState = getBeaconEngineCore(bn.chain.beaconEngine).getHeadState();
     if (!isStatePostAltair(headState)) {
       throw new Error("Expected Altair state in lightclient test");
     }

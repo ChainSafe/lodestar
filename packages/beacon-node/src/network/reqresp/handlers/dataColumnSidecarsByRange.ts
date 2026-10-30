@@ -1,13 +1,14 @@
 import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
 import {ColumnIndex, Epoch, RootHex, fulu} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
+import {ChainViewBlock} from "../../../chain/chainView/interface.js";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 import {
   handleColumnSidecarUnavailability,
@@ -17,7 +18,7 @@ import {
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb,
+  db: IBeaconChainDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
@@ -50,13 +51,13 @@ export async function* onDataColumnSidecarsByRange(
     );
   }
 
-  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  const finalizedSlot = chain.beaconEngine.chainView.getFinalizedBlock().slot;
   // At Gloas, finalizing the beacon block does not finalize its payload. Keep the boundary block in the
   // fork-choice-backed section until the following finalization, matching ExecutionPayloadEnvelopesByRange.
   const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
   const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
-  const headBlock = chain.forkChoice.getHead();
-  const headChain = chain.forkChoice.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
+  const headBlock = chain.beaconEngine.chainView.getHead();
+  const headChain = chain.beaconEngine.chainView.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
 
   for await (const block of resolveCanonicalDataColumnBlocks(
     chain,
@@ -110,8 +111,8 @@ type CanonicalDataColumnBlock = {
 
 async function* resolveCanonicalDataColumnBlocks(
   chain: IBeaconChain,
-  db: IBeaconDb,
-  headChain: ReturnType<IBeaconChain["forkChoice"]["getAllAncestorBlocks"]>,
+  db: IBeaconChainDb,
+  headChain: ChainViewBlock[],
   startSlot: number,
   endSlot: number,
   archiveMaxSlot: number,
@@ -120,7 +121,10 @@ async function* resolveCanonicalDataColumnBlocks(
   const canonicalBlocksBySlot = new Map(headChain.map((block) => [block.slot, block]));
   const oldestForkChoiceSlot = headChain.at(-1)?.slot ?? Number.POSITIVE_INFINITY;
   const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
-  const recentRoots = getRecentCanonicalRoots(chain, startSlot, Math.min(archiveEnd, oldestForkChoiceSlot));
+  const archiveReadEnd = Math.min(archiveEnd, oldestForkChoiceSlot);
+  const archiveMinSlot = startSlot < archiveReadEnd ? await db.blockArchive.firstKey() : null;
+  const legacyEnd = Math.min(archiveReadEnd, (db.lastLegacyArchiveSlot ?? -1) + 1);
+  const legacySlots = new Set(startSlot < legacyEnd ? await db.blockArchive.keys({gte: startSlot, lt: legacyEnd}) : []);
 
   for (let slot = startSlot; slot < archiveEnd; slot++) {
     if (slot >= oldestForkChoiceSlot) {
@@ -136,12 +140,10 @@ async function* resolveCanonicalDataColumnBlocks(
       continue;
     }
 
-    let blockRoot = recentRoots.get(slot);
-    if (blockRoot === null) continue;
-    if (blockRoot === undefined) {
-      const root = await db.blockArchive.getRootBySlot(slot);
-      blockRoot = root === null ? null : toRootHex(root);
-    }
+    const root = await db.blockArchive.getRootBySlot(slot);
+    const blockRoot = root === null ? null : toRootHex(root);
+    // Missing roots within retained archive history are skipped slots, not legacy column lookups.
+    if (blockRoot === null && archiveMinSlot !== null && slot >= archiveMinSlot && !legacySlots.has(slot)) continue;
     if (blockRoot === null && (db.lastLegacyArchiveSlot === null || slot > db.lastLegacyArchiveSlot)) continue;
     if (
       chain.config.getForkSeq(slot) >= ForkSeq.gloas &&
@@ -171,26 +173,10 @@ async function* resolveCanonicalDataColumnBlocks(
 }
 
 /** Copy roots synchronously so serving a request never retains a head-state reference across I/O. */
-function getRecentCanonicalRoots(chain: IBeaconChain, startSlot: number, endSlot: number): Map<number, RootHex | null> {
-  const roots = new Map<number, RootHex | null>();
-  if (startSlot >= endSlot) return roots;
-  const state = chain.getHeadState();
-  // Skipped slots repeat the prior root. At the oldest ring entry, that prior root is unavailable.
-  const start = Math.max(startSlot, state.slot - SLOTS_PER_HISTORICAL_ROOT + 1, 1);
-  const end = Math.min(endSlot, state.slot);
-  if (start >= end) return roots;
-  let previousRoot = toRootHex(state.getBlockRootAtSlot(start - 1));
-  for (let slot = start; slot < end; slot++) {
-    const root = toRootHex(state.getBlockRootAtSlot(slot));
-    roots.set(slot, root === previousRoot ? null : root);
-    previousRoot = root;
-  }
-  return roots;
-}
 
 async function hasExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  db: IBeaconDb,
+  db: IBeaconChainDb,
   slot: number,
   blockRoot: RootHex | null
 ): Promise<boolean> {

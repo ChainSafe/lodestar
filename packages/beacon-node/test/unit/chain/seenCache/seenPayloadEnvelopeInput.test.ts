@@ -1,14 +1,15 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import {ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
+import {IChainView} from "../../../../src/chain/chainView/interface.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {SeenPayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
-import {IBeaconDb} from "../../../../src/db/index.js";
+import {IBeaconChainDb} from "../../../../src/db/index.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../../../src/sync/constants.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
@@ -28,31 +29,31 @@ describe("SeenPayloadEnvelopeInput", () => {
   let cache: SeenPayloadEnvelopeInput;
   let abortController: AbortController;
   let chainEvents: ChainEventEmitter;
-  let forkChoice: IForkChoice;
+  let chainView: IChainView;
+  let db: IBeaconChainDb;
   let serializedCache: SerializedCache;
-  let db: IBeaconDb;
   let seenBlockInputCache: SeenBlockInput;
 
   beforeEach(() => {
     chainEvents = new ChainEventEmitter();
     abortController = new AbortController();
-    forkChoice = {
+    chainView = {
       isDescendant: vi.fn().mockReturnValue(false),
       hasBlockHex: vi.fn(),
-    } as unknown as IForkChoice;
+    } as unknown as IChainView;
+    db = {block: {get: vi.fn()}} as unknown as IBeaconChainDb;
     serializedCache = new SerializedCache();
-    db = {block: {get: vi.fn()}} as unknown as IBeaconDb;
     // Default: cache miss so getOrReload exercises the db path; individual tests override get().
     seenBlockInputCache = {get: vi.fn().mockReturnValue(undefined)} as unknown as SeenBlockInput;
 
     cache = new SeenPayloadEnvelopeInput({
       config,
       clock: getMockedClock(),
-      forkChoice,
+      chainView,
+      db,
       chainEvents,
       signal: abortController.signal,
       serializedCache,
-      db,
       seenBlockInputCache,
       custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
       metrics: null,
@@ -122,7 +123,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     const newRootHex = addPayloadInput(2);
     const parentBlock = protoBlock(newRootHex, 2);
 
-    vi.mocked(forkChoice.isDescendant).mockImplementation((ancestorRoot) => ancestorRoot === oldRootHex);
+    vi.mocked(chainView.isDescendant).mockImplementation((ancestorRoot) => ancestorRoot === oldRootHex);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(oldRootHex)).toBeUndefined();
@@ -134,10 +135,10 @@ describe("SeenPayloadEnvelopeInput", () => {
     const newRootHex = addPayloadInput(2);
     const parentBlock = protoBlock(newRootHex, 2);
 
-    vi.mocked(forkChoice.isDescendant).mockReturnValue(false);
+    vi.mocked(chainView.isDescendant).mockReturnValue(false);
     cache.pruneBelowParent(parentBlock);
 
-    expect(forkChoice.isDescendant).toHaveBeenCalledWith(
+    expect(chainView.isDescendant).toHaveBeenCalledWith(
       oldRootHex,
       PayloadStatus.FULL,
       newRootHex,
@@ -153,7 +154,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(cache.get(oldRootHex)?.hasComputedAllData()).toBe(false);
 
     const parentBlock = protoBlock(newRootHex, 2);
-    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
+    vi.mocked(chainView.isDescendant).mockReturnValue(true);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(oldRootHex)).toBeDefined();
@@ -163,7 +164,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     const rootHex = addPayloadInput(1);
     const parentBlock = protoBlock(rootHex, 1);
 
-    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
+    vi.mocked(chainView.isDescendant).mockReturnValue(true);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(rootHex)).toBeDefined();
@@ -248,12 +249,12 @@ describe("SeenPayloadEnvelopeInput", () => {
       const result = await cache.getOrReload(rootHex);
 
       expect(result).toBe(cache.get(rootHex));
-      expect(forkChoice.hasBlockHex).not.toHaveBeenCalled();
+      expect(chainView.hasBlockHex).not.toHaveBeenCalled();
       expect(db.block.get).not.toHaveBeenCalled();
     });
 
     it("returns undefined and does not read db when the block is not in fork choice", async () => {
-      vi.mocked(forkChoice.hasBlockHex).mockReturnValue(false);
+      vi.mocked(chainView.hasBlockHex).mockReturnValue(false);
 
       const result = await cache.getOrReload(`0x${"ab".repeat(32)}`);
 
@@ -263,7 +264,7 @@ describe("SeenPayloadEnvelopeInput", () => {
 
     it("reconstructs an EMPTY PayloadEnvelopeInput from the hot db when the gloas block is in fork choice", async () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: GLOAS_SLOT});
-      vi.mocked(forkChoice.hasBlockHex).mockReturnValue(true);
+      vi.mocked(chainView.hasBlockHex).mockReturnValue(true);
       vi.mocked(db.block.get).mockResolvedValue(block);
 
       const result = await cache.getOrReload(rootHex);
@@ -276,8 +277,8 @@ describe("SeenPayloadEnvelopeInput", () => {
 
     it("reconstructs from seenBlockInputCache without reading db when the block is still in memory", async () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: GLOAS_SLOT});
-      vi.mocked(forkChoice.hasBlockHex).mockReturnValue(true);
-      // Block imported but its async db write has not flushed yet: it is still in seenBlockInputCache.
+      vi.mocked(chainView.hasBlockHex).mockReturnValue(true);
+      // Block imported and still in seenBlockInputCache while sidecar data is being persisted.
       vi.mocked(seenBlockInputCache.get).mockReturnValue({
         hasBlock: () => true,
         getBlock: () => block,
@@ -292,8 +293,8 @@ describe("SeenPayloadEnvelopeInput", () => {
       expect(db.block.get).not.toHaveBeenCalled();
     });
 
-    it("returns undefined during the import-to-persist window (block not yet in hot db)", async () => {
-      vi.mocked(forkChoice.hasBlockHex).mockReturnValue(true);
+    it("returns undefined when the hot block is missing", async () => {
+      vi.mocked(chainView.hasBlockHex).mockReturnValue(true);
       vi.mocked(db.block.get).mockResolvedValue(null);
 
       const result = await cache.getOrReload(`0x${"cd".repeat(32)}`);
@@ -304,7 +305,7 @@ describe("SeenPayloadEnvelopeInput", () => {
 
     it("returns undefined for a pre-gloas block", async () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.fulu, slot: FULU_SLOT});
-      vi.mocked(forkChoice.hasBlockHex).mockReturnValue(true);
+      vi.mocked(chainView.hasBlockHex).mockReturnValue(true);
       vi.mocked(db.block.get).mockResolvedValue(block);
 
       const result = await cache.getOrReload(rootHex);
@@ -315,7 +316,7 @@ describe("SeenPayloadEnvelopeInput", () => {
 
     it("dedups concurrent reloads of the same root into a single db read and object", async () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: GLOAS_SLOT});
-      vi.mocked(forkChoice.hasBlockHex).mockReturnValue(true);
+      vi.mocked(chainView.hasBlockHex).mockReturnValue(true);
       vi.mocked(db.block.get).mockResolvedValue(block);
 
       const [a, b] = await Promise.all([cache.getOrReload(rootHex), cache.getOrReload(rootHex)]);
@@ -357,7 +358,7 @@ describe("SeenPayloadEnvelopeInput", () => {
 
       // getOrReload an old-slot miss: it inserts the reconstructed shell at the BACK, then the cap runs.
       const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: GLOAS_SLOT});
-      vi.mocked(forkChoice.hasBlockHex).mockReturnValue(true);
+      vi.mocked(chainView.hasBlockHex).mockReturnValue(true);
       vi.mocked(db.block.get).mockResolvedValue(block);
       const reloaded = await cache.getOrReload(rootHex);
 
@@ -383,11 +384,11 @@ describe("SeenPayloadEnvelopeInput", () => {
       const cacheWithMetrics = new SeenPayloadEnvelopeInput({
         config,
         clock: getMockedClock(),
-        forkChoice,
+        chainView,
+        db,
         chainEvents,
         signal: abortController.signal,
         serializedCache: new SerializedCache(),
-        db,
         seenBlockInputCache,
         custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
         metrics: metrics as unknown as ConstructorParameters<typeof SeenPayloadEnvelopeInput>[0]["metrics"],

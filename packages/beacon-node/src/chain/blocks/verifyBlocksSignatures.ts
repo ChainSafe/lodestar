@@ -7,11 +7,13 @@ import {
 } from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
+import {IBeaconEngineOptions} from "../beaconEngine/options.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
 import {ImportBlockOpts} from "./types.js";
+import {persistInvalidSszObject} from "./utils/persistInvalidSszObject.js";
 
 /**
  * Verifies 1 or more block's signatures from a group of blocks in the same epoch.
@@ -24,11 +26,13 @@ export async function verifyBlocksSignatures(
   config: BeaconConfig,
   bls: IBlsVerifier,
   logger: Logger,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
   indexedAttestationsByBlock: IndexedAttestation[][],
-  opts: ImportBlockOpts
+  // Persist config read off `IBeaconEngineOptions` (engine-owned); persisting the state here (engine-side)
+  // keeps `IBeaconStateView` off the thrown `BlockError` (out of the facade seam).
+  opts: ImportBlockOpts & Pick<IBeaconEngineOptions, "persistInvalidSszObjects" | "persistInvalidSszObjectsDir">
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
@@ -64,7 +68,29 @@ export async function verifyBlocksSignatures(
   // `rejectFirstInvalidResolveAllValid()` returns on isValid result with its index
   const res = await rejectFirstInvalidResolveAllValid(isValidPromises);
   if (!res.allValid) {
-    throw new BlockError(blocks[res.index], {code: BlockErrorCode.INVALID_SIGNATURE, state: preState0});
+    if (opts.persistInvalidSszObjects) {
+      const dir = opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects";
+      const invalidBlock = blocks[res.index];
+      const logStr = `slot_${invalidBlock.message.slot}_invalid_signature`;
+      const blockType = config.getForkTypes(invalidBlock.message.slot).SignedBeaconBlock;
+      void persistInvalidSszObject(
+        dir,
+        logger,
+        `SignedBeaconBlock_slot_${invalidBlock.message.slot}`,
+        blockType.serialize(invalidBlock),
+        blockType.hashTreeRoot(invalidBlock),
+        `${logStr}_block`
+      );
+      void persistInvalidSszObject(
+        dir,
+        logger,
+        `state_slot_${preState0.slot}_BeaconState`,
+        preState0.serialize(),
+        preState0.hashTreeRoot(),
+        logStr
+      );
+    }
+    throw new BlockError(blocks[res.index], {code: BlockErrorCode.INVALID_SIGNATURE, stateSlot: preState0.slot});
   }
 
   const verifySignaturesTime = Date.now();

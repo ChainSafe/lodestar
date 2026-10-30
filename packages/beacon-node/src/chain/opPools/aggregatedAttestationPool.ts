@@ -1,7 +1,7 @@
 import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoiceRead} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkSeq,
@@ -31,7 +31,7 @@ import {
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
 import {Logger, MapDef, assert, toRootHex} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ShufflingCache} from "../shufflingCache.js";
@@ -140,7 +140,7 @@ export class AggregatedAttestationPool {
 
   constructor(
     private readonly config: BeaconConfig,
-    private readonly metrics: Metrics | null = null,
+    private readonly metrics: BeaconEngineMetrics | null = null,
     private readonly logger: Logger | null = null
   ) {
     metrics?.opPool.aggregatedAttestationPool.attDataPerSlot.addCollect(() => this.onScrapeMetrics(metrics));
@@ -210,7 +210,7 @@ export class AggregatedAttestationPool {
 
   getAttestationsForBlock(
     fork: ForkName,
-    forkChoice: IForkChoice,
+    forkChoice: IForkChoiceRead,
     shufflingCache: ShufflingCache,
     state: IBeaconStateView
   ): Attestation[] {
@@ -227,7 +227,7 @@ export class AggregatedAttestationPool {
    */
   getAttestationsForBlockElectra(
     fork: ForkName,
-    forkChoice: IForkChoice,
+    forkChoice: IForkChoiceRead,
     shufflingCache: ShufflingCache,
     state: IBeaconStateView
   ): electra.Attestation[] {
@@ -465,7 +465,7 @@ export class AggregatedAttestationPool {
     return attestations;
   }
 
-  private onScrapeMetrics(metrics: Metrics): void {
+  private onScrapeMetrics(metrics: BeaconEngineMetrics): void {
     const poolMetrics = metrics.opPool.aggregatedAttestationPool;
     const allSlots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys());
 
@@ -828,7 +828,7 @@ export function getNotSeenValidatorsFn(
  * See also: https://github.com/ChainSafe/lodestar/issues/4333
  */
 export function getValidateAttestationDataFn(
-  forkChoice: IForkChoice,
+  forkChoice: IForkChoiceRead,
   state: IBeaconStateView
 ): ValidateAttestationDataFn {
   const cachedValidatedAttestationData = new Map<string, InvalidAttestationData | null>();
@@ -874,7 +874,7 @@ export function getValidateAttestationDataFn(
  * Return `null` if the shuffling is valid, otherwise return an `InvalidAttestationData` reason.
  */
 function isValidShuffling(
-  forkChoice: IForkChoice,
+  forkChoice: IForkChoiceRead,
   state: IBeaconStateView,
   blockRootHex: RootHex,
   targetEpoch: Epoch

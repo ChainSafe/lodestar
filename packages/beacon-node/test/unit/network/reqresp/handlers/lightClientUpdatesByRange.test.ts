@@ -6,8 +6,9 @@ import {onLightClientUpdatesByRange} from "../../../../../src/network/reqresp/ha
 // A light client server that has no update for any period: every lookup misses.
 function createChain(): IBeaconChain {
   return {
-    lightClientServer: {
-      getUpdate: async (_period: number) => {
+    opts: {},
+    beaconEngine: {
+      getLightClientUpdate: async (_period: number) => {
         // getUpdate performs async DB I/O in production; yield to keep the mock realistic.
         await new Promise((resolve) => setTimeout(resolve, 0));
         throw new LightClientServerError(

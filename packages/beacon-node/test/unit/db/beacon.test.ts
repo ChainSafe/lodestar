@@ -11,6 +11,8 @@ import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {defer, toRootHex} from "@lodestar/utils";
 import {archiveBlocks} from "../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {BeaconEngineCore} from "../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {IBeaconEngine} from "../../../src/chain/interface.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
 import {Bucket} from "../../../src/db/buckets.js";
 import {blobSidecarsWrapperSsz} from "../../../src/db/repositories/blobSidecars.js";
@@ -145,16 +147,29 @@ describe("BeaconDb.pruneHotDb", () => {
       }),
     } as unknown as IForkChoice;
 
-    await archiveBlocks(
+    const engineContext = {
       config,
       db,
       forkChoice,
-      undefined,
+      logger,
+      clock: {currentEpoch: 0, currentSlot: 0},
+    } as unknown as BeaconEngineCore;
+    Object.assign(forkChoice, {
+      getFinalizedCheckpoint: () => ({epoch: 0, root, rootHex: blockRoot}),
+      getHead: () => generateProtoBlock({slot, blockRoot}),
+    });
+    const engine = {
+      migrateCanonicalBlocks: BeaconEngineCore.prototype.migrateCanonicalBlocks.bind(engineContext),
+      pruneLightClientNonCheckpointData: vi.fn(),
+    } as unknown as IBeaconEngine;
+    await archiveBlocks(
+      config,
+      db,
+      engine,
+      {canonical: [generateProtoBlock({slot, blockRoot})], nonCanonical: []},
       logger,
       {epoch: 0, root, rootHex: blockRoot},
-      0,
-      null,
-      false
+      0
     );
 
     expect(await db.block.getBinary(root)).toBeNull();

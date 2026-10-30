@@ -1,6 +1,5 @@
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {BeaconBlocksByRootRequest} from "../../../util/types.js";
 
@@ -12,8 +11,7 @@ export async function* onBeaconBlocksByRoot(
   // Archival nodes may still serve older retained blocks to allow genesis sync.
 
   for (const blockRoot of requestBody) {
-    const root = blockRoot;
-    const block = await chain.getSerializedBlockByRoot(toRootHex(root));
+    const block = await chain.getSerializedBlockByRoot(blockRoot);
 
     if (block) {
       yield {

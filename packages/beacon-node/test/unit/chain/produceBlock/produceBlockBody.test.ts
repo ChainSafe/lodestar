@@ -8,7 +8,7 @@ import {ForkName} from "@lodestar/params";
 import {BeaconStateView, computeTimeAtSlot, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {BeaconChain} from "../../../../src/chain/chain.js";
+import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {
   BlockType,
   PayloadPreparationType,
@@ -31,7 +31,7 @@ function setup(fork: ForkName.fulu | ForkName.gloas | ForkName.heze = ForkName.f
   );
   const modules = getApiTestModules({config});
   if (!isStatePostFulu(state)) throw new Error("Expected supported proposal state");
-  const chain = modules.chain as unknown as BeaconChain;
+  const chain = modules.chain.beaconEngine as unknown as BeaconEngineCore;
   const parentBlockRoot = new Uint8Array(32).fill(1);
   const parentBlock = generateProtoBlock({slot: slot - 1, blockRoot: toRootHex(parentBlockRoot)});
   const attrs = {

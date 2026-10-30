@@ -1,99 +1,200 @@
-import {describe, expect, it, vi} from "vitest";
-import {createChainForkConfig} from "@lodestar/config";
-import {config as configDef} from "@lodestar/config/default";
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {routes} from "@lodestar/api";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
+import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
-import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
+import {defer, fromHex, toRootHex} from "@lodestar/utils";
+import {VerifiedBlockBundle} from "../../../../src/chain/beaconEngine/importBlock.js";
+import {ImportBlockResponse} from "../../../../src/chain/beaconEngine/interface.js";
+import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
+import {blockFailureFromError} from "../../../../src/chain/beaconEngine/processingResult.js";
+import {toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/utils.js";
+import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
+import {BlockSerializedCache} from "../../../../src/chain/blocks/blockSerializedCache.js";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
-import {FullyVerifiedBlock} from "../../../../src/chain/blocks/types.js";
-import type {BeaconChain} from "../../../../src/chain/chain.js";
-import {getMockedLogger} from "../../../mocks/loggerMock.js";
+import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
+import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
+import * as eventLoop from "../../../../src/util/eventLoop.js";
+import {ClockStopped} from "../../../mocks/clock.js";
+import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
+import {generateCachedState, zeroProtoBlock} from "../../../utils/state.js";
 
-describe("chain / blocks / importBlock", () => {
-  const config = createChainForkConfig({...configDef, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
-  const parentRoot = Buffer.alloc(32, 1);
-  const parentBlockHash = Buffer.alloc(32, 2);
-  const stopAfterOnBlock = new Error("stop after onBlock");
+const engineModes = [BeaconEngineMode.MainThread, BeaconEngineMode.Worker];
 
-  function importGloasBlock(parentVariant: ProtoBlock | null) {
-    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
-    block.message.slot = 1;
-    block.message.parentRoot = parentRoot;
-    block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
-    const blockInput = BlockInputNoData.createFromBlock({
-      block,
-      blockRootHex: toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message)),
-      forkName: ForkName.gloas,
-      daOutOfRange: false,
-      source: BlockInputSource.gossip,
-      seenTimestampSec: 0,
+describe.each(engineModes)("BeaconChain serialized bytes lifecycle (beaconEngineMode=%s)", (beaconEngineMode) => {
+  const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+  const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
+  const blockRootHex = toRootHex(blockRoot);
+  const signedRoot = toSignedBlockRootHex(computeSignedBlockRoot(ForkName.phase0, block));
+  const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(block);
+  const blockInput = BlockInputPreData.createFromBlock({
+    block,
+    blockRootHex,
+    forkName: ForkName.phase0,
+    daOutOfRange: false,
+    source: BlockInputSource.gossip,
+    seenTimestampSec: 0,
+  });
+  const bundle: VerifiedBlockBundle = {
+    block,
+    blockBytes,
+    postState: new BeaconStateView(generateCachedState()),
+    executionStatus: ExecutionStatus.PreMerge,
+    indexedAttestations: [],
+    proposerBalanceDelta: 0,
+    parentBlockSlot: 0,
+    seenTimestampSec: 0,
+  };
+  const blockImportData =
+    beaconEngineMode === BeaconEngineMode.MainThread
+      ? bundle
+      : {signedBlockRoot: computeSignedBlockRoot(ForkName.phase0, block)};
+  const importMethod = beaconEngineMode === BeaconEngineMode.MainThread ? "importBlock" : "importBlockBytes";
+  const importedBlock = toChainViewBlockBytes({...zeroProtoBlock, blockRoot: blockRootHex});
+  const importResult: ImportBlockResponse = {
+    block: importedBlock,
+    newHead: importedBlock,
+    justified: {epoch: 0, root: fromHex(blockRootHex)},
+    finalized: {epoch: 0, root: fromHex(blockRootHex)},
+    executionOptimistic: false,
+    headUpdate: null,
+    reorg: null,
+    justifiedCheckpointChanged: false,
+    finalizedCheckpointChanged: false,
+    version: 0,
+  };
+  let chain: ReturnType<typeof getMockedBeaconChain>;
+  let engineImport: ReturnType<typeof defer<ImportBlockResponse>>;
+  let sidecarWrite: ReturnType<typeof defer<void>>;
+  let engineCache: BlockSerializedCache;
+
+  beforeEach(() => {
+    chain = getMockedBeaconChain();
+    chain.opts.beaconEngineMode = beaconEngineMode;
+    engineCache = chain.beaconEngine.blockSerializedCache;
+    engineImport = defer<ImportBlockResponse>();
+    sidecarWrite = defer<void>();
+    chain.beaconEngine[importMethod] = vi.fn().mockImplementation(async () => {
+      const result = await engineImport.promise;
+      if (beaconEngineMode === BeaconEngineMode.Worker) engineCache.delete(signedRoot, undefined, "persisted");
+      return {err: null, result};
     });
-
-    const forkChoice = {
-      getTime: vi.fn().mockReturnValue(1),
-      getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
-      // The parent's default (PENDING) variant is VALID, only the payload variant may differ
-      getBlockHexDefaultStatus: vi.fn().mockReturnValue({executionStatus: ExecutionStatus.Valid} as ProtoBlock),
-      getBlockHexAndBlockHash: vi.fn().mockReturnValue(parentVariant),
-      onBlock: vi.fn().mockImplementation(() => {
-        throw stopAfterOnBlock;
-      }),
-    };
-    const chain = {
-      config,
-      forkChoice,
-      logger: getMockedLogger(),
-      clock: {secFromSlot: vi.fn().mockReturnValue(0), msFromSlot: vi.fn().mockReturnValue(0)},
-      unfinalizedBlockWrites: {
+    Object.defineProperty(chain, "clock", {value: new ClockStopped(0)});
+    Object.defineProperty(chain, "unfinalizedBlockWrites", {
+      value: {
         waitForSpace: vi.fn().mockResolvedValue(undefined),
-        push: vi.fn().mockResolvedValue(undefined),
+        push: vi.fn().mockReturnValue(sidecarWrite.promise),
       },
-      checkpointBalancesCache: {processState: vi.fn()},
-    } as unknown as BeaconChain;
-
-    const fullyVerifiedBlock: FullyVerifiedBlock = {
-      blockInput,
-      postState: {genesisTime: 0} as IBeaconStateView,
-      parentBlockSlot: 0,
-      proposerBalanceDelta: 0,
-      dataAvailabilityStatus: DataAvailabilityStatus.NotRequired,
-      indexedAttestations: [],
-      seenTimestampSec: 0,
-      executionStatus: ExecutionStatus.Valid,
-    };
-
-    return {forkChoice, result: importBlock.call(chain, fullyVerifiedBlock, {})};
-  }
-
-  it.each([ExecutionStatus.Syncing, ExecutionStatus.Valid])(
-    "gloas block inherits %s from the parent variant its bid builds on",
-    async (parentStatus) => {
-      const {forkChoice, result} = importGloasBlock({executionStatus: parentStatus} as ProtoBlock);
-
-      await expect(result).rejects.toThrow(stopAfterOnBlock);
-      expect(forkChoice.getBlockHexAndBlockHash).toHaveBeenCalledWith(
-        toRootHex(parentRoot),
-        toRootHex(parentBlockHash)
-      );
-      expect(forkChoice.onBlock.mock.calls[0][5]).toBe(parentStatus);
-    }
-  );
-
-  it("rejects a gloas block building on an invalid parent payload", async () => {
-    const {forkChoice, result} = importGloasBlock({executionStatus: ExecutionStatus.Invalid} as ProtoBlock);
-
-    await expect(result).rejects.toThrow("Parent block has invalid execution status");
-    expect(forkChoice.onBlock).not.toHaveBeenCalled();
+    });
+    vi.spyOn(eventLoop, "callInNextEventLoop").mockImplementation(() => {});
+    chain.serializedCache.set(block, blockBytes);
+    if (beaconEngineMode === BeaconEngineMode.Worker) engineCache.set(signedRoot, block, blockBytes);
   });
 
-  it("rejects a gloas block whose parent variant is unknown", async () => {
-    const {forkChoice, result} = importGloasBlock(null);
+  afterEach(() => {
+    sidecarWrite.resolve();
+    vi.restoreAllMocks();
+  });
 
-    await expect(result).rejects.toThrow("Parent block not found in forkChoice");
-    expect(forkChoice.onBlock).not.toHaveBeenCalled();
+  it("rejects import data for the wrong mode before calling Core", async () => {
+    chain.beaconEngine.importBlock = vi.fn();
+    chain.beaconEngine.importBlockBytes = vi.fn();
+    const invalidImportData =
+      beaconEngineMode === BeaconEngineMode.MainThread
+        ? {signedBlockRoot: computeSignedBlockRoot(ForkName.phase0, block)}
+        : bundle;
+
+    await expect(
+      withBeaconEngineFacade(chain).beaconEngine.importBlock(
+        blockInput,
+        invalidImportData,
+        DataAvailabilityStatus.PreData,
+        {}
+      )
+    ).rejects.toMatchObject({type: {code: "BEACON_ENGINE_INVALID_BLOCK_IMPORT_DATA"}});
+
+    expect(chain.beaconEngine.importBlock).not.toHaveBeenCalled();
+    expect(chain.beaconEngine.importBlockBytes).not.toHaveBeenCalled();
+  });
+
+  it("retains local bytes after engine import while sidecar writes are still pending", async () => {
+    const importing = importBlock.call(
+      withBeaconEngineFacade(chain),
+      blockInput,
+      blockImportData,
+      DataAvailabilityStatus.PreData,
+      {}
+    );
+    await vi.waitFor(() => expect(chain.beaconEngine[importMethod]).toHaveBeenCalledOnce());
+    expect(chain.serializedCache.get(block)).toBeDefined();
+
+    engineImport.resolve(importResult);
+    await importing;
+
+    expect(chain.serializedCache.get(block)).toBe(blockBytes);
+    expect(engineCache.get(signedRoot)).toBeUndefined();
+    expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+  });
+
+  it("uses the engine's returned optimism for the block event", async () => {
+    const facade = withBeaconEngineFacade(chain);
+    const onBlock = vi.fn();
+    facade.emitter.on(routes.events.EventType.block, onBlock);
+    vi.mocked(eventLoop.callInNextEventLoop).mockImplementationOnce((callback) => callback());
+    const importing = importBlock.call(facade, blockInput, blockImportData, DataAvailabilityStatus.PreData, {});
+    engineImport.resolve({...importResult, executionOptimistic: true});
+    await importing;
+    expect(onBlock).toHaveBeenCalledExactlyOnceWith({block: blockRootHex, slot: 0, executionOptimistic: true});
+  });
+
+  it("retains the main-thread entry when engine import fails", async () => {
+    const cached = chain.serializedCache.get(block);
+    const error = new Error("Engine import failed");
+    const importing = importBlock.call(
+      withBeaconEngineFacade(chain),
+      blockInput,
+      blockImportData,
+      DataAvailabilityStatus.PreData,
+      {}
+    );
+    const rejected = expect(importing).rejects.toBe(error);
+    await vi.waitFor(() => expect(chain.beaconEngine[importMethod]).toHaveBeenCalledOnce());
+
+    engineImport.reject(error);
+    await rejected;
+
+    expect(chain.serializedCache.get(block)).toBe(cached);
+    expect(engineCache.get(signedRoot) !== undefined).toBe(beaconEngineMode === BeaconEngineMode.Worker);
+    expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+  });
+
+  it("rehydrates a cloned typed failure without applying successful-import cleanup", async () => {
+    const error = new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex});
+    const roots = [computeSignedBlockRoot(ForkName.phase0, block)];
+    chain.beaconEngine[importMethod] = vi
+      .fn()
+      .mockResolvedValue(structuredClone({err: blockFailureFromError(error, chain.config, roots)}));
+    const cached = chain.serializedCache.get(block);
+    const importing = importBlock.call(
+      withBeaconEngineFacade(chain),
+      blockInput,
+      blockImportData,
+      DataAvailabilityStatus.PreData,
+      {}
+    );
+    await expect(importing).rejects.toBeInstanceOf(BlockError);
+    await importing.catch((failure: BlockError) => {
+      expect(failure.signedBlock).toBe(block);
+      expect(failure.type).toEqual(error.type);
+      expect(failure.stack).toBe(error.stack);
+    });
+    expect(chain.beaconEngine[importMethod]).toHaveBeenCalledExactlyOnceWith(
+      beaconEngineMode === BeaconEngineMode.MainThread ? bundle : roots[0],
+      DataAvailabilityStatus.PreData,
+      {}
+    );
+    expect(chain.serializedCache.get(block)).toBe(cached);
+    expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
   });
 });

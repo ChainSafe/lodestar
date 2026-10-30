@@ -5,6 +5,7 @@ import {
   generateTestCachedBeaconStateOnlyValidators,
 } from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
+import type {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
 import {getAttDataFromAttestationSerialized} from "../../../../src/util/sszBytes.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
@@ -60,7 +61,11 @@ describe("validate gossip attestation", () => {
       id: `batch validate gossip attestation - vc ${vc} - chunk ${chunkSize}`,
       beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
       fn: async () => {
-        await validateGossipAttestationsSameAttData(fork, chain, attestationOrBytesArr);
+        await validateGossipAttestationsSameAttData.call(
+          chain.beaconEngine as BeaconEngineCore,
+          fork,
+          attestationOrBytesArr
+        );
       },
       runsFactor: chunkSize,
     });

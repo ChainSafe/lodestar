@@ -40,6 +40,9 @@ export type BuilderApiClientOpts = {
 
 type BuilderUrl = string;
 
+/** Each client records into its owner's registry, whether shared in-process or local to a worker. */
+type BuilderApiClientMetrics = Pick<Metrics, "builderApi" | "builderHttpClient">;
+
 /** Decode the SSZ URL bytes without allowing replacement characters or unsafe header values. */
 export function decodeBuilderUrl(value: Uint8Array): BuilderUrl {
   let url: string;
@@ -76,8 +79,9 @@ export class BuilderApiClient {
     private readonly config: ChainForkConfig,
     private readonly clock: IClock,
     private readonly bls: IBlsVerifier,
-    private readonly metrics: Metrics | null = null,
-    private readonly logger?: Logger
+    private readonly metrics: BuilderApiClientMetrics | null = null,
+    private readonly logger?: Logger,
+    private readonly onBuilderRegistered?: (url: BuilderUrl) => void | Promise<void>
   ) {}
 
   /**
@@ -221,6 +225,29 @@ export class BuilderApiClient {
     );
   }
 
+  /**
+   * Install a URL authenticated by the other owner, without notifying it again.
+   * Never call this with an untrusted URL from a signed-block publication request.
+   */
+  registerAuthenticatedBuilder(url: BuilderUrl): BuilderApi {
+    const cached = this.clients.get(url);
+    if (cached !== undefined) return cached;
+
+    const client = getClient(
+      {
+        baseUrl: url,
+        globalInit: {
+          timeoutMs: this.opts.timeout,
+          headers: this.opts.userAgent ? {"User-Agent": this.opts.userAgent} : undefined,
+        },
+      },
+      {config: this.config, metrics: this.metrics?.builderHttpClient, logger: this.logger}
+    );
+    this.clients.set(url, client);
+    this.logger?.debug("External builder registered", {url: toPrintableUrl(url)});
+    return client;
+  }
+
   private async getOrCreateClient(
     url: BuilderUrl,
     proposerPubkey: BLSPubkey,
@@ -246,18 +273,9 @@ export class BuilderApiClient {
         throw Error("Invalid builder request auth");
       }
 
-      client = getClient(
-        {
-          baseUrl: url,
-          globalInit: {
-            timeoutMs: this.opts.timeout,
-            headers: this.opts.userAgent ? {"User-Agent": this.opts.userAgent} : undefined,
-          },
-        },
-        {config: this.config, metrics: this.metrics?.builderHttpClient, logger: this.logger}
-      );
-      this.clients.set(url, client);
-      this.logger?.debug("External builder registered", {url: toPrintableUrl(url)});
+      // Complete registration on the other owner before a cache hit can bypass it or the HTTP request can finish.
+      await this.onBuilderRegistered?.(url);
+      client = this.registerAuthenticatedBuilder(url);
     }
     return client;
   }

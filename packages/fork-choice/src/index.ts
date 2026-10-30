@@ -25,6 +25,7 @@ export {
   type CheckpointWithTotalBalance,
   EpochDifference,
   type IForkChoice,
+  type IForkChoiceRead,
   NotReorgedReason,
   type PtcQuorumEvent,
 } from "./forkChoice/interface.js";
@@ -46,5 +47,11 @@ export type {
   ProtoNode,
   PtcQuorum,
 } from "./protoArray/interface.js";
-export {ExecutionStatus, PayloadStatus, getPtcVerdict, isGloasBlock} from "./protoArray/interface.js";
+export {
+  ExecutionStatus,
+  type LVHExecResponse,
+  PayloadStatus,
+  getPtcVerdict,
+  isGloasBlock,
+} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";

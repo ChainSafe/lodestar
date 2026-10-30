@@ -10,8 +10,33 @@ export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
  * Metrics from:
  * https://github.com/ethereum/beacon-metrics/ and
  * https://hackmd.io/D5FmoeFZScim_squBFl8oA
+ *
+ * [beacon-engine] Main-thread and shared families only. Engine-owned families are registered separately.
+ * Keep definitions in this file and preserve metric names when merging unstable.
  */
 export function createBeaconMetrics(register: RegistryMetricCreator) {
+  const main = createMainBeaconMetrics(register);
+  const shared = createSharedBeaconMetrics(register);
+  return {
+    ...main,
+    ...shared,
+    peerDas: {
+      ...main.peerDas,
+      ...shared.peerDas,
+    },
+  };
+}
+
+export function createBeaconEngineBeaconMetrics(register: RegistryMetricCreator) {
+  const engine = createEngineBeaconMetrics(register);
+  const shared = createSharedBeaconMetrics(register);
+  return {
+    ...engine,
+    ...shared,
+  };
+}
+
+function createMainBeaconMetrics(register: RegistryMetricCreator) {
   return {
     // From https://github.com/ethereum/beacon-metrics/blob/master/metrics.md
     // Interop-metrics
@@ -24,6 +49,222 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_finalized_epoch",
       help: "current finalized epoch",
     }),
+    reorgEventsTotal: register.gauge({
+      name: "beacon_reorgs_total",
+      help: "number of chain reorganizations",
+    }),
+    processedDepositsTotal: register.gauge({
+      name: "beacon_processed_deposits_total",
+      help: "number of total deposits included on chain",
+    }),
+    blockProductionCacheSize: register.gauge({
+      name: "beacon_block_production_cache_size",
+      help: "Count of cached produced results",
+    }),
+    blobs: {
+      getBlobsV1Requests: register.gauge({
+        name: "beacon_get_blobs_v1_calls_total",
+        help: "Number of getBlobsV1 requests that get made",
+      }),
+      getBlobsV1RequestedBlobCount: register.gauge({
+        name: "beacon_get_blobs_v1_requested_blobs_count_total",
+        help: "Number of versioned hashes that get sent in getBlobsV1 request",
+      }),
+      getBlobsV1Error: register.gauge({
+        name: "beacon_get_blobs_v1_response_error_total",
+        help: "Number of getBlobsV1 calls that errored ",
+      }),
+      getBlobsV1Miss: register.gauge({
+        name: "beacon_get_blobs_v1_missing_blob_response_total",
+        help: "Number of getBlobsV1 misses where a versioned hash returns a null",
+      }),
+      getBlobsV1Hit: register.gauge({
+        name: "beacon_get_blobs_v1_blob_returned_response_total",
+        help: "Number of getBlobsV1 hits where a versioned hash returns blob",
+      }),
+      getBlobsV1HitButArrivedWhileWaiting: register.gauge({
+        name: "beacon_get_blobs_v1_blob_returned_but_arrived_during_response_total",
+        help: "Number of getBlobsV1 hits where a versioned hash returns blob but the blob already arrived via gossip",
+      }),
+      getBlobsV1HitUseful: register.gauge({
+        name: "beacon_get_blobs_v1_blob_useful_response_total",
+        help: "Number of getBlobsV1 hits where a versioned hash returns blob and the blob is needed so call is useful",
+      }),
+    },
+    payloadEnvelopeReconstruction: {
+      envelopes: register.counter<{result: "success" | "unavailable" | "mismatch"}>({
+        name: "beacon_payload_envelope_reconstruction_envelopes_total",
+        help: "Archived header envelopes rebuilt from EL bodies, by outcome",
+        labelNames: ["result"],
+      }),
+      mismatchByField: register.counter<{field: "transactions" | "withdrawals" | "blockAccessList"}>({
+        name: "beacon_payload_envelope_reconstruction_mismatch_total",
+        help: "Body root mismatches, by which body differed from the stored root",
+        labelNames: ["field"],
+      }),
+      engineErrors: register.counter({
+        name: "beacon_payload_envelope_reconstruction_engine_errors_total",
+        help: "engine_getPayloadBodiesByHashV2 round-trips that failed while rebuilding envelopes",
+      }),
+    },
+    blockInputFetchStats: {
+      // of already available blocks which didn't have to go through blobs pull
+      totalDataAvailableBlockInputBlobs: register.gauge({
+        name: "beacon_blockinput_blobs_already_available_total",
+        help: "Total number of block input blobs that of already available blocks",
+      }),
+      // blobs resolution stats
+      dataPromiseBlobsAlreadyAvailable: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_already_available_total",
+        help: "Count of data promise blocks' blobs that were already available in blockinput cache via gossip",
+      }),
+      dataPromiseBlobsDelayedGossipAvailable: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_delayed_gossip_available_total",
+        help: "Count of data promise blocks' blobs that became available delayed via gossip post block arrival",
+      }),
+      dataPromiseBlobsDelayedGossipAvailableSavedGetBlobsCompute: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_delayed_gossip_saved_computation_total",
+        help: "Count of late available blobs that saved blob sidecar computation from getblobs",
+      }),
+      dataPromiseBlobsFoundInGetBlobsCacheNotNull: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_found_nonnull_in_getblobs_cache_total",
+        help: "Count of blobs that were found not null in getblobs cache",
+      }),
+      dataPromiseBlobsFoundInGetBlobsCacheNull: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_found_null_in_getblobs_cache_total",
+        help: "Count of blobs that were found null in the getblobs cache",
+      }),
+      dataPromiseBlobsNotAvailableInGetBlobsCache: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_notfound_in_getblobs_cache_total",
+        help: "Count of blobs that were newly seen and hence in not getblobs cache",
+      }),
+      dataPromiseBlobsFinallyQueriedFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_finally_queried_from_network_total",
+        help: "Number of blob requests finally sent to the network",
+      }),
+      dataPromiseBlobsFinallyAvailableFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total",
+        help: "Number of blobs successfully fetched from the network",
+      }),
+      dataPromiseBlobsRetriedFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_retried_from_network_total",
+        help: "Number of blob requests required from the network on retries",
+      }),
+      dataPromiseBlobsRetriedAvailableFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinput_blobs_retried_and_resolved_from_network_total",
+        help: "Number of blobs successfully fetched from the network on retries",
+      }),
+      // blockinput resolution stats
+      totalDataAvailableBlockInputs: register.gauge({
+        name: "beacon_blockinputs_already_available_total",
+        help: "Total number of block inputs whose blobs were already available",
+      }),
+      totalDataPromiseBlockInputsAvailableUsingGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_using_getblobs_total",
+        help: "Count of block inputs that became available using non-null get blobs requests",
+      }),
+      totalDataPromiseBlockInputsAvailableFromGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_from_getblobs_total",
+        help: "Count of block inputs that became available from non-null get blobs requests",
+      }),
+      totalDataPromiseBlockInputsFinallyAvailableFromNetworkReqResp: register.gauge({
+        name: "beacon_datapromise_blockinputs_finally_available_from_reqresp_total",
+        help: "Count of block inputs that became available using the req/resp from network",
+      }),
+      totalDataPromiseBlockInputsTriedBlobsPull: register.gauge({
+        name: "beacon_datapromise_blockinputs_tried_for_blobs_pull_total",
+        help: "Total number of block inputs that were tried to resolve",
+      }),
+      totalDataPromiseBlockInputsTriedGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_tried_for_getblobs_pull_total",
+        help: "Total number of block inputs that were tried to resolve",
+      }),
+      totalDataPromiseBlockInputsResolvedAvailable: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_post_blobs_pull_total",
+        help: "Total number of block inputs that were successfully resolved as available on blobs pull",
+      }),
+      totalDataPromiseBlockInputsRetriedAvailableFromNetwork: register.gauge({
+        name: "beacon_datapromise_blockinputs_retried_and_resolved_from_network_total",
+        help: "Number of blockinputs successfully resolved from the network on retries",
+      }),
+      totalDataPromiseBlockInputsReTriedBlobsPull: register.gauge({
+        name: "beacon_datapromise_blockinputs_retried_for_blobs_pull_total",
+        help: "Total number of block inputs that were retried for blobs pull from network",
+      }),
+      // some caches stats
+      getBlobsCacheSize: register.gauge({
+        name: "getblob_cache_size",
+        help: "getBlobs cache size",
+      }),
+      getBlobsCachePruned: register.gauge({
+        name: "getblob_cache_pruned_total",
+        help: "getblobs cache pruned count",
+      }),
+      dataPromiseBlockInputRetryTrackerCacheSize: register.gauge({
+        name: "beacon_datapromise_blockinput_retry_tracker_cache_size",
+        help: "datapromise retry tracker cache size",
+      }),
+      dataPromiseBlockInputRetryTrackerCachePruned: register.gauge({
+        name: "beacon_datapromise_blockinput_retry_tracker_cache_pruned",
+        help: "datapromise retry tracker cache pruned count",
+      }),
+    },
+    peerDas: {
+      dataColumnSidecarProcessingSkip: register.counter({
+        name: "beacon_data_column_sidecar_processing_skip_total",
+        help: "Number of data column sidecars with processing skipped for gossip",
+      }),
+      getBlobsV2PreAllocationTime: register.histogram({
+        name: "beacon_engine_getBlobsV2_buffer_preallocation_duration_seconds",
+        help: "Runtime for pre-allocating buffers to use during getBlobsV2 calls",
+        buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1],
+      }),
+      getBlobsV2Requests: register.counter({
+        name: "beacon_engine_getBlobsV2_requests_total",
+        help: "Total number of engine_getBlobsV2 requests sent",
+      }),
+      getBlobsV2Responses: register.counter({
+        name: "beacon_engine_getBlobsV2_responses_total",
+        help: "Total number of engine_getBlobsV2 successful responses received",
+      }),
+      getBlobsV2RequestDuration: register.histogram({
+        name: "beacon_engine_getBlobsV2_request_duration_seconds",
+        help: "Duration of engine_getBlobsV2 requests",
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
+      }),
+      custodyGroupCount: register.gauge({
+        name: "beacon_custody_groups",
+        help: "Total number of custody groups within a node",
+      }),
+      custodyGroupsBackfilled: register.gauge({
+        name: "beacon_custody_groups_backfilled",
+        help: "Total number of custody groups backfilled by a node",
+      }),
+      reconstructedColumns: register.counter({
+        name: "beacon_data_availability_reconstructed_columns_total",
+        help: "Total count of reconstructed columns",
+      }),
+      dataColumnsReconstructionTime: register.histogram({
+        name: "beacon_data_availability_reconstruction_time_seconds",
+        help: "Time taken to reconstruct columns",
+        // this data comes from 20 blobs in `fusaka-devnet-1`, need to reevaluate in the future
+        buckets: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 2, 5],
+      }),
+    },
+    // Non-spec'ed
+    clockSlot: register.gauge({
+      name: "beacon_clock_slot",
+      help: "Current clock slot",
+    }),
+    clockEpoch: register.gauge({
+      name: "beacon_clock_epoch",
+      help: "Current clock epoch",
+    }),
+  };
+}
+
+function createEngineBeaconMetrics(register: RegistryMetricCreator) {
+  return {
     currentJustifiedEpoch: register.gauge({
       name: "beacon_current_justified_epoch",
       help: "current justified epoch",
@@ -36,15 +277,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_current_active_validators",
       help: "number of active validators in current epoch",
     }),
-    reorgEventsTotal: register.gauge({
-      name: "beacon_reorgs_total",
-      help: "number of chain reorganizations",
-    }),
-    processedDepositsTotal: register.gauge({
-      name: "beacon_processed_deposits_total",
-      help: "number of total deposits included on chain",
-    }),
-
     // From https://github.com/ethereum/beacon-metrics/blob/master/metrics.md
     // Additional Metrics
     // TODO: Implement
@@ -54,22 +286,18 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       labelNames: ["status"],
       help: "number of validators in current epoch",
     }),
-
     pendingDeposits: register.gauge({
       name: "beacon_pending_deposits",
       help: "Current number of pending deposits",
     }),
-
     pendingConsolidations: register.gauge({
       name: "beacon_pending_consolidations",
       help: "Current number of pending consolidations",
     }),
-
     pendingPartialWithdrawals: register.gauge({
       name: "beacon_pending_partial_withdrawals",
       help: "Current number of pending partial withdrawals",
     }),
-
     // Non-spec'ed
 
     parentBlockDistance: register.histogram({
@@ -77,7 +305,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Histogram of distance to parent block of valid imported blocks",
       buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
     }),
-
     // TODO: wrap to blockProduction
     blockProductionTime: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_seconds",
@@ -134,11 +361,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1, 0.3, 0.5, 1],
       labelNames: ["source"],
     }),
-    blockProductionCacheSize: register.gauge({
-      name: "beacon_block_production_cache_size",
-      help: "Count of cached produced results",
-    }),
-
     builderCircuitBreaker: {
       active: register.gauge({
         name: "beacon_builder_circuit_breaker_active",
@@ -157,7 +379,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Count of canonical EMPTY blocks in the fault inspection window",
       }),
     },
-
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({
         name: "beacon_block_payload_prepare_time",
@@ -185,170 +406,19 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Count of errors while fetching payloads",
       }),
     },
+    weakHeadDetected: register.gauge({
+      name: "beacon_weak_head_detected_total",
+      help: "Detected current head block is weak. May reorg it out when proposing next slot. See proposer boost reorg for more",
+    }),
+  };
+}
 
-    blobs: {
-      getBlobsV1Requests: register.gauge({
-        name: "beacon_get_blobs_v1_calls_total",
-        help: "Number of getBlobsV1 requests that get made",
-      }),
-      getBlobsV1RequestedBlobCount: register.gauge({
-        name: "beacon_get_blobs_v1_requested_blobs_count_total",
-        help: "Number of versioned hashes that get sent in getBlobsV1 request",
-      }),
-      getBlobsV1Error: register.gauge({
-        name: "beacon_get_blobs_v1_response_error_total",
-        help: "Number of getBlobsV1 calls that errored ",
-      }),
-      getBlobsV1Miss: register.gauge({
-        name: "beacon_get_blobs_v1_missing_blob_response_total",
-        help: "Number of getBlobsV1 misses where a versioned hash returns a null",
-      }),
-      getBlobsV1Hit: register.gauge({
-        name: "beacon_get_blobs_v1_blob_returned_response_total",
-        help: "Number of getBlobsV1 hits where a versioned hash returns blob",
-      }),
-      getBlobsV1HitButArrivedWhileWaiting: register.gauge({
-        name: "beacon_get_blobs_v1_blob_returned_but_arrived_during_response_total",
-        help: "Number of getBlobsV1 hits where a versioned hash returns blob but the blob already arrived via gossip",
-      }),
-      getBlobsV1HitUseful: register.gauge({
-        name: "beacon_get_blobs_v1_blob_useful_response_total",
-        help: "Number of getBlobsV1 hits where a versioned hash returns blob and the blob is needed so call is useful",
-      }),
-    },
-    payloadEnvelopeReconstruction: {
-      envelopes: register.counter<{result: "success" | "unavailable" | "mismatch"}>({
-        name: "beacon_payload_envelope_reconstruction_envelopes_total",
-        help: "Archived header envelopes rebuilt from EL bodies, by outcome",
-        labelNames: ["result"],
-      }),
-      mismatchByField: register.counter<{field: "transactions" | "withdrawals" | "blockAccessList"}>({
-        name: "beacon_payload_envelope_reconstruction_mismatch_total",
-        help: "Body root mismatches, by which body differed from the stored root",
-        labelNames: ["field"],
-      }),
-      engineErrors: register.counter({
-        name: "beacon_payload_envelope_reconstruction_engine_errors_total",
-        help: "engine_getPayloadBodiesByHashV2 round-trips that failed while rebuilding envelopes",
-      }),
-    },
-
-    blockInputFetchStats: {
-      // of already available blocks which didn't have to go through blobs pull
-      totalDataAvailableBlockInputBlobs: register.gauge({
-        name: "beacon_blockinput_blobs_already_available_total",
-        help: "Total number of block input blobs that of already available blocks",
-      }),
-
-      // blobs resolution stats
-      dataPromiseBlobsAlreadyAvailable: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_already_available_total",
-        help: "Count of data promise blocks' blobs that were already available in blockinput cache via gossip",
-      }),
-      dataPromiseBlobsDelayedGossipAvailable: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_delayed_gossip_available_total",
-        help: "Count of data promise blocks' blobs that became available delayed via gossip post block arrival",
-      }),
-      dataPromiseBlobsDelayedGossipAvailableSavedGetBlobsCompute: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_delayed_gossip_saved_computation_total",
-        help: "Count of late available blobs that saved blob sidecar computation from getblobs",
-      }),
-      dataPromiseBlobsFoundInGetBlobsCacheNotNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_found_nonnull_in_getblobs_cache_total",
-        help: "Count of blobs that were found not null in getblobs cache",
-      }),
-      dataPromiseBlobsFoundInGetBlobsCacheNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_found_null_in_getblobs_cache_total",
-        help: "Count of blobs that were found null in the getblobs cache",
-      }),
-      dataPromiseBlobsNotAvailableInGetBlobsCache: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_notfound_in_getblobs_cache_total",
-        help: "Count of blobs that were newly seen and hence in not getblobs cache",
-      }),
-
-      dataPromiseBlobsFinallyQueriedFromNetwork: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_finally_queried_from_network_total",
-        help: "Number of blob requests finally sent to the network",
-      }),
-      dataPromiseBlobsFinallyAvailableFromNetwork: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total",
-        help: "Number of blobs successfully fetched from the network",
-      }),
-      dataPromiseBlobsRetriedFromNetwork: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_retried_from_network_total",
-        help: "Number of blob requests required from the network on retries",
-      }),
-      dataPromiseBlobsRetriedAvailableFromNetwork: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_retried_and_resolved_from_network_total",
-        help: "Number of blobs successfully fetched from the network on retries",
-      }),
-
-      // blockinput resolution stats
-      totalDataAvailableBlockInputs: register.gauge({
-        name: "beacon_blockinputs_already_available_total",
-        help: "Total number of block inputs whose blobs were already available",
-      }),
-      totalDataPromiseBlockInputsAvailableUsingGetBlobs: register.gauge({
-        name: "beacon_datapromise_blockinputs_available_using_getblobs_total",
-        help: "Count of block inputs that became available using non-null get blobs requests",
-      }),
-      totalDataPromiseBlockInputsAvailableFromGetBlobs: register.gauge({
-        name: "beacon_datapromise_blockinputs_available_from_getblobs_total",
-        help: "Count of block inputs that became available from non-null get blobs requests",
-      }),
-      totalDataPromiseBlockInputsFinallyAvailableFromNetworkReqResp: register.gauge({
-        name: "beacon_datapromise_blockinputs_finally_available_from_reqresp_total",
-        help: "Count of block inputs that became available using the req/resp from network",
-      }),
-      totalDataPromiseBlockInputsTriedBlobsPull: register.gauge({
-        name: "beacon_datapromise_blockinputs_tried_for_blobs_pull_total",
-        help: "Total number of block inputs that were tried to resolve",
-      }),
-      totalDataPromiseBlockInputsTriedGetBlobs: register.gauge({
-        name: "beacon_datapromise_blockinputs_tried_for_getblobs_pull_total",
-        help: "Total number of block inputs that were tried to resolve",
-      }),
-      totalDataPromiseBlockInputsResolvedAvailable: register.gauge({
-        name: "beacon_datapromise_blockinputs_available_post_blobs_pull_total",
-        help: "Total number of block inputs that were successfully resolved as available on blobs pull",
-      }),
-      totalDataPromiseBlockInputsRetriedAvailableFromNetwork: register.gauge({
-        name: "beacon_datapromise_blockinputs_retried_and_resolved_from_network_total",
-        help: "Number of blockinputs successfully resolved from the network on retries",
-      }),
-      totalDataPromiseBlockInputsReTriedBlobsPull: register.gauge({
-        name: "beacon_datapromise_blockinputs_retried_for_blobs_pull_total",
-        help: "Total number of block inputs that were retried for blobs pull from network",
-      }),
-
-      // some caches stats
-      getBlobsCacheSize: register.gauge({
-        name: "getblob_cache_size",
-        help: "getBlobs cache size",
-      }),
-      getBlobsCachePruned: register.gauge({
-        name: "getblob_cache_pruned_total",
-        help: "getblobs cache pruned count",
-      }),
-      dataPromiseBlockInputRetryTrackerCacheSize: register.gauge({
-        name: "beacon_datapromise_blockinput_retry_tracker_cache_size",
-        help: "datapromise retry tracker cache size",
-      }),
-      dataPromiseBlockInputRetryTrackerCachePruned: register.gauge({
-        name: "beacon_datapromise_blockinput_retry_tracker_cache_pruned",
-        help: "datapromise retry tracker cache pruned count",
-      }),
-    },
-
-    // TODO(fulu): check if these and metrics in lodestar.ts for dataColumns should/can be combined or organized together
+function createSharedBeaconMetrics(register: RegistryMetricCreator) {
+  return {
     peerDas: {
       dataColumnSidecarProcessingRequests: register.counter({
         name: "beacon_data_column_sidecar_processing_requests_total",
         help: "Number of data column sidecars submitted for processing",
-      }),
-      dataColumnSidecarProcessingSkip: register.counter({
-        name: "beacon_data_column_sidecar_processing_skip_total",
-        help: "Number of data column sidecars with processing skipped for gossip",
       }),
       dataColumnSidecarProcessingSuccesses: register.counter({
         name: "beacon_data_column_sidecar_processing_successes_total",
@@ -381,59 +451,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Runtime of batched data column kzg verification",
         buckets: [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
       }),
-      getBlobsV2PreAllocationTime: register.histogram({
-        name: "beacon_engine_getBlobsV2_buffer_preallocation_duration_seconds",
-        help: "Runtime for pre-allocating buffers to use during getBlobsV2 calls",
-        buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1],
-      }),
-      getBlobsV2Requests: register.counter({
-        name: "beacon_engine_getBlobsV2_requests_total",
-        help: "Total number of engine_getBlobsV2 requests sent",
-      }),
-      getBlobsV2Responses: register.counter({
-        name: "beacon_engine_getBlobsV2_responses_total",
-        help: "Total number of engine_getBlobsV2 successful responses received",
-      }),
-      getBlobsV2RequestDuration: register.histogram({
-        name: "beacon_engine_getBlobsV2_request_duration_seconds",
-        help: "Duration of engine_getBlobsV2 requests",
-        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
-      }),
-      custodyGroupCount: register.gauge({
-        name: "beacon_custody_groups",
-        help: "Total number of custody groups within a node",
-      }),
-      custodyGroupsBackfilled: register.gauge({
-        name: "beacon_custody_groups_backfilled",
-        help: "Total number of custody groups backfilled by a node",
-      }),
-      reconstructedColumns: register.counter({
-        name: "beacon_data_availability_reconstructed_columns_total",
-        help: "Total count of reconstructed columns",
-      }),
-      dataColumnsReconstructionTime: register.histogram({
-        name: "beacon_data_availability_reconstruction_time_seconds",
-        help: "Time taken to reconstruct columns",
-        // this data comes from 20 blobs in `fusaka-devnet-1`, need to reevaluate in the future
-        buckets: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 2, 5],
-      }),
     },
-
-    // Non-spec'ed
-    clockSlot: register.gauge({
-      name: "beacon_clock_slot",
-      help: "Current clock slot",
-    }),
-    clockEpoch: register.gauge({
-      name: "beacon_clock_epoch",
-      help: "Current clock epoch",
-    }),
-
-    weakHeadDetected: register.gauge({
-      name: "beacon_weak_head_detected_total",
-      help: "Detected current head block is weak. May reorg it out when proposing next slot. See proposer boost reorg for more",
-    }),
-
     // HEZE:EIP-7805
     inclusionListsReceived: register.counter<{source: InclusionListSource}>({
       name: "beacon_inclusion_lists_received_total",

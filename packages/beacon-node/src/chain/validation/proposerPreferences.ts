@@ -8,15 +8,15 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {GossipAction, ProposerPreferencesError, ProposerPreferencesErrorCode} from "../errors/index.js";
-import {IBeaconChain} from "../index.js";
 
 /**
  * Validates a gossiped `SignedProposerPreferences` per
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/p2p-interface.md#new-proposer_preferences
  */
 export async function validateGossipProposerPreferences(
-  chain: IBeaconChain,
+  this: BeaconEngineCore,
   signedProposerPreferences: gloas.SignedProposerPreferences
 ): Promise<void> {
   const preferences = signedProposerPreferences.message;
@@ -25,7 +25,7 @@ export async function validateGossipProposerPreferences(
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
 
   // [IGNORE] The proposal epoch is after the Gloas upgrade
-  const proposalFork = chain.config.getForkName(proposalSlot);
+  const proposalFork = this.config.getForkName(proposalSlot);
   if (!isForkPostGloas(proposalFork)) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.PRE_GLOAS_PROPOSAL_SLOT,
@@ -36,7 +36,7 @@ export async function validateGossipProposerPreferences(
 
   // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  const currentEpoch = computeEpochAtSlot(chain.clock.currentSlotWithGossipDisparity);
+  const currentEpoch = computeEpochAtSlot(this.clock.currentSlotWithGossipDisparity);
   if (proposalEpoch > currentEpoch + MIN_SEED_LOOKAHEAD) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.INVALID_EPOCH,
@@ -47,16 +47,16 @@ export async function validateGossipProposerPreferences(
 
   // [IGNORE] `preferences.proposal_slot` has not already passed, i.e. `proposal_slot > current_slot`,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  if (chain.clock.msFromSlot(proposalSlot) > chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+  if (this.clock.msFromSlot(proposalSlot) > this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.PROPOSAL_SLOT_PASSED,
       proposalSlot,
-      currentSlot: chain.clock.currentSlot,
+      currentSlot: this.clock.currentSlot,
     });
   }
 
   // [IGNORE] The block with root `dependent_root` has been seen by the node.
-  const dependentBlock = chain.forkChoice.getBlockHexDefaultStatus(dependentRootHex);
+  const dependentBlock = this.forkChoice.getBlockHexDefaultStatus(dependentRootHex);
   if (dependentBlock === null) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.UNKNOWN_DEPENDENT_ROOT,
@@ -82,7 +82,7 @@ export async function validateGossipProposerPreferences(
 
   // [IGNORE] `is_valid_dependent_root(store, preferences.dependent_root, epoch)` returns `True`,
   // where `epoch` is `compute_epoch_at_slot(preferences.proposal_slot) - MIN_SEED_LOOKAHEAD`.
-  if (!isValidDependentRoot(chain.forkChoice, dependentBlock, dependentEpoch)) {
+  if (!isValidDependentRoot(this.forkChoice, dependentBlock, dependentEpoch)) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.INVALID_DEPENDENT_ROOT,
       dependentRoot: dependentRootHex,
@@ -95,7 +95,7 @@ export async function validateGossipProposerPreferences(
   // the previous-root checkpoint state (populated by `processSlotsToNearestCheckpoint` for
   // any imported branch crossing into `dependentEpoch`). The head-state path also handles
   // narrow timing windows where the checkpoint state isn't yet populated.
-  const headState = chain.getHeadState();
+  const headState = this.getHeadState();
   let proposers: ValidatorIndex[] | null = null;
   if (headState.epoch === proposalEpoch && headState.currentDecisionRoot === dependentRootHex) {
     proposers = headState.currentProposers;
@@ -103,7 +103,7 @@ export async function validateGossipProposerPreferences(
     proposers = headState.nextProposers;
   } else {
     // Sync lookup only to not trigger disk reload from gossip input.
-    const checkpointState = chain.regen.getCheckpointStateSync({epoch: dependentEpoch, rootHex: dependentRootHex});
+    const checkpointState = this.regen.getCheckpointStateSync({epoch: dependentEpoch, rootHex: dependentRootHex});
     if (checkpointState !== null) {
       // State is at `dependentEpoch`, so proposers for `proposalSlot` (next epoch from
       // the state's perspective) live in `nextProposers`.
@@ -129,7 +129,7 @@ export async function validateGossipProposerPreferences(
   }
 
   // [IGNORE] First valid message for (dependent_root, proposal_slot, validator_index).
-  if (chain.proposerPreferencesPool.isKnown(proposalSlot, dependentRootHex, validatorIndex)) {
+  if (this.proposerPreferencesPool.isKnown(proposalSlot, dependentRootHex, validatorIndex)) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
       proposalSlot,
@@ -141,11 +141,11 @@ export async function validateGossipProposerPreferences(
   // [REJECT] `signed_proposer_preferences.signature` is valid with respect to the validator's public key.
   const signatureSet = createIndexedSignatureSetFromComponents(
     validatorIndex,
-    getProposerPreferencesSigningRoot(chain.config, preferences),
+    getProposerPreferencesSigningRoot(this.config, preferences),
     signedProposerPreferences.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+  if (!(await this.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new ProposerPreferencesError(GossipAction.REJECT, {
       code: ProposerPreferencesErrorCode.INVALID_SIGNATURE,
       proposalSlot,
@@ -154,7 +154,7 @@ export async function validateGossipProposerPreferences(
   }
 
   // Repeated check - deals with race-condition between preferences submissions
-  if (chain.proposerPreferencesPool.isKnown(proposalSlot, dependentRootHex, validatorIndex)) {
+  if (this.proposerPreferencesPool.isKnown(proposalSlot, dependentRootHex, validatorIndex)) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
       proposalSlot,
@@ -163,7 +163,7 @@ export async function validateGossipProposerPreferences(
     });
   }
 
-  chain.proposerPreferencesPool.add(signedProposerPreferences);
+  this.proposerPreferencesPool.add(signedProposerPreferences);
 }
 
 /**

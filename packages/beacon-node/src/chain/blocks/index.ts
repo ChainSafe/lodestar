@@ -1,19 +1,21 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
+import {BlockImportData} from "../interface.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock, importsBlockAttestations} from "./importBlock.js";
 import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {FullyVerifiedBlock, ImportBlockOpts, ProcessBlocksResult} from "./types.js";
+import {computeSignedBlockRoot} from "./signedBlockRoot.js";
+import {ImportBlockOpts, ProcessBlocksResult} from "./types.js";
 import {OrphanedPayloadEnvelope, assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
@@ -76,7 +78,7 @@ export async function processBlocks(
   }
 
   try {
-    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, payloadEnvelopes, opts);
+    const {relevantBlocks, parentBlock} = verifyBlocksSanityChecks(this, blocks, payloadEnvelopes, opts);
 
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
@@ -108,78 +110,65 @@ export async function processBlocks(
       }
     }
 
-    // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
-    // states in the state cache through regen.
-    const {
-      postStates,
-      blockDAStatuses,
-      payloadDAStatuses,
-      proposerBalanceDeltas,
-      segmentExecStatus,
-      indexedAttestationsByBlock,
-    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopesToImport, opts);
-
-    // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
-    // and we need to further propagate
-    if (segmentExecStatus.execAborted !== null) {
-      if (segmentExecStatus.invalidSegmentLVH !== undefined) {
-        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
+    const {blockDAStatuses, payloadDAStatuses, blockImportData} = await verifyBlocksInEpoch.call(
+      this,
+      parentBlock,
+      relevantBlocks,
+      payloadEnvelopesToImport,
+      opts
+    );
+    try {
+      const verifiedBlocksBySlot = new Map<
+        Slot,
+        {blockInput: IBlockInput; dataAvailabilityStatus: DataAvailabilityStatus; blockImportData: BlockImportData}
+      >();
+      for (let i = 0; i < relevantBlocks.length; i++) {
+        verifiedBlocksBySlot.set(relevantBlocks[i].getBlock().message.slot, {
+          blockInput: relevantBlocks[i],
+          blockImportData: blockImportData[i],
+          dataAvailabilityStatus: blockDAStatuses[i],
+        });
       }
-      throw segmentExecStatus.execAborted.execError;
-    }
-
-    for (const blockInput of relevantBlocks) {
-      const block = blockInput.getBlock().message;
-      this.seenBlockProposers.add(block.slot, block.proposerIndex, blockInput.blockRootHex);
-    }
-
-    const {executionStatuses} = segmentExecStatus;
-    const verifiedBlocksBySlot = new Map<Slot, FullyVerifiedBlock>();
-    for (let i = 0; i < relevantBlocks.length; i++) {
-      const block = relevantBlocks[i];
-      verifiedBlocksBySlot.set(block.getBlock().message.slot, {
-        blockInput: block,
-        postState: postStates[i],
-        parentBlockSlot: parentSlots[i],
-        executionStatus: executionStatuses[i],
-        // start supporting optimistic syncing/processing
-        dataAvailabilityStatus: blockDAStatuses[i],
-        proposerBalanceDelta: proposerBalanceDeltas[i],
-        indexedAttestations: indexedAttestationsByBlock[i],
-        // TODO: Make this param mandatory and capture in gossip
-        seenTimestampSec: opts.seenTimestampSec ?? Date.now() / 1000,
-      });
-    }
-
-    const slotSet = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
-    if (payloadEnvelopesToImport) {
-      for (const slot of payloadEnvelopesToImport.keys()) slotSet.add(slot);
-    }
-    const slots = Array.from(slotSet).sort((a, b) => a - b);
-    for (const slot of slots) {
-      const fullyVerifiedBlock = verifiedBlocksBySlot.get(slot);
-      if (fullyVerifiedBlock !== undefined) {
-        // TODO: Consider batching importBlock too if it takes significant time
-        await importBlock.call(this, fullyVerifiedBlock, opts);
+      const slotSet = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
+      if (payloadEnvelopesToImport) {
+        for (const slot of payloadEnvelopesToImport.keys()) slotSet.add(slot);
       }
-
-      // PayloadEnvelopeInput is shared and may receive an envelope after the DA snapshot was taken.
-      const payloadDA = payloadDAStatuses.get(slot);
-      if (payloadDA !== undefined) {
-        const payloadInput = payloadEnvelopesToImport?.get(slot);
-        if (payloadInput === undefined) {
-          throw new Error(`Missing payload input for slot ${slot} after DA verification`);
+      const slots = Array.from(slotSet).sort((a, b) => a - b);
+      for (const slot of slots) {
+        const fullyVerifiedBlock = verifiedBlocksBySlot.get(slot);
+        if (fullyVerifiedBlock !== undefined) {
+          // TODO: Consider batching importBlock too if it takes significant time
+          await importBlock.call(
+            this,
+            fullyVerifiedBlock.blockInput,
+            fullyVerifiedBlock.blockImportData,
+            fullyVerifiedBlock.dataAvailabilityStatus,
+            opts
+          );
         }
-        if (!payloadInput.isComplete()) {
-          // we validated DA before reaching this
-          throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
+
+        // PayloadEnvelopeInput is shared and may receive an envelope after the DA snapshot was taken.
+        const payloadDA = payloadDAStatuses.get(slot);
+        if (payloadDA !== undefined) {
+          const payloadInput = payloadEnvelopesToImport?.get(slot);
+          if (payloadInput === undefined) {
+            throw new Error(`Missing payload input for slot ${slot} after DA verification`);
+          }
+          if (!payloadInput.isComplete()) {
+            // we validated DA before reaching this
+            throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
+          }
+          await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
         }
-        await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
+
+        await nextEventLoop();
       }
-
-      await nextEventLoop();
+    } catch (error) {
+      await this.beaconEngine.discardVerifiedBlocks(
+        relevantBlocks.map((block) => computeSignedBlockRoot(block.forkName, block.getBlock()))
+      );
+      throw error;
     }
-
     return {orphaned: orphanedPayloads ?? [], skipped};
   } catch (e) {
     if (isErrorAborted(e) || isQueueErrorAborted(e) || isBlockErrorAborted(e)) {
@@ -195,47 +184,12 @@ export async function processBlocks(
       this.logger.debug("Neither BlockError nor PayloadError received", {}, err);
     } else if (err instanceof PayloadError) {
       if (!opts.disableOnBlockError) {
-        this.logger.debug(
-          "Payload error",
-          {slot: err.payloadInput.slot, blockRoot: err.payloadInput.blockRootHex},
-          err
-        );
+        this.logger.debug("Payload error", {}, err);
       }
     } else if (!opts.disableOnBlockError) {
       this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
 
-      if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
-        const {signedBlock} = err;
-        const blockSlot = signedBlock.message.slot;
-        const {state} = err.type;
-        const forkTypes = this.config.getForkTypes(blockSlot);
-        const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-        this.persistInvalidSszValue(
-          forkTypes.SignedBeaconBlock,
-          signedBlock,
-          `${blockSlot}_invalid_signature`,
-          blockRootHex
-        );
-        this.persistInvalidSszBytes(
-          "BeaconState",
-          state.serialize(),
-          toRootHex(state.hashTreeRoot()),
-          `${state.slot}_invalid_signature`
-        );
-      } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
-        const {signedBlock} = err;
-        const blockSlot = signedBlock.message.slot;
-        const {preState, postState} = err.type;
-        const preRoot = preState.hashTreeRoot();
-        const postRoot = postState.hashTreeRoot();
-        this.persistInvalidStateRoot(preState, postState, signedBlock).catch((e) => {
-          this.logger.error(
-            "Error persisting invalid state root objects",
-            {slot: blockSlot, preStateRoot: toRootHex(preRoot), postStateRoot: toRootHex(postRoot)},
-            e
-          );
-        });
-      }
+      // Invalid block/state persistence remains inside the engine verification helpers.
     }
 
     throw err;
@@ -259,7 +213,8 @@ async function importPayloadEnvelopesOfKnownBlocks(
     return {orphaned: [], skipped: false};
   }
 
-  const head = this.forkChoice.getHead();
+  const {chainView} = this.beaconEngine;
+  const head = chainView.getHead();
   const currentEpoch = this.clock.currentEpoch;
   const payloadInputs: PayloadEnvelopeInput[] = [];
   const orphaned: OrphanedPayloadEnvelope[] = [];
@@ -267,15 +222,15 @@ async function importPayloadEnvelopesOfKnownBlocks(
     const {blockRootHex, slot} = payloadInput;
     if (
       !payloadInput.hasPayloadEnvelope() ||
-      !this.forkChoice.hasBlockHex(blockRootHex) ||
-      this.forkChoice.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null
+      !chainView.hasBlockHex(blockRootHex) ||
+      chainView.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null
     ) {
       continue;
     }
     if (
       head.blockRoot !== blockRootHex &&
       !importsBlockAttestations(opts, computeEpochAtSlot(slot), currentEpoch) &&
-      this.forkChoice.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
+      chainView.isDescendant(blockRootHex, PayloadStatus.EMPTY, head.blockRoot, head.payloadStatus)
     ) {
       // never validated, see processBlocks()
       this.seenPayloadEnvelopeInputCache.remove(blockRootHex);
@@ -305,7 +260,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
     await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validSignature: false});
   }
   // the new FULL variants are not seen by the head cached from the last block import
-  this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+  await this.beaconEngine.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
   return result;
 }

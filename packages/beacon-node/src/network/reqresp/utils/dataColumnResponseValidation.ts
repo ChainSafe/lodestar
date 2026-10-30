@@ -3,7 +3,7 @@ import {ForkSeq} from "@lodestar/params";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
-import {IBeaconDb} from "../../../db/interface.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
@@ -19,7 +19,7 @@ export async function handleColumnSidecarUnavailability({
   finalized,
 }: {
   chain: IBeaconChain;
-  db: IBeaconDb;
+  db: IBeaconChainDb;
   metrics: Metrics | null;
   slot: Slot;
   blockRoot?: Uint8Array;

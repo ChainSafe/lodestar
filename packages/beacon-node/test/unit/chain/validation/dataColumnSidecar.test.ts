@@ -282,7 +282,7 @@ describe("validateGossipFuluDataColumnSidecar - proposer lookup", () => {
     const subnet = setup(deepFulu, deepFulu.signedBlockHeader.message.slot - 1);
 
     await expectRejectedWithLodestarError(
-      validateGossipFuluDataColumnSidecar(chain, deepFulu, subnet, null),
+      validateGossipFuluDataColumnSidecar.call(chain.beaconEngine, deepFulu, subnet, null),
       DataColumnSidecarErrorCode.INCORRECT_PROPOSER
     );
 
@@ -294,7 +294,7 @@ describe("validateGossipFuluDataColumnSidecar - proposer lookup", () => {
     const subnet = setup(deepFulu, deepFulu.signedBlockHeader.message.slot - 2 * SLOTS_PER_EPOCH);
 
     await expectRejectedWithLodestarError(
-      validateGossipFuluDataColumnSidecar(chain, deepFulu, subnet, null),
+      validateGossipFuluDataColumnSidecar.call(chain.beaconEngine, deepFulu, subnet, null),
       DataColumnSidecarErrorCode.INCORRECT_PROPOSER
     );
 
@@ -306,7 +306,7 @@ describe("validateGossipFuluDataColumnSidecar - proposer lookup", () => {
     const subnet = setup(fuluBoundary, fuluBoundary.signedBlockHeader.message.slot - 1);
 
     await expectRejectedWithLodestarError(
-      validateGossipFuluDataColumnSidecar(chain, fuluBoundary, subnet, null),
+      validateGossipFuluDataColumnSidecar.call(chain.beaconEngine, fuluBoundary, subnet, null),
       DataColumnSidecarErrorCode.INCORRECT_PROPOSER
     );
 

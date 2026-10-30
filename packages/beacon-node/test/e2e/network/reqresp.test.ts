@@ -101,9 +101,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     expect(returnedBlocks).toHaveLength(req.count);
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
-      expect(config.getForkTypes(returnedBlock.message.slot).SignedBeaconBlock.equals(returnedBlock, blocks[i])).toBe(
-        true
-      );
+      expect(
+        config.getForkTypes(returnedBlock.block.message.slot).SignedBeaconBlock.equals(returnedBlock.block, blocks[i])
+      ).toBe(true);
     }
   });
 

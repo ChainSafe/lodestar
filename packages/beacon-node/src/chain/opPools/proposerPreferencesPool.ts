@@ -1,6 +1,6 @@
 import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconEngineDb} from "../../db/index.js";
 import {persistDiff} from "./utils.js";
 
 /**
@@ -68,7 +68,7 @@ export class ProposerPreferencesPool {
   }
 
   /** Restore the preferences of upcoming slots, they were validated before they were persisted */
-  async fromPersisted(db: IBeaconDb, currentSlot: Slot): Promise<void> {
+  async fromPersisted(db: IBeaconEngineDb, currentSlot: Slot): Promise<void> {
     for (const signed of await db.proposerPreferences.values()) {
       if (signed.message.proposalSlot >= currentSlot) {
         this.add(signed);
@@ -76,7 +76,7 @@ export class ProposerPreferencesPool {
     }
   }
 
-  async toPersisted(db: IBeaconDb): Promise<void> {
+  async toPersisted(db: IBeaconEngineDb): Promise<void> {
     await persistDiff(
       db.proposerPreferences,
       this.getAll().map((signed) => ({key: db.proposerPreferences.getId(signed), value: signed})),

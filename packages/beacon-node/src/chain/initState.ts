@@ -4,13 +4,14 @@ import {BeaconStateAllForks, IBeaconStateView, computeEpochAtSlot, isStatePostGl
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
-import {IBeaconDb} from "../db/index.js";
+import {IBeaconDb, IBeaconEngineDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
 import {getStateTypeFromBytes} from "../util/multifork.js";
+import {EngineBootstrap} from "./beaconEngine/initialization.js";
 
 export async function persistAnchorState(
   config: ChainForkConfig,
-  db: IBeaconDb,
+  db: IBeaconEngineDb,
   anchorState: IBeaconStateView,
   anchorStateBytes: Uint8Array
 ): Promise<void> {
@@ -80,9 +81,13 @@ export async function initStateFromDb(
   return state;
 }
 
-export function initBeaconMetrics(metrics: Metrics, state: IBeaconStateView): void {
+export function initBeaconMetrics(
+  metrics: Metrics,
+  state: Pick<
+    EngineBootstrap,
+    "slot" | "previousJustifiedCheckpoint" | "currentJustifiedCheckpoint" | "finalizedCheckpoint"
+  >
+): void {
   metrics.headSlot.set(state.slot);
-  metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
-  metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
   metrics.finalizedEpoch.set(state.finalizedCheckpoint.epoch);
 }

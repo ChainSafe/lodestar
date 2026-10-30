@@ -5,27 +5,27 @@ import {
   isSlashableValidator,
 } from "@lodestar/state-transition";
 import {AttesterSlashing, Domain} from "@lodestar/types";
+import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
-import {IBeaconChain} from "../index.js";
 import {getAttesterSlashingSignatureDomains} from "../opPools/utils.js";
 
 export async function validateApiAttesterSlashing(
-  chain: IBeaconChain,
+  this: BeaconEngineCore,
   attesterSlashing: AttesterSlashing
 ): Promise<[Domain, Domain]> {
   const prioritizeBls = true;
-  return validateAttesterSlashing(chain, attesterSlashing, prioritizeBls);
+  return validateAttesterSlashing.call(this, attesterSlashing, prioritizeBls);
 }
 
 export async function validateGossipAttesterSlashing(
-  chain: IBeaconChain,
+  this: BeaconEngineCore,
   attesterSlashing: AttesterSlashing
 ): Promise<[Domain, Domain]> {
-  return validateAttesterSlashing(chain, attesterSlashing);
+  return validateAttesterSlashing.call(this, attesterSlashing);
 }
 
 export async function validateAttesterSlashing(
-  chain: IBeaconChain,
+  this: BeaconEngineCore,
   attesterSlashing: AttesterSlashing,
   prioritizeBls = false
 ): Promise<[Domain, Domain]> {
@@ -34,18 +34,18 @@ export async function validateAttesterSlashing(
   //   attester_slashed_indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices
   // ), verify if any(attester_slashed_indices.difference(prior_seen_attester_slashed_indices))).
   const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
-  if (chain.opPool.hasSeenAttesterSlashing(intersectingIndices)) {
+  if (this.opPool.hasSeenAttesterSlashing(intersectingIndices)) {
     throw new AttesterSlashingError(GossipAction.IGNORE, {
       code: AttesterSlashingErrorCode.ALREADY_EXISTS,
     });
   }
 
-  const state = chain.getHeadState();
+  const state = this.getHeadState();
 
   // [REJECT] All of the conditions within process_attester_slashing pass validation.
   try {
     // verifySignature = false, verified in batch below
-    assertValidAttesterSlashing(chain.config, state.slot, state.validatorCount, attesterSlashing, false);
+    assertValidAttesterSlashing(this.config, state.slot, state.validatorCount, attesterSlashing, false);
   } catch (e) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
@@ -61,9 +61,9 @@ export async function validateAttesterSlashing(
     });
   }
 
-  const signatureSets = getAttesterSlashingSignatureSets(chain.config, state.slot, attesterSlashing);
-  const verifiedDomains = getAttesterSlashingSignatureDomains(chain.config, state.slot, attesterSlashing);
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  const signatureSets = getAttesterSlashingSignatureSets(this.config, state.slot, attesterSlashing);
+  const verifiedDomains = getAttesterSlashingSignatureDomains(this.config, state.slot, attesterSlashing);
+  if (!(await this.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID_SIGNATURE,
     });

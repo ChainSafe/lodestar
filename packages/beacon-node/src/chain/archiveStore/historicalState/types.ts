@@ -1,7 +1,7 @@
 import {ModuleThread} from "@chainsafe/threads";
 import {BeaconConfig, SpecJson} from "@lodestar/config";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
-import {Metrics} from "../../../metrics/index.js";
+import {BeaconEngineMetrics} from "../../../metrics/index.js";
 
 export type HistoricalStateRegenInitModules = {
   opts: {
@@ -12,7 +12,7 @@ export type HistoricalStateRegenInitModules = {
   };
   config: BeaconConfig;
   logger: LoggerNode;
-  metrics: Metrics | null;
+  metrics: BeaconEngineMetrics | null;
   signal?: AbortSignal;
 };
 export type HistoricalStateRegenModules = HistoricalStateRegenInitModules & {

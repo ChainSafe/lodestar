@@ -5,6 +5,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {gloas} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
@@ -149,7 +150,7 @@ describe("sync / unknown block sync thru gloas", () => {
 
       const headSlot = payloadEvent.slot;
       const headRootHex = payloadEvent.blockRoot;
-      const headResult = await bn.chain.getBlockByRoot(headRootHex);
+      const headResult = await bn.chain.beaconEngine.getBlockByRoot(fromHex(headRootHex));
       if (headResult === null) {
         throw Error("Node A is missing the selected gloas head block");
       }

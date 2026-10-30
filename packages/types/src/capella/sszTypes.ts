@@ -106,7 +106,7 @@ export const SignedBeaconBlock = new ContainerType(
     message: BeaconBlock, // Modified in capella
     signature: BLSSignature,
   },
-  {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+  {typeName: "SignedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const BuilderBid = new ContainerType(

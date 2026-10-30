@@ -1,9 +1,7 @@
 import type {ChainForkConfig} from "@lodestar/config";
-import type {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
-import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
-import {IBlockInput} from "./blockInput/types.js";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import type {Slot, fulu} from "@lodestar/types";
 import {OrphanedPayloadEnvelope} from "./utils/chainSegment.js";
 
 export enum GossipedInputType {
@@ -94,29 +92,6 @@ export type ImportBlockOpts = {
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
 };
-
-/**
- * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import.
- *
- * `executionStatus` reflects the outcome of execution payload verification at block-import time:
- * - pre-gloas: Valid | Syncing | PreMerge (from EL notifyNewPayload against the in-block payload)
- * - post-gloas: inherited from parent's chain (Valid/Syncing) by importBlock; payload arrives
- *   separately as an envelope and creates the FULL variant later via onExecutionPayload
- */
-export type FullyVerifiedBlock = {
-  blockInput: IBlockInput;
-  postState: IBeaconStateView;
-  parentBlockSlot: Slot;
-  proposerBalanceDelta: number;
-  dataAvailabilityStatus: DataAvailabilityStatus;
-  /** Pre-computed indexed attestations from signature verification to avoid duplicate work */
-  indexedAttestations: IndexedAttestation[];
-  /** Seen timestamp seconds */
-  seenTimestampSec: number;
-  /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
-  executionStatus: BlockExecutionStatus | PayloadExecutionStatus;
-};
-
 /**
  * Result of processing a chain segment.
  */

@@ -7,7 +7,6 @@ import {ExecutionEngineState} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
-import {isOptimisticBlock} from "../util/forkChoice.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {IBeaconSync, SyncChainDebugState, SyncModules, SyncState, SyncingStatus, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
@@ -28,6 +27,7 @@ export class BeaconSync implements IBeaconSync {
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
   private readonly slotImportTolerance: Slot;
+  private closed = false;
 
   constructor(opts: SyncOptions, modules: SyncModules) {
     const {config, chain, metrics, network, logger} = modules;
@@ -78,11 +78,14 @@ export class BeaconSync implements IBeaconSync {
 
     // A from-scratch or large-gap start boots not synced; updateSyncState resumes once synced
     if (this.state !== SyncState.Synced) {
-      this.chain.forkChoice.pauseFastConfirmation();
+      this.chain.beaconEngine.pauseFastConfirmation().catch((e) => {
+        this.logger.error("Error pausing fast confirmation", {}, e);
+      });
     }
   }
 
   close(): void {
+    this.closed = true;
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
@@ -90,7 +93,7 @@ export class BeaconSync implements IBeaconSync {
     this.unknownBlockSync.close();
   }
 
-  getSyncStatus(): SyncingStatus {
+  async getSyncStatus(): Promise<SyncingStatus> {
     const currentSlot = this.chain.clock.currentSlot;
     const elOffline =
       this.chain.executionEngine.state === ExecutionEngineState.OFFLINE ||
@@ -107,7 +110,8 @@ export class BeaconSync implements IBeaconSync {
       };
     }
 
-    const head = this.chain.forkChoice.getHead();
+    // TODO - beacon engine: may pull the full head from BeaconEngine with head execution status
+    const head = this.chain.beaconEngine.chainView.getHead();
 
     switch (this.state) {
       case SyncState.SyncingFinalized:
@@ -117,7 +121,7 @@ export class BeaconSync implements IBeaconSync {
           headSlot: head.slot,
           syncDistance: currentSlot - head.slot,
           isSyncing: true,
-          isOptimistic: isOptimisticBlock(head),
+          isOptimistic: await this.chain.beaconEngine.isHeadOptimistic(),
           elOffline,
         };
       case SyncState.Synced:
@@ -125,7 +129,7 @@ export class BeaconSync implements IBeaconSync {
           headSlot: head.slot,
           syncDistance: 0,
           isSyncing: false,
-          isOptimistic: isOptimisticBlock(head),
+          isOptimistic: await this.chain.beaconEngine.isHeadOptimistic(),
           elOffline,
         };
       default:
@@ -144,7 +148,7 @@ export class BeaconSync implements IBeaconSync {
 
   get state(): SyncState {
     const currentSlot = this.chain.clock.currentSlot;
-    const headSlot = this.chain.forkChoice.getHead().slot;
+    const headSlot = this.chain.beaconEngine.chainView.getHead().slot;
 
     if (
       // Consider node synced IF
@@ -192,7 +196,12 @@ export class BeaconSync implements IBeaconSync {
    */
   private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const localStatus = this.chain.getStatus();
-    const syncType = getPeerSyncType(localStatus, data.status, this.chain.forkChoice, this.slotImportTolerance);
+    const syncType = getPeerSyncType(
+      localStatus,
+      data.status,
+      this.chain.beaconEngine.chainView,
+      this.slotImportTolerance
+    );
     this.logger.verbose("Peer sync type classified", {
       peer: data.peer,
       syncType,
@@ -211,6 +220,8 @@ export class BeaconSync implements IBeaconSync {
 
     if (syncType === PeerSyncType.Advanced) {
       this.rangeSync.addPeer(data.peer, localStatus, data.status);
+    } else {
+      this.rangeSync.removePeer(data.peer);
     }
 
     this.updateSyncState();
@@ -229,11 +240,15 @@ export class BeaconSync implements IBeaconSync {
    * Run this function when the sync state can potentially change.
    */
   private updateSyncState = (): void => {
+    if (this.closed) return;
+
     const state = this.state; // Don't run the getter twice
 
     // We have become synced, subscribe to all the gossip core topics
     if (state === SyncState.Synced && this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP) {
-      this.chain.forkChoice.resumeFastConfirmation();
+      this.chain.beaconEngine.resumeFastConfirmation().catch((e) => {
+        this.logger.error("Error resuming fast confirmation", {}, e);
+      });
 
       if (!this.network.isSubscribedToGossipCoreTopics()) {
         this.network
@@ -256,10 +271,12 @@ export class BeaconSync implements IBeaconSync {
 
     // If we stopped being synced and fallen significantly behind, stop gossip
     else if (state !== SyncState.Synced) {
-      const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
+      const syncDiff = this.chain.clock.currentSlot - this.chain.beaconEngine.chainView.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {
         // Same debounce as gossip: transient blips keep the rule running, only a real gap pauses it
-        this.chain.forkChoice.pauseFastConfirmation();
+        this.chain.beaconEngine.pauseFastConfirmation().catch((e) => {
+          this.logger.error("Error pausing fast confirmation", {}, e);
+        });
 
         if (this.network.isSubscribedToGossipCoreTopics()) {
           this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);

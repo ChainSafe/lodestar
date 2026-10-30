@@ -15,6 +15,7 @@ const WORKER_DIR = process.env.NODE_ENV === "test" ? "../../../../lib/chain/arch
 /**
  * HistoricalStateRegen limits the damage from recreating historical states
  * by running regen in a separate worker thread.
+ * TODO - beacon engine: may move this completely to BeaconEngine
  */
 export class HistoricalStateRegen implements HistoricalStateWorkerApi {
   private readonly api: ModuleThread<HistoricalStateWorkerApi>;

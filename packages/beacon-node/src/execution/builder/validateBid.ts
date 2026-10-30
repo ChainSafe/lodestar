@@ -11,7 +11,7 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, Slot, gloas, heze} from "@lodestar/types";
 import {bigIntMin, byteArrayEquals, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
-import {IBeaconChain} from "../../chain/index.js";
+import type {BeaconEngineCore} from "../../chain/beaconEngine/beaconEngineCore.js";
 import {RegenCaller} from "../../chain/regen/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 
@@ -29,7 +29,7 @@ export function getBuilderBidTotalGwei(bid: gloas.ExecutionPayloadBid, maxExecut
  * Throws with a description of the failure, the caller drops the bid.
  */
 export async function validateBuilderApiExecutionPayloadBid(
-  chain: IBeaconChain,
+  chain: BeaconEngineCore,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
   request: {
     slot: Slot;

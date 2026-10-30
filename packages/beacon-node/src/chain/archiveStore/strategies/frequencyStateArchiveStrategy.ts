@@ -3,8 +3,8 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {IBeaconDb} from "../../../db/index.js";
-import {Metrics} from "../../../metrics/metrics.js";
+import {IBeaconEngineDb} from "../../../db/index.js";
+import {BeaconEngineMetrics} from "../../../metrics/beaconEngineMetrics.js";
 import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {IStateRegenerator} from "../../regen/interface.js";
@@ -34,14 +34,14 @@ export enum FrequencyStateArchiveStep {
 export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
   constructor(
     private readonly regen: IStateRegenerator,
-    private readonly db: IBeaconDb,
+    private readonly db: IBeaconEngineDb,
     private readonly logger: Logger,
     private readonly opts: StatesArchiveOpts,
     private readonly bufferPool?: BufferPool | null
   ) {}
 
-  async onFinalizedCheckpoint(_finalized: CheckpointWithHex, _metrics?: Metrics | null): Promise<void> {}
-  async onCheckpoint(_stateRoot: RootHex, _metrics?: Metrics | null): Promise<void> {}
+  async onFinalizedCheckpoint(_finalized: CheckpointWithHex, _metrics?: BeaconEngineMetrics | null): Promise<void> {}
+  async onCheckpoint(_stateRoot: RootHex, _metrics?: BeaconEngineMetrics | null): Promise<void> {}
 
   /**
    * Persist states every some epochs to
@@ -55,7 +55,7 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
    * epoch - 1024*2    epoch - 1024    epoch - 32    epoch
    * ```
    */
-  async maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
+  async maybeArchiveState(finalized: CheckpointWithHex, metrics?: BeaconEngineMetrics | null): Promise<void> {
     let timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
     const lastStoredSlot = await this.db.stateArchive.lastKey();
     timer?.({step: FrequencyStateArchiveStep.LoadLastStoredSlot});
@@ -104,7 +104,7 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
    * Archives finalized states from active bucket to archive bucket.
    * Only the new finalized state is stored to disk
    */
-  async archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
+  async archiveState(finalized: CheckpointWithHex, metrics?: BeaconEngineMetrics | null): Promise<void> {
     // starting from Mar 2024, the finalized state could be from disk or in memory
     let timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
     const finalizedHex = {epoch: finalized.epoch, rootHex: finalized.rootHex};

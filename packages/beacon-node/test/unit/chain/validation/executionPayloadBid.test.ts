@@ -77,7 +77,7 @@ describe("validateGossipExecutionPayloadBid", () => {
   });
 
   it("accepts a valid bid", async () => {
-    expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex});
+    expect(await validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).toEqual({proposerIndex});
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
     expect(
       chain.seenExecutionPayloadBids.isKnown(
@@ -91,14 +91,14 @@ describe("validateGossipExecutionPayloadBid", () => {
 
   it("rejects a bid whose block hash equals its parent block hash", async () => {
     signedBid.message.blockHash = signedBid.message.parentBlockHash;
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH},
     });
   });
 
   it("rejects a bid outside the slot window", async () => {
     vi.mocked(chain.clock.isCurrentSlotGivenGossipDisparity).mockReturnValue(false);
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.INVALID_SLOT},
     });
 
@@ -107,21 +107,21 @@ describe("validateGossipExecutionPayloadBid", () => {
 
   it("ignores a bid incompatible with the head branch", async () => {
     chain.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 1, blockRoot: toRootHex(Buffer.alloc(32, 8))}));
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD},
     });
   });
 
   it("ignores an already known bid", async () => {
-    await validateGossipExecutionPayloadBid(chain, signedBid);
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid);
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN},
     });
   });
 
   it("rejects if the parent block is unknown", async () => {
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT},
     });
 
@@ -130,7 +130,7 @@ describe("validateGossipExecutionPayloadBid", () => {
 
   it("rejects if the parent state cannot be regenerated", async () => {
     chain.regen.getBlockSlotState.mockRejectedValue(Error("no state"));
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT},
     });
 
@@ -145,28 +145,28 @@ describe("validateGossipExecutionPayloadBid", () => {
     });
     chain.forkChoice.getHead.mockReturnValue(parentBlock);
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(parentBlock);
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT},
     });
   });
 
   it("ignores a bid without matching proposer preferences", async () => {
     vi.mocked(chain.proposerPreferencesPool.get).mockReturnValue(null);
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES},
     });
   });
 
   it("rejects a non-zero execution payment", async () => {
     signedBid.message.executionPayment = 1n;
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT},
     });
   });
 
   it("rejects an inactive builder", async () => {
     chain.regen.getBlockSlotState.mockResolvedValue(mockState());
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE},
     });
   });
@@ -178,21 +178,21 @@ describe("validateGossipExecutionPayloadBid", () => {
       typeof chain.executionPayloadBidPool.getBestBid
     >);
     signedBid.message.value = 100;
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW},
     });
   });
 
   it("rejects a wrong randao mix", async () => {
     signedBid.message.prevRandao = Buffer.alloc(32, 2);
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.INVALID_PREV_RANDAO},
     });
   });
 
   it("rejects an invalid signature", async () => {
     vi.mocked(chain.bls.verifySignatureSets).mockResolvedValue(false);
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE},
     });
   });
@@ -200,7 +200,7 @@ describe("validateGossipExecutionPayloadBid", () => {
   it("rejects a bid with too many blob KZG commitments", async () => {
     const commitmentLimit = config.getMaxBlobsPerBlock(0);
     signedBid.message.blobKzgCommitments = Array.from({length: commitmentLimit + 1}, () => new Uint8Array(48));
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS},
     });
 
@@ -211,7 +211,7 @@ describe("validateGossipExecutionPayloadBid", () => {
     // Exercises the explicit length guard (bid.builderIndex >= state.getBuildersLength()), which is a
     // separate branch from the "rejects an inactive builder" isActiveBuilder path. mockState() has one builder.
     signedBid.message.builderIndex = 1;
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE},
     });
   });
@@ -222,7 +222,7 @@ describe("validateGossipExecutionPayloadBid", () => {
     builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
     builder.version = PAYLOAD_BUILDER_VERSION + 1;
     chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder}));
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION},
     });
   });
@@ -234,7 +234,7 @@ describe("validateGossipExecutionPayloadBid", () => {
     const mockedState = mockState({builder});
     (mockedState as any).canBuilderCoverBid = () => false;
     chain.regen.getBlockSlotState.mockResolvedValue(mockedState);
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+    await expect(validateGossipExecutionPayloadBid.call(chain.beaconEngine, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH},
     });
   });

@@ -1,18 +1,20 @@
+import {BeaconConfig} from "@lodestar/config";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
+import {SignedBeaconBlock} from "@lodestar/types";
+import {ErrorAborted, Logger, byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
-import {SerializedCache} from "../../util/serializedCache.js";
+import {IBeaconEngineOptions} from "../beaconEngine/options.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
-import {IBlockInput} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
+import {persistInvalidSszObject} from "./utils/persistInvalidSszObject.js";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -23,24 +25,29 @@ import {ImportBlockOpts} from "./types.js";
  *   - Check state root matches
  */
 export async function verifyBlocksStateTransitionOnly(
+  config: BeaconConfig,
   preState0: IBeaconStateView,
-  blocks: IBlockInput[],
+  blocks: SignedBeaconBlock[],
   dataAvailabilityStatuses: DataAvailabilityStatus[],
-  serializedCache: SerializedCache,
+  blockBytes: Uint8Array[],
   logger: Logger,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   validatorMonitor: ValidatorMonitor | null,
   signal: AbortSignal,
-  opts: BlockProcessOpts & ImportBlockOpts
+  // Persist config read off `IBeaconEngineOptions` (engine-owned); persisting the pre/post state bytes here
+  // (engine-side) keeps `IBeaconStateView` off the thrown `BlockError` (out of the facade seam).
+  opts: BlockProcessOpts &
+    ImportBlockOpts &
+    Pick<IBeaconEngineOptions, "persistInvalidSszObjects" | "persistInvalidSszObjectsDir">
 ): Promise<{postStates: IBeaconStateView[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
   const postStates: IBeaconStateView[] = [];
   const proposerBalanceDeltas: number[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
+    if (signal.aborted) throw new ErrorAborted("verifyBlockStateTransitionOnly");
     const {validProposerSignature, validSignatures} = opts;
-    const blockInput = blocks[i];
-    const block = blockInput.getBlock();
+    const block = blocks[i];
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
@@ -50,7 +57,7 @@ export async function verifyBlocksStateTransitionOnly(
     let postState: IBeaconStateView;
     try {
       postState = preState.stateTransition(
-        {block, ssz: serializedCache.get(block)},
+        {block, ssz: blockBytes[i]},
         {
           // NOTE: Assume valid for now while sending payload to execution engine in parallel
           // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
@@ -68,7 +75,7 @@ export async function verifyBlocksStateTransitionOnly(
     } catch (e) {
       throw new BlockError(block, {
         code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
-        blockRoot: blocks[i].blockRootHex,
+        blockRoot: toRootHex(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
         error: e as Error,
       });
     }
@@ -81,12 +88,40 @@ export async function verifyBlocksStateTransitionOnly(
 
     // Check state root matches
     if (!byteArrayEquals(block.message.stateRoot, stateRoot)) {
+      // Invalid state root is critical and often stalls the node; persist block + pre/post state for investigation.
+      if (opts.persistInvalidSszObjects) {
+        const dir = opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects";
+        const logStr = `slot_${block.message.slot}_invalid_state_root_${toRootHex(stateRoot)}`;
+        const blockType = config.getForkTypes(block.message.slot).SignedBeaconBlock;
+        void persistInvalidSszObject(
+          dir,
+          logger,
+          `SignedBeaconBlock_slot_${block.message.slot}`,
+          blockType.serialize(block),
+          blockType.hashTreeRoot(block),
+          `${logStr}_block`
+        );
+        void persistInvalidSszObject(
+          dir,
+          logger,
+          `preState_slot_${preState.slot}_BeaconState`,
+          preState.serialize(),
+          preState.hashTreeRoot(),
+          `${logStr}_pre_state`
+        );
+        void persistInvalidSszObject(
+          dir,
+          logger,
+          `postState_slot_${postState.slot}_BeaconState`,
+          postState.serialize(),
+          postState.hashTreeRoot(),
+          `${logStr}_post_state`
+        );
+      }
       throw new BlockError(block, {
         code: BlockErrorCode.INVALID_STATE_ROOT,
-        root: postState.hashTreeRoot(),
+        root: stateRoot,
         expectedRoot: block.message.stateRoot,
-        preState,
-        postState,
       });
     }
 
@@ -110,7 +145,7 @@ export async function verifyBlocksStateTransitionOnly(
 
   const verifyStateTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const slot = blocks[0].getBlock().message.slot;
+    const slot = blocks[0].message.slot;
     const recvToValidation = verifyStateTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 

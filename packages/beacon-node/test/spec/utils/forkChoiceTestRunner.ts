@@ -18,7 +18,6 @@ import {
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
-  BeaconStateView,
   DataAvailabilityStatus,
   IBeaconStateViewGloas,
   computeEpochAtSlot,
@@ -57,7 +56,7 @@ import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
-import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {getShufflingForAttestationVerification} from "../../../src/chain/validation/attestation.js";
@@ -70,6 +69,8 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {createBeaconChain} from "../../utils/chain.js";
+import {getBeaconEngineCore} from "../../utils/engine.js";
 import {
   createSpecTestBeaconMetrics,
   expectNoProgressiveBalancesMismatches,
@@ -131,7 +132,7 @@ export const forkChoiceTestRunner =
           {skipSyncPubkeys: true}
         );
 
-        const chain = new BeaconChain(
+        const chain = await createBeaconChain(
           {
             ...defaultChainOptions,
             // Do not start workers
@@ -161,18 +162,20 @@ export const forkChoiceTestRunner =
             processShutdownCallback: () => {},
             clock,
             metrics,
-            validatorMonitor: null,
-            anchorState: new BeaconStateView(cachedState),
+            validatorMonitorOpts: null,
+            anchorStateBytes: cachedState.serialize(),
             isAnchorStateFinalized: true,
             earliestAvailableSlot: cachedState.slot,
             executionEngine,
-            executionBuilder: undefined,
           }
         );
 
         // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
         chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
+        const engine = getBeaconEngineCore(chain.beaconEngine);
+        const engineMetrics = engine.metrics;
+        if (!engineMetrics) throw Error("Missing engine metrics");
         const specStoreBlockRoots = new Set<RootHex>([
           toHex(config.getForkTypes(anchorBlock.slot).BeaconBlock.hashTreeRoot(anchorBlock)),
         ]);
@@ -223,20 +226,20 @@ export const forkChoiceTestRunner =
               // cross-epoch fork attestations (surfaced by the compliance suite) decode correctly.
               // The resolution runs inside the try so that errors on `valid: false` steps (e.g.
               // attesting to a future block) count as the expected rejection.
-              const attHeadBlock = chain.forkChoice.getBlockHexDefaultStatus(toHex(attestation.data.beaconBlockRoot));
+              const attHeadBlock = engine.forkChoice.getBlockHexDefaultStatus(toHex(attestation.data.beaconBlockRoot));
               if (attHeadBlock === null && isValid) {
                 throw Error(`Attestation beacon block root unknown to fork choice at step ${i}`);
               }
               try {
                 if (attHeadBlock === null) throw Error("Unknown attestation head block (expected rejection)");
-                const shuffling = await getShufflingForAttestationVerification(
-                  chain,
+                const shuffling = await getShufflingForAttestationVerification.call(
+                  engine,
                   computeEpochAtSlot(attestation.data.slot),
                   attHeadBlock,
                   RegenCaller.validateGossipAttestation
                 );
                 const indexedAttestation = getIndexedAttestation(shuffling, ForkSeq[fork], attestation);
-                chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+                engine.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
@@ -251,7 +254,7 @@ export const forkChoiceTestRunner =
               });
               const attesterSlashing = testcase.attesterSlashings.get(step.attester_slashing);
               if (!attesterSlashing) throw Error(`No attester slashing ${step.attester_slashing}`);
-              chain.forkChoice.onAttesterSlashing(attesterSlashing);
+              engine.forkChoice.onAttesterSlashing(attesterSlashing);
             }
 
             // payload attestation message step
@@ -268,7 +271,7 @@ export const forkChoiceTestRunner =
                 throw Error(`No payload attestation message ${step.payload_attestation_message}`);
               try {
                 const blockRoot = toRootHex(payloadAttestationMessage.data.beaconBlockRoot);
-                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRoot);
+                const protoBlock = engine.forkChoice.getBlockHexDefaultStatus(blockRoot);
                 if (!protoBlock) {
                   throw Error(`Block not found for root ${blockRoot}`);
                 }
@@ -277,7 +280,7 @@ export const forkChoiceTestRunner =
                 // early otherwise" — a slot mismatch is a no-op SUCCESS, not a rejection.
                 // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#on_payload_attestation_message
                 if (protoBlock.slot === payloadAttestationMessage.data.slot) {
-                  const blockState = await chain.regen.getBlockSlotState(
+                  const blockState = await engine.regen.getBlockSlotState(
                     protoBlock,
                     payloadAttestationMessage.data.slot,
                     {dontTransferCache: true},
@@ -314,7 +317,7 @@ export const forkChoiceTestRunner =
                     );
                     let signatureValidity: boolean;
                     try {
-                      signatureValidity = await chain.bls.verifySignatureSets([signatureSet], {
+                      signatureValidity = await engine.bls.verifySignatureSets([signatureSet], {
                         verifyOnMainThread: true,
                         batchable: true,
                         priority: true,
@@ -325,7 +328,7 @@ export const forkChoiceTestRunner =
                     if (!signatureValidity) throw Error("Invalid payload attestation signature");
                   }
 
-                  chain.forkChoice.notifyPtcMessages(
+                  engine.forkChoice.notifyPtcMessages(
                     blockRoot,
                     payloadAttestationMessage.data.slot,
                     ptcIndices,
@@ -529,12 +532,12 @@ export const forkChoiceTestRunner =
                   importAttestations: AttestationImportOpt.Force,
                   validSignatures: testcase.meta?.bls_setting !== BigInt(1),
                 });
-                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+                const protoBlock = engine.forkChoice.getBlockHexDefaultStatus(blockRootHex);
                 if (protoBlock === null) {
                   throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
                 }
-                const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
-                expectValidProgressiveBalances(postState, metrics.stateTransition);
+                const postState = await engine.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
+                expectValidProgressiveBalances(postState, engineMetrics.stateTransition);
                 if (!isValid) throw Error("Expect error since this is a negative test");
                 specStoreBlockRoots.add(blockRootHex);
               } catch (e) {
@@ -561,9 +564,9 @@ export const forkChoiceTestRunner =
                 const gasLimit = envelope.message.payload.gasLimit;
 
                 // Verify envelope against the state
-                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
+                const protoBlock = engine.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
                 if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
-                const blockState = await chain.regen.getBlockSlotState(
+                const blockState = await engine.regen.getBlockSlotState(
                   protoBlock,
                   protoBlock.slot,
                   {dontTransferCache: true},
@@ -580,7 +583,7 @@ export const forkChoiceTestRunner =
                     blockState as IBeaconStateViewGloas,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
-                    chain.bls
+                    engine.bls
                   );
                   if (!sigValid) throw Error("Invalid execution payload envelope signature");
                 }
@@ -593,9 +596,9 @@ export const forkChoiceTestRunner =
                 });
 
                 // The vectors carry no inclusion lists, so every payload satisfies the empty constraint set
-                (chain.forkChoice as ForkChoice).recordPayloadInclusionListSatisfaction(beaconBlockRoot, true);
+                (engine.forkChoice as ForkChoice).recordPayloadInclusionListSatisfaction(beaconBlockRoot, true);
 
-                (chain.forkChoice as ForkChoice).onExecutionPayload(
+                (engine.forkChoice as ForkChoice).onExecutionPayload(
                   beaconBlockRoot,
                   blockHash,
                   blockNumber,
@@ -628,8 +631,8 @@ export const forkChoiceTestRunner =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = (chain.forkChoice as ForkChoice).updateHead();
-              const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
+              const head = (engine.forkChoice as ForkChoice).updateHead();
+              const proposerBootRoot = (engine.forkChoice as ForkChoice).getProposerBoostRoot();
               // Spec: EMPTY=0, FULL=1, PENDING=2; Ours: PENDING=0, EMPTY=1, FULL=2
               const payloadStatusToSpec: Record<number, number> = {0: 2, 1: 0, 2: 1};
 
@@ -656,25 +659,25 @@ export const forkChoiceTestRunner =
               // Compare in slots because proposer boost steps doesn't always come on
               // slot boundary.
               if (step.checks.time !== undefined && step.checks.time > 0)
-                expect(chain.forkChoice.getTime()).toEqualWithMessage(
+                expect(engine.forkChoice.getTime()).toEqualWithMessage(
                   Math.floor(bnToNum(step.checks.time) / (config.SLOT_DURATION_MS / 1000)),
                   `Invalid forkchoice time at step ${i}`
                 );
               if (step.checks.justified_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.forkChoice.getJustifiedCheckpoint())).toEqualWithMessage(
+                expect(toSpecTestCheckpoint(engine.forkChoice.getJustifiedCheckpoint())).toEqualWithMessage(
                   step.checks.justified_checkpoint,
                   `Invalid justified checkpoint at step ${i}`
                 );
               }
               if (step.checks.finalized_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.forkChoice.getFinalizedCheckpoint())).toEqualWithMessage(
+                expect(toSpecTestCheckpoint(engine.forkChoice.getFinalizedCheckpoint())).toEqualWithMessage(
                   step.checks.finalized_checkpoint,
                   `Invalid finalized checkpoint at step ${i}`
                 );
               }
               if (step.checks.get_proposer_head) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
+                const {proposerHead, notReorgedReason} = (engine.forkChoice as ForkChoice).getProposerHead(
                   head,
                   (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
@@ -697,7 +700,7 @@ export const forkChoiceTestRunner =
                     weightGwei: entry.weight,
                   }))
                   .sort(cmpViableHead);
-                const actual = (chain.forkChoice as ForkChoice)
+                const actual = (engine.forkChoice as ForkChoice)
                   .getViableHeads()
                   .map(({root, payloadStatus, weight}) => ({
                     root,
@@ -724,7 +727,7 @@ export const forkChoiceTestRunner =
               }
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
+                const result = engine.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
                   (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
@@ -739,7 +742,7 @@ export const forkChoiceTestRunner =
               }
               if (step.checks.payload_timeliness_vote) {
                 expect(
-                  chain.forkChoice.getPayloadTimelinessVotes(step.checks.payload_timeliness_vote.block_root)
+                  engine.forkChoice.getPayloadTimelinessVotes(step.checks.payload_timeliness_vote.block_root)
                 ).toEqualWithMessage(
                   step.checks.payload_timeliness_vote.votes,
                   `Invalid payload timeliness votes at step ${i}`
@@ -747,7 +750,7 @@ export const forkChoiceTestRunner =
               }
               if (step.checks.payload_data_availability_vote) {
                 expect(
-                  chain.forkChoice.getPayloadDataAvailabilityVotes(
+                  engine.forkChoice.getPayloadDataAvailabilityVotes(
                     step.checks.payload_data_availability_vote.block_root
                   )
                 ).toEqualWithMessage(
@@ -762,7 +765,7 @@ export const forkChoiceTestRunner =
               throw Error(`Unknown step ${i}/${stepsLen}: ${JSON.stringify(Object.keys(step))}`);
             }
           }
-          await expectNoProgressiveBalancesMismatches(metrics.register, testCaseName);
+          await expectNoProgressiveBalancesMismatches(engineMetrics.register, testCaseName, metrics.register);
         } finally {
           await chain.close();
         }

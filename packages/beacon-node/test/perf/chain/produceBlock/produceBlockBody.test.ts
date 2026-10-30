@@ -7,14 +7,12 @@ import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/tes
 import {toRootHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BeaconChain} from "../../../../src/chain/index.js";
-import {
-  BlockType,
-  produceBlockBody,
-  produceCommonBlockBody,
-} from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
 import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.js";
 import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
+import {createBeaconChain} from "../../../utils/chain.js";
+import {getBeaconEngineCore} from "../../../utils/engine.js";
 
 const logger = testLogger();
 
@@ -44,7 +42,7 @@ describe("produceBlockBody", () => {
       dataColumnDir: ".tmpdb-data-columns",
       logger,
     });
-    chain = new BeaconChain(
+    chain = await createBeaconChain(
       {
         proposerBoost: true,
         proposerBoostReorg: true,
@@ -66,8 +64,8 @@ describe("produceBlockBody", () => {
         logger,
         processShutdownCallback: () => {},
         metrics: null,
-        validatorMonitor: null,
-        anchorState: new BeaconStateView(state),
+        validatorMonitorOpts: null,
+        anchorStateBytes: state.serialize(),
         isAnchorStateFinalized: true,
         earliestAvailableSlot: state.slot,
         executionEngine,
@@ -89,7 +87,7 @@ describe("produceBlockBody", () => {
     maxMs: Infinity,
     timeoutBench: 60 * 1000,
     beforeEach: async () => {
-      const head = chain.forkChoice.getHead();
+      const head = getBeaconEngineCore(chain.beaconEngine).forkChoice.getHead();
       const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
       const proposerPubKey = state.epochCtx.pubkeyCache.getPubkeyBytesOrThrow(proposerIndex);
 
@@ -98,14 +96,14 @@ describe("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
-      const commonBlockBodyPromise = produceCommonBlockBody.call(chain, BlockType.Full, state, {
+      const commonBlockBodyPromise = getBeaconEngineCore(chain.beaconEngine).produceCommonBlockBody({
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
         parentBlock: head,
       });
 
-      await produceBlockBody.call(chain, BlockType.Full, state, {
+      await produceBlockBody.call(getBeaconEngineCore(chain.beaconEngine), BlockType.Full, state, {
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),

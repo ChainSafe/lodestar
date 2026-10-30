@@ -1,12 +1,22 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {RootHex} from "@lodestar/types";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 
 export enum ArchiveMode {
   Frequency = "frequency",
   // New strategy to be implemented
   // WIP: https://github.com/ChainSafe/lodestar/pull/7005
   // Differential = "diff",
+}
+
+/** `processFinalizedCheckpoint.durationByTask` label — some tasks now run inside `engine.migrateFinalized`. */
+export enum ArchiveStoreTask {
+  ArchiveBlocks = "archive_blocks",
+  PruneHistory = "prune_history",
+  OnFinalizedCheckpoint = "on_finalized_checkpoint",
+  MaybeArchiveState = "maybe_archive_state",
+  ForkchoicePrune = "forkchoice_prune",
+  UpdateBackfillRange = "update_backfill_range",
 }
 
 export interface StatesArchiveOpts {
@@ -18,10 +28,10 @@ export interface StatesArchiveOpts {
    * Strategy to store archive states
    */
   archiveMode: ArchiveMode;
+  disableArchiveOnCheckpoint?: boolean;
 }
 
 export type ArchiveStoreOpts = StatesArchiveOpts & {
-  disableArchiveOnCheckpoint?: boolean;
   archiveDataEpochs?: number;
   pruneHistory?: boolean;
   serveHistoricalState?: boolean;
@@ -44,10 +54,10 @@ export type FinalizedStats = {
 };
 
 export interface StateArchiveStrategy {
-  onCheckpoint(stateRoot: RootHex, metrics?: Metrics | null): Promise<void>;
-  onFinalizedCheckpoint(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
-  maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
-  archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
+  onCheckpoint(stateRoot: RootHex, metrics?: BeaconEngineMetrics | null): Promise<void>;
+  onFinalizedCheckpoint(finalized: CheckpointWithHex, metrics?: BeaconEngineMetrics | null): Promise<void>;
+  maybeArchiveState(finalized: CheckpointWithHex, metrics?: BeaconEngineMetrics | null): Promise<void>;
+  archiveState(finalized: CheckpointWithHex, metrics?: BeaconEngineMetrics | null): Promise<void>;
 }
 
 export interface IArchiveStore {
@@ -55,20 +65,6 @@ export interface IArchiveStore {
    * Initialize archive store and load any worker required
    */
   init(): Promise<void>;
-  /**
-   * Cleanup and close any worker
-   */
-  close(): Promise<void>;
-  /**
-   * Scrape metrics from the archive store
-   */
-  scrapeMetrics(): Promise<string>;
-  /**
-   * Get historical state by slot
-   */
-  getHistoricalStateBySlot(
-    slot: number
-  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
   /**
    * Archive latest finalized state
    */

@@ -50,16 +50,20 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
       executionEngine,
       db,
       earliestAvailableSlot: 0,
-      forkChoice: {
-        getFinalizedBlock: () => generateProtoBlock({slot: finalizedSlot}),
-        getHead: () => generateProtoBlock({slot: finalizedSlot, payloadStatus: PayloadStatus.FULL}),
-        getAllAncestorBlocks: () => [],
-        getBlockHexDefaultStatus: () => null,
+      getFinalizedBlockSlotByRoot: (root: Uint8Array) => db.blockArchive.getSlotByRoot(root),
+      beaconEngine: {
+        chainView: {
+          getFinalizedBlock: () => generateProtoBlock({slot: finalizedSlot}),
+          getHead: () => generateProtoBlock({slot: finalizedSlot, payloadStatus: PayloadStatus.FULL}),
+          getAllAncestorBlocks: () => [],
+          getBlockHexDefaultStatus: () => null,
+        },
       },
       seenPayloadEnvelopeInputCache: {get: () => undefined},
       serializedCache: {get: () => undefined},
       getSerializedExecutionPayloadEnvelopes: BeaconChain.prototype.getSerializedExecutionPayloadEnvelopes,
       getSerializedExecutionPayloadEnvelope: BeaconChain.prototype.getSerializedExecutionPayloadEnvelope,
+
       getExecutionPayloadEnvelope: BeaconChain.prototype.getExecutionPayloadEnvelope,
     } as unknown as IBeaconChain;
   });
@@ -141,7 +145,7 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
     it("maps an unservable finalized-block envelope on the non-finalized path to RESOURCE_UNAVAILABLE, not SERVER_ERROR", async () => {
       // A migration archived the finalized block's envelope after archiveMaxSlot was computed
       const full = await seed(finalizedSlot);
-      chain.forkChoice.getAllAncestorBlocks = () => [
+      chain.beaconEngine.chainView.getAllAncestorBlocks = () => [
         generateProtoBlock({
           slot: finalizedSlot,
           blockRoot: toRootHex(full.message.beaconBlockRoot),

@@ -1,8 +1,9 @@
-import {beforeEach, describe, expect, it, vi} from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 import {routes} from "@lodestar/api";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {BeaconStateView} from "@lodestar/state-transition";
 import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/index.js";
+import {BeaconEngineCore} from "../../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {ZERO_HASH} from "../../../../../../src/constants/index.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
@@ -27,7 +28,15 @@ describe("getStateValidators status filtering with ids", () => {
       rootHex: "0xbb",
       epoch: 0,
     });
-    vi.spyOn(modules.chain.regen, "getStateSync").mockReturnValue(state);
+    modules.chain.regen.getStateSync.mockReturnValue(state);
+    Object.assign(modules.chain, {
+      beaconEngine: Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
+        config: modules.config,
+        pubkeyCache: state.cachedState.epochCtx.pubkeyCache,
+        forkChoice: modules.forkChoice,
+        regen: modules.chain.regen,
+      }),
+    });
   });
 
   it("returns active_ongoing validator when filtering by group status active with ids", async () => {

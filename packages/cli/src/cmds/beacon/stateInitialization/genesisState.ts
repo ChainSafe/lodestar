@@ -1,4 +1,3 @@
-import {persistAnchorState} from "@lodestar/beacon-node";
 import {createBeaconConfig} from "@lodestar/config";
 import {
   computeEpochAtSlot,
@@ -47,10 +46,11 @@ export async function prepareGenesisInitialization(
   const expectedRoot = getGenesisStateRoot(options.network);
   return {
     stateBytes,
+    activeValidatorCount: weakSubjectivity.activeValidatorCount,
     config,
     isFinalized: true,
     validate(state) {
-      const stateRoot = toRootHex(state.hashTreeRoot());
+      const stateRoot = toRootHex(state.stateRoot);
       if (expectedRoot !== null && stateRoot !== expectedRoot) {
         throw new StateInitializationError(
           {code: StateInitializationErrorCode.GENESIS_ROOT_MISMATCH},
@@ -73,6 +73,7 @@ export async function prepareGenesisInitialization(
         logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
       }
     },
+    shouldPersist: true,
     async initializeEarliestAvailableSlot(state) {
       const stored = await db.earliestAvailableSlot.get();
       if (stored !== null && stored !== state.slot) {
@@ -86,11 +87,10 @@ export async function prepareGenesisInitialization(
       }
       return state.slot;
     },
-    persist: (state, bytes) => persistAnchorState(config, db, state, bytes),
     log(state, nativeStateTransition) {
       logger.info("Initialized genesis state", {
         slot: state.slot,
-        stateRoot: toRootHex(state.hashTreeRoot()),
+        stateRoot: toRootHex(state.stateRoot),
         isFinalized: true,
         nativeStateTransition,
       });

@@ -1,4 +1,3 @@
-import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ExecutionStatus,
@@ -23,8 +22,8 @@ import {
 import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
-import {Metrics} from "../../metrics/index.js";
-import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {BeaconEngineMetrics} from "../../metrics/index.js";
+import {BeaconEngineEvent, IBeaconEngineEventBus} from "../beaconEngine/events.js";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only
@@ -36,19 +35,16 @@ export enum ForkchoiceCaller {
   importBlock = "import_block",
 }
 
-/**
- * Fork Choice extended with a ChainEventEmitter
- */
 export function initializeForkChoice(
   config: ChainForkConfig,
-  emitter: ChainEventEmitter,
+  emitter: IBeaconEngineEventBus,
   currentSlot: Slot,
   state: IBeaconStateView,
   isFinalizedState: boolean,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   stateGetter: ForkChoiceStateGetter,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   logger?: Logger
 ): ForkChoice {
   return isFinalizedState
@@ -81,13 +77,13 @@ export function initializeForkChoice(
  */
 export function initializeForkChoiceFromFinalizedState(
   config: ChainForkConfig,
-  emitter: ChainEventEmitter,
+  emitter: IBeaconEngineEventBus,
   currentSlot: Slot,
   state: IBeaconStateView,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   stateGetter: ForkChoiceStateGetter,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   logger?: Logger
 ): ForkChoice {
   const {blockHeader, checkpoint} = state.computeAnchorCheckpoint();
@@ -119,13 +115,7 @@ export function initializeForkChoiceFromFinalizedState(
       justifiedBalances,
       justifiedBalancesGetter,
       stateGetter,
-      {
-        onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
-        onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
-        onFastConfirmation: ({block, slot, currentSlot}) =>
-          emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
-        onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
-      }
+      {onFastConfirmation: (data) => emitter.emit(BeaconEngineEvent.fastConfirmation, data)}
     ),
 
     ProtoArray.initialize(
@@ -180,13 +170,13 @@ export function initializeForkChoiceFromFinalizedState(
  */
 export function initializeForkChoiceFromUnfinalizedState(
   config: ChainForkConfig,
-  emitter: ChainEventEmitter,
+  emitter: IBeaconEngineEventBus,
   currentSlot: Slot,
   unfinalizedState: IBeaconStateView,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   stateGetter: ForkChoiceStateGetter,
-  metrics: Metrics | null,
+  metrics: BeaconEngineMetrics | null,
   logger?: Logger
 ): ForkChoice {
   const {blockHeader} = unfinalizedState.computeAnchorCheckpoint();
@@ -218,13 +208,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     justifiedBalances,
     justifiedBalancesGetter,
     stateGetter,
-    {
-      onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
-      onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
-      onFastConfirmation: ({block, slot, currentSlot}) =>
-        emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
-      onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
-    }
+    {onFastConfirmation: (data) => emitter.emit(BeaconEngineEvent.fastConfirmation, data)}
   );
 
   // this is the same to the finalized state

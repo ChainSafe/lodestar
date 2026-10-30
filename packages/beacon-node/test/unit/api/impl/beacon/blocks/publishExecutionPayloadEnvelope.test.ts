@@ -1,24 +1,25 @@
-import {beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {IBeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
+import {BeaconEngineCore} from "../../../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {accept} from "../../../../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {PayloadEnvelopeInput} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
+import {OpSource, createValidatorMonitor} from "../../../../../../src/chain/validatorMonitor.js";
+import {withBeaconEngineFacade} from "../../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 vi.mock("../../../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js", () => ({
   verifyExecutionPayloadEnvelope: vi.fn(),
-}));
-vi.mock("../../../../../../src/chain/validation/executionPayloadEnvelope.js", () => ({
-  validateApiExecutionPayloadEnvelope: vi.fn(),
 }));
 
 describe("api - beacon - publishExecutionPayloadEnvelope", () => {
@@ -40,7 +41,73 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.network.publishSignedExecutionPayloadEnvelope = vi.fn();
     modules.chain.processExecutionPayload = vi.fn();
+    const core: BeaconEngineCore = modules.chain.beaconEngine;
+    core.validateApiExecutionPayloadEnvelope = vi
+      .fn<BeaconEngineCore["validateApiExecutionPayloadEnvelope"]>()
+      .mockResolvedValue(accept(undefined));
+    modules.chain.beaconEngine.getConflictingBlockRoots = BeaconEngineCore.prototype.getConflictingBlockRoots.bind(
+      modules.chain.beaconEngine
+    );
+    modules.chain.beaconEngine.validatorMonitor = createValidatorMonitor(null, config, 0, modules.logger, {});
+    modules.chain.beaconEngine.registerApiExecutionPayloadEnvelope = (...args) =>
+      BeaconEngineCore.prototype.registerApiExecutionPayloadEnvelope.call(modules.chain.beaconEngine, ...args);
   });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([
+    {success: true, broadcastValidation: routes.beacon.BroadcastValidation.gossip},
+    {success: false, broadcastValidation: routes.beacon.BroadcastValidation.gossip},
+  ])(
+    "observes before publication with validation=$broadcastValidation, success=$success",
+    async ({success, broadcastValidation}) => {
+      const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = 1;
+      const blockRoot = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(signedBlock.message));
+      const payloadInput = PayloadEnvelopeInput.createFromBlock({
+        blockRootHex: blockRoot,
+        block: signedBlock,
+        forkName: ForkName.gloas,
+        sampledColumns: [],
+        custodyColumns: [],
+        seenTimestampSec: 0,
+        source: PayloadEnvelopeInputSource.byRange,
+        daOutOfRange: false,
+      });
+      const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      signedEnvelope.message.beaconBlockRoot = fromHex(blockRoot);
+      signedEnvelope.message.payload.slotNumber = 1;
+      const seenTimestampSec = computeTimeAtSlot(config, 1, modules.chain.genesisTime) + 1.25;
+      vi.spyOn(Date, "now").mockReturnValue(seenTimestampSec * 1000);
+      vi.mocked(modules.chain.beaconEngine.validateApiExecutionPayloadEnvelope).mockImplementation(async () => {
+        vi.mocked(Date.now).mockReturnValue((seenTimestampSec + 1) * 1000);
+        return accept(undefined);
+      });
+      modules.forkChoice.getBlockHex.mockReturnValue(generateProtoBlock({slot: 1}));
+      vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
+      const monitor = modules.chain.beaconEngine.validatorMonitor;
+      if (!monitor) throw new Error("Missing monitor");
+      const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope");
+      modules.network.publishSignedExecutionPayloadEnvelope = vi.fn().mockImplementation(async () => {
+        expect(payloadInput.hasPayloadEnvelope()).toBe(true);
+        expect(observed).toHaveBeenCalledExactlyOnceWith(OpSource.api, 1.25, signedEnvelope);
+        if (!success) throw new Error("publication failed");
+        return 1;
+      });
+
+      const pending = getBeaconBlockApi(defaultApiOptions, {
+        ...modules,
+        chain: withBeaconEngineFacade(modules.chain),
+      }).publishExecutionPayloadEnvelope({
+        signedEnvelopeOrContents: signedEnvelope,
+        broadcastValidation,
+      });
+      if (success) await expect(pending).resolves.toBeUndefined();
+      else await expect(pending).rejects.toThrow("publication failed");
+      expect(observed).toHaveBeenCalledExactlyOnceWith(OpSource.api, 1.25, signedEnvelope);
+      expect(modules.network.publishSignedExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+    }
+  );
 
   describe("broadcast_validation=consensus_and_equivocation", () => {
     it("rejects an envelope for an observed proposer equivocation", async () => {
@@ -80,7 +147,10 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
         ssz.phase0.SignedBeaconBlockHeader.defaultValue()
       );
 
-      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      const monitor = modules.chain.beaconEngine.validatorMonitor;
+      if (!monitor) throw new Error("Missing monitor");
+      const observed = vi.spyOn(monitor, "registerExecutionPayloadEnvelope");
+      const api = getBeaconBlockApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
       await expect(
         api.publishExecutionPayloadEnvelope({
           signedEnvelopeOrContents: signedEnvelope,
@@ -91,6 +161,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
       expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
       expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+      expect(observed).not.toHaveBeenCalled();
     });
   });
 

@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {BeaconDb, DbCPStateDatastore, nodeUtils} from "@lodestar/beacon-node";
+import {BeaconDb, DbCPStateDatastore, defaultOptions, nodeUtils} from "@lodestar/beacon-node";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -11,6 +12,9 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, computeAnchorCheckpoint, computeWeakSubjectivityPeriod} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {ExecutionEngineDisabled} from "../../../../beacon-node/lib/execution/engine/disabled.js";
+import {executeStateInitialization} from "../../../../beacon-node/src/node/nodejs.js";
+import {createTestBeaconEngine} from "../../../../beacon-node/test/utils/engine.js";
 import {initBeaconState} from "../../../src/cmds/beacon/initBeaconState.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {StateInitializationErrorCode} from "../../../src/cmds/beacon/stateInitialization/errors.js";
@@ -121,21 +125,97 @@ describe("initBeaconState", () => {
   }
 
   // Reduce the result to a summary, a failing assertion would otherwise try to print the whole state
-  async function init(db: BeaconDb, args: Partial<BeaconArgs & GlobalArgs>): Promise<AnchorSummary> {
-    const {anchorState, isFinalized} = await initBeaconState(
+  async function init(
+    db: BeaconDb,
+    args: Partial<BeaconArgs & GlobalArgs>,
+    logger = getMockedLogger()
+  ): Promise<AnchorSummary> {
+    const stateInit = await initBeaconState(
       {network: "dev", ...args} as BeaconArgs & GlobalArgs,
       fixturesDir,
       path.join(fixturesDir, "pubkeys"),
       config,
       db,
-      getMockedLogger()
+      logger
     );
-    return {slot: anchorState.slot, stateRoot: toRootHex(anchorState.hashTreeRoot()), isFinalized};
+    let summary: AnchorSummary | undefined;
+    const modules = createTestBeaconEngine(
+      {
+        ...defaultOptions.chain,
+        blsVerifyAllMainThread: true,
+        disablePrepareNextSlot: true,
+        disableLightClientServer: true,
+        disableArchiveOnCheckpoint: true,
+      },
+      {
+        privateKey: await generateKeyPair("secp256k1"),
+        config: stateInit.config,
+        pubkeyCache,
+        // @ts-expect-error TODO: align source test utilities with CLI built-package imports.
+        db,
+        dbName: path.join(fixturesDir, "db"),
+        dataDir: fixturesDir,
+        logger: getMockedLogger(),
+        processShutdownCallback: () => {},
+        metrics: null,
+        validatorMonitor: null,
+        anchorStateBytes: stateInit.stateBytes,
+        isAnchorStateFinalized: stateInit.isFinalized,
+        // @ts-expect-error TODO: align source test utilities with CLI built-package imports.
+        executionEngine: new ExecutionEngineDisabled(),
+      }
+    );
+    await modules.beaconEngineCore.init();
+    await executeStateInitialization(modules.beaconEngine, {
+      ...stateInit,
+      log(anchor) {
+        stateInit.log(anchor, false);
+        summary = {slot: anchor.slot, stateRoot: toRootHex(anchor.stateRoot), isFinalized: stateInit.isFinalized};
+      },
+    });
+    modules.abortController.abort();
+    await modules.beaconEngine.close();
+    if (!summary) throw new Error("Missing anchor summary");
+    return summary;
   }
 
   function anchorOf(fixture: Fixture, isFinalized: boolean): AnchorSummary {
     return {slot: fixture.state.slot, stateRoot: toRootHex(fixture.state.hashTreeRoot()), isFinalized};
   }
+
+  it.each(["genesis", "db", "checkpoint", "dbAhead"] as const)(
+    "carries the active validator count from the selected %s bytes",
+    async (source) => {
+      const archivedEpoch = (source === "dbAhead" ? dbStale : dbFresh).state.slot / SLOTS_PER_EPOCH;
+      const archived = stateAtEpoch("countArchived", archivedEpoch, (state) => {
+        state.validators.get(0).exitEpoch = state.slot / SLOTS_PER_EPOCH;
+      });
+      const checkpoint = stateAtEpoch("countCheckpoint", checkpointFresh.state.slot / SLOTS_PER_EPOCH, (state) => {
+        state.validators.get(0).exitEpoch = state.slot / SLOTS_PER_EPOCH;
+        state.validators.get(1).activationEpoch = state.slot / SLOTS_PER_EPOCH + 1;
+      });
+      const db = await createDb(source === "genesis" ? {} : {archived});
+      const args: Partial<BeaconArgs & GlobalArgs> =
+        source === "genesis"
+          ? {genesisStateFile: genesis.file}
+          : {
+              checkpointState: source === "dbAhead" ? checkpointOlder.file : checkpoint.file,
+              forceCheckpointSync: source === "checkpoint",
+              ignoreWeakSubjectivityCheck: source === "dbAhead",
+            };
+      const stateInit = await initBeaconState(
+        {network: "dev", ...args} as BeaconArgs & GlobalArgs,
+        fixturesDir,
+        path.join(fixturesDir, "pubkeys"),
+        config,
+        db,
+        getMockedLogger()
+      );
+      const selected = source === "genesis" ? genesis : source === "checkpoint" ? checkpoint : archived;
+      expect(stateInit.stateBytes).toEqual(selected.bytes);
+      expect(stateInit.activeValidatorCount).toBe(source === "genesis" ? 64 : source === "checkpoint" ? 62 : 63);
+    }
+  );
 
   it("preserves the checkpoint boundary across repeated DB restarts", async () => {
     const db = await createDb({archived: dbStale});
@@ -178,16 +258,8 @@ describe("initBeaconState", () => {
     if (stored !== null) await db.earliestAvailableSlot.set(stored);
     const write = vi.spyOn(db.earliestAvailableSlot, "set");
     const logger = getMockedLogger();
-    const {earliestAvailableSlot} = await initBeaconState(
-      {network: "dev", genesisStateFile: genesis.file} as BeaconArgs & GlobalArgs,
-      fixturesDir,
-      path.join(fixturesDir, "pubkeys"),
-      config,
-      db,
-      logger
-    );
+    await init(db, {genesisStateFile: genesis.file}, logger);
 
-    expect(earliestAvailableSlot).toBe(0);
     expect(await db.earliestAvailableSlot.get()).toBe(0);
     if (stored === 0) {
       expect(write).not.toHaveBeenCalled();

@@ -1,11 +1,11 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
-import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
-import {Epoch, Status, fulu, ssz} from "@lodestar/types";
-import {Logger, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, Status, fulu} from "@lodestar/types";
+import {Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
-import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
+import {PayloadErrorCode, PayloadImportError} from "../../chain/blocks/importExecutionPayload.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {assertLinearChainSegment} from "../../chain/blocks/utils/chainSegment.js";
 import {BlockError} from "../../chain/errors/index.js";
@@ -50,6 +50,7 @@ type RangeSyncState =
 
 export type RangeSyncModules = {
   chain: IBeaconChain;
+  parentPayload: ParentPayload | undefined;
   network: INetwork;
   metrics: Metrics | null;
   config: BeaconConfig;
@@ -90,6 +91,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private readonly metrics: Metrics | null;
   private readonly config: BeaconConfig;
   private readonly logger: Logger;
+  private readonly parentPayload: ParentPayload | undefined;
   /** There is a single chain per type, 1 finalized sync, 1 head sync */
   private readonly chains = new Map<RangeSyncType, SyncChain>();
 
@@ -97,8 +99,9 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   constructor(modules: RangeSyncModules, opts?: RangeSyncOpts) {
     super();
-    const {chain, network, metrics, config, logger} = modules;
+    const {chain, parentPayload, network, metrics, config, logger} = modules;
     this.chain = chain;
+    this.parentPayload = parentPayload;
     this.network = network;
     this.metrics = metrics;
     this.config = config;
@@ -246,7 +249,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       }
     } catch (e) {
       if (
-        e instanceof PayloadError &&
+        e instanceof PayloadImportError &&
         (e.type.code === PayloadErrorCode.INVALID_SIGNATURE ||
           e.type.code === PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR ||
           e.type.code === PayloadErrorCode.EXECUTION_ENGINE_INVALID)
@@ -282,6 +285,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     const parentPayload = requests.parentPayloadRequest ? batch.getParentPayload() : undefined;
     const {result, warnings} = await downloadByRange({
       config: this.config,
+      chain: this.chain,
       network: this.network,
       logger: this.logger,
       peerIdStr: peer.peerId,
@@ -366,7 +370,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private onSyncChainEnd: SyncChainFns["onEnd"] = (err, target) => {
-    this.update(this.chain.forkChoice.getFinalizedCheckpoint().epoch);
+    this.update(this.chain.beaconEngine.chainView.getFinalizedCheckpoint().epoch);
     this.emit(RangeSyncEvent.completedChain);
 
     if (err === null && target !== null) {
@@ -377,27 +381,6 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerIdStr, syncType: RangeSyncType): void {
     let syncChain = this.chains.get(syncType);
     if (!syncChain) {
-      // The first block of the first batch may build on the head's FULL variant before its payload is imported,
-      // the batch then downloads the head's payload as dangling parent and validates it against the bid
-      const headState = this.chain.getHeadState();
-      let parentPayload: ParentPayload | undefined;
-      if (isStatePostGloas(headState) && headState.latestBlockHeader.slot > 0) {
-        const header = ssz.phase0.BeaconBlockHeader.clone(headState.latestBlockHeader);
-        if (byteArrayEquals(header.stateRoot, ssz.Root.defaultValue())) {
-          header.stateRoot = headState.hashTreeRoot();
-        }
-        const headRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
-        const headSlot = headState.latestBlockHeader.slot;
-        parentPayload = {
-          blockRoot: headRoot,
-          blockRootHex: toRootHex(headRoot),
-          slot: headSlot,
-          proposerIndex: headState.latestBlockHeader.proposerIndex,
-          forkName: this.config.getForkName(headSlot),
-          bid: (headState as IBeaconStateViewGloas).latestExecutionPayloadBid,
-        };
-      }
-
       syncChain = new SyncChain(
         startEpoch,
         target,
@@ -417,7 +400,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           custodyConfig: this.chain.custodyConfig,
           metrics: this.metrics,
         },
-        parentPayload
+        this.parentPayload
       );
       this.chains.set(syncType, syncChain);
 
@@ -447,7 +430,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         syncChain.peers === 0 ||
         // Outdated: our chain has progressed beyond this sync chain
         syncChain.target.slot < localFinalizedSlot ||
-        this.chain.forkChoice.hasBlock(syncChain.target.root)
+        this.chain.beaconEngine.chainView.hasBlock(syncChain.target.root)
       ) {
         syncChain.remove();
         this.chains.delete(id);

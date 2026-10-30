@@ -45,7 +45,10 @@ export function getBeaconApi(
         throw new ApiError(400, `Proposer preferences are not supported before Gloas fork=${fork}`);
       }
 
-      const preferences = chain.proposerPreferencesPool.getAll(slot, dependentRoot && toRootHex(dependentRoot));
+      const preferences = await chain.beaconEngine.getPoolProposerPreferences(
+        slot,
+        dependentRoot && toRootHex(dependentRoot)
+      );
       return {data: preferences, meta: {version: fork}};
     },
   };

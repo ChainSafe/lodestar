@@ -7,6 +7,7 @@ import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork} from "../network/index.js";
 import {SyncChainDebugState} from "./range/chain.js";
+import {ParentPayload} from "./utils/downloadByRange.js";
 
 export type {SyncChainDebugState};
 
@@ -15,7 +16,7 @@ export type SyncingStatus = routes.node.SyncingStatus;
 export interface IBeaconSync {
   state: SyncState;
   close(): void;
-  getSyncStatus(): SyncingStatus;
+  getSyncStatus(): Promise<SyncingStatus>;
   isSynced(): boolean;
   isSyncing(): boolean;
   getSyncChainsDebugState(): SyncChainDebugState[];
@@ -52,4 +53,5 @@ export interface SyncModules {
   metrics: Metrics | null;
   logger: Logger;
   chain: IBeaconChain;
+  parentPayload: ParentPayload | undefined;
 }

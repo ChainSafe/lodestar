@@ -2,12 +2,14 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ssz} from "@lodestar/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {
   GossipAction,
   ProposerPreferencesError,
   ProposerPreferencesErrorCode,
 } from "../../../../../src/chain/errors/index.js";
 import {validateGossipProposerPreferences} from "../../../../../src/chain/validation/proposerPreferences.js";
+import {withBeaconEngineFacade} from "../../../../mocks/mockedBeaconChain.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 
 vi.mock("../../../../../src/chain/validation/proposerPreferences.js", async (importActual) => ({
@@ -28,7 +30,11 @@ describe("api/validator - submitProposerPreferences", () => {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    api = getValidatorApi(defaultApiOptions, modules);
+    const core: BeaconEngineCore = modules.chain.beaconEngine;
+    core.validateGossipProposerPreferencesBytes =
+      BeaconEngineCore.prototype.validateGossipProposerPreferencesBytes.bind(core);
+    core.validateGossipProposerPreferences = BeaconEngineCore.prototype.validateGossipProposerPreferences.bind(core);
+    api = getValidatorApi(defaultApiOptions, {...modules, chain: withBeaconEngineFacade(modules.chain)});
     vi.spyOn(modules.chain.clock, "currentEpoch", "get").mockReturnValue(5);
     modules.network.publishProposerPreferences = vi.fn().mockResolvedValue(1);
   });

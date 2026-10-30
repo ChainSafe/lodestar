@@ -1,8 +1,7 @@
 import {PeerId} from "@libp2p/interface";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {heze, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {heze} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 
@@ -32,12 +31,16 @@ export async function* onInclusionListsByIndices(
     return;
   }
 
-  const signedInclusionLists = chain.inclusionListStore.getByIndices(slot, toRootHex(dependentRoot), indices);
+  const signedInclusionLists = await chain.beaconEngine.getInclusionListsByIndices(
+    slot,
+    dependentRoot,
+    indices.uint8Array
+  );
 
   const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot));
   for (const signedInclusionList of signedInclusionLists.slice(0, chain.config.MAX_REQUEST_INCLUSION_LIST)) {
     yield {
-      data: ssz.heze.SignedInclusionList.serialize(signedInclusionList),
+      data: signedInclusionList,
       boundary,
     };
   }

@@ -2,25 +2,21 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  getIndexedAttestation,
-  isStatePostCapella,
-} from "@lodestar/state-transition";
-import {Attestation, Epoch, IndexedAttestation, ssz} from "@lodestar/types";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Attestation, Epoch} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
-import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
+import {RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {ProfileThread, profileThread, writeHeapSnapshot} from "../../../util/profile.js";
-import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
+import {notWhileSyncing} from "../utils.js";
 import {getAttesterSlashingsFromIndexedAttestations} from "./attesterSlashing.js";
 
 export function getLodestarApi({
@@ -89,8 +85,7 @@ export function getLodestarApi({
     },
 
     async getLatestWeakSubjectivityCheckpointEpoch() {
-      const state = chain.getHeadState();
-      return {data: state.getLatestWeakSubjectivityCheckpointEpoch()};
+      return {data: await chain.beaconEngine.getLatestWeakSubjectivityCheckpointEpoch()};
     },
 
     async getSyncChainsDebugState() {
@@ -105,9 +100,9 @@ export function getLodestarApi({
 
     async getRegenQueueItems() {
       return {
-        data: (chain.regen as QueuedStateRegenerator).jobQueue.getItems().map((item) => ({
-          key: item.args[0].key,
-          args: regenRequestToJson(config, item.args[0]),
+        data: (await chain.beaconEngine.dumpRegenQueueItems()).map((item) => ({
+          key: item.key,
+          args: regenRequestToJson(config, item.args),
           addedTimeMs: item.addedTimeMs,
         })),
       };
@@ -128,7 +123,7 @@ export function getLodestarApi({
     },
 
     async getStateCacheItems() {
-      return {data: chain.regen.dumpCacheSummary()};
+      return {data: await chain.beaconEngine.dumpCacheSummary()};
     },
 
     async getGossipPeerScoreStats() {
@@ -147,7 +142,7 @@ export function getLodestarApi({
     },
 
     async dropStateCache() {
-      await chain.regen.dropCache();
+      await chain.beaconEngine.dropCache();
     },
 
     async connectPeer({peerId, multiaddrs}) {
@@ -216,35 +211,26 @@ export function getLodestarApi({
     },
 
     async getHistoricalSummaries({stateId}) {
-      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, sync, stateId);
-
-      const stateView = state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state;
-
-      const fork = config.getForkName(stateView.slot);
-      if (ForkSeq[fork] < ForkSeq.capella) {
-        throw new Error("Historical summaries are not supported before Capella");
+      const id = resolveStateId(chain.beaconEngine.chainView, stateId, chain, sync);
+      const res = await chain.beaconEngine.getHistoricalSummaries(id);
+      if (!res) {
+        throw new ApiError(404, `State not found for id '${stateId}'`);
       }
-      if (!isStatePostCapella(stateView)) {
-        throw new Error("Expected Capella state for historical summaries");
-      }
-
-      const {gindex} = ssz[fork].BeaconState.getPathInfo(["historicalSummaries"]);
-      const proof = stateView.getSingleProof(gindex);
 
       return {
         data: {
-          slot: stateView.slot,
-          historicalSummaries: stateView.historicalSummaries,
-          proof: proof,
+          slot: res.slot,
+          historicalSummaries: res.historicalSummaries,
+          proof: res.proof,
         },
-        meta: {executionOptimistic, finalized, version: fork},
+        meta: {executionOptimistic: res.executionOptimistic, finalized: res.finalized, version: res.fork},
       };
     },
 
     // the optional checkpoint is in root:epoch format
     async getPersistedCheckpointState({checkpointId}) {
       const checkpoint = checkpointId ? getCheckpointFromArg(checkpointId) : undefined;
-      const stateBytes = await chain.getPersistedCheckpointState(checkpoint);
+      const stateBytes = await chain.beaconEngine.getPersistedCheckpointState(checkpoint);
       if (stateBytes === null) {
         throw new ApiError(
           404,
@@ -263,7 +249,7 @@ export function getLodestarApi({
 
     async getMonitoredValidatorIndices() {
       return {
-        data: chain.validatorMonitor?.getMonitoredValidatorIndices() ?? [],
+        data: await chain.beaconEngine.getMonitoredValidatorIndices(),
       };
     },
 
@@ -280,31 +266,8 @@ export function getLodestarApi({
     },
 
     async getFastConfirmationInfo() {
-      const fcrStore = chain.forkChoice.getFastConfirmationStore();
-      const confirmedBlock = chain.forkChoice.getConfirmedBlock();
-      const justifiedCheckpoint = chain.forkChoice.getJustifiedCheckpoint();
-      const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-      const headRoot = chain.forkChoice.getHeadRoot();
-      const head = chain.forkChoice.getHead();
-
       return {
-        data: {
-          confirmed: {
-            root: fromHex(fcrStore.confirmedRoot),
-            slot: confirmedBlock?.slot ?? 0,
-          },
-          head: {
-            root: fromHex(headRoot),
-            slot: head.slot,
-          },
-          justifiedCheckpoint,
-          finalizedCheckpoint,
-          previousEpochObservedJustifiedCheckpoint: fcrStore.previousEpochObservedJustifiedCheckpoint,
-          currentEpochObservedJustifiedCheckpoint: fcrStore.currentEpochObservedJustifiedCheckpoint,
-          previousEpochGreatestUnrealizedCheckpoint: fcrStore.previousEpochGreatestUnrealizedCheckpoint,
-          previousSlotHead: fromHex(fcrStore.previousSlotHead),
-          currentSlotHead: fromHex(fcrStore.currentSlotHead),
-        },
+        data: await chain.beaconEngine.getFastConfirmationInfo(),
       };
     },
 
@@ -324,19 +287,16 @@ export function getLodestarApi({
         }
       }
 
-      const indexedAttestations: IndexedAttestation[] = [];
       // Assume all blocks are from the same fork
       const forkSeq = config.getForkSeq(signedBlocks[0].message.slot);
 
-      for (const [epoch, attestationsPerEpoch] of attestations) {
-        const slot = computeStartSlotAtEpoch(epoch);
-        const {state} = await getStateResponseWithRegen(chain, sync, slot);
-        const stateView = state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state;
-        const shuffling = stateView.getShufflingAtEpoch(epoch);
-        for (const attestation of attestationsPerEpoch) {
-          indexedAttestations.push(getIndexedAttestation(shuffling, forkSeq, attestation));
-        }
-      }
+      notWhileSyncing(chain, sync.state);
+      const requests = Array.from(attestations, ([epoch, attestationsPerEpoch]) => ({
+        slot: computeStartSlotAtEpoch(epoch),
+        epoch,
+        attestations: attestationsPerEpoch,
+      }));
+      const indexedAttestations = await chain.beaconEngine.getIndexedAttestationsForSlashing(requests, forkSeq);
 
       const result = getAttesterSlashingsFromIndexedAttestations(forkSeq, indexedAttestations);
 

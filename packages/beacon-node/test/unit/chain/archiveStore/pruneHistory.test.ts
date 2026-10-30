@@ -34,7 +34,7 @@ describe("chain / archiveStore / pruneHistory", () => {
     expect(beforePrune).toHaveBeenCalledExactlyOnceWith(computeStartSlotAtEpoch(10));
   });
 
-  it("prunes blocks and execution payload envelopes older than MIN_EPOCHS_FOR_BLOCK_REQUESTS", async () => {
+  it("prunes blocks older than MIN_EPOCHS_FOR_BLOCK_REQUESTS", async () => {
     const currentEpoch = config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 10;
     const finalizedEpoch = currentEpoch - 2;
     const cutoffSlot = computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_BLOCK_REQUESTS);
@@ -68,7 +68,7 @@ describe("chain / archiveStore / pruneHistory", () => {
 
     expect(blockCutoffSlot).toBe(cutoffSlot);
     expect(await db.blockArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
-    expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
+    expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual(slots);
   });
 
   it("prunes archived states before the finalized epoch", async () => {

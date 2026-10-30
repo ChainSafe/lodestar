@@ -2,9 +2,11 @@
 
 export type {RestApiServerMetrics, RestApiServerModules, RestApiServerOpts} from "./api/rest/base.js";
 export {RestApiServer} from "./api/rest/base.js";
+export type {AnchorSummary} from "./chain/beaconEngine/initialization.js";
 export {persistAnchorState} from "./chain/index.js";
 export {DbCPStateDatastore} from "./chain/stateCache/datastore/db.js";
 export {FileCPStateDatastore} from "./chain/stateCache/datastore/file.js";
+export type {StateInitialization} from "./chain/stateInitialization.js";
 export {BeaconDb, type IBeaconDb} from "./db/index.js";
 // Export execution engine to make it usable by builder
 export {initializeExecutionEngine} from "./execution/index.js";

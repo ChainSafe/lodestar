@@ -4,7 +4,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {MAX_COMMITTEES_PER_SLOT, MAX_PAYLOAD_ATTESTATIONS, PTC_SIZE} from "@lodestar/params";
 import {RootHex, Slot, gloas} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
@@ -41,7 +41,7 @@ export class PayloadAttestationPool {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly clock: IClock,
-    private readonly metrics: Metrics | null = null
+    private readonly metrics: BeaconEngineMetrics | null = null
   ) {}
 
   get size(): number {
