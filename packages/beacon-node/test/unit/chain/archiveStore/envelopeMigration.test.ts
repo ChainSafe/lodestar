@@ -26,7 +26,7 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
   async function readArchived(slot: number): Promise<ArchivedEnvelope> {
     const bytes = await db.executionPayloadEnvelopeArchive.getBinary(slot);
     if (bytes === null) throw Error(`no archived entry at slot ${slot}`);
-    return decodeArchivedEnvelope(bytes);
+    return decodeArchivedEnvelope(config, slot, bytes);
   }
 
   /** Put a full envelope in the hot db and return the finalized ProtoBlock stub that references it */

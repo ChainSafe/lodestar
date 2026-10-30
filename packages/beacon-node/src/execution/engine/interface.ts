@@ -7,6 +7,7 @@ import {
   ForkName,
   ForkPostFulu,
   ForkPreFulu,
+  SWEEP_THRESHOLD_REQUEST_TYPE,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {
@@ -64,7 +65,8 @@ export type ExecutionRequestType =
   | typeof WITHDRAWAL_REQUEST_TYPE
   | typeof CONSOLIDATION_REQUEST_TYPE
   | typeof BUILDER_DEPOSIT_REQUEST_TYPE
-  | typeof BUILDER_EXIT_REQUEST_TYPE;
+  | typeof BUILDER_EXIT_REQUEST_TYPE
+  | typeof SWEEP_THRESHOLD_REQUEST_TYPE;
 
 export function isExecutionRequestType(type: number): type is ExecutionRequestType {
   return (
@@ -72,7 +74,8 @@ export function isExecutionRequestType(type: number): type is ExecutionRequestTy
     type === WITHDRAWAL_REQUEST_TYPE ||
     type === CONSOLIDATION_REQUEST_TYPE ||
     type === BUILDER_DEPOSIT_REQUEST_TYPE ||
-    type === BUILDER_EXIT_REQUEST_TYPE
+    type === BUILDER_EXIT_REQUEST_TYPE ||
+    type === SWEEP_THRESHOLD_REQUEST_TYPE
   );
 }
 

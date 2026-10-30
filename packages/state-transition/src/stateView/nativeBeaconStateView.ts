@@ -1,7 +1,7 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import type {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkPostElectra, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostElectra, ForkPostGloas, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconState,
@@ -12,6 +12,7 @@ import {
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
+  ExecutionRequests,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -27,7 +28,6 @@ import {
   isBlindedBeaconBlock,
   phase0,
   rewards,
-  ssz,
   sszTypesFor,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
@@ -993,8 +993,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
   }
 
-  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
-    const bytes = ssz.gloas.ExecutionRequests.serialize(executionRequests);
+  withParentPayloadApplied(executionRequests: ExecutionRequests<ForkPostGloas>): IBeaconStateViewGloas {
+    const bytes = this.config.getForkTypes<ForkPostGloas>(this.slot).ExecutionRequests.serialize(executionRequests);
     const state = new NativeBeaconStateView(this.config, this.binding.withParentPayloadApplied(bytes));
     if (!isStatePostGloas(state)) {
       state.release();

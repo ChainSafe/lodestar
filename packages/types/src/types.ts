@@ -354,7 +354,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
     ExecutionPayload: gloas.ExecutionPayload;
-    NewPayloadRequest: gloas.NewPayloadRequest;
+    NewPayloadRequest: heze.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
@@ -372,7 +372,7 @@ type TypesByFork = {
     AttesterSlashing: gloas.AttesterSlashing;
     AggregateAndProof: gloas.AggregateAndProof;
     SignedAggregateAndProof: gloas.SignedAggregateAndProof;
-    ExecutionRequests: gloas.ExecutionRequests;
+    ExecutionRequests: heze.ExecutionRequests;
     ExecutionPayloadBid: heze.ExecutionPayloadBid;
     DataColumnSidecar: gloas.DataColumnSidecar;
     DataColumnSidecars: gloas.DataColumnSidecars;

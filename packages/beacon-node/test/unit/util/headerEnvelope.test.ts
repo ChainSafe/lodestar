@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {ContainerType, SerializedList, Type} from "@chainsafe/ssz";
+import {createChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
@@ -7,6 +8,8 @@ import {decodeArchivedEnvelope, encodeArchivedHeaderEnvelope} from "../../../src
 import type {ExecutionPayloadBodies} from "../../../src/util/headerEnvelope.js";
 import {signedHeaderEnvelopeToFull, toSignedHeaderEnvelope} from "../../../src/util/headerEnvelope.js";
 import {generateSignedExecutionPayloadEnvelope, payloadBodiesOf} from "../../utils/typeGenerator.js";
+
+const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
 
 const bodiesOf = payloadBodiesOf;
 
@@ -88,10 +91,14 @@ describe("headerEnvelope", () => {
   it("archive framing round-trips: raw full bytes stay full, prefixed header decodes to the header envelope", () => {
     const full = generateSignedExecutionPayloadEnvelope(8);
     const fullBytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full);
-    expect(decodeArchivedEnvelope(fullBytes).envelopeBytes).toBe(fullBytes);
+    expect(decodeArchivedEnvelope(config, 8, fullBytes).envelopeBytes).toBe(fullBytes);
 
     const headerEnvelope = toSignedHeaderEnvelope(full);
-    const decoded = decodeArchivedEnvelope(encodeArchivedHeaderEnvelope(headerEnvelope)).headerEnvelope;
+    const decoded = decodeArchivedEnvelope(
+      config,
+      8,
+      encodeArchivedHeaderEnvelope(config, headerEnvelope)
+    ).headerEnvelope;
     if (decoded === undefined) throw Error("expected a header entry");
     expect(ssz.gloas.SignedExecutionPayloadHeaderEnvelope.equals(decoded, headerEnvelope)).toBe(true);
   });

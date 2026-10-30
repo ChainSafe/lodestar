@@ -6,6 +6,7 @@ import {
   ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
+  ForkPostGloas,
   ForkPreDeneb,
   ForkPreGloas,
   ForkSeq,
@@ -42,6 +43,7 @@ import {
   Bytes32,
   CommitteeIndex,
   Epoch,
+  ExecutionRequests,
   ProducedBlockSource,
   Root,
   Slot,
@@ -1030,7 +1032,7 @@ export function getValidatorApi(
       // builder directly.
       const bestBidPromise: Promise<BidCandidate | null> = (async () => {
         const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
-        let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
+        let parentExecutionRequestsPromise: Promise<ExecutionRequests<ForkPostGloas>> | null = null;
 
         const candidates = (
           await Promise.all(
@@ -1043,7 +1045,11 @@ export function getValidatorApi(
                   parentBlockRoot: parentBlockRootHex,
                   entry,
                   getParentExecutionRequests: () => {
-                    parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
+                    parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(
+                      parentSlot,
+                      parentBlockRootHex,
+                      slot
+                    );
                     return parentExecutionRequestsPromise;
                   },
                 });

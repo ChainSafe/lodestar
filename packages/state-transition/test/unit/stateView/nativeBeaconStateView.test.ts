@@ -117,10 +117,14 @@ describe("NativeBeaconStateView", () => {
     requests.builderExits.push(ssz.gloas.BuilderExitRequest.defaultValue());
     const postBinding = {forkName: "gloas", release: vi.fn()} as unknown as IBeaconStateViewNative;
     const binding = {
+      slot: 0,
       withParentPayloadApplied: vi.fn(() => postBinding),
       release: vi.fn(),
     } as unknown as IBeaconStateViewNative;
-    const view = new NativeBeaconStateView(config, binding);
+    const view = new NativeBeaconStateView(
+      createBeaconConfig(getConfig(ForkName.gloas), genesisValidatorsRoot),
+      binding
+    );
     const post = view.withParentPayloadApplied(requests);
     const [bytes] = vi.mocked(binding.withParentPayloadApplied).mock.calls[0];
     expect(ssz.gloas.ExecutionRequests.deserialize(bytes)).toEqual(requests);

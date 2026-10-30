@@ -1,7 +1,7 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkName, ForkPostGloas, ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconState,
@@ -12,6 +12,7 @@ import {
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
+  ExecutionRequests,
   Root,
   RootHex,
   Slot,
@@ -907,7 +908,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   /**
    * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/validator.md#executionpayload
    */
-  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
+  withParentPayloadApplied(executionRequests: ExecutionRequests<ForkPostGloas>): IBeaconStateViewGloas {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("withParentPayloadApplied is not available before Gloas");
     }

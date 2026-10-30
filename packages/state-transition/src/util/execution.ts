@@ -1,4 +1,4 @@
-import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkPostGloas, ForkPreGloas, ForkSeq, isForkPostHeze} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconBlockBody,
@@ -6,6 +6,7 @@ import {
   BlindedBeaconBlockBody,
   ExecutionPayload,
   ExecutionPayloadHeader,
+  ExecutionRequests,
   bellatrix,
   capella,
   deneb,
@@ -170,4 +171,18 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
   // No change in Electra
 
   return bellatrixPayloadFields;
+}
+
+/**
+ * Shape execution requests read from a parent payload for the block fork that embeds them.
+ * Across the gloas to heze boundary the parent's requests lack `sweepThresholds`.
+ */
+export function upgradeExecutionRequests(
+  fork: ForkPostGloas,
+  requests: ExecutionRequests<ForkPostGloas>
+): ExecutionRequests<ForkPostGloas> {
+  if (isForkPostHeze(fork) && !("sweepThresholds" in requests)) {
+    return {...requests, sweepThresholds: []};
+  }
+  return requests;
 }

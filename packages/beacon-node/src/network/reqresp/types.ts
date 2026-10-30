@@ -1,6 +1,14 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkPostAltair, ForkPostFulu, isForkPostAltair, isForkPostFulu} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostAltair,
+  ForkPostFulu,
+  ForkPostGloas,
+  isForkPostAltair,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
   DataColumnSidecar,
@@ -159,8 +167,10 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
   [ReqRespMethod.DataColumnSidecarsByRange]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
   [ReqRespMethod.DataColumnSidecarsByRoot]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
-  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
-  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: (fork) =>
+    sszTypesFor(onlyPostGloasFork(fork)).SignedExecutionPayloadEnvelope,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: (fork) =>
+    sszTypesFor(onlyPostGloasFork(fork)).SignedExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
   [ReqRespMethod.InclusionListsByIndices]: () => ssz.heze.SignedInclusionList,
@@ -171,6 +181,13 @@ function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
     return fork;
   }
   throw Error(`Not a post-altair fork ${fork}`);
+}
+
+function onlyPostGloasFork(fork: ForkName): ForkPostGloas {
+  if (isForkPostGloas(fork)) {
+    return fork;
+  }
+  throw Error(`Invalid pre-gloas fork=${fork} for execution payload envelopes`);
 }
 
 function onlyPostFuluFork(fork: ForkName): ForkPostFulu {

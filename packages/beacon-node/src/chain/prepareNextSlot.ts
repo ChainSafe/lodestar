@@ -246,7 +246,8 @@ export class PrepareNextSlotScheduler {
             if (feeRecipient !== undefined || this.chain.opts.emitPayloadAttributes === true) {
               const parentExecutionRequests = await this.chain.getParentExecutionRequests(
                 updatedHead.slot,
-                updatedHead.blockRoot
+                updatedHead.blockRoot,
+                prepareSlot
               );
               stateAfterParentPayload = preparedState.withParentPayloadApplied(parentExecutionRequests);
             }

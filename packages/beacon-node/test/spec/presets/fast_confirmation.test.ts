@@ -16,6 +16,7 @@ import {
   ForkPreFulu,
   ForkPreGloas,
   ForkSeq,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -661,7 +662,9 @@ const fastConfirmationTest =
           [COLUMN_FILE_NAME]: ssz.fulu.DataColumnSidecar,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
-          [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: ssz.gloas.SignedExecutionPayloadEnvelope,
+          [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: isForkPostGloas(fork)
+            ? sszTypesFor(fork).SignedExecutionPayloadEnvelope
+            : ssz.gloas.SignedExecutionPayloadEnvelope,
         },
         mapToTestCase: (t: Record<string, any>) => {
           // t has input file name as key

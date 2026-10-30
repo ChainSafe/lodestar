@@ -1,6 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
-import {BUILDER_INDEX_SELF_BUILD, DOMAIN_BEACON_BUILDER} from "@lodestar/params";
-import {ValidatorIndex, gloas, ssz} from "@lodestar/types";
+import {BUILDER_INDEX_SELF_BUILD, DOMAIN_BEACON_BUILDER, isForkPostGloas} from "@lodestar/params";
+import {ValidatorIndex, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {IBeaconStateView, isStatePostGloas} from "../stateView/interface.js";
 import {computeSigningRoot} from "../util/index.js";
 import {
@@ -13,9 +13,14 @@ export function getExecutionPayloadEnvelopeSigningRoot(
   config: BeaconConfig,
   envelope: gloas.ExecutionPayloadEnvelope
 ): Uint8Array {
-  const domain = config.getDomain(envelope.payload.slotNumber, DOMAIN_BEACON_BUILDER);
+  const slot = envelope.payload.slotNumber;
+  const fork = config.getForkName(slot);
+  const domain = config.getDomain(slot, DOMAIN_BEACON_BUILDER);
+  const envelopeType = isForkPostGloas(fork)
+    ? sszTypesFor(fork).ExecutionPayloadEnvelope
+    : ssz.gloas.ExecutionPayloadEnvelope;
 
-  return computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
+  return computeSigningRoot(envelopeType, envelope, domain);
 }
 
 export function getExecutionPayloadEnvelopeSignatureSet(

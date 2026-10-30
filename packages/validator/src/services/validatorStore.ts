@@ -18,6 +18,7 @@ import {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
+  ForkPostGloas,
   ForkSeq,
   MAX_BUILDER_AUTH_DATA_SIZE,
 } from "@lodestar/params";
@@ -720,7 +721,11 @@ export class ValidatorStore {
 
     const signingSlot = envelope.payload.slotNumber;
     const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
-    const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
+    const signingRoot = computeSigningRoot(
+      this.config.getForkTypes<ForkPostGloas>(signingSlot).ExecutionPayloadEnvelope,
+      envelope,
+      domain
+    );
 
     logger?.debug("Signing execution payload envelope", {
       slot: signingSlot,

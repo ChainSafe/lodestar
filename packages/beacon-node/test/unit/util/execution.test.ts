@@ -41,7 +41,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     const full = generateSignedExecutionPayloadEnvelope(slot);
     await db.executionPayloadEnvelopeArchive.putBinary(
       slot,
-      encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(full))
+      encodeArchivedHeaderEnvelope(config, toSignedHeaderEnvelope(full))
     );
     return full;
   }
@@ -61,6 +61,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     const out = [];
     try {
       for await (const {slot, envelopeBytes} of reconstructExecutionPayloadEnvelopesByRange(
+        config,
         db,
         executionEngine,
         logger,
@@ -217,6 +218,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     let err: unknown = null;
     try {
       for await (const {slot} of reconstructExecutionPayloadEnvelopesByRange(
+        config,
         db,
         executionEngine,
         logger,

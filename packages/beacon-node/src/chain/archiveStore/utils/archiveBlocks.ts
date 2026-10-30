@@ -452,7 +452,7 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
         const root = fromHex(block.blockRoot);
         if (dedupePayloads && block.executionStatus === ExecutionStatus.Valid) {
           const envelope = await db.executionPayloadEnvelope.get(root);
-          return envelope === null ? null : encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(envelope));
+          return envelope === null ? null : encodeArchivedHeaderEnvelope(config, toSignedHeaderEnvelope(envelope));
         }
         return db.executionPayloadEnvelope.getBinary(root);
       })

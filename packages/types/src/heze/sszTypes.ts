@@ -1,9 +1,16 @@
-import {BitVectorType, ContainerType, ProgressiveContainerType, VectorBasicType} from "@chainsafe/ssz";
-import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
+import {
+  BitVectorType,
+  ContainerType,
+  ProgressiveContainerType,
+  ProgressiveListBasicType,
+  ProgressiveListCompositeType,
+  VectorBasicType,
+} from "@chainsafe/ssz";
+import {INCLUSION_LIST_COMMITTEE_SIZE, MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD} from "@lodestar/params";
 import {ssz as gloasSsz} from "../gloas/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
-const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
+const {Slot, Root, BLSSignature, BLSPubkey, ValidatorIndex, ExecutionAddress, Gwei, UintNum64} = primitiveSsz;
 
 function activeFields(count: number, gaps: number[] = []): boolean[] {
   return Array.from({length: count}, (_, index) => !gaps.includes(index));
@@ -60,6 +67,83 @@ export const SignedExecutionPayloadBid = new ContainerType(
 export const DataColumnSidecar = gloasSsz.DataColumnSidecar;
 export const DataColumnSidecars = gloasSsz.DataColumnSidecars;
 
+// New in Heze:EIP8148
+export const SetSweepThresholdRequest = new ContainerType(
+  {
+    sourceAddress: ExecutionAddress,
+    validatorPubkey: BLSPubkey,
+    threshold: Gwei,
+  },
+  {typeName: "SetSweepThresholdRequest", jsonCase: "eth2"}
+);
+export const SweepThresholdRequests = new ProgressiveListCompositeType(SetSweepThresholdRequest, {
+  typeName: "SweepThresholdRequests",
+  limit: MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD,
+});
+
+export const SweepThresholds = new ProgressiveListBasicType(UintNum64, {typeName: "SweepThresholds"});
+
+export const ExecutionRequests = new ProgressiveContainerType(
+  {
+    ...gloasSsz.ExecutionRequests.fields,
+    sweepThresholds: SweepThresholdRequests, // [New in Heze:EIP8148]
+  },
+  activeFields(6),
+  {typeName: "ExecutionRequests", jsonCase: "eth2"}
+);
+
+export const NewPayloadRequest = new ProgressiveContainerType(
+  {
+    ...gloasSsz.NewPayloadRequest.fields,
+    executionRequests: ExecutionRequests, // [Modified in Heze:EIP8148]
+  },
+  activeFields(4),
+  {typeName: "NewPayloadRequest", jsonCase: "eth2"}
+);
+
+export const ExecutionPayloadEnvelope = new ProgressiveContainerType(
+  {
+    ...gloasSsz.ExecutionPayloadEnvelope.fields,
+    executionRequests: ExecutionRequests, // [Modified in Heze:EIP8148]
+  },
+  activeFields(5),
+  {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
+export const SignedExecutionPayloadEnvelope = new ContainerType(
+  {
+    message: ExecutionPayloadEnvelope,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
+);
+
+/** Same field positions as ExecutionPayloadEnvelope, so it hashes to the same root */
+export const ExecutionPayloadHeaderEnvelope = new ProgressiveContainerType(
+  {
+    ...gloasSsz.ExecutionPayloadHeaderEnvelope.fields,
+    executionRequests: ExecutionRequests, // [Modified in Heze:EIP8148]
+  },
+  activeFields(5),
+  {typeName: "ExecutionPayloadHeaderEnvelope", jsonCase: "eth2"}
+);
+
+export const SignedExecutionPayloadHeaderEnvelope = new ContainerType(
+  {
+    message: ExecutionPayloadHeaderEnvelope,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedExecutionPayloadHeaderEnvelope", jsonCase: "eth2"}
+);
+
+export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
+  {
+    ...gloasSsz.SignedExecutionPayloadEnvelopeContents.fields,
+    signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,
+  },
+  {typeName: "SignedExecutionPayloadEnvelopeContents", jsonCase: "eth2"}
+);
+
 const {
   eth1Data: _eth1Data,
   eth1DataVotes: _eth1DataVotes,
@@ -72,9 +156,10 @@ export const BeaconState = new ProgressiveContainerType(
   {
     ...gloasBeaconStateFields,
     latestExecutionPayloadBid: ExecutionPayloadBid, // [Modified in Heze:EIP7805]
+    validatorSweepThresholds: SweepThresholds, // [New in Heze:EIP8148]
   },
   // [Modified in Heze:EIP8015] gaps keep the surviving generalized indices stable
-  activeFields(46, [8, 9, 10, 28]),
+  activeFields(47, [8, 9, 10, 28]),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
@@ -84,6 +169,7 @@ export const BeaconBlockBody = new ProgressiveContainerType(
   {
     ...gloasBeaconBlockBodyFields,
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // [Modified in Heze:EIP7805]
+    parentExecutionRequests: ExecutionRequests, // [Modified in Heze:EIP8148]
   },
   // [Modified in Heze:EIP8015] gaps keep the surviving generalized indices stable
   activeFields(13, [1, 6]),
@@ -110,6 +196,7 @@ export const BlockContents = new ContainerType(
   {
     ...gloasSsz.BlockContents.fields,
     block: BeaconBlock,
+    executionPayloadEnvelope: ExecutionPayloadEnvelope, // [Modified in Heze:EIP8148]
   },
   {typeName: "BlockContents", jsonCase: "eth2"}
 );

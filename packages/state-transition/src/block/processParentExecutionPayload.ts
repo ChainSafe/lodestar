@@ -1,13 +1,14 @@
-import {ForkPostGloas, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {BeaconBlock, gloas, ssz} from "@lodestar/types";
+import {ForkPostGloas, ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {BeaconBlock, ExecutionRequests, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
 import {IndexedBuilderState} from "./indexedBuilderState.js";
 import {processBuilderDepositRequest} from "./processBuilderDepositRequest.js";
 import {processBuilderExitRequest} from "./processBuilderExitRequest.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
+import {processSetSweepThresholdRequest} from "./processSetSweepThresholdRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 /**
@@ -27,8 +28,17 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
     return;
   }
 
-  // Parent was FULL -- verify the bid commitment and apply the payload
-  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(requests);
+  // Parent was FULL -- verify the bid commitment and apply the payload.
+  // The parent's bid committed to the ExecutionRequests type of the parent's fork
+  const parentSlot = state.latestBlockHeader.slot;
+  if (
+    state.config.getForkSeq(parentSlot) < ForkSeq.heze &&
+    "sweepThresholds" in requests &&
+    requests.sweepThresholds.length !== 0
+  ) {
+    throw new Error("Parent execution requests must not carry sweep thresholds when the parent is pre-heze");
+  }
+  const requestsRoot = state.config.getForkTypes<ForkPostGloas>(parentSlot).ExecutionRequests.hashTreeRoot(requests);
   if (!byteArrayEquals(requestsRoot, parentBid.executionRequestsRoot)) {
     throw new Error(
       `Parent execution requests root mismatch actual=${toRootHex(requestsRoot)} expected=${toRootHex(parentBid.executionRequestsRoot)}`
@@ -47,7 +57,10 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
  *
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
-export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: gloas.ExecutionRequests): void {
+export function applyParentExecutionPayload(
+  state: CachedBeaconStateGloas,
+  requests: ExecutionRequests<ForkPostGloas>
+): void {
   const fork = state.config.getForkSeq(state.slot);
   const parentBid = state.latestExecutionPayloadBid;
   const parentSlot = state.latestBlockHeader.slot;
@@ -96,6 +109,12 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
     }
   }
 
+  if (fork >= ForkSeq.heze && "sweepThresholds" in requests) {
+    for (const sweepThreshold of requests.sweepThresholds) {
+      processSetSweepThresholdRequest(state as CachedBeaconStateAllForks as CachedBeaconStateHeze, sweepThreshold);
+    }
+  }
+
   // Update parent payload availability and latest block hash
   state.executionPayloadAvailability.set(parentSlot % SLOTS_PER_HISTORICAL_ROOT, true);
   state.latestBlockHash = parentBid.blockHash;
@@ -120,13 +139,14 @@ function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: numbe
   state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
 }
 
-function assertEmptyExecutionRequests(requests: gloas.ExecutionRequests): void {
+function assertEmptyExecutionRequests(requests: ExecutionRequests<ForkPostGloas>): void {
   if (
     requests.deposits.length !== 0 ||
     requests.withdrawals.length !== 0 ||
     requests.consolidations.length !== 0 ||
     requests.builderDeposits.length !== 0 ||
-    requests.builderExits.length !== 0
+    requests.builderExits.length !== 0 ||
+    ("sweepThresholds" in requests && requests.sweepThresholds.length !== 0)
   ) {
     throw new Error("Parent execution requests must be empty when parent block is EMPTY");
   }

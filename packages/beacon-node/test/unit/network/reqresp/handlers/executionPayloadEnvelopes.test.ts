@@ -70,7 +70,7 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
     const full = generateSignedExecutionPayloadEnvelope(slot);
     await db.executionPayloadEnvelopeArchive.putBinary(
       slot,
-      encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(full))
+      encodeArchivedHeaderEnvelope(config, toSignedHeaderEnvelope(full))
     );
     await db.blockArchive.putBinary(
       slot,

@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {MAX_EXECUTION_PAYMENT, PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
+import {ForkPostGloas, MAX_EXECUTION_PAYMENT, PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
@@ -9,7 +9,7 @@ import {
   isGasLimitTargetCompatible,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {RootHex, Slot, gloas, heze} from "@lodestar/types";
+import {ExecutionRequests, RootHex, Slot, gloas, heze} from "@lodestar/types";
 import {bigIntMin, byteArrayEquals, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {RegenCaller} from "../../chain/regen/index.js";
@@ -37,7 +37,7 @@ export async function validateBuilderApiExecutionPayloadBid(
     parentBlockHash: RootHex;
     parentBlockRoot: RootHex;
     entry: routes.validator.BuilderEntry;
-    getParentExecutionRequests: () => Promise<gloas.ExecutionRequests>;
+    getParentExecutionRequests: () => Promise<ExecutionRequests<ForkPostGloas>>;
   }
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;

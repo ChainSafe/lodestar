@@ -348,6 +348,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: false,
     MAX_SIGNED_INCLUSION_LIST_SIZE: false,
+    MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD: hezeForkRelevant,
 
     // FastConfirmationRule
     CONFIRMATION_BYZANTINE_THRESHOLD: false,

@@ -46,6 +46,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
   try {
     if (startSlot <= archiveMaxSlot) {
       for await (const {slot, envelopeBytes} of reconstructExecutionPayloadEnvelopesByRange(
+        chain.config,
         db,
         chain.executionEngine,
         chain.logger,

@@ -1200,7 +1200,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: ssz.gloas.ExecutionPayloadEnvelope,
+        data: WithVersion((fork) => getPostGloasForkTypes(fork).ExecutionPayloadEnvelope),
         meta: VersionCodec,
       },
     },

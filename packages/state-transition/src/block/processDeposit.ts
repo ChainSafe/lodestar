@@ -21,12 +21,14 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateElectra,
+  CachedBeaconStateHeze,
   CachedBeaconStatePreHeze,
 } from "../types.js";
 import {
   computeDomain,
   computeSigningRoot,
   createSingleSignatureSetFromComponents,
+  getInitialSweepThreshold,
   getMaxEffectiveBalance,
   increaseBalance,
   verifySignatureSet,
@@ -153,6 +155,10 @@ export function addValidatorToRegistry(
   }
 
   state.balances.push(amount);
+
+  if (fork >= ForkSeq.heze) {
+    (state as CachedBeaconStateHeze).validatorSweepThresholds.push(getInitialSweepThreshold(withdrawalCredentials));
+  }
 }
 
 /**

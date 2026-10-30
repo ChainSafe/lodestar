@@ -18,10 +18,8 @@ import type {ExecutionPayloadEnvelopeContents} from "../../../src/services/execu
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/apiStub.js";
 
 const builderIndex = 7;
-const signer = new BuilderSigner(
-  createBeaconConfig(getConfig(ForkName.gloas), Buffer.alloc(32, 9)),
-  keypair(Buffer.alloc(32, 1))
-);
+const config = createBeaconConfig(getConfig(ForkName.gloas), Buffer.alloc(32, 9));
+const signer = new BuilderSigner(config, keypair(Buffer.alloc(32, 1)));
 
 describe("EnvelopePublisher", () => {
   it("signs, records, and submits an exact selected envelope", async () => {
@@ -262,7 +260,7 @@ function createPublisher({win = true}: {win?: boolean} = {}) {
   if (win) {
     ledger.recordWin({...bidIdentity, signedBidRoot}, blockRoot);
   }
-  const publisher = new EnvelopePublisher({api, signer, ledger, builderIndex});
+  const publisher = new EnvelopePublisher({api, config, signer, ledger, builderIndex});
   return {api, ledger, publisher};
 }
 

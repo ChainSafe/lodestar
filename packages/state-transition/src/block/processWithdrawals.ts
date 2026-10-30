@@ -10,7 +10,13 @@ import {
 } from "@lodestar/params";
 import {BuilderIndex, ValidatorIndex, capella, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateCapella, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
+  CachedBeaconStateElectra,
+  CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
+} from "../types.js";
 import {
   convertBuilderIndexToValidatorIndex,
   convertValidatorIndexToBuilderIndex,
@@ -18,6 +24,7 @@ import {
 } from "../util/gloas.js";
 import {
   decreaseBalance,
+  getEffectiveSweepThreshold,
   getMaxEffectiveBalance,
   hasEth1WithdrawalCredential,
   hasExecutionWithdrawalCredential,
@@ -335,6 +342,10 @@ function getValidatorsSweepWithdrawals(
   const epoch = state.epochCtx.epoch;
   const {validators, balances, nextWithdrawalValidatorIndex} = state;
   const isPostElectra = fork >= ForkSeq.electra;
+  const sweepThresholds =
+    fork >= ForkSeq.heze
+      ? (state as CachedBeaconStateAllForks as CachedBeaconStateHeze).validatorSweepThresholds
+      : null;
 
   const validatorsLimit = Math.min(state.validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
   let processedCount = 0;
@@ -381,10 +392,20 @@ function getValidatorsSweepWithdrawals(
       });
       withdrawalIndex++;
       validatorBalanceAfterWithdrawals.set(validatorIndex, 0);
-    } else if (isPartiallyWithdrawableValidator(fork, validator, balance)) {
+    } else {
+      const sweepThreshold = sweepThresholds?.get(validatorIndex) ?? 0;
+      if (!isPartiallyWithdrawableValidator(fork, validator, balance, sweepThreshold)) {
+        processedCount++;
+        continue;
+      }
       // capella partial withdrawal
-      const maxEffectiveBalance = isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE;
-      const partialAmount = balance - maxEffectiveBalance;
+      const sweepLimit =
+        sweepThresholds !== null
+          ? getEffectiveSweepThreshold(validator, sweepThreshold)
+          : isPostElectra
+            ? getMaxEffectiveBalance(withdrawalCredentials)
+            : MAX_EFFECTIVE_BALANCE;
+      const partialAmount = balance - sweepLimit;
       sweepWithdrawals.push({
         index: withdrawalIndex,
         validatorIndex,

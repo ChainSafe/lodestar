@@ -10,6 +10,7 @@ import {
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
   ForkSeq,
+  SWEEP_THRESHOLD_REQUEST_TYPE,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {
@@ -22,6 +23,7 @@ import {
   capella,
   deneb,
   gloas,
+  heze,
   ssz,
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
@@ -224,13 +226,14 @@ export type WithdrawalRpc = {
 };
 
 /**
- * ExecutionRequestsRpc holds at most 5 elements and no repeated type, ordered by
+ * ExecutionRequestsRpc holds at most 6 elements and no repeated type, ordered by
  * the single-byte request type prefix:
  * - ssz'ed DepositRequests          (0x00)
  * - ssz'ed WithdrawalRequests       (0x01)
  * - ssz'ed ConsolidationRequests    (0x02)
  * - ssz'ed BuilderDepositRequests   (0x03)
  * - ssz'ed BuilderExitRequests      (0x04)
+ * - ssz'ed SweepThresholdRequests   (0x05)
  */
 export type ExecutionRequestsRpc = (
   | DepositRequestsRpc
@@ -238,6 +241,7 @@ export type ExecutionRequestsRpc = (
   | ConsolidationRequestsRpc
   | BuilderDepositRequestsRpc
   | BuilderExitRequestsRpc
+  | SweepThresholdRequestsRpc
 )[];
 
 export type DepositRequestsRpc = DATA;
@@ -245,6 +249,7 @@ export type WithdrawalRequestsRpc = DATA;
 export type ConsolidationRequestsRpc = DATA;
 export type BuilderDepositRequestsRpc = DATA;
 export type BuilderExitRequestsRpc = DATA;
+export type SweepThresholdRequestsRpc = DATA;
 
 export type BlobAndProofRpc = {
   blob: DATA;
@@ -553,6 +558,9 @@ function serializePrefixedRequests<T>(type: Type<T>, requests: T, requestType: E
  *
  * Gloas extends the list with builder deposits (0x03) and builder exits (0x04) per
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#modified-get_execution_requests_list
+ *
+ * Heze extends the list with sweep threshold requests (0x05) per
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/_features/eip8148/beacon-chain.md#modified-get_execution_requests_list
  */
 export function serializeExecutionRequestsToBytes(fork: ForkName, executionRequests: ExecutionRequests): Uint8Array[] {
   const {deposits, withdrawals, consolidations} = executionRequests;
@@ -586,6 +594,16 @@ export function serializeExecutionRequestsToBytes(fork: ForkName, executionReque
     }
   }
 
+  if (ForkSeq[fork] >= ForkSeq.heze) {
+    const {sweepThresholds} = executionRequests as heze.ExecutionRequests;
+
+    if (sweepThresholds.length !== 0) {
+      result.push(
+        serializePrefixedRequests(ssz.heze.SweepThresholdRequests, sweepThresholds, SWEEP_THRESHOLD_REQUEST_TYPE)
+      );
+    }
+  }
+
   return result;
 }
 
@@ -595,9 +613,11 @@ export function serializeExecutionRequests(fork: ForkName, executionRequests: Ex
 
 export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized: Uint8Array[]): ExecutionRequests {
   const result: ExecutionRequests =
-    ForkSeq[fork] >= ForkSeq.gloas
-      ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: []}
-      : {deposits: [], withdrawals: [], consolidations: []};
+    ForkSeq[fork] >= ForkSeq.heze
+      ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: [], sweepThresholds: []}
+      : ForkSeq[fork] >= ForkSeq.gloas
+        ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: []}
+        : {deposits: [], withdrawals: [], consolidations: []};
 
   let prevRequestType: ExecutionRequestType | undefined;
 
@@ -651,6 +671,13 @@ export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized
           throw Error(`Builder exit request is not supported pre-gloas fork=${fork}`);
         }
         (result as gloas.ExecutionRequests).builderExits = ssz.gloas.BuilderExitRequests.deserialize(requests);
+        break;
+      }
+      case SWEEP_THRESHOLD_REQUEST_TYPE: {
+        if (ForkSeq[fork] < ForkSeq.heze) {
+          throw Error(`Sweep threshold request is not supported pre-heze fork=${fork}`);
+        }
+        (result as heze.ExecutionRequests).sweepThresholds = ssz.heze.SweepThresholdRequests.deserialize(requests);
         break;
       }
     }

@@ -64,6 +64,7 @@ export class Revealer {
     }
 
     const contents = createExecutionPayloadEnvelopeContents({
+      config,
       blockRoot,
       builderIndex: this.modules.builderIndex,
       selectedBid: observed.signedBid.message,

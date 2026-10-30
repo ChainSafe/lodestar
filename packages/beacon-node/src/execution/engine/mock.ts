@@ -8,11 +8,12 @@ import {
   ForkName,
   ForkPostBellatrix,
   ForkPostCapella,
+  ForkPostElectra,
   ForkSeq,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz} from "@lodestar/types";
+import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
@@ -411,8 +412,8 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         }),
         executionRequests: serializeExecutionRequests(
           fork,
-          ForkSeq[fork] >= ForkSeq.gloas
-            ? ssz.gloas.ExecutionRequests.defaultValue()
+          ForkSeq[fork] >= ForkSeq.electra
+            ? sszTypesFor(fork as ForkPostElectra).ExecutionRequests.defaultValue()
             : ssz.electra.ExecutionRequests.defaultValue()
         ),
       });

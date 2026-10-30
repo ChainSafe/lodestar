@@ -389,12 +389,14 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] The parent's payload does not try to exit the builder
   if (byteArrayEquals(bid.parentBlockHash, state.latestExecutionPayloadBid.blockHash)) {
-    const requests = await chain.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot).catch(() => {
-      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-        code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
-        parentBlockHash: bidParentBlockHash,
+    const requests = await chain
+      .getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot, bid.slot)
+      .catch(() => {
+        throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+          code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
+          parentBlockHash: bidParentBlockHash,
+        });
       });
-    });
     if (
       requests.builderExits.some(
         (request) =>
