@@ -28,8 +28,17 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
     return;
   }
 
-  // Parent was FULL -- verify the bid commitment and apply the payload
-  const requestsRoot = state.config.getForkTypes<ForkPostGloas>(state.slot).ExecutionRequests.hashTreeRoot(requests);
+  // Parent was FULL -- verify the bid commitment and apply the payload.
+  // The parent's bid committed to the ExecutionRequests type of the parent's fork
+  const parentSlot = state.latestBlockHeader.slot;
+  if (
+    state.config.getForkSeq(parentSlot) < ForkSeq.heze &&
+    "sweepThresholds" in requests &&
+    requests.sweepThresholds.length !== 0
+  ) {
+    throw new Error("Parent execution requests must not carry sweep thresholds when the parent is pre-heze");
+  }
+  const requestsRoot = state.config.getForkTypes<ForkPostGloas>(parentSlot).ExecutionRequests.hashTreeRoot(requests);
   if (!byteArrayEquals(requestsRoot, parentBid.executionRequestsRoot)) {
     throw new Error(
       `Parent execution requests root mismatch actual=${toRootHex(requestsRoot)} expected=${toRootHex(parentBid.executionRequestsRoot)}`
