@@ -16,12 +16,12 @@ import {
   OpPool,
   SyncContributionAndProofPool,
 } from "../../src/chain/opPools/index.js";
+import {OptimisticExecutionEngine} from "../../src/chain/optimisticExecutionEngine.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
 import {getMockedClock} from "./clock.js";
 import {getMockedLogger} from "./loggerMock.js";
@@ -29,7 +29,7 @@ import {getMockedLogger} from "./loggerMock.js";
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
   forkChoice: MockedForkChoice;
-  executionEngine: Mocked<ExecutionEngineHttp>;
+  executionEngine: Mocked<OptimisticExecutionEngine>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
   builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
   executionPayloadBidPool: Mocked<ExecutionPayloadBidPool>;
@@ -213,8 +213,6 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       getCanonicalBlockAtSlot: vi.fn(),
       getBlockByRoot: vi.fn(),
       recomputeForkChoiceHead: vi.fn(),
-      onForkchoiceUpdated: vi.fn(),
-      invalidateExecutionPayloads: vi.fn(),
       predictProposerHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),
       getHeadState: vi.fn(),

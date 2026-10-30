@@ -72,20 +72,15 @@ import {
 } from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
-import {
-  ExecutionPayloadStatus,
-  IExecutionBuilder,
-  IExecutionEngine,
-  PayloadAttributes,
-  PayloadId,
-} from "../../execution/index.js";
+import {IExecutionBuilder, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
-import {CommonBlockBody, IBeaconChain} from "../interface.js";
+import {CommonBlockBody} from "../interface.js";
 import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
+import {OptimisticExecutionEngine} from "../optimisticExecutionEngine.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -748,12 +743,11 @@ export async function produceBlockBody<T extends BlockType>(
  */
 export async function prepareExecutionPayload(
   chain: {
-    executionEngine: IExecutionEngine;
+    executionEngine: OptimisticExecutionEngine;
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
     inclusionListStore: InclusionListStore;
-    onForkchoiceUpdated: IBeaconChain["onForkchoiceUpdated"];
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -812,8 +806,9 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    const result = await chain.executionEngine.notifyForkchoiceUpdate(
+    payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
+      toRootHex(parentBlockRoot),
       toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
@@ -826,11 +821,6 @@ export async function prepareExecutionPayload(
           feeRecipient: suggestedFeeRecipient,
         })
     );
-    chain.onForkchoiceUpdated(toRootHex(parentBlockRoot), toRootHex(parentBlockHash), result);
-    if (result.payloadStatus.status === ExecutionPayloadStatus.INVALID) {
-      throw Error(`Invalid prepare payload, validationError=${result.payloadStatus.validationError ?? ""}`);
-    }
-    payloadId = result.payloadId;
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 

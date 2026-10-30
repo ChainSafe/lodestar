@@ -123,7 +123,10 @@ export async function processBlocks(
     // and we need to further propagate
     if (segmentExecStatus.execAborted !== null) {
       if (segmentExecStatus.invalidSegmentLVH !== undefined) {
-        this.invalidateExecutionPayloads(segmentExecStatus.invalidSegmentLVH, ExecutionInvalidSource.blockSegment);
+        this.executionEngine.invalidateExecutionPayloads(
+          segmentExecStatus.invalidSegmentLVH,
+          ExecutionInvalidSource.blockSegment
+        );
       }
       throw segmentExecStatus.execAborted.execError;
     }
