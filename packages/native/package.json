@@ -75,7 +75,7 @@
     ]
   },
   "dependencies": {
-    "@chainsafe/zapi": "4.1.0"
+    "@chainsafe/zapi": "4.2.0"
   },
   "devDependencies": {
     "@chainsafe/benchmark": "2.1.0",

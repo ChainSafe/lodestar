@@ -686,8 +686,8 @@ importers:
   packages/native:
     dependencies:
       '@chainsafe/zapi':
-        specifier: 4.1.0
-        version: 4.1.0
+        specifier: 4.2.0
+        version: 4.2.0
     devDependencies:
       '@chainsafe/benchmark':
         specifier: 2.1.0
@@ -1285,8 +1285,8 @@ packages:
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
 
-  '@chainsafe/zapi@4.1.0':
-    resolution: {integrity: sha512-U/JgUc9KAfDeKlgJWWTvBuKEMezhnb4GVEGd3zYaMB3Vi85YTJtcd2b9eO+upk5buROwRo9DEF+ev32PaO98mg==}
+  '@chainsafe/zapi@4.2.0':
+    resolution: {integrity: sha512-d0vW9KJpTD6Oex9ugfNhdB5qK3TT0gtJsb6UNrmzdkXBRAfZ8NHI2NVBoH2zLnucZ/kXbUDyw8VPDFvDt6vjhQ==}
     hasBin: true
 
   '@colors/colors@1.5.0':
@@ -6803,7 +6803,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@chainsafe/zapi@4.1.0': {}
+  '@chainsafe/zapi@4.2.0': {}
 
   '@colors/colors@1.5.0': {}
 
