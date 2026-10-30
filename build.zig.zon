@@ -9,7 +9,6 @@
         "build.zig.zon",
         "bench",
         "packages/native",
-        "examples",
         "scripts",
         "src",
         "test",
@@ -52,12 +51,6 @@
             .url = "git+https://github.com/karlseguin/metrics.zig.git#816dd1f6c1e67fa947e7e6310ca50f5ff49edde9",
             .hash = "metrics-0.0.0-W7G4eLisAQDYpQvJy25olo-N1XcrgExt67RITrH43viY",
         },
-        // TODO: Re-enable httpz + metrics_stf executable once karlseguin/http.zig supports Zig 0.16.0.
-        // See: https://github.com/karlseguin/http.zig/issues/175
-        // .httpz = .{
-        //     .url = "git+https://github.com/karlseguin/http.zig.git#2924ead41db9e1986db3b4909a82185c576f6361",
-        //     .hash = "httpz-0.0.0-PNVzrC7CBgDSMZNP7chgAczR3FyAz5Eum6Kb1_K9kmYR",
-        // },
         .zio = .{
             .url = "git+https://github.com/lalinsky/zio?ref=v0.14.0#aa860381beb42bc077e24ef304827cbdc23fcef9",
             .hash = "zio-0.14.0-xHbVVPxFHgBCop4CvfF4u360kzWlHD4FS8Ud-RIkPcZ7",
@@ -288,23 +281,6 @@
                 .imports = .{.download_ere_fixture_options},
             },
         },
-        // TODO: Re-enable metrics_stf once karlseguin/http.zig supports Zig 0.16.0.
-        // See: https://github.com/karlseguin/http.zig/issues/175
-        // .metrics_stf = .{
-        //     .root_module = .{
-        //         .root_source_file = "examples/metrics.zig",
-        //         .imports = .{
-        //             .consensus_types,
-        //             .fork_types,
-        //             .state_transition,
-        //             .download_era_options,
-        //             .era,
-        //             .config,
-        //             .preset,
-        //             .httpz,
-        //         },
-        //     },
-        // },
         .download_spec_tests = .{
             .root_module = .{
                 .root_source_file = "test/spec/download_spec_tests.zig",
