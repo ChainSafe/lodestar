@@ -118,6 +118,13 @@ describe("chain / archiveStore / pruneHistory", () => {
         return {key: slot, value: block};
       })
     );
+    await db.executionPayloadEnvelopeArchive.batchPutBinary(
+      slots.map((slot) => {
+        const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+        envelope.message.payload.slotNumber = slot;
+        return {key: slot, value: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)};
+      })
+    );
 
     await pruneHistory(
       config,
@@ -132,6 +139,7 @@ describe("chain / archiveStore / pruneHistory", () => {
     );
 
     expect(await db.blockArchive.keys()).toEqual([firstSlot + maxBlockSlots, firstSlot + 100]);
+    expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual([firstSlot + maxBlockSlots, firstSlot + 100]);
   });
 
   it("prunes archived states before the finalized epoch", async () => {
