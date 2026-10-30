@@ -59,7 +59,8 @@ jobs:
               - "build.zig.zon"
               - "scripts/*.zig"
               - "scripts/ci/**"
-              - ".github/**"
+              - ".github/workflows/test.yml"
+              - ".github/actions/**"
 
   lint:
     name: Lint
