@@ -283,12 +283,16 @@ jobs:
     name: Native bindings tests
     runs-on: warp-ubuntu-2204-x64-4x
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24, 26]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/restore-build
         with:
-          node: 24
+          node: ${{ matrix.node }}
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       - name: Restore era files cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
