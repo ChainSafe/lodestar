@@ -10,7 +10,7 @@
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "type": "module",
   "engines": {
-    "node": "^24.22.1"
+    "node": "^24.22.1 || ^26.13.0"
   },
   "exports": {
     ".": {
