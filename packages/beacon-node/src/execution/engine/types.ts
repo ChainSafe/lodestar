@@ -9,6 +9,7 @@ import {
   DEPOSIT_REQUEST_TYPE,
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
+  ForkPostElectra,
   ForkSeq,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
@@ -23,6 +24,7 @@ import {
   deneb,
   gloas,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
@@ -628,9 +630,7 @@ export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized
 
     switch (currentRequestType) {
       case DEPOSIT_REQUEST_TYPE: {
-        const depositRequestsType =
-          ForkSeq[fork] >= ForkSeq.gloas ? ssz.gloas.DepositRequests : ssz.electra.DepositRequests;
-        result.deposits = depositRequestsType.deserialize(requests);
+        result.deposits = sszTypesFor(fork as ForkPostElectra).DepositRequests.deserialize(requests);
         break;
       }
       case WITHDRAWAL_REQUEST_TYPE: {
