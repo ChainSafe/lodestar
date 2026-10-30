@@ -38,7 +38,7 @@ jobs:
           sudo apt-get install -y build-essential python3
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 24
+          node: 26
       # The host build links against the runner's glibc. An explicit target uses the same glibc floor as the npm packages.
       - name: Rebuild native bindings for an explicit target
         run: zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=mainnet -Dtarget=${{ matrix.zig-target }} --prefix bindings/zig-out
