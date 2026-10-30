@@ -157,7 +157,7 @@ type MetaPayloadStatus = "VALID" | "NOT_VALIDATED" | "INVALIDATED";
 
 interface MetaYaml {
   topic: GossipType;
-  blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus}[];
+  blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus; payload?: string}[];
   finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
   messages: {
     current_time_ms?: bigint;
@@ -304,6 +304,39 @@ function computePostState(
   );
 }
 
+/** Record the block's payload as received and verified, as `on_execution_payload_envelope` would */
+function importBlockPayload(
+  chain: BeaconChain,
+  testCaseDir: string,
+  fork: ForkName,
+  signedBlock: SignedBeaconBlock<ForkPostGloas>,
+  blockRootHex: RootHex,
+  payloadName: string
+): void {
+  const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(loadSszSnappy(testCaseDir, payloadName));
+  const {payload} = envelope.message;
+  chain.seenPayloadEnvelopeInputCache
+    .add({
+      blockRootHex,
+      block: signedBlock,
+      forkName: fork,
+      sampledColumns: chain.custodyConfig.sampledColumns,
+      custodyColumns: chain.custodyConfig.custodyColumns,
+      seenTimestampSec: 0,
+      source: PayloadEnvelopeInputSource.gossip,
+    })
+    .addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+  chain.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, true);
+  chain.forkChoice.onExecutionPayload(
+    blockRootHex,
+    toRootHex(payload.blockHash),
+    payload.blockNumber,
+    payload.gasLimit,
+    ExecutionStatus.Valid,
+    DataAvailabilityStatus.Available
+  );
+}
+
 function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, parentRootHex: RootHex): void {
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRootHex);
   if (!parentBlock?.executionPayloadBlockHash) {
@@ -444,6 +477,16 @@ export async function runGossipValidationTest(
             );
           }
           blockStatesByRoot.set(blockRootHex, anchorStateView);
+          if (blockEntry.payload) {
+            importBlockPayload(
+              chain,
+              testCaseDir,
+              fork,
+              signedBlock as SignedBeaconBlock<ForkPostGloas>,
+              blockRootHex,
+              blockEntry.payload
+            );
+          }
           continue;
         }
 
@@ -554,6 +597,16 @@ export async function runGossipValidationTest(
         });
 
         blockStatesByRoot.set(blockRootHex, postState);
+        if (blockEntry.payload) {
+          importBlockPayload(
+            chain,
+            testCaseDir,
+            fork,
+            signedBlock as SignedBeaconBlock<ForkPostGloas>,
+            blockRootHex,
+            blockEntry.payload
+          );
+        }
       }
     }
 
