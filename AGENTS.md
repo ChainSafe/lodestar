@@ -33,11 +33,9 @@ addon in `packages/native/`. Run Zig commands from the repository root.
 - Use `pnpm --filter @lodestar/native prepare-mainnet` to rebuild the addon before binding tests.
   `prepare-minimal` and `prepare-gnosis` select other presets. Do not share one output
   directory between concurrent builds for different presets.
-- Surface candidate security-objective violations before consulting [THREAT_MODEL.md](THREAT_MODEL.md).
-  It is not an allowlist. Verify trust assumptions against the actual or planned call path.
+- Verify trust assumptions against the actual or planned call path.
   If code and documentation conflict, report both the behavior and the documentation gap.
-- Update the threat model only when security objectives, trust assumptions, boundaries,
-  or caller obligations change. Document enduring preconditions beside their owning API.
+- Document enduring preconditions beside their owning API.
 
 ## Project overview
 
