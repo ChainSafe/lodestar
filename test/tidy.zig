@@ -761,7 +761,7 @@ test "tidy" {
     const files = try loadRepo(arena, io, &errors);
     const cwd: std.Io.Dir = .cwd();
     const zon = try cwd.readFileAlloc(io, "build.zig.zon", arena, max_file_bytes);
-    const ci = try cwd.readFileAlloc(io, ".github/workflows/CI.yml", arena, max_file_bytes);
+    const ci = try cwd.readFileAlloc(io, ".github/workflows/test.yml", arena, max_file_bytes);
     const roots = try declaredRoots(arena, zon);
 
     try tidyTestFileWiring(arena, files, &errors);
