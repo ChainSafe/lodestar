@@ -17,6 +17,7 @@ import {
   getCurrentTargetScore,
   getEquivocationScore,
   getNodeSupportBetweenSlots,
+  getTotalActiveBalance,
   isConfirmedChainSafe,
   isOneConfirmed,
   willCurrentTargetBeJustified,
@@ -147,11 +148,11 @@ describe("fast confirmation", () => {
     });
   });
 
-  // Perf regression guard: computing the total active balance scans (and in production allocates)
-  // the full validator set. It is invariant per balance source within an FCR run but is read several
-  // times per is_one_confirmed evaluation, across every block of the epoch-boundary chain walk.
-  // The cache must memoize it so the full-set work happens once per run, not once per evaluation.
-  it("memoizes total active balance once per balance source across a chain walk", () => {
+  // Perf regression guard: the active balances scan (and in production allocate) the full validator
+  // set. They are invariant per balance source within an FCR run but are read several times per
+  // is_one_confirmed evaluation, across every block of the epoch-boundary chain walk.
+  // The cache must memoize them so the full-set work happens once per run, not once per evaluation.
+  it("memoizes active balances once per balance source across a chain walk", () => {
     const blockCount = 32;
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT})];
     for (let slot = 1; slot <= blockCount; slot++) {
@@ -159,12 +160,12 @@ describe("fast confirmation", () => {
     }
 
     const baseState = makeState(256, 32, [1 as Slot]);
-    let zeroInactiveCalls = 0;
+    let activeSetScans = 0;
     const state = {
       ...baseState,
-      getEffectiveBalanceIncrementsZeroInactive: () => {
-        zeroInactiveCalls++;
-        return baseState.effectiveBalanceIncrements;
+      getCurrentShuffling: () => {
+        activeSetScans++;
+        return baseState.getCurrentShuffling();
       },
     } as typeof baseState;
     const balanceSource = {state, balances: state.effectiveBalanceIncrements};
@@ -188,9 +189,9 @@ describe("fast confirmation", () => {
       computeSafetyThreshold(ctx, store, cache, balanceSource, blocks[slot].blockRoot);
     }
 
-    // Memoized: one read for the total active balance and one for the committee weight sweep per run,
-    // regardless of block count. Without the fix this is ~3 per evaluation (≈ 3 * blockCount).
-    expect(zeroInactiveCalls).toBe(2);
+    // Memoized: one active-set scan per balance source per run, regardless of block count.
+    // Without the fix this is ~3 per evaluation (≈ 3 * blockCount).
+    expect(activeSetScans).toBe(1);
   });
 
   it("memoizes total active balance across current-target justification checks", () => {
@@ -208,7 +209,7 @@ describe("fast confirmation", () => {
       state
     );
     const cache = createFastConfirmationCache();
-    const totalActiveBalanceComputations = vi.spyOn(cache.totalActiveBalanceByKey, "set");
+    const totalActiveBalanceComputations = vi.spyOn(cache.activeBalancesByKey, "set");
 
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
@@ -353,6 +354,21 @@ describe("fast confirmation", () => {
     expect(support()).toBe(64);
     expect(support()).toBe(64);
     expect(getValidator).not.toHaveBeenCalled();
+  });
+
+  it("committee weight and total active balance count slashed validators but not inactive ones", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    // Validator 1 is slashed and validator 2 is inactive, both still sit in slot 2's committee
+    const state = makeState(4, 32, [2 as Slot], [1], [2]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    const ctx = makeContext(3 as Slot, child.blockRoot, blocks, new Map(), {epoch: 0, rootHex: ZERO_ROOT}, state);
+    const cache = createFastConfirmationCache();
+    const balanceSource = {state, balances: state.effectiveBalanceIncrements};
+
+    expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 2 as Slot, 2 as Slot)).toBe(96);
+    expect(getTotalActiveBalance(balanceSource, cache)).toBe(96);
   });
 
   it("vote scans exclude slashed validators without reading them", () => {

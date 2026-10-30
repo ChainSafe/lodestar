@@ -12,6 +12,8 @@ import {Logger, fromHex} from "@lodestar/utils";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "../../protoArray/interface.js";
 import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.js";
 import {
+  ActiveBalances,
+  type BalanceSourceCacheKey,
   type BalanceSourceKey,
   CommitteeSweep,
   FastConfirmationBalanceSource,
@@ -19,7 +21,6 @@ import {
   FastConfirmationContext,
   FastConfirmationSnapshot,
   IFastConfirmationStore,
-  type TotalActiveBalanceCacheKey,
 } from "./types.js";
 
 const SAFETY_THRESHOLD_UNREACHABLE = Object.freeze({
@@ -285,20 +286,42 @@ function getZeroInactiveBalances(balanceSource: FastConfirmationBalanceSource): 
   return balanceSource.state?.getEffectiveBalanceIncrementsZeroInactive() ?? balanceSource.balances;
 }
 
+/**
+ * Balances read by `get_total_active_balance` and `compute_committee_weight_between_slots`. Unlike the
+ * vote scans, these keep slashed validators: the maximum support and the adversarial budget they bound
+ * must cover slashed equivocators, whose weight `getEquivocationScore` subtracts.
+ * Invariant per balance source within a run, but read many times per is_one_confirmed evaluation
+ * across the epoch-boundary chain walk; memoized so the full validator-set scan runs once per run.
+ */
+function getActiveBalances(balanceSource: FastConfirmationBalanceSource, cache: FastConfirmationCache): ActiveBalances {
+  const key: BalanceSourceCacheKey = balanceSource.state ?? balanceSource.balances;
+  const cached = cache.activeBalancesByKey.get(key);
+  if (cached !== undefined) return cached;
+
+  let active: ActiveBalances;
+  if (balanceSource.state) {
+    const {effectiveBalanceIncrements} = balanceSource.state;
+    const balances = new Uint16Array(balanceSource.state.validatorCount);
+    let total = 0;
+    for (const i of balanceSource.state.getCurrentShuffling().activeIndices) {
+      balances[i] = effectiveBalanceIncrements[i];
+      total += balances[i];
+    }
+    active = {balances, total};
+  } else {
+    // Fallback balances come from the justified-balance path, which also zeroes slashed validators
+    active = {balances: balanceSource.balances, total: computeTotalBalance(balanceSource.balances)};
+  }
+
+  cache.activeBalancesByKey.set(key, active);
+  return active;
+}
+
 export function getTotalActiveBalance(
   balanceSource: FastConfirmationBalanceSource,
   cache: FastConfirmationCache
 ): number {
-  // Invariant per balance source within a run, but read many times per is_one_confirmed evaluation
-  // across the epoch-boundary chain walk; memoize so the full validator-set scan runs once per run.
-  const key: TotalActiveBalanceCacheKey = balanceSource.state ?? balanceSource.balances;
-  const cached = cache.totalActiveBalanceByKey.get(key);
-  if (cached !== undefined) return cached;
-
-  const total = computeTotalBalance(getZeroInactiveBalances(balanceSource));
-
-  cache.totalActiveBalanceByKey.set(key, total);
-  return total;
+  return getActiveBalances(balanceSource, cache).total;
 }
 
 export function computeCommitteeWeightBetweenSlots(
@@ -316,7 +339,7 @@ export function computeCommitteeWeightBetweenSlots(
   }
 
   const sweep = getCommitteeSweep(ctx, store, cache, startSlot, endSlot);
-  const key: TotalActiveBalanceCacheKey = balanceSource.state ?? balanceSource.balances;
+  const key: BalanceSourceCacheKey = balanceSource.state ?? balanceSource.balances;
   let weights = sweep.weightsByKey.get(key);
   if (weights === undefined) {
     weights = [];
@@ -325,9 +348,7 @@ export function computeCommitteeWeightBetweenSlots(
 
   const slotCount = endSlot - startSlot + 1;
   if (weights.length < slotCount) {
-    // The spec also counts slashed active validators. Reading the same zeroed balances as
-    // getTotalActiveBalance keeps a partial range from outweighing a full epoch.
-    const balances = getZeroInactiveBalances(balanceSource);
+    const {balances} = getActiveBalances(balanceSource, cache);
     let weight = weights.at(-1) ?? 0;
     for (let i = weights.length; i < slotCount; i++) {
       for (let j = i > 0 ? sweep.lengths[i - 1] : 0; j < sweep.lengths[i]; j++) {
