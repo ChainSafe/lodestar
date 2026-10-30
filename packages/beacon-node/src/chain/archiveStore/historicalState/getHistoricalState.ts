@@ -50,6 +50,15 @@ export async function getHistoricalState(
   const transitionTimer = metrics?.stateTransitionTime.startTimer();
   let blockCount = 0;
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
+    // Pruned history keeps the genesis state but not the blocks after it, without this check the
+    // first block would only be rejected after processing every slot in between
+    if (
+      blockCount === 0 &&
+      !byteArrayEquals(block.message.parentRoot, state.computeAnchorCheckpoint().checkpoint.root)
+    ) {
+      metrics?.regenErrorCount.inc({reason: RegenErrorType.blockProcessing});
+      throw Error(`Archived blocks do not extend nearest state slot=${state.slot} blockSlot=${block.message.slot}`);
+    }
     try {
       state = state.stateTransition(
         {block},

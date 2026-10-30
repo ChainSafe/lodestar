@@ -66,7 +66,7 @@ describe("chain / archiveStore / state pruning progress", () => {
     await db.stateArchive.putBinary(nextSlot, new Uint8Array([2]));
     chain.emitter.emit(ChainEvent.forkChoiceFinalized, {epoch: 102, root: ZERO_HASH, rootHex: ZERO_HASH_HEX});
     await vi.waitFor(() => expect(chain.forkChoice.prune).toHaveBeenCalledTimes(2));
-    expect(await db.stateArchive.keys()).toEqual([nextSlot]);
+    expect(await db.stateArchive.keys()).toEqual([0, nextSlot]);
 
     chain.emitter.emit(ChainEvent.forkChoiceFinalized, {epoch: 103, root: ZERO_HASH, rootHex: ZERO_HASH_HEX});
     await vi.waitFor(() => expect(chain.forkChoice.prune).toHaveBeenCalledTimes(3));
@@ -84,7 +84,7 @@ describe("chain / archiveStore / state pruning progress", () => {
     await vi.waitFor(() =>
       expect(logError).toHaveBeenCalledWith("Error processing finalized checkpoint", {epoch: 102}, error)
     );
-    expect(await db.stateArchive.keys()).toEqual([previousSlot, nextSlot]);
+    expect(await db.stateArchive.keys()).toEqual([0, previousSlot, nextSlot]);
 
     chain.emitter.emit(ChainEvent.forkChoiceFinalized, {epoch: 102, root: ZERO_HASH, rootHex: ZERO_HASH_HEX});
     await vi.waitFor(() => expect(chain.forkChoice.prune).toHaveBeenCalledTimes(1));
@@ -92,6 +92,6 @@ describe("chain / archiveStore / state pruning progress", () => {
       [{gte: previousSlot, lt: nextSlot}],
       [{gte: previousSlot, lt: nextSlot}],
     ]);
-    expect(await db.stateArchive.keys()).toEqual([nextSlot]);
+    expect(await db.stateArchive.keys()).toEqual([0, nextSlot]);
   });
 });
