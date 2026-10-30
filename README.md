@@ -40,7 +40,7 @@ pnpm build
 
 ## Architecture Overview
 
-Zig consensus modules live in `src/`, with their build files at the repository root.
+Zig modules live in `src/`, with their build files at the repository root.
 `packages/` contains the TypeScript monorepo, and `packages/native/` contains the native
 Node.js package.
 
