@@ -68,7 +68,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     if (checkpoint.epoch <= lastSeenEpoch) return;
     lastSeenEpoch = checkpoint.epoch;
 
-    const checkpointState = bn.chain.regen.getCheckpointStateSync({
+    const checkpointState = bn.chain.stateEngine.getCheckpointStateSync({
       epoch: checkpoint.epoch,
       rootHex: toRootHex(checkpoint.root),
     });
@@ -77,7 +77,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     }
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.getStateRootAtSlot(lastSlot);
-    const lastState = await bn.chain.regen.getState(toRootHex(lastStateRoot), RegenCaller.onForkChoiceFinalized);
+    const lastState = await bn.chain.stateEngine.getState(toRootHex(lastStateRoot), RegenCaller.onForkChoiceFinalized);
     logParticipation(lastState);
   }
 

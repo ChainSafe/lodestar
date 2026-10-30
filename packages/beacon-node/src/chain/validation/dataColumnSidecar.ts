@@ -114,10 +114,10 @@ export async function validateGossipFuluDataColumnSidecar(
   const blockEpoch = computeEpochAtSlot(blockHeader.slot);
   const getProposerIndex = async (): Promise<ValidatorIndex> => {
     if (isForkPostFulu(chain.config.getForkName(parentBlock.slot)) && blockEpoch - parentEpoch <= MIN_SEED_LOOKAHEAD) {
-      const parentState = await chain.regen.getState(parentBlock.stateRoot, RegenCaller.validateGossipDataColumn);
+      const parentState = await chain.stateEngine.getState(parentBlock.stateRoot, RegenCaller.validateGossipDataColumn);
       return parentState.getBeaconProposer(blockHeader.slot);
     }
-    const blockState = await chain.regen.getBlockSlotState(
+    const blockState = await chain.stateEngine.getBlockSlotState(
       parentBlock,
       blockHeader.slot,
       {dontTransferCache: true},

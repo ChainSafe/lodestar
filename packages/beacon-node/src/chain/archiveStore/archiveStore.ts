@@ -77,7 +77,7 @@ export class ArchiveStore {
 
     if (opts.archiveMode === ArchiveMode.Frequency) {
       this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(
-        this.chain.regen,
+        this.chain.stateEngine,
         this.db,
         this.logger,
         opts,
@@ -215,7 +215,7 @@ export class ArchiveStore {
 
   private onCheckpoint = (): void => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.onCheckpoint(
+    this.chain.stateEngine.onCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
       this.chain.forkChoice.getJustifiedCheckpoint().epoch,
       headStateRoot

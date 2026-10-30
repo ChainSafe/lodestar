@@ -83,17 +83,19 @@ function isBidCompatibleWithHead(
   return buildsOnParentPayload;
 }
 
+export type ExecutionPayloadBidValidationResult = {proposerIndex: ValidatorIndex};
+
 export async function validateGossipExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<{proposerIndex: ValidatorIndex}> {
+): Promise<ExecutionPayloadBidValidationResult> {
   return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
 }
 
 async function validateExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<{proposerIndex: ValidatorIndex}> {
+): Promise<ExecutionPayloadBidValidationResult> {
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
   const bidParentBlockHash = toRootHex(bid.parentBlockHash);
@@ -267,7 +269,7 @@ async function validateExecutionPayloadBid(
   }
 
   // Use the bid's parent branch state for builder checks
-  const state = await chain.regen
+  const state = await chain.stateEngine
     .getBlockSlotState(parentBlock, bid.slot, {dontTransferCache: true}, RegenCaller.validateGossipExecutionPayloadBid)
     .catch(() => {
       throw new ExecutionPayloadBidError(GossipAction.IGNORE, {

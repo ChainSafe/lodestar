@@ -34,9 +34,9 @@ describe("BeaconChain finalized_checkpoint event", () => {
         getBlockHexDefaultStatus: vi.fn().mockReturnValue(finalizedBlock),
         getHead: vi.fn().mockReturnValue(generateProtoBlock()),
       },
-      seenBlockProposers: {prune: vi.fn()},
+      validationEngine: {onFinalized: vi.fn(), pruneOperations: vi.fn()},
       updateValidatorsCustodyRequirement: vi.fn().mockReturnValue(custodyUpdate),
-      regen: {getStateSync: vi.fn().mockReturnValue(null)},
+      stateEngine: {getStateSync: vi.fn().mockReturnValue(null)},
       getBlockByRoot: vi.fn().mockResolvedValue({block: generateSignedBlockAtSlot(0)}),
     };
 
@@ -72,7 +72,7 @@ describe("BeaconChain finalized_checkpoint event", () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(events).toHaveLength(0);
     expect(chain.metrics.finalizedEpoch.set).toHaveBeenCalledWith(cp.epoch);
-    expect(chain.seenBlockProposers.prune).toHaveBeenCalledOnce();
+    expect(chain.validationEngine.onFinalized).toHaveBeenCalledOnce();
     expect(chain.updateValidatorsCustodyRequirement).toHaveBeenCalledWith(cp);
     expect(chain.getBlockByRoot).toHaveBeenCalledOnce();
   });

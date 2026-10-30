@@ -15,7 +15,8 @@ import {BlockGossipError, GossipAction} from "../../../../src/chain/errors/index
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
-import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
+import {validateGossipBlock} from "../../../../src/chain/validation/block.js";
+import {ValidationEngine} from "../../../../src/chain/validationEngine/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NetworkEventBus} from "../../../../src/network/events.js";
@@ -27,8 +28,8 @@ import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../../src/util/peerId.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 
-vi.mock("../../../../src/chain/validation/index.js", async (importActual) => {
-  const mod = await importActual<typeof import("../../../../src/chain/validation/index.js")>();
+vi.mock("../../../../src/chain/validation/block.js", async (importActual) => {
+  const mod = await importActual<typeof import("../../../../src/chain/validation/block.js")>();
   return {
     ...mod,
     validateGossipBlock: vi.fn(),
@@ -107,6 +108,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
       serializedCache: {set: vi.fn()},
       columnReconstructionTracker: {triggerColumnReconstruction: vi.fn()},
     } as unknown as IBeaconChain;
+    Object.assign(chain, {validationEngine: new ValidationEngine(chain)});
     const handlers = getGossipHandlers(
       {
         chain,
@@ -442,6 +444,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
   } as unknown as IBeaconChain;
+  Object.assign(chain, {validationEngine: new ValidationEngine(chain)});
 
   const handlers = getGossipHandlers(
     {
@@ -523,6 +526,7 @@ async function runBeaconBlockProcessingError(
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
   } as unknown as IBeaconChain;
+  Object.assign(chain, {validationEngine: new ValidationEngine(chain)});
 
   const handlers = getGossipHandlers(
     {
@@ -663,6 +667,7 @@ async function runBeaconBlockRepeatProposal(
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
     serializedCache: {set: vi.fn()},
   } as unknown as IBeaconChain;
+  Object.assign(chain, {validationEngine: new ValidationEngine(chain)});
 
   const handlers = getGossipHandlers(
     {

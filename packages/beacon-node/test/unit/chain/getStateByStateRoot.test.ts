@@ -46,7 +46,7 @@ describe("BeaconChain getStateByStateRoot", () => {
         getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: finalizedEpoch, root: fromHex(rootHex), rootHex}),
         getBlockDefaultStatus: vi.fn().mockReturnValue(finalizedBlock),
       },
-      regen: {
+      stateEngine: {
         getStateSync: vi.fn().mockReturnValue(null),
         getCheckpointStateSync: vi.fn().mockReturnValue(cachedCheckpointState),
         getState: vi.fn().mockResolvedValue(state),
@@ -77,8 +77,8 @@ describe("BeaconChain getStateByStateRoot", () => {
         executionOptimistic,
         finalized: true,
       });
-      expect(chain.regen.getCheckpointStateSync).toHaveBeenCalledWith({epoch: 2, rootHex});
-      expect(chain.regen.getState).not.toHaveBeenCalled();
+      expect(chain.stateEngine.getCheckpointStateSync).toHaveBeenCalledWith({epoch: 2, rootHex});
+      expect(chain.stateEngine.getState).not.toHaveBeenCalled();
       expect(chain.db.blockArchive.get).not.toHaveBeenCalled();
     }
   );
@@ -94,8 +94,8 @@ describe("BeaconChain getStateByStateRoot", () => {
       executionOptimistic: false,
       finalized: true,
     });
-    expect(chain.regen.getCheckpointStateSync).not.toHaveBeenCalled();
-    expect(chain.regen.getState).toHaveBeenCalledWith(blockStateRoot, RegenCaller.restApi);
+    expect(chain.stateEngine.getCheckpointStateSync).not.toHaveBeenCalled();
+    expect(chain.stateEngine.getState).toHaveBeenCalledWith(blockStateRoot, RegenCaller.restApi);
   });
 
   it("preserves regen for non-finalized state roots without checking the checkpoint cache", async () => {
@@ -106,8 +106,8 @@ describe("BeaconChain getStateByStateRoot", () => {
     chain.db.stateArchive.getBinary.mockResolvedValue(genesisStateBytes);
 
     expect(await getStateByStateRoot(root)).toEqual({state, executionOptimistic: false, finalized: false});
-    expect(chain.regen.getCheckpointStateSync).not.toHaveBeenCalled();
-    expect(chain.regen.getState).toHaveBeenCalledWith(root, RegenCaller.restApi);
+    expect(chain.stateEngine.getCheckpointStateSync).not.toHaveBeenCalled();
+    expect(chain.stateEngine.getState).toHaveBeenCalledWith(root, RegenCaller.restApi);
     expect(chain.db.stateArchive.getBinary).not.toHaveBeenCalled();
   });
 
@@ -119,8 +119,8 @@ describe("BeaconChain getStateByStateRoot", () => {
       executionOptimistic: false,
       finalized: true,
     });
-    expect(chain.regen.getCheckpointStateSync).toHaveBeenCalledWith({epoch: 2, rootHex});
-    expect(chain.regen.getState).toHaveBeenCalledWith(stateRoot, RegenCaller.restApi);
+    expect(chain.stateEngine.getCheckpointStateSync).toHaveBeenCalledWith({epoch: 2, rootHex});
+    expect(chain.stateEngine.getState).toHaveBeenCalledWith(stateRoot, RegenCaller.restApi);
   });
 
   it("serves the genesis checkpoint state as not finalized", async () => {
@@ -134,8 +134,8 @@ describe("BeaconChain getStateByStateRoot", () => {
     });
 
     expect(await getStateByStateRoot(root)).toEqual({state, executionOptimistic: false, finalized: false});
-    expect(chain.regen.getCheckpointStateSync).toHaveBeenCalledWith({epoch: 0, rootHex});
-    expect(chain.regen.getState).not.toHaveBeenCalled();
+    expect(chain.stateEngine.getCheckpointStateSync).toHaveBeenCalledWith({epoch: 0, rootHex});
+    expect(chain.stateEngine.getState).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -151,7 +151,7 @@ describe("BeaconChain getStateByStateRoot", () => {
     expect(result?.executionOptimistic).toBe(false);
     expect(result?.finalized).toBe(finalized);
     expect(chain.db.stateArchive.getBinary).toHaveBeenCalledWith(GENESIS_SLOT);
-    expect(chain.regen.getState).not.toHaveBeenCalled();
+    expect(chain.stateEngine.getState).not.toHaveBeenCalled();
   });
 
   it("falls through to regen when the genesis state is not archived", async () => {
@@ -164,7 +164,7 @@ describe("BeaconChain getStateByStateRoot", () => {
       finalized: true,
     });
     expect(chain.db.stateArchive.getBinary).toHaveBeenCalledWith(GENESIS_SLOT);
-    expect(chain.regen.getState).toHaveBeenCalledWith(genesisStateRoot, RegenCaller.restApi);
+    expect(chain.stateEngine.getState).toHaveBeenCalledWith(genesisStateRoot, RegenCaller.restApi);
   });
 
   it("looks up the genesis block only once", async () => {
@@ -174,6 +174,6 @@ describe("BeaconChain getStateByStateRoot", () => {
     await getStateByStateRoot(genesisStateRoot);
 
     expect(chain.db.blockArchive.get).toHaveBeenCalledTimes(1);
-    expect(chain.regen.getState).toHaveBeenCalledTimes(2);
+    expect(chain.stateEngine.getState).toHaveBeenCalledTimes(2);
   });
 });

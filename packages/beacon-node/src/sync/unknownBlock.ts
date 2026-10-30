@@ -13,7 +13,6 @@ import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";
-import {validateGossipExecutionPayloadEnvelope} from "../chain/validation/executionPayloadEnvelope.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
@@ -1141,7 +1140,7 @@ export class BlockInputSync {
     const proposerBoostWindowMs = this.config.getAttestationDueMs(fork);
     if (
       this.chain.clock.msFromSlot(blockSlot) < proposerBoostWindowMs &&
-      this.chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)
+      this.chain.validationEngine.isBlockProposerKnown(blockSlot, proposerIndex)
     ) {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
       // eligible for proposer boost to prevent unbundling attack
@@ -1289,7 +1288,7 @@ export class BlockInputSync {
 
     if (!payloadInput.hasPayloadEnvelope()) {
       const validationResult = await wrapError(
-        validateGossipExecutionPayloadEnvelope(this.chain, pendingPayload.envelope)
+        this.chain.validationEngine.validateGossipExecutionPayloadEnvelope(pendingPayload.envelope)
       );
       if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
         return;
@@ -1597,7 +1596,7 @@ export class BlockInputSync {
         }
 
         if (!payloadInput.hasPayloadEnvelope()) {
-          await validateGossipExecutionPayloadEnvelope(this.chain, envelope);
+          await this.chain.validationEngine.validateGossipExecutionPayloadEnvelope(envelope);
         }
 
         let pendingPayload = this.toPendingPayloadInput(payloadInput, cacheItem, envelope);

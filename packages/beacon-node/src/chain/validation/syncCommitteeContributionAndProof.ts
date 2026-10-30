@@ -10,6 +10,21 @@ import {
 } from "./signatureSets/index.js";
 import {validateGossipSyncCommitteeExceptSig} from "./syncCommittee.js";
 
+export type ContributionAndProofValidationResult = {syncCommitteeParticipantIndices: ValidatorIndex[]};
+
+/** A validator attached to this node may resubmit a contribution it already aggregated, so known participants are allowed */
+export function validateApiContributionAndProof(
+  chain: IBeaconChain,
+  signedContributionAndProof: altair.SignedContributionAndProof
+): Promise<ContributionAndProofValidationResult> {
+  const skipValidationKnownParticipants = true;
+  return validateSyncCommitteeGossipContributionAndProof(
+    chain,
+    signedContributionAndProof,
+    skipValidationKnownParticipants
+  );
+}
+
 /**
  * Spec v1.1.0-beta.2
  */
@@ -17,7 +32,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   chain: IBeaconChain,
   signedContributionAndProof: altair.SignedContributionAndProof,
   skipValidationKnownParticipants = false
-): Promise<{syncCommitteeParticipantIndices: ValidatorIndex[]}> {
+): Promise<ContributionAndProofValidationResult> {
   const contributionAndProof = signedContributionAndProof.message;
   const {contribution, aggregatorIndex} = contributionAndProof;
   const {subcommitteeIndex, slot} = contribution;

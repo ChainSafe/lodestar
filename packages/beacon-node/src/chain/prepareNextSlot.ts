@@ -153,7 +153,7 @@ export class PrepareNextSlotScheduler {
           // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
           // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
           // for other slots dontTransferCached=true because we don't run state transition on this state
-          preparedState = await this.chain.regen.getBlockSlotState(
+          preparedState = await this.chain.stateEngine.getBlockSlotState(
             headBlock,
             prepareSlot,
             {dontTransferCache: !isEpochTransition},
@@ -222,7 +222,7 @@ export class PrepareNextSlotScheduler {
         // post-fulu we'll always reach here because preparedState is undefined
         // we may run epoch transition not with headBlock if it's weak
         if (preparedState === undefined || updatedHead !== headBlock) {
-          preparedState = await this.chain.regen.getBlockSlotState(
+          preparedState = await this.chain.stateEngine.getBlockSlotState(
             updatedHead,
             prepareSlot,
             // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
@@ -311,7 +311,7 @@ export class PrepareNextSlotScheduler {
         this.computeStateHashTreeRoot(preparedState, isEpochTransition);
       } else {
         // Pre-bellatrix only reaches here at an epoch transition to precompute the next epoch state
-        const preparedState = await this.chain.regen.getBlockSlotState(
+        const preparedState = await this.chain.stateEngine.getBlockSlotState(
           headBlock,
           prepareSlot,
           {dontTransferCache: !isEpochTransition},
@@ -325,7 +325,7 @@ export class PrepareNextSlotScheduler {
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(updatedHead.blockRoot, nextEpoch);
+        const previousHits = this.chain.stateEngine.updatePreComputedCheckpoint(updatedHead.blockRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }

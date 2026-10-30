@@ -172,7 +172,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
     },
-    justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
     confirmedRoot: genesisBlock.blockRoot,
     previousEpochObservedJustifiedCheckpoint: {

@@ -2,7 +2,7 @@ import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -33,7 +33,6 @@ import {CustodyConfig} from "../util/dataColumns.js";
 import {ReconstructMissPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
@@ -58,7 +57,7 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
-import {IStateRegenerator, RegenCaller} from "./regen/index.js";
+import {RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
   SeenAggregators,
@@ -74,7 +73,8 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
-import {ShufflingCache} from "./shufflingCache.js";
+import {IStateEngine} from "./stateEngine/index.js";
+import {IValidationEngine} from "./validationEngine/index.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 export {type AssembledBlockType, BlockType, type ProposerPreparationData};
@@ -117,13 +117,15 @@ export interface IBeaconChain {
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
-  readonly regen: IStateRegenerator;
+  readonly stateEngine: IStateEngine;
+  readonly validationEngine: IValidationEngine;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly pubkeyCache: PubkeyCache;
   readonly archiveStore: IArchiveStore;
 
-  // Ops pool
+  // Pools and seen caches are owned by the validation engine (constructed, pruned and persisted there) and
+  // aliased here for the validators it runs
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
@@ -151,11 +153,9 @@ export interface IBeaconChain {
   readonly seenBlockAttesters: SeenBlockAttesters;
 
   readonly beaconProposerCache: BeaconProposerCache;
-  readonly checkpointBalancesCache: CheckpointBalancesCache;
 
   readonly blockProductionCache: Map<RootHex, ProduceResult>;
 
-  readonly shufflingCache: ShufflingCache;
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
   // Cache for serialized objects
   readonly serializedCache: SerializedCache;
@@ -301,12 +301,6 @@ export interface IBeaconChain {
   ): Promise<void>;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void;
-  regenStateForAttestationVerification(
-    attEpoch: Epoch,
-    shufflingDependentRoot: RootHex,
-    attHeadBlock: ProtoBlock,
-    regenCaller: RegenCaller
-  ): Promise<EpochShuffling>;
   updateBuilderStatus(clockSlot: Slot): void;
 
   regenCanAcceptWork(): boolean;

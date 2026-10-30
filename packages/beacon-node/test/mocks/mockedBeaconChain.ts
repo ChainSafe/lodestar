@@ -8,6 +8,7 @@ import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
+import {IBeaconChain} from "../../src/chain/interface.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
 import {
@@ -16,10 +17,10 @@ import {
   OpPool,
   SyncContributionAndProofPool,
 } from "../../src/chain/opPools/index.js";
-import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenExecutionPayloadBids} from "../../src/chain/seenCache/seenExecutionPayloadBids.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
-import {ShufflingCache} from "../../src/chain/shufflingCache.js";
+import {StateEngine} from "../../src/chain/stateEngine/stateEngine.js";
+import {ValidationEngine} from "../../src/chain/validationEngine/validationEngine.js";
 import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
@@ -40,8 +41,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
   beaconProposerCache: Mocked<BeaconProposerCache>;
   seenBlockInputCache: Mocked<SeenBlockInput>;
-  shufflingCache: Mocked<ShufflingCache>;
-  regen: Mocked<QueuedStateRegenerator>;
+  stateEngine: Mocked<StateEngine>;
   bls: {
     verifySignatureSets: Mock<() => boolean>;
     verifySignatureSetsSameMessage: Mock<() => boolean>;
@@ -103,6 +103,7 @@ vi.mock("../../src/chain/regen/index.js");
 vi.mock("../../src/chain/beaconProposerCache.js");
 vi.mock("../../src/chain/seenCache/seenGossipBlockInput.js");
 vi.mock("../../src/chain/shufflingCache.js");
+vi.mock("../../src/chain/stateEngine/stateEngine.js");
 vi.mock("../../src/chain/lightClient/index.js");
 
 vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
@@ -150,7 +151,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
     const clock =
       clockParam === "real" ? new Clock({config, genesisTime, signal: new AbortController().signal}) : getMockedClock();
 
-    return {
+    const chain = {
       config,
       opts: {},
       genesisTime,
@@ -207,7 +208,6 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       seenPayloadEnvelope: vi.fn(),
       seenExecutionPayloadBids: new SeenExecutionPayloadBids(),
       getParentExecutionRequests: vi.fn(),
-      shufflingCache: new ShufflingCache(),
       pubkeyCache,
       produceCommonBlockBody: vi.fn(),
       getProposerHead: vi.fn(),
@@ -227,10 +227,9 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       persistInvalidSszValue: vi.fn(),
       persistExecutionPayloadEnvelope: vi.fn(),
       persistInvalidSszBytes: vi.fn(),
-      regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),
       logger,
-      regen: new QueuedStateRegenerator({} as any),
+      stateEngine: new StateEngine({} as any, {} as any, vi.fn()),
       lightClientServer: new LightClientServer({} as any, {} as any),
       bls: {
         verifySignatureSets: vi.fn().mockResolvedValue(true),
@@ -240,6 +239,8 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       },
       emitter: new ChainEventEmitter(),
     };
+    // Real engine over the mocked chain, so tests observe pool and fork choice writes on the chain mocks
+    return Object.assign(chain, {validationEngine: new ValidationEngine(chain as unknown as IBeaconChain)});
   });
 
   return {

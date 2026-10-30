@@ -16,7 +16,7 @@ describe("chain / archive / ArchiveStore", () => {
         chain: {
           bufferPool: {},
           emitter,
-          regen: {},
+          stateEngine: {},
         },
         db: {},
         logger,

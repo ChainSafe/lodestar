@@ -1,4 +1,4 @@
-import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
+import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ForkChoiceStateGetter, IFastConfirmationStore} from "./fastConfirmation/types.js";
@@ -12,17 +12,6 @@ import {CheckpointWithBalance, CheckpointWithTotalBalance, PtcQuorumEvent} from 
 export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 
 export type JustifiedBalances = EffectiveBalanceIncrements;
-
-/**
- * Returns the justified balances of checkpoint.
- * MUST not throw an error in any case, related to cache miss. Either trigger regen or approximate from a close state.
- * `blockState` is maybe used as a fallback state to get balances since it's very close to desired justified state.
- * @param blockState state that declares justified checkpoint `checkpoint`
- */
-export type JustifiedBalancesGetter = (
-  checkpoint: CheckpointWithHex,
-  blockState: IBeaconStateView
-) => JustifiedBalances;
 
 /**
  * Approximates the `Store` in "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -43,7 +32,6 @@ export interface IForkChoiceStore extends IFastConfirmationStore {
   unrealizedJustified: CheckpointWithBalance;
   finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
-  justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
   notifyFastConfirmation?(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void;
   notifyPtcQuorum?(data: PtcQuorumEvent): void;
@@ -58,7 +46,6 @@ export class ForkChoiceStore implements IForkChoiceStore {
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   equivocatingIndices = new Set<ValidatorIndex>();
-  justifiedBalancesGetter: JustifiedBalancesGetter;
   currentSlot: Slot;
 
   // Fast Confirmation Rule spec fields
@@ -80,7 +67,6 @@ export class ForkChoiceStore implements IForkChoiceStore {
     justifiedCheckpoint: phase0.Checkpoint,
     finalizedCheckpoint: phase0.Checkpoint,
     justifiedBalances: EffectiveBalanceIncrements,
-    justifiedBalancesGetter: JustifiedBalancesGetter,
     stateGetter: ForkChoiceStateGetter,
     private readonly events?: {
       onJustified: (cp: CheckpointWithHex) => void;
@@ -89,7 +75,6 @@ export class ForkChoiceStore implements IForkChoiceStore {
       onPtcQuorum?: (data: PtcQuorumEvent) => void;
     }
   ) {
-    this.justifiedBalancesGetter = justifiedBalancesGetter;
     this.currentSlot = currentSlot;
     this.stateGetter = stateGetter;
     const justified = {

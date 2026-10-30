@@ -17,11 +17,11 @@ import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {IStateRegenerator} from "../../../src/chain/regen/index.js";
 import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
 import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
+import {IStateEngine} from "../../../src/chain/stateEngine/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
@@ -157,18 +157,20 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
   const subnet = state.epochCtx.computeSubnetForSlot(attSlot, attIndex);
 
-  // Add state to regen
-  const regen = {
+  // Add state and shufflings to the state engine
+  const stateEngine = {
     getState: async () => new BeaconStateView(state),
     // TODO: remove this once we have a better way to get state
     getStateSync: () => new BeaconStateView(state),
-  } as Partial<IStateRegenerator> as IStateRegenerator;
+    getShuffling: (epoch, decisionRoot) => shufflingCache.get(epoch, decisionRoot),
+    getShufflingSync: (epoch, decisionRoot) => shufflingCache.getSync(epoch, decisionRoot),
+  } as Partial<IStateEngine> as IStateEngine;
 
   const chain = {
     clock,
     config: state.config,
     forkChoice,
-    regen,
+    stateEngine,
     seenAttesters: new SeenAttesters(),
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
@@ -177,7 +179,6 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
     waitForBlock: () => Promise.resolve(false),
     pubkeyCache: state.epochCtx.pubkeyCache,
-    shufflingCache,
     opts: defaultChainOptions,
   } as Partial<IBeaconChain> as IBeaconChain;
 

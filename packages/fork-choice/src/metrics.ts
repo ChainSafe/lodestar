@@ -1,9 +1,20 @@
-import {MetricsRegisterExtra} from "@lodestar/utils";
+import {Counter, MetricsRegisterExtra} from "@lodestar/utils";
 import {FastConfirmationMetrics, getFastConfirmationMetrics} from "./forkChoice/fastConfirmation/metrics.js";
 import {UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 import {NotReorgedReason} from "./forkChoice/interface.js";
 
-export type ForkChoiceMetrics = ReturnType<typeof getForkChoiceMetrics> & FastConfirmationMetrics;
+/** Defined in beacon-node `createLodestarMetrics`, consumed by `ForkChoice.getJustifiedBalances` */
+export type BalancesCacheMetrics = {
+  balancesCache: {
+    requests: Counter;
+    misses: Counter;
+    closestStateResult: Counter<{stateId: string}>;
+  };
+};
+
+export type ForkChoiceMetrics = ReturnType<typeof getForkChoiceMetrics> &
+  FastConfirmationMetrics &
+  BalancesCacheMetrics;
 
 export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
   return {

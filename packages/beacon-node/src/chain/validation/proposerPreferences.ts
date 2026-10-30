@@ -103,7 +103,10 @@ export async function validateGossipProposerPreferences(
     proposers = headState.nextProposers;
   } else {
     // Sync lookup only to not trigger disk reload from gossip input.
-    const checkpointState = chain.regen.getCheckpointStateSync({epoch: dependentEpoch, rootHex: dependentRootHex});
+    const checkpointState = chain.stateEngine.getCheckpointStateSync({
+      epoch: dependentEpoch,
+      rootHex: dependentRootHex,
+    });
     if (checkpointState !== null) {
       // State is at `dependentEpoch`, so proposers for `proposalSlot` (next epoch from
       // the state's perspective) live in `nextProposers`.

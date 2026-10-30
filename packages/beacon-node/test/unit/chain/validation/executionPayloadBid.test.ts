@@ -66,7 +66,7 @@ describe("validateGossipExecutionPayloadBid", () => {
     const builder = ssz.gloas.Builder.defaultValue();
     builder.depositEpoch = 0;
     builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
-    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder}));
+    chain.stateEngine.getBlockSlotState.mockResolvedValue(mockState({builder}));
     signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     signedBid.message.slot = 2;
     signedBid.message.parentBlockRoot = parentBlockRoot;
@@ -129,7 +129,7 @@ describe("validateGossipExecutionPayloadBid", () => {
   });
 
   it("rejects if the parent state cannot be regenerated", async () => {
-    chain.regen.getBlockSlotState.mockRejectedValue(Error("no state"));
+    chain.stateEngine.getBlockSlotState.mockRejectedValue(Error("no state"));
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT},
     });
@@ -165,7 +165,7 @@ describe("validateGossipExecutionPayloadBid", () => {
   });
 
   it("rejects an inactive builder", async () => {
-    chain.regen.getBlockSlotState.mockResolvedValue(mockState());
+    chain.stateEngine.getBlockSlotState.mockResolvedValue(mockState());
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE},
     });
@@ -221,7 +221,7 @@ describe("validateGossipExecutionPayloadBid", () => {
     builder.depositEpoch = 0;
     builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
     builder.version = PAYLOAD_BUILDER_VERSION + 1;
-    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder}));
+    chain.stateEngine.getBlockSlotState.mockResolvedValue(mockState({builder}));
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION},
     });
@@ -233,7 +233,7 @@ describe("validateGossipExecutionPayloadBid", () => {
     builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
     const mockedState = mockState({builder});
     (mockedState as any).canBuilderCoverBid = () => false;
-    chain.regen.getBlockSlotState.mockResolvedValue(mockedState);
+    chain.stateEngine.getBlockSlotState.mockResolvedValue(mockedState);
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH},
     });

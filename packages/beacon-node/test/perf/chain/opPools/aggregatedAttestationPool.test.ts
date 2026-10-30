@@ -141,7 +141,6 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           ...finalizedCheckpoint,
           rootHex: toHexString(finalizedCheckpoint.root),
         },
-        justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
         confirmedRoot: toHexString(finalizedCheckpoint.root),
         previousEpochObservedJustifiedCheckpoint: {

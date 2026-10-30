@@ -112,7 +112,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
       getShufflingDecisionRoot: () => toRootHex(Buffer.alloc(32)),
       getShufflingAtEpoch: () => shuffling,
     } as unknown as IBeaconStateView;
-    chain.regen.getPreState.mockResolvedValue(preState);
+    chain.stateEngine.getPreState.mockResolvedValue(preState);
     Object.defineProperty(chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     vi.mocked(verifyBlocksExecutionPayload).mockResolvedValue({
       execAborted: null,
@@ -137,8 +137,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     expect(result.indexedAttestationsByBlock).toEqual([
       [{data: attestation.data, signature: attestation.signature, attestingIndices: [10, 30]}],
     ]);
-    expect(chain.shufflingCache.processState).not.toHaveBeenCalled();
-    expect(chain.shufflingCache.getIndexedAttestation).not.toHaveBeenCalled();
+    expect(chain.stateEngine.processShufflings).not.toHaveBeenCalled();
     expect(result.blockDAStatuses).toEqual([DataAvailabilityStatus.NotRequired]);
     expect(result.payloadDAStatuses).toEqual(
       new Map(expectedPayloadDA === undefined ? [] : [[block.message.slot, expectedPayloadDA]])

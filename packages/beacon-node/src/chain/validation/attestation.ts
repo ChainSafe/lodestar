@@ -718,7 +718,7 @@ export async function getShufflingForAttestationVerification(
   const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
   const shufflingDependentRoot = getShufflingDependentRoot(chain.forkChoice, attEpoch, blockEpoch, attHeadBlock);
 
-  const shuffling = await chain.shufflingCache.get(attEpoch, shufflingDependentRoot);
+  const shuffling = await chain.stateEngine.getShuffling(attEpoch, shufflingDependentRoot);
   if (shuffling) {
     // most of the time, we should get the shuffling from cache
     chain.metrics?.gossipAttestation.shufflingCacheHit.inc({caller: regenCaller});
@@ -730,7 +730,7 @@ export async function getShufflingForAttestationVerification(
     // for the 1st time of the same epoch and dependent root, it awaits for the regen state
     // from the 2nd time, it should use the same cached promise and it should reach the above code
     chain.metrics?.gossipAttestation.shufflingCacheRegenHit.inc({caller: regenCaller});
-    return await chain.regenStateForAttestationVerification(
+    return await chain.stateEngine.regenStateForAttestationVerification(
       attEpoch,
       shufflingDependentRoot,
       attHeadBlock,

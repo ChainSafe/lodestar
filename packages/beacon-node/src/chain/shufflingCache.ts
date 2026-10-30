@@ -329,3 +329,5 @@ type ShufflingCacheErrorType = {
 };
 
 export class ShufflingCacheError extends LodestarError<ShufflingCacheErrorType> {}
+
+export type BeaconCommitteeGetter = Pick<ShufflingCache, "getBeaconCommitteeOrNull">;

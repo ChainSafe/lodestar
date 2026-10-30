@@ -126,7 +126,7 @@ describe("beacon state api utils", () => {
         getJustifiedCheckpoint: () => ({rootHex: "0x00", epoch: 0}),
         getFinalizedBlock: () => ({slot: 0}),
       },
-      regen: {getStateSync: () => servedResponse.state},
+      stateEngine: {getStateSync: () => servedResponse.state},
       getStateByStateRoot: () => Promise.resolve(servedResponse),
       getStateOrBytesByCheckpoint: () => Promise.resolve(servedResponse),
       getStateBySlot: () => Promise.resolve(servedResponse),
@@ -160,7 +160,7 @@ describe("beacon state api utils", () => {
           getHead: () => head,
           getFinalizedCheckpoint: () => ({rootHex: "0xbb", epoch: 497}),
         },
-        regen: {getStateSync: (stateRoot: string) => (stateRoot === head.stateRoot ? cachedState : null)},
+        stateEngine: {getStateSync: (stateRoot: string) => (stateRoot === head.stateRoot ? cachedState : null)},
         getHeadState,
       } as unknown as IBeaconChain;
       return {chain, getHeadState};

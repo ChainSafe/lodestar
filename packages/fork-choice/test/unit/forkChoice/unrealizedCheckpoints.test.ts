@@ -40,6 +40,9 @@ function setup(): {
     finalizedCheckpoint: checkpoint(0),
   }));
   const state = {
+    slot: blockSlot,
+    epoch: blockEpoch,
+    getEffectiveBalanceIncrementsZeroInactive: () => new Uint16Array(VALIDATOR_COUNT),
     currentJustifiedCheckpoint: checkpoint(0),
     finalizedCheckpoint: checkpoint(0),
     computeUnrealizedCheckpoints,

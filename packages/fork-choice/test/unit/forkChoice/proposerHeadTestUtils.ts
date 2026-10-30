@@ -122,7 +122,6 @@ export function makeStore({
     unrealizedJustified: {checkpoint, balances},
     finalizedCheckpoint: checkpoint,
     unrealizedFinalizedCheckpoint: checkpoint,
-    justifiedBalancesGetter: () => balances,
     equivocatingIndices,
     confirmedRoot: genesisRoot,
     previousEpochObservedJustifiedCheckpoint: checkpoint,

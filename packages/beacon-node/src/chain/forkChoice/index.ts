@@ -5,7 +5,6 @@ import {
   ForkChoice,
   ForkChoiceStateGetter,
   ForkChoiceStore,
-  JustifiedBalancesGetter,
   PayloadStatus,
   ProtoArray,
   ProtoBlock,
@@ -25,6 +24,7 @@ import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {NativeComponent, NativeComponentsOpts, nativeComponentNotImplemented} from "../nativeComponents.js";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only
@@ -45,35 +45,17 @@ export function initializeForkChoice(
   currentSlot: Slot,
   state: IBeaconStateView,
   isFinalizedState: boolean,
-  opts: ForkChoiceOpts,
-  justifiedBalancesGetter: JustifiedBalancesGetter,
+  opts: ForkChoiceOpts & Pick<NativeComponentsOpts, "nativeForkChoice">,
   stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
+  if (opts.nativeForkChoice) {
+    throw nativeComponentNotImplemented(NativeComponent.forkChoice);
+  }
   return isFinalizedState
-    ? initializeForkChoiceFromFinalizedState(
-        config,
-        emitter,
-        currentSlot,
-        state,
-        opts,
-        justifiedBalancesGetter,
-        stateGetter,
-        metrics,
-        logger
-      )
-    : initializeForkChoiceFromUnfinalizedState(
-        config,
-        emitter,
-        currentSlot,
-        state,
-        opts,
-        justifiedBalancesGetter,
-        stateGetter,
-        metrics,
-        logger
-      );
+    ? initializeForkChoiceFromFinalizedState(config, emitter, currentSlot, state, opts, stateGetter, metrics, logger)
+    : initializeForkChoiceFromUnfinalizedState(config, emitter, currentSlot, state, opts, stateGetter, metrics, logger);
 }
 
 /**
@@ -85,7 +67,6 @@ export function initializeForkChoiceFromFinalizedState(
   currentSlot: Slot,
   state: IBeaconStateView,
   opts: ForkChoiceOpts,
-  justifiedBalancesGetter: JustifiedBalancesGetter,
   stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
@@ -112,21 +93,13 @@ export function initializeForkChoiceFromFinalizedState(
   return new forkchoiceConstructor(
     config,
 
-    new ForkChoiceStore(
-      currentSlot,
-      justifiedCheckpoint,
-      finalizedCheckpoint,
-      justifiedBalances,
-      justifiedBalancesGetter,
-      stateGetter,
-      {
-        onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
-        onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
-        onFastConfirmation: ({block, slot, currentSlot}) =>
-          emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
-        onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
-      }
-    ),
+    new ForkChoiceStore(currentSlot, justifiedCheckpoint, finalizedCheckpoint, justifiedBalances, stateGetter, {
+      onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
+      onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+      onFastConfirmation: ({block, slot, currentSlot}) =>
+        emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+      onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
+    }),
 
     ProtoArray.initialize(
       {
@@ -184,7 +157,6 @@ export function initializeForkChoiceFromUnfinalizedState(
   currentSlot: Slot,
   unfinalizedState: IBeaconStateView,
   opts: ForkChoiceOpts,
-  justifiedBalancesGetter: JustifiedBalancesGetter,
   stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
@@ -216,7 +188,6 @@ export function initializeForkChoiceFromUnfinalizedState(
     justifiedCheckpoint,
     finalizedCheckpoint,
     justifiedBalances,
-    justifiedBalancesGetter,
     stateGetter,
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),

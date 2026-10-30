@@ -92,7 +92,7 @@ async function validatePayloadAttestationMessage(
 
   // block.slot === data.slot is enforced above, so use the block's post-state directly to avoid
   // getting through regen queue
-  const state = chain.regen.getStateSync(block.stateRoot);
+  const state = chain.stateEngine.getStateSync(block.stateRoot);
   if (state == null) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,

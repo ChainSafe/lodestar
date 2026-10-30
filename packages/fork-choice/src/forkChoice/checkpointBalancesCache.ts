@@ -1,7 +1,7 @@
-import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {EffectiveBalanceIncrements, IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {CheckpointWithHex} from "./store.js";
 
 /** The number of validator balance sets that are cached within `CheckpointBalancesCache`. */
 const MAX_BALANCE_CACHE_SIZE = 4;

@@ -9,17 +9,15 @@ import {MockedBeaconChain, getMockedBeaconChain} from "../../../../mocks/mockedB
 
 describe("getShufflingForAttestationVerification", () => {
   let chain: MockedBeaconChain;
-  let regenStub: MockedBeaconChain["regen"];
+  let stateEngineStub: MockedBeaconChain["stateEngine"];
   let forkchoiceStub: MockedBeaconChain["forkChoice"];
-  let shufflingCacheStub: MockedBeaconChain["shufflingCache"];
 
   beforeEach(() => {
     chain = getMockedBeaconChain();
-    regenStub = chain.regen;
+    stateEngineStub = chain.stateEngine;
     forkchoiceStub = chain.forkChoice;
-    shufflingCacheStub = chain.shufflingCache;
-    vi.spyOn(regenStub, "getBlockSlotState");
-    vi.spyOn(regenStub, "getState");
+    vi.spyOn(stateEngineStub, "getBlockSlotState");
+    vi.spyOn(stateEngineStub, "getState");
   });
 
   afterEach(() => {
@@ -44,7 +42,7 @@ describe("getShufflingForAttestationVerification", () => {
       throw new Error("Unexpected input");
     });
     const expectedShuffling = {epoch: attEpoch} as EpochShuffling;
-    shufflingCacheStub.get.mockImplementationOnce((epoch, root) => {
+    stateEngineStub.getShuffling.mockImplementationOnce((epoch, root) => {
       if (epoch === attEpoch && root === previousDependentRoot) {
         return Promise.resolve(expectedShuffling);
       }
@@ -74,7 +72,7 @@ describe("getShufflingForAttestationVerification", () => {
       throw new Error("Unexpected input");
     });
     const expectedShuffling = {epoch: attEpoch} as EpochShuffling;
-    shufflingCacheStub.get.mockImplementationOnce((epoch, root) => {
+    stateEngineStub.getShuffling.mockImplementationOnce((epoch, root) => {
       if (epoch === attEpoch && root === currentDependentRoot) {
         return Promise.resolve(expectedShuffling);
       }
@@ -98,7 +96,7 @@ describe("getShufflingForAttestationVerification", () => {
     } as Partial<ProtoBlock>;
     const expectedShuffling = {epoch: attEpoch} as EpochShuffling;
     let callCount = 0;
-    shufflingCacheStub.get.mockImplementationOnce((epoch, root) => {
+    stateEngineStub.getShuffling.mockImplementationOnce((epoch, root) => {
       if (epoch === attEpoch && root === blockRoot) {
         if (callCount === 0) {
           callCount++;
@@ -108,7 +106,9 @@ describe("getShufflingForAttestationVerification", () => {
       }
       return Promise.resolve(null);
     });
-    chain.regenStateForAttestationVerification.mockImplementationOnce(() => Promise.resolve(expectedShuffling));
+    stateEngineStub.regenStateForAttestationVerification.mockImplementationOnce(() =>
+      Promise.resolve(expectedShuffling)
+    );
 
     const resultShuffling = await getShufflingForAttestationVerification(
       chain,

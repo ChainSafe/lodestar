@@ -1,4 +1,4 @@
-import {Mock, Mocked, beforeEach, describe, expect, it, vi} from "vitest";
+import {Mock, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -7,7 +7,6 @@ import {BeaconStateView, signedBlockToSignedHeader} from "@lodestar/state-transi
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
-import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants/index.js";
@@ -18,7 +17,7 @@ import {generateCachedState} from "../../../utils/state.js";
 describe("gossip block validation", () => {
   let chain: MockedBeaconChain;
   let forkChoice: MockedBeaconChain["forkChoice"];
-  let regen: Mocked<QueuedStateRegenerator>;
+  let regen: MockedBeaconChain["stateEngine"];
   let verifySignature: Mock<() => boolean>;
   let job: SignedBeaconBlock;
   const proposerIndex = 0;
@@ -54,7 +53,7 @@ describe("gossip block validation", () => {
     forkChoice = chain.forkChoice;
     forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
     chain.forkChoice = forkChoice;
-    regen = chain.regen;
+    regen = chain.stateEngine;
 
     (chain as any).opts = {};
 

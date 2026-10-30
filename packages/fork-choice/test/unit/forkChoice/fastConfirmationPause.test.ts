@@ -62,7 +62,6 @@ describe("fast confirmation pause/resume", () => {
       unrealizedJustified: {checkpoint, balances: new Uint16Array([32])},
       finalizedCheckpoint: checkpoint,
       unrealizedFinalizedCheckpoint: checkpoint,
-      justifiedBalancesGetter: () => new Uint16Array([32]),
       equivocatingIndices: new Set(),
       confirmedRoot: finalizedRoot,
       previousEpochObservedJustifiedCheckpoint: checkpoint,

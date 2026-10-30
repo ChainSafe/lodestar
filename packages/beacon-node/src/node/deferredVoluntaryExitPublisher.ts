@@ -27,10 +27,10 @@ export function startDeferredVoluntaryExitPublisher({
       // be many epoch transitions. The head state is fine here: this is a best-effort drain that
       // re-runs every epoch, so a just-processable exit is republished next tick.
       const state = chain.getHeadState();
-      const exits = chain.deferredVoluntaryExitPool.drainProcessableExits(state);
+      const exits = chain.validationEngine.drainProcessableVoluntaryExits(state);
       for (const exit of exits) {
         try {
-          chain.opPool.insertVoluntaryExit(exit);
+          chain.validationEngine.importVoluntaryExit(exit);
           chain.emitter.emit(routes.events.EventType.voluntaryExit, exit);
           await network.publishVoluntaryExit(exit);
           logger.info("Voluntary exit successfully published for validator", {

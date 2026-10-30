@@ -21,6 +21,7 @@ import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposer
 import {SeenBlockInput} from "../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGloasBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validation/executionPayloadEnvelope.js";
+import {ValidationEngine} from "../../../src/chain/validationEngine/index.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
@@ -493,6 +494,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
           remove: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       };
+      Object.assign(chain, {validationEngine: new ValidationEngine(chain as IBeaconChain)});
 
       const setTimeoutSpy = vi.spyOn(global, "setTimeout");
       const processBlockSpy = vi.spyOn(chain, "processBlock");
@@ -742,6 +744,7 @@ describe("UnknownBlockSync", () => {
             remove: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         } as unknown as IBeaconChain;
+        Object.assign(chainForTest, {validationEngine: new ValidationEngine(chainForTest)});
 
         const debug = vi.fn();
         const loggerForTest = Object.assign(Object.create(logger), {debug}) as typeof logger;
@@ -857,6 +860,7 @@ describe("UnknownBlockSync", () => {
           prune: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       } as unknown as IBeaconChain;
+      Object.assign(chainForTest, {validationEngine: new ValidationEngine(chainForTest)});
 
       const svc = new BlockInputSync(minimalConfig, networkForTest, chainForTest, logger, null, defaultSyncOptions);
       svc.subscribeToNetwork();
@@ -1038,6 +1042,7 @@ describe("UnknownBlockSync", () => {
         } as unknown as IForkChoice,
         ...chainOverrides,
       } as IBeaconChain;
+      Object.assign(chain, {validationEngine: new ValidationEngine(chain)});
 
       const network = {
         events: networkEvents,
@@ -3007,6 +3012,7 @@ describe("UnknownBlockSync", () => {
         isKnown: vi.fn().mockReturnValue(false),
       } as unknown as SeenBlockProposers,
     };
+    Object.assign(chainForTest, {validationEngine: new ValidationEngine(chainForTest as IBeaconChain)});
 
     service = new BlockInputSync(gloasConfig, network, chainForTest as IBeaconChain, logger, null, defaultSyncOptions);
     service.subscribeToNetwork();

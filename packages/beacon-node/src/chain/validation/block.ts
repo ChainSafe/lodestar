@@ -202,10 +202,10 @@ export async function validateGossipBlock(
 
   const getValidationState = async () => {
     const getPreState = () =>
-      chain.regen.getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock);
+      chain.stateEngine.getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock);
     if (canUseParentState) {
       try {
-        const parentState = await chain.regen.getState(parentBlock.stateRoot, RegenCaller.validateGossipBlock);
+        const parentState = await chain.stateEngine.getState(parentBlock.stateRoot, RegenCaller.validateGossipBlock);
         chain.metrics?.gossipBlock.preStateSource.inc({source: "parentState"});
         return parentState;
       } catch {
@@ -236,7 +236,7 @@ export async function validateGossipBlock(
   });
 
   // in forky condition, make sure to populate ShufflingCache with regened state
-  chain.shufflingCache.processState(state);
+  chain.stateEngine.processShufflings(state);
 
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
@@ -308,6 +308,38 @@ export async function validateGossipBlock(
   chain.seenBlockProposers.add(blockSlot, proposerIndex, blockRoot);
 
   return {skippedSlots};
+}
+
+/**
+ * The gossip rules that need no parent: proposer signature and proposer equivocation tracking. Applied to a
+ * block retained for unknown parent sync, so that two concurrent proposals cannot both be retained.
+ */
+export async function validateGossipBlockWithUnknownParent(
+  chain: IBeaconChain,
+  signedBlock: SignedBeaconBlock,
+  blockRoot: RootHex
+): Promise<void> {
+  const {slot, proposerIndex} = signedBlock.message;
+  await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
+  chain.seenBlockProposers.observeBlockRoot(
+    slot,
+    proposerIndex,
+    blockRoot,
+    signedBlockToSignedHeader(chain.config, signedBlock)
+  );
+
+  // Check again after the signature verification so concurrent proposals cannot both be retained
+  if (chain.seenBlockProposers.isKnown(slot, proposerIndex)) {
+    if (chain.seenBlockProposers.isRepeatProposal(slot, proposerIndex, blockRoot)) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex,
+        root: blockRoot,
+      });
+    }
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
+  }
+  chain.seenBlockProposers.add(slot, proposerIndex, blockRoot);
 }
 
 export async function verifyBlockProposerSignature(

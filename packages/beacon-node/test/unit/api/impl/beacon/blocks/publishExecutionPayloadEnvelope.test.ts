@@ -65,7 +65,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
 
       modules.forkChoice.getBlockHex.mockReturnValue(generateProtoBlock({slot}));
       vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
-      modules.chain.regen.getBlockSlotState.mockResolvedValue({forkName: ForkName.gloas} as IBeaconStateView);
+      modules.chain.stateEngine.getBlockSlotState.mockResolvedValue({forkName: ForkName.gloas} as IBeaconStateView);
       modules.chain.seenBlockProposers.add(slot, proposerIndex, blockRoot);
       modules.chain.seenBlockProposers.observeBlockRoot(
         slot,

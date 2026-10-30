@@ -71,7 +71,7 @@ export async function getStateResponseWithRegen(
     const head = chain.forkChoice.getHead();
     // Head block's post-state is not cached after init from an anchor state at a skipped boundary slot,
     // it does not exist anywhere and regen has no seed for it, serve the closest head state instead
-    const state = chain.regen.getStateSync(head.stateRoot) ?? chain.getHeadState();
+    const state = chain.stateEngine.getStateSync(head.stateRoot) ?? chain.getHeadState();
     const finalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
     return {
       state,
