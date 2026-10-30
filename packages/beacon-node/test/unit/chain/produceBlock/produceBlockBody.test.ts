@@ -158,7 +158,7 @@ describe("Fulu engine body", () => {
       });
       expect(modules.chain.executionEngine.notifyForkchoiceUpdate).toHaveBeenCalledExactlyOnceWith(
         ForkName.fulu,
-        expect.any(String),
+        toRootHex(parentBlockRoot),
         toRootHex(state.latestExecutionPayloadHeader.blockHash),
         expect.any(String),
         expect.any(String),
