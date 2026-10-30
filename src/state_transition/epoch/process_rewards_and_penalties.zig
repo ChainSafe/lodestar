@@ -32,12 +32,10 @@ pub fn processRewardsAndPenalties(
 
     // applyPendingDeposit appends with appendAssumeCapacity for each validator it adds, at most
     // MAX_PENDING_DEPOSITS_PER_EPOCH per epoch, so this headroom is required.
-    var new_balances: std.ArrayList(u64) = try .initCapacity(
-        cache.allocator,
-        validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
+    std.debug.assert(
+        cache.balances_buffer.len >= validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
     );
-    errdefer new_balances.deinit(cache.allocator);
-
+    var new_balances: std.ArrayList(u64) = .initBuffer(cache.balances_buffer);
     const balances = new_balances.addManyAsSliceAssumeCapacity(validator_count);
     _ = try balances_view.getAllInto(balances);
 
@@ -53,9 +51,6 @@ pub fn processRewardsAndPenalties(
 
     try state.setBalances(&new_balances);
 
-    if (cache.balances) |*old_balances| {
-        old_balances.deinit(cache.allocator);
-    }
     // Populate cache.balances for reuse by the validator monitor and
     // more importantly processEffectiveBalanceUpdates() doesn't need to
     // get from tree view state which has to commit.
