@@ -3,6 +3,7 @@ import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
+import {ExecutionProofVerificationKey} from "./proofEngine/interface.js";
 import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {
@@ -56,6 +57,8 @@ export type IChainOptions = BlockProcessOpts &
     faultInspectionWindow?: number;
     /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
     allowedFaults?: number;
+    /** Verification keys for the EIP-8025 proof types this node verifies; empty means not execution proof-aware */
+    executionProofVerifiers?: ExecutionProofVerificationKey[];
   };
 
 export type BlockProcessOpts = {

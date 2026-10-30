@@ -13,6 +13,8 @@ import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
+  ExecutionProofError,
+  ExecutionProofErrorCode,
   GossipAction,
   PayloadAttestationError,
   PayloadAttestationErrorCode,
@@ -21,6 +23,7 @@ import {
 } from "../../../../chain/errors/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
+import {validateApiExecutionProof} from "../../../../chain/validation/executionProof.js";
 import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiPayloadAttestationMessage} from "../../../../chain/validation/payloadAttestationMessage.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
@@ -30,6 +33,13 @@ import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
+
+/** The API spec says a proof the node has already processed is not an error */
+const ALREADY_PROCESSED_EXECUTION_PROOF_CODES = new Set<ExecutionProofErrorCode>([
+  ExecutionProofErrorCode.PROOF_ALREADY_KNOWN,
+  ExecutionProofErrorCode.PROOF_ALREADY_PROCESSED,
+  ExecutionProofErrorCode.PROVER_ALREADY_SEEN,
+]);
 
 export function getBeaconPoolApi({
   chain,
@@ -307,6 +317,47 @@ export function getBeaconPoolApi({
 
       if (failures.length > 0) {
         throw new IndexedError("Error processing payload attestation messages", failures);
+      }
+    },
+
+    async submitExecutionProofs({signedExecutionProofEnvelopes}) {
+      const seenTimestampSec = Date.now() / 1000;
+      const failures: FailureList = [];
+
+      await Promise.all(
+        signedExecutionProofEnvelopes.map(async (signedProofEnvelope, i) => {
+          const {proofType} = signedProofEnvelope.message;
+          const logCtx = {
+            blockRoot: toRootHex(signedProofEnvelope.message.beaconBlockRoot),
+            proofType,
+            validatorIndex: signedProofEnvelope.validatorIndex,
+          };
+          try {
+            const {blockSlot} = await validateApiExecutionProof(chain, signedProofEnvelope);
+
+            metrics?.gossipExecutionProof.elapsedTimeTillReceived.observe(
+              {source: OpSource.api, proofType},
+              chain.clock.secFromSlot(blockSlot, seenTimestampSec)
+            );
+
+            await network.publishExecutionProof(signedProofEnvelope, blockSlot);
+          } catch (e) {
+            if (e instanceof ExecutionProofError && ALREADY_PROCESSED_EXECUTION_PROOF_CODES.has(e.type.code)) {
+              logger.debug("Ignoring known execution proof", logCtx);
+              return;
+            }
+
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on submitExecutionProofs [${i}]`, logCtx, e as Error);
+            if (e instanceof ExecutionProofError && e.action === GossipAction.REJECT) {
+              chain.persistInvalidSszValue(ssz.eip8025.SignedExecutionProofEnvelope, signedProofEnvelope, "api_reject");
+            }
+          }
+        })
+      );
+
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing execution proofs", failures);
       }
     },
 

@@ -5,6 +5,7 @@ import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
 import {userOverrides, userSelectedPreset} from "./setPreset.js";
 
+export * from "./executionProofTypes.js";
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
 export type {BeaconPreset} from "./types.js";
@@ -173,6 +174,7 @@ export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
 export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
+export const DOMAIN_EXECUTION_PROOF = Uint8Array.from([15, 0, 0, 0]);
 export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
 
 // Application specific domains

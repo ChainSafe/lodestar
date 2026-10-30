@@ -16,8 +16,10 @@ import {
   OpPool,
   SyncContributionAndProofPool,
 } from "../../src/chain/opPools/index.js";
+import {ExecutionProofInput} from "../../src/chain/proofEngine/executionProof.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenExecutionPayloadBids} from "../../src/chain/seenCache/seenExecutionPayloadBids.js";
+import {SeenExecutionProofs} from "../../src/chain/seenCache/seenExecutionProofs.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
@@ -49,6 +51,11 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
     canAcceptWork: Mock<() => boolean>;
   };
   lightClientServer: Mocked<LightClientServer>;
+  proofEngine: {
+    supportedProofTypes: Set<number>;
+    verifiableProofTypes: Set<number>;
+    verifyExecutionProof: Mock<(input: ExecutionProofInput) => Promise<boolean>>;
+  };
 };
 
 vi.mock("@lodestar/fork-choice", async (importActual) => {
@@ -69,6 +76,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getBlock: vi.fn(),
       getBlockDefaultStatus: vi.fn(),
       getBlockHexDefaultStatus: vi.fn(),
+      hasPayloadHexUnsafe: vi.fn(),
       getBlockHexAndBlockHash: vi.fn(),
       getAllAncestorBlocks: vi.fn(),
       getAllNonAncestorBlocks: vi.fn(),
@@ -207,6 +215,12 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       seenPayloadEnvelope: vi.fn(),
       seenExecutionPayloadBids: new SeenExecutionPayloadBids(),
       getParentExecutionRequests: vi.fn(),
+      seenExecutionProofs: new SeenExecutionProofs(),
+      proofEngine: {
+        supportedProofTypes: new Set([1, 2, 3, 4, 5, 6, 7, 8]),
+        verifiableProofTypes: new Set([1, 2, 3]),
+        verifyExecutionProof: vi.fn().mockResolvedValue(true),
+      },
       shufflingCache: new ShufflingCache(),
       pubkeyCache,
       produceCommonBlockBody: vi.fn(),

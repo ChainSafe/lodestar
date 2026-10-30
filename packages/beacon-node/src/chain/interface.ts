@@ -58,6 +58,7 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
+import {ProofEngine} from "./proofEngine/index.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
@@ -72,6 +73,7 @@ import {
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
+import {SeenExecutionProofs} from "./seenCache/seenExecutionProofs.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
@@ -114,6 +116,7 @@ export interface IBeaconChain {
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
+  readonly proofEngine: ProofEngine;
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
@@ -147,6 +150,7 @@ export interface IBeaconChain {
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
+  readonly seenExecutionProofs: SeenExecutionProofs;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 

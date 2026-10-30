@@ -141,6 +141,7 @@ const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.execution_payload_bid]: {},
   [GossipType.proposer_preferences]: {},
   [GossipType.inclusion_list]: {},
+  [GossipType.execution_proof]: {},
 };
 const executeGossipWorkOrder = Object.keys(executeGossipWorkOrderObj) as (keyof typeof executeGossipWorkOrderObj)[];
 

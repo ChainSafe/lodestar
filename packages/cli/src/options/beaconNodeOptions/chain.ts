@@ -1,5 +1,13 @@
-import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions} from "@lodestar/utils";
+import fs from "node:fs";
+import {
+  ArchiveMode,
+  DEFAULT_ARCHIVE_MODE,
+  ExecutionProofVerificationKey,
+  IBeaconNodeOptions,
+  defaultOptions,
+} from "@lodestar/beacon-node";
+import {EXECUTION_PROOF_TYPES, ExecutionProofZkvm} from "@lodestar/params";
+import {CliCommandOptions, toHex} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
 import {CircuitBreakerArgs} from "./builder.js";
 
@@ -41,7 +49,30 @@ export type ChainArgs = {
   "chain.maxCPStateEpochsOnDisk"?: number;
 
   "chain.pruneHistory"?: boolean;
+  "chain.executionProofVerifiers"?: string[];
 };
+
+const EXECUTION_PROOF_ZKVMS: ExecutionProofZkvm[] = ["openvm", "sp1", "zisk"];
+
+/**
+ * `<proofType>:<verificationKeyPath>` for a spec-assigned type, e.g. `2:/keys/ethrex-sp1.vk`, or
+ * `<proofType>:<zkvm>:<verificationKeyPath>` to assign the type explicitly, e.g. `8:sp1:/keys/nimbus-sp1.vk`
+ */
+export function parseExecutionProofVerifierArg(arg: string): ExecutionProofVerificationKey {
+  const expected = `<proofType>:<verificationKeyPath> or <proofType>:<${EXECUTION_PROOF_ZKVMS.join("|")}>:<verificationKeyPath>`;
+  const [proofTypeStr, ...rest] = arg.split(":");
+  const proofType = Number(proofTypeStr);
+  const zkvm = EXECUTION_PROOF_ZKVMS.find((name) => name === rest[0]);
+  const verificationKeyPath = (zkvm === undefined ? rest : rest.slice(1)).join(":");
+  if (!Number.isInteger(proofType) || proofType < 1 || proofType > 255 || verificationKeyPath === "") {
+    throw Error(`Invalid execution proof verifier '${arg}', expected ${expected}`);
+  }
+  if (zkvm === undefined && !EXECUTION_PROOF_TYPES.has(proofType)) {
+    throw Error(`Proof type ${proofType} has no spec assignment, name its zkvm: ${expected}`);
+  }
+  const verificationKey = toHex(fs.readFileSync(verificationKeyPath));
+  return zkvm === undefined ? {proofType, verificationKey} : {proofType, verificationKey, zkvm};
+}
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
   return {
@@ -87,6 +118,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
     pruneHistory: args["chain.pruneHistory"],
+    executionProofVerifiers: args["chain.executionProofVerifiers"]?.map(parseExecutionProofVerifierArg),
   };
 }
 
@@ -345,6 +377,18 @@ Will double processing times. Use only for debugging purposes.",
       "Max number of checkpoint state epochs to keep on disk. Default (Infinity) uses tiered pruning to bound disk usage during long non-finality; set a finite N to keep only the last N epochs instead (previous behavior)",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsOnDisk,
+    group: "chain",
+  },
+
+  "chain.executionProofVerifiers": {
+    type: "array",
+    string: true,
+    description:
+      "EIP-8025 execution proof types this node verifies and relays, as <proofType>:<verificationKeyPath>. " +
+      "The proof type selects the guest program and zkVM from the EIP-8025 proof type table, and the file must hold " +
+      "that type's raw verification key, checked by SHA-256 against the table. " +
+      "Use <proofType>:<zkvm>:<verificationKeyPath> to assign a type explicitly, skipping the table and its check. " +
+      "Requires a lodestar-z build with the ere verifier. Unset means the node ignores execution proofs.",
     group: "chain",
   },
 

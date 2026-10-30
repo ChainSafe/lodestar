@@ -40,6 +40,7 @@ export type WorkerNetworkCoreOpts = NetworkOptions & {
   genesisTime: number;
   initialStatus: Status;
   initialCustodyGroupCount: number;
+  executionProofAware: boolean;
 };
 
 export type WorkerNetworkCoreInitModules = {
@@ -118,6 +119,7 @@ export class WorkerNetworkCore implements INetworkCore {
       metricsEnabled,
       initialStatus,
       initialCustodyGroupCount,
+      executionProofAware,
     } = opts;
 
     const workerData: NetworkWorkerData = {
@@ -131,6 +133,7 @@ export class WorkerNetworkCore implements INetworkCore {
       genesisTime,
       initialStatus,
       initialCustodyGroupCount,
+      executionProofAware,
       activeValidatorCount,
       loggerOpts: modules.logger.toOpts(),
     };

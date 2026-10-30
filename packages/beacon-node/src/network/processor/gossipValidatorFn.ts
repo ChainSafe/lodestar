@@ -11,6 +11,7 @@ import {
   DataColumnSidecarErrorCode,
   ExecutionPayloadBidErrorCode,
   ExecutionPayloadEnvelopeErrorCode,
+  ExecutionProofErrorCode,
   GossipAction,
   GossipActionError,
   InclusionListErrorCode,
@@ -98,6 +99,14 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   [GossipType.proposer_preferences]: {
     default: PeerAction.HighToleranceError,
     byCode: {[ProposerPreferencesErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.execution_proof]: {
+    default: PeerAction.LowToleranceError,
+    byCode: {
+      [ExecutionProofErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal,
+      // Proof type assignments are provisional, so a peer on a newer table may relay types we do not know
+      [ExecutionProofErrorCode.UNSUPPORTED_PROOF_TYPE]: PeerAction.HighToleranceError,
+    },
   },
   [GossipType.voluntary_exit]: {
     default: PeerAction.HighToleranceError,

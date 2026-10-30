@@ -1086,6 +1086,27 @@ export function createLodestarMetrics(
         buckets: [3, 6, 9, 12],
       }),
     },
+    gossipExecutionProof: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource; proofType: number}>({
+        name: "lodestar_gossip_execution_proof_elapsed_time_till_received_seconds",
+        help: "Time elapsed between the proven block's slot start and the time its execution proof was received",
+        labelNames: ["source", "proofType"],
+        buckets: [12, 60, 120, 300, 600, 1800],
+      }),
+    },
+    executionProofEngine: {
+      verifyTime: register.histogram<{proofType: number}>({
+        name: "lodestar_execution_proof_engine_verify_time_seconds",
+        help: "Time to verify an execution proof in the proof engine",
+        labelNames: ["proofType"],
+        buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+      }),
+      verifyResult: register.counter<{proofType: number; result: string; publicInput: string}>({
+        name: "lodestar_execution_proof_engine_verify_result_total",
+        help: "Execution proof engine results by proof type (valid, invalid_proof or public_input_mismatch) and the public input convention a valid proof matched (spec, execution_specs or none)",
+        labelNames: ["proofType", "result", "publicInput"],
+      }),
+    },
     // recovery in the case of specific blob rows required
     recoverBlobSidecars: {
       blobsReconstructed: register.counter({

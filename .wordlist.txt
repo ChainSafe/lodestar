@@ -86,6 +86,7 @@ Nim
 NodeJS
 NodeSource
 OSI
+OpenVM
 PR
 PRs
 Plaintext
@@ -114,10 +115,12 @@ UID
 UPnP
 UTF
 VM
+VPN
 Vitalik
 Vitest
 Wagyu
 Zig
+ZisK
 addons
 api
 args
@@ -159,6 +162,7 @@ devcontainer
 devnet
 devnets
 devtools
+discv5
 distutils
 dropdown
 eg
@@ -168,6 +172,7 @@ env
 envs
 ephemery
 ethers
+ethrex
 fastconfirm
 feeRecipient
 flamegraph
@@ -204,6 +209,7 @@ mbps
 mdns
 merkle
 merkleization
+minisign
 misconfiguration
 mmeshsub
 monorepo
@@ -213,6 +219,7 @@ namespace
 namespaced
 namespaces
 navbar
+nimbus
 nodemodule
 orchestrator
 osx
@@ -225,8 +232,10 @@ pnpm
 pre
 premined
 produceBlockV
+proofType
 protolambda
 prover
+provers
 pubsub
 rebased
 recompiles
@@ -260,6 +269,7 @@ util
 utils
 validator
 validators
+verificationKeyPath
 verifier
 vite
 vitest
@@ -271,3 +281,7 @@ xcode
 yaml
 yamux
 yml
+zesu
+zilkworm
+zkVM
+zkboost

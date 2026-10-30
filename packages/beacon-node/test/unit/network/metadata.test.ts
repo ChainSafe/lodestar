@@ -63,6 +63,19 @@ describe("network / metadata", () => {
       expect(onSetValue).toHaveBeenCalledWith(ENRKey.cgc, expect.anything());
     });
 
+    it("should upstream eproof only when execution proof-aware", () => {
+      const nodeId = computeNodeId(getValidPeerId());
+      const networkConfig: NetworkConfig = {nodeId, config, custodyConfig: new CustodyConfig({nodeId, config})};
+
+      const unaware = vi.fn();
+      new MetadataController({}, {onSetValue: unaware, networkConfig, logger}).upstreamValues(0);
+      expect(unaware).not.toHaveBeenCalledWith(ENRKey.eproof, expect.anything());
+
+      const aware = vi.fn();
+      new MetadataController({executionProofAware: true}, {onSetValue: aware, networkConfig, logger}).upstreamValues(0);
+      expect(aware).toHaveBeenCalledWith(ENRKey.eproof, Uint8Array.of(1));
+    });
+
     it("should call onSetValue with the correct cgc", () => {
       const onSetValue = vi.fn();
       const nodeId = computeNodeId(getValidPeerId());

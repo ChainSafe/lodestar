@@ -40,6 +40,7 @@ export type PeerDiscoveryModules = {
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
   logger: LoggerNode;
+  executionProofAware?: boolean;
 };
 
 type PeerIdStr = string;
@@ -95,6 +96,7 @@ type CachedENR = {
   addedUnixMs: number;
   // custodyGroups is null for pre-fulu
   custodyGroups: number[] | null;
+  executionProofAware: boolean;
 };
 
 /**
@@ -110,6 +112,7 @@ export class PeerDiscovery {
   private logger: LoggerNode;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
+  private readonly executionProofAware: boolean;
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
   private subnetRequests: Record<SubnetType, Map<number, SubnetRequestInfo>> = {
@@ -127,6 +130,7 @@ export class PeerDiscovery {
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
     const {libp2p, clock, peerRpcScores, metrics, logger, networkConfig} = modules;
+    this.executionProofAware = modules.executionProofAware ?? false;
     this.libp2p = libp2p;
     this.clock = clock;
     this.peerRpcScores = peerRpcScores;
@@ -251,6 +255,10 @@ export class PeerDiscovery {
       }
     }
     cachedENRsReverse.reverse();
+    if (this.executionProofAware) {
+      // EIP-8025: prefer peers that relay the execution_proof topic, keeping the recency order within each group
+      cachedENRsReverse.sort((a, b) => Number(b.executionProofAware) - Number(a.executionProofAware));
+    }
 
     this.peersToConnect += peersToConnect;
 
@@ -439,12 +447,23 @@ export class PeerDiscovery {
     const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
     const custodyGroupCount = custodyGroupCountBytes ? bytesToInt(custodyGroupCountBytes, "be") : undefined;
+    const eproofBytes = enr.kvs.get(ENRKey.eproof);
+    const executionProofAware = eproofBytes?.some((byte) => byte !== 0) ?? false;
 
-    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, multiaddrQUIC, attnets, syncnets, custodyGroupCount);
+    const status = this.handleDiscoveredPeer(
+      peerId,
+      multiaddrTCP,
+      multiaddrQUIC,
+      attnets,
+      syncnets,
+      custodyGroupCount,
+      executionProofAware
+    );
     this.logger.debug("Discovered peer via discv5", {
       peer: prettyPrintPeerId(peerId),
       status,
       cgc: custodyGroupCount,
+      eproof: executionProofAware,
     });
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
@@ -458,7 +477,8 @@ export class PeerDiscovery {
     multiaddrQUIC: Multiaddr | undefined,
     attnets: boolean[],
     syncnets: boolean[],
-    custodySubnetCount?: number
+    custodySubnetCount?: number,
+    executionProofAware = false
   ): DiscoveredPeerStatus {
     const nodeId = computeNodeId(peerId);
     this.logger.debug("handleDiscoveredPeer", {nodeId: toHex(nodeId), peerId: peerId.toString()});
@@ -511,6 +531,7 @@ export class PeerDiscovery {
           forkSeq >= ForkSeq.fulu
             ? getCustodyGroups(this.config, nodeId, custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT)
             : null,
+        executionProofAware,
       };
 
       // Only dial peer if necessary
