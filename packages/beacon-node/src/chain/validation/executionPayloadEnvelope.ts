@@ -31,8 +31,8 @@ export async function validateGossipExecutionPayloadEnvelope(
 
 /**
  * Applies the transaction count check to the serialized envelope so that an oversized envelope is rejected
- * before it is deserialized. Defers to validateGossipExecutionPayloadEnvelope if the data is
- * malformed or an IGNORE rule that precedes the check in the spec applies.
+ * before it is deserialized. Defers to validateGossipExecutionPayloadEnvelope if the data is malformed
+ * or the bid is not known.
  */
 export function validateGossipExecutionPayloadEnvelopeSerialized(
   chain: IBeaconChain,
@@ -46,17 +46,7 @@ export function validateGossipExecutionPayloadEnvelopeSerialized(
   }
 
   const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
-  if (
-    !payloadInput ||
-    payloadInput.hasPayloadEnvelope() ||
-    chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL) !== null ||
-    chain.forkChoice.getBlockHexDefaultStatus(blockRootHex) === null
-  ) {
-    return;
-  }
-
-  const finalizedSlot = computeStartSlotAtEpoch(chain.forkChoice.getFinalizedCheckpoint().epoch);
-  if (slot < finalizedSlot) {
+  if (!payloadInput) {
     return;
   }
 

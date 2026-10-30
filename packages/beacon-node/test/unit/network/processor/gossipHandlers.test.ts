@@ -112,11 +112,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
       emitter,
       processExecutionPayload: vi.fn().mockResolvedValue(undefined),
       seenPayloadEnvelopeInputCache: {get: getPayloadInput},
-      forkChoice: {
-        getBlockHex: vi.fn().mockReturnValue(null),
-        getBlockHexDefaultStatus: vi.fn().mockReturnValue({}),
-        getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
-      },
+      forkChoice: {getBlockHex: vi.fn().mockReturnValue(null)},
       serializedCache: {set: vi.fn()},
       columnReconstructionTracker: {triggerColumnReconstruction: vi.fn()},
     } as unknown as IBeaconChain;
@@ -479,11 +475,6 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
       get: vi.fn().mockReturnValue(payloadInput),
       removeInvalid,
     } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-    forkChoice: {
-      getBlockHex: vi.fn().mockReturnValue(null),
-      getBlockHexDefaultStatus: vi.fn().mockReturnValue({}),
-      getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
-    },
     serializedCache: {set: vi.fn()},
   } as unknown as IBeaconChain;
 
