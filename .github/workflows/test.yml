@@ -556,11 +556,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - preset: minimal
-            optimize: ReleaseSafe
-          - preset: mainnet
-            optimize: Debug
+        preset: [minimal, mainnet]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -584,7 +580,7 @@ jobs:
           path: test/spec
       - name: Run ssz_static spec tests
         run: |
-          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }}
+          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }}
 
   zig-spec-tests:
     name: Zig spec tests (${{ matrix.preset }}, ${{ matrix.runner }})
