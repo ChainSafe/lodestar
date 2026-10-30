@@ -42,8 +42,7 @@ pnpm build
 
 Zig consensus modules live in `src/`, with their build files at the repository root.
 `packages/` contains the TypeScript monorepo, and `packages/native/` contains the native
-Node.js package. See the [Zig contributor guide](./docs/pages/contribution/zig.md)
-for build and test commands.
+Node.js package.
 
 - :package: This mono-repository contains a suite of Ethereum Consensus packages.
 - :balance_scale: The mono-repository is released under [Apache-2.0 license](./LICENSE). Note, that the packages contain their own licenses.
