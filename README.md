@@ -29,6 +29,7 @@
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [pnpm](https://pnpm.io/)
+- :zap: [Zig](https://ziglang.org/download/) 0.16.0
 
 ###### Developer Quickstart:
 
