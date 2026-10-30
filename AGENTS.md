@@ -19,7 +19,7 @@ Zig sources live in `src/`, the TypeScript monorepo in `packages/`, and the Node
 addon in `packages/native/`. Run Zig commands from the repository root.
 `@lodestar/native` uses the root lockfile and shared Lerna version. Run its package commands with `pnpm --filter @lodestar/native`.
 
-- Use Zig 0.16.0 and follow [.gemini/styleguide.md](.gemini/styleguide.md).
+- Use Zig 0.16.0.
 - Bound loops and allocations, avoid recursion, assert invariants, and fail fast.
 - Pair allocations with cleanup immediately and cover partial initialization errors.
 - Validate JavaScript-controlled lengths, indexes, encodings, and ownership at NAPI boundaries.
