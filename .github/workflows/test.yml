@@ -37,6 +37,31 @@ jobs:
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
+  zig-changes:
+    name: Detect Zig changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      # Zig jobs run on 1) every push, 2) manual run, and 3) on PRs with Zig sources change
+      zig: ${{ github.event_name != 'pull_request' || steps.filter.outputs.zig == 'true' }}
+    steps:
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            zig:
+              - "src/**"
+              - "bench/**"
+              - "test/**"
+              - "bindings/**"
+              - "build.zig"
+              - "build.zig.zon"
+              - "scripts/*.zig"
+              - "scripts/ci/**"
+              - ".github/**"
+
   lint:
     name: Lint
     needs: build
@@ -282,7 +307,8 @@ jobs:
   bindings-test:
     name: Native bindings tests
     runs-on: warp-ubuntu-2204-x64-4x
-    needs: build
+    needs: [build, zig-changes]
+    if: needs.zig-changes.outputs.zig == 'true'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -330,6 +356,8 @@ jobs:
 
   zig-build-test:
     name: Zig build and tests (${{ matrix.os }})
+    needs: zig-changes
+    if: needs.zig-changes.outputs.zig == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -444,6 +472,8 @@ jobs:
 
   zig-build-test-slow:
     name: Zig integration tests
+    needs: zig-changes
+    if: needs.zig-changes.outputs.zig == 'true'
     # It takes time to download and run these tests, so we only run them on ubuntu-latest
     runs-on: ubuntu-latest
     steps:
@@ -467,6 +497,8 @@ jobs:
 
   zig-spec-test-prep:
     name: Zig spec preparation
+    needs: zig-changes
+    if: needs.zig-changes.outputs.zig == 'true'
     runs-on: ubuntu-latest
     outputs:
       spec-test-version: ${{ steps.spec-test-version.outputs.version }}
@@ -638,6 +670,8 @@ jobs:
 
   zig-build-fuzz:
     name: Zig fuzz build
+    needs: zig-changes
+    if: needs.zig-changes.outputs.zig == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -669,6 +703,8 @@ jobs:
 
   bindings-artifacts:
     name: Native platform builds
+    needs: zig-changes
+    if: needs.zig-changes.outputs.zig == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
