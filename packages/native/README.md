@@ -28,14 +28,14 @@ For native-only changes, rebuild with `pnpm build:native`. The output is
 preset. Rebuild before switching presets; they share an output directory.
 
 Bindings use their own Vitest configuration and the root workspace lockfile.
-Consensus spec vectors are pinned in [build.zig.zon](../../build.zig.zon).
+Consensus spec vectors are pinned in [`build.zig.zon`](../../build.zig.zon).
 See [contributing](../../CONTRIBUTING.md).
 
 ## Publishing
 
 `pnpm release:publish` uses zapi to build and publish the platform packages and
 wrapper at the shared version, then runs Lerna for the remaining Lodestar packages.
-Use `--dist-tag next` or `--dist-tag rc` for prereleases. `--dry-run` builds and
+Use `--dist-tag next` or `--dist-tag rc` for pre-releases. `--dry-run` builds and
 prepares the native packages without publishing.
 
 ## License
