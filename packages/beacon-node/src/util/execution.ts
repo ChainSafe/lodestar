@@ -1,8 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
+import {ForkPostFulu, ForkPostGloas, ForkPreFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {DataColumnSidecar, SignedBeaconBlock, Slot, deneb, gloas, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {DataColumnSidecar, SignedBeaconBlock, Slot, deneb, gloas, isGloasDataColumnSidecar} from "@lodestar/types";
 import {Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -288,6 +288,7 @@ export type RebuildMiss = {slot: Slot; reason: "unavailable" | "mismatch"; error
  * Throws ENGINE_UNAVAILABLE if the EL call fails. Either may surface after envelopes were yielded.
  */
 export async function* reconstructExecutionPayloadEnvelopesByRange(
+  config: ChainForkConfig,
   db: IBeaconDb,
   executionEngine: IExecutionEngine,
   logger: Logger,
@@ -299,14 +300,15 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
   let batch: RangeEntry[] = [];
 
   for await (const {key, value: bytes} of archive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
-    batch.push({slot: archive.decodeKey(key), ...decodeArchivedEnvelope(bytes)});
+    const slot = archive.decodeKey(key);
+    batch.push({slot, ...decodeArchivedEnvelope(config, slot, bytes)});
     if (batch.length === MAX_BODIES_PER_REQUEST) {
-      yield* reconstructBatch(executionEngine, logger, metrics, batch);
+      yield* reconstructBatch(config, executionEngine, logger, metrics, batch);
       batch = [];
     }
   }
   if (batch.length > 0) {
-    yield* reconstructBatch(executionEngine, logger, metrics, batch);
+    yield* reconstructBatch(config, executionEngine, logger, metrics, batch);
   }
 }
 
@@ -315,6 +317,7 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
  * RANGE_UNSERVABLE for it
  */
 async function* reconstructBatch(
+  config: ChainForkConfig,
   executionEngine: IExecutionEngine,
   logger: Logger,
   metrics: Metrics | null,
@@ -345,7 +348,10 @@ async function* reconstructBatch(
         `archived envelope range unservable from slot=${entry.slot}`
       );
     }
-    yield {slot: entry.slot, envelopeBytes: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result)};
+    yield {
+      slot: entry.slot,
+      envelopeBytes: config.getForkTypes<ForkPostGloas>(entry.slot).SignedExecutionPayloadEnvelope.serialize(result),
+    };
   }
 }
 

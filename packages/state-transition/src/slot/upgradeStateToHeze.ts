@@ -1,6 +1,8 @@
+import {MAX_EFFECTIVE_BALANCE_ELECTRA} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
+import {hasCompoundingWithdrawalCredential} from "../util/electra.js";
 
 /**
  * Upgrade a state from Gloas to Heze.
@@ -83,6 +85,15 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
 
   stateHezeView.payloadExpectedWithdrawals = stateHezeCloned.payloadExpectedWithdrawals;
   stateHezeView.ptcWindow = stateHezeCloned.ptcWindow;
+
+  // [New in Heze:EIP8148]
+  const sweepThresholds: number[] = [];
+  stateHezeCloned.validators.forEachValue((validator) => {
+    sweepThresholds.push(
+      hasCompoundingWithdrawalCredential(validator.withdrawalCredentials) ? MAX_EFFECTIVE_BALANCE_ELECTRA : 0
+    );
+  });
+  stateHezeView.validatorSweepThresholds = ssz.heze.SweepThresholds.toViewDU(sweepThresholds);
 
   const stateHeze = getCachedBeaconState(stateHezeView, stateGloas);
   stateHeze.commit();

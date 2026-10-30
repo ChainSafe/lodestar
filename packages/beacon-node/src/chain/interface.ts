@@ -2,12 +2,14 @@ import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkPostGloas} from "@lodestar/params";
 import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
   DataColumnSidecar,
   Epoch,
+  ExecutionRequests,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -246,7 +248,11 @@ export interface IBeaconChain {
     blockSlot: Slot,
     blockRootHex: string
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
-  getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
+  getParentExecutionRequests(
+    parentBlockSlot: Slot,
+    parentBlockRootHex: RootHex,
+    blockSlot: Slot
+  ): Promise<ExecutionRequests<ForkPostGloas>>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{

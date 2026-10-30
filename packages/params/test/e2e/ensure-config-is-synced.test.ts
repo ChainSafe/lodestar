@@ -12,7 +12,7 @@ import {loadConfigYaml} from "../yaml.js";
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant
  */
-const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
+const ignoredLocalPresetFields: (keyof BeaconPreset)[] = ["MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD"];
 
 const ignoredRemotePresetFields: string[] = [];
 

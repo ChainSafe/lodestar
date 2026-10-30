@@ -1291,7 +1291,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
           if (e.action === GossipAction.REJECT) {
             chain.persistInvalidSszValue(
-              ssz.gloas.SignedExecutionPayloadEnvelope,
+              chain.config.getForkTypes<ForkPostGloas>(slot).SignedExecutionPayloadEnvelope,
               signedEnvelope,
               `gossip_reject_slot_${slot}`
             );

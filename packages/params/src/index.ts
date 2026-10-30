@@ -127,6 +127,7 @@ export const {
   INCLUSION_LIST_COMMITTEE_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
   MAX_SIGNED_INCLUSION_LIST_SIZE,
+  MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD,
 } = activePreset;
 
 ////////////
@@ -174,6 +175,11 @@ export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
 export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
+
+// Heze EIP-8148
+export const SWEEP_THRESHOLD_REQUEST_TYPE = 0x05;
+export const SWEEP_THRESHOLD_CREDENTIAL_OFFSET = 10;
+export const SWEEP_THRESHOLD_CREDENTIAL_LENGTH = 2;
 
 // Application specific domains
 

@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
 import type {Root, RootHex, gloas} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
@@ -8,6 +9,8 @@ import {
   createExecutionPayloadEnvelopeContents,
 } from "../../../src/services/executionPayloadEnvelope.js";
 import {type BuiltPayload, PayloadStore, type StoredPayload} from "../../../src/services/payloadStore.js";
+
+const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
 
 const builderIndex = 7;
 const blockRoot = root(8);
@@ -22,7 +25,13 @@ describe("createExecutionPayloadEnvelopeContents", () => {
     expect(storedPayload).not.toBeNull();
     if (storedPayload === null) throw Error("Expected retained payload");
 
-    const contents = createExecutionPayloadEnvelopeContents({blockRoot, builderIndex, selectedBid, storedPayload});
+    const contents = createExecutionPayloadEnvelopeContents({
+      config,
+      blockRoot,
+      builderIndex,
+      selectedBid,
+      storedPayload,
+    });
 
     expect(contents.envelope).toEqual({
       payload: payload.executionPayload,
@@ -41,7 +50,7 @@ describe("createExecutionPayloadEnvelopeContents", () => {
     const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
     expectEnvelopeError(
-      () => createExecutionPayloadEnvelopeContents({blockRoot, builderIndex, selectedBid, storedPayload}),
+      () => createExecutionPayloadEnvelopeContents({config, blockRoot, builderIndex, selectedBid, storedPayload}),
       {
         code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
         bidSlot: 11,
@@ -56,7 +65,7 @@ describe("createExecutionPayloadEnvelopeContents", () => {
     const storedPayload = retain(payload, fromHex(root(9)));
 
     expectEnvelopeError(
-      () => createExecutionPayloadEnvelopeContents({blockRoot, builderIndex, selectedBid, storedPayload}),
+      () => createExecutionPayloadEnvelopeContents({config, blockRoot, builderIndex, selectedBid, storedPayload}),
       {
         code: ExecutionPayloadEnvelopeErrorCode.PARENT_BLOCK_ROOT_MISMATCH,
         bidParentBlockRoot: toRootHex(selectedBid.parentBlockRoot),
@@ -71,7 +80,7 @@ describe("createExecutionPayloadEnvelopeContents", () => {
     const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
     expectEnvelopeError(
-      () => createExecutionPayloadEnvelopeContents({blockRoot, builderIndex, selectedBid, storedPayload}),
+      () => createExecutionPayloadEnvelopeContents({config, blockRoot, builderIndex, selectedBid, storedPayload}),
       {
         code: ExecutionPayloadEnvelopeErrorCode.PARENT_BLOCK_HASH_MISMATCH,
         bidParentBlockHash: toRootHex(selectedBid.parentBlockHash),
@@ -86,7 +95,7 @@ describe("createExecutionPayloadEnvelopeContents", () => {
     const storedPayload = retain(payload, selectedBid.parentBlockRoot);
 
     expectEnvelopeError(
-      () => createExecutionPayloadEnvelopeContents({blockRoot, builderIndex, selectedBid, storedPayload}),
+      () => createExecutionPayloadEnvelopeContents({config, blockRoot, builderIndex, selectedBid, storedPayload}),
       {
         code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
         bidBlockHash: toRootHex(selectedBid.blockHash),
@@ -108,6 +117,7 @@ describe("createExecutionPayloadEnvelopeContents", () => {
 
     expect(() =>
       createExecutionPayloadEnvelopeContents({
+        config,
         blockRoot,
         builderIndex,
         selectedBid,
@@ -123,6 +133,7 @@ describe("createExecutionPayloadEnvelopeContents", () => {
 
     expect(() =>
       createExecutionPayloadEnvelopeContents({
+        config,
         blockRoot,
         builderIndex,
         selectedBid,
@@ -146,6 +157,7 @@ describe("createExecutionPayloadEnvelopeContents", () => {
 
     expect(() =>
       createExecutionPayloadEnvelopeContents({
+        config,
         blockRoot,
         builderIndex,
         selectedBid,

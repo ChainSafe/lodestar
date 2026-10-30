@@ -33,6 +33,7 @@ import {
   isStatePostAltair,
   isStatePostElectra,
   isStatePostGloas,
+  upgradeExecutionRequests,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -40,6 +41,7 @@ import {
   BlindedBeaconBlockBody,
   DataColumnSidecar,
   Epoch,
+  ExecutionRequests,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -997,7 +999,9 @@ export class BeaconChain implements IBeaconChain {
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput?.hasPayloadEnvelope()) {
         const envelope = payloadInput.getPayloadEnvelope();
-        out[i] = this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        out[i] =
+          this.serializedCache.get(envelope) ??
+          this.config.getForkTypes<ForkPostGloas>(blockSlot).SignedExecutionPayloadEnvelope.serialize(envelope);
         continue;
       }
 
@@ -1010,7 +1014,7 @@ export class BeaconChain implements IBeaconChain {
       const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
       if (archivedBytes === null) continue;
 
-      const archived = decodeArchivedEnvelope(archivedBytes);
+      const archived = decodeArchivedEnvelope(this.config, blockSlot, archivedBytes);
       if (archived.envelopeBytes !== undefined) {
         out[i] = archived.envelopeBytes;
         continue;
@@ -1034,7 +1038,9 @@ export class BeaconChain implements IBeaconChain {
           );
           continue;
         }
-        out[headerEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
+        out[headerEnvelopeIdxs[j]] = this.config
+          .getForkTypes<ForkPostGloas>(result.message.payload.slotNumber)
+          .SignedExecutionPayloadEnvelope.serialize(result);
       }
     }
 
@@ -1055,9 +1061,11 @@ export class BeaconChain implements IBeaconChain {
 
     const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
     if (archivedBytes === null) return null;
-    const archived = decodeArchivedEnvelope(archivedBytes);
+    const archived = decodeArchivedEnvelope(this.config, blockSlot, archivedBytes);
     if (archived.envelopeBytes !== undefined) {
-      return ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
+      return this.config
+        .getForkTypes<ForkPostGloas>(blockSlot)
+        .SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
     }
     const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [
       archived.headerEnvelope,
@@ -1068,28 +1076,42 @@ export class BeaconChain implements IBeaconChain {
 
   async getParentExecutionRequests(
     parentBlockSlot: Slot,
-    parentBlockRootHex: RootHex
-  ): Promise<gloas.ExecutionRequests> {
+    parentBlockRootHex: RootHex,
+    blockSlot: Slot
+  ): Promise<ExecutionRequests<ForkPostGloas>> {
+    const blockFork = this.config.getForkName(blockSlot);
+    if (!isForkPostGloas(blockFork)) {
+      throw Error(`Parent execution requests are not available pre-gloas blockSlot=${blockSlot}`);
+    }
     // at the fork boundary, parent is pre-gloas
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
-      return ssz.gloas.ExecutionRequests.defaultValue();
+      return sszTypesFor(blockFork).ExecutionRequests.defaultValue();
     }
+    return upgradeExecutionRequests(blockFork, await this.getExecutionRequests(parentBlockSlot, parentBlockRootHex));
+  }
+
+  private async getExecutionRequests(
+    blockSlot: Slot,
+    blockRootHex: RootHex
+  ): Promise<ExecutionRequests<ForkPostGloas>> {
     // executionRequests is kept in the header envelope, so read it without reconstructing
-    const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope().message.executionRequests;
     }
 
-    const hot = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
+    const hot = await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex));
     if (hot !== null) return hot.message.executionRequests;
 
-    const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(parentBlockSlot);
+    const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
     if (archivedBytes === null) {
-      throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
+      throw Error(`Parent execution payload envelope not found slot=${blockSlot}, root=${blockRootHex}`);
     }
-    const archived = decodeArchivedEnvelope(archivedBytes);
+    const archived = decodeArchivedEnvelope(this.config, blockSlot, archivedBytes);
     return archived.envelopeBytes !== undefined
-      ? ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).message.executionRequests
+      ? this.config
+          .getForkTypes<ForkPostGloas>(blockSlot)
+          .SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).message.executionRequests
       : archived.headerEnvelope.message.executionRequests;
   }
 
@@ -1552,7 +1574,7 @@ export class BeaconChain implements IBeaconChain {
     const blockRoot = toRootHex(envelope.beaconBlockRoot);
     void this.persistSszObject(
       "ExecutionPayloadEnvelope",
-      ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope),
+      this.config.getForkTypes<ForkPostGloas>(envelope.payload.slotNumber).ExecutionPayloadEnvelope.serialize(envelope),
       blockRoot,
       "produced_execution_payload_envelope"
     ).catch((e) => {

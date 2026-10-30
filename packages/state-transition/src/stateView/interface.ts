@@ -30,6 +30,7 @@ import {
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
+  ExecutionRequests,
   Gwei,
   Root,
   RootHex,
@@ -302,7 +303,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
    * operation selection (e.g. voluntary exits) see the same post-apply state that the block
    * processor will see at import.
    */
-  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas;
+  withParentPayloadApplied(executionRequests: ExecutionRequests<ForkPostGloas>): IBeaconStateViewGloas;
 }
 
 /** Heze+ state fields — use isStatePostHeze() guard */

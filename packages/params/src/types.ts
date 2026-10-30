@@ -118,6 +118,7 @@ export type BeaconPreset = {
   INCLUSION_LIST_COMMITTEE_SIZE: number;
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: number;
   MAX_SIGNED_INCLUSION_LIST_SIZE: number;
+  MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD: number;
 };
 
 /**
@@ -241,6 +242,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   INCLUSION_LIST_COMMITTEE_SIZE: "number",
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: "number",
   MAX_SIGNED_INCLUSION_LIST_SIZE: "number",
+  MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD: "number",
 };
 
 type BeaconPresetTypes = {

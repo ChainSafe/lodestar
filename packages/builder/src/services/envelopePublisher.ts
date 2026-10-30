@@ -1,5 +1,7 @@
 import {type ApiClient, routes} from "@lodestar/api";
-import {type BuilderIndex, type RootHex, type gloas, ssz} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkPostGloas} from "@lodestar/params";
+import {type BuilderIndex, type RootHex, type gloas} from "@lodestar/types";
 import {LodestarError, defer, toRootHex} from "@lodestar/utils";
 import type {BidIdentity, BidLedger} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
@@ -9,6 +11,7 @@ export type EnvelopeSelectionIdentity = BidIdentity & {blockRoot: RootHex};
 
 export type EnvelopePublisherModules = {
   api: ApiClient;
+  config: ChainForkConfig;
   signer: BuilderSigner;
   ledger: BidLedger;
   builderIndex: BuilderIndex;
@@ -48,7 +51,7 @@ export class EnvelopePublisher {
   async publish(contents: ExecutionPayloadEnvelopeContents, signal: AbortSignal): Promise<EnvelopePublicationResult> {
     signal.throwIfAborted();
 
-    const {api, builderIndex, ledger, signer} = this.modules;
+    const {api, builderIndex, config, ledger, signer} = this.modules;
     const {envelope} = contents;
     if (envelope.builderIndex !== builderIndex) {
       throw new EnvelopePublisherError(
@@ -75,7 +78,9 @@ export class EnvelopePublisher {
       );
     }
 
-    const envelopeRoot = toRootHex(ssz.gloas.ExecutionPayloadEnvelope.hashTreeRoot(envelope));
+    const envelopeRoot = toRootHex(
+      config.getForkTypes<ForkPostGloas>(identity.slot).ExecutionPayloadEnvelope.hashTreeRoot(envelope)
+    );
     ledger.recordReveal(identity.slot, identity.blockRoot, identity.blockHash, envelopeRoot);
     if (ledger.hasPublishedReveal(identity.blockRoot)) {
       return {status: "duplicate"};

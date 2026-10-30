@@ -1,5 +1,6 @@
 import {digest} from "@chainsafe/as-sha256";
-import {RootHex, Slot, ssz} from "@lodestar/types";
+import {ForkPostGloas} from "@lodestar/params";
+import {RootHex, Slot, sszTypesFor} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -52,7 +53,10 @@ export function hashBlocks(blocks: IBlockInput[], payloadEnvelopes: Map<Slot, Pa
   for (const [, envelope] of envelopes) {
     const signedEnvelope = envelope.getPayloadEnvelope();
     // envelope's root is cached thanks to cachePermanentRootStruct, so this avoids re-hashing
-    buf.set(ssz.gloas.ExecutionPayloadEnvelope.hashTreeRoot(signedEnvelope.message), offset);
+    buf.set(
+      sszTypesFor(envelope.forkName as ForkPostGloas).ExecutionPayloadEnvelope.hashTreeRoot(signedEnvelope.message),
+      offset
+    );
     offset += ROOT_SIZE;
     buf.set(signedEnvelope.signature, offset);
     offset += SIGNATURE_SIZE;

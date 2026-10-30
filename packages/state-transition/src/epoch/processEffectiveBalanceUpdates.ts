@@ -9,7 +9,7 @@ import {
   MIN_ACTIVATION_BALANCE,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@lodestar/params";
-import {BeaconStateAltair, CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
+import {BeaconStateAltair, CachedBeaconStateAllForks, CachedBeaconStateHeze, EpochTransitionCache} from "../types.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
@@ -45,6 +45,8 @@ export function processEffectiveBalanceUpdates(
   // so it's recycled here for performance.
   const balances = cache.balances ?? state.balances.getAll();
   const isCompoundingValidatorArr = cache.isCompoundingValidatorArr;
+  const sweepThresholds =
+    fork >= ForkSeq.heze ? (state as CachedBeaconStateHeze).validatorSweepThresholds.getAll() : null;
 
   let numUpdate = 0;
   for (let i = 0, len = balances.length; i < len; i++) {
@@ -57,22 +59,29 @@ export function processEffectiveBalanceUpdates(
     let effectiveBalanceLimit: number;
     if (fork < ForkSeq.electra) {
       effectiveBalanceLimit = MAX_EFFECTIVE_BALANCE;
+    } else if (sweepThresholds !== null && sweepThresholds[i] !== 0) {
+      // from heze, a custom sweep threshold caps the effective balance
+      effectiveBalanceLimit = sweepThresholds[i];
     } else {
       // from electra, effectiveBalanceLimit is per validator
       effectiveBalanceLimit = isCompoundingValidatorArr[i] ? MAX_EFFECTIVE_BALANCE_ELECTRA : MIN_ACTIVATION_BALANCE;
     }
 
-    if (
+    const newEffectiveBalance =
       // Too big
       effectiveBalance > balance + DOWNWARD_THRESHOLD ||
-      // Too small. Check effectiveBalance < MAX_EFFECTIVE_BALANCE to prevent unnecessary updates
-      (effectiveBalance < effectiveBalanceLimit && effectiveBalance + UPWARD_THRESHOLD < balance)
-    ) {
+      // Too small
+      effectiveBalance + UPWARD_THRESHOLD < balance
+        ? Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), effectiveBalanceLimit)
+        : effectiveBalance;
+
+    // Skip the tree update when the hysteresis bounds are hit at the limit and nothing changes
+    if (newEffectiveBalance !== effectiveBalance) {
       // Update the state tree
       // Should happen rarely, so it's fine to update the tree
       const validator = validators.get(i);
 
-      effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), effectiveBalanceLimit);
+      effectiveBalance = newEffectiveBalance;
       validator.effectiveBalance = effectiveBalance;
       // Also update the fast cached version
       const newEffectiveBalanceIncrement = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);

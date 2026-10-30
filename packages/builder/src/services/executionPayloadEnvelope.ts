@@ -1,9 +1,12 @@
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkPostGloas} from "@lodestar/params";
 import type {BuilderIndex, RootHex, Slot, deneb, gloas} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import type {StoredPayload} from "./payloadStore.js";
 
 export type ExecutionPayloadEnvelopeInput = {
+  config: ChainForkConfig;
   blockRoot: RootHex;
   builderIndex: BuilderIndex;
   selectedBid: gloas.ExecutionPayloadBid;
@@ -63,6 +66,7 @@ export class ExecutionPayloadEnvelopeError extends LodestarError<ExecutionPayloa
 
 /** The caller must have matched the selected bid to its local ledger record. */
 export function createExecutionPayloadEnvelopeContents({
+  config,
   blockRoot,
   builderIndex,
   selectedBid,
@@ -133,7 +137,9 @@ export function createExecutionPayloadEnvelopeContents({
     throw new ExecutionPayloadEnvelopeError({code: ExecutionPayloadEnvelopeErrorCode.BLOB_KZG_COMMITMENTS_MISMATCH});
   }
 
-  const executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(payload.executionRequests);
+  const executionRequestsRoot = config
+    .getForkTypes<ForkPostGloas>(payloadSlot)
+    .ExecutionRequests.hashTreeRoot(payload.executionRequests);
   if (!byteArrayEquals(executionRequestsRoot, selectedBid.executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError({
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,

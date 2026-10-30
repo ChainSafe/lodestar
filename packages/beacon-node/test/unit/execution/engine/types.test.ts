@@ -5,9 +5,10 @@ import {
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   ForkName,
+  SWEEP_THRESHOLD_REQUEST_TYPE,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {ExecutionRequests, gloas, ssz} from "@lodestar/types";
+import {ExecutionRequests, gloas, heze, ssz} from "@lodestar/types";
 import {fromHex, strip0xPrefix} from "@lodestar/utils";
 import {deserializeExecutionRequests, serializeExecutionRequests} from "../../../../src/execution/engine/types.js";
 
@@ -104,6 +105,19 @@ describe("execution / engine / types", () => {
       const serialized = serializeExecutionRequests(ForkName.electra, executionRequests);
 
       expect(serialized.length).toBe(0);
+    });
+
+    it("should serialize sweep threshold requests post-heze and skip them pre-heze", () => {
+      const executionRequests: heze.ExecutionRequests = {
+        ...ssz.heze.ExecutionRequests.defaultValue(),
+        sweepThresholds: [ssz.heze.SetSweepThresholdRequest.defaultValue()],
+      };
+
+      const serialized = serializeExecutionRequests(ForkName.heze, executionRequests).map(strip0xPrefix);
+      expect(serialized.length).toBe(1);
+      expect(Number(serialized[0].substring(0, 2))).toBe(SWEEP_THRESHOLD_REQUEST_TYPE);
+
+      expect(serializeExecutionRequests(ForkName.gloas, executionRequests).length).toBe(0);
     });
   });
 
@@ -206,6 +220,33 @@ describe("execution / engine / types", () => {
       expect(deserialized.deposits).toEqual(electraRequests.deposits);
       expect(deserialized.builderDeposits).toEqual([]);
       expect(deserialized.builderExits).toEqual([]);
+    });
+
+    it("should reject sweep threshold requests pre-heze and deserialize them post-heze", () => {
+      const hezeRequests: heze.ExecutionRequests = {
+        ...ssz.heze.ExecutionRequests.defaultValue(),
+        sweepThresholds: [
+          {
+            sourceAddress: new Uint8Array(20).fill(1),
+            validatorPubkey: new Uint8Array(48).fill(2),
+            threshold: 64_000_000_000n,
+          },
+        ],
+      };
+      const serialized = serializeExecutionRequests(ForkName.heze, hezeRequests);
+
+      const deserialized = deserializeExecutionRequests(ForkName.heze, serialized) as heze.ExecutionRequests;
+      expect(deserialized.sweepThresholds).toEqual(hezeRequests.sweepThresholds);
+      expect(serializeExecutionRequests(ForkName.heze, deserialized)).toEqual(serialized);
+
+      expect(() => deserializeExecutionRequests(ForkName.gloas, serialized)).toThrow();
+    });
+
+    it("should include an empty sweep thresholds field when deserializing post-heze without them", () => {
+      const serialized = serializeExecutionRequests(ForkName.gloas, ssz.gloas.ExecutionRequests.defaultValue());
+
+      const deserialized = deserializeExecutionRequests(ForkName.heze, serialized) as heze.ExecutionRequests;
+      expect(deserialized.sweepThresholds).toEqual([]);
     });
   });
 });

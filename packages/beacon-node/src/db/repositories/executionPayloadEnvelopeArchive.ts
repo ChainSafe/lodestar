@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH, BinaryRepository, Db, DbBatch, encodeKey as encodeDbKey} from "@lodestar/db";
-import {Slot, gloas, ssz} from "@lodestar/types";
+import {ForkPostGloas} from "@lodestar/params";
+import {Slot, gloas} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
@@ -16,14 +17,23 @@ export type ArchivedEnvelope =
   | {headerEnvelope: gloas.SignedExecutionPayloadHeaderEnvelope; envelopeBytes?: undefined}
   | {headerEnvelope?: undefined; envelopeBytes: Uint8Array};
 
-export function decodeArchivedEnvelope(bytes: Uint8Array): ArchivedEnvelope {
+export function decodeArchivedEnvelope(config: ChainForkConfig, slot: Slot, bytes: Uint8Array): ArchivedEnvelope {
   return bytes[0] === HEADER_ENVELOPE_PREFIX
-    ? {headerEnvelope: ssz.gloas.SignedExecutionPayloadHeaderEnvelope.deserialize(bytes.subarray(1))}
+    ? {
+        headerEnvelope: config
+          .getForkTypes<ForkPostGloas>(slot)
+          .SignedExecutionPayloadHeaderEnvelope.deserialize(bytes.subarray(1)),
+      }
     : {envelopeBytes: bytes};
 }
 
-export function encodeArchivedHeaderEnvelope(headerEnvelope: gloas.SignedExecutionPayloadHeaderEnvelope): Uint8Array {
-  const value = ssz.gloas.SignedExecutionPayloadHeaderEnvelope.serialize(headerEnvelope);
+export function encodeArchivedHeaderEnvelope(
+  config: ChainForkConfig,
+  headerEnvelope: gloas.SignedExecutionPayloadHeaderEnvelope
+): Uint8Array {
+  const value = config
+    .getForkTypes<ForkPostGloas>(headerEnvelope.message.payloadHeader.slotNumber)
+    .SignedExecutionPayloadHeaderEnvelope.serialize(headerEnvelope);
   const out = new Uint8Array(1 + value.length);
   out[0] = HEADER_ENVELOPE_PREFIX;
   out.set(value, 1);

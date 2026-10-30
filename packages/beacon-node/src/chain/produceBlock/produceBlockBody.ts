@@ -42,6 +42,7 @@ import {
   Bytes32,
   ExecutionPayload,
   ExecutionPayloadHeader,
+  ExecutionRequests,
   Root,
   RootHex,
   SSEPayloadAttributes,
@@ -56,7 +57,6 @@ import {
   fulu,
   gloas,
   heze,
-  ssz,
 } from "@lodestar/types";
 import {
   GWEI_TO_WEI,
@@ -130,7 +130,7 @@ export type ProduceFullGloas = {
   type: BlockType.Full;
   fork: ForkPostGloas;
   executionPayload: ExecutionPayload<ForkPostGloas>;
-  executionRequests: gloas.ExecutionRequests;
+  executionRequests: ExecutionRequests<ForkPostGloas>;
   blobsBundle: BlobsBundle<ForkPostGloas>;
   cells: fulu.Cell[][];
   parentBlockRoot: Root;
@@ -250,8 +250,8 @@ export async function produceBlockBody<T extends BlockType>(
       currentState.latestExecutionPayloadBid.blockHash
     );
     const parentExecutionRequests = isExtendingPayload
-      ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
-      : ssz.gloas.ExecutionRequests.defaultValue();
+      ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot, blockSlot)
+      : this.config.getForkTypes<ForkPostGloas>(blockSlot).ExecutionRequests.defaultValue();
     executionPayloadValue = (BigInt(builderBid.message.value) + builderBid.message.executionPayment) * GWEI_TO_WEI;
 
     const commonBlockBody = await commonBlockBodyPromise;
@@ -298,7 +298,7 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
-    let parentExecutionRequests: gloas.ExecutionRequests;
+    let parentExecutionRequests: ExecutionRequests<ForkPostGloas>;
     // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
     let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
     // Spec: should_build_on_full(store, head, slot). `parentBlock` is the proposer's head
@@ -307,11 +307,15 @@ export async function produceBlockBody<T extends BlockType>(
     const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
     if (isBuildingOnFull) {
       parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
-      parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
+      parentExecutionRequests = await this.getParentExecutionRequests(
+        parentBlock.slot,
+        parentBlock.blockRoot,
+        blockSlot
+      );
       stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
     } else {
       parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
-      parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+      parentExecutionRequests = this.config.getForkTypes<ForkPostGloas>(blockSlot).ExecutionRequests.defaultValue();
     }
     const prepareRes = await prepareExecutionPayload(
       this,
@@ -386,7 +390,9 @@ export async function produceBlockBody<T extends BlockType>(
       value: 0,
       executionPayment: 0n,
       blobKzgCommitments: blobsBundle.commitments,
-      executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
+      executionRequestsRoot: this.config
+        .getForkTypes<ForkPostGloas>(blockSlot)
+        .ExecutionRequests.hashTreeRoot(executionRequests as ExecutionRequests<ForkPostGloas>),
     };
     if (ForkSeq[fork] >= ForkSeq.heze) {
       // Built from the full view (only_timely=False), a superset of the receiver's timely-only
@@ -426,7 +432,7 @@ export async function produceBlockBody<T extends BlockType>(
     // Store execution payload data required to construct execution payload envelope later
     const gloasResult = produceResult as ProduceFullGloas;
     gloasResult.executionPayload = executionPayload as ExecutionPayload<ForkPostGloas>;
-    gloasResult.executionRequests = executionRequests as gloas.ExecutionRequests;
+    gloasResult.executionRequests = executionRequests as ExecutionRequests<ForkPostGloas>;
     gloasResult.blobsBundle = blobsBundle;
     gloasResult.cells = cells;
     gloasResult.parentBlockRoot = fromHex(parentBlock.blockRoot);

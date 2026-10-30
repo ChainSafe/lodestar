@@ -6,6 +6,8 @@ import {
   MAX_EFFECTIVE_BALANCE,
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_ACTIVATION_BALANCE,
+  SWEEP_THRESHOLD_CREDENTIAL_LENGTH,
+  SWEEP_THRESHOLD_CREDENTIAL_OFFSET,
 } from "@lodestar/params";
 import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
@@ -181,10 +183,43 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
 }
 
 /**
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/_features/eip8148/beacon-chain.md#new-get_initial_sweep_threshold
+ */
+export function getInitialSweepThreshold(withdrawalCredentials: Uint8Array): number {
+  if (!hasCompoundingWithdrawalCredential(withdrawalCredentials)) {
+    return 0;
+  }
+
+  let increments = 0;
+  for (let i = SWEEP_THRESHOLD_CREDENTIAL_LENGTH - 1; i >= 0; i--) {
+    increments = increments * 256 + withdrawalCredentials[SWEEP_THRESHOLD_CREDENTIAL_OFFSET + i];
+  }
+  const threshold = increments * EFFECTIVE_BALANCE_INCREMENT;
+
+  if (threshold < MIN_ACTIVATION_BALANCE || threshold > MAX_EFFECTIVE_BALANCE_ELECTRA) {
+    return MAX_EFFECTIVE_BALANCE_ELECTRA;
+  }
+  return threshold;
+}
+
+/**
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/_features/eip8148/beacon-chain.md#new-get_effective_sweep_threshold
+ */
+export function getEffectiveSweepThreshold(validator: phase0.Validator, sweepThreshold: number): number {
+  return sweepThreshold !== 0 ? sweepThreshold : getMaxEffectiveBalance(validator.withdrawalCredentials);
+}
+
+/**
  * Check if validator is partially withdrawable.
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/electra/beacon-chain.md#modified-is_partially_withdrawable_validator
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/_features/eip8148/beacon-chain.md#modified-is_partially_withdrawable_validator
  */
-export function isPartiallyWithdrawableValidator(fork: ForkSeq, validator: phase0.Validator, balance: number): boolean {
+export function isPartiallyWithdrawableValidator(
+  fork: ForkSeq,
+  validator: phase0.Validator,
+  balance: number,
+  sweepThreshold = 0
+): boolean {
   const isPostElectra = fork >= ForkSeq.electra;
 
   // Check withdrawal credentials
@@ -194,6 +229,11 @@ export function isPartiallyWithdrawableValidator(fork: ForkSeq, validator: phase
 
   if (!hasWithdrawableCredentials) {
     return false;
+  }
+
+  if (fork >= ForkSeq.heze) {
+    const effectiveSweepThreshold = getEffectiveSweepThreshold(validator, sweepThreshold);
+    return validator.effectiveBalance >= effectiveSweepThreshold && balance > effectiveSweepThreshold;
   }
 
   // Get max effective balance based on fork

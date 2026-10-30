@@ -14,6 +14,7 @@ import {
   ForkPreFulu,
   ForkPreGloas,
   ForkSeq,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -779,7 +780,9 @@ export const forkChoiceTestRunner =
           [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
           [BLOBS_FILE_NAME]: ssz.deneb.Blobs,
           [COLUMN_FILE_NAME]: ssz.fulu.DataColumnSidecar,
-          [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: ssz.gloas.SignedExecutionPayloadEnvelope,
+          [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: isForkPostGloas(fork)
+            ? sszTypesFor(fork).SignedExecutionPayloadEnvelope
+            : ssz.gloas.SignedExecutionPayloadEnvelope,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
           [PAYLOAD_ATTESTATION_MESSAGE_FILE_NAME]: ssz.gloas.PayloadAttestationMessage,

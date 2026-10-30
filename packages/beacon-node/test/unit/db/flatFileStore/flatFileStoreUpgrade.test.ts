@@ -75,7 +75,7 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       envelope.message.payload.slotNumber = slot;
       await db.executionPayloadEnvelopeArchive.putBinary(
         slot,
-        encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(envelope))
+        encodeArchivedHeaderEnvelope(config, toSignedHeaderEnvelope(envelope))
       );
     }
     return {block, columns: columns.map(({data}) => data)};

@@ -1,7 +1,18 @@
-import {COMPOUNDING_WITHDRAWAL_PREFIX, GENESIS_SLOT, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
+import {
+  COMPOUNDING_WITHDRAWAL_PREFIX,
+  ForkSeq,
+  GENESIS_SLOT,
+  MAX_EFFECTIVE_BALANCE_ELECTRA,
+  MIN_ACTIVATION_BALANCE,
+} from "@lodestar/params";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
-import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
+  CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
+} from "../types.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
 
 export function hasCompoundingWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
@@ -31,6 +42,13 @@ export function switchToCompoundingValidator(
   newWithdrawalCredentials[0] = COMPOUNDING_WITHDRAWAL_PREFIX;
   validator.withdrawalCredentials = newWithdrawalCredentials;
   queueExcessActiveBalance(state, index);
+
+  if (state.config.getForkSeq(state.slot) >= ForkSeq.heze) {
+    (state as CachedBeaconStateAllForks as CachedBeaconStateHeze).validatorSweepThresholds.set(
+      index,
+      MAX_EFFECTIVE_BALANCE_ELECTRA
+    );
+  }
 }
 
 export function queueExcessActiveBalance(
@@ -59,7 +77,7 @@ export function queueExcessActiveBalance(
 /**
  * Since we share pubkey2index, pubkey maybe added by other epoch transition but we don't have that validator in this state
  */
-export function isPubkeyKnown(state: CachedBeaconStateElectra | CachedBeaconStateGloas, pubkey: Uint8Array): boolean {
+export function isPubkeyKnown(state: CachedBeaconStateAllForks, pubkey: Uint8Array): boolean {
   return isValidatorKnown(state, state.epochCtx.getValidatorIndex(pubkey));
 }
 
@@ -67,7 +85,7 @@ export function isPubkeyKnown(state: CachedBeaconStateElectra | CachedBeaconStat
  * Since we share pubkey2index, validatorIndex maybe not null but we don't have that validator in this state
  */
 export function isValidatorKnown(
-  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
+  state: CachedBeaconStateAllForks,
   index: ValidatorIndex | null
 ): index is ValidatorIndex {
   return index !== null && index < state.validators.length;

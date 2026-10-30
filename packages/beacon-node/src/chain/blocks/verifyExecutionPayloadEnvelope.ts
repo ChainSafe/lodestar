@@ -1,4 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
+import {ForkPostGloas} from "@lodestar/params";
 import {
   type IBeaconStateViewGloas,
   computeTimeAtSlot,
@@ -71,7 +72,9 @@ export function verifyExecutionPayloadEnvelope(
   // Verify execution_requests_root matches bid commitment.
   // Can be skipped if already verified during gossip validation.
   if (verifyExecutionRequestsRoot) {
-    const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+    const requestsRoot = config
+      .getForkTypes<ForkPostGloas>(payload.slotNumber)
+      .ExecutionRequests.hashTreeRoot(envelope.executionRequests);
     if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
       throw new Error(
         `Execution requests root mismatch envelope=${toRootHex(requestsRoot)} bid=${toRootHex(bid.executionRequestsRoot)}`

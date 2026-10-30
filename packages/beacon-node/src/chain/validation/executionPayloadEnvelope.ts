@@ -1,10 +1,11 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
+import {ForkPostGloas} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
   getExecutionPayloadEnvelopeSignatureSet,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {gloas, ssz} from "@lodestar/types";
+import {gloas} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -112,7 +113,9 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
-  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+  const requestsRoot = chain.config
+    .getForkTypes<ForkPostGloas>(payload.slotNumber)
+    .ExecutionRequests.hashTreeRoot(envelope.executionRequests);
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,

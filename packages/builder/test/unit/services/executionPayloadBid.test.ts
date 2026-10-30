@@ -1,7 +1,7 @@
 import {describe, expect, expectTypeOf, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {ForkName, type ForkPostGloas, INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {heze, ssz} from "@lodestar/types";
 import {
   ExecutionPayloadBidError,
   ExecutionPayloadBidErrorCode,
@@ -79,7 +79,9 @@ describe("createExecutionPayloadBid", () => {
       value: 456,
       executionPayment: 0n,
       blobKzgCommitments: payload.blobsBundle.commitments,
-      executionRequestsRoot: ssz.heze.ExecutionRequests.hashTreeRoot(payload.executionRequests),
+      executionRequestsRoot: ssz.heze.ExecutionRequests.hashTreeRoot(
+        payload.executionRequests as heze.ExecutionRequests
+      ),
       inclusionListBits,
     });
   });
