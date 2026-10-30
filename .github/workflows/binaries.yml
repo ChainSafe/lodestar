@@ -36,7 +36,7 @@ jobs:
           sudo apt-get install -y build-essential python3
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 24
+          node: 26
       - run: |
           mkdir -p dist
           pnpm exec caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -e ".zig-cache/**" -e "zig-pkg/**" -e "bindings/artifacts/**" -D -p "pnpm clean:nm && pnpm install --frozen-lockfile --prod" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/packages/cli/bin/lodestar.js"
