@@ -357,9 +357,10 @@ export interface IForkChoice {
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
+   * Apply an execution engine verdict with a latest valid hash, see `ProtoArray.validateLatestHash`.
+   * Returns whether any execution status changed. A consensus failure is recorded in `irrecoverableError`.
    */
-  validateLatestHash(execResponse: LVHExecResponse): void;
+  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean;
 
   /**
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling

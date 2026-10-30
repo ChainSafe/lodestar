@@ -3,9 +3,17 @@ import {ExecutionPayload, ExecutionRequests, Root, RootHex, bellatrix} from "@lo
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
-import {ClientCode, ClientVersion, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
+import {
+  ClientCode,
+  ClientVersion,
+  ForkchoiceUpdatedResult,
+  PayloadAttributes,
+  PayloadId,
+  PayloadStatusResult,
+  VersionedHashes,
+} from "./interface.js";
 import {IJsonRpcHttpClient, JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
-import {ForkchoiceUpdatedResult, GetPayloadResult, IEngineTransport, PayloadStatusResult} from "./transport.js";
+import {GetPayloadResult, IEngineTransport} from "./transport.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
   EngineApiRpcParamTypes,

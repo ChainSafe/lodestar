@@ -52,7 +52,7 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   onCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   processState(blockRootHex: RootHex, postState: IBeaconStateView): void;
   addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView): void;
-  updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void;
+  updateHeadState(newHead: ProtoBlock, maybeHeadState?: IBeaconStateView): void;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
 }
 

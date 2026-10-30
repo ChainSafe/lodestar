@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -117,6 +117,9 @@ export function verifyBlocksSanityChecks(
         } else {
           parentBlock = parentBlockWithPayload;
         }
+      }
+      if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
+        throw new BlockError(block, {code: BlockErrorCode.PARENT_EXECUTION_INVALID, parentRoot});
       }
       // Parent is known to the fork-choice
       parentBlockSlot = parentBlock.slot;
