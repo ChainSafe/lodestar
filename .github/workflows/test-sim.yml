@@ -30,10 +30,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 24
+          node: 26
       - uses: ./.github/actions/upload-build
         with:
-          node: 24
+          node: 26
 
   sim-test-multifork:
     name: Multifork sim test
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
         with:
-          node: 24
+          node: 26
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -71,7 +71,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
         with:
-          node: 24
+          node: 26
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -99,7 +99,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
         with:
-          node: 24
+          node: 26
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -127,7 +127,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
         with:
-          node: 24
+          node: 26
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests

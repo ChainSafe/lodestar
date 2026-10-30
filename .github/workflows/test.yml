@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24, 26]
+        node: [26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24, 26]
+        node: [26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
@@ -76,7 +76,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24, 26]
+        node: [26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -97,7 +97,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24, 26]
+        node: [26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
@@ -145,7 +145,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24, 26]
+        node: [26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -181,7 +181,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24, 26]
+        node: [26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
@@ -208,7 +208,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24, 26]
+        node: [26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
@@ -252,7 +252,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24, 26]
+        node: [26]
         preset: [mainnet]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -286,7 +286,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24, 26]
+        node: [26]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -318,7 +318,7 @@ jobs:
 
       - uses: ./.github/actions/restore-build
         with:
-          node: 24
+          node: 26
 
       - name: Download release platform bindings
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -679,7 +679,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-node
         with:
-          node: 24
+          node: 26
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       - name: Build release artifacts
         run: |

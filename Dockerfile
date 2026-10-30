@@ -1,4 +1,4 @@
-FROM node:24-slim AS build_src
+FROM node:26-slim AS build_src
 ARG COMMIT
 WORKDIR /usr/app
 RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools curl xz-utils && apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -37,7 +37,7 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
-FROM node:24-slim
+FROM node:26-slim
 WORKDIR /usr/app
 COPY --from=build_src /usr/app .
 
