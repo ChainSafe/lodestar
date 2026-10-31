@@ -13,11 +13,11 @@ const QUEUE_MAX_LENGTH = 16;
  *
  * Jobs are enqueued only on envelope arrival (gossip or API). The envelope may reach us before
  * the sampled data columns; importExecutionPayload awaits `verifyPayloadsDataAvailability`
- * internally, so a queued job can pend for up to `PAYLOAD_DATA_AVAILABILITY_TIMEOUT` while
- * waiting for columns. Duplicate triggers for the same payloadInput are deduped by sharing the
- * in-flight import promise: every caller observes the real import outcome. Resolving duplicates
- * early instead would let BlockInputSync mark a still-pending payload as processed, re-queue it,
- * and spin re-processing the same root until OOM while the import is blocked (e.g. EL syncing).
+ * internally, so a queued job can pend for up to one slot while waiting for columns. Duplicate
+ * triggers for the same payloadInput are deduped by sharing the in-flight import promise: every
+ * caller observes the real import outcome. Resolving duplicates early instead would let
+ * BlockInputSync mark a still-pending payload as processed, re-queue it, and spin re-processing
+ * the same root until OOM while the import is blocked (e.g. EL syncing).
  */
 export class PayloadEnvelopeProcessor {
   readonly jobQueue: JobItemQueue<[PayloadEnvelopeInput, ImportPayloadOpts], void>;
@@ -35,7 +35,7 @@ export class PayloadEnvelopeProcessor {
 
   async processPayloadEnvelopeJob(payloadInput: PayloadEnvelopeInput, opts: ImportPayloadOpts = {}): Promise<void> {
     const existing = this.imports.get(payloadInput);
-    if (existing) {
+    if (existing !== undefined) {
       return existing;
     }
 
@@ -43,7 +43,7 @@ export class PayloadEnvelopeProcessor {
 
     // Re-check after await, as another call may have queued this payload.
     const queued = this.imports.get(payloadInput);
-    if (queued) {
+    if (queued !== undefined) {
       return queued;
     }
 

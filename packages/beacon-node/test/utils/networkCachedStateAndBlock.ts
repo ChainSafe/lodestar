@@ -1,5 +1,5 @@
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {NetworkName} from "@lodestar/config/networks";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {testCachePath} from "@lodestar/state-transition/test-utils";
 import {getNetworkCachedBlockBytes, getNetworkCachedStateBytes} from "@lodestar/test-utils";

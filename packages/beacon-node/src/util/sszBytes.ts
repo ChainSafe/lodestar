@@ -832,7 +832,7 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
 
     const start = bidMsgStart + commitmentsRange.start;
     const end = bidMsgStart + commitmentsRange.end;
-    return Math.round(((end > blockBytes.byteLength ? blockBytes.byteLength : end) - start) / commitmentSize);
+    return Math.round((Math.min(end, blockBytes.byteLength) - start) / commitmentSize);
   }
 
   const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody, KZGCommitment} = ssz[forkName as ForkPostDeneb];
@@ -858,5 +858,5 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
   const end = messageRange.end + bodyRange.end + kzgCommitmentsRange.end;
   const start = messageRange.start + bodyRange.start + kzgCommitmentsRange.start;
 
-  return Math.round(((end > blockBytes.byteLength ? blockBytes.byteLength : end) - start) / commitmentSize);
+  return Math.round((Math.min(end, blockBytes.byteLength) - start) / commitmentSize);
 }

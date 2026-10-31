@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {afterAll, beforeEach, describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ensureInteropPubkeyCache, testCachePath} from "../../../src/testUtils/index.js";
 import {interopSecretKey} from "../../../src/util/interop.js";
 

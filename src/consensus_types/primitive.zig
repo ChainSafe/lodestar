@@ -1,0 +1,40 @@
+const ssz = @import("ssz");
+
+pub const Boolean = ssz.BoolType();
+pub const Byte = ssz.UintType(8);
+pub const Bytes4 = ssz.ByteVectorType(4);
+pub const Bytes8 = ssz.ByteVectorType(8);
+pub const Bytes20 = ssz.ByteVectorType(20);
+pub const Bytes32 = ssz.ByteVectorType(32);
+pub const Bytes48 = ssz.ByteVectorType(48);
+pub const Bytes96 = ssz.ByteVectorType(96);
+pub const Uint8 = ssz.UintType(8);
+pub const Uint16 = ssz.UintType(16);
+pub const Uint32 = ssz.UintType(32);
+pub const Uint64 = ssz.UintType(64);
+pub const Uint128 = ssz.UintType(128);
+pub const Uint256 = ssz.UintType(256);
+
+pub const Slot = Uint64;
+pub const Epoch = Uint64;
+pub const SyncPeriod = Uint64;
+pub const CommitteeIndex = Uint64;
+pub const SubcommitteeIndex = Uint64;
+pub const ValidatorIndex = Uint64;
+pub const WithdrawalIndex = Uint64;
+pub const Gwei = Uint64;
+pub const Wei = Uint256;
+pub const Root = Bytes32;
+pub const BlobIndex = Uint64;
+pub const VersionedHash = Bytes32;
+pub const KZGCommitment = Bytes48;
+pub const KZGProof = Bytes48;
+
+pub const Version = Bytes4;
+pub const DomainType = Bytes4;
+pub const ForkDigest = Bytes4;
+pub const BLSPubkey = Bytes48;
+pub const BLSSignature = Bytes96;
+pub const Domain = Bytes32;
+pub const ParticipationFlags = Uint8;
+pub const ExecutionAddress = Bytes20;

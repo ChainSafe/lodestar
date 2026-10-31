@@ -1,14 +1,18 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Logger} from "@lodestar/utils";
+import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
-import {callInNextEventLoop} from "../util/eventLoop.js";
 import {DataColumnEngineResult, getDataColumnSidecarsFromExecution} from "../util/execution.js";
 import {IBlockInput, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
+
+/** A `null` answer only changes if the EL receives the transactions later, so retries are few and spaced out */
+export const MAX_GET_BLOBS_ATTEMPTS = 3;
+export const GET_BLOBS_RETRY_INTERVAL_MS = 1000;
+const MAX_TRACKED_BLOCK_ROOTS = 64;
 
 export type GetBlobsTrackerInit = {
   logger: Logger;
@@ -28,6 +32,8 @@ export class GetBlobsTracker {
   metrics: Metrics | null;
   config: ChainForkConfig;
   activeReconstructions = new Set<string>();
+  failedAttempts = new Map<string, {count: number; lastAttemptMs: number; retryTimer?: NodeJS.Timeout}>();
+  pendingTriggers = new Set<string>();
   // Preallocate buffers for getBlobsV2 RPC calls
   // See https://github.com/ChainSafe/lodestar/pull/8282 for context
   blobsAndProofsBuffers: {buffers: Uint8Array[]; inUse: boolean}[] = [];
@@ -42,9 +48,30 @@ export class GetBlobsTracker {
 
   triggerGetBlobs(input: IBlockInput | PayloadEnvelopeInput): void {
     if (this.activeReconstructions.has(input.blockRootHex)) {
+      this.pendingTriggers.add(input.blockRootHex);
       return;
     }
 
+    const failed = this.failedAttempts.get(input.blockRootHex);
+    if (failed) {
+      if (failed.count >= MAX_GET_BLOBS_ATTEMPTS) {
+        return;
+      }
+      const waitMs = GET_BLOBS_RETRY_INTERVAL_MS - (Date.now() - failed.lastAttemptMs);
+      if (waitMs > 0) {
+        // Columns tend to arrive in one burst, so keep a single trailing retry instead of relying on a later trigger
+        failed.retryTimer ??= setTimeout(() => {
+          failed.retryTimer = undefined;
+          if (this.failedAttempts.get(input.blockRootHex) === failed && !input.hasAllData()) {
+            this.triggerGetBlobs(input);
+          }
+        }, waitMs).unref();
+        return;
+      }
+    }
+
+    // The request is sent right away, before block processing issues newPayload: ELs that drop a
+    // transaction's blobs once the payload is validated can only answer a request that gets there first
     if (!(input instanceof PayloadEnvelopeInput) && !isBlockInputColumns(input)) {
       // getBlobs from the execution engine is only supported for post-fulu data columns
       return;
@@ -66,34 +93,55 @@ export class GetBlobsTracker {
     }
     timer?.();
 
-    // We don't care about the outcome of this call,
-    // just that it has been triggered for this block root.
     this.activeReconstructions.add(input.blockRootHex);
     this.blobsAndProofsBuffers[freeIndex].inUse = true;
-    callInNextEventLoop(() => {
-      const logCtx = {slot: input.slot, root: input.blockRootHex};
-      this.logger.verbose("Trigger getBlobsV2 for block", logCtx);
-      getDataColumnSidecarsFromExecution(
-        this.config,
-        this.executionEngine,
-        this.emitter,
-        input,
-        this.metrics,
-        this.blobsAndProofsBuffers[freeIndex].buffers
-      )
-        .then((result) => {
-          this.logger.debug("getBlobsV2 result for block", {...logCtx, result});
-          this.metrics?.dataColumns.dataColumnEngineResult.inc({result});
-        })
-        .catch((error) => {
-          this.logger.debug("Error during getBlobsV2 for block", logCtx, error as Error);
-          this.metrics?.dataColumns.dataColumnEngineResult.inc({result: DataColumnEngineResult.Failed});
-        })
-        .finally(() => {
-          this.logger.verbose("Completed getBlobsV2 for block", logCtx);
-          this.activeReconstructions.delete(input.blockRootHex);
-          this.blobsAndProofsBuffers[freeIndex].inUse = false;
-        });
-    });
+    const logCtx = {slot: input.slot, root: input.blockRootHex};
+    this.logger.verbose("Trigger getBlobsV2 for block", logCtx);
+    let requestFailed = false;
+    getDataColumnSidecarsFromExecution(
+      this.config,
+      this.executionEngine,
+      this.emitter,
+      input,
+      this.metrics,
+      this.blobsAndProofsBuffers[freeIndex].buffers
+    )
+      .then((result) => {
+        this.logger.debug("getBlobsV2 result for block", {...logCtx, result});
+        this.metrics?.dataColumns.dataColumnEngineResult.inc({result});
+        if (result === DataColumnEngineResult.NullResponse) {
+          requestFailed = true;
+          this.recordFailedAttempt(input.blockRootHex);
+        }
+      })
+      .catch((error) => {
+        this.logger.debug("Error during getBlobsV2 for block", logCtx, error as Error);
+        this.metrics?.dataColumns.dataColumnEngineResult.inc({result: DataColumnEngineResult.Failed});
+        requestFailed = true;
+        this.recordFailedAttempt(input.blockRootHex);
+      })
+      .finally(() => {
+        this.logger.verbose("Completed getBlobsV2 for block", logCtx);
+        this.activeReconstructions.delete(input.blockRootHex);
+        this.blobsAndProofsBuffers[freeIndex].inUse = false;
+        this.retryPendingTrigger(input, requestFailed);
+      });
+  }
+
+  private retryPendingTrigger(input: IBlockInput | PayloadEnvelopeInput, requestFailed: boolean): void {
+    // Triggers dropped while the request was in flight re-enter once it failed, the attempt that was just
+    // recorded makes this arm the trailing retry instead of sending another request right away.
+    // Post-gloas only the bid triggers a request, so every failed attempt re-enters to arm its own retry
+    const hadPendingTrigger = this.pendingTriggers.delete(input.blockRootHex);
+    if (requestFailed && (hadPendingTrigger || input instanceof PayloadEnvelopeInput)) {
+      this.triggerGetBlobs(input);
+    }
+  }
+
+  private recordFailedAttempt(blockRootHex: string): void {
+    const failed = this.failedAttempts.get(blockRootHex);
+    clearTimeout(failed?.retryTimer);
+    this.failedAttempts.set(blockRootHex, {count: (failed?.count ?? 0) + 1, lastAttemptMs: Date.now()});
+    pruneSetToMax(this.failedAttempts, MAX_TRACKED_BLOCK_ROOTS);
   }
 }

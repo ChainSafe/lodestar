@@ -27,8 +27,8 @@ describe("monitoring / service", () => {
   describe("MonitoringService - constructor", () => {
     let service: MonitoringService | undefined;
 
-    afterEach(() => {
-      service?.close();
+    afterEach(async () => {
+      await service?.close();
     });
 
     it("should return an instance of the monitoring service", () => {
@@ -123,7 +123,7 @@ describe("monitoring / service", () => {
     it("should set the status to closed", async () => {
       const service = await stubbedMonitoringService();
 
-      service.close();
+      await service.close();
 
       expect(service["status"]).toBe("closed");
     });
@@ -131,7 +131,7 @@ describe("monitoring / service", () => {
     it("should clear the monitoring interval", async () => {
       const service = await stubbedMonitoringService();
 
-      service.close();
+      await service.close();
 
       expect(clearTimeout).toHaveBeenCalledWith(service["monitoringInterval"]);
     });
@@ -139,7 +139,7 @@ describe("monitoring / service", () => {
     it("should clear the initial delay timeout", async () => {
       const service = await stubbedMonitoringService({initialDelay: 1000});
 
-      service.close();
+      await service.close();
 
       expect(clearTimeout).toHaveBeenCalledWith(service["initialDelayTimeout"]);
     });
@@ -148,7 +148,7 @@ describe("monitoring / service", () => {
       const service = await stubbedMonitoringService();
       service["pendingRequest"] = Promise.resolve();
 
-      service.close();
+      await service.close();
 
       expect(service["fetchAbortController"]?.abort).toHaveBeenCalledTimes(1);
     });
@@ -165,8 +165,8 @@ describe("monitoring / service", () => {
       baseUrl = remoteServiceUrl.origin;
     });
 
-    afterEach(() => {
-      service?.close();
+    afterEach(async () => {
+      await service?.close();
     });
 
     for (const client of ["beacon", "validator"] as const) {
@@ -255,8 +255,8 @@ describe("monitoring / service", () => {
     // wait for initial monitoring interval
     await waitForInterval();
 
-    afterAll(() => {
-      service.close();
+    afterAll(async () => {
+      await service.close();
     });
 
     return service;

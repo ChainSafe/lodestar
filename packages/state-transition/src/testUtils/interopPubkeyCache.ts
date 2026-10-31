@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {interopSecretKey} from "../util/interop.js";
 import {testCachePath} from "./cache.js";
 

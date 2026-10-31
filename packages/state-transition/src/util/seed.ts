@@ -3,7 +3,7 @@ import {
   computePtcIndicesForEpoch,
   computeProposerIndex as nativeComputeProposerIndex,
   computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
-} from "@chainsafe/lodestar-z/shuffle";
+} from "@lodestar/native/shuffle";
 import {
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_PTC_ATTESTER,

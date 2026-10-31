@@ -46,7 +46,6 @@ export type IChainOptions = BlockProcessOpts &
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
     initialCustodyGroupCount?: number;
-    broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
@@ -119,7 +118,6 @@ export const defaultChainOptions: IChainOptions = {
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
   disableProposerSlashings: false,
-  broadcastValidationStrictness: "warn",
   // should be less than or equal to MIN_SIGNATURE_SETS_TO_BATCH_VERIFY
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value

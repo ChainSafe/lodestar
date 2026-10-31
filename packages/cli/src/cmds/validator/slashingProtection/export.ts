@@ -42,9 +42,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
         string: true, // Ensures the pubkey string is not automatically converted to numbers
         coerce: (pubkeys: string[]): string[] =>
           // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-          pubkeys
-            .flatMap((item) => item.split(","))
-            .map(ensure0xPrefix),
+          pubkeys.flatMap((item) => item.split(",")).map(ensure0xPrefix),
       },
     },
 

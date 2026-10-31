@@ -1,6 +1,6 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
-import {type PubkeyCache, pubkeyCache as defaultPubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
+import {PublicKey} from "@lodestar/native/blst";
+import {type PubkeyCache, pubkeyCache as defaultPubkeyCache} from "@lodestar/native/pubkeys";
 import {
   ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_PROPOSER,
