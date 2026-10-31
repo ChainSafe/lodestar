@@ -3,28 +3,25 @@ import {
   EffectiveBalanceIncrements,
   IBeaconStateView,
   computeEpochAtSlot,
-  computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   isActiveValidator,
   isStartSlotOfEpoch,
 } from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "../../protoArray/interface.js";
 import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.js";
 import {
+  ActiveBalances,
+  type BalanceSourceCacheKey,
   type BalanceSourceKey,
+  CommitteeSweep,
   FastConfirmationBalanceSource,
   FastConfirmationCache,
   FastConfirmationContext,
   FastConfirmationSnapshot,
   IFastConfirmationStore,
-  type TotalActiveBalanceCacheKey,
 } from "./types.js";
-
-// Spec: adjust_committee_weight_estimate_to_ensure_safety
-// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md#adjust_committee_weight_estimate_to_ensure_safety
-const COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR = 5;
 
 const SAFETY_THRESHOLD_UNREACHABLE = Object.freeze({
   threshold: Number.POSITIVE_INFINITY,
@@ -180,25 +177,44 @@ export function getCheckpointState(
   return state ?? null;
 }
 
-export function getSlotCommittee(
+/**
+ * Spec: get_slot_committee, for the slots `startSlot..endSlot`.
+ * Call sites share a handful of end slots (mostly `current_slot - 1`) across many start slots, so the
+ * sweep is built once per end slot and extended backwards on demand instead of once per range, which
+ * on mainnet would be up to ~1M validators per evaluated block.
+ */
+function getCommitteeSweep(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
   cache: FastConfirmationCache,
-  state: IBeaconStateView,
-  slot: Slot
-): Set<ValidatorIndex> {
-  if (cache.committeeBySlot.has(slot)) {
-    return cache.committeeBySlot.get(slot) ?? new Set();
+  startSlot: Slot,
+  endSlot: Slot
+): CommitteeSweep {
+  const headState = getHeadState(ctx, store, cache);
+  let sweep = cache.committeeSweepByEndSlot.get(endSlot);
+  if (sweep === undefined) {
+    sweep = {
+      seen: new Uint8Array(headState.validatorCount),
+      order: new Uint32Array(headState.validatorCount),
+      lengths: [],
+      weightsByKey: new Map(),
+    };
+    cache.committeeSweepByEndSlot.set(endSlot, sweep);
   }
-  const epoch = computeEpochAtSlot(slot);
-  const committeesCount = state.getBeaconCommitteeCountPerSlot(epoch);
-  const participants = new Set<ValidatorIndex>();
-  for (let i = 0; i < committeesCount; i++) {
-    const committee = state.getBeaconCommittee(slot, i);
-    for (const index of committee) {
-      participants.add(index);
+
+  let length = sweep.lengths.at(-1) ?? 0;
+  for (let slot = endSlot - sweep.lengths.length; slot >= startSlot; slot--) {
+    const committeesCount = headState.getBeaconCommitteeCountPerSlot(computeEpochAtSlot(slot));
+    for (let i = 0; i < committeesCount; i++) {
+      for (const index of headState.getBeaconCommittee(slot, i)) {
+        if (sweep.seen[index] === 1) continue;
+        sweep.seen[index] = 1;
+        sweep.order[length++] = index;
+      }
     }
+    sweep.lengths.push(length);
   }
-  cache.committeeBySlot.set(slot, participants);
-  return participants;
+  return sweep;
 }
 
 function getSlotRangeParticipants(
@@ -207,17 +223,9 @@ function getSlotRangeParticipants(
   cache: FastConfirmationCache,
   startSlot: Slot,
   endSlot: Slot
-): Set<ValidatorIndex> {
-  const participants = new Set<ValidatorIndex>();
-  const headState = getHeadState(ctx, store, cache);
-
-  for (let slot = startSlot; slot <= endSlot; slot++) {
-    for (const index of getSlotCommittee(cache, headState, slot)) {
-      participants.add(index);
-    }
-  }
-
-  return participants;
+): Uint32Array {
+  const sweep = getCommitteeSweep(ctx, store, cache, startSlot, endSlot);
+  return sweep.order.subarray(0, sweep.lengths[endSlot - startSlot]);
 }
 
 function isDescendantCached(
@@ -278,72 +286,83 @@ function getZeroInactiveBalances(balanceSource: FastConfirmationBalanceSource): 
   return balanceSource.state?.getEffectiveBalanceIncrementsZeroInactive() ?? balanceSource.balances;
 }
 
+/**
+ * Balances read by `get_total_active_balance` and `compute_committee_weight_between_slots`. Unlike the
+ * vote scans, these keep slashed validators: the maximum support and the adversarial budget they bound
+ * must cover slashed equivocators, whose weight `getEquivocationScore` subtracts. `unslashedTotal` serves
+ * `compute_proposer_score`, whose `calculate_committee_fraction` excludes slashed validators.
+ * Invariant per balance source within a run, but read many times per is_one_confirmed evaluation
+ * across the epoch-boundary chain walk; memoized so the full validator-set scan runs once per run.
+ */
+function getActiveBalances(balanceSource: FastConfirmationBalanceSource, cache: FastConfirmationCache): ActiveBalances {
+  const key: BalanceSourceCacheKey = balanceSource.state ?? balanceSource.balances;
+  const cached = cache.activeBalancesByKey.get(key);
+  if (cached !== undefined) return cached;
+
+  let active: ActiveBalances;
+  if (balanceSource.state) {
+    const {effectiveBalanceIncrements} = balanceSource.state;
+    const unslashedBalances = balanceSource.state.getEffectiveBalanceIncrementsZeroInactive();
+    const balances = new Uint16Array(balanceSource.state.validatorCount);
+    let total = 0;
+    let unslashedTotal = 0;
+    for (const i of balanceSource.state.getCurrentShuffling().activeIndices) {
+      balances[i] = effectiveBalanceIncrements[i];
+      total += balances[i];
+      unslashedTotal += unslashedBalances[i];
+    }
+    active = {balances, total, unslashedTotal};
+  } else {
+    // Fallback balances come from the justified-balance path, which also zeroes slashed validators
+    const total = computeTotalBalance(balanceSource.balances);
+    active = {balances: balanceSource.balances, total, unslashedTotal: total};
+  }
+
+  cache.activeBalancesByKey.set(key, active);
+  return active;
+}
+
 export function getTotalActiveBalance(
   balanceSource: FastConfirmationBalanceSource,
   cache: FastConfirmationCache
 ): number {
-  // Invariant per balance source within a run, but read many times per is_one_confirmed evaluation
-  // across the epoch-boundary chain walk; memoize so the full validator-set scan runs once per run.
-  const key: TotalActiveBalanceCacheKey = balanceSource.state ?? balanceSource.balances;
-  const cached = cache.totalActiveBalanceByKey.get(key);
-  if (cached !== undefined) return cached;
-
-  const total = computeTotalBalance(getZeroInactiveBalances(balanceSource));
-
-  cache.totalActiveBalanceByKey.set(key, total);
-  return total;
+  return getActiveBalances(balanceSource, cache).total;
 }
 
-export function estimateCommitteeWeightBetweenSlots(
-  balanceSource: FastConfirmationBalanceSource,
+export function computeCommitteeWeightBetweenSlots(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
   cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
   startSlot: Slot,
   endSlot: Slot
 ): number {
   if (startSlot > endSlot) return 0;
-  const totalActiveBalance = getTotalActiveBalance(balanceSource, cache);
-  const startEpoch = computeEpochAtSlot(startSlot);
-  const endEpoch = computeEpochAtSlot(endSlot);
 
   if (isFullValidatorSetCovered(startSlot, endSlot)) {
-    return totalActiveBalance;
+    return getTotalActiveBalance(balanceSource, cache);
   }
 
-  const committeeWeightPerSlot = Math.floor(totalActiveBalance / SLOTS_PER_EPOCH);
-
-  if (startEpoch === endEpoch) {
-    return committeeWeightPerSlot * (endSlot - startSlot + 1);
+  const sweep = getCommitteeSweep(ctx, store, cache, startSlot, endSlot);
+  const key: BalanceSourceCacheKey = balanceSource.state ?? balanceSource.balances;
+  let weights = sweep.weightsByKey.get(key);
+  if (weights === undefined) {
+    weights = [];
+    sweep.weightsByKey.set(key, weights);
   }
 
-  const numSlotsInStartEpoch = SLOTS_PER_EPOCH - computeSlotsSinceEpochStart(startSlot);
-  const numSlotsInEndEpoch = computeSlotsSinceEpochStart(endSlot) + 1;
-  const remainingSlotsInEndEpoch = SLOTS_PER_EPOCH - numSlotsInEndEpoch;
-
-  const startEpochWeight = committeeWeightPerSlot * numSlotsInStartEpoch;
-  const endEpochWeight = committeeWeightPerSlot * numSlotsInEndEpoch;
-  // For ranges that cross exactly one epoch boundary without covering a full epoch,
-  // the spec models overlap as:
-  //   startEpochWeightProRated = startEpochWeight * (1 - numSlotsInEndEpoch / SLOTS_PER_EPOCH)
-  //                            = startEpochWeight * remainingSlotsInEndEpoch / SLOTS_PER_EPOCH
-  // We keep the spec's "pro-rate the start epoch" form so integer rounding matches it exactly.
-  const startEpochWeightProRated = Math.floor(startEpochWeight / SLOTS_PER_EPOCH) * remainingSlotsInEndEpoch;
-
-  return adjustCommitteeWeightEstimateToEnsureSafety(startEpochWeightProRated + endEpochWeight);
-}
-
-export function adjustCommitteeWeightEstimateToEnsureSafety(estimate: number): number {
-  // The spec applies this adjustment in raw Gwei:
-  //   ceil(estimate_gwei / 1000) * (1000 + factor)
-  //
-  // Lodestar carries effective balance increments instead, where:
-  //   1 increment = EFFECTIVE_BALANCE_INCREMENT = 1e9 Gwei
-  //
-  // Since each increment is already far larger than 1000 Gwei, the spec's
-  // `ceil(... / 1000)` becomes a no-op at our unit scale. The equivalent
-  // conservative adjustment in increments is therefore:
-  //   ceil(estimate_increments * (1000 + factor) / 1000)
-  // The `+ 999` is integer ceiling division by 1000.
-  return Math.floor((estimate * (1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR) + 999) / 1000);
+  const slotCount = endSlot - startSlot + 1;
+  if (weights.length < slotCount) {
+    const {balances} = getActiveBalances(balanceSource, cache);
+    let weight = weights.at(-1) ?? 0;
+    for (let i = weights.length; i < slotCount; i++) {
+      for (let j = i > 0 ? sweep.lengths[i - 1] : 0; j < sweep.lengths[i]; j++) {
+        weight += balances[sweep.order[j]] ?? 0;
+      }
+      weights.push(weight);
+    }
+  }
+  return weights[slotCount - 1];
 }
 
 export function isFullValidatorSetCovered(startSlot: Slot, endSlot: Slot): boolean {
@@ -357,8 +376,8 @@ export function computeProposerScore(
   balanceSource: FastConfirmationBalanceSource,
   cache: FastConfirmationCache
 ): number {
-  const totalActiveBalance = getTotalActiveBalance(balanceSource, cache);
-  const committeeWeight = Math.floor(totalActiveBalance / SLOTS_PER_EPOCH);
+  const {unslashedTotal} = getActiveBalances(balanceSource, cache);
+  const committeeWeight = Math.floor(unslashedTotal / SLOTS_PER_EPOCH);
   return Math.floor((committeeWeight * ctx.config.PROPOSER_SCORE_BOOST) / 100);
 }
 
@@ -426,7 +445,7 @@ export function getNodeSupportBetweenSlots(
   if (startSlot > endSlot) return 0;
   const balances = getZeroInactiveBalances(balanceSource);
   const participants = getSlotRangeParticipants(ctx, store, cache, startSlot, endSlot);
-  if (participants.size === 0) return 0;
+  if (participants.length === 0) return 0;
 
   const equivocating = ctx.getEquivocatingIndices();
   let score = 0;
@@ -463,7 +482,7 @@ export function getEquivocationScore(
   const state = balanceSource.state;
   const stateEpoch = state ? computeEpochAtSlot(state.slot) : null;
   const participants = getSlotRangeParticipants(ctx, store, cache, startSlot, endSlot);
-  if (participants.size === 0) return 0;
+  if (participants.length === 0) return 0;
 
   let score = 0;
   for (const i of participants) {
@@ -486,7 +505,7 @@ export function computeAdversarialWeight(
   startSlot: Slot,
   endSlot: Slot
 ): number {
-  const maximumWeight = estimateCommitteeWeightBetweenSlots(balanceSource, cache, startSlot, endSlot);
+  const maximumWeight = computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, startSlot, endSlot);
   // The spec uses raw Gwei and computes `maximum_weight // 100 * threshold`.
   // Lodestar carries effective-balance increments instead, so divide after multiplying to avoid
   // dropping the adversarial budget to zero for small validator sets/minimal presets.
@@ -588,21 +607,23 @@ export function computeSafetyThreshold(
   // Build the threshold from the same terms used in the paper/spec:
   // max possible committee support, proposer boost, empty-slot discount, and adversarial budget.
   const proposerScore = computeProposerScore(ctx, balanceSource, cache);
-  const maximumSupport = estimateCommitteeWeightBetweenSlots(
-    balanceSource,
+  const maximumSupport = computeCommitteeWeightBetweenSlots(
+    ctx,
+    store,
     cache,
+    balanceSource,
     (parentBlock.slot + 1) as Slot,
     (currentSlot - 1) as Slot
   );
   const supportDiscount = computeEmptySlotSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
   const adversarialWeight = getAdversarialWeight(ctx, store, cache, balanceSource, blockRoot);
 
-  // Spec underflow guard:
-  // if the discount alone already exceeds the threshold budget, the safety threshold is zero.
-  const threshold =
-    supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeight
-      ? 0
-      : Math.floor((maximumSupport + proposerScore + 2 * adversarialWeight - supportDiscount) / 2);
+  // The discounted votes come from committees within the maximum support range and are weighed with
+  // the same balances, so exceeding it means the computation is wrong rather than an underflow to guard.
+  if (supportDiscount > maximumSupport) {
+    throw new Error(`Fast confirmation support discount ${supportDiscount} exceeds maximum support ${maximumSupport}`);
+  }
+  const threshold = Math.floor((maximumSupport + proposerScore + 2 * adversarialWeight - supportDiscount) / 2);
 
   return {threshold, proposerScore, maximumSupport, supportDiscount, adversarialWeight};
 }
@@ -737,9 +758,11 @@ export function computeHonestFfgSupportForCurrentTarget(
   const targetBalanceSource = {state: targetState, balances: targetState.effectiveBalanceIncrements};
   const totalActiveBalance = getTotalActiveBalance(targetBalanceSource, cache);
   const ffgSupport = getCurrentTargetScore(ctx, store, cache);
-  const tillNowFFGWeight = estimateCommitteeWeightBetweenSlots(
-    targetBalanceSource,
+  const tillNowFFGWeight = computeCommitteeWeightBetweenSlots(
+    ctx,
+    store,
     cache,
+    targetBalanceSource,
     computeStartSlotAtEpoch(currentEpoch),
     (currentSlot - 1) as Slot
   );

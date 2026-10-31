@@ -9,14 +9,16 @@ import {FastConfirmationRule} from "../../../src/forkChoice/fastConfirmation/fas
 import {runFastConfirmationRules} from "../../../src/forkChoice/fastConfirmation/rules.js";
 import {FastConfirmationDecisionReason} from "../../../src/forkChoice/fastConfirmation/types.js";
 import {
-  adjustCommitteeWeightEstimateToEnsureSafety,
+  computeCommitteeWeightBetweenSlots,
   computeEmptySlotSupportDiscount,
+  computeProposerScore,
   computeSafetyThreshold,
   findLatestConfirmedDescendant,
   getAttestationScore,
   getCurrentTargetScore,
   getEquivocationScore,
   getNodeSupportBetweenSlots,
+  getTotalActiveBalance,
   isConfirmedChainSafe,
   isOneConfirmed,
   willCurrentTargetBeJustified,
@@ -34,7 +36,7 @@ import {
 } from "./fastConfirmationTestUtils.js";
 
 describe("fast confirmation", () => {
-  it("computeSafetyThreshold applies the spec underflow guard", () => {
+  it("computeSafetyThreshold subtracts the empty slot discount from the exact maximum support", () => {
     const parent = makeBlock(1, ZERO_ROOT);
     const block = makeBlock(3, parent.blockRoot);
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, block];
@@ -49,7 +51,7 @@ describe("fast confirmation", () => {
       state
     );
 
-    const {threshold, maximumSupport, supportDiscount, adversarialWeight} = computeSafetyThreshold(
+    const {threshold, proposerScore, maximumSupport, supportDiscount, adversarialWeight} = computeSafetyThreshold(
       ctx,
       store,
       createFastConfirmationCache(),
@@ -57,21 +59,101 @@ describe("fast confirmation", () => {
       block.blockRoot
     );
 
-    expect(maximumSupport).toBeGreaterThan(0);
-    expect(supportDiscount).toBeGreaterThan(maximumSupport + 2 * adversarialWeight);
-    expect(threshold).toBe(0);
+    // Slots 2 and 3 share the same 32 validators, so they are counted once
+    expect(maximumSupport).toBe(32);
+    expect(adversarialWeight).toBe(8);
+    expect(supportDiscount).toBe(24);
+    expect(threshold).toBe(Math.floor((maximumSupport + proposerScore + 2 * adversarialWeight - supportDiscount) / 2));
   });
 
-  it("adjustCommitteeWeightEstimateToEnsureSafety applies the spec safety bump in effective balance increments", () => {
-    expect(adjustCommitteeWeightEstimateToEnsureSafety(999)).toBe(1004);
-    expect(adjustCommitteeWeightEstimateToEnsureSafety(1001)).toBe(1007);
+  describe("computeCommitteeWeightBetweenSlots", () => {
+    const validatorCount = 4 * SLOTS_PER_EPOCH;
+    const inactiveIndex = 5;
+    const balancePerValidator = 2;
+
+    // Each epoch partitions validators across its slots, with a different assignment per epoch so
+    // ranges crossing an epoch boundary see validators in both epochs' committees.
+    function committeeAt(slot: Slot): Uint32Array {
+      const epoch = Math.floor(slot / SLOTS_PER_EPOCH);
+      const indices: ValidatorIndex[] = [];
+      for (let i = 0; i < validatorCount; i++) {
+        if ((i + epoch * (i >> 1)) % SLOTS_PER_EPOCH === slot % SLOTS_PER_EPOCH) indices.push(i);
+      }
+      return Uint32Array.from(indices);
+    }
+
+    function expectedWeight(startSlot: Slot, endSlot: Slot): number {
+      const participants = new Set<ValidatorIndex>();
+      for (let slot = startSlot; slot <= endSlot; slot++) {
+        for (const i of committeeAt(slot)) participants.add(i);
+      }
+      participants.delete(inactiveIndex);
+      return participants.size * balancePerValidator;
+    }
+
+    function setup() {
+      const head = makeBlock(2 * SLOTS_PER_EPOCH, ZERO_ROOT);
+      const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), head];
+      const baseState = makeState(validatorCount, balancePerValidator, [], [], [inactiveIndex]);
+      const state = {...baseState, getBeaconCommittee: committeeAt} as typeof baseState;
+      const store = makeStore(head.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, head.blockRoot, head.blockRoot, state);
+      const ctx = makeContext(
+        (2 * SLOTS_PER_EPOCH + 1) as Slot,
+        head.blockRoot,
+        blocks,
+        new Map(),
+        {epoch: 0, rootHex: ZERO_ROOT},
+        state
+      );
+      return {ctx, store, balanceSource: {state, balances: state.effectiveBalanceIncrements}};
+    }
+
+    it("counts each participant once across an epoch boundary and skips inactive validators", () => {
+      const {ctx, store, balanceSource} = setup();
+      const cache = createFastConfirmationCache();
+      const endSlot = (SLOTS_PER_EPOCH + 2) as Slot;
+
+      // Shorter ranges after longer ones and vice versa, all sharing one end slot sweep
+      const startSlots = [SLOTS_PER_EPOCH + 2, 4, SLOTS_PER_EPOCH - 1, 3, SLOTS_PER_EPOCH, 6] as Slot[];
+      for (const startSlot of startSlots) {
+        expect(
+          computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, startSlot, endSlot),
+          `wrong weight for slots ${startSlot}..${endSlot}`
+        ).toBe(expectedWeight(startSlot, endSlot));
+      }
+      let committeeSizes = 0;
+      for (let slot = 3; slot <= endSlot; slot++) committeeSizes += committeeAt(slot).length;
+      expect(expectedWeight(3 as Slot, endSlot)).toBeLessThan((committeeSizes - 1) * balancePerValidator);
+
+      // A range within one epoch with a different end slot
+      expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 1 as Slot, 2 as Slot)).toBe(
+        expectedWeight(1 as Slot, 2 as Slot)
+      );
+    });
+
+    it("returns the total active balance for a range covering a full epoch", () => {
+      const {ctx, store, balanceSource} = setup();
+      const cache = createFastConfirmationCache();
+
+      expect(
+        computeCommitteeWeightBetweenSlots(
+          ctx,
+          store,
+          cache,
+          balanceSource,
+          1 as Slot,
+          (2 * SLOTS_PER_EPOCH - 1) as Slot
+        )
+      ).toBe((validatorCount - 1) * balancePerValidator);
+      expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 3 as Slot, 2 as Slot)).toBe(0);
+    });
   });
 
-  // Perf regression guard: computing the total active balance scans (and in production allocates)
-  // the full validator set. It is invariant per balance source within an FCR run but is read several
-  // times per is_one_confirmed evaluation, across every block of the epoch-boundary chain walk.
-  // The cache must memoize it so the full-set work happens once per run, not once per evaluation.
-  it("memoizes total active balance once per balance source across a chain walk", () => {
+  // Perf regression guard: the active balances scan (and in production allocate) the full validator
+  // set. They are invariant per balance source within an FCR run but are read several times per
+  // is_one_confirmed evaluation, across every block of the epoch-boundary chain walk.
+  // The cache must memoize them so the full-set work happens once per run, not once per evaluation.
+  it("memoizes active balances once per balance source across a chain walk", () => {
     const blockCount = 32;
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT})];
     for (let slot = 1; slot <= blockCount; slot++) {
@@ -79,12 +161,12 @@ describe("fast confirmation", () => {
     }
 
     const baseState = makeState(256, 32, [1 as Slot]);
-    let zeroInactiveCalls = 0;
+    let activeSetScans = 0;
     const state = {
       ...baseState,
-      getEffectiveBalanceIncrementsZeroInactive: () => {
-        zeroInactiveCalls++;
-        return baseState.effectiveBalanceIncrements;
+      getCurrentShuffling: () => {
+        activeSetScans++;
+        return baseState.getCurrentShuffling();
       },
     } as typeof baseState;
     const balanceSource = {state, balances: state.effectiveBalanceIncrements};
@@ -108,9 +190,9 @@ describe("fast confirmation", () => {
       computeSafetyThreshold(ctx, store, cache, balanceSource, blocks[slot].blockRoot);
     }
 
-    // Memoized: one full-set computation per balance source per run, regardless of block count.
+    // Memoized: one active-set scan per balance source per run, regardless of block count.
     // Without the fix this is ~3 per evaluation (≈ 3 * blockCount).
-    expect(zeroInactiveCalls).toBe(1);
+    expect(activeSetScans).toBe(1);
   });
 
   it("memoizes total active balance across current-target justification checks", () => {
@@ -128,7 +210,7 @@ describe("fast confirmation", () => {
       state
     );
     const cache = createFastConfirmationCache();
-    const totalActiveBalanceComputations = vi.spyOn(cache.totalActiveBalanceByKey, "set");
+    const totalActiveBalanceComputations = vi.spyOn(cache.activeBalancesByKey, "set");
 
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
@@ -139,7 +221,13 @@ describe("fast confirmation", () => {
   it("isOneConfirmed returns true only when support exceeds the computed threshold", () => {
     const block = makeBlock(1, ZERO_ROOT);
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), block];
-    const state = makeState(100, 32, [1 as Slot]);
+    const baseState = makeState(100, 32, [1 as Slot]);
+    // Validators 1, 33, 65 and 97 form the slot 1 committee
+    const state = {
+      ...baseState,
+      getBeaconCommittee: (slot: Slot) =>
+        Uint32Array.from([0, 1, 2, 3].map((i) => i * 32 + slot)).filter((i) => i < 100),
+    } as typeof baseState;
     const store = makeStore(ZERO_ROOT, ZERO_ROOT, ZERO_ROOT, 0, 0, ZERO_ROOT, block.blockRoot, state);
 
     const enoughSupportCtx = makeContext(
@@ -267,6 +355,28 @@ describe("fast confirmation", () => {
     expect(support()).toBe(64);
     expect(support()).toBe(64);
     expect(getValidator).not.toHaveBeenCalled();
+  });
+
+  it("committee weight and total active balance count slashed validators but not inactive ones", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    // Validator 1 is slashed and validator 2 is inactive, both still sit in slot 2's committee
+    const state = makeState(4, 32, [2 as Slot], [1], [2]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    const ctx = makeContext(3 as Slot, child.blockRoot, blocks, new Map(), {epoch: 0, rootHex: ZERO_ROOT}, state);
+    const cache = createFastConfirmationCache();
+    const balanceSource = {state, balances: state.effectiveBalanceIncrements};
+
+    expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 2 as Slot, 2 as Slot)).toBe(96);
+    expect(getTotalActiveBalance(balanceSource, cache)).toBe(96);
+    // Proposer score follows calculate_committee_fraction, so it leaves the slashed validator out: 64, not 96
+    expect(computeProposerScore(ctx, balanceSource, cache)).toBe(
+      Math.floor((Math.floor(64 / SLOTS_PER_EPOCH) * 40) / 100)
+    );
+    expect(computeProposerScore(ctx, balanceSource, cache)).not.toBe(
+      Math.floor((Math.floor(96 / SLOTS_PER_EPOCH) * 40) / 100)
+    );
   });
 
   it("vote scans exclude slashed validators without reading them", () => {
