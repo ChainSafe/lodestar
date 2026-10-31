@@ -22,9 +22,7 @@ export async function verifyPayloadsDataAvailability(
   const promises: Promise<gloas.DataColumnSidecar[]>[] = [];
   for (const payloadInput of payloadInputs) {
     if (!payloadInput.hasAllData()) {
-      // Sync and reconstruction keep pulling the data columns from the network while we wait. The wait is
-      // capped at one slot because the payload queue is serial: a longer wait lets consecutive unavailable
-      // payloads push every later payload import further behind with each slot.
+      // Sync and reconstruction keep pulling the data columns from the network while we wait
       promises.push(
         payloadInput.waitForAllData(config.getSlotDurationMs(payloadInput.forkName), signal).catch((e) => {
           if (e instanceof TimeoutError) {
