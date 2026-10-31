@@ -144,6 +144,8 @@ export const chainConfig: ChainConfig = {
   EPOCHS_PER_SUBNET_SUBSCRIPTION: 256,
   // [customized] MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2 (= 272) epochs
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: 272,
+  // TODO: guessed, EIP-8383 only defines the mainnet value; align with the minimal config once the consensus-specs PR exists
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS_HEZE: 8192,
   // 2**5 (= 32) slots
   ATTESTATION_PROPAGATION_SLOT_RANGE: 32,
   // 500ms

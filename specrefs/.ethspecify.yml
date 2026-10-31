@@ -149,8 +149,9 @@ exceptions:
     - compute_max_request_blob_sidecars#deneb
     - compute_max_request_blob_sidecars#electra
     - compute_max_request_data_column_sidecars#fulu
-    - compute_min_epochs_for_block_requests#phase0
-    # The pre-Gloas retention minimum exceeds the reduced Gloas minimum.
+    # Before Heze the pre-Gloas retention minimum exceeds the reduced Gloas minimum. From Heze the
+    # window is MIN_EPOCHS_FOR_BLOCK_REQUESTS_HEZE per EIP-8383, implemented ahead of its consensus-specs
+    # PR, which is below the Gloas minimum on purpose.
     - compute_min_epochs_for_block_requests#gloas
 
   custom_types:

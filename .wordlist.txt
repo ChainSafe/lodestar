@@ -183,6 +183,7 @@ gnosis
 gpg
 heapdump
 heaptrack
+heze
 holesky
 hoodi
 hostname

@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -69,6 +70,76 @@ describe("chain / archiveStore / pruneHistory", () => {
     expect(blockCutoffSlot).toBe(cutoffSlot);
     expect(await db.blockArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
     expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual([cutoffSlot, cutoffSlot + 100]);
+  });
+
+  it("prunes blocks older than the heze retention window", async () => {
+    const hezeConfig = createChainForkConfig({...config, GLOAS_FORK_EPOCH: 0, HEZE_FORK_EPOCH: 0});
+    const minEpochsForBlockRequests = hezeConfig.getMinEpochsForBlockRequests(0);
+    expect(minEpochsForBlockRequests).toBe(config.MIN_EPOCHS_FOR_BLOCK_REQUESTS_HEZE);
+
+    const currentEpoch = minEpochsForBlockRequests + 10;
+    const finalizedEpoch = currentEpoch - 2;
+    const cutoffSlot = computeStartSlotAtEpoch(currentEpoch - minEpochsForBlockRequests);
+    const slots = [0, cutoffSlot - 1, cutoffSlot];
+
+    await db.blockArchive.batchPut(
+      slots.map((slot) => {
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+        block.message.slot = slot;
+        return {key: slot, value: block};
+      })
+    );
+
+    await pruneHistory(
+      hezeConfig,
+      db,
+      testLogger(),
+      null,
+      finalizedEpoch,
+      currentEpoch,
+      0,
+      vi.fn().mockResolvedValue(undefined)
+    );
+
+    expect(await db.blockArchive.keys()).toEqual([cutoffSlot]);
+  });
+
+  it("limits the blocks pruned per run", async () => {
+    const currentEpoch = config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 10;
+    const finalizedEpoch = currentEpoch - 2;
+    const maxBlockSlots = 8;
+    const firstSlot = 16;
+    const slots = [firstSlot, firstSlot + maxBlockSlots - 1, firstSlot + maxBlockSlots, firstSlot + 100];
+
+    await db.blockArchive.batchPut(
+      slots.map((slot) => {
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+        block.message.slot = slot;
+        return {key: slot, value: block};
+      })
+    );
+    await db.executionPayloadEnvelopeArchive.batchPutBinary(
+      slots.map((slot) => {
+        const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+        envelope.message.payload.slotNumber = slot;
+        return {key: slot, value: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)};
+      })
+    );
+
+    await pruneHistory(
+      config,
+      db,
+      testLogger(),
+      null,
+      finalizedEpoch,
+      currentEpoch,
+      0,
+      vi.fn().mockResolvedValue(undefined),
+      maxBlockSlots
+    );
+
+    expect(await db.blockArchive.keys()).toEqual([firstSlot + maxBlockSlots, firstSlot + 100]);
+    expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual([firstSlot + maxBlockSlots, firstSlot + 100]);
   });
 
   it("prunes archived states before the finalized epoch", async () => {
