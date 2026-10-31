@@ -1,5 +1,4 @@
 import {spawnSync} from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {parseArgs} from "node:util";
@@ -20,58 +19,38 @@ function run(args, cwd = root) {
   if (result.status !== 0) throw new Error(`pnpm exited with ${result.status ?? result.signal}`);
 }
 
-function isPublished(spec) {
-  const result = spawnSync("npm", ["view", spec, "version"], {cwd: root, encoding: "utf8"});
-  if (result.error) throw result.error;
-  if (result.status === 0) return true;
-  if (result.stderr.includes("E404")) return false;
-  throw new Error(`npm view ${spec} failed: ${result.stderr.trim()}`);
-}
-
-const manifestPath = path.join(native, "package.json");
-const manifest = fs.readFileSync(manifestPath);
-const {name, version} = JSON.parse(manifest.toString());
-
-// zapi publishes the main package after all platform packages and never skips existing versions,
-// so skip it entirely when the main package exists to keep a failed release re-runnable.
-if (isPublished(`${name}@${version}`)) {
-  // biome-ignore lint/suspicious/noConsole: Release logs need to show why native publishing was skipped
-  console.log(`${name}@${version} is already published, skipping native packages`);
-} else {
-  run([
-    "--filter",
-    "@lodestar/native",
+run([
+  "--filter",
+  "@lodestar/native",
+  "exec",
+  "zapi",
+  "build-artifacts",
+  "--optimize",
+  "ReleaseSafe",
+  "--zig-cwd",
+  "..",
+  "--artifacts-dir",
+  path.join(native, "artifacts"),
+]);
+run(["exec", "zapi", "prepublish", "--platforms-only"], native);
+run(
+  [
     "exec",
     "zapi",
-    "build-artifacts",
-    "--optimize",
-    "ReleaseSafe",
-    "--zig-cwd",
-    "..",
-    "--artifacts-dir",
-    path.join(native, "artifacts"),
-  ]);
-  try {
-    run(["exec", "zapi", "prepublish"], native);
-    run(
-      [
-        "exec",
-        "zapi",
-        "publish",
-        ...(values["dry-run"] ? ["--dry-run"] : []),
-        "--",
-        "--access",
-        "public",
-        "--ignore-scripts",
-        "--provenance",
-        "--tag",
-        values["dist-tag"],
-      ],
-      native
-    );
-  } finally {
-    // zapi adds release-only optionalDependencies; restore the workspace manifest before Lerna checks Git.
-    fs.writeFileSync(manifestPath, manifest);
-  }
-}
+    "publish",
+    "--platforms-only",
+    "--skip-existing",
+    ...(values["dry-run"] ? ["--dry-run"] : []),
+    "--",
+    "--access",
+    "public",
+    "--ignore-scripts",
+    "--provenance",
+    "--tag",
+    values["dist-tag"],
+  ],
+  native
+);
+// Lerna publishes @lodestar/native itself. Its prepack script pins the platform packages as
+// optionalDependencies, so Lerna must run lifecycle scripts.
 if (!values["dry-run"]) run(["exec", "lerna", "publish", "from-package", "--yes", "--no-verify-access", ...args]);
