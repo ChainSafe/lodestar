@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -11,7 +11,7 @@ import {
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, IndexedAttestation, ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
@@ -22,6 +22,7 @@ import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {getAttesterSlashingsFromIndexedAttestations} from "./attesterSlashing.js";
+import {createBlockRootProof, fillPeriodBlockRoots, getHistoricalSummaryIndex} from "./historicalBlockRootProof.js";
 
 export function getLodestarApi({
   chain,
@@ -239,6 +240,37 @@ export function getLodestarApi({
         },
         meta: {executionOptimistic, finalized, version: fork},
       };
+    },
+
+    async getHistoricalBlockRootProof({slot}) {
+      const headState = chain.getHeadState();
+      if (!isStatePostCapella(headState)) {
+        throw new ApiError(400, "Historical summaries are not supported before Capella");
+      }
+
+      const period = Math.floor(slot / SLOTS_PER_HISTORICAL_ROOT);
+      const historicalSummaryIndex = getHistoricalSummaryIndex(config, period);
+      const summary = headState.historicalSummaries[historicalSummaryIndex];
+      if (historicalSummaryIndex < 0 || summary === undefined) {
+        throw new ApiError(404, `Slot ${slot} is not covered by a historical summary`);
+      }
+
+      const periodStartSlot = period * SLOTS_PER_HISTORICAL_ROOT;
+      const [rootBeforePeriod, archived] = await Promise.all([
+        db.blockArchive.getLatestRootBeforeSlot(periodStartSlot),
+        db.blockArchive.getRootsBySlotRange(periodStartSlot, periodStartSlot + SLOTS_PER_HISTORICAL_ROOT),
+      ]);
+      const blockRoots = fillPeriodBlockRoots(periodStartSlot, rootBeforePeriod, archived);
+      if (blockRoots === null) {
+        throw new ApiError(404, `Block archive does not cover slot ${periodStartSlot}`);
+      }
+
+      const {blockRoot, blockSummaryRoot, proof} = createBlockRootProof(blockRoots, slot - periodStartSlot);
+      if (!byteArrayEquals(blockSummaryRoot, summary.blockSummaryRoot)) {
+        throw new ApiError(404, `Archived block roots do not match historical summary ${historicalSummaryIndex}`);
+      }
+
+      return {data: {slot, blockRoot, historicalSummaryIndex, blockSummaryRoot, proof}};
     },
 
     // the optional checkpoint is in root:epoch format

@@ -129,6 +129,19 @@ const HistoricalSummariesResponseType = new ContainerType(
 
 export type HistoricalSummariesResponse = ValueOf<typeof HistoricalSummariesResponseType>;
 
+const HistoricalBlockRootProofType = new ContainerType(
+  {
+    slot: ssz.Slot,
+    blockRoot: ssz.Root,
+    historicalSummaryIndex: ssz.UintNum64,
+    blockSummaryRoot: ssz.Root,
+    proof: ArrayOf(ssz.Bytes32),
+  },
+  {jsonCase: "eth2"}
+);
+
+export type HistoricalBlockRootProof = ValueOf<typeof HistoricalBlockRootProofType>;
+
 export type CustodyInfo = {
   /** Earliest slot for which the node has custodied data columns */
   earliestCustodiedSlot: Slot;
@@ -350,6 +363,18 @@ export type Endpoints = {
     {params: {state_id: string}},
     HistoricalSummariesResponse,
     ExecutionOptimisticFinalizedAndVersionMeta
+  >;
+
+  /**
+   * Returns the block root at a slot together with its Merkle branch to the `block_summary_root` of the
+   * historical summary covering that slot. Only served for slots the node has archived.
+   */
+  getHistoricalBlockRootProof: Endpoint<
+    "GET",
+    {slot: Slot},
+    {params: {slot: number}},
+    HistoricalBlockRootProof,
+    EmptyMeta
   >;
 
   getPersistedCheckpointState: Endpoint<
@@ -601,6 +626,21 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: HistoricalSummariesResponseType,
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getHistoricalBlockRootProof: {
+      url: "/eth/v1/lodestar/historical_summaries/block_roots/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({slot}) => ({params: {slot}}),
+        parseReq: ({params}) => ({slot: params.slot}),
+        schema: {
+          params: {slot: Schema.UintRequired},
+        },
+      },
+      resp: {
+        data: HistoricalBlockRootProofType,
+        meta: EmptyMetaCodec,
       },
     },
     getPersistedCheckpointState: {
