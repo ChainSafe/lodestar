@@ -11,8 +11,11 @@ export type FastConfirmationBalanceSource = {
 
 export type BalanceSourceCacheKey = IBeaconStateView | EffectiveBalanceIncrements;
 
-/** Effective balances of the validators active at the balance source epoch, slashed included, and their sum */
-export type ActiveBalances = {balances: EffectiveBalanceIncrements; total: number};
+/**
+ * Effective balances of the validators active at the balance source epoch, slashed included, their sum,
+ * and the sum over the unslashed ones (`calculate_committee_fraction`)
+ */
+export type ActiveBalances = {balances: EffectiveBalanceIncrements; total: number; unslashedTotal: number};
 
 export type ForkChoiceStateGetter = (
   opts: {stateRoot: RootHex; checkpoint?: never} | {stateRoot?: never; checkpoint: CheckpointWithHex}
