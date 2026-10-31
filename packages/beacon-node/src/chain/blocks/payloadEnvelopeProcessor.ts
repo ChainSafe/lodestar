@@ -64,7 +64,9 @@ export class PayloadEnvelopeProcessor {
       this.signal
     );
 
-    await this.jobQueue.waitForSpace();
+    while (this.jobQueue.jobLen >= QUEUE_MAX_LENGTH) {
+      await this.jobQueue.waitForSpace();
+    }
 
     return this.jobQueue.push(payloadInput, dataAvailabilityStatuses[0], opts);
   }
