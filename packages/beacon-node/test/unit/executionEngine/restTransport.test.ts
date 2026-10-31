@@ -64,7 +64,6 @@ describe("REST engine metadata and limits", () => {
     );
     await transport.getCapabilities();
     await expect(transport.getPayloadBodiesByHashV2([hashHex, hashHex])).rejects.toThrow();
-    await expect(transport.getBlobsV1([hash, hash])).rejects.toThrow();
     await expect(transport.getBlobsV2([hash, hash])).rejects.toThrow();
     expect(request).not.toHaveBeenCalled();
   });

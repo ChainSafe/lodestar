@@ -4,12 +4,8 @@ import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
-import {
-  DataColumnEngineResult,
-  getBlobSidecarsFromExecution,
-  getDataColumnSidecarsFromExecution,
-} from "../util/execution.js";
-import {IBlockInput, isBlockInputBlobs} from "./blocks/blockInput/index.js";
+import {DataColumnEngineResult, getDataColumnSidecarsFromExecution} from "../util/execution.js";
+import {IBlockInput, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
@@ -76,32 +72,8 @@ export class GetBlobsTracker {
 
     // The request is sent right away, before block processing issues newPayload: ELs that drop a
     // transaction's blobs once the payload is validated can only answer a request that gets there first
-    if (!(input instanceof PayloadEnvelopeInput) && isBlockInputBlobs(input)) {
-      // there is not preallocation for blob sidecars like there is for columns sidecars so no need to
-      // store the index for the preallocated buffers
-      this.activeReconstructions.add(input.blockRootHex);
-      const logCtx = {slot: input.slot, root: input.blockRootHex};
-      this.logger.verbose("Trigger getBlobsV1 for block", logCtx);
-      let requestFailed = false;
-      getBlobSidecarsFromExecution(this.config, this.executionEngine, this.metrics, this.emitter, input)
-        .then(() => {
-          // EL errors and misses are handled inside the helper, blobs still missing means the attempt failed
-          if (!input.hasAllData()) {
-            requestFailed = true;
-            this.recordFailedAttempt(input.blockRootHex);
-          }
-        })
-        .catch((error) => {
-          this.logger.debug("Error during getBlobsV1 for block", logCtx, error as Error);
-          requestFailed = true;
-          this.recordFailedAttempt(input.blockRootHex);
-        })
-        .finally(() => {
-          this.logger.verbose("Completed getBlobsV1 for block", logCtx);
-          this.activeReconstructions.delete(input.blockRootHex);
-          this.retryPendingTrigger(input, requestFailed);
-        });
-
+    if (!(input instanceof PayloadEnvelopeInput) && !isBlockInputColumns(input)) {
+      // getBlobs from the execution engine is only supported for post-fulu data columns
       return;
     }
 

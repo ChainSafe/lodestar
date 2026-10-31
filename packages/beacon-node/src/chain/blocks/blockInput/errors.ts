@@ -1,7 +1,7 @@
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {PeerIdStr} from "../../../util/peerId.js";
-import {BlockInputSource, LogMetaBlobs, LogMetaColumns} from "./types.js";
+import {BlockInputSource, LogMetaColumns} from "./types.js";
 
 export enum BlockInputErrorCode {
   // Bad Arguments
@@ -42,7 +42,6 @@ export type BlockInputErrorType =
       sidecarIndex: number;
       commitmentIndex?: number;
     }
-  | (LogMetaBlobs & {code: BlockInputErrorCode.INCOMPLETE_DATA})
   | (LogMetaColumns & {code: BlockInputErrorCode.INCOMPLETE_DATA});
 
 export class BlockInputError extends LodestarError<BlockInputErrorType> {}
