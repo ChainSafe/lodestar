@@ -11,6 +11,7 @@ import {FastConfirmationDecisionReason} from "../../../src/forkChoice/fastConfir
 import {
   computeCommitteeWeightBetweenSlots,
   computeEmptySlotSupportDiscount,
+  computeProposerScore,
   computeSafetyThreshold,
   findLatestConfirmedDescendant,
   getAttestationScore,
@@ -369,6 +370,13 @@ describe("fast confirmation", () => {
 
     expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 2 as Slot, 2 as Slot)).toBe(96);
     expect(getTotalActiveBalance(balanceSource, cache)).toBe(96);
+    // Proposer score follows calculate_committee_fraction, so it leaves the slashed validator out: 64, not 96
+    expect(computeProposerScore(ctx, balanceSource, cache)).toBe(
+      Math.floor((Math.floor(64 / SLOTS_PER_EPOCH) * 40) / 100)
+    );
+    expect(computeProposerScore(ctx, balanceSource, cache)).not.toBe(
+      Math.floor((Math.floor(96 / SLOTS_PER_EPOCH) * 40) / 100)
+    );
   });
 
   it("vote scans exclude slashed validators without reading them", () => {

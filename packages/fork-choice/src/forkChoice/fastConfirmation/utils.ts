@@ -289,7 +289,8 @@ function getZeroInactiveBalances(balanceSource: FastConfirmationBalanceSource): 
 /**
  * Balances read by `get_total_active_balance` and `compute_committee_weight_between_slots`. Unlike the
  * vote scans, these keep slashed validators: the maximum support and the adversarial budget they bound
- * must cover slashed equivocators, whose weight `getEquivocationScore` subtracts.
+ * must cover slashed equivocators, whose weight `getEquivocationScore` subtracts. `unslashedTotal` serves
+ * `compute_proposer_score`, whose `calculate_committee_fraction` excludes slashed validators.
  * Invariant per balance source within a run, but read many times per is_one_confirmed evaluation
  * across the epoch-boundary chain walk; memoized so the full validator-set scan runs once per run.
  */
@@ -301,16 +302,20 @@ function getActiveBalances(balanceSource: FastConfirmationBalanceSource, cache: 
   let active: ActiveBalances;
   if (balanceSource.state) {
     const {effectiveBalanceIncrements} = balanceSource.state;
+    const unslashedBalances = balanceSource.state.getEffectiveBalanceIncrementsZeroInactive();
     const balances = new Uint16Array(balanceSource.state.validatorCount);
     let total = 0;
+    let unslashedTotal = 0;
     for (const i of balanceSource.state.getCurrentShuffling().activeIndices) {
       balances[i] = effectiveBalanceIncrements[i];
       total += balances[i];
+      unslashedTotal += unslashedBalances[i];
     }
-    active = {balances, total};
+    active = {balances, total, unslashedTotal};
   } else {
     // Fallback balances come from the justified-balance path, which also zeroes slashed validators
-    active = {balances: balanceSource.balances, total: computeTotalBalance(balanceSource.balances)};
+    const total = computeTotalBalance(balanceSource.balances);
+    active = {balances: balanceSource.balances, total, unslashedTotal: total};
   }
 
   cache.activeBalancesByKey.set(key, active);
@@ -371,8 +376,8 @@ export function computeProposerScore(
   balanceSource: FastConfirmationBalanceSource,
   cache: FastConfirmationCache
 ): number {
-  const totalActiveBalance = getTotalActiveBalance(balanceSource, cache);
-  const committeeWeight = Math.floor(totalActiveBalance / SLOTS_PER_EPOCH);
+  const {unslashedTotal} = getActiveBalances(balanceSource, cache);
+  const committeeWeight = Math.floor(unslashedTotal / SLOTS_PER_EPOCH);
   return Math.floor((committeeWeight * ctx.config.PROPOSER_SCORE_BOOST) / 100);
 }
 
