@@ -21,17 +21,18 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateElectra,
-  CachedBeaconStateHeze,
   CachedBeaconStatePreHeze,
 } from "../types.js";
 import {
   computeDomain,
   computeSigningRoot,
   createSingleSignatureSetFromComponents,
-  getInitialSweepThreshold,
   getMaxEffectiveBalance,
+  getSweepThreshold,
+  hasCompoundingWithdrawalCredential,
   increaseBalance,
   verifySignatureSet,
+  withSweepThreshold,
 } from "../util/index.js";
 
 /**
@@ -114,15 +115,24 @@ export function addValidatorToRegistry(
   amount: UintNum64
 ): void {
   const {validators, epochCtx} = state;
+  // From heze the sweep threshold bytes of compounding credentials are stored in their canonical encoding
+  const credentials =
+    fork >= ForkSeq.heze && hasCompoundingWithdrawalCredential(withdrawalCredentials)
+      ? withSweepThreshold(withdrawalCredentials, getSweepThreshold(withdrawalCredentials))
+      : withdrawalCredentials;
   // add validator and balance entries
   const effectiveBalance = Math.min(
     amount - (amount % EFFECTIVE_BALANCE_INCREMENT),
-    fork < ForkSeq.electra ? MAX_EFFECTIVE_BALANCE : getMaxEffectiveBalance(withdrawalCredentials)
+    fork < ForkSeq.electra
+      ? MAX_EFFECTIVE_BALANCE
+      : fork >= ForkSeq.heze
+        ? getSweepThreshold(credentials)
+        : getMaxEffectiveBalance(credentials)
   );
   validators.push(
     ssz.phase0.Validator.toViewDU({
       pubkey,
-      withdrawalCredentials,
+      withdrawalCredentials: credentials,
       activationEligibilityEpoch: FAR_FUTURE_EPOCH,
       activationEpoch: FAR_FUTURE_EPOCH,
       exitEpoch: FAR_FUTURE_EPOCH,
@@ -155,10 +165,6 @@ export function addValidatorToRegistry(
   }
 
   state.balances.push(amount);
-
-  if (fork >= ForkSeq.heze) {
-    (state as CachedBeaconStateHeze).validatorSweepThresholds.push(getInitialSweepThreshold(withdrawalCredentials));
-  }
 }
 
 /**

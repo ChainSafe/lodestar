@@ -178,7 +178,7 @@ export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
 
 // Heze EIP-8148
 export const SWEEP_THRESHOLD_REQUEST_TYPE = 0x05;
-export const SWEEP_THRESHOLD_CREDENTIAL_OFFSET = 10;
+export const SWEEP_THRESHOLD_CREDENTIAL_OFFSET = 1;
 export const SWEEP_THRESHOLD_CREDENTIAL_LENGTH = 2;
 
 // Application specific domains

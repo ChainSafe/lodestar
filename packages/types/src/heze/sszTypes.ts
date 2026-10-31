@@ -2,7 +2,6 @@ import {
   BitVectorType,
   ContainerType,
   ProgressiveContainerType,
-  ProgressiveListBasicType,
   ProgressiveListCompositeType,
   VectorBasicType,
 } from "@chainsafe/ssz";
@@ -10,7 +9,7 @@ import {INCLUSION_LIST_COMMITTEE_SIZE, MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYL
 import {ssz as gloasSsz} from "../gloas/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
-const {Slot, Root, BLSSignature, BLSPubkey, ValidatorIndex, ExecutionAddress, Gwei, UintNum64} = primitiveSsz;
+const {Slot, Root, BLSSignature, BLSPubkey, ValidatorIndex, ExecutionAddress, Gwei} = primitiveSsz;
 
 function activeFields(count: number, gaps: number[] = []): boolean[] {
   return Array.from({length: count}, (_, index) => !gaps.includes(index));
@@ -80,8 +79,6 @@ export const SweepThresholdRequests = new ProgressiveListCompositeType(SetSweepT
   typeName: "SweepThresholdRequests",
   limit: MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD,
 });
-
-export const SweepThresholds = new ProgressiveListBasicType(UintNum64, {typeName: "SweepThresholds"});
 
 export const ExecutionRequests = new ProgressiveContainerType(
   {
@@ -156,10 +153,9 @@ export const BeaconState = new ProgressiveContainerType(
   {
     ...gloasBeaconStateFields,
     latestExecutionPayloadBid: ExecutionPayloadBid, // [Modified in Heze:EIP7805]
-    validatorSweepThresholds: SweepThresholds, // [New in Heze:EIP8148]
   },
   // [Modified in Heze:EIP8015] gaps keep the surviving generalized indices stable
-  activeFields(47, [8, 9, 10, 28]),
+  activeFields(46, [8, 9, 10, 28]),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 

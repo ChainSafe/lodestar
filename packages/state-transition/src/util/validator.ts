@@ -183,19 +183,26 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
 }
 
 /**
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/_features/eip8148/beacon-chain.md#new-get_initial_sweep_threshold
+ * Sweep threshold increments stored in bytes 1..2 of compounding withdrawal credentials, 0 when unset.
  */
-export function getInitialSweepThreshold(withdrawalCredentials: Uint8Array): number {
-  if (!hasCompoundingWithdrawalCredential(withdrawalCredentials)) {
-    return 0;
-  }
-
+export function getSweepThresholdIncrements(withdrawalCredentials: Uint8Array): number {
   let increments = 0;
   for (let i = SWEEP_THRESHOLD_CREDENTIAL_LENGTH - 1; i >= 0; i--) {
     increments = increments * 256 + withdrawalCredentials[SWEEP_THRESHOLD_CREDENTIAL_OFFSET + i];
   }
-  const threshold = increments * EFFECTIVE_BALANCE_INCREMENT;
+  return increments;
+}
 
+/**
+ * Spec: get_sweep_threshold, see consensus-specs PR 5790
+ * https://github.com/ethereum/consensus-specs/pull/5790
+ */
+export function getSweepThreshold(withdrawalCredentials: Uint8Array): number {
+  if (!hasCompoundingWithdrawalCredential(withdrawalCredentials)) {
+    return getMaxEffectiveBalance(withdrawalCredentials);
+  }
+
+  const threshold = getSweepThresholdIncrements(withdrawalCredentials) * EFFECTIVE_BALANCE_INCREMENT;
   if (threshold < MIN_ACTIVATION_BALANCE || threshold > MAX_EFFECTIVE_BALANCE_ELECTRA) {
     return MAX_EFFECTIVE_BALANCE_ELECTRA;
   }
@@ -203,10 +210,19 @@ export function getInitialSweepThreshold(withdrawalCredentials: Uint8Array): num
 }
 
 /**
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/_features/eip8148/beacon-chain.md#new-get_effective_sweep_threshold
+ * Spec: set_sweep_threshold, see consensus-specs PR 5790. Returns new credentials, the input is not mutated.
+ * MAX_EFFECTIVE_BALANCE_ELECTRA is stored as 0 so every threshold has a single encoding.
  */
-export function getEffectiveSweepThreshold(validator: phase0.Validator, sweepThreshold: number): number {
-  return sweepThreshold !== 0 ? sweepThreshold : getMaxEffectiveBalance(validator.withdrawalCredentials);
+export function withSweepThreshold(withdrawalCredentials: Uint8Array, threshold: number): Uint8Array {
+  const increments =
+    threshold >= MIN_ACTIVATION_BALANCE && threshold < MAX_EFFECTIVE_BALANCE_ELECTRA
+      ? Math.floor(threshold / EFFECTIVE_BALANCE_INCREMENT)
+      : 0;
+  const credentials = Uint8Array.prototype.slice.call(withdrawalCredentials);
+  for (let i = 0; i < SWEEP_THRESHOLD_CREDENTIAL_LENGTH; i++) {
+    credentials[SWEEP_THRESHOLD_CREDENTIAL_OFFSET + i] = Math.floor(increments / 256 ** i) % 256;
+  }
+  return credentials;
 }
 
 /**
@@ -214,12 +230,7 @@ export function getEffectiveSweepThreshold(validator: phase0.Validator, sweepThr
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/electra/beacon-chain.md#modified-is_partially_withdrawable_validator
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/_features/eip8148/beacon-chain.md#modified-is_partially_withdrawable_validator
  */
-export function isPartiallyWithdrawableValidator(
-  fork: ForkSeq,
-  validator: phase0.Validator,
-  balance: number,
-  sweepThreshold = 0
-): boolean {
+export function isPartiallyWithdrawableValidator(fork: ForkSeq, validator: phase0.Validator, balance: number): boolean {
   const isPostElectra = fork >= ForkSeq.electra;
 
   // Check withdrawal credentials
@@ -232,8 +243,8 @@ export function isPartiallyWithdrawableValidator(
   }
 
   if (fork >= ForkSeq.heze) {
-    const effectiveSweepThreshold = getEffectiveSweepThreshold(validator, sweepThreshold);
-    return validator.effectiveBalance >= effectiveSweepThreshold && balance > effectiveSweepThreshold;
+    const sweepThreshold = getSweepThreshold(validator.withdrawalCredentials);
+    return validator.effectiveBalance >= sweepThreshold && balance > sweepThreshold;
   }
 
   // Get max effective balance based on fork

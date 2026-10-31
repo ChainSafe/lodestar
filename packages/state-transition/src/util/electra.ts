@@ -2,17 +2,13 @@ import {
   COMPOUNDING_WITHDRAWAL_PREFIX,
   ForkSeq,
   GENESIS_SLOT,
-  MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_ACTIVATION_BALANCE,
+  SWEEP_THRESHOLD_CREDENTIAL_LENGTH,
+  SWEEP_THRESHOLD_CREDENTIAL_OFFSET,
 } from "@lodestar/params";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
-import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateElectra,
-  CachedBeaconStateGloas,
-  CachedBeaconStateHeze,
-} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
 
 export function hasCompoundingWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
@@ -40,15 +36,16 @@ export function switchToCompoundingValidator(
     validator.withdrawalCredentials.length
   );
   newWithdrawalCredentials[0] = COMPOUNDING_WITHDRAWAL_PREFIX;
-  validator.withdrawalCredentials = newWithdrawalCredentials;
-  queueExcessActiveBalance(state, index);
-
   if (state.config.getForkSeq(state.slot) >= ForkSeq.heze) {
-    (state as CachedBeaconStateAllForks as CachedBeaconStateHeze).validatorSweepThresholds.set(
-      index,
-      MAX_EFFECTIVE_BALANCE_ELECTRA
+    // Start at the default sweep threshold, stored as zero bytes
+    newWithdrawalCredentials.fill(
+      0,
+      SWEEP_THRESHOLD_CREDENTIAL_OFFSET,
+      SWEEP_THRESHOLD_CREDENTIAL_OFFSET + SWEEP_THRESHOLD_CREDENTIAL_LENGTH
     );
   }
+  validator.withdrawalCredentials = newWithdrawalCredentials;
+  queueExcessActiveBalance(state, index);
 }
 
 export function queueExcessActiveBalance(

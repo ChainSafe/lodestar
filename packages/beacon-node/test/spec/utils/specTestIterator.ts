@@ -89,12 +89,12 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
-    // TODO-HEZE: temporary. EIP-8148 (CFI, `specs/_features/eip8148` in v1.7.0-beta.4) adds
-    // `validator_sweep_thresholds` to the Heze BeaconState and `sweep_thresholds` to ExecutionRequests, so the
+    // TODO-HEZE: temporary. EIP-8148 (CFI, `specs/_features/eip8148` plus consensus-specs PR 5790) adds
+    // `sweep_thresholds` to the Heze ExecutionRequests and changes the sweep and effective balance rules, so the
     // v1.7.0-beta.4 Heze vectors no longer match. Unskip once the pinned release folds EIP-8148 into Heze.
     // Containers EIP-8148 does not touch keep running through ssz_static.
     /^heze\/(?!ssz_static\/).*/,
-    /^heze\/ssz_static\/(BeaconState|BeaconBlockBody|BeaconBlock|SignedBeaconBlock|ExecutionRequests|ExecutionPayloadEnvelope|SignedExecutionPayloadEnvelope|NewPayloadRequest)\/.*$/,
+    /^heze\/ssz_static\/(BeaconBlockBody|BeaconBlock|SignedBeaconBlock|ExecutionRequests|ExecutionPayloadEnvelope|SignedExecutionPayloadEnvelope|NewPayloadRequest)\/.*$/,
   ],
   skippedTests: [],
   skippedRunners: [],

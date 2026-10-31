@@ -1,7 +1,7 @@
 import {ForkPostGloas, ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconBlock, ExecutionRequests, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateAllForks, CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
+import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
 import {IndexedBuilderState} from "./indexedBuilderState.js";
 import {processBuilderDepositRequest} from "./processBuilderDepositRequest.js";
@@ -112,7 +112,7 @@ export function applyParentExecutionPayload(
 
   if (fork >= ForkSeq.heze && "sweepThresholds" in requests) {
     for (const sweepThreshold of requests.sweepThresholds) {
-      processSetSweepThresholdRequest(state as CachedBeaconStateAllForks as CachedBeaconStateHeze, sweepThreshold);
+      processSetSweepThresholdRequest(state, sweepThreshold);
     }
   }
 

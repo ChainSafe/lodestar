@@ -9,7 +9,8 @@ import {
   MIN_ACTIVATION_BALANCE,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@lodestar/params";
-import {BeaconStateAltair, CachedBeaconStateAllForks, CachedBeaconStateHeze, EpochTransitionCache} from "../types.js";
+import {BeaconStateAltair, CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
+import {getSweepThreshold} from "../util/validator.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
@@ -45,8 +46,6 @@ export function processEffectiveBalanceUpdates(
   // so it's recycled here for performance.
   const balances = cache.balances ?? state.balances.getAll();
   const isCompoundingValidatorArr = cache.isCompoundingValidatorArr;
-  const sweepThresholds =
-    fork >= ForkSeq.heze ? (state as CachedBeaconStateHeze).validatorSweepThresholds.getAll() : null;
 
   let numUpdate = 0;
   for (let i = 0, len = balances.length; i < len; i++) {
@@ -59,9 +58,9 @@ export function processEffectiveBalanceUpdates(
     let effectiveBalanceLimit: number;
     if (fork < ForkSeq.electra) {
       effectiveBalanceLimit = MAX_EFFECTIVE_BALANCE;
-    } else if (sweepThresholds !== null && sweepThresholds[i] !== 0) {
-      // from heze, a custom sweep threshold caps the effective balance
-      effectiveBalanceLimit = sweepThresholds[i];
+    } else if (fork >= ForkSeq.heze && isCompoundingValidatorArr[i]) {
+      // from heze, the sweep threshold in the compounding credentials caps the effective balance
+      effectiveBalanceLimit = getSweepThreshold(validators.getReadonly(i).withdrawalCredentials);
     } else {
       // from electra, effectiveBalanceLimit is per validator
       effectiveBalanceLimit = isCompoundingValidatorArr[i] ? MAX_EFFECTIVE_BALANCE_ELECTRA : MIN_ACTIVATION_BALANCE;

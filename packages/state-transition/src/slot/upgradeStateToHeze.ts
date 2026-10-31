@@ -3,6 +3,7 @@ import {ssz} from "@lodestar/types";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
 import {hasCompoundingWithdrawalCredential} from "../util/electra.js";
+import {getSweepThresholdIncrements, withSweepThreshold} from "../util/validator.js";
 
 /**
  * Upgrade a state from Gloas to Heze.
@@ -86,14 +87,24 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
   stateHezeView.payloadExpectedWithdrawals = stateHezeCloned.payloadExpectedWithdrawals;
   stateHezeView.ptcWindow = stateHezeCloned.ptcWindow;
 
-  // [New in Heze:EIP8148]
-  const sweepThresholds: number[] = [];
-  stateHezeCloned.validators.forEachValue((validator) => {
-    sweepThresholds.push(
-      hasCompoundingWithdrawalCredential(validator.withdrawalCredentials) ? MAX_EFFECTIVE_BALANCE_ELECTRA : 0
-    );
+  // [New in Heze:EIP8148] compounding validators start at the default sweep threshold, stored as zero bytes
+  const indicesToClear: number[] = [];
+  stateHezeCloned.validators.forEachValue((validator, i) => {
+    const {withdrawalCredentials} = validator;
+    if (
+      hasCompoundingWithdrawalCredential(withdrawalCredentials) &&
+      getSweepThresholdIncrements(withdrawalCredentials) !== 0
+    ) {
+      indicesToClear.push(i);
+    }
   });
-  stateHezeView.validatorSweepThresholds = ssz.heze.SweepThresholds.toViewDU(sweepThresholds);
+  for (const i of indicesToClear) {
+    const validator = stateHezeView.validators.get(i);
+    validator.withdrawalCredentials = withSweepThreshold(
+      validator.withdrawalCredentials,
+      MAX_EFFECTIVE_BALANCE_ELECTRA
+    );
+  }
 
   const stateHeze = getCachedBeaconState(stateHezeView, stateGloas);
   stateHeze.commit();

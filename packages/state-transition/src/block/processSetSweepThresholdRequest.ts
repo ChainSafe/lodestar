@@ -6,14 +6,16 @@ import {
 } from "@lodestar/params";
 import {heze} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
-import {CachedBeaconStateHeze} from "../types.js";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
+import {getSweepThreshold, withSweepThreshold} from "../util/validator.js";
 
 /**
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.4/specs/_features/eip8148/beacon-chain.md#new-process_set_sweep_threshold_request
+ * Spec: process_set_sweep_threshold_request, see consensus-specs PR 5790
+ * https://github.com/ethereum/consensus-specs/pull/5790
  */
 export function processSetSweepThresholdRequest(
-  state: CachedBeaconStateHeze,
+  state: CachedBeaconStateAllForks,
   request: heze.SetSweepThresholdRequest
 ): void {
   const {sourceAddress, validatorPubkey, threshold} = request;
@@ -37,7 +39,7 @@ export function processSetSweepThresholdRequest(
   }
 
   const thresholdGwei = Number(threshold);
-  if (state.validatorSweepThresholds.get(index) === thresholdGwei) {
+  if (getSweepThreshold(validator.withdrawalCredentials) === thresholdGwei) {
     return;
   }
   if (thresholdGwei < state.balances.get(index)) {
@@ -50,5 +52,6 @@ export function processSetSweepThresholdRequest(
     return;
   }
 
-  state.validatorSweepThresholds.set(index, thresholdGwei);
+  const validatorToUpdate = state.validators.get(index);
+  validatorToUpdate.withdrawalCredentials = withSweepThreshold(validatorToUpdate.withdrawalCredentials, thresholdGwei);
 }

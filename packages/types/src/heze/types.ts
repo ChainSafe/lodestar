@@ -11,7 +11,6 @@ export type SignedExecutionPayloadBid = ValueOf<typeof ssz.SignedExecutionPayloa
 
 export type SetSweepThresholdRequest = ValueOf<typeof ssz.SetSweepThresholdRequest>;
 export type SweepThresholdRequests = ValueOf<typeof ssz.SweepThresholdRequests>;
-export type SweepThresholds = ValueOf<typeof ssz.SweepThresholds>;
 export type ExecutionRequests = ValueOf<typeof ssz.ExecutionRequests>;
 export type NewPayloadRequest = ValueOf<typeof ssz.NewPayloadRequest>;
 export type ExecutionPayloadEnvelope = ValueOf<typeof ssz.ExecutionPayloadEnvelope>;
