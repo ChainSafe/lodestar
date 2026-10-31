@@ -33,8 +33,10 @@ See [contributing](../CONTRIBUTING.md).
 
 ## Publishing
 
-`pnpm release:publish` uses zapi to build and publish the platform packages and
-wrapper at the shared version, then runs Lerna for the remaining Lodestar packages.
+`pnpm release:publish` uses zapi to build and publish the platform packages at the
+shared version, skipping versions already on npm, then runs Lerna for the wrapper and the
+remaining Lodestar packages. The wrapper's `prepack` script pins the platform packages
+as `optionalDependencies`.
 Use `--dist-tag next` or `--dist-tag rc` for pre-releases. `--dry-run` builds and
 prepares the native packages without publishing.
 
