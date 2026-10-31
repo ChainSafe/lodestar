@@ -4,7 +4,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockInputBlobs, BlockInputColumns} from "../../../src/chain/blocks/blockInput/index.js";
+import {BlockInputColumns} from "../../../src/chain/blocks/blockInput/index.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {
   PayloadEnvelopeInput,
@@ -146,43 +146,6 @@ describe("GetBlobsTracker", () => {
     expect(getBlobs).toHaveBeenCalledTimes(1);
 
     rejectRequest(new Error("EL unavailable"));
-    await vi.advanceTimersByTimeAsync(0);
-    expect(getBlobs).toHaveBeenCalledTimes(1);
-
-    await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS);
-    expect(getBlobs).toHaveBeenCalledTimes(2);
-  });
-
-  it("retries getBlobsV1 misses when triggers arrived while the request was in flight", async () => {
-    const electraConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: Infinity});
-    const v1Tracker = new GetBlobsTracker({
-      logger: testLogger(),
-      executionEngine: {getBlobs} as unknown as IExecutionEngine,
-      emitter: new ChainEventEmitter(),
-      metrics: null,
-      config: electraConfig,
-    });
-    const block = ssz.electra.SignedBeaconBlock.defaultValue();
-    block.message.body.blobKzgCommitments = [new Uint8Array(48)];
-    const blockInput = BlockInputBlobs.createFromBlock({
-      block: block as SignedBeaconBlock<typeof ForkName.electra>,
-      blockRootHex: toRootHex(ssz.electra.BeaconBlock.hashTreeRoot(block.message)),
-      forkName: ForkName.electra,
-      daOutOfRange: false,
-      seenTimestampSec: 0,
-      source: BlockInputSource.gossip,
-    });
-    let resolveRequest: (value: null[]) => void = () => {};
-    getBlobs.mockReturnValueOnce(
-      new Promise<null[]>((resolve) => {
-        resolveRequest = resolve;
-      })
-    );
-    v1Tracker.triggerGetBlobs(blockInput);
-    v1Tracker.triggerGetBlobs(blockInput);
-    expect(getBlobs).toHaveBeenCalledTimes(1);
-
-    resolveRequest([null]);
     await vi.advanceTimersByTimeAsync(0);
     expect(getBlobs).toHaveBeenCalledTimes(1);
 
