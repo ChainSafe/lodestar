@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {EFFECTIVE_BALANCE_INCREMENT, EPOCHS_PER_SLASHINGS_VECTOR, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {beforeProcessEpoch} from "../../../src/cache/epochTransitionCache.js";

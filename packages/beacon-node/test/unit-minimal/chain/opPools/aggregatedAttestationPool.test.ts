@@ -1,8 +1,8 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@chainsafe/lodestar-z/blst";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDefault} from "@lodestar/config/default";
+import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@lodestar/native/blst";
 import {
   FAR_FUTURE_EPOCH,
   ForkName,

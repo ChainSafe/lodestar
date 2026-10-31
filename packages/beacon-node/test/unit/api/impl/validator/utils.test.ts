@@ -1,7 +1,7 @@
 import {beforeAll, describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {BeaconStateAllForks, BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {BLSPubkey, ProducedBlockSource, ValidatorIndex, ssz} from "@lodestar/types";
 import {

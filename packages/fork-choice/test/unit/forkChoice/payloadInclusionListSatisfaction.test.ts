@@ -1,8 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, ForkChoice, ForkChoiceMetrics, ProtoArray} from "../../../src/index.js";
-import {getPayloadBlockHash, gloasConfig, headSlot, hezeConfig, setup} from "./proposerHeadTestUtils.js";
+import {ExecutionStatus, ForkChoice, ForkChoiceMetrics, PayloadStatus, ProtoArray} from "../../../src/index.js";
+import {getPayloadBlockHash, gloasConfig, headSlot, hezeConfig, makeStore, setup} from "./proposerHeadTestUtils.js";
 
 /** Deliver the execution payload envelope for a block, creating its FULL variant. */
 function deliverPayload(forkChoice: ForkChoice, blockRoot: RootHex): void {
@@ -93,6 +93,20 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
 
       const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;
       expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(true);
+    });
+  });
+
+  describe("head during the block's own slot", () => {
+    it("moves to the EMPTY variant once the payload is recorded unsatisfied", () => {
+      const store = {...makeStore(), currentSlot: headSlot};
+      const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig, store});
+      deliverPayload(forkChoice, headRoot);
+      expect(forkChoice.updateHead().payloadStatus).toBe(PayloadStatus.FULL);
+
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
+      const head = forkChoice.updateHead();
+      expect(head.blockRoot).toBe(headRoot);
+      expect(head.payloadStatus).toBe(PayloadStatus.EMPTY);
     });
   });
 

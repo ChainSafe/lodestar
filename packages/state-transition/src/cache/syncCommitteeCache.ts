@@ -1,5 +1,5 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompositeViewDU} from "@chainsafe/ssz";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 

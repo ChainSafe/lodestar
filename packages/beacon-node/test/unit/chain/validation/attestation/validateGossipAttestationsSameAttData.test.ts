@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {PublicKey, SecretKey} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";

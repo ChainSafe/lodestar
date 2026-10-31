@@ -1,5 +1,5 @@
-import {unshuffleList} from "@chainsafe/lodestar-z/shuffle";
 import {BeaconConfig} from "@lodestar/config";
+import {unshuffleList} from "@lodestar/native/shuffle";
 import {
   DOMAIN_BEACON_ATTESTER,
   GENESIS_SLOT,

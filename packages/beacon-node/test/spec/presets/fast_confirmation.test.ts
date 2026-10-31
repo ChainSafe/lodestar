@@ -1,12 +1,12 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   ACTIVE_PRESET,
   ForkPostDeneb,
@@ -49,7 +49,7 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
-import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.ts";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,

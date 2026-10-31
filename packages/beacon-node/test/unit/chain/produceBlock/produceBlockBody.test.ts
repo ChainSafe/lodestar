@@ -1,9 +1,9 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {SerializedList} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, computeTimeAtSlot, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";

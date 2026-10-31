@@ -8,7 +8,7 @@ import {
 } from "../../spec/utils/progressiveBalances.js";
 
 const {scrapeMetrics} = vi.hoisted(() => ({scrapeMetrics: vi.fn<() => string>()}));
-vi.mock("@chainsafe/lodestar-z/metrics", () => ({init: vi.fn(), scrapeMetrics}));
+vi.mock("@lodestar/native/metrics", () => ({init: vi.fn(), scrapeMetrics}));
 vi.mock("../../spec/utils/stateTransition.js", () => ({nativeStateTransition: true}));
 
 describe("native progressive balance assertion", () => {

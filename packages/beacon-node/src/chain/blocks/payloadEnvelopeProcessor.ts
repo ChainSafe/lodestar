@@ -40,7 +40,7 @@ export class PayloadEnvelopeProcessor {
 
   async processPayloadEnvelopeJob(payloadInput: PayloadEnvelopeInput, opts: ImportPayloadOpts = {}): Promise<void> {
     const existing = this.imports.get(payloadInput);
-    if (existing) {
+    if (existing !== undefined) {
       return existing;
     }
 

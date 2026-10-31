@@ -1,5 +1,5 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,

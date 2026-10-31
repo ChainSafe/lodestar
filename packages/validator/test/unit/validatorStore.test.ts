@@ -1,11 +1,11 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {DOMAIN_BEACON_PROPOSER, DOMAIN_BUILDER_REQUEST_AUTH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ZERO_HASH, computeDomain, computeEpochAtSlot, computeSigningRoot} from "@lodestar/state-transition";
 import {bellatrix, ssz} from "@lodestar/types";

@@ -2,7 +2,7 @@ import {
   BLS_VERIFIER_MAX_BATCH_SIZE,
   BLS_VERIFIER_MAX_SAME_MESSAGE_BATCH_SIZE,
   verifySignatureSets,
-} from "@chainsafe/lodestar-z/bls-verifier";
+} from "@lodestar/native/bls-verifier";
 import {ISignatureSet, SignatureSetType, toBlsSignatureSet} from "@lodestar/state-transition";
 import {SameMessageSignatureSet} from "./interface.js";
 

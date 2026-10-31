@@ -12,8 +12,6 @@
       "Bash(pnpm vitest *)",
       "Bash(pnpm download-spec-tests)",
       "Bash(pnpm test:spec)",
-      "Bash(pnpm docs:lint)",
-      "Bash(pnpm docs:lint:fix)",
       "Bash(git status *)",
       "Bash(git diff *)",
       "Bash(git log *)",
@@ -46,14 +44,7 @@
     "ethereum-rnd@lodestar-claude-plugins": true,
     "consensus-clients@lodestar-claude-plugins": true,
     "eth-rnd-archive@lodestar-claude-plugins": true,
-    "claude-md-management@claude-plugins-official": true,
-    "code-review@claude-plugins-official": true,
-    "code-simplifier@claude-plugins-official": true,
-    "commit-commands@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
-    "feature-dev@claude-plugins-official": true,
-    "pr-review-toolkit@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {

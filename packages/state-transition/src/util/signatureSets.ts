@@ -1,4 +1,4 @@
-import {BLS_VERIFIER_SET_TYPE, type BlsSignatureSet, verifySignatureSets} from "@chainsafe/lodestar-z/bls-verifier";
+import {BLS_VERIFIER_SET_TYPE, type BlsSignatureSet, verifySignatureSets} from "@lodestar/native/bls-verifier";
 import {Root} from "@lodestar/types";
 
 export enum SignatureSetType {

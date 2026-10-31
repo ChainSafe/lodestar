@@ -3,6 +3,7 @@ import {fetch, fromHex} from "@lodestar/utils";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
 import {ChainConfig} from "../../src/chainConfig/types.js";
+// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
 import specTestsVersions from "../spec-tests-version.json" with {type: "json"};
 
 // Not e2e, but slow. Run with e2e tests

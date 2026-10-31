@@ -1,8 +1,0 @@
-**/lib
-**/.nyc_output
-/packages/*/spec-tests
-node_modules
-**/node_modules
-*.js
-*.ts
-.zig-cache
