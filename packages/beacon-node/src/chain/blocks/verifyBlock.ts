@@ -214,6 +214,13 @@ export async function verifyBlocksInEpoch(
       // maybe chain with the above verifyBlocksSignatures()
     ]);
 
+    if (blockInputs.length === 1 && opts.seenTimestampSec !== undefined) {
+      const consensusVerifiedTime = Math.max(verifyStateTime, verifySignaturesTime);
+      this.metrics?.gossipBlock.receivedToConsensusVerifiedTime.observe(
+        consensusVerifiedTime / 1000 - opts.seenTimestampSec
+      );
+    }
+
     for (const blockInput of blockInputs) {
       const block = blockInput.getBlock();
       const {slot, proposerIndex} = block.message;
