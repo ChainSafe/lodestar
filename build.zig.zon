@@ -144,6 +144,26 @@
                 .default = "d83a63d7dd39a843eeffbe073562d89c4e2448c85e9df0bbcee857bd9ad63d19",
                 .description = "SHA-256 of the pinned SSZ fixture archive.",
             },
+            .bls_spec_test_url = .{
+                .type = .string,
+                .default = "https://github.com/ethereum/bls12-381-tests",
+                .description = "Git repo URL for the BLS12-381 test vectors.",
+            },
+            .bls_spec_test_version = .{
+                .type = .string,
+                .default = "v0.1.1",
+                .description = "BLS12-381 test vectors tag.",
+            },
+            .interchange_spec_test_url = .{
+                .type = .string,
+                .default = "https://github.com/eth-clients/slashing-protection-interchange-tests",
+                .description = "Git repo URL for the slashing protection interchange tests.",
+            },
+            .interchange_spec_test_version = .{
+                .type = .string,
+                .default = "v5.3.0",
+                .description = "Slashing protection interchange tests tag.",
+            },
             .spec_test_out_dir = .{
                 .type = .string,
                 .default = "test/spec/spec_tests",
@@ -286,6 +306,12 @@
         .download_ssz_spec_tests = .{
             .root_module = .{
                 .root_source_file = "test/spec/download_ssz_spec_tests.zig",
+                .imports = .{.spec_test_options},
+            },
+        },
+        .download_comptests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/download_comptests.zig",
                 .imports = .{.spec_test_options},
             },
         },

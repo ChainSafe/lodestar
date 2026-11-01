@@ -1,4 +1,3 @@
-import path from "node:path";
 import {expect} from "vitest";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET} from "@lodestar/params";
@@ -125,7 +124,7 @@ const epochProcessing =
     };
   };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   epoch_processing: {
     type: RunnerType.default,
     fn: epochProcessing([

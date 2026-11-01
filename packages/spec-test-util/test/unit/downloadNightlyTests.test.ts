@@ -1,15 +1,14 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {downloadArchives} from "../../src/downloadArchives.js";
 import {downloadNightlyTests} from "../../src/downloadNightlyTests.js";
-import {downloadGenericSpecTests} from "../../src/downloadTests.js";
 
-vi.mock("../../src/downloadTests.js", () => ({downloadGenericSpecTests: vi.fn()}));
+vi.mock("../../src/downloadArchives.js", () => ({downloadArchives: vi.fn()}));
 
 describe("downloadNightlyTests", () => {
   const fetchMock = vi.fn<(url: string | URL, init?: RequestInit) => Promise<Response>>();
   const log = vi.fn<(message: string) => void>();
   const opts = {
     specTestsRepoUrl: "https://github.com/ethereum/consensus-specs",
-    outputDir: "/unused/spec-tests",
     testsToDownload: ["minimal"],
   };
   const recentRun = {id: 35671698955, created_at: "2026-09-22T00:00:00Z", head_sha: "recent-sha"};
@@ -45,7 +44,7 @@ describe("downloadNightlyTests", () => {
       .mockResolvedValueOnce(Response.json({workflow_runs: [recentRun]}))
       .mockResolvedValueOnce(Response.json(artifacts));
 
-    const assertion = expect(downloadNightlyTests(opts, log, "latest")).resolves.toBeUndefined();
+    const assertion = expect(downloadNightlyTests(opts, log, "latest")).resolves.toBe(`nightly-${recentRun.id}`);
     await Promise.all([assertion, vi.runAllTimersAsync()]);
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -53,8 +52,8 @@ describe("downloadNightlyTests", () => {
     expect(query.get("created")).toBe("2026-09-22");
     expect(query.get("event")).toBe("schedule");
     expect(fetchMock.mock.calls[2][0]).toContain(`/runs/${recentRun.id}/artifacts`);
-    expect(downloadGenericSpecTests).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({specVersion: `nightly-${recentRun.id}`}),
+    expect(downloadArchives).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({version: `nightly-${recentRun.id}`}),
       log
     );
   });
@@ -83,7 +82,7 @@ describe("downloadNightlyTests", () => {
     await Promise.all([assertion, vi.runAllTimersAsync()]);
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(downloadGenericSpecTests).not.toHaveBeenCalled();
+    expect(downloadArchives).not.toHaveBeenCalled();
     for (const [url] of fetchMock.mock.calls) {
       expect(String(url), "must only query workflow runs").not.toContain("/artifacts");
     }
@@ -99,9 +98,6 @@ describe("downloadNightlyTests", () => {
     const query = new URL(fetchMock.mock.calls[0][0]).searchParams;
     expect(query.get("created")).toBe("2026-08-30");
     expect(query.has("event")).toBe(false);
-    expect(downloadGenericSpecTests).toHaveBeenCalledWith(
-      expect.objectContaining({specVersion: `nightly-${staleRun.id}`}),
-      log
-    );
+    expect(downloadArchives).toHaveBeenCalledWith(expect.objectContaining({version: `nightly-${staleRun.id}`}), log);
   });
 });

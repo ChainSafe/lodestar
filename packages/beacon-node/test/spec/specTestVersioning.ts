@@ -1,30 +1,28 @@
 import path from "node:path";
-import {fileURLToPath} from "node:url";
-// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
-import specTestVersions from "../spec-tests-version.json" with {type: "json"};
+import {
+  consensusSpecFixtureVersion,
+  consensusSpecTestsDir,
+  pinnedSpecFixtureVersions,
+  specFixturesDir,
+} from "@lodestar/spec-test-util/fixtures";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pinned = pinnedSpecFixtureVersions();
+const consensusVersion = consensusSpecFixtureVersion();
 
 export const ethereumConsensusSpecsTests = {
-  ...specTestVersions.ethereumConsensusSpecsTests,
-  outputDir: path.join(__dirname, "../../", specTestVersions.ethereumConsensusSpecsTests.outputDirBase),
+  specVersion: consensusVersion,
+  testsDir: (name: string): string => consensusSpecTestsDir(name, consensusVersion),
 };
 
 export const sszSpecTests = {
-  ...specTestVersions.sszSpecTests,
-  outputDir: path.join(__dirname, "../../", specTestVersions.sszSpecTests.outputDirBase),
+  fixturesDir: path.join(specFixturesDir, "ssz", pinned.ssz, "fixtures", "ssz", "ssz"),
 };
 
 export const blsSpecTests = {
-  ...specTestVersions.blsSpecTests,
-  outputDir: path.join(__dirname, "../../", specTestVersions.blsSpecTests.outputDirBase),
+  outputDir: path.join(specFixturesDir, "bls", pinned.bls),
 };
 
-// Even though comptests is run indepdently from spec test, it still shares the same
-// version and repo url with spec test
+// Comptests ship with the consensus-specs release but download separately, so they stay on the pin.
 export const comptestsSpecTests = {
-  ...specTestVersions.comptestsSpecTests,
-  specVersion: specTestVersions.ethereumConsensusSpecsTests.specVersion,
-  specTestsRepoUrl: specTestVersions.ethereumConsensusSpecsTests.specTestsRepoUrl,
-  outputDir: path.join(__dirname, "../../", specTestVersions.comptestsSpecTests.outputDirBase),
+  testsDir: (preset: string): string => path.join(specFixturesDir, pinned.consensus, "comptests", "tests", preset),
 };

@@ -1,11 +1,17 @@
+import fs from "node:fs";
+import path from "node:path";
 import axios from "axios";
 import {describe, expect, it, vi} from "vitest";
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
-// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
-import specTests from "../spec-tests-version.json" with {type: "json"};
 import {loadConfigYaml} from "../yaml.js";
+
+// The consensus-specs tag pinned for the spec fixtures, shared with the Zig spec tests
+const specVersion = fs
+  .readFileSync(path.resolve(import.meta.dirname, "../../../../build.zig.zon"), "utf8")
+  .match(/\.spec_test_version = \.\{[^}]*\.default = "([^"]+)"/)?.[1];
+if (!specVersion) throw new Error("spec_test_version not found in build.zig.zon");
 
 // Not e2e, but slow. Run with e2e tests
 /**
@@ -20,12 +26,12 @@ describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
   it("mainnet", async () => {
-    const remotePreset = await downloadRemoteConfig("mainnet", specTests.ethereumConsensusSpecsTests.specVersion);
+    const remotePreset = await downloadRemoteConfig("mainnet", specVersion);
     assertCorrectPreset({...mainnetPreset}, remotePreset);
   });
 
   it("minimal", async () => {
-    const remotePreset = await downloadRemoteConfig("minimal", specTests.ethereumConsensusSpecsTests.specVersion);
+    const remotePreset = await downloadRemoteConfig("minimal", specVersion);
     assertCorrectPreset({...minimalPreset}, remotePreset);
   });
 });

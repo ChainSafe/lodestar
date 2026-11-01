@@ -52,13 +52,27 @@ jobs:
         with:
           node: ${{ matrix.node }}
 
+      - name: Read spec test cache key
+        id: spec-test-version
+        run: |
+          version=$(zig build spec-test-version)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      # Restore only: saving would put the nightly download into the pinned cache.
+      - name: Restore spec tests cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: test/spec/spec_tests
+          key: zig-spec-test-data-${{ steps.spec-test-version.outputs.version }}
+      - name: Download pinned spec tests
+        run: zig build run:download_spec_tests
       - name: Download nightly spec tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NIGHTLY_DATE: ${{ inputs.date || 'latest' }}
           NIGHTLY_REPO: ${{ inputs.repo }}
           NIGHTLY_BRANCH: ${{ inputs.branch }}
-        run: pnpm download-spec-tests "$NIGHTLY_DATE" "$NIGHTLY_REPO" "$NIGHTLY_BRANCH"
+        run: pnpm download-nightly-spec-tests "$NIGHTLY_DATE" "$NIGHTLY_REPO" "$NIGHTLY_BRANCH"
 
       # Each suite tees its output so we can upload logs on failure.
       # GitHub's default bash is `-eo pipefail`, so vitest's exit code

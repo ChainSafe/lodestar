@@ -99,7 +99,7 @@ Note that to run `test:e2e`, first ensure that the environment is correctly setu
 ./scripts/run_e2e_env.sh start
 ```
 
-Similarly, run `pnpm download-spec-tests` before running `pnpm test:spec`.
+Similarly, run `zig build run:download_spec_tests` before running `pnpm test:spec`.
 
 Contributing to tests:
 

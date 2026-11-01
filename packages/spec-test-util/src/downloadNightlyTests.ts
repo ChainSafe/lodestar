@@ -1,5 +1,5 @@
 import {LodestarError, fetch, retry} from "@lodestar/utils";
-import {downloadGenericSpecTests} from "./downloadTests.js";
+import {downloadArchives} from "./downloadArchives.js";
 
 type WorkflowRun = {id: number; created_at: string; head_sha: string};
 type WorkflowRunsResponse = {workflow_runs: WorkflowRun[]};
@@ -77,11 +77,15 @@ async function resolveNightlyRun(
   );
 }
 
+/**
+ * Downloads the spec test artifacts of a consensus-specs CI run into
+ * `<specFixturesDir>/nightly-<runId>` and returns that version.
+ */
 export async function downloadNightlyTests(
-  opts: {specTestsRepoUrl: string; outputDir: string; testsToDownload: string[]; branch?: string},
+  opts: {specTestsRepoUrl: string; testsToDownload: string[]; branch?: string},
   log: (msg: string) => void,
   date?: string
-): Promise<void> {
+): Promise<string> {
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error("GITHUB_TOKEN is required for nightly downloads");
 
@@ -118,15 +122,7 @@ export async function downloadNightlyTests(
 
   const authInit: RequestInit = {headers: {Authorization: `token ${token}`, Accept: "application/vnd.github+json"}};
 
-  await downloadGenericSpecTests(
-    {
-      specVersion: `nightly-${runId}`,
-      specTestsRepoUrl: opts.specTestsRepoUrl,
-      outputDir: opts.outputDir,
-      testsToDownload: available,
-      testUrls: urlByTest,
-      fetchInit: authInit,
-    },
-    log
-  );
+  const version = `nightly-${runId}`;
+  await downloadArchives({version, archives: urlByTest, fetchInit: authInit}, log);
+  return version;
 }

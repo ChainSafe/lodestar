@@ -74,6 +74,6 @@ const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDir
   }
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   networking: {type: RunnerType.custom, fn: networking},
 });

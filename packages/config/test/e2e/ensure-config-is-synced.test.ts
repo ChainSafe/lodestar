@@ -1,10 +1,16 @@
+import fs from "node:fs";
+import path from "node:path";
 import {describe, expect, it, vi} from "vitest";
 import {fetch, fromHex} from "@lodestar/utils";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
 import {ChainConfig} from "../../src/chainConfig/types.js";
-// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
-import specTestsVersions from "../spec-tests-version.json" with {type: "json"};
+
+// The consensus-specs tag pinned for the spec fixtures, shared with the Zig spec tests
+const specVersion = fs
+  .readFileSync(path.resolve(import.meta.dirname, "../../../../build.zig.zon"), "utf8")
+  .match(/\.spec_test_version = \.\{[^}]*\.default = "([^"]+)"/)?.[1];
+if (!specVersion) throw new Error("spec_test_version not found in build.zig.zon");
 
 // Not e2e, but slow. Run with e2e tests
 
@@ -57,18 +63,12 @@ describe("Ensure chainConfig is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
   it("mainnet chainConfig values match spec", async () => {
-    const remoteConfig = await downloadRemoteConfig(
-      "mainnet",
-      specTestsVersions.ethereumConsensusSpecsTests.specVersion
-    );
+    const remoteConfig = await downloadRemoteConfig("mainnet", specVersion);
     assertCorrectConfig({...mainnetChainConfig}, remoteConfig);
   });
 
   it("minimal chainConfig values match spec", async () => {
-    const remoteConfig = await downloadRemoteConfig(
-      "minimal",
-      specTestsVersions.ethereumConsensusSpecsTests.specVersion
-    );
+    const remoteConfig = await downloadRemoteConfig("minimal", specVersion);
     assertCorrectConfig({...minimalChainConfig}, remoteConfig);
   });
 });

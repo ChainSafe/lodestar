@@ -113,13 +113,6 @@ jobs:
           restore-keys: |
             interop-pubkeys-${{ runner.os }}-
 
-      # Cache validator slashing protection data tests
-      - name: Restore spec tests cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: packages/validator/spec-tests
-          key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
-
       - name: Unit tests
         run: pnpm vitest run --project unit --project unit-minimal --coverage
 
@@ -215,17 +208,23 @@ jobs:
         with:
           node: ${{ matrix.node }}
 
-      # Download spec tests with cache
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          cache-key: spec-tests-warp-ubuntu-2204-x64
+      - name: Read spec test cache key
+        id: spec-test-version
+        run: |
+          version=$(zig build spec-test-version)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Restore spec tests cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: |
-            packages/beacon-node/spec-tests
-            packages/beacon-node/spec-tests-ssz
-            packages/beacon-node/spec-tests-bls
-          key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
+          path: test/spec/spec_tests
+          key: zig-spec-test-data-${{ steps.spec-test-version.outputs.version }}
       - name: Download spec tests
-        run: pnpm download-spec-tests
+        run: zig build run:download_spec_tests
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `pnpm test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
@@ -261,17 +260,23 @@ jobs:
           node: ${{ matrix.node }}
           preset: ${{ matrix.preset }}
 
-      # Download spec tests with cache
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          cache-key: spec-tests-warp-ubuntu-2204-x64
+      - name: Read spec test cache key
+        id: spec-test-version
+        run: |
+          version=$(zig build spec-test-version)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Restore spec tests cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: |
-            packages/beacon-node/spec-tests
-            packages/beacon-node/spec-tests-ssz
-            packages/beacon-node/spec-tests-bls
-          key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
+          path: test/spec/spec_tests
+          key: zig-spec-test-data-${{ steps.spec-test-version.outputs.version }}
       - name: Download spec tests
-        run: pnpm download-spec-tests
+        run: zig build run:download_spec_tests
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `pnpm test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet

@@ -1,4 +1,3 @@
-import path from "node:path";
 import {expect} from "vitest";
 import {VectorCompositeType} from "@chainsafe/ssz";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -91,6 +90,6 @@ function sumDeltas(deltasArr: Deltas[]): Deltas {
   return totalDeltas;
 }
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   rewards: {type: RunnerType.default, fn: rewards},
 });

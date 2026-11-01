@@ -112,8 +112,9 @@ pnpm vitest run --project unit test/unit/path/to/test.test.ts
 # Run tests matching a pattern
 pnpm vitest run --project unit -t "pattern"
 
-# Run spec tests (requires downloading first)
-pnpm download-spec-tests
+# Run spec tests (requires downloading first). Fixture tags are pinned under
+# spec_test_options in build.zig.zon and land in test/spec/spec_tests
+zig build run:download_spec_tests
 pnpm test:spec
 
 # Run a single spec test file (located in packages/beacon-node) from the repository root — use spec-mainnet
@@ -126,15 +127,17 @@ pnpm vitest run --project spec-minimal test/spec/presets/transition.test.ts \
 
 # Download nightly artifacts from ethereum/consensus-specs CI instead of a
 # stable release. Useful when testing against unreleased spec changes.
-# Requires GITHUB_TOKEN in the env or a repo-root .env file.
-pnpm download-spec-tests latest                                # latest scheduled master run
-pnpm download-spec-tests 2026-04-14                            # latest successful run on that date
-pnpm download-spec-tests latest <owner>/consensus-specs        # fork
-pnpm download-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
+# Requires GITHUB_TOKEN in the env or a repo-root .env file and the pinned download
+# above for the other fixtures. The spec tests keep using the nightly run until
+# `zig build run:download_spec_tests` restores the pinned release.
+pnpm download-nightly-spec-tests latest                                # latest scheduled master run
+pnpm download-nightly-spec-tests 2026-04-14                            # latest successful run on that date
+pnpm download-nightly-spec-tests latest <owner>/consensus-specs        # fork
+pnpm download-nightly-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
 
 # Fork-choice compliance tests (model-generated vectors, standalone flow;
 # runs nightly in CI, not per-PR). Same version pin as the spec tests.
-pnpm download-comptests
+zig build run:download_comptests
 pnpm test:comptest
 SPEC_FILTER_FORK=deneb pnpm test:comptest   # single fork (from packages/beacon-node)
 

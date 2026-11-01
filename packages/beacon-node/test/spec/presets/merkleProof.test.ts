@@ -1,4 +1,3 @@
-import path from "node:path";
 import {expect} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {
@@ -90,6 +89,6 @@ interface IProof {
   branch: string[];
 }
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   merkle_proof: {type: RunnerType.default, fn: merkleProof},
 });
