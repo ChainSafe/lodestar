@@ -6,5 +6,15 @@ afl-out/
 *.log
 zig-pkg/
 
-# Spec-extracted seeds (regenerate with: zig build extract-corpus)
+# Extracted seeds (regenerate with: zig build extract-corpus)
 corpus/*-initial/spec-*
+corpus/*-initial/default-*
+
+# Archived campaign outputs from overnight restarts
+afl-out-run*/
+
+# Local campaign tooling, the loop's instance logs and the minimized network corpora --cmin writes from the queues
+overnight.sh
+logs/
+corpus/network_*-cmin/
+corpus/discv5_wire-cmin/

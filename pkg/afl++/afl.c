@@ -61,7 +61,16 @@ void __sanitizer_cov_pcs_init() {}
 // is much faster. When not running under AFL++ (e.g. standalone execution),
 // __afl_fuzz_ptr will be NULL and we fall back to reading from stdin into
 // __afl_fuzz_alt (a 1 MB static buffer).
+// Snapshot mode (-DFUZZ_SNAPSHOT): zig_fuzz_init() builds expensive state once, the fork
+// server starts after it, and every input runs in a fresh fork child that exits when done.
+// Each child inherits the identical initialized state, so stateful harnesses get a fresh,
+// deterministic start without rebuilding it per input. Input arrives on stdin, since the
+// shared-memory path needs the persistent loop.
+#ifdef FUZZ_SNAPSHOT
+int __afl_sharedmem_fuzzing = 0;
+#else
 int __afl_sharedmem_fuzzing = 1;
+#endif
 extern __attribute__((visibility("default"))) unsigned int* __afl_fuzz_len;
 extern __attribute__((visibility("default"))) unsigned char* __afl_fuzz_ptr;
 unsigned char __afl_fuzz_alt[1048576];
@@ -90,6 +99,18 @@ int main(int argc, char** argv) {
   __attribute__((visibility("default"))) void _I(void) __asm__(
       "__afl_manual_init");
 #endif
+#ifdef FUZZ_SNAPSHOT
+  zig_fuzz_init();
+  _I();
+  {
+    ssize_t len = read(0, __afl_fuzz_alt_ptr, sizeof(__afl_fuzz_alt));
+    if (len > 0) {
+      zig_fuzz_test(__afl_fuzz_alt_ptr, (size_t)len);
+    }
+  }
+  return 0;
+#endif
+
   _I();
 
   zig_fuzz_init();

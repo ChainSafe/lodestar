@@ -55,6 +55,8 @@
       "**/packages/**/*/src/**/*.ts",
       "**/packages/**/*/test/**/*.ts",
       "bindings/src/**/*.ts",
+      "bindings/src/network*.js",
+      "test/interop/**/*.mjs",
       "bindings/test/**/*.ts",
       "**/configs/**/*.ts",
       "vitest.config.ts",

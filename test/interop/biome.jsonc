@@ -1,0 +1,7 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "root": false,
+  "extends": ["@chainsafe/biomejs-config", "@chainsafe/biomejs-config/recommended", "@chainsafe/biomejs-config/nodejs", "@chainsafe/biomejs-config/esm"],
+  "files": {"includes": ["**/*.mjs"]},
+  "linter": {"rules": {"suspicious": {"noConsole": "off", "noEmptyBlockStatements": "off"}}}
+}

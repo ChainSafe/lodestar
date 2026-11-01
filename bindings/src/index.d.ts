@@ -165,8 +165,8 @@ export interface ProcessSlotsOpts {
 }
 
 interface CompactMultiProof {
-  // biome-ignore lint/suspicious/noExplicitAny: native returns string literal "compactMulti", IBeaconStateView uses @chainsafe/persistent-merkle-tree's ProofType
   // TODO(bing): align types?
+  // biome-ignore lint/suspicious/noExplicitAny: native returns string literal "compactMulti", IBeaconStateView uses @chainsafe/persistent-merkle-tree's ProofType
   type: any;
   leaves: Uint8Array[];
   descriptor: Uint8Array;
@@ -427,8 +427,7 @@ export declare class BeaconStateView {
     opts?: {preloadValidatorsAndBalances?: boolean}
   ): BeaconStateView;
   loadOtherStateBench(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): void;
-  // biome-ignore lint/suspicious/noExplicitAny: structurally a BeaconState (fork-narrowed),
-  // but typing the union here would duplicate types from @lodestar/types. Caller narrows by forkName.
+  // biome-ignore lint/suspicious/noExplicitAny: structurally a BeaconState; callers narrow by forkName rather than duplicating the @lodestar/types union here.
   toValue(): any;
 
   serialize(): Uint8Array;

@@ -41,6 +41,9 @@
     "lint:zig": "zig fmt --check . && zig build test:tidy",
     "build:native": "pnpm --filter @lodestar/native build",
     "test:native": "pnpm --filter @lodestar/native test",
+    "test:network-interop": "zig build build-exe:network_interop_peer -Doptimize=ReleaseSafe && node --max-old-space-size=256 test/interop/run.mjs zig-out/bin/network_interop_peer",
+    "test:network-core-interop": "zig build build-exe:core_interop_peer -Doptimize=ReleaseSafe && node --max-old-space-size=256 test/interop/core_run.mjs",
+    "test:network-identify-interop": "zig build build-exe:network_interop_peer -Doptimize=ReleaseSafe && node --max-old-space-size=256 test/interop/identify_run.mjs zig-out/bin/network_interop_peer installed",
     "lint:native": "pnpm --filter @lodestar/native lint"
   },
   "devDependencies": {

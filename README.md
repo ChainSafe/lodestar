@@ -45,6 +45,10 @@ Zig modules live in `src/`, with their build files at the repository root.
 `packages/` contains the TypeScript monorepo, and `bindings/` contains the native
 Node.js package.
 
+The experimental [network module](./src/network/root.zig) documents its discovery,
+QUIC, protocol, scheduling, and delivery owners. Its [threat model](./THREAT_MODEL.md)
+describes the resource-accounting boundaries and remaining dependency risks.
+
 - :package: This mono-repository contains a suite of Ethereum Consensus packages.
 - :balance_scale: The mono-repository is released under [Apache-2.0 license](./LICENSE). Note, that the packages contain their own licenses.
 

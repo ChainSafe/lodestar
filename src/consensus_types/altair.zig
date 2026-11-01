@@ -170,3 +170,19 @@ pub const LightClientOptimisticUpdate = ssz.FixedContainerType(struct {
     sync_aggregate: SyncAggregate,
     signature_slot: p.Slot,
 });
+
+// Req/resp messages
+// =================
+
+pub const Status = phase0.Status;
+pub const Goodbye = phase0.Goodbye;
+pub const Ping = phase0.Ping;
+pub const BeaconBlocksByRangeRequest = phase0.BeaconBlocksByRangeRequest;
+pub const BeaconBlockRoots = phase0.BeaconBlockRoots;
+pub const ErrorMessage = phase0.ErrorMessage;
+
+pub const MetaDataV2 = ssz.FixedContainerType(struct {
+    seq_number: p.Uint64,
+    attnets: ssz.BitVectorType(c.ATTESTATION_SUBNET_COUNT),
+    syncnets: ssz.BitVectorType(c.SYNC_COMMITTEE_SUBNET_COUNT),
+});

@@ -11,6 +11,10 @@
       "types": "./src/index.d.ts",
       "import": "./src/index.js"
     },
+    "./network": {
+      "types": "./src/network.d.ts",
+      "import": "./src/network.js"
+    },
     "./blst": {
       "types": "./src/blst.d.ts",
       "import": "./src/blst.js"
@@ -52,6 +56,7 @@
     "build:release": "pnpm clean && pnpm build",
     "clean": "rm -rf zig-out",
     "check-build": "node -e \"import('./src/index.js')\"",
+    "check-types": "tsc -p tsconfig.network.json",
     "prepack": "zapi prepublish --main-only"
   },
   "keywords": [],
@@ -79,7 +84,10 @@
   },
   "devDependencies": {
     "@chainsafe/benchmark": "2.1.0",
-    "@chainsafe/ssz": "^1.9.0"
+    "@chainsafe/ssz": "^1.9.0",
+    "@libp2p/crypto": "5.1.23",
+    "@libp2p/peer-id": "6.0.15",
+    "@multiformats/multiaddr": "13.0.3"
   },
   "publishConfig": {
     "access": "public"

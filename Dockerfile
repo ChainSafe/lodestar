@@ -1,7 +1,7 @@
 FROM node:24-slim AS build_src
 ARG COMMIT
 WORKDIR /usr/app
-RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools curl xz-utils && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools curl xz-utils ca-certificates cmake libclang-dev llvm pkg-config && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install zig toolchain
 # Required to build the @lodestar/native workspace package
@@ -18,6 +18,14 @@ RUN case "${TARGETARCH}" in \
   ln -s /opt/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}/zig /usr/local/bin/zig && \
   rm /tmp/zig.tar.xz && \
   zig version
+
+ENV RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo
+ENV PATH="/opt/cargo/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /usr/local/bin/rustup-init.sh && \
+    sh /usr/local/bin/rustup-init.sh -y --profile minimal --default-toolchain none && \
+    rm /usr/local/bin/rustup-init.sh
+COPY rust-toolchain.toml ./
+RUN rustup toolchain install
 
 COPY . .
 

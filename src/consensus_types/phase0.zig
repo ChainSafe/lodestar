@@ -226,3 +226,32 @@ pub const SignedAggregateAndProof = ssz.VariableContainerType(struct {
     message: AggregateAndProof,
     signature: p.BLSSignature,
 });
+
+// Req/resp messages
+// =================
+
+pub const Status = ssz.FixedContainerType(struct {
+    fork_digest: p.ForkDigest,
+    finalized_root: p.Root,
+    finalized_epoch: p.Epoch,
+    head_root: p.Root,
+    head_slot: p.Slot,
+});
+
+pub const Goodbye = p.Uint64;
+pub const Ping = p.Uint64;
+
+pub const MetaDataV1 = ssz.FixedContainerType(struct {
+    seq_number: p.Uint64,
+    attnets: ssz.BitVectorType(c.ATTESTATION_SUBNET_COUNT),
+});
+
+pub const BeaconBlocksByRangeRequest = ssz.FixedContainerType(struct {
+    start_slot: p.Slot,
+    count: p.Uint64,
+    step: p.Uint64,
+});
+
+pub const BeaconBlockRoots = ssz.FixedListType(p.Root, c.MAX_REQUEST_BLOCKS, .{});
+
+pub const ErrorMessage = ssz.ByteListType(c.MAX_ERROR_MESSAGE_LENGTH);

@@ -1,0 +1,977 @@
+{
+  "upstream": {
+    "repository": "https://github.com/ChainSafe/lodestar",
+    "head": "ef81c9f0a5b2d7a3819b7710094167f1d6219eb5",
+    "history_start": "8d743ffafc17d96770e0eae8de9e3139af3e6552",
+    "integration_baseline": "a677c3eafb63eb6fd99826d9c50e69bf1c5f4a05",
+    "consensus_spec": "v1.7.0-beta.4"
+  },
+  "scope": "Gloas beacon P2P and its shared validation, synchronization, state-view and archive dependencies. History was searched by Gloas/ePBS/payload/PTC subjects and by network, sync, validation and SSZ source paths. Entries below record transport replacements as well as shared handlers; ancestry alone is not treated as native parity.",
+  "paths": {
+    "native": ".",
+    "lodestar": "../lodestar-native-all"
+  },
+  "deployment": "No deployment performed for these changes.",
+  "groups": [
+    {
+      "area": "Gossip topics, progressive SSZ, fork scheduling and wire bounds",
+      "commits": [
+        {
+          "sha": "8d743ffafc17d96770e0eae8de9e3139af3e6552",
+          "subject": "feat: add gloas fork definition (#8222)"
+        },
+        {
+          "sha": "9defa5c09b7217cdaa0d460d95a5d32ca96b5983",
+          "subject": "feat: implement ePBS gossip topics (#8616)"
+        },
+        {
+          "sha": "66d2c102e372f755710098a55229a24837e9ebbf",
+          "subject": "feat: wire up proposer_preferences gossip topic (#9275)"
+        },
+        {
+          "sha": "8b81ee6c3e0a218492f786eea4af8b6c50c3ed8f",
+          "subject": "feat: update data column sidecars for gloas (#8938)"
+        },
+        {
+          "sha": "17a48050e67af1c339b28f1283d5c2f04dc60bc1",
+          "subject": "feat: implement EIP 7688 (#9390)"
+        },
+        {
+          "sha": "3d99c9cb5c6ab2963467f7ccf6d049d486d87ccb",
+          "subject": "feat: implement non-eip-7688 changes in alpha.12 (#9606)"
+        },
+        {
+          "sha": "b0ddac0ac2489fa25c7be2660444b103e1f2de4b",
+          "subject": "refactor: derive gloas p2p max sizes from ssz types (#10053)"
+        },
+        {
+          "sha": "ae6cc426f1d010178c627ed38b9152f35d981fbd",
+          "subject": "fix: bound gloas DataColumnSidecar by max blob of BLOB_SCHEDULE (#10076)"
+        },
+        {
+          "sha": "fd70e5fc15d4b0da5e49383c3d298e2b6245abf5",
+          "subject": "feat: enforce progressive list limits on deserialization (#10042)"
+        },
+        {
+          "sha": "ff9749be2cfe0631be425aebcb63cc90c078cb5a",
+          "subject": "fix: reject gloas blocks with legacy deposits on deserialization (#10080)"
+        },
+        {
+          "sha": "9203d3d7da2b64a2114a940a5fb3390d4d151a99",
+          "subject": "fix(beacon-node): derive the sync aggregate size from the preset in serialized block offsets (#10334)"
+        },
+        {
+          "sha": "20101a8cc1f1c38f909d21bf111cc14d8f05e424",
+          "subject": "fix: use UintBn64 for gloas ExecutionPayloadBid.gasLimit (#9750)"
+        },
+        {
+          "sha": "5aeaa12d3c9386b528f0161d9fd56b785a1a3415",
+          "subject": "fix: use UintBn64 for gloas ExecutionPayloadBid.executionPayment (#9749)"
+        },
+        {
+          "sha": "ba701016f376d21249be93c7729b6d1d62c4ea64",
+          "subject": "fix: use UintBn64 for gloas targetGasLimit (#9751)"
+        }
+      ],
+      "disposition": "Implemented in native transport. Gloas adds four gossip kinds and two envelope protocols. Fork/BPO activation extends through Gloas; Heze remains rejected. Progressive sizes use spec wire caps and the maximum configured blob schedule. Metadata offsets include preset-dependent sync aggregate size. Uint64 bid fields remain bigint in the host.",
+      "evidence": [
+        "native:src/network/chain.zig",
+        "native:src/network/reqresp/protocol.zig",
+        "native:src/network/reqresp/response_bounds.zig",
+        "native:src/network/gossip_processor/metadata.zig",
+        "lodestar:packages/types/src/gloas/sszTypes.ts"
+      ],
+      "validation": [
+        "native:src/network/chain_test.zig",
+        "native:src/network/gossip_processor/metadata_test.zig",
+        "lodestar:packages/types/test/unit/gloas/eip7688.test.ts"
+      ]
+    },
+    {
+      "area": "Awaiting blocks and payloads, optimistic recovery, parent bids",
+      "commits": [
+        {
+          "sha": "4118b5b440a7ccb411c97e8d70dd119290f467d5",
+          "subject": "refactor: generalize NetworkProcessor awaiting-block mechanism for all gossip types (#9059)"
+        },
+        {
+          "sha": "e8407e965790276fae8a22dd7ff57358b9d785e1",
+          "subject": "feat: enhance NetworkProcessor for gloas (#9025)"
+        },
+        {
+          "sha": "89ddaaeed26fc24cad3e5ebb4c563acaab04a8eb",
+          "subject": "fix: update attestation data index extraction (#9158)"
+        },
+        {
+          "sha": "bc0be71fb05ef1e1ad1a2d709f44da400f06269c",
+          "subject": "fix: process payload attestations before payload envelope import (#9159)"
+        },
+        {
+          "sha": "1629c3a59e9edb709c4341c5dc421aa447c4a498",
+          "subject": "fix: queue payload envelopes in network processor (#9300)"
+        },
+        {
+          "sha": "dbe9dc8ef18b79b1695a44294393bba32f8b7d57",
+          "subject": "feat: allow multiple bids compatible with the head view (#9739)"
+        },
+        {
+          "sha": "fbb58f72800e4e444a768de009ddc8c3ed73f867",
+          "subject": "fix: specify optimistic search for payload in NetworkProcessor (#10123)"
+        },
+        {
+          "sha": "2b55a3acab0d890fe68746037503e463baf5d522",
+          "subject": "feat: unknownEnvelopeBlockRootSlot event (#10112)"
+        }
+      ],
+      "disposition": "Native dependency checks retain only unverified bounded metadata. Envelopes wait for blocks; index-1 attestations wait for payloads. PTC votes and columns can validate before payload import and search without attributing payload availability to their sender. Blocks bypass dependency waiting. Bids recover parent variants without requiring current-head compatibility. Later payload-slot hints are forwarded once after slotless searches. Block and payload events recheck waiting work.",
+      "evidence": [
+        "native:bindings/napi/network_exchange.zig",
+        "native:bindings/src/network-pump.js",
+        "lodestar:packages/beacon-node/src/network/core/native/executor.ts"
+      ],
+      "validation": [
+        "lodestar:packages/beacon-node/test/unit/network/native/executor.test.ts"
+      ]
+    },
+    {
+      "area": "Bounded queues, malformed metadata, expired roots, fatal peers and frame admission",
+      "commits": [
+        {
+          "sha": "98d359db41812da0e2a41b8b3e0085640a45343c",
+          "subject": "fix: untrusted slot in network processor (#8466)"
+        },
+        {
+          "sha": "60b5607f3ad48212a500b78357a69b349840a890",
+          "subject": "fix: dos protection for NetworkProcessor (#10039)"
+        },
+        {
+          "sha": "17f78227c7434606b5307f2ebe36d32b3439d29c",
+          "subject": "fix: skip buffering unknown-root gossip messages from expired slots (#10388)"
+        },
+        {
+          "sha": "01f0b664cd02b68114b67c6bf74a36120d3e4dcb",
+          "subject": "fix: prune queued messages by bufferred roots in NetworkProcessor (#10395)"
+        },
+        {
+          "sha": "a28be61ecba97f68988032ef810a28c4eb456ce5",
+          "subject": "fix: reject null slot gossip messages (#10241)"
+        },
+        {
+          "sha": "baa28132d248203178c8c8266561384b2ddcf29a",
+          "subject": "fix: ignore future slot gossip messages (#10023)"
+        },
+        {
+          "sha": "fd4f342a40f62f50f4368e4e7515a1dab958457c",
+          "subject": "fix: ignore messages from FATAL peer (#10239)"
+        },
+        {
+          "sha": "33d8e7d3cd7ef35a790f1e98af45d5ad0cc5ceeb",
+          "subject": "fix: bound inbound gossipsub RPC frames by max_message_size (#10079)"
+        },
+        {
+          "sha": "e6d38ecb0362a09c044624839138693227121882",
+          "subject": "fix: set gossipsub allowedTopics (#9620)"
+        },
+        {
+          "sha": "66e3c719266cf263a1de95240b8b78660c031980",
+          "subject": "fix: add length check for received msgId (#9469)"
+        }
+      ],
+      "disposition": "Mitigated by the native processor, bounded arenas, canonical namespaces, frame/SSZ limits and peer lifecycle. No JS awaiting-root queue is used by the native backend. Recovery has slot, root and source budgets; clock-stale searches are refused. Truncated metadata does not establish consensus validity and still passes through ordinary validators. Native owner fatal reports purge queued peer work. Dependency classification drops unknown roots outside the bounded search window while allowing known older attestations to reach their normal validators; waiting capacity is also limited globally and per source.",
+      "evidence": [
+        "native:src/network/gossip_processor/admission.zig",
+        "native:src/network/gossip_processor/metadata.zig",
+        "native:src/network/gossipsub/topic_policy.zig",
+        "lodestar:packages/beacon-node/src/network/core/native/executor.ts",
+        "native:src/network/gossip_processor/GossipProcessor.zig"
+      ],
+      "validation": [
+        "native:src/network/gossip_processor/metadata_test.zig",
+        "native:src/network/gossip_processor/gossip_processor_ingress_test.zig",
+        "lodestar:packages/beacon-node/test/unit/network/native/executor.test.ts"
+      ]
+    },
+    {
+      "area": "Envelope req/resp quotas, contexts, deduplication, streaming and availability",
+      "commits": [
+        {
+          "sha": "b10dfaca8dbdcfa25e0a3173f9096ce48fd9b077",
+          "subject": "feat: add payload envelope reqresp (#9050)"
+        },
+        {
+          "sha": "d9bad172a8c72d863401c5022617f37d199cb8f7",
+          "subject": "fix: use payload request limit for envelope byPeer range quota (#9710)"
+        },
+        {
+          "sha": "540d803f913789903dbab52841b7c88867691288",
+          "subject": "fix(reqresp): floor rate-limiter request cost to at least 1 token (#10034)"
+        },
+        {
+          "sha": "033e6b71382e582ed35109a1e47f312a30cbca19",
+          "subject": "fix: deduplicate and stream execution payload envelopes by root (#10207)"
+        },
+        {
+          "sha": "f0b11f836e1e8986c0142c78283f1364d63dc806",
+          "subject": "fix: surface archived envelopes the EL cannot serve (#10248)"
+        },
+        {
+          "sha": "c440fa9a2d77740c7e7107766206c5468f07c724",
+          "subject": "fix: use finalized block slot as envelope by range archive boundary (#9432)"
+        },
+        {
+          "sha": "d730eae4b65358f61cd3c2b23e0a460c81945718",
+          "subject": "fix: return resource_unavailable if requested range is before earliest_available_slot (#9454)"
+        },
+        {
+          "sha": "1e596a7422b9c7744c7894ccd7e5845a1741b257",
+          "subject": "fix: validate MIN_EPOCHS for blob/data column by range/root requests (#9173)"
+        },
+        {
+          "sha": "c116c26c3d4a5bdbe5a50ec5df74edd8b1cc7799",
+          "subject": "fix: handle post-gloas empty blocks in data columns by range (#9433)"
+        },
+        {
+          "sha": "00facd40a88c00558d4909130d595f5009ba1e84",
+          "subject": "fix: continue past non-custody column requests in DataColumnSidecarsByRoot (#9456)"
+        },
+        {
+          "sha": "4bcb7ef8556aee372e6ebcd97cd792f9d9220964",
+          "subject": "chore: do not throw if peers request 0 columns for a root (#9544)"
+        }
+      ],
+      "disposition": "Native envelope request shapes, runtime MAX_REQUEST_PAYLOADS limits, original-count quota charging and response fork bounds are implemented. Empty requests still cost at least one token. Shared Lodestar handlers preserve duplicate-root omission, streamed reconstruction, finalized-block archive boundaries, EMPTY-block omission and RESOURCE_UNAVAILABLE semantics. Existing host-safe integer checks remain.",
+      "evidence": [
+        "native:src/network/reqresp/request_policy.zig",
+        "native:src/network/reqresp/quotas.zig",
+        "lodestar:packages/beacon-node/src/network/reqresp/handlers/executionPayloadEnvelopesByRoot.ts",
+        "lodestar:packages/beacon-node/src/network/reqresp/handlers/executionPayloadEnvelopesByRange.ts"
+      ],
+      "validation": [
+        "native:src/network/reqresp/request_policy_test.zig",
+        "native:src/network/reqresp/quotas_test.zig",
+        "lodestar:packages/beacon-node/test/unit/network/reqresp/handlers/executionPayloadEnvelopes.test.ts",
+        "lodestar:packages/beacon-node/test/utils/nativeNetworkTests.ts"
+      ]
+    },
+    {
+      "area": "Bid validation and proposer preferences",
+      "commits": [
+        {
+          "sha": "7622a1076ce62d1ae6577986ce29360aabb25850",
+          "subject": "fix: add check on bid gossip for blob kzg commitment len (#9261)"
+        },
+        {
+          "sha": "847e824a6aa76334308041985fbd10a7afc63aa6",
+          "subject": "fix: ensure bids are for a higher slot than their parent (#9414)"
+        },
+        {
+          "sha": "2defe36dd3c16961c33e3997411a21d0ff24d146",
+          "subject": "fix: validate execution payload bids against parent branch state (#9409)"
+        },
+        {
+          "sha": "8265ad216411ab914bf2d47ee466b43fb479af44",
+          "subject": "fix: reject bids with invalid prev_randao during gossip validation (#9533)"
+        },
+        {
+          "sha": "33dbc1859acac60a4f6878259c4e5c830c4ff506",
+          "subject": "fix: reject out-of-range builder_index in execution payload bid gossip validation (#9624)"
+        },
+        {
+          "sha": "47eedd48a24ab5833c3a0a58676be812d07ee08d",
+          "subject": "fix: apply gossip clock disparity to execution payload bid slot validation (#9627)"
+        },
+        {
+          "sha": "31b495a1d4e13d01b7f59e217d966c1e80546d2c",
+          "subject": "fix: apply gossip clock disparity to proposer_preferences slot check (#9633)"
+        },
+        {
+          "sha": "4c86702f24311a714c196bddaa9f0599dc76a927",
+          "subject": "fix: correct clock disparity handling for proposer preferences (#9729)"
+        },
+        {
+          "sha": "4001398810453c5c1b4abe8c06323a76d0ba592f",
+          "subject": "fix: validate proposer preferences dependent root (#9695)"
+        },
+        {
+          "sha": "d0262e861000c816836420a8e950d8381ea16503",
+          "subject": "feat: require minimum increment to forward bids over gossip (#9706)"
+        },
+        {
+          "sha": "8d73a6a8cb7ff9ee8ce6c4055d54d98ec0c2f31b",
+          "subject": "fix: proposer preferences race condition (#9613)"
+        },
+        {
+          "sha": "a64cdf7144fb8f8556564f0e4703638cdf2a775d",
+          "subject": "fix: ignore proposer preferences for pre-gloas proposal slots (#9869)"
+        },
+        {
+          "sha": "f6a0d6840a79eb1350f842a9c2c1c383b5aeba24",
+          "subject": "fix: ignore parent bids at epoch boundary (#9756)"
+        },
+        {
+          "sha": "1d09a4c954b68b963565f8d7c42be655a551eca2",
+          "subject": "fix: allow proposer boost reorg bid over epoch transition (#9944)"
+        },
+        {
+          "sha": "9ba9a5ce851f7f32f43bdf52b9bf9dd052110a5b",
+          "subject": "fix: ignore bids from builders exiting in the parent payload (#9954)"
+        },
+        {
+          "sha": "d00b8296c9dc88d2e3c6c01fe7c3b494d4a81149",
+          "subject": "fix: run cheap bid rejects before expensive validation (#9984)"
+        },
+        {
+          "sha": "76b167bf36918ae5f811427850587734e556e319",
+          "subject": "fix: reject bids with block_hash equal to parent_block_hash (#9972)"
+        },
+        {
+          "sha": "985999b30c2414620973be840096d62aee82f54d",
+          "subject": "feat: check gas limit consistency with the target (#9391)"
+        }
+      ],
+      "disposition": "Preserved in shared gossip validators invoked by NativeGossipExecutor. Includes commitment bounds, parent branch state, randao, builder-index bounds, clock disparity, preferences dependent root and races, increment thresholds, parent-epoch/reorg cases, exiting builders, cheap rejects first and unequal block/parent hashes. Native preferences metadata intentionally has no current-slot gate because valid preferences can refer to future proposal slots.",
+      "evidence": [
+        "lodestar:packages/beacon-node/src/chain/validation/executionPayloadBid.ts",
+        "lodestar:packages/beacon-node/src/chain/validation/proposerPreferences.ts",
+        "lodestar:packages/beacon-node/src/network/processor/gossipHandlers.ts"
+      ],
+      "validation": [
+        "lodestar:packages/beacon-node/test/unit/chain/validation/executionPayloadBid.test.ts",
+        "lodestar:packages/beacon-node/test/utils/nativeNetworkTests.ts"
+      ]
+    },
+    {
+      "area": "PTC validation, duplicate members and events",
+      "commits": [
+        {
+          "sha": "0e1ac44567df0a2e14b31628f95316555ae2ae1e",
+          "subject": "fix: ignore PTC votes whose slot does not match the referenced block (#9425)"
+        },
+        {
+          "sha": "4451fec75a7fcc8daccf02d452e6314bf63a7a52",
+          "subject": "fix: handle ptc votes from same duplicated validators (#9369)"
+        },
+        {
+          "sha": "b24dce51bf0653036f60b3be32cf6b42996b5a61",
+          "subject": "fix: minor improvement on ptc message gossip validation (#9969)"
+        },
+        {
+          "sha": "ee7c2aa8ee71d6869ecd2a5556d6b07b2a2440cb",
+          "subject": "fix: reject pre-Gloas payload attestations on gossip (#10141)"
+        },
+        {
+          "sha": "5cd2c38c27d8bdda760eec3ef5647db941bd19e5",
+          "subject": "fix: key payload attesters by slot (#9882)"
+        },
+        {
+          "sha": "566a28844f9edf23027c7dfd6a423688cbb26984",
+          "subject": "fix: batch verify payload attestation signatures in blocks (#10055)"
+        },
+        {
+          "sha": "2e78647e8c824723d5616f73f441d764d5161565",
+          "subject": "feat: emit payload_attestation_message SSE event (#9636)"
+        },
+        {
+          "sha": "ff662b331cf62493712816facd0097c7b38ee589",
+          "subject": "feat: add execution payload bid event (#9185)"
+        },
+        {
+          "sha": "53cbf74b3b801f21ca3d0411cc7e239c66b335a2",
+          "subject": "feat: add execution payload events (#9120)"
+        }
+      ],
+      "disposition": "Preserved in shared validation, pools and handlers. Native state view exposes repeated PTC membership and availability bits. Native delivery uses those same handlers and emits the ordinary chain/API events.",
+      "evidence": [
+        "lodestar:packages/beacon-node/src/network/processor/gossipHandlers.ts",
+        "lodestar:packages/state-transition/src/stateView/nativeBeaconStateView.ts"
+      ],
+      "validation": [
+        "lodestar:packages/state-transition/test/unit/stateView/nativeBeaconStateView.test.ts",
+        "lodestar:packages/beacon-node/test/unit/network/native/executor.test.ts"
+      ]
+    },
+    {
+      "area": "Gossip publishing, scores and timing metrics",
+      "commits": [
+        {
+          "sha": "9ecc10f386cc79d46e18ac70c37e22ba06aeca58",
+          "subject": "feat: flood publish execution payload bids (#9914)"
+        },
+        {
+          "sha": "c746ec6a07a98a92c7bdb96bb410db307934f7b8",
+          "subject": "refactor(network): resolve zero peers publish policy per topic (#9887)"
+        },
+        {
+          "sha": "80c76a87864040422d795dfe359b0ee15b471876",
+          "subject": "fix: skip already-seen data columns in zero-peer publish warning (#9580)"
+        },
+        {
+          "sha": "b228e400d13bab074036c5912d5b248710021b01",
+          "subject": "fix: defer gossip handler to the next event loop (#9990)"
+        },
+        {
+          "sha": "56250f4ab6b9839ad5d34fd25fec54169bf54c96",
+          "subject": "feat: track queue time of gossipsub messages (#9940)"
+        },
+        {
+          "sha": "d477ac6ef71229e0746bd488a230df9fece77392",
+          "subject": "fix: only track ACCEPT message job time (#9961)"
+        },
+        {
+          "sha": "7481aa585088fa0f87b0414f3feeac6a6c5482d2",
+          "subject": "chore: track elapsed time for ptc and bid (#9796)"
+        },
+        {
+          "sha": "535f5dd45f9b27346554804cf5f45ccd94d3a390",
+          "subject": "chore: track p2p served bytes and request count per method (#10176)"
+        }
+      ],
+      "disposition": "Native publication already forwards per-topic zero-peer and flood options, including forced bid flooding. Scores are generated from Lodestar policy for all Gloas kinds. Shared handlers defer import work after validation. Added the missing native ACCEPT-only job-duration filter while keeping wait-time observations for all messages. Native metrics retain request/served-byte counters.",
+      "evidence": [
+        "native:src/network/application_policy.zig",
+        "lodestar:packages/beacon-node/src/network/core/native/gossip.ts",
+        "lodestar:packages/beacon-node/src/network/core/native/executor.ts",
+        "lodestar:packages/beacon-node/src/network/network.ts"
+      ],
+      "validation": [
+        "native:src/network/application_policy_test.zig",
+        "lodestar:packages/beacon-node/test/unit/network/native/executor.test.ts",
+        "lodestar:packages/beacon-node/test/unit/network/native/gossip.test.ts"
+      ]
+    },
+    {
+      "area": "Payload recovery races and input ownership",
+      "commits": [
+        {
+          "sha": "1540a78cd0d876dec4f04dcd3b7f7021b3b996b6",
+          "subject": "feat: add unknown payload envelope sync flow (#9241)"
+        },
+        {
+          "sha": "101e2c290d37fe37e1f785d41be56a5d76aec4c9",
+          "subject": "feat: enhance UnknownBlockPeerBalancer for gloas (#9928)"
+        },
+        {
+          "sha": "e73f1f51653f1916fce6dd6a60eaed4a75e84b74",
+          "subject": "fix: feed peer sync meta to UnknownBlockPeerBalancer on subscribeToNetwork (#9924)"
+        },
+        {
+          "sha": "7aa8c9c93ab90acd2f9b3e2781ce9e47e4dc10c0",
+          "subject": "fix: bound payload envelope seen cache (#9904)"
+        },
+        {
+          "sha": "f591cb177e959e48cf0d47467897dd4387926c9e",
+          "subject": "fix: prune prefinalized pending items in BlockInputSync (#9852)"
+        },
+        {
+          "sha": "25a4a1c65f68fa2b0c8a36c8c2a402befcf99ce4",
+          "subject": "fix: trigger getBlobs in Unknown block sync (#9806)"
+        },
+        {
+          "sha": "407d8c5b58ae18cac46ad3aed1ec9d73665e7931",
+          "subject": "fix: ensure block in forkchoice before validate by_root payload (#9479)"
+        },
+        {
+          "sha": "57ffc39074bb3888e43ec436a72460f94aa34343",
+          "subject": "feat: search payload at deadline (#10134)"
+        },
+        {
+          "sha": "ca7e252e954b88baee31b36bb80a2e166e7fea7e",
+          "subject": "fix: do not remove pending block on failed download (#10137)"
+        },
+        {
+          "sha": "79bf6381f867e91556f36787535271e57146c8a1",
+          "subject": "fix: prevent unknown block sync stall when rate limit backoff expires (#10250)"
+        },
+        {
+          "sha": "fef46df5ba4afab225b44f1f90d80c39dbf3de24",
+          "subject": "fix: removeAndDownScoreAllDescendants of unknown sync (#10221)"
+        },
+        {
+          "sha": "02c5a19f35d8107f28bb8115d52e593689364601",
+          "subject": "fix: deduplicate incomplete payload sync at the payload deadline (#10289)"
+        }
+      ],
+      "disposition": "Shared unknown-block/payload sync is retained. Ported 02c5a19f35: one incomplete-envelope notification per cached input at the configured payload deadline, identity checks after asynchronous work, preserved in-flight imports/downloads and source hints. Existing peer balancing, retry/backoff and cache bounds remain active for native recovery events.",
+      "evidence": [
+        "lodestar:packages/beacon-node/src/sync/unknownBlock.ts",
+        "lodestar:packages/beacon-node/src/network/processor/gossipHandlers.ts"
+      ],
+      "validation": [
+        "lodestar:packages/beacon-node/test/unit/sync/unknownBlock.test.ts",
+        "lodestar:packages/beacon-node/test/unit/network/processor/gossipHandlers.test.ts"
+      ]
+    },
+    {
+      "area": "Repeat proposals, signature-verified caching and peer attribution",
+      "commits": [
+        {
+          "sha": "36fc8329830d988e6a25e633911d945d14e80058",
+          "subject": "fix: process REPEAT_PROPOSAL block (#9805)"
+        },
+        {
+          "sha": "8d21f7a861b38d15d6c001a0fa2626ade1a1a947",
+          "subject": "fix: prune cache entries of repeat proposals that are not imported (#10083)"
+        },
+        {
+          "sha": "c3aaeedc3b6cdc1e7ad21d218e671f2363546d81",
+          "subject": "fix: cache gossip blocks only after proposer signature verification (#10279)"
+        },
+        {
+          "sha": "51a1c44b27069d392acdbd2c09a838da9b336eba",
+          "subject": "fix: ensure PayloadEnvelopeInput in cache whenever we have a block (#9476)"
+        },
+        {
+          "sha": "3bd495295ea2472ff7bc82d342c356c460007b0a",
+          "subject": "fix: evict invalid payload envelopes from the seen cache (#10246)"
+        },
+        {
+          "sha": "e6f04acd829a12869b48968555604887d04eccfd",
+          "subject": "fix: avoid peer scoring on local payload errors (#9755)"
+        },
+        {
+          "sha": "d16fa2b13a19127ae71d77a7276e32cd2ad9cecd",
+          "subject": "fix: split execution engine errors (#9685)"
+        },
+        {
+          "sha": "312812503e5c9fe95ccb661193b55658f85a510b",
+          "subject": "fix: check the parent payload before importing a repeat proposal in gloas (#10424)"
+        }
+      ],
+      "disposition": "Ported the Gloas repeat-proposal parent-payload check. Shared handlers preserve signature-before-cache, envelope eviction on definitive invalidity and no peer penalties for local EL errors. Branch-specific reporters retain the captured native origin across deferred work.",
+      "evidence": [
+        "lodestar:packages/beacon-node/src/network/processor/gossipHandlers.ts",
+        "lodestar:packages/beacon-node/src/network/core/native/reports.ts"
+      ],
+      "validation": [
+        "lodestar:packages/beacon-node/test/unit/network/processor/gossipHandlers.test.ts",
+        "lodestar:packages/beacon-node/test/unit/network/native/reports.test.ts"
+      ]
+    },
+    {
+      "area": "Range sync, orphaned payloads and bid/hash consistency",
+      "commits": [
+        {
+          "sha": "180030f94698662a6329216fece033d596d114bc",
+          "subject": "feat: range sync for gloas (#9269)"
+        },
+        {
+          "sha": "1e9a530f9897d50d2d6337cd4143c8dc53667c66",
+          "subject": "fix(beacon-node): skip empty Gloas payloads during range sync (#9937)"
+        },
+        {
+          "sha": "4da7a943baea8460a61f47c5c9b600de669c8bcf",
+          "subject": "fix: handle 1st orphaned payload of blocks[0] in range sync (#9785)"
+        },
+        {
+          "sha": "71f5df05ba3cc3d7d274fd4f9d3f3943011af028",
+          "subject": "fix: handle orphaned parent payload envelope in range sync batches (#10002)"
+        },
+        {
+          "sha": "7c6505e8e62339ab0022455ad107b59929e81632",
+          "subject": "fix: do not import orphaned payload envelopes of old blocks in range sync (#10005)"
+        },
+        {
+          "sha": "3211c1bdd4b97fa1b40bfc5910fcba52da948526",
+          "subject": "fix: import payload envelopes of known blocks in range sync batches (#10006)"
+        },
+        {
+          "sha": "b71ab45af3ff80a338533e82e628c7a8cf4145c3",
+          "subject": "fix: check the parent envelope block root in chain segment assertion (#10033)"
+        },
+        {
+          "sha": "e8dec5f2fee5db729212009029cfdc8b0ba81c27",
+          "subject": "fix: reject range sync envelopes whose block hash does not match the bid (#10251)"
+        },
+        {
+          "sha": "c02b971f5b130627a99fe87d06c06c42acaa602b",
+          "subject": "fix: recreate the dangling parent payload entry in range sync (#10311)"
+        },
+        {
+          "sha": "4546ac1229590e8558683421b7e079ddd129ee10",
+          "subject": "fix: handle attributable peers on range sync (#9836)"
+        },
+        {
+          "sha": "a03686d0dc4674da0a4637925bb0997e90a6d1d3",
+          "subject": "fix: harden range sync hashBlocks() (#9686)"
+        },
+        {
+          "sha": "7acc183c2b2d31ab9aeefbbe667710d2d8e46c7f",
+          "subject": "fix: harden assertLinearChainSegment (#9684)"
+        }
+      ],
+      "disposition": "Preserved in shared range sync and block-segment validation. Native requests feed the same typed collectors, including EMPTY/FULL handling, orphaned parent envelope ordering, block-hash matching, recreated dangling parents and attributable-peer reporting.",
+      "evidence": [
+        "lodestar:packages/beacon-node/src/sync/range",
+        "lodestar:packages/beacon-node/src/network/reqresp/utils/collect.ts"
+      ],
+      "validation": [
+        "lodestar:packages/beacon-node/test/unit/network/reqresp",
+        "lodestar:packages/beacon-node/test/unit/sync"
+      ]
+    },
+    {
+      "area": "Archived envelopes and light-client witnesses",
+      "commits": [
+        {
+          "sha": "253ed58dd19681b917cef4c936b7bd490b59c514",
+          "subject": "feat: add execution payload envelope repositories (#8916)"
+        },
+        {
+          "sha": "f1b14bce8f760fbc3259589d8eefb4e7f44ed16d",
+          "subject": "feat: de-duplicate execution payload from archived Gloas envelopes (#10089)"
+        },
+        {
+          "sha": "f2d839a25c46f80a4fe352db50a26e288bbdad92",
+          "subject": "chore: payload envelope reconstruction follow-ups from #10089 (#10192)"
+        },
+        {
+          "sha": "09a1892a856873dc7651fb1309551f5f3a88710e",
+          "subject": "fix: prune execution payload envelopes with `chain.pruneHistory` (#10105)"
+        },
+        {
+          "sha": "0dbea0de1b39ab8d2064660dd074900ad04b3334",
+          "subject": "feat: gloas lc support (#9687)"
+        },
+        {
+          "sha": "18a1510f34c012a43ab8410b55749156b90095af",
+          "subject": "fix: use attested slot for light client response context (#9760)"
+        },
+        {
+          "sha": "4bacee3dacfe04629dc167947bad12fa95ae96f1",
+          "subject": "fix: avoid legacy column scans during archiving (#10447)"
+        },
+        {
+          "sha": "23bc3d7be9e301110912ce4e8af6aae9623c3248",
+          "subject": "fix(archive): rework pruning for non-canonical block variants (#10022)"
+        },
+        {
+          "sha": "9cb14e3381b08b7eb399b37c9b9e48e66eb2c791",
+          "subject": "test: reuse mocked envelope repository in block archiver tests (#10452)"
+        }
+      ],
+      "disposition": "Preserved shared envelope reconstruction and light-client handlers. Ported variant-aware archive pruning so canonical EMPTY/FULL/PENDING roots retain witnesses; orphan FULL envelopes are pruned separately. Ported legacy-column compaction without repeated scans and the associated mock fix. Light-client response context uses attested slot.",
+      "evidence": [
+        "lodestar:packages/beacon-node/src/chain/archiveStore/utils/archiveBlocks.ts",
+        "lodestar:packages/beacon-node/src/db/beacon.ts",
+        "lodestar:packages/beacon-node/src/network/reqresp/handlers"
+      ],
+      "validation": [
+        "lodestar:packages/beacon-node/test/unit/chain/archiveStore/blockArchiver.test.ts",
+        "lodestar:packages/beacon-node/test/unit/chain/lightclient/server.test.ts",
+        "lodestar:packages/beacon-node/test/unit/db/beacon.test.ts"
+      ]
+    },
+    {
+      "area": "Published bids and serialized transaction memory",
+      "commits": [
+        {
+          "sha": "808c9f25d961c419afeffbc82baec42701edf6a8",
+          "subject": "feat: add flag to disable validation of published execution payload bids (#10429)"
+        },
+        {
+          "sha": "8391040477000654975e5c814dc2bc6a71b5982c",
+          "subject": "refactor: use gossip validation for execution payload bids published via api (#10444)"
+        },
+        {
+          "sha": "bdcac30ee0b035ece13cac7e44437cbe407be6c4",
+          "subject": "fix: model Transactions as SerializedList types (#10399)"
+        },
+        {
+          "sha": "a1ecd6c34f74457af28e2c0c29ce2c2ce5687cd9",
+          "subject": "fix: drop finalized block hash from payload id cache key (#10432)"
+        }
+      ],
+      "disposition": "Ported: published bids use gossip validation by default and enter the bid pool; the upstream explicit validation-disable option is available. Transactions use SSZ SerializedList instead of allocating an array entry per transaction. Payload cache keys no longer include finalized block hash. This protects the shared JS decode boundary in addition to native wire-byte limits.",
+      "evidence": [
+        "lodestar:packages/beacon-node/src/api/impl/beacon/blocks/index.ts",
+        "lodestar:packages/types/src/bellatrix/sszTypes.ts",
+        "lodestar:packages/types/src/gloas/sszTypes.ts",
+        "lodestar:packages/beacon-node/src/execution/engine/payloadIdCache.ts"
+      ],
+      "validation": [
+        "lodestar:packages/beacon-node/test/unit/api/impl/beacon/blocks/publishExecutionPayloadBid.test.ts",
+        "lodestar:packages/types/test/unit/gloas/eip7688.test.ts",
+        "lodestar:packages/beacon-node/test/unit/executionEngine/payloadIdCache.test.ts"
+      ]
+    },
+    {
+      "area": "Native state integration and slot timing",
+      "commits": [
+        {
+          "sha": "8299317d72794a03c09ae88ad163812c91d14c31",
+          "subject": "feat(state-transition): add gloas fields/methods to IBeaconStateView (#8963)"
+        },
+        {
+          "sha": "e17b11435fe6e854c3abd622e89e2fbfc0190777",
+          "subject": "perf(state-transition): use native PTC sampling (#9903)"
+        },
+        {
+          "sha": "41653ebb93d8cddc82a8ce425b111f6e0f19f868",
+          "subject": "fix: fully initialize execution payload bid on gloas upgrade (#9847)"
+        },
+        {
+          "sha": "49b1d65ffe0948868755ab3806e8807518c3a74c",
+          "subject": "feat: cache builder deposit signatures for gloas fork transition (#9727)"
+        },
+        {
+          "sha": "fe53cec080a37fa21c4b2e5e916c0eb9fc1447d8",
+          "subject": "feat: enable native gloas transitions (#10345)"
+        },
+        {
+          "sha": "20062ed60e2e565a1578a9172082821104b8f205",
+          "subject": "refactor: make slot timing fork-aware to prepare for slot duration changes (#10138)"
+        },
+        {
+          "sha": "ec493d509d9f202eb1245a77b305add14a603a88",
+          "subject": "refactor: carry milliseconds through the fork choice timeliness API (#10455)"
+        },
+        {
+          "sha": "ef81c9f0a5b2d7a3819b7710094167f1d6219eb5",
+          "subject": "fix: floor slot component durations as the spec does (#10456)"
+        },
+        {
+          "sha": "99bbd7b976c4e98476980c585b225644627b5ef5",
+          "subject": "chore: unschedule Gloas fork and 200M gas limit on Hoodi (#10461)"
+        }
+      ],
+      "disposition": "Integrated native Gloas fields, fork-aware pending-list codecs, builder/PTC APIs and separately owned parent-payload views. Native upgrade verifies builder deposit signatures directly, replacing JS preverification cache warming. Startup, regeneration and transitions reject Heze. Ported millisecond timeliness and integer-floor slot components; Hoodi remains unscheduled per the audit head. No transport timing support for Heze is claimed.",
+      "evidence": [
+        "lodestar:packages/state-transition/src/stateView/nativeBeaconStateView.ts",
+        "lodestar:packages/state-transition/src/stateView/stateViewFactory.ts",
+        "lodestar:packages/fork-choice/src/forkChoice/forkChoice.ts",
+        "lodestar:packages/config/src/forkConfig/index.ts"
+      ],
+      "validation": [
+        "lodestar:packages/state-transition/test/unit/stateView",
+        "lodestar:packages/beacon-node/test/spec/presets/sanity.test.ts",
+        "lodestar:packages/beacon-node/test/spec/presets/transition.test.ts",
+        "lodestar:packages/config/test/unit/config.test.ts"
+      ]
+    },
+    {
+      "area": "Attached validators, preferences persistence and PTC duties",
+      "commits": [
+        {
+          "sha": "67e8d545498265c033a8661e71b0403a2571f564",
+          "subject": "feat: stop depending on prepare_beacon_proposer for custody and gloas payloads (#10336)"
+        },
+        {
+          "sha": "5a1db4e01ce41dc9c69f174647e0c6bd5b7a24df",
+          "subject": "feat: track validators that submit proposer preferences as attached (#10340)"
+        },
+        {
+          "sha": "b726a05a4df34068d21b254bf5c590ea75afd169",
+          "subject": "feat: reject proposer data and validator registrations from gloas (#10341)"
+        },
+        {
+          "sha": "0837ebd40295cc26fa1278157e1c7ddc880dd714",
+          "subject": "feat: persist proposer preferences across beacon node restarts (#10327)"
+        },
+        {
+          "sha": "072bf9885376d737fc37a393e34ac64b66501264",
+          "subject": "fix: retry proposer preferences submission on error response (#10317)"
+        },
+        {
+          "sha": "82f05c43ffdc707283a7bfb6133de48cf742cde5",
+          "subject": "feat: retrieve proposer preferences on connection opening (#10290)"
+        },
+        {
+          "sha": "456b75a81ee79bfaaa5098f256ea789f2da12ae9",
+          "subject": "fix: do not miss PTC duties in the first Gloas epoch (#10242)"
+        },
+        {
+          "sha": "7f24e06bb60054affecacd132cafa521e866c2e7",
+          "subject": "fix: merge PTC duties for newly discovered validators (#10197)"
+        }
+      ],
+      "disposition": "Already in the shared integration baseline. Committee subscriptions and signed preferences identify attached validators; custody and payload preparation do not require deprecated prepare_beacon_proposer calls. Preference persistence/reconnect retrieval and first-epoch/new-validator PTC duties remain shared API/validator behavior. Native network uses the same Network and chain handlers.",
+      "evidence": [
+        "lodestar:packages/beacon-node/src/api/impl/validator/index.ts",
+        "lodestar:packages/beacon-node/src/chain/prepareNextSlot.ts",
+        "lodestar:packages/beacon-node/src/network/processor/gossipHandlers.ts",
+        "lodestar:packages/builder/src/builder.ts"
+      ],
+      "validation": [
+        "lodestar:packages/beacon-node/test/unit/chain/produceBlock/produceBlockBody.test.ts",
+        "lodestar:packages/beacon-node/test/unit/network/native/config.test.ts"
+      ]
+    },
+    {
+      "area": "Native state memory in fast confirmation",
+      "commits": [
+        {
+          "sha": "88c15a0731b09e2b31cc46ef59e628fa0a48a432",
+          "subject": "fix: avoid per-validator reads in fast confirmation scans (#10371)"
+        }
+      ],
+      "disposition": "Ported after tracing the enabled native state view into fast confirmation. Per-validator object materialization retained excessive JS heap; scans now use the zero-inactive balance array, cached per state. This is required to retain the resource behavior expected by the integration.",
+      "evidence": [
+        "lodestar:packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts",
+        "lodestar:packages/state-transition/src/stateView/beaconStateView.ts"
+      ],
+      "validation": [
+        "lodestar:packages/fork-choice/test/unit/forkChoice/fastConfirmation.test.ts",
+        "lodestar:packages/state-transition/test/unit/stateView/beaconStateView.test.ts"
+      ]
+    }
+  ],
+  "newer_upstream_commits_outside_scope": [
+    {
+      "sha": "f39fad29a1360ef44dcaee2da521e2b93b6be395",
+      "subject": "feat(builder): minimal wiring, bidding and revealing (#10379)",
+      "reason": "Standalone builder bidding/reveal orchestration and EL/CLI wiring; no new beacon P2P protocol or validator. Native transport supports the existing bid/envelope publication endpoints."
+    },
+    {
+      "sha": "b3beff224608ff26c0d07421cb7f1ed232039a91",
+      "subject": "chore: upgrade js-libp2p to 3.4.0 (#10427)",
+      "reason": "General libp2p dependency upgrade. Native transport uses its own implementation; interoperability is tested against the branch libp2p version."
+    },
+    {
+      "sha": "3da261f88e8937caa501bde255bec77a9991057f",
+      "subject": "fix: harden validator client shutdown (#10441)",
+      "reason": "Validator client shutdown, outside the beacon networking/native Gloas integration."
+    },
+    {
+      "sha": "e95d4a80f2765db9563a4124a9ca9b55188c4fe4",
+      "subject": "chore: refresh Node.js runtimes for builds (#10459)",
+      "reason": "Build runtime maintenance."
+    },
+    {
+      "sha": "708700cdf63c49b5673b9c2380d6c2097b6a666f",
+      "subject": "chore(deps): bump the actions group with 3 updates (#10439)",
+      "reason": "GitHub Actions dependency maintenance."
+    },
+    {
+      "sha": "ab56d90f0c0964da6bd7a66d0b38bd54cbe42dbd",
+      "subject": "test: use fake timers instead of Date.now spies (#10440)",
+      "reason": "General fake-timer test maintenance."
+    },
+    {
+      "sha": "e91a5043ed77fe82d1f9e3bde55d25d021fca0be",
+      "subject": "test: make promise duration checks deterministic (#10434)",
+      "reason": "General promise-duration test maintenance."
+    }
+  ],
+  "ported_commits": [
+    "a1ecd6c34f74457af28e2c0c29ce2c2ce5687cd9",
+    "bdcac30ee0b035ece13cac7e44437cbe407be6c4",
+    "02c5a19f35d8107f28bb8115d52e593689364601",
+    "808c9f25d961c419afeffbc82baec42701edf6a8",
+    "8391040477000654975e5c814dc2bc6a71b5982c",
+    "312812503e5c9fe95ccb661193b55658f85a510b",
+    "4bacee3dacfe04629dc167947bad12fa95ae96f1",
+    "23bc3d7be9e301110912ce4e8af6aae9623c3248",
+    "9cb14e3381b08b7eb399b37c9b9e48e66eb2c791",
+    "fe53cec080a37fa21c4b2e5e916c0eb9fc1447d8",
+    "ec493d509d9f202eb1245a77b305add14a603a88",
+    "ef81c9f0a5b2d7a3819b7710094167f1d6219eb5",
+    "99bbd7b976c4e98476980c585b225644627b5ef5",
+    "88c15a0731b09e2b31cc46ef59e628fa0a48a432"
+  ],
+  "checks": {
+    "native_network_mainnet": {
+      "passed": 1537,
+      "command": "scripts/test-shards.sh network"
+    },
+    "native_network_minimal": {
+      "passed": 1537,
+      "command": "zig build build-test:network -Dpreset=minimal; zig-out/bin/network --shard=N/8 (N=0..7)"
+    },
+    "dynamic_gloas_metadata": {
+      "passed_per_preset": 2,
+      "presets": [
+        "mainnet",
+        "minimal"
+      ],
+      "note": "Rechecked after adding a nonempty proposer-slashing list to exercise the dynamic bid offset."
+    },
+    "bindings_mainnet": {
+      "passed": 844,
+      "skipped": 20,
+      "command": "pnpm test --maxWorkers=4"
+    },
+    "gloas_spec_mainnet": {
+      "passed": 177,
+      "suites": [
+        "sanity",
+        "transition",
+        "fork"
+      ],
+      "environment": {
+        "LODESTAR_NATIVE_STATE_TRANSITION": "true",
+        "SPEC_FILTER_FORK": "gloas"
+      }
+    },
+    "gloas_spec_minimal": {
+      "passed": 200,
+      "suites": [
+        "sanity",
+        "transition",
+        "fork"
+      ],
+      "environment": {
+        "LODESTAR_NATIVE_STATE_TRANSITION": "true",
+        "SPEC_FILTER_FORK": "gloas"
+      }
+    },
+    "gloas_interop_minimal": {
+      "passed": 2,
+      "backends": [
+        "native",
+        "libp2p"
+      ]
+    },
+    "integration_e2e_mainnet": {
+      "cases_covered": 20,
+      "initial_passed": 16,
+      "affected_rerun_passed": 6,
+      "note": "Four existing block-interoperability cases needed SSZ bytes across test-process IPC after SerializedList was introduced. Those four and the two Gloas cases passed on rerun. Includes IPv4/IPv6, native/libp2p, lifecycle and 210-peer startup."
+    },
+    "integration_targeted_unit": {
+      "passed": 326,
+      "skipped": 2
+    },
+    "lodestar_network_and_validation_unit": {
+      "initial_passed": 1850,
+      "skipped": 7,
+      "resolved_assertion_failures": 6,
+      "note": "Six existing light-client persistence assertions compared Buffer objects with Uint8Array values after the SSZ upgrade. Changed the assertions to compare SSZ bytes; the affected file passed in the final regression run."
+    },
+    "final_regression_unit": {
+      "passed": 92,
+      "scope": [
+        "light-client source reads",
+        "fast confirmation",
+        "state views",
+        "builder payload source",
+        "validator inclusion lists",
+        "CLI options"
+      ]
+    },
+    "builds": {
+      "workspace_dependencies": "passed",
+      "release_safe_addon_presets": [
+        "mainnet",
+        "minimal"
+      ],
+      "target": "x86_64-linux-gnu.2.35",
+      "cpu": "znver1",
+      "installed_preset": "mainnet"
+    },
+    "static_checks": {
+      "native_lint": "passed",
+      "lodestar_lint": "passed, 1946 files",
+      "tidy": "passed",
+      "type_checks": [
+        "beacon-node",
+        "state-transition",
+        "fork-choice",
+        "cli"
+      ],
+      "frozen_offline_install": "passed",
+      "diff_check": "passed",
+      "tracked_zig_format": "passed",
+      "whole_directory_zig_format": "Flags existing ignored generated spec tests and downloaded zig-pkg dependencies. No generated or vendor source was manually formatted."
+    }
+  }
+}

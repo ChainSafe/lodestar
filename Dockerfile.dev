@@ -22,6 +22,15 @@ RUN case "${TARGETARCH}" in \
   zig version
 
 WORKDIR /usr/app
+RUN apt-get update && apt-get install -y cmake libclang-dev llvm pkg-config && rm -rf /var/lib/apt/lists/*
+
+ENV RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo
+ENV PATH="/opt/cargo/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /usr/local/bin/rustup-init.sh && \
+    sh /usr/local/bin/rustup-init.sh -y --profile minimal --default-toolchain none && \
+    rm /usr/local/bin/rustup-init.sh
+COPY rust-toolchain.toml ./
+RUN rustup toolchain install
 
 # Enable corepack for pnpm support
 RUN corepack enable
@@ -41,6 +50,7 @@ COPY packages/era/package.json packages/era/
 COPY packages/fork-choice/package.json packages/fork-choice/
 COPY packages/logger/package.json packages/logger/
 COPY bindings/package.json bindings/
+COPY test/interop/package.json test/interop/
 COPY packages/params/package.json packages/params/
 COPY packages/reqresp/package.json packages/reqresp/
 COPY packages/spec-test-util/package.json packages/spec-test-util/

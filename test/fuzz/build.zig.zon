@@ -19,5 +19,5 @@
             .hash = "hashtree-0.1.0-sBOoviYWAAA1HcTLhxWt0TtrLFXvYM5gOvxpu_Rreiiw",
         },
     },
-    .paths = .{ "build.zig", "build.zig.zon", "src", "tools" },
+    .paths = .{ "build.zig", "build.zig.zon", "network-targets.tsv", "src", "tools" },
 }

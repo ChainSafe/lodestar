@@ -4,6 +4,7 @@ const testing = std.testing;
 pub const BeaconConfig = @import("./BeaconConfig.zig");
 pub const ChainConfig = @import("./ChainConfig.zig");
 pub const ForkSeq = @import("./fork_seq.zig").ForkSeq;
+pub const fork_digest = @import("./fork_digest.zig");
 
 pub const mainnet = @import("./networks/mainnet.zig");
 pub const minimal = @import("./networks/minimal.zig");
@@ -16,6 +17,7 @@ test {
     testing.refAllDecls(BeaconConfig);
     testing.refAllDecls(ChainConfig);
     testing.refAllDecls(ForkSeq);
+    testing.refAllDecls(fork_digest);
 
     testing.refAllDecls(mainnet);
     testing.refAllDecls(minimal);
