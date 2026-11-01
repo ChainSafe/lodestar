@@ -72,7 +72,11 @@ jobs:
           NIGHTLY_DATE: ${{ inputs.date || 'latest' }}
           NIGHTLY_REPO: ${{ inputs.repo }}
           NIGHTLY_BRANCH: ${{ inputs.branch }}
-        run: pnpm download-nightly-spec-tests "$NIGHTLY_DATE" "$NIGHTLY_REPO" "$NIGHTLY_BRANCH"
+        run: |
+          zig build run:download_nightly_spec_tests \
+            -Dspec_test_options.nightly_date="$NIGHTLY_DATE" \
+            -Dspec_test_options.nightly_repo="$NIGHTLY_REPO" \
+            -Dspec_test_options.nightly_branch="$NIGHTLY_BRANCH"
 
       # Each suite tees its output so we can upload logs on failure.
       # GitHub's default bash is `-eo pipefail`, so vitest's exit code

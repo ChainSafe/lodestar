@@ -28,7 +28,6 @@
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "vitest run --project browser",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
-    "download-nightly-spec-tests": "pnpm --filter @lodestar/beacon-node download-nightly-spec-tests",
     "test:comptest": "vitest run --project comptest",
     "test:spec": "vitest run --project spec-minimal --project spec-mainnet",
     "benchmark": "pnpm benchmark:files 'packages/*/test/perf/**/*.test.ts'",

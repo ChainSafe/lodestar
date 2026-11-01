@@ -89,7 +89,6 @@
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "test:sim": "vitest run test/sim/**/*.test.ts",
     "test:sim:blobs": "vitest run test/sim/4844-interop.test.ts",
-    "download-nightly-spec-tests": "node --import tsx test/spec/downloadNightlyTests.ts",
     "test:comptest": "vitest run --project comptest",
     "test:spec:bls": "vitest run --project spec-minimal test/spec/bls/",
     "test:spec:general": "vitest run --project spec-minimal test/spec/general/",
@@ -163,7 +162,6 @@
     "@types/js-yaml": "^4.0.5",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
-    "dotenv": "^16.4.5",
     "js-yaml": "^4.1.0",
     "rimraf": "^4.4.1",
     "tmp": "^0.2.1"

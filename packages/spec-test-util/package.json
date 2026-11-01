@@ -19,11 +19,6 @@
       "typescript": "./src/fixtures.ts",
       "types": "./lib/fixtures.d.ts",
       "import": "./lib/fixtures.js"
-    },
-    "./downloadNightlyTests": {
-      "typescript": "./src/downloadNightlyTests.ts",
-      "types": "./lib/downloadNightlyTests.d.ts",
-      "import": "./lib/downloadNightlyTests.js"
     }
   },
   "files": [

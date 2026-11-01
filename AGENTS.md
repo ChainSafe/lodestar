@@ -130,10 +130,11 @@ pnpm vitest run --project spec-minimal test/spec/presets/transition.test.ts \
 # Requires GITHUB_TOKEN in the env or a repo-root .env file and the pinned download
 # above for the other fixtures. The spec tests keep using the nightly run until
 # `zig build run:download_spec_tests` restores the pinned release.
-pnpm download-nightly-spec-tests latest                                # latest scheduled master run
-pnpm download-nightly-spec-tests 2026-04-14                            # latest successful run on that date
-pnpm download-nightly-spec-tests latest <owner>/consensus-specs        # fork
-pnpm download-nightly-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
+zig build run:download_nightly_spec_tests                                      # latest scheduled master run
+zig build run:download_nightly_spec_tests -Dspec_test_options.nightly_date=2026-04-14  # that date
+zig build run:download_nightly_spec_tests -Dspec_test_options.nightly_repo=<owner>/consensus-specs  # fork
+zig build run:download_nightly_spec_tests -Dspec_test_options.nightly_repo=<owner>/consensus-specs \
+  -Dspec_test_options.nightly_branch=<ref>                                     # fork + branch
 
 # Fork-choice compliance tests (model-generated vectors, standalone flow;
 # runs nightly in CI, not per-PR). Same version pin as the spec tests.

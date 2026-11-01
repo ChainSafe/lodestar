@@ -169,6 +169,21 @@
                 .default = "test/spec/spec_tests",
                 .description = "Output directory for downloaded spec tests.",
             },
+            .nightly_date = .{
+                .type = .string,
+                .default = "latest",
+                .description = "consensus-specs CI run to download: \"latest\" (today, UTC) or YYYY-MM-DD.",
+            },
+            .nightly_repo = .{
+                .type = .string,
+                .default = "ethereum/consensus-specs",
+                .description = "consensus-specs repository (owner/name) whose CI run to download.",
+            },
+            .nightly_branch = .{
+                .type = .string,
+                .default = "",
+                .description = "Branch of the nightly repository; empty selects the default branch.",
+            },
         },
     },
     // Preset bundles let CI keep using `-Dpreset=mainnet` / `-Dpreset=minimal`.
@@ -191,6 +206,9 @@
         },
         .hex = .{
             .root_source_file = "src/hex.zig",
+        },
+        .github_actions = .{
+            .root_source_file = "test/spec/github_actions.zig",
         },
         .time = .{
             .root_source_file = "src/time.zig",
@@ -313,6 +331,12 @@
             .root_module = .{
                 .root_source_file = "test/spec/download_comptests.zig",
                 .imports = .{.spec_test_options},
+            },
+        },
+        .download_nightly_spec_tests = .{
+            .root_module = .{
+                .root_source_file = "test/spec/download_nightly_spec_tests.zig",
+                .imports = .{ .spec_test_options, .github_actions },
             },
         },
         .write_spec_tests = .{
@@ -458,6 +482,7 @@
         // Per-module unit tests (mirror the old auto-generated `test:<module>` steps).
         .constants = .{ .root_module = .constants },
         .hex = .{ .root_module = .hex },
+        .github_actions = .{ .root_module = .github_actions },
         .bit_array = .{ .root_module = .bit_array },
         .bounded_array = .{ .root_module = .bounded_array },
         .cpu_count = .{ .root_module = .cpu_count },
