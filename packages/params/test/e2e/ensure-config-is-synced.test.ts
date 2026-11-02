@@ -1,17 +1,12 @@
-import fs from "node:fs";
-import path from "node:path";
 import axios from "axios";
 import {describe, expect, it, vi} from "vitest";
+import {pinnedSpecFixtureVersions} from "@lodestar/spec-test-util/fixtures";
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
 import {loadConfigYaml} from "../yaml.js";
 
-// The consensus-specs tag pinned for the spec fixtures, shared with the Zig spec tests
-const specVersion = fs
-  .readFileSync(path.resolve(import.meta.dirname, "../../../../build.zig.zon"), "utf8")
-  .match(/\.spec_test_version = \.\{[^}]*\.default = "([^"]+)"/)?.[1];
-if (!specVersion) throw new Error("spec_test_version not found in build.zig.zon");
+const specVersion = pinnedSpecFixtureVersions().consensus;
 
 // Not e2e, but slow. Run with e2e tests
 /**

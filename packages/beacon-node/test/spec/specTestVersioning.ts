@@ -10,7 +10,6 @@ const pinned = pinnedSpecFixtureVersions();
 const consensusVersion = consensusSpecFixtureVersion();
 
 export const ethereumConsensusSpecsTests = {
-  specVersion: consensusVersion,
   testsDir: (name: string): string => consensusSpecTestsDir(name, consensusVersion),
 };
 

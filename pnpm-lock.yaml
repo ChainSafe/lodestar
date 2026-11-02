@@ -600,6 +600,10 @@ importers:
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
+    devDependencies:
+      '@lodestar/spec-test-util':
+        specifier: workspace:^
+        version: link:../spec-test-util
 
   packages/db:
     dependencies:
@@ -695,6 +699,9 @@ importers:
 
   packages/params:
     devDependencies:
+      '@lodestar/spec-test-util':
+        specifier: workspace:^
+        version: link:../spec-test-util
       '@types/js-yaml':
         specifier: ^4.0.5
         version: 4.0.5

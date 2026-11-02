@@ -6,11 +6,9 @@ const repoRoot = path.resolve(import.meta.dirname, "../../..");
 /** Where `zig build run:download_spec_tests` extracts every fixture archive. */
 export const specFixturesDir = path.join(repoRoot, "test/spec/spec_tests");
 
-/**
- * Written by the nightly downloader to point the consensus spec tests at an unreleased
- * consensus-specs run. `zig build run:download_spec_tests` removes it.
- */
-export const nightlyMarkerFile = path.join(specFixturesDir, "nightly.txt");
+// Written by the nightly downloader to point the consensus spec tests at an unreleased
+// consensus-specs run. `zig build run:download_spec_tests` removes it.
+const nightlyMarkerFile = path.join(specFixturesDir, "nightly.txt");
 
 export type SpecFixtureVersions = {consensus: string; ssz: string; bls: string; interchange: string};
 
