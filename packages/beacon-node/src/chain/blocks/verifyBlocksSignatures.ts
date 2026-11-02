@@ -50,7 +50,9 @@ export async function verifyBlocksSignatures(
         bls.verifySignatureSets(
           getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
-          })
+          }),
+          // Every attester in the slot waits on the block; nothing else queued has a deadline within its wait time
+          {priority: true}
         );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
