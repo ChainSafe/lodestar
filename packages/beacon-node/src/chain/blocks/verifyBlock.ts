@@ -175,16 +175,29 @@ export async function verifyBlocksInEpoch(
     const [
       segmentExecStatus,
       {blockDAStatuses, payloadDAStatuses, availableTime},
-      {postStates, proposerBalanceDeltas, verifyStateTime},
       {verifySignaturesTime},
+      {postStates, proposerBalanceDeltas, verifyStateTime},
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
 
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
 
+      // All signatures at once. Must be called before verifyBlocksStateTransitionOnly(): the array is evaluated
+      // left to right and the state transition runs synchronously, so this is what hands the BLS job to the
+      // worker pool before the main thread is busy with the state transition.
+      verifyBlocksSignatures(
+        this.config,
+        this.bls,
+        this.logger,
+        this.metrics,
+        preState0,
+        blocks,
+        indexedAttestationsByBlock,
+        opts
+      ),
+
       // Run state transition only
-      // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(
         preState0,
         blockInputs,
@@ -195,18 +208,6 @@ export async function verifyBlocksInEpoch(
         this.metrics,
         this.validatorMonitor,
         abortController.signal,
-        opts
-      ),
-
-      // All signatures at once
-      verifyBlocksSignatures(
-        this.config,
-        this.bls,
-        this.logger,
-        this.metrics,
-        preState0,
-        blocks,
-        indexedAttestationsByBlock,
         opts
       ),
 
