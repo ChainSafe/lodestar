@@ -150,7 +150,7 @@ export async function createNodeJsLibp2p(
     nodeInfo: {
       name: "lodestar",
       version: networkOpts.version ?? "unknown",
-      userAgent: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
+      userAgent: networkOpts.private ? "" : "lodestar",
     },
     addresses: {
       listen: localMultiaddrs,
