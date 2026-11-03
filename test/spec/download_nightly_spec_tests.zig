@@ -77,8 +77,9 @@ fn githubToken(allocator: Allocator, io: std.Io, environ: *const std.process.Env
     var lines = std.mem.splitScalar(u8, env_file, '\n');
     while (lines.next()) |line| {
         const trimmed = std.mem.trim(u8, line, " \t\r");
-        const value = std.mem.trim(u8, trimmed["GITHUB_TOKEN=".len..], "\"'");
-        if (std.mem.startsWith(u8, trimmed, "GITHUB_TOKEN=") and value.len != 0) return value;
+        const assignment = std.mem.cutPrefix(u8, trimmed, "GITHUB_TOKEN=") orelse continue;
+        const value = std.mem.trim(u8, assignment, "\"'");
+        if (value.len != 0) return value;
     }
     std.log.err("GITHUB_TOKEN is required for nightly downloads: export it or add it to .env", .{});
     return error.MissingGitHubToken;

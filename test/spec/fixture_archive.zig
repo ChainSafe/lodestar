@@ -56,7 +56,10 @@ fn fetchArchive(allocator: Allocator, io: std.Io, url: []const u8, out_dir: []co
     while (true) : (attempt += 1) {
         try parent.deleteTree(io, staging_name);
         downloadAndExtract(allocator, io, url, parent, staging_name, headers, format) catch |err| {
-            if (attempt >= max_attempts) return err;
+            if (attempt >= max_attempts) {
+                parent.deleteTree(io, staging_name) catch {};
+                return err;
+            }
             std.log.warn("attempt {d}/{d} for {s} failed: {s}", .{ attempt, max_attempts, url, @errorName(err) });
             try retry_delay.sleep(io);
             continue;
