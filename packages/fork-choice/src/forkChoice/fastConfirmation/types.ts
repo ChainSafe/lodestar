@@ -131,6 +131,7 @@ export type FastConfirmationCache = {
   blockByRoot: Map<RootHex, ProtoBlock | null>;
   ancestorRoots: Map<string, RootHex[] | null>;
   committeeSweepByEndSlot: Map<Slot, CommitteeSweep>;
+  participantsByRange: Map<string, Uint32Array>;
   isDescendantByRootPair: Map<string, boolean>;
   /** voteRoot -> totalWeight, keyed by sourceKey */
   voteWeightBySource: Map<BalanceSourceKey, Map<RootHex, number>>;

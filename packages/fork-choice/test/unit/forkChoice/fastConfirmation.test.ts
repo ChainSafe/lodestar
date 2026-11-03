@@ -131,6 +131,41 @@ describe("fast confirmation", () => {
       );
     });
 
+    it("matches direct ranges and shared sweeps across balance sources and query ordering", () => {
+      const {ctx, store, balanceSource} = setup();
+      const cache = createFastConfirmationCache();
+      const endSlot = (SLOTS_PER_EPOCH + 2) as Slot;
+      const sweepContext = {...ctx, getCurrentSlot: () => (endSlot + 1) as Slot};
+      const sweepCache = createFastConfirmationCache();
+      const balances = Uint16Array.from({length: validatorCount}, (_, i) => i % 17);
+      const sources = [balanceSource, {state: null, balances}];
+      for (const source of sources) {
+        for (const startSlot of [endSlot, 4, SLOTS_PER_EPOCH - 1, 3, SLOTS_PER_EPOCH, 6]) {
+          const participants = new Set<number>();
+          for (let slot = startSlot; slot <= endSlot; slot++) {
+            for (const index of committeeAt(slot as Slot)) participants.add(index);
+          }
+          const expected = [...participants].reduce(
+            (sum, index) => sum + (source.state && index === inactiveIndex ? 0 : source.balances[index]),
+            0
+          );
+          for (const [context, rangeCache] of [
+            [ctx, cache],
+            [sweepContext, sweepCache],
+          ] as const) {
+            expect(
+              computeCommitteeWeightBetweenSlots(context, store, rangeCache, source, startSlot as Slot, endSlot),
+              `wrong weight for ${startSlot}..${endSlot}`
+            ).toBe(expected);
+          }
+        }
+      }
+      expect(cache.committeeSweepByEndSlot.size).toBe(0);
+      expect(cache.participantsByRange.size).toBe(6);
+      expect(sweepCache.committeeSweepByEndSlot.size).toBe(1);
+      expect(sweepCache.participantsByRange.size).toBe(0);
+    });
+
     it("returns the total active balance for a range covering a full epoch", () => {
       const {ctx, store, balanceSource} = setup();
       const cache = createFastConfirmationCache();

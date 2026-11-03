@@ -179,9 +179,8 @@ export function getCheckpointState(
 
 /**
  * Spec: get_slot_committee, for the slots `startSlot..endSlot`.
- * Call sites share a handful of end slots (mostly `current_slot - 1`) across many start slots, so the
- * sweep is built once per end slot and extended backwards on demand instead of once per range, which
- * on mainnet would be up to ~1M validators per evaluated block.
+ * Chain-walk queries ending at `current_slot - 1` share this sweep across many start slots.
+ * Extending it backwards avoids rebuilding a union of up to the full validator set per block.
  */
 function getCommitteeSweep(
   ctx: FastConfirmationContext,
@@ -224,6 +223,44 @@ function getSlotRangeParticipants(
   startSlot: Slot,
   endSlot: Slot
 ): Uint32Array {
+  // Empty-slot discounts end at different block slots. A sweep per endpoint would allocate
+  // 5 bytes per registered validator for each gap, even when the gap spans just one slot.
+  // Cache compact participants instead, shared by support and adversarial-weight calculations.
+  if (endSlot !== ctx.getCurrentSlot() - 1) {
+    const key = `${startSlot}:${endSlot}`;
+    const cached = cache.participantsByRange.get(key);
+    if (cached !== undefined) return cached;
+
+    const state = getHeadState(ctx, store, cache);
+    const committees: Uint32Array[] = [];
+    let length = 0;
+    for (let slot = startSlot; slot <= endSlot; slot++) {
+      const count = state.getBeaconCommitteeCountPerSlot(computeEpochAtSlot(slot));
+      for (let i = 0; i < count; i++) {
+        const committee = state.getBeaconCommittee(slot, i);
+        committees.push(committee);
+        length += committee.length;
+      }
+    }
+    let participants: Uint32Array;
+    // Within an epoch committees partition the active validator set.
+    if (computeEpochAtSlot(startSlot) === computeEpochAtSlot(endSlot)) {
+      participants = new Uint32Array(length);
+      let offset = 0;
+      for (const committee of committees) {
+        participants.set(committee, offset);
+        offset += committee.length;
+      }
+    } else {
+      const unique = new Set<number>();
+      for (const committee of committees) {
+        for (const index of committee) unique.add(index);
+      }
+      participants = Uint32Array.from(unique);
+    }
+    cache.participantsByRange.set(key, participants);
+    return participants;
+  }
   const sweep = getCommitteeSweep(ctx, store, cache, startSlot, endSlot);
   return sweep.order.subarray(0, sweep.lengths[endSlot - startSlot]);
 }
@@ -341,6 +378,17 @@ export function computeCommitteeWeightBetweenSlots(
 
   if (isFullValidatorSetCovered(startSlot, endSlot)) {
     return getTotalActiveBalance(balanceSource, cache);
+  }
+
+  // Only the shared endpoint benefits from incremental weight prefixes across the chain walk.
+  // Other ranges reuse their compact participants without allocating a validator-sized sweep.
+  if (endSlot !== ctx.getCurrentSlot() - 1) {
+    const {balances} = getActiveBalances(balanceSource, cache);
+    let weight = 0;
+    for (const index of getSlotRangeParticipants(ctx, store, cache, startSlot, endSlot)) {
+      weight += balances[index] ?? 0;
+    }
+    return weight;
   }
 
   const sweep = getCommitteeSweep(ctx, store, cache, startSlot, endSlot);

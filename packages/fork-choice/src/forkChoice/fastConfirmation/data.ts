@@ -12,6 +12,7 @@ export function createFastConfirmationCache(): FastConfirmationCache {
     blockByRoot: new Map(),
     ancestorRoots: new Map(),
     committeeSweepByEndSlot: new Map(),
+    participantsByRange: new Map(),
     isDescendantByRootPair: new Map(),
     voteWeightBySource: new Map(),
     activeBalancesByKey: new Map(),
