@@ -3,7 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {SecretKey, Signature, fastAggregateVerify} from "@lodestar/native/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {newFilledArray} from "@lodestar/state-transition";
+import {G2_POINT_AT_INFINITY, newFilledArray} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {
   SyncContributionAndProofPool,
@@ -132,4 +132,21 @@ describe("aggregate", () => {
       ).toBe(true);
     });
   }
+
+  it("returns empty participation bits when the aggregate signature is the point at infinity", () => {
+    const bySubnet = new Map<number, SyncContributionFast>([
+      [
+        0,
+        {
+          syncSubcommitteeBits: BitArray.fromBoolArray([true, false, false, false, false, false, false, false]),
+          numParticipants: 1,
+          syncSubcommitteeSignature: G2_POINT_AT_INFINITY,
+        },
+      ],
+    ]);
+
+    const syncAggregate = aggregate(bySubnet);
+    expect(syncAggregate.syncCommitteeBits.getTrueBitIndexes()).toEqual([]);
+    expect(syncAggregate.syncCommitteeSignature).toEqual(G2_POINT_AT_INFINITY);
+  });
 });

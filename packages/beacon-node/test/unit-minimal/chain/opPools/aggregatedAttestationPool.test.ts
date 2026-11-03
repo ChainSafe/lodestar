@@ -15,6 +15,7 @@ import {
   BeaconStateView,
   CachedBeaconStateAllForks,
   CachedBeaconStateElectra,
+  G2_POINT_AT_INFINITY,
   newFilledArray,
 } from "@lodestar/state-transition";
 import {Attestation, electra, phase0, ssz} from "@lodestar/types";
@@ -326,6 +327,66 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       committeeIndices
     );
   });
+
+  describe("aggregate signature at the point at infinity", () => {
+    // Its own attestation data, cloned so the cached root of attestation.data is not reused
+    const infData = ssz.phase0.AttestationData.clone(attestation.data);
+    infData.beaconBlockRoot = Buffer.alloc(32, 0xbb);
+    const infDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(infData));
+
+    function getPackedAttestations(): Attestation<ForkPostElectra>[] {
+      forkchoiceStub.getBlockHexDefaultStatus.mockReturnValue(generateProtoBlock());
+      forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
+      const stateView = new BeaconStateView(electraState);
+      const shufflingCache = new ShufflingCache();
+      shufflingCache.processState(stateView);
+      return pool.getAttestationsForBlock(
+        fork,
+        forkchoiceStub,
+        shufflingCache,
+        stateView
+      ) as Attestation<ForkPostElectra>[];
+    }
+
+    beforeEach(() => {
+      const epochParticipation = ssz.altair.EpochParticipation.toViewDU(newFilledArray(vc, 0b000));
+      (electraState as CachedBeaconStateElectra).previousEpochParticipation = epochParticipation;
+      (electraState as CachedBeaconStateElectra).currentEpochParticipation = epochParticipation.clone();
+      electraState.commit();
+
+      // a valid full-participation consolidation on separate data
+      for (const committeeIndex of committeeIndices) {
+        pool.add(
+          {
+            ...attestation,
+            aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(255), committeeLength),
+            committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, committeeIndex),
+          },
+          attDataRootHex,
+          committeeLength,
+          committees[committeeIndex]
+        );
+      }
+    });
+
+    it("is excluded while a valid consolidation is still packed", () => {
+      pool.add(
+        {
+          aggregationBits: BitArray.fromSingleBit(committeeLength, 10),
+          data: infData,
+          committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0),
+          signature: G2_POINT_AT_INFINITY,
+        },
+        infDataRootHex,
+        1,
+        committees[0]
+      );
+
+      const packed = getPackedAttestations();
+      expect(packed.length).toBe(1);
+      expect(packed[0].data.beaconBlockRoot).toEqual(attestation.data.beaconBlockRoot);
+    });
+  });
 });
 
 describe("AggregatedAttestationPool.getAll", () => {
@@ -339,6 +400,18 @@ describe("AggregatedAttestationPool.getAll", () => {
   it("returns empty array when called without slot filter on empty pool", () => {
     const pool = new AggregatedAttestationPool(config);
     expect(pool.getAll()).toEqual([]);
+  });
+
+  it("excludes an aggregate whose signature is the point at infinity", () => {
+    const pool = new AggregatedAttestationPool(config);
+    const attestation = ssz.phase0.Attestation.defaultValue();
+    attestation.aggregationBits = BitArray.fromSingleBit(8, 0);
+    attestation.signature = G2_POINT_AT_INFINITY;
+    const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
+
+    pool.add(attestation, attDataRootHex, 1, Uint32Array.from([0, 1, 2, 3, 4, 5, 6, 7]));
+
+    expect(pool.getAll(attestation.data.slot)).toEqual([]);
   });
 });
 
