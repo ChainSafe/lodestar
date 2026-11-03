@@ -9,6 +9,7 @@ import {FastConfirmationRule} from "../../../src/forkChoice/fastConfirmation/fas
 import {runFastConfirmationRules} from "../../../src/forkChoice/fastConfirmation/rules.js";
 import {FastConfirmationDecisionReason} from "../../../src/forkChoice/fastConfirmation/types.js";
 import {
+  computeAdversarialWeight,
   computeCommitteeWeightBetweenSlots,
   computeEmptySlotSupportDiscount,
   computeProposerScore,
@@ -331,7 +332,7 @@ describe("fast confirmation", () => {
     ).toBe(false);
   });
 
-  it("getNodeSupportBetweenSlots counts only votes for the requested payload variant of the root", () => {
+  it("getNodeSupportBetweenSlots counts only votes for the requested payload variants of the root", () => {
     const parent = makeBlock(1, ZERO_ROOT);
     const child = makeBlock(2, parent.blockRoot);
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
@@ -346,21 +347,23 @@ describe("fast confirmation", () => {
     ]);
     const ctx = makeContext(3 as Slot, child.blockRoot, blocks, latestMessages, {epoch: 0, rootHex: ZERO_ROOT}, state);
 
-    const supportFor = (payloadStatus: PayloadStatus): number =>
+    const supportFor = (payloadStatuses: PayloadStatus[]): number =>
       getNodeSupportBetweenSlots(
         ctx,
         store,
         createFastConfirmationCache(),
         {state, balances: state.effectiveBalanceIncrements},
         parent.blockRoot,
-        payloadStatus,
+        payloadStatuses,
         2 as Slot,
         2 as Slot
       );
 
-    expect(supportFor(PayloadStatus.FULL)).toBe(64);
-    expect(supportFor(PayloadStatus.EMPTY)).toBe(32);
-    expect(supportFor(PayloadStatus.PENDING)).toBe(32);
+    expect(supportFor([PayloadStatus.FULL])).toBe(64);
+    expect(supportFor([PayloadStatus.EMPTY])).toBe(32);
+    expect(supportFor([PayloadStatus.PENDING])).toBe(32);
+    expect(supportFor([PayloadStatus.PENDING, PayloadStatus.FULL])).toBe(96);
+    expect(supportFor([PayloadStatus.FULL, PayloadStatus.FULL])).toBe(64);
   });
 
   it("getNodeSupportBetweenSlots excludes slashed and inactive validators without reading them", () => {
@@ -382,7 +385,7 @@ describe("fast confirmation", () => {
         cache,
         {state, balances: state.effectiveBalanceIncrements},
         parent.blockRoot,
-        PayloadStatus.FULL,
+        [PayloadStatus.FULL],
         2 as Slot,
         2 as Slot
       );
@@ -432,45 +435,62 @@ describe("fast confirmation", () => {
     expect(getValidator).not.toHaveBeenCalled();
   });
 
-  it("computeEmptySlotSupportDiscount discounts only the parent node the block extends", () => {
-    // Block B at slot 3 extends EMPTY(P); slot 2 is empty
-    const parent = makeBlock(1, ZERO_ROOT, {payloadStatus: PayloadStatus.EMPTY});
+  it.each([
+    {name: "EMPTY", extended: PayloadStatus.EMPTY, other: PayloadStatus.FULL},
+    {name: "FULL", extended: PayloadStatus.FULL, other: PayloadStatus.EMPTY},
+  ])("computeEmptySlotSupportDiscount discounts PENDING(P) and $name(P) the block extends", ({extended, other}) => {
+    // Block B at slot 3 extends a payload node of P; slot 2 is empty. P is a gloas block, so its default node is PENDING
+    const parent = makeBlock(1, ZERO_ROOT, {payloadStatus: PayloadStatus.PENDING});
     const block = makeBlock(3, parent.blockRoot);
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, block];
     const state = makeState(4, 32, [2 as Slot]);
     const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, block.blockRoot, state);
+    const balanceSource = {state, balances: state.effectiveBalanceIncrements};
 
     const discountFor = (votes: Map<ValidatorIndex, {root: RootHex; epoch: Epoch; payloadStatus: PayloadStatus}>) =>
       computeEmptySlotSupportDiscount(
-        makeContext(4 as Slot, block.blockRoot, blocks, votes, {epoch: 0, rootHex: ZERO_ROOT}, state),
+        {
+          ...makeContext(4 as Slot, block.blockRoot, blocks, votes, {epoch: 0, rootHex: ZERO_ROOT}, state),
+          getParentNodePayloadStatus: () => extended,
+        },
         store,
         createFastConfirmationCache(),
-        {state, balances: state.effectiveBalanceIncrements},
+        balanceSource,
         block.blockRoot
       );
 
     const voteFor = (payloadStatus: PayloadStatus) => ({root: parent.blockRoot, epoch: 0 as Epoch, payloadStatus});
+    const ctx = makeContext(4 as Slot, block.blockRoot, blocks, new Map(), {epoch: 0, rootHex: ZERO_ROOT}, state);
+    const adversarialWeight = computeAdversarialWeight(
+      ctx,
+      store,
+      createFastConfirmationCache(),
+      balanceSource,
+      2 as Slot,
+      2 as Slot
+    );
+    expect(adversarialWeight).toBe(32);
 
-    // Votes on EMPTY(P) support the node B extends, so they are discounted
+    // Votes on PENDING(P) and on the payload node B extends are both discounted
     expect(
       discountFor(
         new Map([
-          [0, voteFor(PayloadStatus.EMPTY)],
-          [1, voteFor(PayloadStatus.EMPTY)],
-          [2, voteFor(PayloadStatus.FULL)],
-          [3, voteFor(PayloadStatus.PENDING)],
+          [0, voteFor(PayloadStatus.PENDING)],
+          [1, voteFor(extended)],
+          [2, voteFor(extended)],
+          [3, voteFor(other)],
         ])
       )
-    ).toBeGreaterThan(0);
+    ).toBe(96 - adversarialWeight);
 
-    // Same root, but no vote supports EMPTY(P), so there is nothing to discount
+    // Votes on the other payload node count against B, so there is nothing to discount
     expect(
       discountFor(
         new Map([
-          [0, voteFor(PayloadStatus.FULL)],
-          [1, voteFor(PayloadStatus.FULL)],
-          [2, voteFor(PayloadStatus.PENDING)],
-          [3, voteFor(PayloadStatus.PENDING)],
+          [0, voteFor(other)],
+          [1, voteFor(other)],
+          [2, voteFor(other)],
+          [3, voteFor(other)],
         ])
       )
     ).toBe(0);
