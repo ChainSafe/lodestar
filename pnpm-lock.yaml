@@ -397,9 +397,6 @@ importers:
       js-yaml:
         specifier: ^4.1.0
         version: 4.3.2
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
       tmp:
         specifier: ^0.2.1
         version: 0.2.7
@@ -527,9 +524,6 @@ importers:
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
       source-map-support:
         specifier: ^0.5.21
         version: 0.5.21
@@ -774,9 +768,6 @@ importers:
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
       vitest:
         specifier: 'catalog:'
         version: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
@@ -937,9 +928,6 @@ importers:
       '@vekexasia/bigint-buffer2':
         specifier: ^1.1.1
         version: 1.1.1
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
 
 packages:
 
@@ -4075,11 +4063,6 @@ packages:
     engines: {node: '>=12'}
     deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
-  glob@9.3.5:
-    resolution: {integrity: sha512-e1LleDykUz2Iu+MTYdkSsuWX8lvAjAcs0Xef0lNIu0S2wOAzuTxCJtcd9S3cijlwYF18EsU3rzb8jPVobxDh9Q==}
-    engines: {node: '>=16 || 14 >=14.17'}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
-
   globby@13.2.2:
     resolution: {integrity: sha512-Y1zNGV+pzQdh7H39l9zgB4PJqjRNqydvdYCDG4HFXM4XuvSaQQlEc91IU1yALL8gUTDomgBAfz3XJdmUS+oo0w==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
@@ -4715,10 +4698,6 @@ packages:
   minimatch@5.1.0:
     resolution: {integrity: sha512-9TPBGGak4nHfGZsPBohm9AWg6NoT7QTCehS3BIJABslyZbzxfV78QM2Y6+i741OPZIafFAaiiEMh5OyIrJPgtg==}
     engines: {node: '>=10'}
-
-  minimatch@8.0.3:
-    resolution: {integrity: sha512-tEEvU9TkZgnFDCtpnrEYnPsjT7iUx42aXfs4bzmQ5sMA09/6hZY0jeZcGkXyDagiBOvkUjNo8Viom+Me6+2x7g==}
-    engines: {node: '>=16 || 14 >=14.17'}
 
   minimatch@9.0.5:
     resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
@@ -5415,11 +5394,6 @@ packages:
   rimraf@3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
     deprecated: Rimraf versions prior to v4 are no longer supported
-    hasBin: true
-
-  rimraf@4.4.1:
-    resolution: {integrity: sha512-Gk8NlF062+T9CqNGn6h4tls3k6T1+/nXdOcSZVikNVtlRdYpA7wRJJMoXmuvOnLW844rPjdQ7JgXCYM6PPC/og==}
-    engines: {node: '>=14'}
     hasBin: true
 
   ripemd160@2.0.2:
@@ -9966,13 +9940,6 @@ snapshots:
       minimatch: 5.1.0
       once: 1.4.0
 
-  glob@9.3.5:
-    dependencies:
-      fs.realpath: 1.0.0
-      minimatch: 8.0.3
-      minipass: 4.2.8
-      path-scurry: 1.11.1
-
   globby@13.2.2:
     dependencies:
       dir-glob: 3.0.1
@@ -10654,10 +10621,6 @@ snapshots:
       brace-expansion: 1.1.11
 
   minimatch@5.1.0:
-    dependencies:
-      brace-expansion: 2.0.1
-
-  minimatch@8.0.3:
     dependencies:
       brace-expansion: 2.0.1
 
@@ -11384,10 +11347,6 @@ snapshots:
   rimraf@3.0.2:
     dependencies:
       glob: 7.2.3
-
-  rimraf@4.4.1:
-    dependencies:
-      glob: 9.3.5
 
   ripemd160@2.0.2:
     dependencies:
