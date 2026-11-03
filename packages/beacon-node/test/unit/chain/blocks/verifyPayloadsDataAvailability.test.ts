@@ -64,13 +64,13 @@ describe("verifyPayloadsDataAvailability", () => {
     const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 0, sampledColumns: [0, 1, 2, 3]});
 
     const controller = new AbortController();
-    const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+    const {dataAvailabilityStatuses, availableTimeMs} = await verifyPayloadsDataAvailability(
       [payloadInput],
       controller.signal
     );
 
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.NotRequired]);
-    expect(availableTime).toBeGreaterThan(0);
+    expect(availableTimeMs).toBeGreaterThan(0);
   });
 
   it("resolves immediately when all sampled columns are already present", async () => {
@@ -87,12 +87,12 @@ describe("verifyPayloadsDataAvailability", () => {
     expect(payloadInput.hasAllData()).toBe(true);
 
     const controller = new AbortController();
-    const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+    const {dataAvailabilityStatuses, availableTimeMs} = await verifyPayloadsDataAvailability(
       [payloadInput],
       controller.signal
     );
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.Available]);
-    expect(availableTime).toBe(completeSec * 1000);
+    expect(availableTimeMs).toBe(completeSec * 1000);
   });
 
   it("waits for columns to arrive after envelope, then resolves", async () => {

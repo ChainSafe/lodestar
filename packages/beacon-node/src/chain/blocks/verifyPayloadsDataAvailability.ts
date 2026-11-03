@@ -17,7 +17,7 @@ export async function verifyPayloadsDataAvailability(
   signal: AbortSignal
 ): Promise<{
   dataAvailabilityStatuses: DataAvailabilityStatus[];
-  availableTime: number;
+  availableTimeMs: number;
 }> {
   const promises: Promise<gloas.DataColumnSidecar[]>[] = [];
   for (const payloadInput of payloadInputs) {
@@ -27,7 +27,7 @@ export async function verifyPayloadsDataAvailability(
   }
   await Promise.all(promises);
 
-  const availableTime =
+  const availableTimeMs =
     Math.max(0, Math.max(...payloadInputs.map((payloadInput) => payloadInput.getTimeComplete()))) * 1000;
   const dataAvailabilityStatuses: DataAvailabilityStatus[] = payloadInputs.map((payloadInput) => {
     if (payloadInput.daOutOfRange) {
@@ -38,5 +38,5 @@ export async function verifyPayloadsDataAvailability(
       : DataAvailabilityStatus.Available;
   });
 
-  return {dataAvailabilityStatuses, availableTime};
+  return {dataAvailabilityStatuses, availableTimeMs};
 }

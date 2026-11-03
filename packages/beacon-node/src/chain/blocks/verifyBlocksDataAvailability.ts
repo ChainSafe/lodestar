@@ -16,7 +16,7 @@ export async function verifyBlocksDataAvailability(
   signal: AbortSignal
 ): Promise<{
   dataAvailabilityStatuses: DataAvailabilityStatus[];
-  availableTime: number;
+  availableTimeMs: number;
 }> {
   const promises: Promise<DAData>[] = [];
   for (const blockInput of blocks) {
@@ -27,7 +27,7 @@ export async function verifyBlocksDataAvailability(
   }
   await Promise.all(promises);
 
-  const availableTime = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete()))) * 1000;
+  const availableTimeMs = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete()))) * 1000;
   const dataAvailabilityStatuses: DataAvailabilityStatus[] = blocks.map((blockInput) => {
     if (blockInput.type === DAType.NoData) {
       return DataAvailabilityStatus.NotRequired;
@@ -41,5 +41,5 @@ export async function verifyBlocksDataAvailability(
     return DataAvailabilityStatus.Available;
   });
 
-  return {dataAvailabilityStatuses, availableTime};
+  return {dataAvailabilityStatuses, availableTimeMs};
 }

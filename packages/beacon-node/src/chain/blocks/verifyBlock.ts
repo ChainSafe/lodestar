@@ -129,7 +129,7 @@ export async function verifyBlocksInEpoch(
     const daAvailabilityPromise: Promise<{
       blockDAStatuses: DataAvailabilityStatus[];
       payloadDAStatuses: Map<Slot, DataAvailabilityStatus>;
-      availableTime: number;
+      availableTimeMs: number;
     }> =
       fork >= ForkSeq.gloas
         ? (async () => {
@@ -142,7 +142,7 @@ export async function verifyBlocksInEpoch(
               payloadEnvelopes !== null
                 ? Array.from(payloadEnvelopes.values()).filter((payloadInput) => payloadInput.hasPayloadEnvelope())
                 : [];
-            const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+            const {dataAvailabilityStatuses, availableTimeMs} = await verifyPayloadsDataAvailability(
               payloadInputsForDa,
               abortController.signal
             );
@@ -155,25 +155,25 @@ export async function verifyBlocksInEpoch(
               // post-gloas, DataAvailabilityStatus is NotRequired for forkChoice.onBlock() ProtoBlock
               blockDAStatuses: blockInputs.map(() => DataAvailabilityStatus.NotRequired),
               payloadDAStatuses,
-              availableTime,
+              availableTimeMs,
             };
           })()
         : (async () => {
-            const {dataAvailabilityStatuses, availableTime} = await verifyBlocksDataAvailability(
+            const {dataAvailabilityStatuses, availableTimeMs} = await verifyBlocksDataAvailability(
               blockInputs,
               abortController.signal
             );
             return {
               blockDAStatuses: dataAvailabilityStatuses,
               payloadDAStatuses: new Map<Slot, DataAvailabilityStatus>(),
-              availableTime,
+              availableTimeMs,
             };
           })();
 
     // batch all I/O operations to reduce overhead
     const [
       segmentExecStatus,
-      {blockDAStatuses, payloadDAStatuses, availableTime},
+      {blockDAStatuses, payloadDAStatuses, availableTimeMs},
       {postStates, proposerBalanceDeltas, verifyStateTime},
       {verifySignaturesTime},
     ] = await Promise.all([
@@ -289,8 +289,8 @@ export async function verifyBlocksInEpoch(
         const recvTofullyVerifedTime = fullyVerifiedTime / 1000 - opts.seenTimestampSec;
         this.metrics?.gossipBlock.receivedToFullyVerifiedTime.observe(recvTofullyVerifedTime);
 
-        const verifiedToBlobsAvailabiltyTime = Math.max(availableTime - fullyVerifiedTime, 0) / 1000;
-        const receivedToBlobsAvailabilityTime = Math.max(availableTime / 1000 - opts.seenTimestampSec, 0);
+        const verifiedToBlobsAvailabiltyTime = Math.max(availableTimeMs - fullyVerifiedTime, 0) / 1000;
+        const receivedToBlobsAvailabilityTime = Math.max(availableTimeMs / 1000 - opts.seenTimestampSec, 0);
         const block = blockInputs[0].getBlock();
         const numBlobs = getBlobKzgCommitments(blockInputs[0].forkName, block as deneb.SignedBeaconBlock).length;
 

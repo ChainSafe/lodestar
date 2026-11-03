@@ -35,9 +35,9 @@ describe("verifyBlocksDataAvailability", () => {
     const verified = verifyBlocksDataAvailability([blockInput], new AbortController().signal);
     const completeSec = 1_700_000_002;
     addColumn(blockInput, 1, completeSec);
-    const {availableTime} = await verified;
+    const {availableTimeMs} = await verified;
 
-    expect(availableTime).toBe(completeSec * 1000);
+    expect(availableTimeMs).toBe(completeSec * 1000);
   });
 
   it("keeps the completion time when a column arrives after the data is complete", async () => {
@@ -47,9 +47,9 @@ describe("verifyBlocksDataAvailability", () => {
     addColumn(blockInput, 1, completeSec);
     addColumn(blockInput, 2, completeSec + 2);
 
-    const {availableTime} = await verifyBlocksDataAvailability([blockInput], new AbortController().signal);
+    const {availableTimeMs} = await verifyBlocksDataAvailability([blockInput], new AbortController().signal);
 
     expect(blockInput.getTimeComplete()).toBe(completeSec);
-    expect(availableTime).toBe(completeSec * 1000);
+    expect(availableTimeMs).toBe(completeSec * 1000);
   });
 });
