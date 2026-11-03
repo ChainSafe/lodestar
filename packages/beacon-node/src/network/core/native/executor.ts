@@ -1,6 +1,6 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
-import {DependencyCheck} from "@chainsafe/lodestar-z/network";
 import {routes} from "@lodestar/api";
+import {DependencyCheck} from "@lodestar/native/network";
 import {SlotRootHex} from "@lodestar/types";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../../chain/emitter.js";

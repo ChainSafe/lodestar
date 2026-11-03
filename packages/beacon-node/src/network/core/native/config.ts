@@ -1,6 +1,7 @@
 import {PrivateKey} from "@libp2p/interface";
 import {ENR} from "@chainsafe/enr";
-import bindings from "@chainsafe/lodestar-z";
+import {BeaconConfig} from "@lodestar/config";
+import bindings from "@lodestar/native";
 import {
   AdvertisedEndpoints,
   IpEndpoint,
@@ -8,8 +9,7 @@ import {
   NativeDiscoveryConfig,
   NativeTopicKind,
   NetworkStatusUpdate,
-} from "@chainsafe/lodestar-z/network";
-import {BeaconConfig} from "@lodestar/config";
+} from "@lodestar/native/network";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {Status} from "@lodestar/types";
 import {NetworkOptions} from "../../options.js";

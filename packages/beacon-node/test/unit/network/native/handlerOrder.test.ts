@@ -1,7 +1,7 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {GossipJob, GossipMessage, NativeNetwork, NativeTopicKind} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
+import {GossipJob, GossipMessage, NativeNetwork, NativeTopicKind} from "@lodestar/native/network";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";

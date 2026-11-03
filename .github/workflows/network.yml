@@ -1,0 +1,171 @@
+name: Native network
+on:
+  push:
+    branches: [unstable, stable]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+env:
+  NODE_VERSION: "24"
+  ZIG_VERSION: "0.16.0"
+jobs:
+  network-interop:
+    name: Independent network interoperability
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install LLVM
+        uses: ./.github/actions/setup-llvm
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Install pinned independent peers
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check codecs and run bounded loopback scenarios
+        run: |
+          cargo --version
+          cmake --version
+          node --test \
+            test/interop/bounded_lines.test.mjs \
+            test/interop/check_network_binding_results.test.mjs \
+            test/interop/codec.test.mjs \
+            test/interop/control_wire.test.mjs \
+            test/interop/fixtures.test.mjs \
+            test/interop/stock_packages.test.mjs
+          pnpm test:network-interop
+          pnpm test:network-core-interop
+          pnpm test:network-identify-interop
+
+  network-policy:
+    name: Network policy parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Read Lodestar policy revision
+        id: policy
+        run: echo "revision=$(cat src/network/testdata/lodestar-revision)" >> "$GITHUB_OUTPUT"
+      - name: Checkout pinned Lodestar
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ChainSafe/lodestar
+          ref: ${{ steps.policy.outputs.revision }}
+          path: .policy-reference
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: .policy-reference/package.json
+      - name: Install LLVM
+        uses: ./.github/actions/setup-llvm
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Build pinned Lodestar dependencies
+        working-directory: .policy-reference
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter '@lodestar/beacon-node^...' build
+      - name: Regenerate and compare policy fixtures
+        run: scripts/check-network-policy.sh .policy-reference
+      - name: Check native policy across presets
+        run: |
+          for preset in mainnet minimal gnosis; do
+            zig build build-test:network -Dpreset="$preset"
+            zig-out/bin/network --filter='application IDONTWANT' \
+              --filter='reqresp quotas' --filter='reqresp quota derivation' \
+              --filter='reqresp light client' --filter='reqresp retained source capacity'
+            if [[ "$preset" != gnosis ]]; then
+              zig-out/bin/network --filter='application score policy' --filter='application subscriptions match'
+            fi
+          done
+
+  network-bindings-lifecycle:
+    name: Network bindings lifecycle (${{ matrix.preset }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [mainnet, minimal]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install LLVM
+        uses: ./.github/actions/setup-llvm
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Install pinned stock fixture
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          node --test test/interop/stock_packages.test.mjs
+      - name: Build and test the native network and bindings
+        run: |
+          zig build test:network -Doptimize=ReleaseSafe -Dpreset=${{ matrix.preset }}
+          zig build run:bench_network -Doptimize=ReleaseSafe -Dpreset=${{ matrix.preset }} -- owner
+          zig build run:bench_network -Doptimize=ReleaseSafe -Dpreset=${{ matrix.preset }} -- idle_transport
+          zig build run:bench_network -Doptimize=ReleaseSafe -Dpreset=${{ matrix.preset }} -- idle_connections
+          zig build run:bench_network -Doptimize=ReleaseSafe -Dpreset=${{ matrix.preset }} -- idle_wait
+          zig build test:network_runtime -Doptimize=ReleaseSafe -Dpreset=${{ matrix.preset }}
+          pnpm --filter @lodestar/native prepare-${{ matrix.preset }}
+          pnpm --filter @lodestar/config... --filter @lodestar/types... build
+          zig build build-exe:network_interop_peer -Doptimize=ReleaseSafe -Dpreset=${{ matrix.preset }}
+      - name: Check network declarations and tests
+        run: pnpm --filter @lodestar/native check-types
+      - name: Run lifecycle and loopback binding suites
+        env:
+          NODE_OPTIONS: --expose-gc
+          LODESTAR_Z_NETWORK_STOCK_HOST: installed
+          LODESTAR_Z_NETWORK_NATIVE_PEER: ${{ github.workspace }}/zig-out/bin/network_interop_peer
+        run: |
+          pnpm --filter @lodestar/native exec vitest run test/network --reporter=default --reporter=json --outputFile=${{ github.workspace }}/network-binding-results.json
+          node test/interop/check_network_binding_results.mjs network-binding-results.json
+
+  discv5-interop:
+    name: DiscV5 geth interoperability
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install LLVM
+        uses: ./.github/actions/setup-llvm
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Build DiscV5 interoperability helper
+        run: zig build build-exe:discv5_interop -Doptimize=ReleaseSafe
+      - name: Test against pinned geth
+        working-directory: test/int/discv5
+        env:
+          GOTOOLCHAIN: auto
+          DISCV5_INTEROP_BIN: ${{ github.workspace }}/zig-out/bin/discv5_interop
+        run: go test -mod=readonly -count=1 -timeout=60s -v .

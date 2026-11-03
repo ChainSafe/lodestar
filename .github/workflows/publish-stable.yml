@@ -102,6 +102,9 @@ jobs:
           prerelease: false
           draft: true
 
+      - name: Install Rust release targets
+        run: rustup target add $(node -p 'require("./bindings/package.json").zapi.targets.join(" ")')
+
       - name: Publish to npm registry (release)
         run: pnpm run release:publish
 

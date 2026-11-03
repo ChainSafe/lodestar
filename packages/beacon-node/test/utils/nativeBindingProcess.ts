@@ -1,11 +1,11 @@
 import {fork} from "node:child_process";
+import type {BeaconConfig} from "@lodestar/config";
 import type {
   NativeApplicationConfig,
   NativeIdentity,
   NativeLocalIntent,
   NativePeerState,
-} from "@chainsafe/lodestar-z/network";
-import type {BeaconConfig} from "@lodestar/config";
+} from "@lodestar/native/network";
 
 export async function nativeBindingProcess(config: Omit<NativeApplicationConfig, "logLevel">, chain: BeaconConfig) {
   const child = fork(new URL("./nativeBindingPeer.mjs", import.meta.url), [], {

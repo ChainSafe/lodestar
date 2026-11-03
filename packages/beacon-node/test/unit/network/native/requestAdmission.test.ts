@@ -1,5 +1,5 @@
 import {afterEach, expect, it, vi} from "vitest";
-import {NativeNetwork, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
+import {NativeNetwork, NativeResponseChunk} from "@lodestar/native/network";
 import {defer} from "@lodestar/utils";
 import {NativeRequestAdmission} from "../../../../src/network/core/native/requestAdmission.js";
 import {outgoingNativeRequest} from "../../../../src/network/core/native/requests.js";

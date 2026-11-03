@@ -237,7 +237,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   close(): Promise<void> {
-    if (this.closePromise) return this.closePromise;
+    if (this.closePromise !== undefined) return this.closePromise;
     this.closed = true;
     if (this.bufferedJobs) {
       clearTimeout(this.bufferedJobs.timeout);
@@ -361,7 +361,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       } else {
         this.jobs.push(job);
       }
-      callInNextEventLoop(this.runJob);
+      callInNextEventLoop(() => void this.runJob());
     }
   }
 
@@ -403,7 +403,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     let completedJobsCount = 0;
 
     if (this.jobs.length > 0) {
-      callInNextEventLoop(this.runJob);
+      callInNextEventLoop(() => void this.runJob());
     }
 
     try {
@@ -451,7 +451,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         const wasReady = this.canAcceptWork();
         this.workersBusy--;
         if (!wasReady && this.canAcceptWork()) this.onCapacity?.();
-        callInNextEventLoop(this.runJob);
+        callInNextEventLoop(() => void this.runJob());
         return;
       }
 
@@ -530,7 +530,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     if (!this.closed && !wasReadyAtCompletion && this.canAcceptWork()) this.onCapacity?.();
 
     // Potentially run a new job
-    callInNextEventLoop(this.runJob);
+    callInNextEventLoop(() => void this.runJob());
   };
 
   /**
@@ -573,7 +573,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.jobs.unshift(job);
       }
       this.bufferedJobs = null;
-      callInNextEventLoop(this.runJob);
+      callInNextEventLoop(() => void this.runJob());
     }
   };
 

@@ -1,9 +1,9 @@
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
-import {NativePeerReportContext} from "@chainsafe/lodestar-z/network";
 import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
+import {NativePeerReportContext} from "@lodestar/native/network";
 import {Status} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkOptions} from "../options.js";

@@ -72,7 +72,7 @@ function findNodeFiles(dir, baseDir = dir) {
   return files;
 }
 
-function collectLinuxX64GnuBinaries(dir, binaryFiles) {
+function collectLinuxX64Binaries(dir, binaryFiles) {
   for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
     if (entry.name === "node_modules") {
       continue;
@@ -80,18 +80,17 @@ function collectLinuxX64GnuBinaries(dir, binaryFiles) {
 
     const entryPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      collectLinuxX64GnuBinaries(entryPath, binaryFiles);
+      collectLinuxX64Binaries(entryPath, binaryFiles);
     } else if (entry.isFile() && entry.name.endsWith(".node")) {
       const normalizedPath = entryPath.split(path.sep).join("/");
       const isBundledPrebuild = normalizedPath.includes("/prebuilds/");
-      const isLinuxX64GnuPrebuild = normalizedPath.includes("/prebuilds/linux-x64/") && !entry.name.includes("musl");
-      const isTargetPackage = /(?:linux-x64-gnu|x86_64-unknown-linux-gnu)/.test(normalizedPath);
-      const isOtherTargetPackage =
-        /(?:darwin|win32|windows|linux-(?:arm64|aarch64)|aarch64-(?:apple|unknown)|linux-x64-musl|x86_64-unknown-linux-musl)/.test(
-          normalizedPath
-        );
+      const isLinuxX64Prebuild = normalizedPath.includes("/prebuilds/linux-x64/");
+      const isTargetPackage = /(?:linux-x64-(?:gnu|musl)|x86_64-unknown-linux-(?:gnu|musl))/.test(normalizedPath);
+      const isOtherTargetPackage = /(?:darwin|win32|windows|linux-(?:arm64|aarch64)|aarch64-(?:apple|unknown))/.test(
+        normalizedPath
+      );
 
-      if (isLinuxX64GnuPrebuild || isTargetPackage || (!isBundledPrebuild && !isOtherTargetPackage)) {
+      if (isLinuxX64Prebuild || isTargetPackage || (!isBundledPrebuild && !isOtherTargetPackage)) {
         binaryFiles.add(fs.realpathSync(entryPath));
       }
     }
@@ -183,7 +182,7 @@ function checkNativeTargetCoverage() {
     const dependencies = manifest.dependencies ?? {};
     const optionalDependencies = manifest.optionalDependencies ?? {};
     const prebuildFiles = findNodeFiles(path.join(manifestDir, "prebuilds"));
-    collectLinuxX64GnuBinaries(manifestDir, binaryFiles);
+    collectLinuxX64Binaries(manifestDir, binaryFiles);
 
     const validation = validateNativePackageTargets(manifest, prebuildFiles);
     if (validation.isNativePackage) {

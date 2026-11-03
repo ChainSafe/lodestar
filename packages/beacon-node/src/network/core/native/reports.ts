@@ -1,4 +1,4 @@
-import {GossipMessage, NativeNetwork, NativePeerAction, NativePeerReportContext} from "@chainsafe/lodestar-z/network";
+import {GossipMessage, NativeNetwork, NativePeerAction, NativePeerReportContext} from "@lodestar/native/network";
 import type {GossipPeerReport} from "../../gossip/interface.js";
 import {PeerAction} from "../../peers/index.js";
 

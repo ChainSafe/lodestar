@@ -102,7 +102,7 @@ export async function nativeNetworkProcess(
     }
   }
   const close = (): Promise<void> => {
-    if (closing) return closing;
+    if (closing !== undefined) return closing;
     closing = (async () => {
       try {
         if (!exited) await call({method: "close", args: []});

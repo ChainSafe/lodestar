@@ -69,7 +69,7 @@ export class JobItemQueue<Args extends any[], R> {
       if (this.jobs.length === 1 && this.opts.noYieldIfOneItem) {
         void this.runJob();
       } else if (this.runningJobs < this.opts.maxConcurrency) {
-        callInNextEventLoop(this.runJob);
+        callInNextEventLoop(() => void this.runJob());
       }
     });
   }

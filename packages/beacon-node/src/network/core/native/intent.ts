@@ -1,4 +1,4 @@
-import {NativeLocalIntent, NativeNetwork} from "@chainsafe/lodestar-z/network";
+import {NativeLocalIntent, NativeNetwork} from "@lodestar/native/network";
 import {Status} from "@lodestar/types";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {normalizeCommitteeSubscriptions} from "./committee.js";

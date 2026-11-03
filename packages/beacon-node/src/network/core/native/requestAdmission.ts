@@ -1,5 +1,5 @@
 import {setImmediate as yieldToIO} from "node:timers/promises";
-import {NativeNetwork, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
+import {NativeNetwork, NativeResponseChunk} from "@lodestar/native/network";
 import {ErrorAborted} from "@lodestar/utils";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 

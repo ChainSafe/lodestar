@@ -1,6 +1,6 @@
-import {NativeLogLevel, NativeLogRecord} from "@chainsafe/lodestar-z/network";
 import {logLevelNum} from "@lodestar/logger";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
+import {NativeLogLevel, NativeLogRecord} from "@lodestar/native/network";
 
 /** Native thresholds by Lodestar level verbosity; native has no verbose or trace records. */
 const nativeLevels: NativeLogLevel[] = ["error", "warn", "info", "info", "debug", "debug"];

@@ -1,4 +1,4 @@
-import {NativeRequestProtocolId, NetworkFork} from "@chainsafe/lodestar-z/network";
+import {NativeRequestProtocolId, NetworkFork} from "@lodestar/native/network";
 import {ForkName, isForkPostHeze} from "@lodestar/params";
 import {ReqRespMethod} from "../../reqresp/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";

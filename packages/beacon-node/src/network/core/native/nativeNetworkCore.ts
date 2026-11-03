@@ -1,8 +1,8 @@
 import {PublishOpts} from "@libp2p/gossipsub/types";
 import {ENR} from "@chainsafe/enr";
-import {NativeHost, NativeNetwork, NativePeerReportContext, createNativeNetwork} from "@chainsafe/lodestar-z/network";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
+import {NativeHost, NativeNetwork, NativePeerReportContext, createNativeNetwork} from "@lodestar/native/network";
 import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
 import {PeerAction} from "../../peers/index.js";
@@ -160,7 +160,7 @@ export class NativeNetworkCore implements INetworkCore {
 
   /** Releases resources. Operational failure is reported by terminated. */
   close(): Promise<void> {
-    if (this.closePromise) return this.closePromise;
+    if (this.closePromise !== undefined) return this.closePromise;
     const completion = defer<void>();
     this.closePromise = completion.promise;
     this.closed = true;

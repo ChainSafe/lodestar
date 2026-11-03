@@ -1,12 +1,12 @@
 import {peerIdFromString} from "@libp2p/peer-id";
+import {BeaconConfig} from "@lodestar/config";
 import {
   IncomingRequest,
   NativeNetwork,
   NativePeerOrigin,
   NativeRequestError,
   NativeResponseChunk,
-} from "@chainsafe/lodestar-z/network";
-import {BeaconConfig} from "@lodestar/config";
+} from "@lodestar/native/network";
 import {ForkName} from "@lodestar/params";
 import {
   RequestError,

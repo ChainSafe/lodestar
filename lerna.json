@@ -1,6 +1,7 @@
 {
   "packages": [
-    "packages/*"
+    "packages/*",
+    "bindings"
   ],
   "version": "1.50.1",
   "stream": true,

@@ -108,6 +108,98 @@ Contributing to tests:
   - Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).
   - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
 
+## Zig and Native Bindings
+
+Zig modules live in `src/`, and the Node.js addon, wrappers, and binding tests live in
+`bindings/`. Use Zig 0.16.0.
+Run Zig commands from the repository root. The native package uses the root pnpm
+lockfile and shared monorepo version.
+
+The network addon also requires CMake 3.22+, libclang, and the Rust toolchain
+pinned in `rust-toolchain.toml`. Install it with `rustup toolchain install`.
+Linux GNU builds require `llvm-objcopy` on `PATH` for the ere archive compatibility
+fix. For release cross-compilation, install the targets from
+`bindings/package.json` with
+`rustup target add $(node -p 'require("./bindings/package.json").zapi.targets.join(" ")')`.
+
+### Tests and Formatting
+
+Run the tests relevant to your changes, for example:
+
+```sh
+zig build test:ssz
+zig build test:ssz -Dssz.filters="my full test name"
+zig fmt --check .
+zig build test:tidy
+```
+
+A module may contain at most one `test` block. Move additional tests to a sibling
+`<module>_test.zig` file and import it from the owning module's test block.
+Use snake_case for test filenames (`Node.zig` pairs with `node_test.zig`). Keep tests
+of private internals inline; do not make declarations public solely for testing.
+The tidy check uses `git ls-files`, so stage new files before running it.
+
+For changes affecting consensus behavior, download the fixtures and generate the
+spec test sources. Do not edit generated tests directly.
+
+```sh
+zig build run:download_spec_tests
+zig build run:download_era_files
+zig build run:write_spec_tests
+zig build run:write_ssz_generic_spec_tests
+zig build run:write_ssz_static_spec_tests
+zig build run:write_bls_spec_tests
+zig build test:spec_tests -Dpreset=minimal
+zig build test:spec_tests -Dpreset=mainnet
+```
+
+The spec test version is pinned in `build.zig.zon`. To run the full Zig test suite,
+use `zig build test`.
+
+### Network Tests and Policy Fixtures
+
+Compile the full module before selecting tests. `network` and `discv5` use a runtime
+filter, so compilation still covers tests outside the selected subset:
+
+```sh
+zig build build-test:network
+scripts/test-shards.sh network --filter="reqresp" --filter="gossip"
+scripts/test-shards.sh network
+scripts/test-shards.sh discv5
+```
+
+Run every shard before committing network changes. Compile-time
+`-D<module>.filters` can omit otherwise unreachable suites; passing `--test-filter`
+to the aggregate build step does not select tests.
+
+`src/network/testdata/lodestar-revision` pins the external Lodestar revision that
+owns the score and subnet parity fixtures. To verify them, install that checkout's
+locked dependencies, build `@lodestar/beacon-node^...`, and run
+`scripts/check-network-policy.sh <reference-checkout>` from this repository.
+Change the pin only with reviewed policy changes and regenerate fixtures with the
+reference checkout's `packages/beacon-node/test/utils/nativePolicyFixtures.ts`
+under both `LODESTAR_PRESET=mainnet` and `LODESTAR_PRESET=minimal`. Do not edit the
+fixtures manually. Native resource limits and peer selection are separate policy.
+
+Independent libp2p peers and the published response decoder are pinned in the
+private `test/interop` workspace, not substituted with local Lodestar packages.
+Run `pnpm test:network-interop`, `pnpm test:network-core-interop`, and
+`pnpm test:network-identify-interop` for the loopback suites.
+
+### Native Bindings
+
+Rebuild the addon before running binding tests:
+
+```sh
+pnpm --filter @lodestar/native prepare-mainnet
+pnpm --filter @lodestar/native test
+pnpm --filter @lodestar/native lint
+```
+
+Use `prepare-minimal` or `prepare-gnosis` for other presets. These scripts share an
+output directory, so do not run builds for different presets concurrently. Keep
+JavaScript wrappers and type declarations synchronized with native exports.
+
 ## Devcontainer
 
 A [devcontainer](https://containers.dev/) [configuration](https://github.com/ChainSafe/lodestar/blob/unstable/.devcontainer/devcontainer.json) is provided to help speed up linux based development environment setup. It will be used by [GitHub Codespaces](https://github.com/features/codespaces) or directly inside VS Code via your local through this [extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).

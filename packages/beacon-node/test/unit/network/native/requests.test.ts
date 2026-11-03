@@ -1,8 +1,8 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {expect, it, vi} from "vitest";
-import {IncomingRequest, NativeNetwork, NativePeerOrigin, NativeResponseChunk} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
+import {IncomingRequest, NativeNetwork, NativePeerOrigin, NativeResponseChunk} from "@lodestar/native/network";
 import {RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ErrorAborted, defer} from "@lodestar/utils";
 import {NativeNetworkErrorCode} from "../../../../src/network/core/native/errors.js";

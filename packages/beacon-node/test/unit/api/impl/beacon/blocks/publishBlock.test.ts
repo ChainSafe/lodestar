@@ -318,7 +318,7 @@ describe("api - beacon - publishBlockV2", () => {
     await expect(
       api.publishBlockV2({
         signedBlockContents: {signedBlock: block, blobs, kzgProofs},
-        broadcastValidation: routes.beacon.BroadcastValidation.none,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       })
     ).resolves.toBeUndefined();
 
@@ -341,6 +341,7 @@ describe("api - beacon - publish block size cap", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
     modules = getApiTestModules({config});
     Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
@@ -387,6 +388,7 @@ describe("api - beacon - publish block size cap", () => {
       message: expect.stringContaining(`Signed block size ${size} exceeds MAX_PAYLOAD_SIZE ${limit}`),
     });
     // Refused before the block is cached, published or imported
+    expect(validateGossipBlock).not.toHaveBeenCalled();
     expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
     expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
     expect(modules.chain.processBlock).not.toHaveBeenCalled();
@@ -399,7 +401,7 @@ describe("api - beacon - publish block size cap", () => {
     await expectOutcome(
       api.publishBlockV2({
         signedBlockContents: {signedBlock},
-        broadcastValidation: routes.beacon.BroadcastValidation.none,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       }),
       accepted,
       size
@@ -420,7 +422,7 @@ describe("api - beacon - publish block size cap", () => {
     } as ProduceFullBellatrix);
     const api = getBeaconBlockApi(defaultApiOptions, modules);
     await expectOutcome(
-      api.publishBlindedBlockV2({signedBlindedBlock, broadcastValidation: routes.beacon.BroadcastValidation.none}),
+      api.publishBlindedBlockV2({signedBlindedBlock, broadcastValidation: routes.beacon.BroadcastValidation.gossip}),
       accepted,
       size
     );
@@ -435,7 +437,7 @@ describe("api - beacon - publish block size cap", () => {
     await expectOutcome(
       api.publishBlindedBlockV2({
         signedBlindedBlock: signedBeaconBlockToBlinded(config, signedBlock),
-        broadcastValidation: routes.beacon.BroadcastValidation.none,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       }),
       accepted,
       size

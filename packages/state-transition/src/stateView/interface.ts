@@ -1,6 +1,6 @@
-import type {BeaconStateView as NativeBinding} from "@chainsafe/lodestar-z";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
+import type {BeaconStateView as NativeBinding} from "@lodestar/native";
 import {
   ForkName,
   ForkPostAltair,

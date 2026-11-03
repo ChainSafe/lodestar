@@ -1,8 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS,
   CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS,

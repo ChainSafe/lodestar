@@ -1,8 +1,8 @@
 import {isDeepStrictEqual} from "node:util";
-import {NativeNetwork, NativePeerObservation, NativePeerState, NetworkStatus} from "@chainsafe/lodestar-z/network";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
+import {NativeNetwork, NativePeerObservation, NativePeerState, NetworkStatus} from "@lodestar/native/network";
 import {Status} from "@lodestar/types";
 import {computeColumnsForCustodyGroup} from "../../../util/dataColumns.js";
 import {NetworkEvent, NetworkEventBus} from "../../events.js";

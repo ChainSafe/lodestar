@@ -1,4 +1,4 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
 

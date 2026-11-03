@@ -1,5 +1,5 @@
-import bindings from "@chainsafe/lodestar-z";
-import {createNativeNetwork} from "@chainsafe/lodestar-z/network";
+import bindings from "@lodestar/native";
+import {createNativeNetwork} from "@lodestar/native/network";
 
 let network;
 let active = 0;

@@ -1,0 +1,112 @@
+{
+  "provenance": {
+    "implementation": "@lodestar/types built local library",
+    "reference_commit": "92b9ec6e8bb85e747a9dcd3685be683c98936e3f",
+    "generator": "/tmp/peer-management-control-reference.mjs",
+    "oracle": "public ssz serializer with independent deserialize verification"
+  },
+  "records": [
+    {
+      "name": "status-v1",
+      "length": 84,
+      "hex": "01020304000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f0403020100000000fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e00506070800000000",
+      "sha256": "1477eb7ae820bfa054bc4e2de3cb257fb2d011f63727f50ec0f0ae4406a19991",
+      "value": {
+        "fork_digest": "0x01020304",
+        "finalized_root": "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "finalized_epoch": "16909060",
+        "head_root": "0xfffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0",
+        "head_slot": "134678021"
+      }
+    },
+    {
+      "name": "status-v2",
+      "length": 92,
+      "hex": "01020304000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f0403020100000000fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e005060708000000000c0b0a0900000000",
+      "sha256": "9769e5fa483c056c47bd1c3a7b269a811778aefbc288ddf0cd579e7ba52aa298",
+      "value": {
+        "fork_digest": "0x01020304",
+        "finalized_root": "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "finalized_epoch": "16909060",
+        "head_root": "0xfffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0",
+        "head_slot": "134678021",
+        "earliest_available_slot": "151653132"
+      }
+    },
+    {
+      "name": "metadata-v1",
+      "length": 16,
+      "hex": "01020304050607088101008000000080",
+      "sha256": "078e25fd9224ee16347ef7a611c4180c163ce0ed34d87f0b37bc43867e5ab0fa",
+      "value": {
+        "seq_number": "578437695752307201",
+        "attnets": "0x8101008000000080"
+      }
+    },
+    {
+      "name": "metadata-v2",
+      "length": 17,
+      "hex": "010203040506070881010080000000800d",
+      "sha256": "74b682b6d855c4681cf08906d6fefb6e95f847d6fa1f2d9929991f17d6e959b9",
+      "value": {
+        "seq_number": "578437695752307201",
+        "attnets": "0x8101008000000080",
+        "syncnets": "0x0d"
+      }
+    },
+    {
+      "name": "metadata-v3",
+      "length": 25,
+      "hex": "010203040506070881010080000000800d0400000000000000",
+      "sha256": "994cb4eff0500423604a33880e8b9a1d3c31043069ec2402747e2f33fa1725e3",
+      "value": {
+        "seq_number": "578437695752307201",
+        "attnets": "0x8101008000000080",
+        "syncnets": "0x0d",
+        "custody_group_count": "4"
+      }
+    },
+    {
+      "name": "ping-sequence",
+      "length": 8,
+      "hex": "0102030405060708",
+      "sha256": "66840dda154e8a113c31dd0ad32f7f3a366a80e8136979d8f5a101d3d29d6f72",
+      "value": "578437695752307201"
+    },
+    {
+      "name": "ping-sequence-max",
+      "length": 8,
+      "hex": "ffffffffffffffff",
+      "sha256": "12a3ae445661ce5dee78d0650d33362dec29c4f82af05e7e57fb595bbbacf0ca",
+      "value": "18446744073709551615"
+    },
+    {
+      "name": "goodbye-1",
+      "length": 8,
+      "hex": "0100000000000000",
+      "sha256": "7c9fa136d4413fa6173637e883b6998d32e1d675f88cddff9dcbcf331820f4b8",
+      "value": "1"
+    },
+    {
+      "name": "goodbye-2",
+      "length": 8,
+      "hex": "0200000000000000",
+      "sha256": "d86e8112f3c4c4442126f8e9f44f16867da487f29052bf91b810457db34209a4",
+      "value": "2"
+    },
+    {
+      "name": "goodbye-3",
+      "length": 8,
+      "hex": "0300000000000000",
+      "sha256": "35be322d094f9d154a8aba4733b8497f180353bd7ae7b0a15f90b586b549f28b",
+      "value": "3"
+    },
+    {
+      "name": "goodbye-128",
+      "length": 8,
+      "hex": "8000000000000000",
+      "sha256": "b1b0bee5378188f5250138bcce25855f2617f9c55b20b9628e13d367c47404a9",
+      "value": "128"
+    }
+  ]
+}

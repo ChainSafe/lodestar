@@ -1,4 +1,4 @@
-import {NativeLocalIntent} from "@chainsafe/lodestar-z/network";
+import {NativeLocalIntent} from "@lodestar/native/network";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";

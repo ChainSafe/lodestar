@@ -1,8 +1,8 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
 import {describe, expect, it, vi} from "vitest";
-import {NativePeerObservation, NativePeerState} from "@chainsafe/lodestar-z/network";
 import {createBeaconConfig} from "@lodestar/config";
+import {NativePeerObservation, NativePeerState} from "@lodestar/native/network";
 import {NativePeers, formatNativePeer} from "../../../../src/network/core/native/peers.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
 

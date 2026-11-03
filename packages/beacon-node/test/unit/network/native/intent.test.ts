@@ -1,6 +1,6 @@
 import {setImmediate} from "node:timers/promises";
 import {describe, expect, it, vi} from "vitest";
-import {NativeNetwork} from "@chainsafe/lodestar-z/network";
+import {NativeNetwork} from "@lodestar/native/network";
 import {ssz} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
 import {NativeIntent} from "../../../../src/network/core/native/intent.js";

@@ -287,7 +287,7 @@ export class Network implements INetwork {
   }
 
   close(): Promise<void> {
-    if (this.closePromise) return this.closePromise;
+    if (this.closePromise !== undefined) return this.closePromise;
     const completion = defer<void>();
     this.closePromise = completion.promise;
     void this.closeInternal().then(completion.resolve, completion.reject);
@@ -942,12 +942,10 @@ export class Network implements INetwork {
     this.connectedPeersSyncMeta.delete(data.peer);
   };
 
-  private onTargetGroupCountUpdated = async (count: number): Promise<void> => {
-    try {
-      await this.core.setTargetGroupCount(count);
-    } catch (error) {
-      this.logger.error("Error updating network custody group count", {count}, error as Error);
-    }
+  private onTargetGroupCountUpdated = (count: number): void => {
+    this.core.setTargetGroupCount(count).catch((e) => {
+      this.logger.debug("Error setting target custody group count", {count}, e as Error);
+    });
   };
 
   private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {

@@ -1,4 +1,4 @@
-import {NativeApplicationConfig, NativeHost, NativeNetwork, createNativeNetwork} from "@chainsafe/lodestar-z/network";
+import {NativeApplicationConfig, NativeHost, NativeNetwork, createNativeNetwork} from "@lodestar/native/network";
 
 /** A host that takes no work, so the binding only settles results, as after the adapter closes. */
 const settlingHost: NativeHost = {

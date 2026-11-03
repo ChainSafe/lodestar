@@ -1,5 +1,5 @@
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
-import type {NativeGossipDiagnosticsPage, NativeNetwork} from "@chainsafe/lodestar-z/network";
+import type {NativeGossipDiagnosticsPage, NativeNetwork} from "@lodestar/native/network";
 import type {PeerScoreStats} from "../../peers/score/interface.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 

@@ -1,5 +1,5 @@
 import {expect, it, vi} from "vitest";
-import type {NativeGossipDiagnosticsPage, NativeNetwork} from "@chainsafe/lodestar-z/network";
+import type {NativeGossipDiagnosticsPage, NativeNetwork} from "@lodestar/native/network";
 import {
   dumpNativeGossipScores,
   dumpNativeMeshPeers,

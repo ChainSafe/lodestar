@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
-import {NativeLogRecord} from "@chainsafe/lodestar-z/network";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
+import {NativeLogRecord} from "@lodestar/native/network";
 import {LogLevel} from "@lodestar/utils";
 import {NativeLogs, nativeLogLevel} from "../../../../src/network/core/native/logs.js";
 

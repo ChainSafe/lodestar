@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
-import {CloseResult} from "@chainsafe/lodestar-z/network";
+import {CloseResult} from "@lodestar/native/network";
 import {defer} from "@lodestar/utils";
 import {NativeNetworkCore} from "../../../../src/network/core/native/nativeNetworkCore.js";
 

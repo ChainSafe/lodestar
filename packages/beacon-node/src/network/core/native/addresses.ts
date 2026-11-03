@@ -1,7 +1,7 @@
 import {peerIdFromString} from "@libp2p/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
-import {IpEndpoint} from "@chainsafe/lodestar-z/network";
+import {IpEndpoint} from "@lodestar/native/network";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
 export type NativePeerAddress = {peerId: string; addresses: IpEndpoint[]};

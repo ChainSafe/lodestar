@@ -1,0 +1,18 @@
+{
+  "name": "@lodestar/network-interop-fixture",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@chainsafe/fast-crc32c": "4.2.0",
+    "@chainsafe/libp2p-quic": "2.1.3",
+    "@libp2p/crypto": "5.1.23",
+    "@libp2p/gossipsub": "17.1.1",
+    "@libp2p/identify": "4.1.14",
+    "@libp2p/peer-id": "6.0.15",
+    "@lodestar/reqresp": "1.46.0",
+    "@multiformats/multiaddr": "13.0.3",
+    "it-length-prefixed": "11.0.1",
+    "libp2p": "3.3.10",
+    "snappy": "7.3.3"
+  }
+}
