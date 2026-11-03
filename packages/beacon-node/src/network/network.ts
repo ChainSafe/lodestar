@@ -942,10 +942,12 @@ export class Network implements INetwork {
     this.connectedPeersSyncMeta.delete(data.peer);
   };
 
-  private onTargetGroupCountUpdated = (count: number): void => {
-    this.core.setTargetGroupCount(count).catch((e) => {
-      this.logger.debug("Error setting target custody group count", {count}, e as Error);
-    });
+  private onTargetGroupCountUpdated = async (count: number): Promise<void> => {
+    try {
+      await this.core.setTargetGroupCount(count);
+    } catch (error) {
+      this.logger.error("Error updating network custody group count", {count}, error as Error);
+    }
   };
 
   private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {
