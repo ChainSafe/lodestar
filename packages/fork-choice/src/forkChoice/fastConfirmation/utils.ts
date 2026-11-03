@@ -486,7 +486,7 @@ export function getNodeSupportBetweenSlots(
   cache: FastConfirmationCache,
   balanceSource: FastConfirmationBalanceSource,
   nodeRoot: RootHex,
-  nodePayloadStatus: PayloadStatus,
+  nodePayloadStatuses: readonly PayloadStatus[],
   startSlot: Slot,
   endSlot: Slot
 ): number {
@@ -502,7 +502,7 @@ export function getNodeSupportBetweenSlots(
     if (weight === 0) continue;
     if (equivocating.has(i)) continue;
     const latestMessage = ctx.getLatestMessage(i);
-    if (latestMessage?.root === nodeRoot && latestMessage.payloadStatus === nodePayloadStatus) {
+    if (latestMessage?.root === nodeRoot && nodePayloadStatuses.includes(latestMessage.payloadStatus)) {
       score += weight;
     }
   }
@@ -601,8 +601,9 @@ export function computeEmptySlotSupportDiscount(
     return 0;
   }
 
-  // Post-Gloas the parent block has PENDING, EMPTY and FULL nodes. Only the support of the node this
-  // block actually extends is discounted; votes for the other parent nodes are not support for it.
+  // Post-Gloas the parent block has PENDING, EMPTY and FULL nodes. Support for PENDING(P) and for the
+  // payload node this block extends is discounted. Support for the other payload node counts against
+  // this block. `parentBlock` is the default variant, PENDING post-Gloas and the only node pre-Gloas.
   const parentNodePayloadStatus = ctx.getParentNodePayloadStatus(blockRoot);
   if (parentNodePayloadStatus === null) return 0;
 
@@ -612,7 +613,7 @@ export function computeEmptySlotSupportDiscount(
     cache,
     balanceSource,
     block.parentRoot,
-    parentNodePayloadStatus,
+    [parentBlock.payloadStatus, parentNodePayloadStatus],
     (parentBlock.slot + 1) as Slot,
     (block.slot - 1) as Slot
   );
