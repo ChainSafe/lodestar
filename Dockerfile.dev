@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Dockerfile.dev is a stripped down version of Dockerfile that is used for development purposes.
 # It minimizes number of installs and builds to speed up the development process.
 # Run this on local host only.
@@ -61,7 +62,11 @@ COPY scripts ./scripts
 COPY test ./test
 COPY bindings/napi ./bindings/napi
 
-RUN pnpm build:native
+# Keep the Zig package and build caches outside the layer so that a Zig edit
+# recompiles incrementally instead of refetching and rebuilding everything.
+RUN --mount=type=cache,target=/root/.cache/zig \
+    --mount=type=cache,target=/usr/app/.zig-cache \
+    pnpm build:native
 
 # Copy source code and build the TypeScript packages
 COPY . .
