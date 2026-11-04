@@ -1,6 +1,7 @@
 pub const TypeKind = @import("type_kind.zig").TypeKind;
 pub const isBasicType = @import("type_kind.zig").isBasicType;
 pub const isFixedType = @import("type_kind.zig").isFixedType;
+pub const initValue = @import("value_init.zig").initValue;
 
 pub const BoolType = @import("bool.zig").BoolType;
 pub const UintType = @import("uint.zig").UintType;
@@ -63,5 +64,6 @@ test {
     _ = @import("container.zig");
     _ = @import("progressive_container.zig");
     _ = @import("compatible_union.zig");
+    _ = @import("value_init.zig");
     _ = @import("path.zig");
 }

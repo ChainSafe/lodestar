@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const Node = @import("persistent_merkle_tree").Node;
 const isBasicType = @import("../type/type_kind.zig").isBasicType;
 const isFixedType = @import("../type/type_kind.zig").isFixedType;
+const initValue = @import("../type/value_init.zig").initValue;
 
 const progressive = @import("../type/progressive.zig");
 const CompositeChunks = @import("chunks.zig").CompositeChunks;
@@ -290,10 +291,7 @@ pub fn ProgressiveListCompositeTreeView(comptime ST: type) type {
                 const node = try self.nextNode();
                 // Variable-size elements: toValue reads `out` (it resizes embedded ArrayLists),
                 // so initialize it before the call.
-                var value: ST.Element.Type = if (comptime @hasDecl(ST.Element, "default_value"))
-                    ST.Element.default_value
-                else
-                    std.mem.zeroes(ST.Element.Type);
+                var value = initValue(ST.Element);
                 errdefer if (comptime @hasDecl(ST.Element, "deinit")) {
                     ST.Element.deinit(allocator, &value);
                 };

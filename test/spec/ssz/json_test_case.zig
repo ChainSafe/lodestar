@@ -15,12 +15,16 @@ fn numberString(json: std.json.Value) ![]const u8 {
     };
 }
 
-/// Decoders take a deinitializable `out`. A compatible union has no default value, so start from its
-/// first option; decoding replaces it.
-fn initialValue(comptime ST: type) ST.Type {
-    if (comptime ST.kind != .compatible_union) return ST.default_value;
-    const option = ST._union_options[0];
-    return @unionInit(ST.Type, std.fmt.comptimePrint("option_{d}", .{option.@"0"}), option.@"1".default_value);
+fn containsUnion(comptime ST: type) bool {
+    switch (ST.kind) {
+        .compatible_union => return true,
+        .container, .progressive_container => {
+            inline for (ST.fields) |field| if (containsUnion(field.type)) return true;
+        },
+        .list, .progressive_list, .vector => return containsUnion(ST.Element),
+        else => {},
+    }
+    return false;
 }
 
 /// Read the fixture's independent value representation without decoding its SSZ
@@ -152,7 +156,7 @@ fn expectInvalid(result: anyerror!void) !void {
 /// and tree decoding. Any success is a failure.
 fn expectFixtureRejected(comptime ST: type, fixture_allocator: Allocator, pool: *Node.Pool, bytes: []const u8) !void {
     try expectInvalid(ST.serialized.validate(bytes));
-    var value = initialValue(ST);
+    var value = ssz.initValue(ST);
     try expectInvalid(deserializeFromBytes(ST, fixture_allocator, bytes, &value));
     if (ST.tree.deserializeFromBytes(pool, bytes)) |node| {
         pool.unref(node);
@@ -171,7 +175,7 @@ fn expectValueSerializesTo(comptime ST: type, fixture_allocator: Allocator, valu
 /// The fixture's SSZ bytes pass validation and decode to the fixture's value.
 fn expectBytesDeserializeTo(comptime ST: type, fixture_allocator: Allocator, bytes: []const u8, expected: *const ST.Type) !void {
     try ST.serialized.validate(bytes);
-    var actual = initialValue(ST);
+    var actual = ssz.initValue(ST);
     try deserializeFromBytes(ST, fixture_allocator, bytes, &actual);
     try std.testing.expect(ST.equals(expected, &actual));
 }
@@ -211,7 +215,7 @@ fn expectTreeRoundTrip(
     try std.testing.expectEqual(bytes.len, try ST.tree.serializeIntoBytes(node, pool, out));
     try std.testing.expectEqualSlices(u8, bytes, out);
 
-    var tree_value = initialValue(ST);
+    var tree_value = ssz.initValue(ST);
     try treeToValue(ST, fixture_allocator, pool, node, &tree_value);
     try std.testing.expect(ST.equals(value, &tree_value));
     return node;
@@ -279,8 +283,8 @@ fn runLayout(comptime ST: type, backing_allocator: Allocator, file: []const u8, 
     const node = try expectTreeRoundTrip(ST, fixture_allocator, &pool, &expected, fixture.bytes, &root);
     defer pool.unref(node);
 
-    // Compatible unions have no tree view.
-    if (comptime @hasDecl(ST, "TreeView")) {
+    // Compatible unions have no tree view, so a type that holds one cannot build its view.
+    if (comptime !containsUnion(ST) and @hasDecl(ST, "TreeView")) {
         try expectViewRoundTrip(ST, backing_allocator, fixture_allocator, &pool, node, fixture.bytes, &root);
     }
 }

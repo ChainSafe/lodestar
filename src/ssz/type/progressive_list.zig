@@ -4,6 +4,7 @@ const isBasicType = @import("type_kind.zig").isBasicType;
 const isFixedType = @import("type_kind.zig").isFixedType;
 const canMemcpySsz = @import("type_kind.zig").canMemcpySsz;
 const VariableElementIterator = @import("variable_element_iterator.zig").VariableElementIterator;
+const initValue = @import("value_init.zig").initValue;
 const mixInLength = @import("hashing").mixInLength;
 const maxChunksToDepth = @import("hashing").maxChunksToDepth;
 const Depth = @import("hashing").Depth;
@@ -521,7 +522,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
         ) !void {
             try out.ensureTotalCapacity(allocator, value.items.len);
             for (value.items) |*element| {
-                out.appendAssumeCapacity(DestinationST.Element.default_value);
+                out.appendAssumeCapacity(initValue(DestinationST.Element));
                 try Element.cloneInto(
                     DestinationST.Element,
                     allocator,
@@ -569,7 +570,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
             const len = elements.len;
 
             try out.resize(allocator, len);
-            @memset(out.items, Element.default_value);
+            @memset(out.items, initValue(Element));
 
             var i: usize = 0;
             while (try elements.next()) |element_bytes| : (i += 1) {
@@ -642,7 +643,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
                 const len = try length(node, pool);
                 var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), len);
                 try out.resize(allocator, len);
-                @memset(out.items, Element.default_value);
+                @memset(out.items, initValue(Element));
                 var index: usize = 0;
                 while (try it.next()) |chunk| {
                     try Element.tree.toValue(allocator, chunk, pool, &out.items[index]);
@@ -726,7 +727,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
 
             while ((try source.peekNextTokenType()) != .array_end) {
                 if (out.items.len == limit) return error.LengthOverLimit;
-                try out.append(allocator, Element.default_value);
+                try out.append(allocator, initValue(Element));
                 try Element.deserializeFromJson(
                     allocator,
                     source,

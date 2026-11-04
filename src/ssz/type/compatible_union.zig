@@ -3,6 +3,7 @@ const TypeKind = @import("type_kind.zig").TypeKind;
 const isFixedType = @import("type_kind.zig").isFixedType;
 const hashOne = @import("hashing").hashOne;
 const Node = @import("persistent_merkle_tree").Node;
+const initValue = @import("value_init.zig").initValue;
 
 /// Validates that a selector is within the valid range (1-127)
 fn isValidSelector(selector: u8) bool {
@@ -238,10 +239,22 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
             }
         }
 
+        /// The caller initializes `out` with `initValue(Self)`; this uses `cloneInto`'s contract.
         pub fn clone(
             allocator: std.mem.Allocator,
             value: *const Type,
             out: *Type,
+        ) !void {
+            return cloneInto(Self, allocator, value, out);
+        }
+
+        /// The caller initializes `out` with `initValue(DestinationST)` and deinitializes it
+        /// after success or error. Errors leave `out` unchanged.
+        pub fn cloneInto(
+            comptime DestinationST: type,
+            allocator: std.mem.Allocator,
+            value: *const Type,
+            out: *DestinationST.Type,
         ) !void {
             const selector = getSelector(value);
 
@@ -250,17 +263,31 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
                     const option_type = option.@"1";
                     const field_name = comptime std.fmt.comptimePrint("option_{d}", .{option.@"0"});
 
-                    const value_data_ptr = &@field(value.*, field_name);
-                    var replacement = @unionInit(Type, field_name, option_type.default_value);
-                    errdefer deinit(allocator, &replacement);
-                    const replacement_data_ptr = &@field(replacement, field_name);
-                    if (comptime isFixedType(option_type)) {
-                        try option_type.clone(value_data_ptr, replacement_data_ptr);
-                    } else {
-                        try option_type.clone(allocator, value_data_ptr, replacement_data_ptr);
+                    inline for (DestinationST._union_options) |destination_option| {
+                        if (comptime destination_option.@"0" == option.@"0") {
+                            const DestinationOption = destination_option.@"1";
+                            const value_data_ptr = &@field(value.*, field_name);
+                            var replacement = @unionInit(
+                                DestinationST.Type,
+                                field_name,
+                                initValue(DestinationOption),
+                            );
+                            errdefer DestinationST.deinit(allocator, &replacement);
+                            const replacement_data_ptr = &@field(replacement, field_name);
+                            if (comptime isFixedType(option_type)) {
+                                try option_type.clone(value_data_ptr, replacement_data_ptr);
+                            } else {
+                                try option_type.cloneInto(
+                                    DestinationOption,
+                                    allocator,
+                                    value_data_ptr,
+                                    replacement_data_ptr,
+                                );
+                            }
+                            out.* = replacement;
+                            return;
+                        }
                     }
-                    out.* = replacement;
-                    return;
                 }
             }
             return error.InvalidSelector;
@@ -347,7 +374,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
                     const option_type = option.@"1";
                     const field_name = comptime std.fmt.comptimePrint("option_{d}", .{option.@"0"});
 
-                    var replacement = @unionInit(Type, field_name, option_type.default_value);
+                    var replacement = @unionInit(Type, field_name, initValue(option_type));
                     errdefer deinit(allocator, &replacement);
                     const replacement_data_ptr = &@field(replacement, field_name);
 
@@ -453,7 +480,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
                         const option_type = option.@"1";
                         const field_name = comptime std.fmt.comptimePrint("option_{d}", .{option.@"0"});
 
-                        var replacement = @unionInit(Type, field_name, option_type.default_value);
+                        var replacement = @unionInit(Type, field_name, initValue(option_type));
                         errdefer deinit(allocator, &replacement);
                         const replacement_data_ptr = &@field(replacement, field_name);
 
@@ -566,7 +593,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
                     const option_type = option.@"1";
                     const field_name = comptime std.fmt.comptimePrint("option_{d}", .{option.@"0"});
 
-                    var replacement = @unionInit(Type, field_name, option_type.default_value);
+                    var replacement = @unionInit(Type, field_name, initValue(option_type));
                     errdefer deinit(allocator, &replacement);
                     const replacement_data_ptr = &@field(replacement, field_name);
 
