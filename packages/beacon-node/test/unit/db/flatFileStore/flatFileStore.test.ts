@@ -1,5 +1,4 @@
-import fs from "node:fs";
-import {open} from "node:fs/promises";
+import * as fsPromises from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
@@ -11,10 +10,9 @@ import {fulu, gloas, ssz} from "@lodestar/types";
 import {DCOL_VERSION} from "../../../../src/db/flatFileStore/dcolFormat.js";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
 
-vi.mock("node:fs/promises", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs/promises")>();
-  return {...actual, open: vi.fn(actual.open)};
-});
+vi.mock("node:fs/promises", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("node:fs/promises")>()),
+}));
 
 // Valid 32-byte hex roots for testing
 const ROOT_A = "0x" + "aa".repeat(32);
@@ -33,14 +31,14 @@ describe("FlatFileStore", () => {
   let store: FlatFileStore;
 
   beforeEach(async () => {
-    tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-"));
+    tmpDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-"));
     store = new FlatFileStore(path.join(tmpDir, "data_columns"), config, testLogger());
     await store.init();
   });
 
   afterEach(async () => {
     await store.close();
-    await fs.promises.rm(tmpDir, {recursive: true, force: true});
+    await fsPromises.rm(tmpDir, {recursive: true, force: true});
   });
 
   describe("columns", () => {
@@ -112,7 +110,7 @@ describe("FlatFileStore", () => {
       await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: col0}]);
 
       const readError = Object.assign(new Error("read failed"), {code: "EIO"});
-      const readSpy = vi.spyOn(fs.promises, "readFile").mockRejectedValueOnce(readError);
+      const readSpy = vi.spyOn(fsPromises, "readFile").mockRejectedValueOnce(readError);
       try {
         await expect(
           store.putDataColumnsBinary(1000, ROOT_A, [{index: 1, data: new Uint8Array(40).fill(0x02)}])
@@ -131,8 +129,9 @@ describe("FlatFileStore", () => {
       const slotDir = path.join(tmpDir, "data_columns", "000000000100");
       const column = new Uint8Array([1, 2, 3]);
       const syncError = Object.assign(new Error("directory sync failed"), {code: "EIO"});
-      const openMock = vi.mocked(open).mockImplementation(async (...args) => {
-        const fd = await fs.promises.open(...args);
+      const realOpen = fsPromises.open;
+      const openSpy = vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+        const fd = await realOpen(...args);
         if (String(args[0]) === slotDir && args[1] === "r") {
           vi.spyOn(fd, "sync").mockRejectedValueOnce(syncError);
         }
@@ -145,12 +144,12 @@ describe("FlatFileStore", () => {
           cause: syncError,
         });
       } finally {
-        openMock.mockImplementation(fs.promises.open);
+        openSpy.mockRestore();
       }
 
       await expect(store.getDataColumnsBinary(100, ROOT_A, [0])).resolves.toEqual([column]);
       await expect(store.pruneBefore(200)).resolves.toEqual([100]);
-      await expect(fs.promises.access(slotDir)).rejects.toMatchObject({code: "ENOENT"});
+      await expect(fsPromises.access(slotDir)).rejects.toMatchObject({code: "ENOENT"});
       await expect(store.pruneBefore(300)).resolves.toEqual([]);
     });
 
@@ -158,8 +157,8 @@ describe("FlatFileStore", () => {
       const column = new Uint8Array(20);
       await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: column}]);
       const deleteError = new Error("delete failed");
-      const originalRm = fs.promises.rm.bind(fs.promises);
-      const rmSpy = vi.spyOn(fs.promises, "rm").mockImplementation(async (filePath, options) => {
+      const originalRm = fsPromises.rm;
+      const rmSpy = vi.spyOn(fsPromises, "rm").mockImplementation(async (filePath, options) => {
         if (String(filePath).includes("data_columns")) {
           throw deleteError;
         }
@@ -198,7 +197,7 @@ describe("FlatFileStore", () => {
 
       await expect(store.pruneBefore(200)).resolves.toEqual([100]);
 
-      await expect(fs.promises.access(slotDir)).rejects.toMatchObject({code: "ENOENT"});
+      await expect(fsPromises.access(slotDir)).rejects.toMatchObject({code: "ENOENT"});
     });
   });
 
@@ -208,19 +207,19 @@ describe("FlatFileStore", () => {
 
       // Read the raw file and check version byte
       const slotDir = path.join(tmpDir, "data_columns", "000000001000");
-      const files = await fs.promises.readdir(slotDir);
+      const files = await fsPromises.readdir(slotDir);
       const dcolFile = files.find((f) => f.endsWith(".dcol"));
       expect(dcolFile).toBeDefined();
       if (!dcolFile) throw new Error("Expected a dcol file");
 
-      const raw = await fs.promises.readFile(path.join(slotDir, dcolFile));
+      const raw = await fsPromises.readFile(path.join(slotDir, dcolFile));
       expect(raw[0]).toBe(DCOL_VERSION);
     });
 
     it("should reject truncated dcol files when read", async () => {
       const slotDir = path.join(tmpDir, "data_columns", "000000001000");
-      await fs.promises.mkdir(slotDir, {recursive: true});
-      await fs.promises.writeFile(path.join(slotDir, `${ROOT_A}.dcol`), new Uint8Array([DCOL_VERSION]));
+      await fsPromises.mkdir(slotDir, {recursive: true});
+      await fsPromises.writeFile(path.join(slotDir, `${ROOT_A}.dcol`), new Uint8Array([DCOL_VERSION]));
 
       await expect(store.getDataColumnsBinary(1000, ROOT_A, [0])).rejects.toThrow("Unexpected end of dcol file");
     });
@@ -228,7 +227,7 @@ describe("FlatFileStore", () => {
     it("should reject a dcol file whose header root does not match its path", async () => {
       await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
       const slotDir = path.join(tmpDir, "data_columns", "000000001000");
-      await fs.promises.rename(path.join(slotDir, `${ROOT_A}.dcol`), path.join(slotDir, `${ROOT_B}.dcol`));
+      await fsPromises.rename(path.join(slotDir, `${ROOT_A}.dcol`), path.join(slotDir, `${ROOT_B}.dcol`));
 
       await expect(store.getDataColumnsBinary(1000, ROOT_B, [0])).rejects.toThrow("Dcol block root mismatch");
     });
@@ -236,7 +235,7 @@ describe("FlatFileStore", () => {
     it("should reject traversal-shaped roots before deleting files", async () => {
       const columnSiblingPath = path.join(tmpDir, "data_columns", "escape.dcol");
       const sentinel = new Uint8Array([1, 2, 3]);
-      await fs.promises.writeFile(columnSiblingPath, sentinel);
+      await fsPromises.writeFile(columnSiblingPath, sentinel);
 
       const error = await store.deleteMany([{slot: 100, blockRoot: "../escape"}]).catch((e: unknown) => e);
       expect(error).toMatchObject({type: {code: "DATA_COLUMN_STORE_BATCH_DELETE_FAILED", failures: 1}});
@@ -244,7 +243,7 @@ describe("FlatFileStore", () => {
       expect(causes.errors).toHaveLength(1);
       expect(causes.errors[0]).toMatchObject({message: expect.stringContaining("Invalid flat file root")});
 
-      expect(new Uint8Array(await fs.promises.readFile(columnSiblingPath))).toEqual(sentinel);
+      expect(new Uint8Array(await fsPromises.readFile(columnSiblingPath))).toEqual(sentinel);
     });
   });
 
@@ -262,7 +261,7 @@ describe("FlatFileStore", () => {
 
   describe("concurrent pruning", () => {
     it("should prune a first write already in progress below the boundary", async () => {
-      const readFile = fs.promises.readFile.bind(fs.promises);
+      const realReadFile = fsPromises.readFile;
       let markReadStarted: (() => void) | undefined;
       let resumeWrite: (() => void) | undefined;
       const readStarted = new Promise<void>((resolve) => {
@@ -271,10 +270,10 @@ describe("FlatFileStore", () => {
       const writePaused = new Promise<void>((resolve) => {
         resumeWrite = resolve;
       });
-      const readFileSpy = vi.spyOn(fs.promises, "readFile").mockImplementation(async (file, options) => {
+      const readFileSpy = vi.spyOn(fsPromises, "readFile").mockImplementation(async (file, options) => {
         markReadStarted?.();
         await writePaused;
-        return readFile(file, options);
+        return realReadFile(file, options);
       });
 
       try {
@@ -294,7 +293,7 @@ describe("FlatFileStore", () => {
     it("should reject writes below an active pruning boundary", async () => {
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array([1])}]);
 
-      const remove = fs.promises.rm.bind(fs.promises);
+      const remove = fsPromises.rm;
       let markRemoved: (() => void) | undefined;
       let resumePrune: (() => void) | undefined;
       const removed = new Promise<void>((resolve) => {
@@ -303,7 +302,7 @@ describe("FlatFileStore", () => {
       const prunePaused = new Promise<void>((resolve) => {
         resumePrune = resolve;
       });
-      const removeSpy = vi.spyOn(fs.promises, "rm").mockImplementation(async (target, options) => {
+      const removeSpy = vi.spyOn(fsPromises, "rm").mockImplementation(async (target, options) => {
         await remove(target, options);
         if (options?.recursive) {
           markRemoved?.();
@@ -337,7 +336,7 @@ describe("FlatFileStore", () => {
       ]);
 
       const store2 = new FlatFileStore(path.join(tmpDir, "data_columns"), config, testLogger());
-      const readdirSpy = vi.spyOn(fs.promises, "readdir");
+      const readdirSpy = vi.spyOn(fsPromises, "readdir");
       try {
         await store2.init();
         expect(readdirSpy).toHaveBeenCalledOnce();
@@ -352,18 +351,18 @@ describe("FlatFileStore", () => {
 
     it("should ignore partial files and retain their slot directories for pruning", async () => {
       const columnSlotDir = path.join(tmpDir, "data_columns", "000000000100");
-      await fs.promises.mkdir(columnSlotDir, {recursive: true});
+      await fsPromises.mkdir(columnSlotDir, {recursive: true});
       const columnPartPath = path.join(columnSlotDir, `${ROOT_A}.dcol.part-crash`);
-      await fs.promises.writeFile(columnPartPath, new Uint8Array([2]));
+      await fsPromises.writeFile(columnPartPath, new Uint8Array([2]));
 
       const store2 = new FlatFileStore(path.join(tmpDir, "data_columns"), config, testLogger());
       await store2.init();
       expect(await store2.getDataColumnsBinary(100, ROOT_A, [0])).toBeNull();
-      await expect(fs.promises.access(columnPartPath)).resolves.toBeUndefined();
+      await expect(fsPromises.access(columnPartPath)).resolves.toBeUndefined();
 
       await store2.pruneBefore(200);
 
-      await expect(fs.promises.access(columnSlotDir)).rejects.toMatchObject({code: "ENOENT"});
+      await expect(fsPromises.access(columnSlotDir)).rejects.toMatchObject({code: "ENOENT"});
     });
 
     it("should only index canonical top-level slot directories", async () => {
@@ -372,20 +371,20 @@ describe("FlatFileStore", () => {
 
       const columnSlotDir = path.join(tmpDir, "data_columns", "000000000103");
       const malformedColumnPath = path.join(columnSlotDir, "0xabc.dcol");
-      await fs.promises.mkdir(columnSlotDir, {recursive: true});
-      await fs.promises.writeFile(malformedColumnPath, new Uint8Array([6]));
+      await fsPromises.mkdir(columnSlotDir, {recursive: true});
+      await fsPromises.writeFile(malformedColumnPath, new Uint8Array([6]));
 
       const nonCanonicalColumnDir = path.join(tmpDir, "data_columns", "102");
       const nonCanonicalColumnPath = path.join(nonCanonicalColumnDir, `${ROOT_B}.dcol`);
-      await fs.promises.mkdir(nonCanonicalColumnDir, {recursive: true});
-      await fs.promises.writeFile(nonCanonicalColumnPath, new Uint8Array([5]));
+      await fsPromises.mkdir(nonCanonicalColumnDir, {recursive: true});
+      await fsPromises.writeFile(nonCanonicalColumnPath, new Uint8Array([5]));
 
       const logger = testLogger();
       const warn = vi.spyOn(logger, LogLevel.warn);
       const store2 = new FlatFileStore(path.join(tmpDir, "data_columns"), config, logger);
       await store2.init();
 
-      const readdirSpy = vi.spyOn(fs.promises, "readdir");
+      const readdirSpy = vi.spyOn(fsPromises, "readdir");
       try {
         expect(await store2.getDataColumnsBinary(100, ROOT_A, [0])).toEqual([validData]);
         expect(readdirSpy).not.toHaveBeenCalled();
@@ -397,13 +396,13 @@ describe("FlatFileStore", () => {
         entries: 1,
       });
 
-      await expect(fs.promises.access(malformedColumnPath)).resolves.toBeUndefined();
-      await expect(fs.promises.access(nonCanonicalColumnPath)).resolves.toBeUndefined();
+      await expect(fsPromises.access(malformedColumnPath)).resolves.toBeUndefined();
+      await expect(fsPromises.access(nonCanonicalColumnPath)).resolves.toBeUndefined();
     });
 
     it("should not scan storage directories while pruning", async () => {
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
-      const readdirSpy = vi.spyOn(fs.promises, "readdir");
+      const readdirSpy = vi.spyOn(fsPromises, "readdir");
 
       try {
         await store.pruneBefore(200);
@@ -430,7 +429,7 @@ describe("FlatFileStore", () => {
       expect(await store2.getDataColumnsBinary(hotSlot, ROOT_B, [0])).toEqual([new Uint8Array([4])]);
       for (const slot of [skippedBoundarySlot, hotSlot]) {
         await expect(
-          fs.promises.access(path.join(tmpDir, "data_columns", String(slot).padStart(12, "0")))
+          fsPromises.access(path.join(tmpDir, "data_columns", String(slot).padStart(12, "0")))
         ).resolves.toBeUndefined();
       }
     });
