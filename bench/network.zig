@@ -419,7 +419,7 @@ fn idleWait(init: std.process.Init) !void {
     try node.setHostWake(host.pipe[0]);
     const calls = backing.allocations;
     const start = timestamp(io);
-    const window_end_ms = (try network.Now.read(io)).millis() + 1_000;
+    const window_end: std.Io.Clock.Timestamp = .{ .clock = .awake, .raw = .fromNanoseconds(start + 1_000_000_000) };
     var count: u32 = 0;
     var immediate: u32 = 0;
     var elapsed_turns: u64 = 0;
@@ -429,8 +429,8 @@ fn idleWait(init: std.process.Init) !void {
         if (before - start >= 1_000_000_000) break;
         const now = try network.Now.read(io);
         immediate += @intFromBool(node.schedule(now, .{}).due(now.monotonic));
-        for (dueSources(node, now, .{}, network.time.optionalMilliseconds(window_end_ms)), &due) |ready, *total| total.* += @intFromBool(ready);
-        const result = network.driver.step(node, io, now, .{}, .{ .handler = .{ .context = &host, .apply = IdleHost.apply }, .deadline = network.time.optionalMilliseconds(window_end_ms) });
+        for (dueSources(node, now, .{}, window_end), &due) |ready, *total| total.* += @intFromBool(ready);
+        const result = network.driver.step(node, io, now, .{}, .{ .handler = .{ .context = &host, .apply = IdleHost.apply }, .deadline = window_end });
         if (result.failure) |err| return err;
         elapsed_turns += timestamp(io) - before;
         count += 1;

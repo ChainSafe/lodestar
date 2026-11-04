@@ -299,18 +299,9 @@ const Chain = struct {
 /// Processor limits as Lodestar's `createNativeConfig` derives them, with the attestation items
 /// sized from one slot's messages as Lodestar sizes them from active validators.
 fn processorLimits(chain: *const Chain, options: *const Options) network.gossip_processor.limits.Limits {
-    const items = [_]u32{ 8, 2048, 0, 32, 32, 128, 128, 1024, 8, 8, 128, 256, 256 };
-    const weights_mib = [_]usize{ 24, 8, 8, 1, 4, 1, 2, 2, 2, 2, 1, 8, 16 };
     const slot_messages = @as(u64, options.burst) + @as(u64, options.background) * chain_config.chain.SLOT_DURATION_MS / 1000;
-    var limits: network.gossip_processor.limits.Limits = undefined;
-    for (&limits, items, weights_mib, 0..) |*limit, count, weight, kind| {
-        var largest: usize = 0;
-        for (chain.network_config.topics[0..chain.network_config.boundary_count]) |boundary| largest = @max(largest, boundary.rules[kind].ssz_max);
-        limit.* = .{
-            .items = if (kind == @intFromEnum(Kind.beacon_attestation)) @intCast(@max(128, (slot_messages * 11 + 9) / 10)) else count,
-            .bytes = @intCast(std.mem.alignForward(usize, @max(gossip.constants.maxCompressedLen(largest), weight * mib), 4096)),
-        };
-    }
+    var limits = network.application_policy.processor(chain.network_config.topics[0..chain.network_config.boundary_count], 1) catch unreachable;
+    limits[@intFromEnum(Kind.beacon_attestation)].items = @intCast(@max(128, (slot_messages * 11 + 9) / 10));
     return limits;
 }
 
