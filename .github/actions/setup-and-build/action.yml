@@ -21,19 +21,28 @@ runs:
         node: ${{ inputs.node }}
         registry-url: ${{ inputs.registry-url }}
 
+    - name: Detect host
+      id: host
+      shell: bash
+      run: |
+        echo "libc=$(node -p "process.report.getReport().header.glibcVersionRuntime ?? 'none'")" >> $GITHUB_OUTPUT
+        echo "kernel=$(uname -r)" >> $GITHUB_OUTPUT
+
     # Required to build the @lodestar/native workspace package
     - name: Setup Zig
       uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       with:
         version: ${{ inputs.zig }}
+        # Zig's native target includes the host glibc and kernel versions, so its cache only hits on matching hosts.
+        # Without this, every workflow's `build` job shares one cache and the last one saved wins.
+        cache-key: libc-${{ steps.host.outputs.libc }}-kernel-${{ steps.host.outputs.kernel }}
 
     - name: Create cache key
       id: build-cache
       shell: bash
       # This build cache will be reused among different jobs for the same commit
       run: |
-        libc=$(node -p "process.report.getReport().header.glibcVersionRuntime ?? 'none'")
-        echo "key=build-cache-v2-${{ runner.os }}-${{ runner.arch }}-libc-${libc}-node-$(node --version)-zig-$(zig version)-preset-${{ env.LODESTAR_PRESET || 'mainnet' }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+        echo "key=build-cache-v2-${{ runner.os }}-${{ runner.arch }}-libc-${{ steps.host.outputs.libc }}-node-$(node --version)-zig-$(zig version)-preset-${{ env.LODESTAR_PRESET || 'mainnet' }}-${{ github.sha }}" >> $GITHUB_OUTPUT
 
     - name: Restore build
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0

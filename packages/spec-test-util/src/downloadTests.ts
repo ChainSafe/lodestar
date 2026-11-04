@@ -4,7 +4,6 @@ import path from "node:path";
 import {pipeline} from "node:stream/promises";
 import {ReadableStream as NodeReadableStream} from "node:stream/web";
 import {promisify} from "node:util";
-import {rimraf} from "rimraf";
 import {fetch, retry} from "@lodestar/utils";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-specs";
@@ -64,7 +63,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
 
   if (fs.existsSync(outputDir)) {
     log(`Cleaning existing version ${existingVersion} at ${outputDir}`);
-    rimraf.sync(outputDir);
+    fs.rmSync(outputDir, {recursive: true, force: true});
   }
 
   fs.mkdirSync(outputDir, {recursive: true});
