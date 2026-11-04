@@ -169,9 +169,14 @@ describe("network event command failures", () => {
 });
 
 describe("network publication completion", () => {
-  it.each([false, true])(
-    "waits for every fork publication after the first succeeds (last fails: %s)",
-    async (fails) => {
+  it.each([
+    {firstFails: false, lastFails: false},
+    {firstFails: false, lastFails: true},
+    {firstFails: true, lastFails: false},
+    {firstFails: true, lastFails: true},
+  ])(
+    "waits for every fork publication (first fails: $firstFails, last fails: $lastFails)",
+    async ({firstFails, lastFails}) => {
       const config = createBeaconConfig(
         {
           ...defaultConfig,
@@ -189,20 +194,23 @@ describe("network publication completion", () => {
       const {network, clock, publishGossip} = await fixture(async () => {}, config);
       clock.setSlot(3 * SLOTS_PER_EPOCH);
       const last = defer<number>();
-      publishGossip.mockResolvedValueOnce(3).mockReturnValue(last.promise);
+      if (firstFails) publishGossip.mockRejectedValueOnce(new Error("first fork refused"));
+      else publishGossip.mockResolvedValueOnce(3);
+      publishGossip.mockReturnValue(last.promise);
       const finished = vi.fn();
       const published = network.publishBlsToExecutionChange(ssz.capella.SignedBLSToExecutionChange.defaultValue());
-      void published.then(finished);
+      void published.then(finished, finished);
       try {
         await yieldToIO();
         expect(publishGossip).toHaveBeenCalledTimes(6);
         expect(finished).not.toHaveBeenCalled();
-        if (fails) last.reject(new Error("second fork refused"));
+        if (lastFails) last.reject(new Error("second fork refused"));
         else last.resolve(4);
-        await expect(published).resolves.toBe(3);
+        if (firstFails && lastFails) await expect(published).rejects.toBeInstanceOf(AggregateError);
+        else await expect(published).resolves.toBe(firstFails ? 4 : 3);
       } finally {
         last.resolve(0);
-        await published;
+        await Promise.allSettled([published]);
         await network.close();
       }
     }
