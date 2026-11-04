@@ -1,9 +1,10 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {routes} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputBlobs, BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
@@ -126,16 +127,25 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
       GossipType.data_column_sidecar
     ] as SequentialGossipHandler<GossipType.data_column_sidecar>;
 
-    async function sendEnvelope(): Promise<void> {
+    function createEnvelope() {
       const envelope = forkTypes.SignedExecutionPayloadEnvelope.defaultValue();
       envelope.message.beaconBlockRoot = blockRoot;
       envelope.message.payload.slotNumber = 1;
+      return envelope;
+    }
+
+    // Returns once gossip validation has passed, before the next event loop runs
+    async function validateEnvelope(): Promise<void> {
       await envelopeHandler({
-        gossipData: {serializedData: forkTypes.SignedExecutionPayloadEnvelope.serialize(envelope)},
+        gossipData: {serializedData: forkTypes.SignedExecutionPayloadEnvelope.serialize(createEnvelope())},
         topic: {boundary: {fork, epoch: 0}, type: GossipType.execution_payload},
         peerIdStr,
         seenTimestampSec: Date.now() / 1000,
       });
+    }
+
+    async function sendEnvelope(): Promise<void> {
+      await validateEnvelope();
       await vi.advanceTimersByTimeAsync(0);
     }
 
@@ -153,8 +163,65 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
       await vi.advanceTimersByTimeAsync(0);
     }
 
-    return {config, payloadInput, onIncomplete, getPayloadInput, peerIdStr, sendEnvelope, sendColumn};
+    return {
+      chain,
+      config,
+      createEnvelope,
+      emitter,
+      payloadInput,
+      onIncomplete,
+      getPayloadInput,
+      peerIdStr,
+      sendEnvelope,
+      sendColumn,
+      validateEnvelope,
+    };
   }
+
+  // What BlockInputSync does when a by-root response lands, see toPendingPayloadInput
+  function addByRootIfMissing(
+    payloadInput: PayloadEnvelopeInput,
+    envelope: gloas.SignedExecutionPayloadEnvelope
+  ): void {
+    if (!payloadInput.hasPayloadEnvelope()) {
+      payloadInput.addPayloadEnvelope({
+        envelope,
+        source: PayloadEnvelopeInputSource.byRoot,
+        seenTimestampSec: Date.now() / 1000,
+      });
+    }
+  }
+
+  it("adds a validated gossip envelope before the next event loop, so a by-root response cannot add it first", async () => {
+    const {chain, createEnvelope, emitter, payloadInput, validateEnvelope} = setup();
+    const onGossip = vi.fn();
+    emitter.on(routes.events.EventType.executionPayloadGossip, onGossip);
+
+    await validateEnvelope();
+    expect(payloadInput.hasPayloadEnvelope()).toBe(true);
+    expect(payloadInput.getPayloadEnvelopeSource().source).toBe(PayloadEnvelopeInputSource.gossip);
+
+    addByRootIfMissing(payloadInput, createEnvelope());
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onGossip).toHaveBeenCalledOnce();
+    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validSignature: true});
+  });
+
+  it("still emits and imports if another source added the envelope while gossip validation was running", async () => {
+    const {chain, createEnvelope, emitter, payloadInput, sendEnvelope} = setup();
+    const onGossip = vi.fn();
+    emitter.on(routes.events.EventType.executionPayloadGossip, onGossip);
+    const byRootEnvelope = createEnvelope();
+    addByRootIfMissing(payloadInput, byRootEnvelope);
+
+    await sendEnvelope();
+
+    expect(payloadInput.getPayloadEnvelope()).toBe(byRootEnvelope);
+    expect(onGossip).toHaveBeenCalledOnce();
+    // The stored envelope is not the one gossip validated, so its signature must be verified at import
+    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validSignature: false});
+  });
 
   it("requests missing columns at the configured payload deadline when only the envelope arrives", async () => {
     const {config, payloadInput, onIncomplete, peerIdStr, sendEnvelope} = setup();
