@@ -205,6 +205,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
     MAX_REQUEST_DATA_COLUMN_SIDECARS: false,
     MAX_REQUEST_PAYLOADS: false,
+    MIN_BID_INCREMENT_PERCENT: false,
+    MIN_BID_INCREMENT_FLOOR: false,
+    MIN_BID_INCREMENT_CAP: false,
 
     // # Phase0Preset
     /////////////////

@@ -1,3 +1,4 @@
+import {ChainConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
@@ -17,30 +18,17 @@ import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
 /**
- * Relative increment over the current highest bid required to forward a bid, in basis points.
- * With 3%, laddering from 1 gwei to 1 ETH takes ~256 bids given the floor and cap below, see
- * https://github.com/ethereum/consensus-specs/pull/4792#issuecomment-3714553549.
+ * Return the minimum value of a builder's next bid for the same slot and parent given its previous bid.
+ *
+ * The increment bounds how many bids one builder can propagate per slot and parent, with 3% laddering
+ * from 1 gwei to 1 ETH takes ~256 bids given the floor and cap. The floor covers low values where 3% is
+ * tiny, the cap keeps the raise a builder must make on high value blocks small. Division before
+ * multiplication to stay within safe integer range for max gwei values.
  */
-const BID_INCREMENT_BPS = 300;
-/**
- * Minimum absolute increment (0.0001 ETH). Covers low bid values where the relative increment
- * is tiny and provides weak spam protection.
- */
-const BID_INCREMENT_FLOOR_GWEI = 100_000;
-/**
- * Maximum absolute increment (0.01 ETH). Bounds the barrier for legitimate competition on
- * high value blocks where the relative increment would suppress closely competing bids.
- */
-const BID_INCREMENT_CAP_GWEI = 10_000_000;
-
-/**
- * Return the minimum value a new bid must have to be forwarded given the current highest bid.
- * Division before multiplication to stay within safe integer range for max gwei values.
- */
-function getMinBidValue(currentHighestBid: number): number {
-  const relativeIncrement = Math.floor(currentHighestBid / 10_000) * BID_INCREMENT_BPS;
-  const increment = Math.min(Math.max(BID_INCREMENT_FLOOR_GWEI, relativeIncrement), BID_INCREMENT_CAP_GWEI);
-  return currentHighestBid + increment;
+function getMinBidValue(config: ChainConfig, previousBid: number): number {
+  const relativeIncrement = Math.floor(previousBid / 100) * config.MIN_BID_INCREMENT_PERCENT;
+  const increment = Math.min(Math.max(relativeIncrement, config.MIN_BID_INCREMENT_FLOOR), config.MIN_BID_INCREMENT_CAP);
+  return previousBid + increment;
 }
 
 /**
@@ -165,17 +153,22 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for
-  // the tuple `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
-  // Entries are only added after signature verification, so known tuples can be dropped before
-  // state regeneration and the other expensive validation steps.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
+  // [IGNORE] the bid exceeds the builder's previous bid for the tuple
+  // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)` by the minimum increment.
+  // Entries are only added after signature verification, so bids below the increment can be
+  // dropped before state regeneration and the other expensive validation steps.
+  let previousBid = chain.seenExecutionPayloadBids.getValue(
+    bid.slot,
+    bid.builderIndex,
+    bidParentBlockHash,
+    bidParentBlockRoot
+  );
+  if (previousBid !== null && bid.value < getMinBidValue(chain.config, previousBid)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
+      code: ExecutionPayloadBidErrorCode.BID_BELOW_MIN_INCREMENT,
       builderIndex: bid.builderIndex,
-      slot: bid.slot,
-      parentBlockRoot: bidParentBlockRoot,
-      parentBlockHash: bidParentBlockHash,
+      bidValue: bid.value,
+      previousBid,
     });
   }
 
@@ -354,11 +347,8 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] this bid is the highest value bid seen for the tuple
   // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
-  // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
-  // increment, see https://github.com/ethereum/consensus-specs/pull/4831. This prevents spam
-  // from builders submitting numerous bids with minimal value increments.
   const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHash, bidParentBlockRoot);
-  if (bestBid !== null && bid.value < getMinBidValue(bestBid.signedBid.message.value)) {
+  if (bestBid !== null && bid.value <= bestBid.signedBid.message.value) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
       bidValue: bid.value,
@@ -425,20 +415,25 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // Repeat the seen check after the awaited signature verification to prevent concurrent bids
-  // for the same builder and tuple from both passing validation.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
+  // Repeat the increment check after the awaited signature verification to prevent concurrent
+  // bids from the same builder for the tuple from both passing validation.
+  previousBid = chain.seenExecutionPayloadBids.getValue(
+    bid.slot,
+    bid.builderIndex,
+    bidParentBlockHash,
+    bidParentBlockRoot
+  );
+  if (previousBid !== null && bid.value < getMinBidValue(chain.config, previousBid)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
+      code: ExecutionPayloadBidErrorCode.BID_BELOW_MIN_INCREMENT,
       builderIndex: bid.builderIndex,
-      slot: bid.slot,
-      parentBlockRoot: bidParentBlockRoot,
-      parentBlockHash: bidParentBlockHash,
+      bidValue: bid.value,
+      previousBid,
     });
   }
 
   // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot);
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot, bid.value);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }

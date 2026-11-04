@@ -197,6 +197,12 @@ export const chainConfig: ChainConfig = {
   // Gloas
   // 2**7 (= 128) payloads
   MAX_REQUEST_PAYLOADS: 128,
+  // 3%
+  MIN_BID_INCREMENT_PERCENT: 3,
+  // 10**5 (= 100,000) Gwei
+  MIN_BID_INCREMENT_FLOOR: 100000,
+  // 10**7 (= 10,000,000) Gwei
+  MIN_BID_INCREMENT_CAP: 10000000,
 
   // Blob Scheduling
   // ---------------------------------------------------------------
