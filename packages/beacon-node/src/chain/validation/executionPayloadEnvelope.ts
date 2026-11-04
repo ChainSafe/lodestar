@@ -14,6 +14,7 @@ import {
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
+import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
@@ -51,7 +52,7 @@ export function validateGossipExecutionPayloadEnvelopeSerialized(
     return;
   }
 
-  const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput.getBid().gasLimit);
+  const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput);
   if (BigInt(transactionCount) > maxTransactionCount) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
@@ -163,7 +164,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] The number of transactions is within the limit implied by the parent payload's gas limit
-  const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput.getBid().gasLimit);
+  const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput);
   if (BigInt(payload.transactions.length) > maxTransactionCount) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
@@ -210,11 +211,11 @@ async function validateExecutionPayloadEnvelope(
  * The bid's gas limit is only tied to the parent payload by bid gossip, so the bound is the gas limit the
  * EIP-1559 rule allows on top of the parent payload's. The bid is the only bound if that gas limit is unknown.
  */
-function getMaxTransactionCount(chain: IBeaconChain, block: ProtoBlock, bidGasLimit: bigint): bigint {
+function getMaxTransactionCount(chain: IBeaconChain, block: ProtoBlock, payloadInput: PayloadEnvelopeInput): bigint {
   const parentGasLimit = block.executionPayloadBlockHash === null ? 0n : BigInt(block.executionPayloadGasLimit);
   const maxGasLimit =
     parentGasLimit === 0n
-      ? bidGasLimit
+      ? payloadInput.getBid().gasLimit
       : parentGasLimit + (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
   return maxGasLimit / BigInt(chain.config.MIN_TRANSACTION_GAS);
 }
