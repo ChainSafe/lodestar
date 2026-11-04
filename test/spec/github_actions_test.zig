@@ -41,6 +41,18 @@ test "runsQuery filters by branch instead of event" {
     try testing.expectEqualStrings("status=success&per_page=1&branch=dev&created=2026-09-22", query);
 }
 
+test "runsQuery escapes reserved characters in branch names" {
+    const query = try github_actions.runsQuery(testing.allocator, today, "feature/a+b&c=d#e%2F", true);
+    defer testing.allocator.free(query);
+    try testing.expectEqualStrings("status=success&per_page=1&branch=feature%2Fa%2Bb%26c%3Dd%23e%252F&created=2026-09-22", query);
+}
+
+test "runsQuery encodes UTF-8 branch names" {
+    const query = try github_actions.runsQuery(testing.allocator, today, "feature/café-1.0", false);
+    defer testing.allocator.free(query);
+    try testing.expectEqualStrings("status=success&per_page=1&branch=feature%2Fcaf%C3%A9-1.0&created=2026-09-22", query);
+}
+
 test "selectRun takes today's run" {
     const run = try github_actions.selectRun(&.{recent_run}, today);
     try testing.expectEqual(recent_run.id, run.id);

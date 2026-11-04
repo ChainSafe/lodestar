@@ -65,7 +65,7 @@ pub fn runsQuery(allocator: Allocator, day: Day, branch: ?[]const u8, latest: bo
     try query.appendSlice(allocator, "status=success&per_page=1");
     if (branch) |name| {
         try query.appendSlice(allocator, "&branch=");
-        try query.appendSlice(allocator, name);
+        try query.print(allocator, "{f}", .{std.fmt.alt(std.Uri.Component{ .raw = name }, .formatEscaped)});
     } else if (latest) {
         try query.appendSlice(allocator, "&event=schedule");
     }
