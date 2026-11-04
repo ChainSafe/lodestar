@@ -1,4 +1,3 @@
-import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
@@ -886,7 +885,7 @@ function isCheck(step: Step): step is Checks {
 }
 
 specTestIterator(
-  path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET),
+  ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET),
   {
     fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
   },

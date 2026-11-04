@@ -1,11 +1,12 @@
 import axios from "axios";
 import {describe, expect, it, vi} from "vitest";
+import {pinnedSpecFixtureVersions} from "@lodestar/spec-test-util/fixtures";
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
-// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
-import specTests from "../spec-tests-version.json" with {type: "json"};
 import {loadConfigYaml} from "../yaml.js";
+
+const specVersion = pinnedSpecFixtureVersions().consensus;
 
 // Not e2e, but slow. Run with e2e tests
 /**
@@ -20,12 +21,12 @@ describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
   it("mainnet", async () => {
-    const remotePreset = await downloadRemoteConfig("mainnet", specTests.ethereumConsensusSpecsTests.specVersion);
+    const remotePreset = await downloadRemoteConfig("mainnet", specVersion);
     assertCorrectPreset({...mainnetPreset}, remotePreset);
   });
 
   it("minimal", async () => {
-    const remotePreset = await downloadRemoteConfig("minimal", specTests.ethereumConsensusSpecsTests.specVersion);
+    const remotePreset = await downloadRemoteConfig("minimal", specVersion);
     assertCorrectPreset({...minimalPreset}, remotePreset);
   });
 });

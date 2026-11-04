@@ -391,9 +391,6 @@ importers:
       '@types/tmp':
         specifier: ^0.2.3
         version: 0.2.3
-      dotenv:
-        specifier: ^16.4.5
-        version: 16.4.5
       js-yaml:
         specifier: ^4.1.0
         version: 4.3.2
@@ -603,6 +600,10 @@ importers:
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
+    devDependencies:
+      '@lodestar/spec-test-util':
+        specifier: workspace:^
+        version: link:../spec-test-util
 
   packages/db:
     dependencies:
@@ -698,6 +699,9 @@ importers:
 
   packages/params:
     devDependencies:
+      '@lodestar/spec-test-util':
+        specifier: workspace:^
+        version: link:../spec-test-util
       '@types/js-yaml':
         specifier: ^4.0.5
         version: 4.0.5
@@ -768,15 +772,9 @@ importers:
       '@chainsafe/ssz':
         specifier: ^1.9.0
         version: 1.9.0
-      '@lodestar/types':
-        specifier: workspace:^
-        version: link:../types
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
       vitest:
         specifier: 'catalog:'
         version: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)

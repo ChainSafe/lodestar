@@ -47,7 +47,7 @@ export const specProjectMainnet = defineProject({
 
 // Fork-choice compliance suite (`pnpm test:comptest`) — deliberately its own project so the
 // regular spec projects never pick it up.
-// Fixtures via `pnpm download-comptests`.
+// Fixtures via `zig build run:download_comptests`.
 export const specProjectComptest = defineProject({
   test: {
     name: "comptest",

@@ -78,7 +78,7 @@ const sszStatic =
     }
   };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   ssz_static: {
     type: RunnerType.custom,
     fn: sszStatic(),

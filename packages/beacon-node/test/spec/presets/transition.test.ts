@@ -1,4 +1,3 @@
-import path from "node:path";
 import {expect} from "vitest";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -185,7 +184,7 @@ type TransitionTestCase = {
   post?: BeaconStateAllForks;
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   transition: {
     type: RunnerType.default,
     fn: transition(),

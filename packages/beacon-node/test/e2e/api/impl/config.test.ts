@@ -1,10 +1,9 @@
 import {describe, it} from "vitest";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName, activePreset} from "@lodestar/params";
+import {pinnedSpecFixtureVersions} from "@lodestar/spec-test-util/fixtures";
 import {fetch} from "@lodestar/utils";
 import {specConstants} from "../../../../src/api/impl/config/constants.js";
-// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
-import specTestVersion from "../../../spec-tests-version.json" with {type: "json"};
 
 const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant is an array, so it's skipped due to not being just a string.
@@ -18,7 +17,7 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
 
 describe("api / impl / config", () => {
   it("Ensure all constants are exposed", async () => {
-    const constantNames = await downloadRemoteConstants(specTestVersion.ethereumConsensusSpecsTests.specVersion);
+    const constantNames = await downloadRemoteConstants(pinnedSpecFixtureVersions().consensus);
 
     const constantsInCode = new Set([
       // Constants for API only

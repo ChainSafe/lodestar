@@ -1,4 +1,3 @@
-import path from "node:path";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
@@ -82,6 +81,6 @@ export function getPreviousFork(config: ChainForkConfig, fork: ForkName): ForkNa
   return config.forksAscendingEpochOrder[forkIndex - 1].name;
 }
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   fork: {type: RunnerType.default, fn: fork},
 });

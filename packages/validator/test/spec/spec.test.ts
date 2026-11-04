@@ -1,7 +1,9 @@
+import path from "node:path";
 import {rimraf} from "rimraf";
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db/controller/level";
+import {pinnedSpecFixtureVersions, specFixturesDir} from "@lodestar/spec-test-util/fixtures";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   InterchangeError,
@@ -14,10 +16,18 @@ import {
 import {SurroundAttestationError} from "../../src/slashingProtection/minMaxSurround/index.js";
 import {testLogger} from "../utils/logger.js";
 import {loadTestCases} from "../utils/spec.js";
-import {SPEC_TEST_CASES_LOCATION} from "./params.js";
+
+const interchangeVersion = pinnedSpecFixtureVersions().interchange;
+const testCasesDir = path.join(
+  specFixturesDir,
+  "interchange",
+  interchangeVersion,
+  `slashing-protection-interchange-tests-${interchangeVersion.slice(1)}`,
+  "tests/generated"
+);
 
 describe("slashing-protection-interchange-tests", () => {
-  const testCases = loadTestCases(SPEC_TEST_CASES_LOCATION);
+  const testCases = loadTestCases(testCasesDir);
   const dbLocation = "./.__testdb";
   let db: LevelDbController;
   let slashingProtection: SlashingProtection;

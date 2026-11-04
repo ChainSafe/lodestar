@@ -27,13 +27,19 @@ jobs:
         with:
           node: 24
 
+      - name: Read spec test cache key
+        id: spec-test-version
+        run: |
+          version=$(zig build spec-test-version)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Restore compliance vectors cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: packages/beacon-node/spec-tests-comptests
-          key: comptest-data-${{ hashFiles('spec-tests-version.json') }}
+          path: test/spec/spec_tests
+          key: comptest-data-${{ steps.spec-test-version.outputs.version }}
       - name: Download compliance vectors
-        run: pnpm download-comptests
+        run: zig build run:download_comptests
 
       - name: Fork-choice compliance tests
         run: pnpm test:comptest
