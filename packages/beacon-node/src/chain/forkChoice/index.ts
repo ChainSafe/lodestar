@@ -153,13 +153,11 @@ export function initializeForkChoiceFromFinalizedState(
               executionPayloadBlockHash: isStatePostGloas(state)
                 ? toRootHex(state.latestBlockHash)
                 : toRootHex(state.latestExecutionPayloadHeader.blockHash),
-              // TODO GLOAS: executionPayloadNumber is not tracked in BeaconState post-gloas (EIP-7732 removed
-              // latestExecutionPayloadHeader). Using 0 as unavailable fallback, see
-              // initializeForkChoiceFromUnfinalizedState for the same caveat and for the gas limit.
+              // TODO GLOAS: executionPayloadNumber/GasLimit are not tracked in BeaconState post-gloas
+              // (EIP-7732 removed latestExecutionPayloadHeader). Using 0 as unavailable fallback —
+              // see initializeForkChoiceFromUnfinalizedState for the same caveat on validation.
               executionPayloadNumber: isStatePostGloas(state) ? 0 : state.payloadBlockNumber,
-              executionPayloadGasLimit: isStatePostGloas(state)
-                ? Number(state.latestExecutionPayloadBid.gasLimit)
-                : state.latestExecutionPayloadHeader.gasLimit,
+              executionPayloadGasLimit: isStatePostGloas(state) ? 0 : state.latestExecutionPayloadHeader.gasLimit,
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
             }
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
@@ -257,18 +255,16 @@ export function initializeForkChoiceFromUnfinalizedState(
           executionPayloadBlockHash: isStatePostGloas(unfinalizedState)
             ? toRootHex(unfinalizedState.latestBlockHash)
             : toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash),
-          // TODO GLOAS: executionPayloadNumber is not tracked in BeaconState post-gloas
+          // TODO GLOAS: executionPayloadNumber/GasLimit are not tracked in BeaconState post-gloas
           // (EIP-7732 removed latestExecutionPayloadHeader). Using 0 as unavailable fallback until
           // a solution is found. The 0 doesn't gate validation in practice: at boot the head's
           // PENDING variant's `executionPayloadBlockHash` is the *parent's* payload hash (per the
           // PENDING/EMPTY convention), so gossip bids that reference the head's *own* payload
           // hash won't match this variant anyway and will IGNORE until `onExecutionPayload`
-          // upgrades the head to FULL with real values. The gas limit of that parent payload is not
-          // tracked either, the anchor bid's gas limit approximates it within 1/1024 for a bid that
-          // passed bid gossip.
+          // upgrades the head to FULL with real values.
           executionPayloadNumber: isStatePostGloas(unfinalizedState) ? 0 : unfinalizedState.payloadBlockNumber,
           executionPayloadGasLimit: isStatePostGloas(unfinalizedState)
-            ? Number(unfinalizedState.latestExecutionPayloadBid.gasLimit)
+            ? 0
             : unfinalizedState.latestExecutionPayloadHeader.gasLimit,
           executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
         }
