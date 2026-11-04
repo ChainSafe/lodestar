@@ -95,9 +95,7 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
         const result = try lookup.getOrPutContext(allocator, deposit.pubkey, context);
         if (!result.found_existing) result.value_ptr.* = .{};
         const entry = result.value_ptr;
-        const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
-        const known_validator = try isValidatorKnown(.gloas, state, validator_index);
-        if (!known_validator) {
+        if (gloas.isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
             if (entry.builder_index) |builder_index| {
                 var builder: ct.gloas.Builder.Type = undefined;
                 try builders.getValue(undefined, builder_index, &builder);
@@ -105,33 +103,35 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                 try builders.setValue(builder_index, &builder);
                 continue;
             }
-            if (gloas.isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
-                var pending_index = entry.pending_head;
-                // Each retained deposit's signature is checked at most once per pubkey.
-                while (!entry.has_pending_validator and pending_index != entry.checked_head) {
-                    var prior: ct.electra.PendingDeposit.Type = undefined;
-                    try pending.getValue(undefined, pending_index, &prior);
-                    validateDepositSignature(config, &prior.pubkey, &prior.withdrawal_credentials, prior.amount, prior.signature) catch {
-                        pending_index = previous[pending_index];
-                        continue;
-                    };
-                    entry.has_pending_validator = true;
-                }
-                entry.checked_head = entry.pending_head;
-                if (!entry.has_pending_validator) {
-                    validateDepositSignature(config, &deposit.pubkey, &deposit.withdrawal_credentials, deposit.amount, deposit.signature) catch continue;
-                    const builder = ct.gloas.Builder.Type{
-                        .pubkey = deposit.pubkey,
-                        .version = c.PAYLOAD_BUILDER_VERSION,
-                        .execution_address = deposit.withdrawal_credentials[12..32].*,
-                        .balance = deposit.amount,
-                        .deposit_epoch = computeEpochAtSlot(deposit.slot),
-                        .withdrawable_epoch = c.FAR_FUTURE_EPOCH,
-                    };
-                    const builder_index = try builders.length();
-                    try builders.pushValue(&builder);
-                    entry.builder_index = builder_index;
-                    continue;
+            if (validateDepositSignature(config, &deposit.pubkey, &deposit.withdrawal_credentials, deposit.amount, deposit.signature)) {
+                const builder = ct.gloas.Builder.Type{
+                    .pubkey = deposit.pubkey,
+                    .version = c.PAYLOAD_BUILDER_VERSION,
+                    .execution_address = deposit.withdrawal_credentials[12..32].*,
+                    .balance = deposit.amount,
+                    .deposit_epoch = computeEpochAtSlot(deposit.slot),
+                    .withdrawable_epoch = c.FAR_FUTURE_EPOCH,
+                };
+                const builder_index = try builders.length();
+                try builders.pushValue(&builder);
+                entry.builder_index = builder_index;
+                continue;
+            } else |_| {
+                const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+                if (!try isValidatorKnown(.gloas, state, validator_index)) {
+                    var pending_index = entry.pending_head;
+                    // Each retained deposit's signature is checked at most once per pubkey.
+                    while (!entry.has_pending_validator and pending_index != entry.checked_head) {
+                        var prior: ct.electra.PendingDeposit.Type = undefined;
+                        try pending.getValue(undefined, pending_index, &prior);
+                        validateDepositSignature(config, &prior.pubkey, &prior.withdrawal_credentials, prior.amount, prior.signature) catch {
+                            pending_index = previous[pending_index];
+                            continue;
+                        };
+                        entry.has_pending_validator = true;
+                    }
+                    entry.checked_head = entry.pending_head;
+                    if (!entry.has_pending_validator) continue;
                 }
             }
         }
