@@ -22,7 +22,7 @@ pub fn processRewardsAndPenalties(
         return;
     }
 
-    const rewards = cache.rewards;
+    const rewards = cache.validator_scratch;
     const penalties = cache.penalties;
     try getRewardsAndPenalties(fork, config, epoch_cache, state, cache, rewards, penalties);
 

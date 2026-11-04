@@ -142,12 +142,9 @@ const ReusedEpochTransitionCache = struct {
 
     previous_epoch_participation: U8Array,
     current_epoch_participation: U8Array,
-    rewards: U64Array,
+    validator_scratch: U64Array,
     penalties: U64Array,
-    inactivity_scores_buffer: U64Array,
     slashing_penalties: U64Array,
-    /// Backing memory for `EpochTransitionCache.balances`. `items` stays empty; only its
-    /// capacity is borrowed, through `allocatedSlice()`.
     balances_buffer: U64Array,
 
     /// Holds a ref into the node pool. Teardown this struct before the pool.
@@ -171,18 +168,15 @@ const ReusedEpochTransitionCache = struct {
         self.is_compounding_validator_arr = .empty;
         self.previous_epoch_participation = .empty;
         self.current_epoch_participation = .empty;
-        self.rewards = try U64Array.initCapacity(allocator, validator_count);
-        errdefer self.rewards.deinit(allocator);
+        self.validator_scratch = try U64Array.initCapacity(allocator, validator_count);
+        errdefer self.validator_scratch.deinit(allocator);
         self.penalties = try U64Array.initCapacity(allocator, validator_count);
         errdefer self.penalties.deinit(allocator);
-        self.inactivity_scores_buffer = try U64Array.initCapacity(allocator, validator_count);
-        errdefer self.inactivity_scores_buffer.deinit(allocator);
         self.slashing_penalties = .empty;
         self.balances_buffer = try U64Array.initCapacity(
             allocator,
             validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
         );
-        errdefer self.balances_buffer.deinit(allocator);
     }
 
     pub fn resize(self: *ReusedEpochTransitionCache, validator_count: usize) !void {
@@ -191,11 +185,9 @@ const ReusedEpochTransitionCache = struct {
         try self.is_active_next_epoch.resize(self.allocator, validator_count);
         try self.flags.resize(self.allocator, validator_count);
         try self.next_epoch_shuffling_active_validator_indices.resize(self.allocator, validator_count);
-        try self.rewards.resize(self.allocator, validator_count);
+        try self.validator_scratch.resize(self.allocator, validator_count);
         try self.penalties.resize(self.allocator, validator_count);
-        try self.inactivity_scores_buffer.resize(self.allocator, validator_count);
-        std.debug.assert(self.balances_buffer.items.len == 0);
-        try self.balances_buffer.ensureTotalCapacity(
+        try self.balances_buffer.resize(
             self.allocator,
             validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
         );
@@ -217,9 +209,8 @@ const ReusedEpochTransitionCache = struct {
         self.is_compounding_validator_arr.deinit(self.allocator);
         self.previous_epoch_participation.deinit(self.allocator);
         self.current_epoch_participation.deinit(self.allocator);
-        self.rewards.deinit(self.allocator);
+        self.validator_scratch.deinit(self.allocator);
         self.penalties.deinit(self.allocator);
-        self.inactivity_scores_buffer.deinit(self.allocator);
         self.slashing_penalties.deinit(self.allocator);
         self.balances_buffer.deinit(self.allocator);
         self.* = undefined;
@@ -282,14 +273,13 @@ pub const EpochTransitionCache = struct {
     // this is borrowed from ReusedEpochTransitionCache
     flags: []const u8,
     compounding_validator_flags: CompoundingValidatorFlags,
-    rewards: []u64,
+    /// Shared by processInactivityUpdates() and getRewardsAndPenalties(). Holds the previous step's
+    /// values, so each step overwrites it before reading.
+    validator_scratch: []u64,
     penalties: []u64,
-    /// Scratch for processInactivityUpdates(), which leaves the pre-update scores in it.
-    inactivity_scores_buffer: []u64,
     slashing_penalties: []u64,
-    /// Borrowed from `ReusedEpochTransitionCache` as the backing memory of `balances`.
     balances_buffer: []u64,
-    /// Allocator-taking methods are illegal on this list: the reused cache owns its memory.
+    /// Backed by balances_buffer, so allocator-taking methods are illegal on this list.
     balances: ?U64Array,
     next_shuffling_active_indices: []const u32,
     next_shuffling: ?*EpochShufflingRc,
@@ -651,11 +641,10 @@ pub const EpochTransitionCache = struct {
             .inclusion_delays = reused_cache.inclusion_delays.items,
             .flags = reused_cache.flags.items,
             .compounding_validator_flags = .{ .base = reused_cache.is_compounding_validator_arr.items },
-            .rewards = reused_cache.rewards.items,
+            .validator_scratch = reused_cache.validator_scratch.items,
             .penalties = reused_cache.penalties.items,
-            .inactivity_scores_buffer = reused_cache.inactivity_scores_buffer.items,
             .slashing_penalties = reused_cache.slashing_penalties.items,
-            .balances_buffer = reused_cache.balances_buffer.allocatedSlice(),
+            .balances_buffer = reused_cache.balances_buffer.items,
             // Will be assigned in processRewardsAndPenalties()
             .balances = null,
         };

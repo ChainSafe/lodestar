@@ -31,11 +31,7 @@ pub fn processInactivityUpdates(
 
     var inactivity_scores = try state.inactivityScores();
     try inactivity_scores.commit();
-    // The buffer is sized from the validator count at cache init, and a valid state keeps one
-    // inactivity score per validator.
-    const inactivity_scores_values = cache.inactivity_scores_buffer;
-    std.debug.assert(inactivity_scores_values.len == try inactivity_scores.length());
-    _ = try inactivity_scores.getAllInto(inactivity_scores_values);
+    const inactivity_scores_values = try inactivity_scores.getAllInto(cache.validator_scratch);
 
     std.debug.assert(flags.len <= inactivity_scores_values.len);
     for (0..flags.len) |i| {
