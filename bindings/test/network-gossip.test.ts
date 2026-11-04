@@ -393,7 +393,8 @@ for (const hoodi of [false, true]) {
       try {
         const info = await peer.command("ready");
         const config = applicationConfig();
-        setSlot(config, 2000n * 32n);
+        const slot = 2000 * 32;
+        setSlot(config, BigInt(slot));
         const firstTopic = topicName("beacon_block", 2);
         const secondTopic = topicName("beacon_block", 3);
         runtime = startRuntime(config, () => undefined);
@@ -401,6 +402,7 @@ for (const hoodi of [false, true]) {
         const intent = localIntent(config);
         intent.coreTopics = true;
         await runtime.applyIntent(intent);
+        await peer.command("status", {digest: Buffer.from(requestForks[2].digest).toString("hex"), headSlot: slot});
         await peer.command("gossipSubscribe", {topic: firstTopic});
         await peer.command("gossipSubscribe", {topic: secondTopic});
         const remote = peerIdFromHex(info.peer);
@@ -417,17 +419,17 @@ for (const hoodi of [false, true]) {
           await delay(25);
         }
         for (const [index, topic] of [firstTopic, secondTopic].entries()) {
-          const sent = await peer.command("gossipPublish", {length: 4000, seed: 71 + index, slot: 100, topic});
+          const sent = await peer.command("gossipPublish", {length: 4000, seed: 71 + index, slot, topic});
           const message = await nextGossip(runtime);
           expect(message.topic).toBe(topic);
           expect(Buffer.from(message.id).toString("hex")).toBe(sent.messageId);
           expect(message.peerId).toEqual(remote);
           const expected = payload(4000, 71 + index);
-          expected.writeBigUInt64LE(100n, 100);
+          expected.writeBigUInt64LE(BigInt(slot), 100);
           expect(summary(message.data)).toEqual(summary(expected));
           report(runtime, message.handle, index === 0 ? "accept" : "ignore");
           const data = payload(4000, 81 + index);
-          data.writeBigUInt64LE(100n, 100);
+          data.writeBigUInt64LE(BigInt(slot), 100);
           expect(await runtime.publishGossip(topic, data, {allowZeroPeers: false})).toMatchObject({
             queued: 1,
             selected: 1,
@@ -448,7 +450,7 @@ for (const hoodi of [false, true]) {
         const held = 4;
         if (!hoodi) {
           for (let i = 0; i < 64; i++)
-            await peer.command("gossipPublish", {length: 4000, seed: 900 + i, slot: 100, topic: firstTopic});
+            await peer.command("gossipPublish", {length: 4000, seed: 900 + i, slot, topic: firstTopic});
           const active = runtime;
           await expect
             .poll(

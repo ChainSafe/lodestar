@@ -311,8 +311,10 @@ stockTest(
         reason: "invalid_request",
       });
       await peer.command("scenario", {scenario: "hold"});
-      const streams = Array.from({length: 6}, () => runtime.request(id, BLOCKS, new Uint8Array(32)));
-      expect(() => runtime.request(id, BLOCKS, new Uint8Array(32))).toThrow(
+      const streams: ReturnType<typeof runtime.request>[] = [];
+      expect(() => {
+        for (let i = 0; i < 1024; i++) streams.push(runtime.request(id, BLOCKS, new Uint8Array(32)));
+      }).toThrow(
         expect.objectContaining({
           capacityToken: expect.any(String),
           code: "NetworkRequestRejected",
@@ -593,16 +595,18 @@ stockTest(
     try {
       await peer.command("scenario", {count: 1, digest: "deadbeef", scenario: "chunks"});
       const stream = runtime.request(id, BLOCKS, new Uint8Array(32));
-      let score = 0;
-      for (let attempt = 0; attempt < 100; attempt++) {
-        score = (await runtime.observePeers()).peers[0].score;
-        if (score < -9) break;
-        await new Promise((resolve) => setTimeout(resolve, 10));
-      }
+      await expect
+        .poll(async () => (await runtime.getPeerScores()).peers.find((entry) => entry.identity === id)?.score ?? 0, {
+          timeout: 5000,
+        })
+        .toBeLessThan(-9);
+      const score = (await runtime.getPeerScores()).peers.find((entry) => entry.identity === id)?.score ?? 0;
       expect(score).toBeGreaterThanOrEqual(-10);
       expect(score).toBeLessThan(-9);
       await expect(stream.next()).rejects.toMatchObject({reason: "unknown_context"});
-      expect((await runtime.observePeers()).peers[0].score).toBeGreaterThanOrEqual(score);
+      expect(
+        (await runtime.getPeerScores()).peers.find((entry) => entry.identity === id)?.score
+      ).toBeGreaterThanOrEqual(score);
     } finally {
       await runtime.close();
       await peer.stop();

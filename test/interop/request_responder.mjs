@@ -52,7 +52,7 @@ const node = await createLibp2p({
   start: false,
   transports: [quic()],
 });
-const status = Buffer.alloc(84);
+const status = Buffer.alloc(92);
 status.set(scenario.digest);
 status.writeBigUInt64LE(100n, 76);
 async function respondControl(stream) {
@@ -64,7 +64,7 @@ async function respondControl(stream) {
     let bytes;
     if (protocol.includes("/status/")) {
       control.status++;
-      bytes = status;
+      bytes = protocol.includes("/status/2/") ? status : status.subarray(0, 84);
     } else if (protocol.includes("/ping/")) {
       control.ping++;
       bytes = uint64(metadataSequence);
@@ -84,7 +84,7 @@ async function respondControl(stream) {
     stream.abort(error);
   }
 }
-for (const method of ["status/1", "ping/1", "goodbye/1", "metadata/2", "metadata/3"]) {
+for (const method of ["status/1", "status/2", "ping/1", "goodbye/1", "metadata/2", "metadata/3"]) {
   await node.handle(`/eth2/beacon_chain/req/${method}/ssz_snappy`, respondControl, {
     maxInboundStreams: 8,
     maxOutboundStreams: 8,
@@ -166,7 +166,12 @@ for await (const line of boundedLines(process.stdin)) {
         protocols: node.getProtocols(),
         versions: {libp2p: await version("libp2p"), quic: await version("@chainsafe/libp2p-quic")},
       };
-    else if (command.op === "gossipSubscribe") {
+    else if (command.op === "status") {
+      assert(typeof command.digest === "string" && /^[0-9a-f]{8}$/.test(command.digest));
+      assert(Number.isSafeInteger(command.headSlot) && command.headSlot >= 0);
+      status.set(Buffer.from(command.digest, "hex"));
+      status.writeBigUInt64LE(BigInt(command.headSlot), 76);
+    } else if (command.op === "gossipSubscribe") {
       assert(gossipMode && /^\/eth2\/[0-9a-f]{8}\/beacon_block\/ssz_snappy$/.test(command.topic));
       assert(gossipTopics.size < 4);
       gossipTopics.add(command.topic);
