@@ -624,7 +624,7 @@ test "queued request and disconnect share the protocol turn clock while latency 
 
     const disconnect = try runtime.bridge.commands.reserve(.disconnect);
     defer runtime.bridge.commands.retire(disconnect);
-    runtime.bridge.commands.get(disconnect).input.disconnect = remote_id;
+    runtime.bridge.commands.get(disconnect).input.disconnect = .{ .peer = remote_id, .reason = null };
     runtime.bridge.commands.transition(runtime.bridge.commands.get(disconnect), .queued);
     try std.testing.expect(!try executeWork(&runtime, io, tick));
     try std.testing.expect(command.failure == null);

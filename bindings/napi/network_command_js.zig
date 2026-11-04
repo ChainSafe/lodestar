@@ -116,7 +116,21 @@ pub fn submit(env: napi.Env, runtime: *Runtime, comptime command: commands.Comma
                 if (dial.timeout_ms == 0 or dial.timeout_ms > 60_000) return error.InvalidNetworkInteger;
             }
         },
-        .disconnect, .removeDirectPeer => @field(operation.input, @tagName(command)) = try decode.peerIdFrom(args[0]),
+        .disconnect => {
+            operation.input.disconnect = .{ .peer = try decode.peerIdFrom(args[0]), .reason = null };
+            if (try args[1].typeof() != .undefined) {
+                operation.input.disconnect.reason = switch (try decode.integer(args[1], 251)) {
+                    1 => .host,
+                    2 => .incompatible_fork,
+                    3 => .health_error,
+                    129 => .count_pruning,
+                    250 => .reputation,
+                    251 => .banned,
+                    else => return error.InvalidNetworkGoodbyeReason,
+                };
+            }
+        },
+        .removeDirectPeer => operation.input.removeDirectPeer = try decode.peerIdFrom(args[0]),
     }
     const promise = try operation.promise.init(env);
     try runtime.queueCommand(token);

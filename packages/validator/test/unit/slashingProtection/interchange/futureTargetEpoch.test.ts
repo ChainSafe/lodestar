@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {ssz} from "@lodestar/types";
@@ -25,7 +24,7 @@ describe("SlashingProtection interchange import of attestations after the curren
 
   afterEach(async () => {
     await db.close();
-    rimraf.sync(dbLocation);
+    fs.rmSync(dbLocation, {recursive: true, force: true});
   });
 
   function importAttestation(sourceEpoch: number, targetEpoch: number, epoch = currentEpoch): Promise<void> {

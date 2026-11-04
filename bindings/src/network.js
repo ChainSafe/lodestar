@@ -104,9 +104,9 @@ class NativeNetwork {
   async connect(peerId, endpoints, timeoutMs = CONNECT_TIMEOUT_MS) {
     return this.#command("connect", [peerId, endpoints, timeoutMs], peerId);
   }
-  async disconnect(peerId) {
+  async disconnect(peerId, goodbyeReason) {
     this.#commands.cancelConnect(peerId);
-    return this.#command("disconnect", [peerId], peerId);
+    return this.#command("disconnect", [peerId, goodbyeReason], peerId);
   }
   async setDirectPeer(peerId, endpoints) {
     const operation =

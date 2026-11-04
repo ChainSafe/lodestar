@@ -121,7 +121,7 @@ pub const Input = union(enum) {
     getPeerScores,
     getGossipDiagnostics: u16,
     connect: Dial,
-    disconnect: n.PeerId,
+    disconnect: struct { peer: n.PeerId, reason: ?n.peers.types.DisconnectReason },
     reStatusPeers: struct { peers: [256]n.PeerId, count: u16 },
     addDirectPeer: Dial,
     removeDirectPeer: n.PeerId,
@@ -172,7 +172,8 @@ fn executeOne(self: *Runtime, index: usize, timestamp: n.Now) !void {
             self.bridge.commands.transition(operation, .waiting);
             self.unlock();
         },
-        .disconnect => |*peer| {
+        .disconnect => |*request| {
+            const peer = &request.peer;
             core.cancelConnect(peer, timestamp);
             self.lock();
             for (&self.bridge.commands.cells, 0..) |*cell, i| {
@@ -181,7 +182,13 @@ fn executeOne(self: *Runtime, index: usize, timestamp: n.Now) !void {
                 self.bridge.commands.transition(cell, .terminal);
             }
             self.unlock();
-            _ = core.closePeer(peer, timestamp);
+            if (request.reason) |reason| {
+                if (core.peer_manager.catalog.find(peer)) |ref| {
+                    _ = core.peer_manager.disconnect(ref, reason, timestamp);
+                }
+            } else {
+                _ = core.closePeer(peer, timestamp);
+            }
         },
         .reStatusPeers => |*targets| for (targets.peers[0..targets.count]) |*identity| {
             _ = core.reStatusPeer(identity, timestamp);

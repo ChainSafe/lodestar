@@ -1,6 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 import {CloseResult} from "@lodestar/native/network";
 import {defer} from "@lodestar/utils";
+import {GoodByeReasonCode} from "../../../../src/constants/index.js";
 import {NativeNetworkCore} from "../../../../src/network/core/native/nativeNetworkCore.js";
 
 function fixture() {
@@ -14,6 +15,7 @@ function fixture() {
     closed: nativeClosed.promise,
     setDirectPeer: vi.fn(async () => {}),
     connect: vi.fn(async () => {}),
+    disconnect: vi.fn(async () => {}),
     stopDelivery: vi.fn(),
     close: vi.fn((): Promise<CloseResult> => {
       nativeClosed.resolve({reason: "requested"});
@@ -25,6 +27,15 @@ function fixture() {
 }
 
 describe("native core close", () => {
+  it.each([
+    [GoodByeReasonCode.IRRELEVANT_NETWORK, 2],
+    [GoodByeReasonCode.INBOUND_DISCONNECT, undefined],
+  ] as const)("forwards Goodbye reason %s to native", async (reason, expected) => {
+    const {core, network} = fixture();
+    await core.goodbyeAndDisconnect("peer", reason);
+    expect(network.disconnect).toHaveBeenCalledExactlyOnceWith("peer", expected);
+  });
+
   it("omits native metrics when a scrape races shutdown but preserves unexpected errors", async () => {
     const {core, network} = fixture();
     await expect(core.scrapeMetrics()).resolves.toBe("networkreports");

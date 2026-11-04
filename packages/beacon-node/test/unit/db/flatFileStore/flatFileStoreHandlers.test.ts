@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {mkdtemp, rm} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {PeerId} from "@libp2p/interface";
@@ -44,7 +44,7 @@ describe("FlatFileStore reqresp handler integration", () => {
   let store: FlatFileStore;
 
   beforeEach(async () => {
-    tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-handlers-"));
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), "lodestar-handlers-"));
     store = new FlatFileStore(
       path.join(tmpDir, "data_columns"),
       createChainForkConfig({...defaultConfig, FULU_FORK_EPOCH: 0}),
@@ -55,7 +55,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
   afterEach(async () => {
     await store.close();
-    await fs.promises.rm(tmpDir, {recursive: true, force: true});
+    await rm(tmpDir, {recursive: true, force: true});
   });
 
   describe("onDataColumnSidecarsByRange with flatFileStore", () => {

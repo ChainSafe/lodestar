@@ -253,8 +253,9 @@ pub fn getGossipDiagnostics(self: *@This(), cursor: js.Value) !js.Value {
 pub fn connect(self: *@This(), peer: js.Value, addresses: js.Value, timeout: js.Value) !js.Value {
     return .{ .val = try command_js.submit(js.env(), try self.owner(), .connect, &.{ peer.val, addresses.val, timeout.val }) };
 }
-pub fn disconnect(self: *@This(), peer: js.Value) !js.Value {
-    return .{ .val = try command_js.submit(js.env(), try self.owner(), .disconnect, &.{peer.val}) };
+pub fn disconnect(self: *@This(), peer: js.Value, reason: ?js.Value) !js.Value {
+    const value = if (reason) |provided| provided.val else try js.env().getUndefined();
+    return .{ .val = try command_js.submit(js.env(), try self.owner(), .disconnect, &.{ peer.val, value }) };
 }
 pub fn reStatusPeers(self: *@This(), peers: js.Value) !js.Value {
     return .{ .val = try command_js.submit(js.env(), try self.owner(), .reStatusPeers, &.{peers.val}) };

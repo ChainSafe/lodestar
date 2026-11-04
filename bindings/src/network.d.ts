@@ -636,8 +636,12 @@ export interface NativeNetwork {
   watchRequestCapacity(token: string): boolean;
   /** One-shot connection attempt. Its timeout starts at native admission (10 s by default). */
   connect(peerId: PeerIdStr, endpoints: readonly IpEndpoint[], timeoutMs?: bigint): Promise<void>;
-  /** Closes the connection and rejects pending connects with NetworkConnectCancelled. Direct membership remains. */
-  disconnect(peerId: PeerIdStr): Promise<void>;
+  /**
+   * Closes the connection and rejects pending connects with NetworkConnectCancelled. Direct membership remains.
+   * With a reason, schedules a Goodbye and reconnection cooldown; resolves when scheduled, before transport close.
+   * An already closing peer keeps its first reason.
+   */
+  disconnect(peerId: PeerIdStr, goodbyeReason?: 1 | 2 | 3 | 129 | 250 | 251): Promise<void>;
   /** Adds persistent direct membership, or with null removes it and reports whether it existed. */
   setDirectPeer(peerId: PeerIdStr, endpoints: readonly IpEndpoint[]): Promise<void>;
   setDirectPeer(peerId: PeerIdStr, endpoints: null): Promise<boolean>;

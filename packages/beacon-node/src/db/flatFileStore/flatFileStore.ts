@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {type FileHandle, open, readFile, rm} from "node:fs/promises";
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu} from "@lodestar/params";
@@ -172,7 +172,7 @@ export class FlatFileStore implements IFlatFileStore {
       for (const slot of slotsToPrune) {
         const release = await this.acquireMutationLock(slot);
         try {
-          await fs.promises.rm(path.join(this.dataColumnDir, padSlot(slot)), {recursive: true, force: true});
+          await rm(path.join(this.dataColumnDir, padSlot(slot)), {recursive: true, force: true});
           this.slotIndex.remove(slot);
           this.metrics?.prunedDirectories.inc();
         } finally {
@@ -212,7 +212,7 @@ export class FlatFileStore implements IFlatFileStore {
 
   private async readFile(slot: Slot, rootHex: RootHex): Promise<Uint8Array | null> {
     try {
-      return await fs.promises.readFile(this.filePath(slot, rootHex));
+      return await readFile(this.filePath(slot, rootHex));
     } catch (e) {
       if (!isFsNotFoundError(e)) throw e;
       return null;
@@ -224,9 +224,9 @@ export class FlatFileStore implements IFlatFileStore {
     rootHex: RootHex,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[] | null> {
-    let fd: fs.promises.FileHandle;
+    let fd: FileHandle;
     try {
-      fd = await fs.promises.open(this.filePath(slot, rootHex), "r");
+      fd = await open(this.filePath(slot, rootHex), "r");
     } catch (e) {
       if (!isFsNotFoundError(e)) throw e;
       return null;
@@ -281,7 +281,7 @@ export class FlatFileStore implements IFlatFileStore {
     await observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.delete, async () => {
       const release = await this.acquireMutationLock(slot);
       try {
-        await fs.promises.rm(this.filePath(slot, rootHex), {force: true});
+        await rm(this.filePath(slot, rootHex), {force: true});
       } finally {
         release();
       }
@@ -305,7 +305,7 @@ function validateDcolHeader(header: DcolHeader, slot: Slot, rootHex: RootHex): v
   }
 }
 
-async function readExactly(fd: fs.promises.FileHandle, buffer: Uint8Array, position: number): Promise<void> {
+async function readExactly(fd: FileHandle, buffer: Uint8Array, position: number): Promise<void> {
   let totalRead = 0;
   while (totalRead < buffer.length) {
     const {bytesRead} = await fd.read(buffer, totalRead, buffer.length - totalRead, position + totalRead);

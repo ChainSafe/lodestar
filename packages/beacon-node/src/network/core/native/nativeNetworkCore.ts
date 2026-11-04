@@ -5,6 +5,7 @@ import {routes} from "@lodestar/api";
 import {NativeHost, NativeNetwork, NativePeerReportContext, createNativeNetwork} from "@lodestar/native/network";
 import {Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
+import {GoodByeReasonCode} from "../../../constants/index.js";
 import {PeerAction} from "../../peers/index.js";
 import {NetworkProcessorModules, NetworkProcessorOpts} from "../../processor/index.js";
 import {OutgoingRequestArgs} from "../../reqresp/types.js";
@@ -231,6 +232,9 @@ export class NativeNetworkCore implements INetworkCore {
   }
   disconnectPeer(peer: string): Promise<void> {
     return this.network.disconnect(peer);
+  }
+  goodbyeAndDisconnect(peer: string, reason: GoodByeReasonCode): Promise<void> {
+    return this.network.disconnect(peer, reason === GoodByeReasonCode.INBOUND_DISCONNECT ? undefined : reason);
   }
   async addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
     const direct = parseNativePeerAddress(peer);

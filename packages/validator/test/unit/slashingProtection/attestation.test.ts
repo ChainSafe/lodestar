@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {ssz} from "@lodestar/types";
@@ -33,7 +32,7 @@ describe("SlashingProtection attestation min-span lookback", () => {
 
   afterEach(async () => {
     await db.close();
-    rimraf.sync(dbLocation);
+    fs.rmSync(dbLocation, {recursive: true, force: true});
   });
 
   async function sign(sourceEpoch: number, targetEpoch: number, root = 1): Promise<void> {
@@ -153,7 +152,7 @@ describe("SlashingProtection overlapping attestation checks", () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     await db.close();
-    rimraf.sync(dbLocation);
+    fs.rmSync(dbLocation, {recursive: true, force: true});
   });
 
   it("rejects a double vote when checks for the same public key bytes overlap", async () => {

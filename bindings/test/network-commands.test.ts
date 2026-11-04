@@ -1,9 +1,48 @@
 import {createHook} from "node:async_hooks";
 import {expect, test} from "vitest";
-import {applicationConfig, localIntent, startRuntime, unreachableConnect} from "./utils/network.js";
+import {applicationConfig, localIntent, metricValue, startRuntime, unreachableConnect} from "./utils/network.js";
+import {incomingPair} from "./utils/network-incoming.js";
 import type {NetworkTestRuntime} from "./utils/network-runtime.js";
 
 type Command = (runtime: NetworkTestRuntime) => Promise<unknown>;
+
+test.each([
+  [1, "Client shutdown"],
+  [2, "Irrelevant network"],
+  [3, "Internal fault/error"],
+  [129, "Client has too many peers"],
+  [250, "Peer score too low"],
+  [251, "Peer banned this node"],
+] as const)("disconnect sends Goodbye %s before closing", async (reason, label) => {
+  const pair = await incomingPair();
+  try {
+    await pair.right.disconnect(pair.identity.peerId, reason);
+    await expect
+      .poll(
+        async () =>
+          metricValue(await pair.left.getMetrics(), `lodestar_peer_goodbye_received_total{reason="${label}"}`),
+        {
+          timeout: 5000,
+        }
+      )
+      .toBe(1);
+    await expect.poll(() => pair.right.observePeers().counts.connected, {timeout: 5000}).toBe(0);
+  } finally {
+    await Promise.allSettled([pair.left.stop(), pair.right.close()]);
+  }
+});
+
+test("rejects invalid Goodbye reasons", async () => {
+  const runtime = startRuntime(applicationConfig());
+  try {
+    for (const reason of [0, 128, -1, 2.5, 252, NaN]) {
+      expect(() => runtime.disconnect(runtime.identity.peerId, reason as 1), `reason ${reason}`).toThrow();
+    }
+    await runtime.reStatusPeers([]);
+  } finally {
+    await runtime.close();
+  }
+});
 
 /** Diagnostics share one result buffer, so exercise the two query kinds separately. */
 function commands(): [string, [string, Command][]][] {

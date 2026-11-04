@@ -12,6 +12,7 @@ import {NativePeerReportContext} from "@lodestar/native/network";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {Status} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
+import {GoodByeReasonCode} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
@@ -205,6 +206,9 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     return this.getApi().reStatusPeers(peers);
+  }
+  goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void> {
+    return this.getApi().goodbyeAndDisconnect(peer, reason);
   }
   reportPeer(
     peer: PeerIdStr,
