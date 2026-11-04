@@ -98,4 +98,19 @@ describe("chain / opPools / PayloadAttestationPool", () => {
     const [aggregate] = pool.getPayloadAttestationsForBlock(toHexString(beaconBlockRoot), slot);
     expect(aggregate.aggregationBits.getTrueBitIndexes()).toEqual([1, 4]);
   });
+
+  it("getAll excludes an aggregate whose signature is the point at infinity", () => {
+    const infMessage: gloas.PayloadAttestationMessage = {
+      data,
+      validatorIndex: 7,
+      signature: G2_POINT_AT_INFINITY,
+    };
+    expect(pool.add(infMessage, attDataRootHex, [1])).toBe(InsertOutcome.NewData);
+    expect(pool.getAll(slot)).toEqual([]);
+
+    // once the aggregate signature is no longer the point at infinity it is served again
+    expect(pool.add(message, attDataRootHex, [4])).toBe(InsertOutcome.Aggregated);
+    const [aggregate] = pool.getAll(slot);
+    expect(aggregate.aggregationBits.getTrueBitIndexes()).toEqual([1, 4]);
+  });
 });

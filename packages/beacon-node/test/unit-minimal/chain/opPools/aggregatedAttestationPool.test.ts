@@ -7,6 +7,7 @@ import {
   FAR_FUTURE_EPOCH,
   ForkName,
   ForkPostElectra,
+  MAX_ATTESTATIONS_ELECTRA,
   MAX_COMMITTEES_PER_SLOT,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
@@ -385,6 +386,46 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       const packed = getPackedAttestations();
       expect(packed.length).toBe(1);
       expect(packed[0].data.beaconBlockRoot).toEqual(attestation.data.beaconBlockRoot);
+    });
+
+    it("still fills the block to MAX_ATTESTATIONS_ELECTRA when an excluded consolidation scores inside the top", () => {
+      // Excluded consolidation scores inside the top via full participation on committee 0
+      pool.add(
+        {
+          aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(255), committeeLength),
+          data: infData,
+          committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0),
+          signature: G2_POINT_AT_INFINITY,
+        },
+        infDataRootHex,
+        committeeLength,
+        committees[0]
+      );
+
+      // Enough additional valid consolidations that the block can still be filled to
+      // MAX_ATTESTATIONS_ELECTRA after the one above is excluded
+      for (let i = 0; i < MAX_ATTESTATIONS_ELECTRA; i++) {
+        const data = ssz.phase0.AttestationData.clone(attestation.data);
+        data.beaconBlockRoot = Buffer.alloc(32, 0x40 + i);
+        const dataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(data));
+        pool.add(
+          {
+            ...attestation,
+            aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(255), committeeLength),
+            data,
+            committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0),
+          },
+          dataRootHex,
+          committeeLength,
+          committees[0]
+        );
+      }
+
+      const packed = getPackedAttestations();
+      expect(packed.length).toBe(MAX_ATTESTATIONS_ELECTRA);
+      for (const attestation of packed) {
+        expect(attestation.data.beaconBlockRoot).not.toEqual(infData.beaconBlockRoot);
+      }
     });
   });
 });

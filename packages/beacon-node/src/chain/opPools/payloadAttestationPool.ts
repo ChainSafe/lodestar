@@ -148,9 +148,11 @@ export class PayloadAttestationPool {
       }
     }
 
+    // The point at infinity is not a valid aggregate signature, do not serve such an aggregate
     return aggregates
       .sort((a, b) => b.aggregationBits.getTrueBitIndexes().length - a.aggregationBits.getTrueBitIndexes().length)
-      .map(fastToPayloadAttestation);
+      .map(fastToPayloadAttestation)
+      .filter((attestation) => !byteArrayEquals(attestation.signature, G2_POINT_AT_INFINITY));
   }
 
   prune(clockSlot: Slot): void {
