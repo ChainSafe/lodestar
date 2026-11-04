@@ -73,6 +73,9 @@ export type NetworkArgs = {
   "network.rateLimitMultiplier"?: number;
   "network.maxGossipTopicConcurrency"?: number;
   "network.useWorker"?: boolean;
+  "network.xrayAddress"?: string;
+  "network.xrayWaitForAttach"?: boolean;
+  "network.xrayMaxBufferBytes"?: number;
   "network.maxYoungGenerationSizeMb"?: number;
   "network.targetGroupPeers"?: number;
 
@@ -120,6 +123,17 @@ export function parseListenArgs(args: NetworkArgs, ipv6Available = hasGlobalIPv6
 export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const {listenAddress, port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6} =
     parseListenArgs(args);
+  const xrayAddress = args["network.xrayAddress"]?.trim() || undefined;
+  if (args["network.xrayWaitForAttach"] && !xrayAddress) {
+    throw new YargsError("network.xrayWaitForAttach requires network.xrayAddress");
+  }
+  const xrayMaxBufferBytes = args["network.xrayMaxBufferBytes"];
+  if (
+    xrayMaxBufferBytes !== undefined &&
+    (!Number.isSafeInteger(xrayMaxBufferBytes) || xrayMaxBufferBytes < 128 * 1024)
+  ) {
+    throw new YargsError("network.xrayMaxBufferBytes must be a safe integer of at least 131072 bytes");
+  }
   const quic = args.quic ?? defaultOptions.network.quic;
   const tcp = args.tcp ?? defaultOptions.network.tcp;
 
@@ -231,6 +245,9 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
     useWorker: args["network.useWorker"],
+    xrayAddress,
+    xrayWaitForAttach: args["network.xrayWaitForAttach"],
+    xrayMaxBufferBytes,
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
     directPeers: args.directPeers,
@@ -238,6 +255,21 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 }
 
 export const options: CliCommandOptions<NetworkArgs> = {
+  "network.xrayAddress": {
+    description: "Xray collector ingest address (Unix socket path or host:port). Enables raw libp2p stream capture",
+    type: "string",
+    group: "network",
+  },
+  "network.xrayWaitForAttach": {
+    description: "Wait up to 30 seconds for the Xray collector before starting networking",
+    type: "boolean",
+    group: "network",
+  },
+  "network.xrayMaxBufferBytes": {
+    description: "Maximum bytes retained by the Xray replay buffer (minimum 131072)",
+    type: "number",
+    group: "network",
+  },
   discv5: {
     type: "boolean",
     // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type
