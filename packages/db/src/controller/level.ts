@@ -1,3 +1,4 @@
+import {mkdir} from "node:fs/promises";
 import {LevelDb, LevelDbIteratorOptions} from "@lodestar/native/leveldb";
 import {Logger} from "@lodestar/utils";
 import {DatabaseController, DatabaseOptions, DbBatch, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
@@ -45,7 +46,12 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   static async create(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules): Promise<LevelDbController> {
-    const db = opts.db ?? (await LevelDb.open(opts.name || "beaconchain", {multithreading: true}));
+    let db = opts.db;
+    if (db === undefined) {
+      const path = opts.name || "beaconchain";
+      await mkdir(path, {recursive: true});
+      db = await LevelDb.open(path, {multithreading: true});
+    }
 
     return new LevelDbController(logger, db, metrics ?? null);
   }

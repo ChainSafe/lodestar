@@ -37,6 +37,19 @@ describe("native LevelDB controller lifecycle", () => {
     await rm(directory, {recursive: true, force: true});
   });
 
+  it("creates missing parent directories when opening a new database", async () => {
+    const nested = await LevelDbController.create(
+      {name: join(directory, "new", "nested", "db")},
+      {logger: getEnvLogger()}
+    );
+    try {
+      await nested.put(entries[0].key, entries[0].value);
+      expect(await nested.get(entries[0].key)).toEqual(entries[0].value);
+    } finally {
+      await nested.close();
+    }
+  });
+
   it("shares the close promise until the native close finishes", async () => {
     const gate = defer<void>();
     const close = storage.close.bind(storage);

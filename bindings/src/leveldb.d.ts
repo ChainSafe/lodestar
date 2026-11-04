@@ -87,7 +87,8 @@ export interface LevelDbIterator<T = LevelDbEntry> extends AsyncIterableIterator
 export declare class LevelDb {
   private constructor();
   /**
-   * Opens off the event loop. The path must contain 1 through 4096 UTF-8 bytes and no NUL characters.
+   * Opens off the event loop. Parent directories must exist.
+   * The path must contain 1 through 4096 UTF-8 bytes and no NUL characters.
    * With multithreading enabled, handles for the same resolved directory share the first opener's engine options.
    * Every handle must opt in. Closing one handle preserves other handles and their cursors.
    * The host must prevent concurrent access through other engine copies or filesystem aliases not resolved by realpath.

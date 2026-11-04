@@ -1,3 +1,4 @@
+import {mkdir} from "node:fs/promises";
 import {AbortOptions} from "@libp2p/interface";
 import {BaseDatastore} from "datastore-core";
 import {Batch, Key, KeyQuery, Pair, Query} from "interface-datastore";
@@ -14,10 +15,12 @@ export class NativeDatastore extends BaseDatastore {
 
   async open(): Promise<void> {
     if (this.closing !== undefined) await this.closing;
-    this.database ??= LevelDb.open(this.path).catch((error: unknown) => {
-      this.database = undefined;
-      throw new OpenFailedError(String(error));
-    });
+    this.database ??= mkdir(this.path, {recursive: true})
+      .then(() => LevelDb.open(this.path))
+      .catch((error: unknown) => {
+        this.database = undefined;
+        throw new OpenFailedError(String(error));
+      });
     await this.database;
   }
 

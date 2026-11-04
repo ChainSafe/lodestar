@@ -122,8 +122,10 @@ files, and bound the number of databases at the host. The cache defaults to
 ## Lodestar integration
 
 Lodestar's database controller and peer datastore use this binding instead of
-`classic-level` and `datastore-level`. The controller preserves missing-value,
-range, cache, batch, metrics and lifecycle behavior. The binding supplies
+`classic-level` and `datastore-level`. Both adapters create missing parent directories;
+direct binding callers must create those parents before opening a new database.
+The controller preserves missing-value, range, cache, batch, metrics and lifecycle
+behavior. The binding supplies
 `clear`, `approximateSize`, `compactRange`, `getProperty` and `destroy` directly;
 maintenance runs on the calling handle's serialized queue alongside writes and cursors.
 `clear` uses bounded deletion chunks and is not atomic across those chunks.

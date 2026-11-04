@@ -175,6 +175,18 @@ describe("native peer datastore", () => {
     expect(await datastore.has(new Key("/missing"))).toBe(false);
   });
 
+  it("creates missing parent directories when opening a new peer datastore", async () => {
+    const nested = new NativeDatastore(join(directory, "new", "nested", "peers"));
+    await nested.open();
+    try {
+      const key = new Key("/peer");
+      await nested.put(key, Uint8Array.of(7));
+      expect(await nested.get(key)).toEqual(Uint8Array.of(7));
+    } finally {
+      await nested.close();
+    }
+  });
+
   it("preserves operation error classes and does not turn read failures into missing keys", async () => {
     const key = new Key("/peer");
     const failure = new Error("read failed");
