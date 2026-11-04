@@ -20,7 +20,9 @@ pub const Day = [10]u8;
 
 pub const DayError = error{InvalidDate};
 
-/// Accepts exactly the days that `new Date(text).toISOString()` reproduces as `text`.
+/// Accepts exactly the days that `new Date(text).toISOString()` reproduces as `text`:
+/// OK: `2026-02-28`
+/// Not OK: `2026-02-30` (rolls over to March 2), `2026-2-28`.
 pub fn parseDay(text: []const u8) DayError!Day {
     if (text.len != 10 or text[4] != '-' or text[7] != '-') return error.InvalidDate;
     const year = parseDigits(text[0..4]) orelse return error.InvalidDate;

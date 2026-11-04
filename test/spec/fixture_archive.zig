@@ -128,11 +128,12 @@ fn unzip(io: std.Io, dir: std.Io.Dir, name: []const u8) !void {
     try dir.deleteFile(io, name);
 }
 
-/// Streams the whole archive to disk before extraction: extracting many small files inline would
-/// stall the connection long enough for the server to close it.
+/// Streams the whole archive to disk before extracting: extracting many small files inline
+/// stalls the connection long enough for the server to close it.
 ///
-/// With `headers`, the first redirect is followed by hand without them: GitHub answers an
-/// authenticated artifact request with a signed storage URL that rejects the token as well.
+/// Authenticated requests follow redirects by hand. GitHub answers an artifact request with a
+/// 302 to a pre-signed storage URL, and that host fails the request if the Authorization header
+/// is still attached, so we fetch the redirect target again without `headers`.
 fn download(allocator: Allocator, io: std.Io, url: []const u8, dir: std.Io.Dir, name: []const u8, headers: Headers) !void {
     switch (try request(allocator, io, url, dir, name, headers)) {
         .saved => {},
@@ -151,7 +152,8 @@ fn download(allocator: Allocator, io: std.Io, url: []const u8, dir: std.Io.Dir, 
 
 const RequestOutcome = union(enum) {
     saved,
-    /// Only returned for an authenticated request; the caller owns the target URL.
+    /// We got a redirect instead of a body. Only happens for authenticated requests, which do
+    /// not follow redirects automatically. Holds the Location URL; the caller frees it.
     redirect: []u8,
 };
 
