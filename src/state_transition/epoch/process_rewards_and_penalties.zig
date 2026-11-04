@@ -5,7 +5,6 @@ const BeaconState = @import("fork_types").BeaconState;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const EpochTransitionCache = @import("../cache/epoch_transition_cache.zig").EpochTransitionCache;
 const GENESIS_EPOCH = @import("preset").GENESIS_EPOCH;
-const preset = @import("preset").preset;
 const getAttestationDeltas = @import("./get_attestation_deltas.zig").getAttestationDeltas;
 const getRewardsAndPenaltiesAltair = @import("./get_rewards_and_penalties.zig").getRewardsAndPenaltiesAltair;
 
@@ -28,15 +27,8 @@ pub fn processRewardsAndPenalties(
 
     var balances_view = try state.balances();
     try balances_view.commit();
-    const validator_count = try balances_view.length();
-
-    // applyPendingDeposit appends with appendAssumeCapacity for each validator it adds, at most
-    // MAX_PENDING_DEPOSITS_PER_EPOCH per epoch, so this headroom is required.
-    std.debug.assert(
-        cache.balances_buffer.len >= validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
-    );
     var new_balances: std.ArrayList(u64) = .initBuffer(cache.balances_buffer);
-    const balances = new_balances.addManyAsSliceAssumeCapacity(validator_count);
+    const balances = new_balances.addManyAsSliceAssumeCapacity(try balances_view.length());
     _ = try balances_view.getAllInto(balances);
 
     for (rewards, penalties, balances) |reward, penalty, *balance| {

@@ -145,6 +145,7 @@ const ReusedEpochTransitionCache = struct {
     validator_scratch: U64Array,
     penalties: U64Array,
     slashing_penalties: U64Array,
+    /// Spare MAX_PENDING_DEPOSITS_PER_EPOCH slots for the balances processPendingDeposits appends.
     balances_buffer: U64Array,
 
     /// Holds a ref into the node pool. Teardown this struct before the pool.
