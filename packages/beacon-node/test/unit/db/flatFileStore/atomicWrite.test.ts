@@ -1,5 +1,4 @@
-import fs from "node:fs";
-import {open} from "node:fs/promises";
+import {mkdtemp, open, readFile, readdir, rm} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
@@ -15,11 +14,11 @@ describe("atomicWrite", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-atomic-"));
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), "lodestar-atomic-"));
   });
 
   afterEach(async () => {
-    await fs.promises.rm(tmpDir, {recursive: true, force: true});
+    await rm(tmpDir, {recursive: true, force: true});
   });
 
   it("should write file atomically", async () => {
@@ -28,10 +27,10 @@ describe("atomicWrite", () => {
 
     await atomicWrite(target, data);
 
-    const result = await fs.promises.readFile(target);
+    const result = await readFile(target);
     expect(new Uint8Array(result)).toEqual(data);
 
-    expect(await fs.promises.readdir(path.dirname(target))).toEqual([path.basename(target)]);
+    expect(await readdir(path.dirname(target))).toEqual([path.basename(target)]);
   });
 
   it("should sync the parent after creating the target directory", async () => {
@@ -60,7 +59,7 @@ describe("atomicWrite", () => {
     await atomicWrite(target, new Uint8Array([1]));
     await atomicWrite(target, new Uint8Array([2, 3]));
 
-    const result = await fs.promises.readFile(target);
+    const result = await readFile(target);
     expect(new Uint8Array(result)).toEqual(new Uint8Array([2, 3]));
   });
 });
