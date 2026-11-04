@@ -1,5 +1,5 @@
+import fs from "node:fs";
 import path from "node:path";
-import {rimraf} from "rimraf";
 import {beforeAll, describe, it, onTestFinished, vi} from "vitest";
 import {ImportStatus} from "@lodestar/api/keymanager";
 import {getKeystoresStr} from "@lodestar/test-utils";
@@ -27,7 +27,7 @@ describe("import keystores from api, test DefaultProposerConfig", () => {
   };
 
   beforeAll(() => {
-    rimraf.sync(dataDir);
+    fs.rmSync(dataDir, {recursive: true, force: true});
   });
 
   /** Generated from  const sk = bls.SecretKey.fromKeygen(Buffer.alloc(32, 0xaa)); */

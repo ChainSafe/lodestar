@@ -34,6 +34,7 @@ import {prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
+import {GoodByeReasonCode} from "../constants/index.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
@@ -287,6 +288,10 @@ export class Network implements INetwork {
    */
   async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     return this.core.reStatusPeers(peers);
+  }
+
+  async goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void> {
+    return this.core.goodbyeAndDisconnect(peer, reason);
   }
 
   searchUnknownBlock(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {

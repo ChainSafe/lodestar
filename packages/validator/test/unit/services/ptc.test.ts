@@ -1,9 +1,9 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";

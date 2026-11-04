@@ -6,9 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@chainsafe/lodestar-z':
-      specifier: 2.2.0
-      version: 2.2.0
     '@vitest/browser':
       specifier: ^4.0.7
       version: 4.0.7
@@ -39,9 +36,9 @@ importers:
       '@chainsafe/lodestar':
         specifier: workspace:*
         version: link:packages/cli
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:bindings
     devDependencies:
       '@actions/core':
         specifier: ^1.11.1
@@ -73,9 +70,21 @@ importers:
       '@lerna-lite/version':
         specifier: ^4.9.4
         version: 4.9.4(@lerna-lite/exec@4.10.3)(@lerna-lite/publish@4.9.4)(@lerna-lite/run@4.9.4)(@types/node@24.10.1)(conventional-commits-filter@5.0.0)
+      '@lodestar/config':
+        specifier: workspace:^
+        version: link:packages/config
+      '@lodestar/era':
+        specifier: workspace:^
+        version: link:packages/era
       '@lodestar/params':
         specifier: 'workspace:'
         version: link:packages/params
+      '@lodestar/state-transition':
+        specifier: workspace:^
+        version: link:packages/state-transition
+      '@lodestar/types':
+        specifier: workspace:^
+        version: link:packages/types
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.1
@@ -140,6 +149,19 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
 
+  bindings:
+    dependencies:
+      '@chainsafe/zapi':
+        specifier: 4.3.0
+        version: 4.3.0
+    devDependencies:
+      '@chainsafe/benchmark':
+        specifier: 2.1.0
+        version: 2.1.0(encoding@0.1.13)
+      '@chainsafe/ssz':
+        specifier: ^1.9.0
+        version: 1.9.0
+
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
@@ -197,9 +219,6 @@ importers:
       '@chainsafe/libp2p-quic':
         specifier: ^2.1.5
         version: 2.1.5
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -278,6 +297,9 @@ importers:
       '@lodestar/logger':
         specifier: workspace:^
         version: link:../logger
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -337,7 +359,7 @@ importers:
         version: 2.0.0
       systeminformation:
         specifier: ^5.22.9
-        version: 5.31.7
+        version: 5.33.16
       uint8arraylist:
         specifier: ^2.4.7
         version: 2.4.8
@@ -375,18 +397,12 @@ importers:
       js-yaml:
         specifier: ^4.1.0
         version: 4.3.2
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
       tmp:
         specifier: ^0.2.1
         version: 0.2.7
 
   packages/builder:
     dependencies:
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/ssz':
         specifier: ^1.9.0
         version: 1.9.0
@@ -396,6 +412,9 @@ importers:
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -430,9 +449,6 @@ importers:
       '@chainsafe/enr':
         specifier: ^6.0.2
         version: 6.0.2
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -469,6 +485,9 @@ importers:
       '@lodestar/logger':
         specifier: workspace:^
         version: link:../logger
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -505,9 +524,6 @@ importers:
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
       source-map-support:
         specifier: ^0.5.21
         version: 0.5.21
@@ -603,12 +619,12 @@ importers:
 
   packages/era:
     dependencies:
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -752,9 +768,6 @@ importers:
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
       vitest:
         specifier: 'catalog:'
         version: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
@@ -764,9 +777,6 @@ importers:
       '@chainsafe/as-sha256':
         specifier: ^1.2.5
         version: 1.2.5
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -776,6 +786,9 @@ importers:
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -798,15 +811,15 @@ importers:
       '@chainsafe/bls-keystore':
         specifier: ^3.1.0
         version: 3.1.0
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -872,9 +885,6 @@ importers:
 
   packages/validator:
     dependencies:
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/ssz':
         specifier: ^1.9.0
         version: 1.9.0
@@ -887,6 +897,9 @@ importers:
       '@lodestar/db':
         specifier: workspace:^
         version: link:../db
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -915,9 +928,6 @@ importers:
       '@vekexasia/bigint-buffer2':
         specifier: ^1.1.1
         version: 1.1.1
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
 
 packages:
 
@@ -1111,6 +1121,10 @@ packages:
     resolution: {integrity: sha512-qL8HpfP3922oPIDC7zarJpVNYddlf5Vv1DDGoOrKT/WRWKyQ0+INgrcs0Z67DbRp3tyZf70du1Oul0A93pAA5g==}
     hasBin: true
 
+  '@chainsafe/benchmark@2.1.0':
+    resolution: {integrity: sha512-ePdMfWNbtmhe5PAhJCv+uKiLyIkcKJmsTeYLJTeTCmkU4BcvOOUn2NF2lC80ppZ0Qn+OaKsVsXLhiVOAJFzPRg==}
+    hasBin: true
+
   '@chainsafe/biomejs-config@1.0.0':
     resolution: {integrity: sha512-juZ0Oivc8QeF5wIUDdgOfOvAH4II8N3hHjQBdyv2PjvbTXna+gTv0kucJ9Mp7HO+nwRH58fhFh7iOMfsrSfogg==}
     peerDependencies:
@@ -1238,43 +1252,6 @@ packages:
     resolution: {integrity: sha512-U/4P2ApgPVAEC7PCfUgtneCQvmdLiPSFNYkbK1OTXj23Vpguk2rKQFSp9onfT/wEbOGTwWwBs53wgT/NToOKSw==}
     engines: {node: '>= 22'}
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@2.2.0':
-    resolution: {integrity: sha512-SXmQuNQNnHgLAc0H57vKG0qQT+27f2sZrvS3spAw5tWEhzdZmFkbtQyxNv3dfqZOOtxssW1lYQnPO7JzOb7tbQ==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@2.2.0':
-    resolution: {integrity: sha512-10G4yFQrTYdaeXoUoyRHmCiLgVxTicMNUsSqr4ZsjyC1v+pQtWjsd2oHCPIR+0SWqzWTZYn8J8hC1ekfQGZ+rw==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@2.2.0':
-    resolution: {integrity: sha512-zhT3pan2kPAhdee/9KA2p79YiD62SjX4Awh7WjhIHOM8wjS29p/tiYVsME4dm6qwl4mOkv3SF5do0zuX7/7ubA==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@2.2.0':
-    resolution: {integrity: sha512-23DZ36kqd2eesi8d1Y2SH7Ffr+Uj7UaLWmV1TjMsFCqXhH4x12rG84qp3dmJFhLPOYonlwmrDeinLI1Q+hNVWQ==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@2.2.0':
-    resolution: {integrity: sha512-WPZQbVqUaOfSaL7Nq6vTbMdGXjIawhb113fBks/t7PwBNmtx5G/t2yvKnHOtzFRyo235PoEGZ5++FpP4P2gJTw==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@2.2.0':
-    resolution: {integrity: sha512-OiWdp4K0zM3GU1nAvQzOk46+5wBNnNgVH8OeFHKFG3zx32EO25gj4iHksI6BexVuiJjK+H+4NdMbDszzibq4NQ==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/lodestar-z@2.2.0':
-    resolution: {integrity: sha512-99/1rNkiL2IejBD5gSoXdK+EjdPGFg9iYabkWi5hJVa3SVApfDd3IX25n+iVwDrbpW9P9+nxILNvo4we2BIfdA==}
-
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
 
@@ -1296,8 +1273,8 @@ packages:
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
 
-  '@chainsafe/zapi@4.1.0':
-    resolution: {integrity: sha512-U/JgUc9KAfDeKlgJWWTvBuKEMezhnb4GVEGd3zYaMB3Vi85YTJtcd2b9eO+upk5buROwRo9DEF+ev32PaO98mg==}
+  '@chainsafe/zapi@4.3.0':
+    resolution: {integrity: sha512-ahd/Ri/wDe8OczwJCodIb5TpMSKFFREdb2sbf6O+ochy1RYsbA9xUxYAo1T7NWGJJS18RN3+uQvFmbjZw6WPlA==}
     hasBin: true
 
   '@colors/colors@1.5.0':
@@ -4086,11 +4063,6 @@ packages:
     engines: {node: '>=12'}
     deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
-  glob@9.3.5:
-    resolution: {integrity: sha512-e1LleDykUz2Iu+MTYdkSsuWX8lvAjAcs0Xef0lNIu0S2wOAzuTxCJtcd9S3cijlwYF18EsU3rzb8jPVobxDh9Q==}
-    engines: {node: '>=16 || 14 >=14.17'}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
-
   globby@13.2.2:
     resolution: {integrity: sha512-Y1zNGV+pzQdh7H39l9zgB4PJqjRNqydvdYCDG4HFXM4XuvSaQQlEc91IU1yALL8gUTDomgBAfz3XJdmUS+oo0w==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
@@ -4533,6 +4505,7 @@ packages:
   jwt-simple@0.5.6:
     resolution: {integrity: sha512-40aUybvhH9t2h71ncA1/1SbtTNCVZHgsTsTgqPUxGWDmUDrXyDf2wMNQKEbdBjbf4AI+fQhbECNTV6lWxQKUzg==}
     engines: {node: '>= 0.4.0'}
+    deprecated: jwt-simple is no longer maintained. Please migrate to jose or jsonwebtoken.
 
   kuler@2.0.0:
     resolution: {integrity: sha512-Xq9nH7KlWZmXAtodXDDRE7vs6DU1gTU8zYDHDiWLSip45Egwq3plLHzPn27NgvzL2r1LMPC1vdqh98sQxtqj4A==}
@@ -4726,10 +4699,6 @@ packages:
     resolution: {integrity: sha512-9TPBGGak4nHfGZsPBohm9AWg6NoT7QTCehS3BIJABslyZbzxfV78QM2Y6+i741OPZIafFAaiiEMh5OyIrJPgtg==}
     engines: {node: '>=10'}
 
-  minimatch@8.0.3:
-    resolution: {integrity: sha512-tEEvU9TkZgnFDCtpnrEYnPsjT7iUx42aXfs4bzmQ5sMA09/6hZY0jeZcGkXyDagiBOvkUjNo8Viom+Me6+2x7g==}
-    engines: {node: '>=16 || 14 >=14.17'}
-
   minimatch@9.0.5:
     resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
     engines: {node: '>=16 || 14 >=14.17'}
@@ -4875,8 +4844,8 @@ packages:
       encoding:
         optional: true
 
-  node-gyp-build@4.5.0:
-    resolution: {integrity: sha512-2iGbaQBV+ITgCz76ZEjmhUKAKVf7xfY1sRl4UiKQspfZMH2h06SyhNsnSVy50cwkFQDGLyif6m/6uFXHkOZ6rg==}
+  node-gyp-build@4.8.4:
+    resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
     hasBin: true
 
   node-gyp@12.1.0:
@@ -5427,11 +5396,6 @@ packages:
     deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
 
-  rimraf@4.4.1:
-    resolution: {integrity: sha512-Gk8NlF062+T9CqNGn6h4tls3k6T1+/nXdOcSZVikNVtlRdYpA7wRJJMoXmuvOnLW844rPjdQ7JgXCYM6PPC/og==}
-    engines: {node: '>=14'}
-    hasBin: true
-
   ripemd160@2.0.2:
     resolution: {integrity: sha512-ii4iagi25WusVoiC4B4lq7pbXfAp3D9v5CwfkY33vffw2+pkDjY1D8GaN7spsxvCSx8dkPqOZCEZyfxcmJG2IA==}
 
@@ -5699,9 +5663,9 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  systeminformation@5.31.7:
-    resolution: {integrity: sha512-/8NC53e5nP9nmhn42/ncdOkyJnOoue/Vy+tJOyUGd1Yv66G069wK4rrziwhrqDETgk78CudTQupw5z19S5uoZw==}
-    engines: {node: '>=8.0.0'}
+  systeminformation@5.33.16:
+    resolution: {integrity: sha512-R+Lh69IJXfJj6bfyH1In5cIR9FTr4hBS39YvlZHZjsK1p9cuELPq7hplZZIb56ZESMMb+DzdKqqE6Iomi01Mvg==}
+    engines: {node: '>=10.0.0'}
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
 
@@ -6619,6 +6583,26 @@ snapshots:
       - supports-color
       - ts-proto
 
+  '@chainsafe/benchmark@2.1.0(encoding@0.1.13)':
+    dependencies:
+      '@actions/cache': 4.0.0(encoding@0.1.13)
+      '@actions/github': 6.0.0
+      '@vitest/runner': 2.1.8
+      ajv: 8.18.0
+      aws-sdk: 2.934.0
+      cli-table3: 0.6.5
+      csv-parse: 5.6.0
+      csv-stringify: 6.5.2
+      debug: 4.4.3
+      glob: 10.4.5
+      log-symbols: 7.0.0
+      yaml: 2.8.2
+      yargs: 17.7.2
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+      - ts-proto
+
   '@chainsafe/biomejs-config@1.0.0(@biomejs/biome@2.6.3)':
     dependencies:
       '@biomejs/biome': 2.6.3
@@ -6762,35 +6746,6 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.5
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.5
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z@2.2.0':
-    dependencies:
-      '@chainsafe/zapi': 4.1.0
-    optionalDependencies:
-      '@chainsafe/lodestar-z-aarch64-apple-darwin': 2.2.0
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 2.2.0
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-musl': 2.2.0
-      '@chainsafe/lodestar-z-x86_64-apple-darwin': 2.2.0
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 2.2.0
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 2.2.0
-
   '@chainsafe/netmask@2.0.0':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
@@ -6823,7 +6778,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@chainsafe/zapi@4.1.0': {}
+  '@chainsafe/zapi@4.3.0': {}
 
   '@colors/colors@1.5.0': {}
 
@@ -9163,14 +9118,14 @@ snapshots:
       catering: 2.1.1
       module-error: 1.0.2
       napi-macros: 2.2.2
-      node-gyp-build: 4.5.0
+      node-gyp-build: 4.8.4
 
   classic-level@3.0.0:
     dependencies:
       abstract-level: 3.1.1
       module-error: 1.0.2
       napi-macros: 2.2.2
-      node-gyp-build: 4.5.0
+      node-gyp-build: 4.8.4
 
   clean-stack@2.2.0: {}
 
@@ -9985,13 +9940,6 @@ snapshots:
       minimatch: 5.1.0
       once: 1.4.0
 
-  glob@9.3.5:
-    dependencies:
-      fs.realpath: 1.0.0
-      minimatch: 8.0.3
-      minipass: 4.2.8
-      path-scurry: 1.11.1
-
   globby@13.2.2:
     dependencies:
       dir-glob: 3.0.1
@@ -10676,10 +10624,6 @@ snapshots:
     dependencies:
       brace-expansion: 2.0.1
 
-  minimatch@8.0.3:
-    dependencies:
-      brace-expansion: 2.0.1
-
   minimatch@9.0.5:
     dependencies:
       brace-expansion: 2.0.1
@@ -10803,7 +10747,7 @@ snapshots:
     optionalDependencies:
       encoding: 0.1.13
 
-  node-gyp-build@4.5.0: {}
+  node-gyp-build@4.8.4: {}
 
   node-gyp@12.1.0:
     dependencies:
@@ -11404,10 +11348,6 @@ snapshots:
     dependencies:
       glob: 7.2.3
 
-  rimraf@4.4.1:
-    dependencies:
-      glob: 9.3.5
-
   ripemd160@2.0.2:
     dependencies:
       hash-base: 3.1.0
@@ -11721,7 +11661,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  systeminformation@5.31.7: {}
+  systeminformation@5.33.16: {}
 
   tar-stream@2.2.0:
     dependencies:

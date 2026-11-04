@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";

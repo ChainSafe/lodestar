@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import {rimraf} from "rimraf";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {fromHex, toHex} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
@@ -37,10 +36,10 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
   // Remove slashing protection db. Otherwise the validators won't be able to propose nor attest
   // until the clock reach a higher slot than the previous run of the dev command
   if (args.genesisTime === undefined) {
-    await rimraf(beaconDbDir);
-    await rimraf(validatorsDbDir);
+    await fs.promises.rm(beaconDbDir, {recursive: true, force: true});
+    await fs.promises.rm(validatorsDbDir, {recursive: true, force: true});
     // Validators deposited in the previous run do not exist on the new chain
-    await rimraf(pubkeysFile);
+    await fs.promises.rm(pubkeysFile, {recursive: true, force: true});
   }
 
   mkdir(beaconDbDir);
@@ -48,8 +47,8 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
 
   if (args.reset) {
     onGracefulShutdown(async () => {
-      await rimraf(beaconDbDir);
-      await rimraf(validatorsDbDir);
+      await fs.promises.rm(beaconDbDir, {recursive: true, force: true});
+      await fs.promises.rm(validatorsDbDir, {recursive: true, force: true});
     });
   }
 

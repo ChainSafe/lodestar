@@ -40,3 +40,4 @@ matrix:
       - "CONTRIBUTING.md"
       - "README.md"
       - "packages/*/README.md"
+      - "bindings/README.md"

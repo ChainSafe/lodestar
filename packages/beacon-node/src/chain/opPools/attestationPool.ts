@@ -1,9 +1,10 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {Signature, aggregateSignatures} from "@lodestar/native/blst";
 import {MAX_COMMITTEES_PER_SLOT, isForkPostElectra} from "@lodestar/params";
+import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {Attestation, RootHex, SingleAttestation, Slot, isElectraSingleAttestation} from "@lodestar/types";
-import {MapDef, assert} from "@lodestar/utils";
+import {MapDef, assert, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -180,7 +181,13 @@ export class AttestationPool {
       assert.true(!isElectraAggregate(aggregate), "Aggregate should be type AggregateFastPhase0");
     }
 
-    return fastToAttestation(aggregate);
+    const attestation = fastToAttestation(aggregate);
+    // The point at infinity is not a valid aggregate signature, do not serve such an aggregate
+    if (byteArrayEquals(attestation.signature, G2_POINT_AT_INFINITY)) {
+      return null;
+    }
+
+    return attestation;
   }
 
   /**
@@ -209,7 +216,12 @@ export class AttestationPool {
       if (aggregateByRoot) {
         for (const aggFastByIndex of aggregateByRoot.values()) {
           for (const aggFast of aggFastByIndex.values()) {
-            attestations.push(fastToAttestation(aggFast));
+            const attestation = fastToAttestation(aggFast);
+            // The point at infinity is not a valid aggregate signature, do not serve such an aggregate
+            if (byteArrayEquals(attestation.signature, G2_POINT_AT_INFINITY)) {
+              continue;
+            }
+            attestations.push(attestation);
           }
         }
       }

@@ -1,6 +1,6 @@
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {IBeaconDb} from "@lodestar/beacon-node";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {MAX_PENDING_DEPOSITS_PER_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   IBeaconStateView,

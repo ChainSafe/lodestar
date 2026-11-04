@@ -1,16 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import {beforeEach, describe, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {nativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
 
-let nativeStateTransitionPromise: Promise<typeof import("@chainsafe/lodestar-z/state-transition")> | null = null;
+let nativeStateTransitionPromise: Promise<typeof import("@lodestar/native/state-transition")> | null = null;
 
 async function resetNativeStateTransition(): Promise<void> {
-  nativeStateTransitionPromise ??= import("@chainsafe/lodestar-z/state-transition");
+  nativeStateTransitionPromise ??= import("@lodestar/native/state-transition");
   const nativeStateTransition = await nativeStateTransitionPromise;
   nativeStateTransition.deinitReusedEpochTransitionCache();
 }
