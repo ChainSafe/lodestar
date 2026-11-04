@@ -25,6 +25,38 @@ afterEach(async () => {
   await rm(directory, {recursive: true, force: true});
 });
 
+it("does not hold the database lock when libp2p startup fails", async () => {
+  await expect(
+    createNodeJsLibp2p(
+      await generateKeyPair("secp256k1"),
+      {localMultiaddrs: ["invalid-multiaddr"], tcp: true, quic: false},
+      {peerStoreDir: directory, disablePeerDiscovery: true}
+    )
+  ).rejects.toThrow();
+
+  const reopened = await LevelDb.open(directory);
+  await reopened.close();
+});
+
+it("does not hold the database lock when bootstrap configuration fails", async () => {
+  await expect(
+    createNodeJsLibp2p(
+      await generateKeyPair("secp256k1"),
+      {
+        localMultiaddrs: [],
+        tcp: true,
+        quic: false,
+        connectToDiscv5Bootnodes: true,
+        discv5: {enr: "unused", bindAddrs: {ip4: "/ip4/127.0.0.1/udp/0"}, bootEnrs: ["invalid-enr"]},
+      },
+      {peerStoreDir: directory}
+    )
+  ).rejects.toThrow();
+
+  const reopened = await LevelDb.open(directory);
+  await reopened.close();
+});
+
 it("flushes peers and releases the database lock when the node stops", async () => {
   const created = await createNodeJsLibp2p(
     await generateKeyPair("secp256k1"),
