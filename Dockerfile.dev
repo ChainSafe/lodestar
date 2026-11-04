@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Dockerfile.dev is a stripped down version of Dockerfile that is used for development purposes.
 # It minimizes number of installs and builds to speed up the development process.
 # Run this on local host only.
@@ -52,10 +53,25 @@ COPY packages/validator/package.json packages/validator/
 
 RUN pnpm install --frozen-lockfile
 
-# Copy source code and build
+# Build the native addon before copying the TypeScript sources so that
+# source edits reuse this layer. Only Zig changes rebuild it.
+COPY build.zig build.zig.zon ./
+COPY src ./src
+COPY bench ./bench
+COPY scripts ./scripts
+COPY test ./test
+COPY bindings/napi ./bindings/napi
+
+# Keep the Zig package and build caches outside the layer so that a Zig edit
+# recompiles incrementally instead of refetching and rebuilding everything.
+RUN --mount=type=cache,target=/root/.cache/zig \
+    --mount=type=cache,target=/usr/app/.zig-cache \
+    pnpm build:native
+
+# Copy source code and build the TypeScript packages
 COPY . .
 
-RUN pnpm build
+RUN pnpm -r --filter "!@lodestar/native" --filter "!{.}" build
 
 # Declare COMMIT arg after install+build layers to avoid cache invalidation
 ARG COMMIT
