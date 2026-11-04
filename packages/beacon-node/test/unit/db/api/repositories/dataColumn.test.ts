@@ -1,4 +1,4 @@
-import {rimraf} from "rimraf";
+import fs from "node:fs";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -48,7 +48,7 @@ describe("dataColumnSidecar repository", () => {
 
   afterEach(async () => {
     await db.close();
-    rimraf.sync(testDir);
+    fs.rmSync(testDir, {recursive: true, force: true});
   });
 
   describe("encodeKeyRaw", () => {
@@ -153,7 +153,7 @@ describe("dataColumnSidecarArchive repository", () => {
 
   afterEach(async () => {
     await db.close();
-    rimraf.sync(testDir);
+    fs.rmSync(testDir, {recursive: true, force: true});
   });
 
   describe("encodeKeyRaw", () => {
