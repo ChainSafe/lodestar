@@ -57,7 +57,6 @@
   },
   "peerDependencies": {
     "@chainsafe/ssz": "^1.9.0",
-    "@lodestar/types": "workspace:^",
     "vitest": "catalog:"
   }
 }

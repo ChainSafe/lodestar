@@ -2,8 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {afterAll, beforeAll} from "vitest";
-import {ContainerType, Type} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
+import {BooleanType, ContainerType, Type, UintNumberType} from "@chainsafe/ssz";
 import {InputType, describeDirectorySpecTest, loadYamlFile} from "../../../src/single.js";
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -23,16 +22,17 @@ export interface SimpleCase extends Iterable<string> {
   };
 }
 
+const uint64Type = new UintNumberType(8);
 const sampleContainerType = new ContainerType({
-  test: ssz.Boolean,
-  number: ssz.UintNum64,
+  test: new BooleanType(),
+  number: uint64Type,
 });
 
 beforeAll(() => {
   yamlToSSZ(path.join(__dirname, "../_test_files/single/case0/input.yaml"), sampleContainerType);
-  yamlToSSZ(path.join(__dirname, "../_test_files/single/case0/output.yaml"), ssz.UintNum64);
+  yamlToSSZ(path.join(__dirname, "../_test_files/single/case0/output.yaml"), uint64Type);
   yamlToSSZ(path.join(__dirname, "../_test_files/single/case1/input.yaml"), sampleContainerType);
-  yamlToSSZ(path.join(__dirname, "../_test_files/single/case1/output.yaml"), ssz.UintNum64);
+  yamlToSSZ(path.join(__dirname, "../_test_files/single/case1/output.yaml"), uint64Type);
   fs.writeFileSync(path.join(__dirname, "../_test_files/single/case1/input.ssz"), new Uint8Array());
 });
 
@@ -59,7 +59,7 @@ describeDirectorySpecTest<SimpleCase, number>(
     },
     sszTypes: {
       input: sampleContainerType,
-      output: ssz.UintNum64,
+      output: uint64Type,
     },
     shouldError: (testCase) => !testCase.input.test,
     getExpected: (testCase) => testCase.output,
@@ -77,7 +77,7 @@ describeDirectorySpecTest<SimpleCase, number>(
     },
     sszTypes: {
       input: sampleContainerType,
-      output: ssz.UintNum64,
+      output: uint64Type,
     },
     shouldErrorOnInput: (_error, _inputNames, name) => name.endsWith("/case1"),
     getExpected: (testCase) => testCase.output,

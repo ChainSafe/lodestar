@@ -772,9 +772,6 @@ importers:
       '@chainsafe/ssz':
         specifier: ^1.9.0
         version: 1.9.0
-      '@lodestar/types':
-        specifier: workspace:^
-        version: link:../types
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
