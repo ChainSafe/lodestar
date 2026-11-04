@@ -302,7 +302,12 @@ jobs:
       - name: Download ere verifier fixtures
         run: |
           zig build run:download_ere_fixtures
+      - name: Build network test peer
+        run: zig build build-exe:network_interop_peer -Doptimize=ReleaseSafe
       - name: Test bindings
+        env:
+          LODESTAR_Z_NETWORK_STOCK_HOST: installed
+          LODESTAR_Z_NETWORK_NATIVE_PEER: ${{ github.workspace }}/zig-out/bin/network_interop_peer
         run: |
           pnpm --filter @lodestar/native test
 
