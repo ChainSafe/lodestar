@@ -158,8 +158,10 @@ export class GetBlobsTracker {
 
   private retryPendingTrigger(input: IBlockInput | PayloadEnvelopeInput, requestFailed: boolean): void {
     // Triggers dropped while the request was in flight re-enter once it failed, the attempt that was just
-    // recorded makes this arm the trailing retry instead of sending another request right away
-    if (this.pendingTriggers.delete(input.blockRootHex) && requestFailed) {
+    // recorded makes this arm the trailing retry instead of sending another request right away.
+    // Post-gloas only the bid triggers a request, so every failed attempt re-enters to arm its own retry
+    const hadPendingTrigger = this.pendingTriggers.delete(input.blockRootHex);
+    if (requestFailed && (hadPendingTrigger || input instanceof PayloadEnvelopeInput)) {
       this.triggerGetBlobs(input);
     }
   }

@@ -1,8 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
-import {SecretKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {HttpStatusCode} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey, Signature, verify} from "@lodestar/native/blst";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getExecutionPayloadBidSigningRoot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";

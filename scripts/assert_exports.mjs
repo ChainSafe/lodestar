@@ -32,8 +32,8 @@ function getExportPaths(pkgDirPath, pkgExports) {
   return exportPaths;
 }
 
-for (const pkgDirname of fs.readdirSync(pkgsDirpath)) {
-  const pkgDirpath = path.join(pkgsDirpath, pkgDirname);
+const packagePaths = [...fs.readdirSync(pkgsDirpath).map((name) => path.join(pkgsDirpath, name)), path.resolve("bindings")];
+for (const pkgDirpath of packagePaths) {
   const packageJSONPath = path.join(pkgDirpath, "package.json");
   if (!fs.existsSync(packageJSONPath)) {
     throw Error(`No package.json found in ${pkgDirpath}`);

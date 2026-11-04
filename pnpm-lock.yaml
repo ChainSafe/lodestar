@@ -6,9 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@chainsafe/lodestar-z':
-      specifier: 2.2.0
-      version: 2.2.0
     '@vitest/browser':
       specifier: ^4.0.7
       version: 4.0.7
@@ -39,22 +36,22 @@ importers:
       '@chainsafe/lodestar':
         specifier: workspace:*
         version: link:packages/cli
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:bindings
     devDependencies:
       '@actions/core':
         specifier: ^1.11.1
         version: 1.11.1
       '@biomejs/biome':
-        specifier: ^2.2.0
-        version: 2.2.2
+        specifier: ^2.6.3
+        version: 2.6.3
       '@chainsafe/benchmark':
         specifier: ^2.0.2
         version: 2.0.2(encoding@0.1.13)
       '@chainsafe/biomejs-config':
         specifier: ^1.0.0
-        version: 1.0.0(@biomejs/biome@2.2.2)
+        version: 1.0.0(@biomejs/biome@2.6.3)
       '@chainsafe/caxa':
         specifier: 3.0.6
         version: 3.0.6
@@ -73,9 +70,21 @@ importers:
       '@lerna-lite/version':
         specifier: ^4.9.4
         version: 4.9.4(@lerna-lite/exec@4.10.3)(@lerna-lite/publish@4.9.4)(@lerna-lite/run@4.9.4)(@types/node@24.10.1)(conventional-commits-filter@5.0.0)
+      '@lodestar/config':
+        specifier: workspace:^
+        version: link:packages/config
+      '@lodestar/era':
+        specifier: workspace:^
+        version: link:packages/era
       '@lodestar/params':
         specifier: 'workspace:'
         version: link:packages/params
+      '@lodestar/state-transition':
+        specifier: workspace:^
+        version: link:packages/state-transition
+      '@lodestar/types':
+        specifier: workspace:^
+        version: link:packages/types
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.1
@@ -109,9 +118,6 @@ importers:
       playwright:
         specifier: ^1.60.0
         version: 1.60.0
-      prettier:
-        specifier: ^3.2.5
-        version: 3.2.5
       pretty-format:
         specifier: ^29.7.0
         version: 29.7.0
@@ -143,6 +149,19 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
 
+  bindings:
+    dependencies:
+      '@chainsafe/zapi':
+        specifier: 4.3.0
+        version: 4.3.0
+    devDependencies:
+      '@chainsafe/benchmark':
+        specifier: 2.1.0
+        version: 2.1.0(encoding@0.1.13)
+      '@chainsafe/ssz':
+        specifier: ^1.9.0
+        version: 1.9.0
+
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
@@ -168,7 +187,7 @@ importers:
         version: 2.0.2
       qs:
         specifier: ^6.14.2
-        version: 6.16.0
+        version: 6.16.1
     devDependencies:
       '@types/eventsource':
         specifier: ^1.1.11
@@ -200,9 +219,6 @@ importers:
       '@chainsafe/libp2p-quic':
         specifier: ^2.1.5
         version: 2.1.5
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -281,6 +297,9 @@ importers:
       '@lodestar/logger':
         specifier: workspace:^
         version: link:../logger
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -331,7 +350,7 @@ importers:
         version: 15.1.3
       qs:
         specifier: ^6.14.2
-        version: 6.16.0
+        version: 6.16.1
       snappy:
         specifier: ^7.4.3
         version: 7.4.3
@@ -340,7 +359,7 @@ importers:
         version: 2.0.0
       systeminformation:
         specifier: ^5.22.9
-        version: 5.31.7
+        version: 5.33.16
       uint8arraylist:
         specifier: ^2.4.7
         version: 2.4.8
@@ -387,9 +406,6 @@ importers:
 
   packages/builder:
     dependencies:
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/ssz':
         specifier: ^1.9.0
         version: 1.9.0
@@ -399,6 +415,9 @@ importers:
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -433,9 +452,6 @@ importers:
       '@chainsafe/enr':
         specifier: ^6.0.2
         version: 6.0.2
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -472,6 +488,9 @@ importers:
       '@lodestar/logger':
         specifier: workspace:^
         version: link:../logger
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -606,12 +625,12 @@ importers:
 
   packages/era:
     dependencies:
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -767,9 +786,6 @@ importers:
       '@chainsafe/as-sha256':
         specifier: ^1.2.5
         version: 1.2.5
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -779,6 +795,9 @@ importers:
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -801,15 +820,15 @@ importers:
       '@chainsafe/bls-keystore':
         specifier: ^3.1.0
         version: 3.1.0
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -875,9 +894,6 @@ importers:
 
   packages/validator:
     dependencies:
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 2.2.0
       '@chainsafe/ssz':
         specifier: ^1.9.0
         version: 1.9.0
@@ -890,6 +906,9 @@ importers:
       '@lodestar/db':
         specifier: workspace:^
         version: link:../db
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -1035,59 +1054,71 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@biomejs/biome@2.2.2':
-    resolution: {integrity: sha512-j1omAiQWCkhuLgwpMKisNKnsM6W8Xtt1l0WZmqY/dFj8QPNkIoTvk4tSsi40FaAAkBE1PU0AFG2RWFBWenAn+w==}
+  '@biomejs/biome@2.6.3':
+    resolution: {integrity: sha512-va/0xPku7wnfzv+D8Zpdm5uKiGJWiV8neqoEPnRjvNQQwhl4tVXS4fETs4H0CCB2rGeqJ4cu9y4iOZOnOYKAUA==}
     engines: {node: '>=14.21.3'}
     hasBin: true
 
-  '@biomejs/cli-darwin-arm64@2.2.2':
-    resolution: {integrity: sha512-6ePfbCeCPryWu0CXlzsWNZgVz/kBEvHiPyNpmViSt6A2eoDf4kXs3YnwQPzGjy8oBgQulrHcLnJL0nkCh80mlQ==}
+  '@biomejs/cli-android-arm64@2.6.3':
+    resolution: {integrity: sha512-5JD7QQDEHxdeEb4sftEHG+lsuUyu8Cob/hVLqRELbgGlFl68Rldv/PPi2k4dRjERZ/EItJ3O6Xmv8lqsEtUBiw==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [android]
+
+  '@biomejs/cli-android-x64@2.6.3':
+    resolution: {integrity: sha512-70WOGKCgpT+Uqg6LFdTLqefV54/DypdZg+LnBQDO6AWvkgXO+9xhVClajQyDsIHYjnXMtI1pRO5sP+zMXlS/bw==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [android]
+
+  '@biomejs/cli-darwin-arm64@2.6.3':
+    resolution: {integrity: sha512-ezf+XEKeyJ2yYlBhrzyEEHLvfRYrhtNKc6maLzR/WcAcBccb4RVDeFxsymjBve2LO0bpIMRUAiS90D4bUBRT0A==}
     engines: {node: '>=14.21.3'}
     cpu: [arm64]
     os: [darwin]
 
-  '@biomejs/cli-darwin-x64@2.2.2':
-    resolution: {integrity: sha512-Tn4JmVO+rXsbRslml7FvKaNrlgUeJot++FkvYIhl1OkslVCofAtS35MPlBMhXgKWF9RNr9cwHanrPTUUXcYGag==}
+  '@biomejs/cli-darwin-x64@2.6.3':
+    resolution: {integrity: sha512-Lg2tFdg4elJo+7i707PpLMs6N1hATVt4kqDo6MD/q/VnPs8rsKReKXsz1TA5GNdfRVAQNJ5GRiyK2EwNptK+MA==}
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [darwin]
 
-  '@biomejs/cli-linux-arm64-musl@2.2.2':
-    resolution: {integrity: sha512-/MhYg+Bd6renn6i1ylGFL5snYUn/Ct7zoGVKhxnro3bwekiZYE8Kl39BSb0MeuqM+72sThkQv4TnNubU9njQRw==}
+  '@biomejs/cli-linux-arm64-musl@2.6.3':
+    resolution: {integrity: sha512-dYU70A89OFHzakQPE9VOPbE60JNcQt4mtxvUGQl+EgTkGtqCFxLD2RUn1SbiMu8Mu5xFscS1bfYDpoasaUrqNA==}
     engines: {node: '>=14.21.3'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@biomejs/cli-linux-arm64@2.2.2':
-    resolution: {integrity: sha512-JfrK3gdmWWTh2J5tq/rcWCOsImVyzUnOS2fkjhiYKCQ+v8PqM+du5cfB7G1kXas+7KQeKSWALv18iQqdtIMvzw==}
+  '@biomejs/cli-linux-arm64@2.6.3':
+    resolution: {integrity: sha512-8Stcvq98n1gs9VyLKuaWrnsd8kbXE2nKDAHtuLHGSYdGyNWN5JIIm5a28xdnmgdKzKHmiDgYyATetkEv7+zGow==}
     engines: {node: '>=14.21.3'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@biomejs/cli-linux-x64-musl@2.2.2':
-    resolution: {integrity: sha512-ZCLXcZvjZKSiRY/cFANKg+z6Fhsf9MHOzj+NrDQcM+LbqYRT97LyCLWy2AS+W2vP+i89RyRM+kbGpUzbRTYWig==}
+  '@biomejs/cli-linux-x64-musl@2.6.3':
+    resolution: {integrity: sha512-j6eFjUcWSphmgVTbrobEMA0wdbfNHKrGi8hRsFkc17jeS1n7nHwFACxp6jWqe9sxQqyFAeyOgt2/1bOGVcbATA==}
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@biomejs/cli-linux-x64@2.2.2':
-    resolution: {integrity: sha512-Ogb+77edO5LEP/xbNicACOWVLt8mgC+E1wmpUakr+O4nKwLt9vXe74YNuT3T1dUBxC/SnrVmlzZFC7kQJEfquQ==}
+  '@biomejs/cli-linux-x64@2.6.3':
+    resolution: {integrity: sha512-CShmx0bO6BngywT3minv8K1xsQX1ig1vsBqYTLnmDY3mBiDYHlaLRIsdHoM1pEU9dV3BN5a0uiH0IGDtYh9TWA==}
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@biomejs/cli-win32-arm64@2.2.2':
-    resolution: {integrity: sha512-wBe2wItayw1zvtXysmHJQoQqXlTzHSpQRyPpJKiNIR21HzH/CrZRDFic1C1jDdp+zAPtqhNExa0owKMbNwW9cQ==}
+  '@biomejs/cli-win32-arm64@2.6.3':
+    resolution: {integrity: sha512-00SthDxBPwNiT7IL/mOneif6fiEU1PXK875zhr+InpeZjovY1mF5tCuDhXo1Hh0GYyiKHKzLbItzn58SAyLhJQ==}
     engines: {node: '>=14.21.3'}
     cpu: [arm64]
     os: [win32]
 
-  '@biomejs/cli-win32-x64@2.2.2':
-    resolution: {integrity: sha512-DAuHhHekGfiGb6lCcsT4UyxQmVwQiBCBUMwVra/dcOSs9q8OhfaZgey51MlekT3p8UwRqtXQfFuEJBhJNdLZwg==}
+  '@biomejs/cli-win32-x64@2.6.3':
+    resolution: {integrity: sha512-GhtOPphBWlnCepqpNk/w5eGN5oGRCzL20EbAkL1XCIpyboeVC9R642noyT43l8LSenGS4qz9IL8sKPfwY37V/Q==}
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [win32]
@@ -1100,6 +1131,10 @@ packages:
 
   '@chainsafe/benchmark@2.0.2':
     resolution: {integrity: sha512-qL8HpfP3922oPIDC7zarJpVNYddlf5Vv1DDGoOrKT/WRWKyQ0+INgrcs0Z67DbRp3tyZf70du1Oul0A93pAA5g==}
+    hasBin: true
+
+  '@chainsafe/benchmark@2.1.0':
+    resolution: {integrity: sha512-ePdMfWNbtmhe5PAhJCv+uKiLyIkcKJmsTeYLJTeTCmkU4BcvOOUn2NF2lC80ppZ0Qn+OaKsVsXLhiVOAJFzPRg==}
     hasBin: true
 
   '@chainsafe/biomejs-config@1.0.0':
@@ -1229,43 +1264,6 @@ packages:
     resolution: {integrity: sha512-U/4P2ApgPVAEC7PCfUgtneCQvmdLiPSFNYkbK1OTXj23Vpguk2rKQFSp9onfT/wEbOGTwWwBs53wgT/NToOKSw==}
     engines: {node: '>= 22'}
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@2.2.0':
-    resolution: {integrity: sha512-SXmQuNQNnHgLAc0H57vKG0qQT+27f2sZrvS3spAw5tWEhzdZmFkbtQyxNv3dfqZOOtxssW1lYQnPO7JzOb7tbQ==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@2.2.0':
-    resolution: {integrity: sha512-10G4yFQrTYdaeXoUoyRHmCiLgVxTicMNUsSqr4ZsjyC1v+pQtWjsd2oHCPIR+0SWqzWTZYn8J8hC1ekfQGZ+rw==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@2.2.0':
-    resolution: {integrity: sha512-zhT3pan2kPAhdee/9KA2p79YiD62SjX4Awh7WjhIHOM8wjS29p/tiYVsME4dm6qwl4mOkv3SF5do0zuX7/7ubA==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@2.2.0':
-    resolution: {integrity: sha512-23DZ36kqd2eesi8d1Y2SH7Ffr+Uj7UaLWmV1TjMsFCqXhH4x12rG84qp3dmJFhLPOYonlwmrDeinLI1Q+hNVWQ==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@2.2.0':
-    resolution: {integrity: sha512-WPZQbVqUaOfSaL7Nq6vTbMdGXjIawhb113fBks/t7PwBNmtx5G/t2yvKnHOtzFRyo235PoEGZ5++FpP4P2gJTw==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@2.2.0':
-    resolution: {integrity: sha512-OiWdp4K0zM3GU1nAvQzOk46+5wBNnNgVH8OeFHKFG3zx32EO25gj4iHksI6BexVuiJjK+H+4NdMbDszzibq4NQ==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/lodestar-z@2.2.0':
-    resolution: {integrity: sha512-99/1rNkiL2IejBD5gSoXdK+EjdPGFg9iYabkWi5hJVa3SVApfDd3IX25n+iVwDrbpW9P9+nxILNvo4we2BIfdA==}
-
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
 
@@ -1287,8 +1285,8 @@ packages:
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
 
-  '@chainsafe/zapi@4.1.0':
-    resolution: {integrity: sha512-U/JgUc9KAfDeKlgJWWTvBuKEMezhnb4GVEGd3zYaMB3Vi85YTJtcd2b9eO+upk5buROwRo9DEF+ev32PaO98mg==}
+  '@chainsafe/zapi@4.3.0':
+    resolution: {integrity: sha512-ahd/Ri/wDe8OczwJCodIb5TpMSKFFREdb2sbf6O+ochy1RYsbA9xUxYAo1T7NWGJJS18RN3+uQvFmbjZw6WPlA==}
     hasBin: true
 
   '@colors/colors@1.5.0':
@@ -4524,6 +4522,7 @@ packages:
   jwt-simple@0.5.6:
     resolution: {integrity: sha512-40aUybvhH9t2h71ncA1/1SbtTNCVZHgsTsTgqPUxGWDmUDrXyDf2wMNQKEbdBjbf4AI+fQhbECNTV6lWxQKUzg==}
     engines: {node: '>= 0.4.0'}
+    deprecated: jwt-simple is no longer maintained. Please migrate to jose or jsonwebtoken.
 
   kuler@2.0.0:
     resolution: {integrity: sha512-Xq9nH7KlWZmXAtodXDDRE7vs6DU1gTU8zYDHDiWLSip45Egwq3plLHzPn27NgvzL2r1LMPC1vdqh98sQxtqj4A==}
@@ -5220,11 +5219,6 @@ packages:
     engines: {node: '>=10.13.0'}
     hasBin: true
 
-  prettier@3.2.5:
-    resolution: {integrity: sha512-3/GWa9aOC0YeD7LUfvOG2NiDyhOWRvt1k+rcKhOuYnMY24iiCphgneUfJDyFXd6rZCAnuLBv6UeAULtrhT/F4A==}
-    engines: {node: '>=14'}
-    hasBin: true
-
   pretty-format@29.7.0:
     resolution: {integrity: sha512-Pdlw/oPxN+aXdmM9R00JVC9WVFoCLTKJvDVLgmJ+qAffBMxsV85l/Lu7sNx4zSzPyoL2euImuEwHhOXdEgNFZQ==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -5316,8 +5310,8 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  qs@6.16.0:
-    resolution: {integrity: sha512-h6fhOIaRrID2CbEY2fqs+7t+UXZo+MLAnU5gRIq85uFtdiUPCdsApMlHhXogKVM4HM2DVbIjGNTTYH2OcmP1vA==}
+  qs@6.16.1:
+    resolution: {integrity: sha512-5Px6J7rfHBAGUhNQ3es4YzcOdBBw0SDcVtThJml4RdnKw4tKs2epA0kPZ+K8X+WiHktT93RHVcQ/3ym5aTCgtg==}
     engines: {node: '>=0.6'}
 
   querystring-es3@0.2.1:
@@ -5695,9 +5689,9 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  systeminformation@5.31.7:
-    resolution: {integrity: sha512-/8NC53e5nP9nmhn42/ncdOkyJnOoue/Vy+tJOyUGd1Yv66G069wK4rrziwhrqDETgk78CudTQupw5z19S5uoZw==}
-    engines: {node: '>=8.0.0'}
+  systeminformation@5.33.16:
+    resolution: {integrity: sha512-R+Lh69IJXfJj6bfyH1In5cIR9FTr4hBS39YvlZHZjsK1p9cuELPq7hplZZIb56ZESMMb+DzdKqqE6Iomi01Mvg==}
+    engines: {node: '>=10.0.0'}
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
 
@@ -6548,39 +6542,47 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@biomejs/biome@2.2.2':
+  '@biomejs/biome@2.6.3':
     optionalDependencies:
-      '@biomejs/cli-darwin-arm64': 2.2.2
-      '@biomejs/cli-darwin-x64': 2.2.2
-      '@biomejs/cli-linux-arm64': 2.2.2
-      '@biomejs/cli-linux-arm64-musl': 2.2.2
-      '@biomejs/cli-linux-x64': 2.2.2
-      '@biomejs/cli-linux-x64-musl': 2.2.2
-      '@biomejs/cli-win32-arm64': 2.2.2
-      '@biomejs/cli-win32-x64': 2.2.2
+      '@biomejs/cli-android-arm64': 2.6.3
+      '@biomejs/cli-android-x64': 2.6.3
+      '@biomejs/cli-darwin-arm64': 2.6.3
+      '@biomejs/cli-darwin-x64': 2.6.3
+      '@biomejs/cli-linux-arm64': 2.6.3
+      '@biomejs/cli-linux-arm64-musl': 2.6.3
+      '@biomejs/cli-linux-x64': 2.6.3
+      '@biomejs/cli-linux-x64-musl': 2.6.3
+      '@biomejs/cli-win32-arm64': 2.6.3
+      '@biomejs/cli-win32-x64': 2.6.3
 
-  '@biomejs/cli-darwin-arm64@2.2.2':
+  '@biomejs/cli-android-arm64@2.6.3':
     optional: true
 
-  '@biomejs/cli-darwin-x64@2.2.2':
+  '@biomejs/cli-android-x64@2.6.3':
     optional: true
 
-  '@biomejs/cli-linux-arm64-musl@2.2.2':
+  '@biomejs/cli-darwin-arm64@2.6.3':
     optional: true
 
-  '@biomejs/cli-linux-arm64@2.2.2':
+  '@biomejs/cli-darwin-x64@2.6.3':
     optional: true
 
-  '@biomejs/cli-linux-x64-musl@2.2.2':
+  '@biomejs/cli-linux-arm64-musl@2.6.3':
     optional: true
 
-  '@biomejs/cli-linux-x64@2.2.2':
+  '@biomejs/cli-linux-arm64@2.6.3':
     optional: true
 
-  '@biomejs/cli-win32-arm64@2.2.2':
+  '@biomejs/cli-linux-x64-musl@2.6.3':
     optional: true
 
-  '@biomejs/cli-win32-x64@2.2.2':
+  '@biomejs/cli-linux-x64@2.6.3':
+    optional: true
+
+  '@biomejs/cli-win32-arm64@2.6.3':
+    optional: true
+
+  '@biomejs/cli-win32-x64@2.6.3':
     optional: true
 
   '@chainsafe/as-chacha20poly1305@0.1.0': {}
@@ -6607,9 +6609,29 @@ snapshots:
       - supports-color
       - ts-proto
 
-  '@chainsafe/biomejs-config@1.0.0(@biomejs/biome@2.2.2)':
+  '@chainsafe/benchmark@2.1.0(encoding@0.1.13)':
     dependencies:
-      '@biomejs/biome': 2.2.2
+      '@actions/cache': 4.0.0(encoding@0.1.13)
+      '@actions/github': 6.0.0
+      '@vitest/runner': 2.1.8
+      ajv: 8.18.0
+      aws-sdk: 2.934.0
+      cli-table3: 0.6.5
+      csv-parse: 5.6.0
+      csv-stringify: 6.5.2
+      debug: 4.4.3
+      glob: 10.4.5
+      log-symbols: 7.0.0
+      yaml: 2.8.2
+      yargs: 17.7.2
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+      - ts-proto
+
+  '@chainsafe/biomejs-config@1.0.0(@biomejs/biome@2.6.3)':
+    dependencies:
+      '@biomejs/biome': 2.6.3
 
   '@chainsafe/bls-hd-key@0.3.0':
     dependencies:
@@ -6750,35 +6772,6 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.5
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.5
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-musl@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@2.2.0':
-    optional: true
-
-  '@chainsafe/lodestar-z@2.2.0':
-    dependencies:
-      '@chainsafe/zapi': 4.1.0
-    optionalDependencies:
-      '@chainsafe/lodestar-z-aarch64-apple-darwin': 2.2.0
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 2.2.0
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-musl': 2.2.0
-      '@chainsafe/lodestar-z-x86_64-apple-darwin': 2.2.0
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 2.2.0
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 2.2.0
-
   '@chainsafe/netmask@2.0.0':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
@@ -6811,7 +6804,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@chainsafe/zapi@4.1.0': {}
+  '@chainsafe/zapi@4.3.0': {}
 
   '@colors/colors@1.5.0': {}
 
@@ -11208,8 +11201,6 @@ snapshots:
 
   prettier@2.8.8: {}
 
-  prettier@3.2.5: {}
-
   pretty-format@29.7.0:
     dependencies:
       '@jest/schemas': 29.6.3
@@ -11295,7 +11286,7 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  qs@6.16.0:
+  qs@6.16.1:
     dependencies:
       es-define-property: 1.0.1
       side-channel: 1.1.1
@@ -11711,7 +11702,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  systeminformation@5.31.7: {}
+  systeminformation@5.33.16: {}
 
   tar-stream@2.2.0:
     dependencies:

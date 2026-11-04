@@ -3,7 +3,6 @@ export * from "./types.js";
 import type {SSZTypesFor} from "./sszTypes.js";
 import * as ssz from "./sszTypes.js";
 import {sszTypesFor} from "./sszTypes.js";
-export {sszTypesFor, SSZTypesFor, ssz};
 
 export * from "./utils/array.js";
 // Container utils
@@ -15,3 +14,4 @@ export {StringType, stringType} from "./utils/stringType.js";
 // Typeguards
 export * from "./utils/typeguards.js";
 export * from "./utils/validatorStatus.js";
+export {SSZTypesFor, ssz, sszTypesFor};

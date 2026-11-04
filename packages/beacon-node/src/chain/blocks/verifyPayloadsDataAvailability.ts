@@ -1,7 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
+import {TimeoutError} from "@lodestar/utils";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
+import {PayloadError, PayloadErrorCode} from "./importExecutionPayload.js";
 
 /**
  * Verifies that all payload envelope inputs have their data columns available.
@@ -23,7 +25,14 @@ export async function verifyPayloadsDataAvailability(
       // Sync and reconstruction keep pulling the data columns from the network while we wait. The wait is
       // capped at one slot because the payload queue is serial: a longer wait lets consecutive unavailable
       // payloads push every later payload import further behind with each slot.
-      promises.push(payloadInput.waitForAllData(config.getSlotDurationMs(payloadInput.forkName), signal));
+      promises.push(
+        payloadInput.waitForAllData(config.getSlotDurationMs(payloadInput.forkName), signal).catch((e) => {
+          if (e instanceof TimeoutError) {
+            throw new PayloadError(payloadInput, {code: PayloadErrorCode.DATA_UNAVAILABLE});
+          }
+          throw e;
+        })
+      );
     }
   }
   await Promise.all(promises);

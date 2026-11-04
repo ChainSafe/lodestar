@@ -1,5 +1,5 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {BeaconBlock, ValidatorIndex, altair, rewards} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";

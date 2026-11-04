@@ -6,6 +6,10 @@ import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputBlobs, BlockInputColumns} from "../../../src/chain/blocks/blockInput/index.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
+import {
+  PayloadEnvelopeInput,
+  PayloadEnvelopeInputSource,
+} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "../../../src/chain/emitter.js";
 import {
   GET_BLOBS_RETRY_INTERVAL_MS,
@@ -190,6 +194,69 @@ describe("GetBlobsTracker", () => {
     tracker.triggerGetBlobs(createBlockInput(1));
     await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS * 2);
     expect(getBlobs).toHaveBeenCalledTimes(1);
+  });
+
+  describe("post-gloas", () => {
+    const gloasConfig = createChainForkConfig({...config, GLOAS_FORK_EPOCH: 0});
+    let gloasTracker: GetBlobsTracker;
+
+    function createPayloadInput(slot: number): PayloadEnvelopeInput {
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = [new Uint8Array(48)];
+      return PayloadEnvelopeInput.createFromBlock({
+        blockRootHex: toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message)),
+        block: block as SignedBeaconBlock<typeof ForkName.gloas>,
+        forkName: ForkName.gloas,
+        sampledColumns: [0],
+        custodyColumns: [0],
+        seenTimestampSec: 0,
+        source: PayloadEnvelopeInputSource.gossip,
+        daOutOfRange: false,
+      });
+    }
+
+    beforeEach(() => {
+      gloasTracker = new GetBlobsTracker({
+        logger: testLogger(),
+        executionEngine: {getBlobs} as unknown as IExecutionEngine,
+        emitter: new ChainEventEmitter(),
+        metrics: null,
+        config: gloasConfig,
+      });
+    });
+
+    it("retries a null answer without further triggers", async () => {
+      gloasTracker.triggerGetBlobs(createPayloadInput(1));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(getBlobs).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS);
+      expect(getBlobs).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS * (MAX_GET_BLOBS_ATTEMPTS + 2));
+      expect(getBlobs).toHaveBeenCalledTimes(MAX_GET_BLOBS_ATTEMPTS);
+    });
+
+    it("retries a rejected request without further triggers", async () => {
+      getBlobs.mockRejectedValueOnce(new Error("EL unavailable"));
+      gloasTracker.triggerGetBlobs(createPayloadInput(1));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(getBlobs).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS);
+      expect(getBlobs).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not retry once all columns arrived", async () => {
+      const payloadInput = createPayloadInput(1);
+      gloasTracker.triggerGetBlobs(payloadInput);
+      await vi.advanceTimersByTimeAsync(0);
+      vi.spyOn(payloadInput, "hasAllData").mockReturnValue(true);
+
+      await vi.advanceTimersByTimeAsync(GET_BLOBS_RETRY_INTERVAL_MS * 2);
+      expect(getBlobs).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("tracks failed attempts per block root", async () => {

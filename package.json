@@ -6,14 +6,15 @@
   },
   "packageManager": "pnpm@11.0.0+sha512.5bd187500e49cc6c3d891d973b432c02b844a5eb7209172c90a517a3ef4f579ed5c23d409b699e6a9dc418ff7b2b1890e63f6d74f1d3fc49848f37779c89c84c",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "bindings"
   ],
   "scripts": {
-    "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
-    "clean:nm": "rm -rf ./packages/*/node_modules ./node_modules",
+    "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo ./bindings/zig-out",
+    "clean:nm": "rm -rf ./packages/*/node_modules ./bindings/node_modules ./node_modules",
     "build": "pnpm -r build",
     "build:watch": "pnpm -r --parallel exec pnpm run build:watch",
-    "build:ifchanged": "pnpm -r exec -- ../../scripts/build_if_changed.sh",
+    "build:ifchanged": "pnpm build:native && pnpm -r --filter \"!@lodestar/native\" exec -- ../../scripts/build_if_changed.sh",
     "lint": "biome check",
     "lint:fix": "pnpm lint --write",
     "lint-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards",
@@ -23,8 +24,6 @@
     "check-spelling": "pyspelling -c .pyspelling.yml -v",
     "docs:build": "pnpm -r check-readme && pnpm -r docs:build && ./scripts/prepare-docs.sh",
     "docs:serve": "pnpm --cwd docs install && pnpm --cwd docs start",
-    "docs:lint": "prettier '**/*.md' --check",
-    "docs:lint:fix": "prettier '**/*.md' --write",
     "test": "pnpm -r --workspace-concurrency=1 run test",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "vitest run --project browser",
@@ -38,11 +37,15 @@
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
-    "release:publish": "lerna publish from-package --yes --no-verify-access"
+    "release:publish": "node scripts/release/publish.mjs",
+    "lint:zig": "zig fmt --check . && zig build test:tidy",
+    "build:native": "pnpm --filter @lodestar/native build",
+    "test:native": "pnpm --filter @lodestar/native test",
+    "lint:native": "pnpm --filter @lodestar/native lint"
   },
   "devDependencies": {
     "@actions/core": "^1.11.1",
-    "@biomejs/biome": "^2.2.0",
+    "@biomejs/biome": "^2.6.3",
     "@chainsafe/benchmark": "^2.0.2",
     "@chainsafe/biomejs-config": "^1.0.0",
     "@chainsafe/caxa": "3.0.6",
@@ -51,7 +54,11 @@
     "@lerna-lite/publish": "^4.9.4",
     "@lerna-lite/run": "^4.9.4",
     "@lerna-lite/version": "^4.9.4",
+    "@lodestar/config": "workspace:^",
+    "@lodestar/era": "workspace:^",
     "@lodestar/params": "workspace:",
+    "@lodestar/state-transition": "workspace:^",
+    "@lodestar/types": "workspace:^",
     "@types/node": "^24.10.1",
     "@typescript/typescript6": "^6.0.1",
     "@vitest/browser": "catalog:",
@@ -63,7 +70,6 @@
     "libp2p": "3.4.0",
     "node-gyp": "^9.4.0",
     "playwright": "^1.60.0",
-    "prettier": "^3.2.5",
     "pretty-format": "^29.7.0",
     "semver": "^7.7.3",
     "tsx": "^4.23.0",
@@ -77,7 +83,7 @@
   },
   "dependencies": {
     "@chainsafe/lodestar": "workspace:*",
-    "@chainsafe/lodestar-z": "catalog:"
+    "@lodestar/native": "workspace:^"
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",

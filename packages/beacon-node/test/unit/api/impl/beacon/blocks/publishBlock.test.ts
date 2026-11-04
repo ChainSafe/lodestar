@@ -315,7 +315,7 @@ describe("api - beacon - publishBlockV2", () => {
     await expect(
       api.publishBlockV2({
         signedBlockContents: {signedBlock: block, blobs, kzgProofs},
-        broadcastValidation: routes.beacon.BroadcastValidation.none,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       })
     ).resolves.toBeUndefined();
 

@@ -29,6 +29,7 @@
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [pnpm](https://pnpm.io/)
+- :zap: [Zig](https://ziglang.org/download/) 0.16.0
 
 ###### Developer Quickstart:
 
@@ -39,6 +40,10 @@ pnpm build
 ```
 
 ## Architecture Overview
+
+Zig modules live in `src/`, with their build files at the repository root.
+`packages/` contains the TypeScript monorepo, and `bindings/` contains the native
+Node.js package.
 
 - :package: This mono-repository contains a suite of Ethereum Consensus packages.
 - :balance_scale: The mono-repository is released under [Apache-2.0 license](./LICENSE). Note, that the packages contain their own licenses.

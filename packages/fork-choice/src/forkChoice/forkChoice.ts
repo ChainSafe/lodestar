@@ -1547,7 +1547,9 @@ export class ForkChoice implements IForkChoice {
 
   /** Very expensive function, iterates the entire ProtoArray. TODO: Is this function even necessary? */
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[] {
-    return this.protoArray.nodes.filter((node) => node.parentRoot === parentRoot);
+    return this.protoArray.nodes.filter(
+      (node) => node.parentRoot === parentRoot && (!isGloasBlock(node) || node.payloadStatus === PayloadStatus.PENDING)
+    );
   }
 
   /** Very expensive function, iterates the entire ProtoArray. TODO: Is this function even necessary? */
@@ -1556,7 +1558,7 @@ export class ForkChoice implements IForkChoice {
     const blocksAtSlot: ProtoBlock[] = [];
     for (let i = 0, len = nodes.length; i < len; i++) {
       const node = nodes[i];
-      if (node.slot === slot) {
+      if (node.slot === slot && (!isGloasBlock(node) || node.payloadStatus === PayloadStatus.PENDING)) {
         blocksAtSlot.push(node);
       }
     }

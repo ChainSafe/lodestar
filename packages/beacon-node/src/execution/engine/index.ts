@@ -17,8 +17,8 @@ import {EngineRestHttpClient} from "./restHttpClient.js";
 import {RestEngineTransport, formatClientVersionHeader} from "./restTransport.js";
 import {ExecutionEngineMockJsonRpcClient, JsonRpcBackend} from "./utils.js";
 
-export {ExecutionEngineHttp, ExecutionEngineDisabled, defaultExecutionEngineHttpOpts, engineApiModes};
 export type {EngineApiMode};
+export {ExecutionEngineDisabled, ExecutionEngineHttp, defaultExecutionEngineHttpOpts, engineApiModes};
 
 export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)

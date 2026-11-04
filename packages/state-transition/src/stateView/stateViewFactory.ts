@@ -1,6 +1,6 @@
-import bindings from "@chainsafe/lodestar-z";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
+import bindings from "@lodestar/native";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {getStateSlotFromBytes, getStateTypeFromBytes} from "../util/sszBytes.js";
 import {BeaconStateView} from "./beaconStateView.js";

@@ -1,8 +1,8 @@
 import {Mocked, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";

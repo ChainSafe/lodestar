@@ -1,6 +1,6 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {Signature, aggregateSignatures} from "@lodestar/native/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Root, Slot, SubcommitteeIndex, SubnetID, altair} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
