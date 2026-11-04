@@ -15,6 +15,10 @@
     },
     .description = "Zig consensus modules for Lodestar (Ethereum beacon chain client)",
     .dependencies = .{
+        .leveldb_c = .{
+            .url = "git+https://github.com/ChainSafe/leveldb.zig#e44b7544178a7fdcf12f41e15b5d043cf2ac3be9",
+            .hash = "leveldb-0.1.0-nY4h8EuhAADx4YKZtMTVqPkcCK1xjRl5qU4qp9g4LPwT",
+        },
         .zbuild = .{
             .url = "git+https://github.com/chainsafe/zbuild.git#f7d5f19de09f2808e54acf599605f9e18c9bd804",
             .hash = "zbuild-0.4.0-XJFav-1nAgDmfVY1nVSIIzbkcbuHZj7yMb7Fv8yvznPO",
@@ -259,6 +263,10 @@
             .root_source_file = "src/beacon_node/root.zig",
             .imports = .{ .consensus_types, .state_transition, .persistent_merkle_tree, .testing_allocators, .metrics, .hex, .time },
         },
+        .leveldb = .{
+            .root_source_file = "src/leveldb/root.zig",
+            .link_libraries = .{"leveldb_c:leveldb"},
+        },
         .ere_verifier = .{
             .root_source_file = "src/ere_verifier/root.zig",
             .imports = .{.ere},
@@ -405,6 +413,7 @@
             .root_module = .{
                 .root_source_file = "bindings/napi/root.zig",
                 .imports = .{
+                    .leveldb,
                     .bls,
                     .bls_options,
                     .cpu_count,
@@ -429,6 +438,7 @@
         },
     },
     .tests = .{
+        .leveldb = .{ .root_module = .leveldb },
         // Per-module unit tests (mirror the old auto-generated `test:<module>` steps).
         .constants = .{ .root_module = .constants },
         .hex = .{ .root_module = .hex },

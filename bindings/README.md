@@ -31,6 +31,14 @@ Bindings use their own Vitest configuration and the root workspace lockfile.
 Consensus spec vectors are pinned in [`build.zig.zon`](../build.zig.zon).
 See [contributing](../CONTRIBUTING.md).
 
+## LevelDB
+
+`@lodestar/native/leveldb` provides asynchronous binary storage with bounded result
+copying, atomic batches, and snapshot cursors. See [docs/leveldb.md](./docs/leveldb.md).
+Its Zig module lives in [`src/leveldb`](../src/leveldb); run its tests with
+`zig build test:leveldb`. The adapted ChainSafe LevelDB handles retain their
+[MIT license](../src/leveldb/LICENSE).
+
 ## Publishing
 
 `pnpm release:publish` uses zapi to build and publish the platform packages at the

@@ -6,6 +6,10 @@ pub fn build(b: *std.Build) !void {
     @setEvalBranchQuota(200_000);
     const manifest = @import("build.zig.zon");
     const result = try zbuild.configureBuild(b, manifest, .{});
+    const leveldb = result.dependency("leveldb_c").?.artifact("leveldb").root_module;
+    leveldb.pic = true;
+    // The pinned upstream build spells O_CLOEXEC with a zero; keep database descriptors out of child processes.
+    if (leveldb.resolved_target.?.result.os.tag != .windows) leveldb.addCMacro("HAVE_O_CLOEXEC", "1");
 
     zapi.addAddonIdentity(
         b,
