@@ -117,6 +117,7 @@ fn initCachedState(
     io: std.Io,
     state: *AnyBeaconState,
     beacon_config: *const c.BeaconConfig,
+    deposit_cache: ?*st.BuilderDepositSignatureCacheRc,
 ) !void {
     try cached_state.init(
         allocator,
@@ -125,6 +126,7 @@ fn initCachedState(
         .{
             .config = beacon_config,
             .pubkey_cache = &pubkey.state.cache,
+            .builder_deposit_signature_cache = deposit_cache,
         },
         null,
     );
@@ -158,7 +160,7 @@ pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig) !Beaco
     errdefer allocator.destroy(cached_state);
 
     const io = js.io();
-    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config);
+    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null);
 
     return .{
         .cached_state = cached_state,
@@ -1295,7 +1297,7 @@ pub fn loadOtherState(
     }
 
     const io = js.io();
-    try initCachedState(allocator, new_cached_state, io, new_state, old_cached_state.config);
+    try initCachedState(allocator, new_cached_state, io, new_state, old_cached_state.config, old_cached_state.epoch_cache.builder_deposit_signature_cache);
     new_cached_state_initialized = true;
 
     if (opts) |value| {
@@ -1337,6 +1339,29 @@ pub fn serialize(self: *BeaconStateView) !js.Uint8Array {
     const result = try cached_state.state.serialize(allocator);
     defer allocator.free(result);
     return .{ .val = try numberSliceToNapiValue(env, u8, result, .{ .typed_array = .uint8 }) };
+}
+
+pub fn preVerifyBuilderDepositsPreGloas(self: *BeaconStateView, max_deposits: js.Number, max_duration_ms: js.Number) !js_types.PreVerifyBuilderDepositsResult {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const limit = max_deposits.toU32Exact() catch return error.InvalidDepositVerificationLimit;
+    const duration = max_duration_ms.toU32Exact() catch return error.InvalidDepositVerificationDuration;
+    if (limit > 10_000) return error.InvalidDepositVerificationLimit;
+    if (duration > 60_000) return error.InvalidDepositVerificationDuration;
+    const thread_pool = @import("blst.zig").state.thread_pool orelse return error.ThreadPoolNotInitialized;
+    const result = try st.preVerifyBuilderDepositsPreGloas(js.io(), thread_pool, cached_state, limit, duration);
+    const object = try js.env().createObject();
+    inline for (@typeInfo(@TypeOf(result)).@"struct".fields) |field| {
+        try object.setNamedProperty(comptime snakeToCamel(field.name), try js.env().createDouble(@floatFromInt(@field(result, field.name))));
+    }
+    return js_types.wrap(js_types.PreVerifyBuilderDepositsResult, object);
+}
+
+pub fn clearPreGloasBuilderDepositCache(self: *BeaconStateView) !void {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const cache = cached_state.epoch_cache.builder_deposit_signature_cache;
+    cache.instance.clear(cache.allocator);
 }
 
 pub fn serializedSize(self: *BeaconStateView) !js.Number {
