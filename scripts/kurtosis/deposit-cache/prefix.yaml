@@ -1,0 +1,81 @@
+id: gloas-deposit-cache-prefix
+name: "Gloas deposit cache: invalid validator prefix"
+timeout: 30m
+config:
+  walletPrivkey: ""
+  depositContract: "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+  invalidDeposits: 50000
+tasks:
+  - name: check_clients_are_healthy
+    timeout: 5m
+    config:
+      minClientCount: 3
+  - name: get_consensus_specs
+    id: specs
+  - name: check_consensus_block_proposals
+    config:
+      blockCount: 2
+      checkLookback: 0
+  - name: generate_child_wallet
+    id: wallet
+    config:
+      walletSeed: lodestar-native-deposit-cache
+    configVars:
+      privateKey: walletPrivkey
+      prefundMinBalance: "| (.invalidDeposits + 201) * 1000000000000000000"
+  - name: get_random_mnemonic
+    id: mnemonic
+  - name: generate_batch_deposits
+    id: prefix
+    title: Queue distinct wrong-message validator signatures for one pubkey
+    timeout: 10m
+    config:
+      reuseIndex: true
+      startIndex: 0
+      invalidSigPercent: 100
+      batchSize: 220
+      limitPendingBatches: 32
+      limitPerSlot: 8192
+      depositAmount: 1
+      awaitReceipt: true
+      awaitInclusion: false
+      failOnReject: true
+    configVars:
+      walletPrivkey: tasks.wallet.outputs.childWallet.privkey
+      mnemonic: tasks.mnemonic.outputs.mnemonic
+      depositContract: depositContract
+      limitTotal: invalidDeposits
+      withdrawalCredentials: '| "0x01" + ("00" * 11) + (.tasks.wallet.outputs.childWallet.address | ltrimstr("0x"))'
+  - name: generate_batch_deposits
+    title: Append the valid same-key builder trigger
+    config:
+      reuseIndex: true
+      startIndex: 0
+      invalidSigPercent: 0
+      batchSize: 1
+      limitTotal: 1
+      depositAmount: 1
+      awaitReceipt: true
+      awaitInclusion: false
+      failOnReject: true
+    configVars:
+      walletPrivkey: tasks.wallet.outputs.childWallet.privkey
+      mnemonic: tasks.mnemonic.outputs.mnemonic
+      depositContract: depositContract
+      batchContract: tasks.prefix.outputs.batchContract
+      withdrawalCredentials: '| "0xb0" + ("00" * 11) + (.tasks.wallet.outputs.childWallet.address | ltrimstr("0x"))'
+  - name: check_consensus_slot_range
+    title: Require the entire attack queue to arrive before Gloas
+    configVars:
+      maxEpochNumber: "| .tasks.specs.outputs.specs.GLOAS_FORK_EPOCH - 1"
+  - name: check_consensus_slot_range
+    title: Wait for Gloas
+    configVars:
+      minEpochNumber: tasks.specs.outputs.specs.GLOAS_FORK_EPOCH
+  - name: check_consensus_finality
+    title: Finalize Gloas
+    config:
+      maxUnfinalizedEpochs: 4
+      failOnCheckMiss: false
+    configVars:
+      minFinalizedEpochs: tasks.specs.outputs.specs.GLOAS_FORK_EPOCH
