@@ -217,8 +217,10 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       # Without provenance or SBOM attestations, each publish is exactly one
-      # package version, so this keeps the newest 20 builds.
+      # package version, so this keeps the newest 20 builds. Pruning only on an
+      # unstable publish keeps the image tagged `unstable` among them.
       - name: Delete old image versions
+        if: steps.push.outputs.tag == 'unstable'
         uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
         with:
           package-name: lodestar-fuzz
