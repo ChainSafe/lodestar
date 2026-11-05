@@ -6,7 +6,6 @@ const Node = @import("persistent_merkle_tree").Node;
 const Gindex = @import("persistent_merkle_tree").Gindex;
 const isBasicType = @import("../type/type_kind.zig").isBasicType;
 const isFixedType = @import("../type/type_kind.zig").isFixedType;
-const initValue = @import("../type/value_init.zig").initValue;
 
 const type_root = @import("../type/root.zig");
 const chunkDepth = type_root.chunkDepth;
@@ -260,7 +259,7 @@ pub fn ListCompositeTreeView(comptime ST: type) type {
                 const node = try self.depth_iterator.next();
                 // Variable-size elements: toValue reads `out` (it resizes embedded ArrayLists),
                 // so initialize it before the call.
-                var value = initValue(ST.Element);
+                var value = ST.Element.init;
                 errdefer if (comptime @hasDecl(ST.Element, "deinit")) {
                     ST.Element.deinit(allocator, &value);
                 };

@@ -4,7 +4,6 @@ const isBasicType = @import("type_kind.zig").isBasicType;
 const isFixedType = @import("type_kind.zig").isFixedType;
 const canMemcpySsz = @import("type_kind.zig").canMemcpySsz;
 const VariableElementIterator = @import("variable_element_iterator.zig").VariableElementIterator;
-const initValue = @import("value_init.zig").initValue;
 const mixInLength = @import("hashing").mixInLength;
 const maxChunksToDepth = @import("hashing").maxChunksToDepth;
 const Depth = @import("hashing").Depth;
@@ -59,6 +58,7 @@ pub fn FixedProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) typ
             limit * Element.fixed_size;
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
         pub const default_root: [32]u8 = @import("hashing").getZeroHash(1).*;
 
         pub fn equals(a: *const Type, b: *const Type) bool {
@@ -489,6 +489,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
             limit *| 4 +| limit *| Element.max_size;
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
         pub const default_root: [32]u8 = @import("hashing").getZeroHash(1).*;
 
         pub fn equals(a: *const Type, b: *const Type) bool {
@@ -522,7 +523,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
         ) !void {
             try out.ensureTotalCapacity(allocator, value.items.len);
             for (value.items) |*element| {
-                out.appendAssumeCapacity(initValue(DestinationST.Element));
+                out.appendAssumeCapacity(DestinationST.Element.init);
                 try Element.cloneInto(
                     DestinationST.Element,
                     allocator,
@@ -570,7 +571,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
             const len = elements.len;
 
             try out.resize(allocator, len);
-            @memset(out.items, initValue(Element));
+            @memset(out.items, Element.init);
 
             var i: usize = 0;
             while (try elements.next()) |element_bytes| : (i += 1) {
@@ -643,7 +644,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
                 const len = try length(node, pool);
                 var it = try progressive.NodeIterator.init(pool, try node.getLeft(pool), len);
                 try out.resize(allocator, len);
-                @memset(out.items, initValue(Element));
+                @memset(out.items, Element.init);
                 var index: usize = 0;
                 while (try it.next()) |chunk| {
                     try Element.tree.toValue(allocator, chunk, pool, &out.items[index]);
@@ -727,7 +728,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
 
             while ((try source.peekNextTokenType()) != .array_end) {
                 if (out.items.len == limit) return error.LengthOverLimit;
-                try out.append(allocator, initValue(Element));
+                try out.append(allocator, Element.init);
                 try Element.deserializeFromJson(
                     allocator,
                     source,

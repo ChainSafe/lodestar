@@ -156,7 +156,7 @@ fn expectInvalid(result: anyerror!void) !void {
 /// and tree decoding. Any success is a failure.
 fn expectFixtureRejected(comptime ST: type, fixture_allocator: Allocator, pool: *Node.Pool, bytes: []const u8) !void {
     try expectInvalid(ST.serialized.validate(bytes));
-    var value = ssz.initValue(ST);
+    var value = ST.init;
     try expectInvalid(deserializeFromBytes(ST, fixture_allocator, bytes, &value));
     if (ST.tree.deserializeFromBytes(pool, bytes)) |node| {
         pool.unref(node);
@@ -175,7 +175,7 @@ fn expectValueSerializesTo(comptime ST: type, fixture_allocator: Allocator, valu
 /// The fixture's SSZ bytes pass validation and decode to the fixture's value.
 fn expectBytesDeserializeTo(comptime ST: type, fixture_allocator: Allocator, bytes: []const u8, expected: *const ST.Type) !void {
     try ST.serialized.validate(bytes);
-    var actual = ssz.initValue(ST);
+    var actual = ST.init;
     try deserializeFromBytes(ST, fixture_allocator, bytes, &actual);
     try std.testing.expect(ST.equals(expected, &actual));
 }
@@ -215,7 +215,7 @@ fn expectTreeRoundTrip(
     try std.testing.expectEqual(bytes.len, try ST.tree.serializeIntoBytes(node, pool, out));
     try std.testing.expectEqualSlices(u8, bytes, out);
 
-    var tree_value = ssz.initValue(ST);
+    var tree_value = ST.init;
     try treeToValue(ST, fixture_allocator, pool, node, &tree_value);
     try std.testing.expect(ST.equals(value, &tree_value));
     return node;

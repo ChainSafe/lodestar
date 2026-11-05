@@ -9,7 +9,6 @@ const Node = pmt.Node;
 const Gindex = pmt.Gindex;
 
 const isFixedType = @import("../type/type_kind.zig").isFixedType;
-const initValue = @import("../type/value_init.zig").initValue;
 const progressive = @import("../type/progressive.zig");
 
 const tree_view_root = @import("root.zig");
@@ -485,7 +484,7 @@ pub fn CompositeChunks(
                 } else {
                     // Initialize value before toValue for variable types
                     // (e.g. BitList fields need initialized ArrayList)
-                    values[i] = initValue(ST.Element);
+                    values[i] = ST.Element.init;
                     errdefer if (comptime @hasDecl(ST.Element, "deinit")) {
                         ST.Element.deinit(allocator, &values[i]);
                     };

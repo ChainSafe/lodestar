@@ -3,7 +3,6 @@ const TypeKind = @import("type_kind.zig").TypeKind;
 const isFixedType = @import("type_kind.zig").isFixedType;
 const hashOne = @import("hashing").hashOne;
 const Node = @import("persistent_merkle_tree").Node;
-const initValue = @import("value_init.zig").initValue;
 
 /// Validates that a selector is within the valid range (1-127)
 fn isValidSelector(selector: u8) bool {
@@ -190,6 +189,15 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
         pub const max_size: usize = _max_size;
         pub const _union_options = options;
 
+        /// Compatible unions have no SSZ default. Start at the first declared option only so a
+        /// decode or clone slot holds a valid tag and empty owned fields before it is replaced.
+        /// Never use `init` where the SSZ default is meant: tree roots, list growth, or fork upgrades.
+        pub const init: Type = @unionInit(
+            Type,
+            std.fmt.comptimePrint("option_{d}", .{options[0].@"0"}),
+            options[0].@"1".init,
+        );
+
         /// Get the selector value from a union value
         pub fn getSelector(value: *const Type) u8 {
             return @intFromEnum(std.meta.activeTag(value.*));
@@ -239,7 +247,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
             }
         }
 
-        /// The caller initializes `out` with `initValue(Self)`; this uses `cloneInto`'s contract.
+        /// The caller initializes `out` with `Self.init`; this uses `cloneInto`'s contract.
         pub fn clone(
             allocator: std.mem.Allocator,
             value: *const Type,
@@ -248,7 +256,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
             return cloneInto(Self, allocator, value, out);
         }
 
-        /// The caller initializes `out` with `initValue(DestinationST)` and deinitializes it
+        /// The caller initializes `out` with `DestinationST.init` and deinitializes it
         /// after success or error. Errors leave `out` unchanged.
         pub fn cloneInto(
             comptime DestinationST: type,
@@ -270,7 +278,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
                             var replacement = @unionInit(
                                 DestinationST.Type,
                                 field_name,
-                                initValue(DestinationOption),
+                                DestinationOption.init,
                             );
                             errdefer DestinationST.deinit(allocator, &replacement);
                             const replacement_data_ptr = &@field(replacement, field_name);
@@ -374,7 +382,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
                     const option_type = option.@"1";
                     const field_name = comptime std.fmt.comptimePrint("option_{d}", .{option.@"0"});
 
-                    var replacement = @unionInit(Type, field_name, initValue(option_type));
+                    var replacement = @unionInit(Type, field_name, option_type.init);
                     errdefer deinit(allocator, &replacement);
                     const replacement_data_ptr = &@field(replacement, field_name);
 
@@ -480,7 +488,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
                         const option_type = option.@"1";
                         const field_name = comptime std.fmt.comptimePrint("option_{d}", .{option.@"0"});
 
-                        var replacement = @unionInit(Type, field_name, initValue(option_type));
+                        var replacement = @unionInit(Type, field_name, option_type.init);
                         errdefer deinit(allocator, &replacement);
                         const replacement_data_ptr = &@field(replacement, field_name);
 
@@ -593,7 +601,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
                     const option_type = option.@"1";
                     const field_name = comptime std.fmt.comptimePrint("option_{d}", .{option.@"0"});
 
-                    var replacement = @unionInit(Type, field_name, initValue(option_type));
+                    var replacement = @unionInit(Type, field_name, option_type.init);
                     errdefer deinit(allocator, &replacement);
                     const replacement_data_ptr = &@field(replacement, field_name);
 
