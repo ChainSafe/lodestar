@@ -1013,8 +1013,8 @@ export function createLodestarMetrics(
         help: "Time elapsed between block received and fully verified state, signatures and payload",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
-      stfE2eTime: register.histogram({
-        name: "lodestar_gossip_block_stf_e2e_seconds",
+      receivedToConsensusVerifiedTime: register.histogram({
+        name: "lodestar_gossip_block_received_to_consensus_verified_seconds",
         help: "Time from gossip block arrival until both the state transition and all block signature verifications are complete, excluding execution payload verification",
         buckets: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1],
       }),

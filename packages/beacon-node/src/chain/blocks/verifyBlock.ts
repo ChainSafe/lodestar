@@ -216,8 +216,10 @@ export async function verifyBlocksInEpoch(
     ]);
 
     if (blockInputs.length === 1 && opts.seenTimestampSec !== undefined) {
-      const stfE2eTime = Math.max(verifyStateTime, verifySignaturesTime);
-      this.metrics?.gossipBlock.stfE2eTime.observe(stfE2eTime / 1000 - opts.seenTimestampSec);
+      const consensusVerifiedTime = Math.max(verifyStateTime, verifySignaturesTime);
+      this.metrics?.gossipBlock.receivedToConsensusVerifiedTime.observe(
+        consensusVerifiedTime / 1000 - opts.seenTimestampSec
+      );
     }
 
     for (const blockInput of blockInputs) {
