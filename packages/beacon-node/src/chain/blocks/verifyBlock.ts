@@ -184,7 +184,7 @@ export async function verifyBlocksInEpoch(
       daAvailabilityPromise,
 
       // All signatures at once. Must be called before verifyBlocksStateTransitionOnly()
-      // so we hand the BLS job to the worker pool before the main thread 
+      // so we hand the BLS job to the worker pool before the main thread
       // is busy with the state transition.
       verifyBlocksSignatures(
         this.config,
