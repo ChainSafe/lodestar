@@ -27,8 +27,11 @@ jobs:
           key: perf-states-${{ hashFiles('packages/state-transition/test/perf/params.ts') }}
 
       - name: Run benchmarks
+        id: benchmarks
+        # An explicit bash shell enables pipefail, without it tee hides a failed run
+        shell: bash
         # @chainsafe/benchmark only infers the baseline and posts comments on push and pull_request events
-        run: pnpm benchmark --compareBranch unstable --skipPostComment
+        run: pnpm benchmark --compareBranch unstable --skipPostComment 2>&1 | tee "$RUNNER_TEMP/benchmark.log"
         env:
           # benchmark options
           BENCHMARK_S3: true
@@ -40,3 +43,17 @@ jobs:
           S3_ENDPOINT: ${{ secrets.S3_BENCH_LODESTAR_ENDPOINT }}
           # Key prefix to separate benchmark data from multiple repositories
           S3_KEY_PREFIX: ${{ github.repository }}/${{ runner.os }}
+
+      - name: Report failed benchmarks in the job summary
+        if: failure() && steps.benchmarks.outcome == 'failure'
+        run: |
+          log=$(sed -E 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/benchmark.log")
+          {
+            echo "### Failed benchmarks"
+            echo
+            grep "Found previous benchmark" <<< "$log" || echo "No previous benchmark found"
+            echo
+            echo '```'
+            grep -E '^\s*(!|✖) ' <<< "$log" || echo "No failed benchmarks found, see the job log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
