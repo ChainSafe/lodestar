@@ -207,14 +207,17 @@ export class PtcDutiesService {
     }
 
     const currentEpochDependentRoot = this.dutiesByIndexByEpoch.get(currentEpoch)?.dependentRoot;
-    if (currentEpochDependentRoot && currentEpochDependentRoot !== previousDutyDependentRoot) {
+    // The fork epoch PTC depends on the last block of the previous epoch, which is the current duty dependent root
+    const headCurrentEpochDependentRoot =
+      currentEpoch === this.config.GLOAS_FORK_EPOCH ? currentDutyDependentRoot : previousDutyDependentRoot;
+    if (currentEpochDependentRoot && currentEpochDependentRoot !== headCurrentEpochDependentRoot) {
       this.logger.warn("Potential current epoch PTC duties reorg", {
         slot,
         dutyEpoch: currentEpoch,
         priorDependentRoot: currentEpochDependentRoot,
-        newDependentRoot: previousDutyDependentRoot,
+        newDependentRoot: headCurrentEpochDependentRoot,
       });
-      await this.handlePtcDutiesReorg(currentEpoch, slot, currentEpochDependentRoot, previousDutyDependentRoot);
+      await this.handlePtcDutiesReorg(currentEpoch, slot, currentEpochDependentRoot, headCurrentEpochDependentRoot);
     }
   };
 

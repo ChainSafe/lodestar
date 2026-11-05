@@ -22,15 +22,15 @@ import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 import {ProcessBlockOpts, ProcessOperationsStep} from "./types.js";
 
 export {
-  processProposerSlashing,
-  processAttesterSlashing,
   processAttestations,
+  processAttesterSlashing,
+  processBlsToExecutionChange,
+  processConsolidationRequest,
   processDeposit,
+  processDepositRequest,
+  processProposerSlashing,
   processVoluntaryExit,
   processWithdrawalRequest,
-  processBlsToExecutionChange,
-  processDepositRequest,
-  processConsolidationRequest,
 };
 
 export function processOperations(

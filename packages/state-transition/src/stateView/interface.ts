@@ -336,8 +336,6 @@ export type IBeaconStateViewLatestFork = Omit<
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
-  | "builderPendingPayments"
-  | "builderPendingWithdrawals"
   | "computeAttestationsRewards"
   | "computeBlockRewards"
   | "computeNewStateRoot"
@@ -346,8 +344,6 @@ export type IBeaconStateViewNative = Omit<
   | "eth1Data"
   | "executionPayloadAvailability"
   | "getBeaconCommittee"
-  | "getIndicesInPayloadTimelinessCommittee"
-  | "getPayloadTimelinessCommittee"
   | "loadOtherState"
   | "pendingConsolidations"
   | "pendingDeposits"
@@ -365,7 +361,6 @@ export type IBeaconStateViewNative = Omit<
   pendingPartialWithdrawals: Uint8Array;
   pendingConsolidations: Uint8Array;
   proposerLookahead: Uint32Array;
-  // UintBn64 lowers to number across the FFI boundary; the wrapper lifts it back to bigint
   eth1Data: phase0.Eth1Data;
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   computeBlockRewards(
@@ -379,8 +374,6 @@ export type IBeaconStateViewNative = Omit<
     validatorIds: (ValidatorIndex | string)[]
   ): rewards.SyncCommitteeRewards;
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
-  getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
-  getIndicesInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number[];
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
   stateTransition(
     signedBlockBytes: Uint8Array,
@@ -388,9 +381,7 @@ export type IBeaconStateViewNative = Omit<
     options?: StateTransitionOpts
   ): IBeaconStateViewNative;
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}): IBeaconStateViewNative;
-  withParentPayloadApplied(
-    ...args: Parameters<IBeaconStateViewLatestFork["withParentPayloadApplied"]>
-  ): IBeaconStateViewNative;
+  withParentPayloadApplied(executionRequestsBytes: Uint8Array): IBeaconStateViewNative;
 };
 
 export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {

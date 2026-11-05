@@ -1,0 +1,23 @@
+.{
+    .name = .lodestar_z_fuzz,
+    .version = "0.1.0",
+    .fingerprint = 0xa5f5892cc2169277,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .blst = .{
+            .url = "git+https://github.com/ChainSafe/blst.zig#6ad139afc26a518d06cef1379b17cbd1d883af5c",
+            .hash = "blst_zig-0.0.0-cnAxzg4LAAAj7C2e_M9QgfMS0OZsqyHHWjf_lnfN3G-B",
+        },
+        .lodestar_z = .{ .path = "../../" },
+        .afl = .{ .path = "../../pkg/afl++" },
+        .snappy = .{
+            .url = "git+https://github.com/ChainSafe/snappy.zig#713942410426051da6107a955b29f3f152815622",
+            .hash = "snappy-0.1.0-n4AaquQ4AADQScvw9-i6SJvZTTagvxmGgGKnat4T_a4e",
+        },
+        .hashtree = .{
+            .url = "git+https://github.com/ChainSafe/hashtree-z.git#81b7303f72e202e966f71eedf4be1d8d33e2fcaa",
+            .hash = "hashtree-0.1.0-sBOoviYWAAA1HcTLhxWt0TtrLFXvYM5gOvxpu_Rreiiw",
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "src", "tools" },
+}

@@ -1,7 +1,8 @@
 import {MockedObject, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
+import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {altair} from "@lodestar/types";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";
@@ -65,5 +66,17 @@ describe("chain / opPools / SyncCommitteeMessagePool", () => {
         expect(aggregationBits.get(index)).toBe(newIndices.includes(index));
       }
     }
+  });
+
+  it("returns null when the contribution signature is the point at infinity", () => {
+    clockStub.msFromSlot.mockReturnValue(0);
+    const infinityBlockRoot = Buffer.alloc(32, 9);
+    cache.add(
+      subcommitteeIndex,
+      {slot, beaconBlockRoot: infinityBlockRoot, validatorIndex: 3000, signature: G2_POINT_AT_INFINITY},
+      indexInSubcommittee
+    );
+
+    expect(cache.getContribution(subcommitteeIndex, slot, infinityBlockRoot)).toBeNull();
   });
 });

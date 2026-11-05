@@ -1,12 +1,12 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -232,9 +232,9 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  if (options.chain.nativeStateTransition && config.GLOAS_FORK_EPOCH !== Infinity) {
+  if (options.chain.nativeStateTransition && config.HEZE_FORK_EPOCH !== Infinity) {
     throw Error(
-      `--chain.nativeStateTransition does not support Gloas, which is scheduled at epoch ${config.GLOAS_FORK_EPOCH}`
+      `--chain.nativeStateTransition does not support Heze, which is scheduled at epoch ${config.HEZE_FORK_EPOCH}`
     );
   }
 

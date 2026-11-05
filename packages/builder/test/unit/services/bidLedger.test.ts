@@ -226,6 +226,23 @@ describe("BidLedger", () => {
     expect(ledger.recordBid({...bid, slot: bid.slot + 1}).slot).toBe(bid.slot + 1);
   });
 
+  it("settles payments of bids won before a slot", () => {
+    const ledger = new BidLedger();
+    const settled = submittedBid();
+    const unsettled = {...submittedBid(), slot: settled.slot + 1};
+    const lost = {...submittedBid(), slot: settled.slot - 1};
+    for (const bid of [settled, unsettled, lost]) ledger.recordBid(bid);
+    ledger.recordWin(settled, root(6));
+    ledger.recordWin(unsettled, root(7));
+    expect(ledger.getUnsettledValueGwei(0)).toBe(settled.valueGwei + unsettled.valueGwei);
+
+    ledger.settlePaymentsBefore(unsettled.slot);
+
+    expect(ledger.getUnsettledValueGwei(0)).toBe(unsettled.valueGwei);
+    expect(ledger.prune(unsettled.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(2);
+    expect(ledger.getBidsForSlot(unsettled.slot)).toHaveLength(1);
+  });
+
   it("prunes reveal protection even when no winning bid record exists", () => {
     const ledger = new BidLedger();
     const blockRoot = root(6);

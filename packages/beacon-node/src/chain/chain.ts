@@ -1,6 +1,5 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
@@ -15,6 +14,7 @@ import {
   UpdateHeadOpt,
 } from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   type ForkPostFulu,
@@ -1545,10 +1545,10 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
     const slot = this.clock.currentSlot;
-    const secFromSlot = this.clock.secFromSlot(slot);
+    const msFromSlot = this.clock.msFromSlot(slot);
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, secFromSlot, slot}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, msFromSlot, slot}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
@@ -1560,13 +1560,13 @@ export class BeaconChain implements IBeaconChain {
   getProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.getProposerHead});
-    const secFromSlot = this.clock.secFromSlot(slot);
+    const msFromSlot = this.clock.msFromSlot(slot);
 
     try {
       // Do not emit head event here, when proposing we rely on the one emitted when importing our own block
       const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetProposerHead,
-        secFromSlot,
+        msFromSlot,
         slot,
       });
 

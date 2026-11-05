@@ -645,6 +645,11 @@ export function createLodestarMetrics(
       help: "Count of peers by sync type [FullySynced, Advanced, Behind]",
       labelNames: ["syncType"],
     }),
+    syncPeerFinalizedCheckpointMismatch: register.counter<{reason: string}>({
+      name: "lodestar_sync_peer_finalized_checkpoint_mismatch_total",
+      help: "Total behind peers whose Status finalized checkpoint is not in our chain, by reason",
+      labelNames: ["reason"],
+    }),
     syncSwitchGossipSubscriptions: register.gauge<{action: string}>({
       name: "lodestar_sync_switch_gossip_subscriptions",
       help: "Sync switched gossip subscriptions on/off",
@@ -1472,6 +1477,11 @@ export function createLodestarMetrics(
         gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
           name: "lodestar_oppool_execution_payload_bid_pool_gossip_insert_outcome_total",
           help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
           labelNames: ["insertOutcome"],
         }),
         apiValidationTime: register.histogram({

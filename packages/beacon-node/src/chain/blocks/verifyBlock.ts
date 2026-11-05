@@ -143,6 +143,7 @@ export async function verifyBlocksInEpoch(
                 ? Array.from(payloadEnvelopes.values()).filter((payloadInput) => payloadInput.hasPayloadEnvelope())
                 : [];
             const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+              this.config,
               payloadInputsForDa,
               abortController.signal
             );

@@ -1,23 +1,29 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
+import {hasher} from "@chainsafe/persistent-merkle-tree";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
+import {BeaconConfig} from "@lodestar/config";
+import type {LoggerNode} from "@lodestar/logger/node";
 import {
   init as initNativeMetrics,
   registerLocalValidator as registerNativeLocalValidator,
   scrapeMetrics as scrapeNativeMetrics,
   unregisterLocalValidator as unregisterNativeLocalValidator,
-} from "@chainsafe/lodestar-z/metrics";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BeaconApiMethods} from "@lodestar/api/beacon/server";
-import {BeaconConfig} from "@lodestar/config";
-import type {LoggerNode} from "@lodestar/logger/node";
+} from "@lodestar/native/metrics";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {IBeaconStateView, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
+import {
+  IBeaconStateView,
+  computeStartSlotAtEpoch,
+  isStatePostBellatrix,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
+import {getDataColumnSidecarsMinEpoch} from "../chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
@@ -211,6 +217,17 @@ export class BeaconNode {
         : null;
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
+
+    // Before any lookup into the legacy column buckets, which can be slow until compacted
+    const columnsMinEpoch =
+      opts.chain.archiveDataEpochs === Infinity
+        ? null
+        : getDataColumnSidecarsMinEpoch(config, clock.currentEpoch, opts.chain.archiveDataEpochs);
+    await db.compactLegacyDataColumns(
+      columnsMinEpoch !== null && columnsMinEpoch >= config.FULU_FORK_EPOCH
+        ? computeStartSlotAtEpoch(columnsMinEpoch)
+        : 0
+    );
 
     await db.init();
 

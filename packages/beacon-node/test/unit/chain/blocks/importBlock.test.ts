@@ -47,7 +47,7 @@ describe("chain / blocks / importBlock", () => {
       config,
       forkChoice,
       logger: getMockedLogger(),
-      clock: {secFromSlot: vi.fn().mockReturnValue(0)},
+      clock: {secFromSlot: vi.fn().mockReturnValue(0), msFromSlot: vi.fn().mockReturnValue(0)},
       unfinalizedBlockWrites: {
         waitForSpace: vi.fn().mockResolvedValue(undefined),
         push: vi.fn().mockResolvedValue(undefined),

@@ -342,7 +342,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       } else {
         this.jobs.push(job);
       }
-      callInNextEventLoop(this.runJob);
+      callInNextEventLoop(() => void this.runJob());
     }
   }
 
@@ -377,7 +377,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     let completedJobsCount = 0;
 
     if (this.jobs.length > 0) {
-      callInNextEventLoop(this.runJob);
+      callInNextEventLoop(() => void this.runJob());
     }
 
     try {
@@ -423,7 +423,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       if (workReqs.length === 0) {
         worker.status = {code: WorkerStatusCode.idle, workerApi};
         this.workersBusy--;
-        callInNextEventLoop(this.runJob);
+        callInNextEventLoop(() => void this.runJob());
         return;
       }
 
@@ -499,7 +499,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workersBusy--;
 
     // Potentially run a new job
-    callInNextEventLoop(this.runJob);
+    callInNextEventLoop(() => void this.runJob());
   };
 
   /**
@@ -542,7 +542,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.jobs.unshift(job);
       }
       this.bufferedJobs = null;
-      callInNextEventLoop(this.runJob);
+      callInNextEventLoop(() => void this.runJob());
     }
   };
 

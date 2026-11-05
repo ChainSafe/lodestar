@@ -158,7 +158,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
           blobs: currentSidecars.map((b) => b.blob),
           kzgProofs: currentSidecars.map((b) => b.kzgProof),
         },
-        broadcastValidation: routes.beacon.BroadcastValidation.none,
+        broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       })
     ).assertOk();
   } catch (error) {

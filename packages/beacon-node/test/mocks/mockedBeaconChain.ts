@@ -1,8 +1,8 @@
 import {Mock, Mocked, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {Logger} from "@lodestar/utils";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
@@ -18,6 +18,7 @@ import {
   SyncContributionAndProofPool,
 } from "../../src/chain/opPools/index.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
+import {SeenExecutionPayloadBids} from "../../src/chain/seenCache/seenExecutionPayloadBids.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
@@ -204,6 +205,8 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         removeInvalid: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
+      seenExecutionPayloadBids: new SeenExecutionPayloadBids(),
+      getParentExecutionRequests: vi.fn(),
       shufflingCache: new ShufflingCache(),
       pubkeyCache,
       produceCommonBlockBody: vi.fn(),

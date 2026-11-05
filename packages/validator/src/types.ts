@@ -1,5 +1,5 @@
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {DatabaseController} from "@lodestar/db";
+import {SecretKey} from "@lodestar/native/blst";
 import {BLSPubkey} from "@lodestar/types";
 
 export type GenesisInfo = {

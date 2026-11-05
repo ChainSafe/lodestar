@@ -1,0 +1,31 @@
+name: Upload workspace build
+description: Share compiled JS and native bindings with jobs in this workflow run
+inputs:
+  node:
+    description: Node version used to build
+    required: true
+  preset:
+    description: Native preset used to build
+    default: mainnet
+runs:
+  using: composite
+  steps:
+    - name: Archive build outputs
+      shell: bash
+      run: |
+        test -f bindings/zig-out/lib/bindings.node
+        shopt -s nullglob
+        paths=()
+        for path in lib packages/*/lib bindings/zig-out packages/*/.git-data.json; do
+          if [[ -e "$path" ]]; then
+            paths+=("$path")
+          fi
+        done
+        tar -czf "$RUNNER_TEMP/workspace-build.tar.gz" -- "${paths[@]}"
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: workspace-build-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ inputs.preset }}
+        path: ${{ runner.temp }}/workspace-build.tar.gz
+        compression-level: 0
+        if-no-files-found: error
+        overwrite: true

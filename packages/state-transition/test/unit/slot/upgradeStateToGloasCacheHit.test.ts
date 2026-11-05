@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import type {CachedBeaconStateFulu} from "../../../src/types.js";
