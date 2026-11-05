@@ -208,7 +208,7 @@ async function createSignedVoluntaryExit(
         data: voluntaryExit,
         type: SignableMessageType.VOLUNTARY_EXIT,
       });
-      signature = Signature.fromBytes(fromHex(signatureHex));
+      signature = parseRemoteSignerSignature(signatureHex);
       break;
     }
     default:
@@ -221,6 +221,16 @@ async function createSignedVoluntaryExit(
   };
 
   return signedVoluntaryExit;
+}
+
+export function parseRemoteSignerSignature(signatureHex: string): Signature {
+  const signatureBytes = fromHex(signatureHex);
+  if (signatureBytes.length !== Signature.COMPRESS_SIZE) {
+    throw new YargsError(
+      `Invalid signature length ${signatureBytes.length} from remote signer, expected ${Signature.COMPRESS_SIZE} bytes`
+    );
+  }
+  return Signature.fromBytes(signatureBytes);
 }
 
 type SignerPubkey = {signer: Signer; pubkey: string};
