@@ -1,6 +1,5 @@
 import {ForkName} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {ClientVersion, ExecutionPayloadStatus, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
 import {JsonRpcHttpClientEventEmitter} from "./jsonRpcHttpClient.js";
@@ -55,8 +54,6 @@ export interface IEngineTransport {
   getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult>;
 
   getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
-
-  getBlobsV1(versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
 
   getBlobsV2(versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null>;
 

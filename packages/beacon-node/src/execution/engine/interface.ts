@@ -6,7 +6,6 @@ import {
   DEPOSIT_REQUEST_TYPE,
   ForkName,
   ForkPostFulu,
-  ForkPreFulu,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {
@@ -19,7 +18,6 @@ import {
   bellatrix,
   capella,
 } from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBodyV2} from "./types.js";
@@ -202,9 +200,4 @@ export interface IExecutionEngine {
     versionedHashes: VersionedHashes,
     buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | null>;
-  getBlobs(
-    fork: ForkPreFulu,
-    versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<(BlobAndProof | null)[]>;
 }

@@ -11,7 +11,6 @@ import {
   electra,
   gloas,
 } from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {EndTimer, LodestarError, fromHex, strip0xPrefix, toHex, toRootHex} from "@lodestar/utils";
 import {isValidBlobVersionedHashes} from "./blobVersionedHashes.js";
@@ -27,7 +26,6 @@ import {JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
 import {EngineRestHttpClient, EngineRestResponseError} from "./restHttpClient.js";
 import {
   BlobsRequest,
-  BlobsV1Response,
   BlobsV2Response,
   BodiesByHashRequest,
   BodiesResponseBellatrix,
@@ -88,7 +86,6 @@ const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedOpts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
-const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
 const getCapabilitiesOpts: ReqOpts = {routeId: "getCapabilities", retries: 0};
@@ -384,24 +381,6 @@ export class RestEngineTransport implements IEngineTransport {
       throw Error(`Invalid bodies response length=${bodies.length} blockHashes=${blockHashes.length}`);
     }
     return bodies;
-  }
-
-  async getBlobsV1(versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]> {
-    assertReqSizeLimit(versionedHashes.length, this.limits.blobsMaxVersionedHashes);
-    const res = await this.client.request(
-      {method: "POST", path: "/blobs/v1", body: BlobsRequest.serialize({versionedHashes}), responseType: "ssz"},
-      getBlobsV1Opts
-    );
-    // 204 means the EL cannot serve blobs at all, e.g. while syncing
-    if (res.status === 204) {
-      return versionedHashes.map(() => null);
-    }
-
-    const {entries} = deserializeResponse(BlobsV1Response, res.body, "getBlobsV1", this.metrics);
-    if (entries.length !== versionedHashes.length) {
-      throw Error(`Invalid blobs/v1 response length=${entries.length} versionedHashes=${versionedHashes.length}`);
-    }
-    return entries.map((entry) => (entry.available ? entry.contents : null));
   }
 
   /**

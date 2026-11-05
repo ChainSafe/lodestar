@@ -5,7 +5,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockInputBlobs, BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -490,7 +490,7 @@ async function runBeaconBlockProcessingError(
   const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
   signedBlock.message.slot = 1;
   const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message));
-  const blockInput = BlockInputBlobs.createFromBlock({
+  const blockInput = BlockInputPreData.createFromBlock({
     block: signedBlock,
     blockRootHex,
     forkName: ForkName.deneb,
@@ -584,7 +584,7 @@ async function runBeaconBlockRepeatProposal(
   let signedBlock: SignedBeaconBlock;
   let blockRootHex: RootHex;
   let serializedData: Uint8Array;
-  let blockInput: BlockInputBlobs | BlockInputNoData;
+  let blockInput: BlockInputPreData | BlockInputNoData;
   if (fork === ForkName.gloas) {
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
@@ -600,7 +600,7 @@ async function runBeaconBlockRepeatProposal(
     block.message.proposerIndex = 3;
     blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
     serializedData = ssz.deneb.SignedBeaconBlock.serialize(block);
-    blockInput = BlockInputBlobs.createFromBlock({...blockInputMeta, block, blockRootHex, forkName: ForkName.deneb});
+    blockInput = BlockInputPreData.createFromBlock({...blockInputMeta, block, blockRootHex, forkName: ForkName.deneb});
     signedBlock = block;
   }
 
