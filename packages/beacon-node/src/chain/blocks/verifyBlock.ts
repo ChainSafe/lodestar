@@ -183,9 +183,9 @@ export async function verifyBlocksInEpoch(
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
 
-      // All signatures at once. Must be called before verifyBlocksStateTransitionOnly(): the array is evaluated
-      // left to right and the state transition runs synchronously, so this is what hands the BLS job to the
-      // worker pool before the main thread is busy with the state transition.
+      // All signatures at once. Must be called before verifyBlocksStateTransitionOnly()
+      // so we hand the BLS job to the worker pool before the main thread 
+      // is busy with the state transition.
       verifyBlocksSignatures(
         this.config,
         this.bls,

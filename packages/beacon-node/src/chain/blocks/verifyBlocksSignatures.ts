@@ -51,7 +51,8 @@ export async function verifyBlocksSignatures(
           getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
           }),
-          // Every attester in the slot waits on the block; nothing else queued has a deadline within its wait time
+          // Prioritize block verification over attestations, since
+          // attestations already buffer up to `MAX_BUFFER_WAIT_MS`
           {priority: true}
         );
 

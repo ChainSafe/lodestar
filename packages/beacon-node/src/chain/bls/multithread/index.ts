@@ -333,9 +333,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       }
     }
 
-    // Priority jobs are handed to an idle worker before returning to the caller. Deferring the post to the
-    // next macrotask would make the job wait for whatever synchronous work the caller does next, e.g. the
-    // block state transition, and the worker would sit idle for that long.
+    // First hand work to an idle worker before returning to the caller.
+    // Deferring the post to the next macrotask would make the worker
+    // sit idle while waiting for the next synchronous work
     else if (job.opts.priority) {
       this.jobs.unshift(job);
       void this.runJob();
