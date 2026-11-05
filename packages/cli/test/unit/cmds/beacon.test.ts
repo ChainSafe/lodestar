@@ -19,6 +19,35 @@ describe("cmds / beacon / args handler", () => {
   // Make tests faster skipping a network call
   process.env.SKIP_FETCH_NETWORK_BOOTNODES = "true";
 
+  it.each([
+    ["mainnet", false],
+    ["gnosis", false],
+    [undefined, false],
+    ["sepolia", true],
+    ["hoodi", true],
+    ["plataberget", true],
+    ["chiado", true],
+    ["ephemery", true],
+    ["dev", true],
+  ] as const)("sets Identify version disclosure for %s to %s", async (network, expected) => {
+    // Keep the process-wide test preset while exercising the network-name policy.
+    const paramsFile = path.join(testFilesDir, "identify_preset.yaml");
+    fs.writeFileSync(paramsFile, JSON.stringify({PRESET_BASE: chainConfig.PRESET_BASE}));
+    const {options, version} = await runBeaconHandlerInit({network, paramsFile, discv5: false});
+    expect(options.network.advertiseVersion).toBe(expected);
+    expect(options.network.version).toBe(version);
+    expect(options.api.version).toBe(version);
+    expect(options.executionBuilder.userAgent).toBe(`Lodestar/${version}`);
+  });
+
+  it.each(["mainnet", "hoodi", "dev"] as const)("keeps private mode on %s", async (network) => {
+    const {options} = await runBeaconHandlerInit({network, discv5: false, private: true});
+    expect(options.network.private).toBe(true);
+    expect(options.api.private).toBe(true);
+    expect(options.network.version).toBeUndefined();
+    expect(options.network.advertiseVersion).not.toBe(true);
+  });
+
   it("Merge bootnodes from file and CLI arg", async () => {
     const enr1 =
       "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA";
@@ -86,12 +115,13 @@ describe("cmds / beacon / args handler", () => {
     const paramsFile = path.join(testFilesDir, "custom_config.yaml");
     fs.writeFileSync(paramsFile, JSON.stringify(chainConfigToJson(config)));
 
-    const {network} = await runBeaconHandlerInit({
+    const {network, options} = await runBeaconHandlerInit({
       paramsFile,
     });
 
     // Okay to hardcode, since this value will never change
     expect(network).toBe(networkName);
+    expect(options.network.advertiseVersion).toBe(false);
   });
 
   it("accepts native Gloas and rejects a scheduled unsupported Heze fork", async () => {

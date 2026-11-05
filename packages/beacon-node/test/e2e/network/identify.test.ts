@@ -17,8 +17,18 @@ describe("network / identify", () => {
       expected: "lodestar",
     },
     {
+      name: "test/dev network version opt-in",
+      opts: {version: "v1.50.1/developer-feature/80c248b", advertiseVersion: true},
+      expected: "lodestar/v1.50.1/developer-feature/80c248b",
+    },
+    {
       name: "explicit public mode",
       opts: {version: "v1.50.1/80c248b", private: false},
+      expected: "lodestar",
+    },
+    {
+      name: "explicit version opt-out",
+      opts: {version: "v1.50.1/80c248b", advertiseVersion: false},
       expected: "lodestar",
     },
     {
@@ -27,8 +37,18 @@ describe("network / identify", () => {
       expected: "lodestar",
     },
     {
+      name: "version opt-in without a version",
+      opts: {advertiseVersion: true},
+      expected: "lodestar",
+    },
+    {
+      name: "version opt-in with an empty version",
+      opts: {version: "", advertiseVersion: true},
+      expected: "lodestar",
+    },
+    {
       name: "private mode",
-      opts: {version: "v1.50.1/80c248b", private: true},
+      opts: {version: "v1.50.1/80c248b", private: true, advertiseVersion: true},
       expected: "",
     },
     {
@@ -58,5 +78,6 @@ describe("network / identify", () => {
     const result = await client.services.identify.identify(connection);
 
     expect(result.agentVersion).toBe(expected);
+    expect(server.services.components.nodeInfo.version).toBe(opts.version ?? "unknown");
   });
 });
