@@ -17,7 +17,7 @@ describe("network / identify", () => {
       expected: "lodestar",
     },
     {
-      name: "test/dev network version opt-in",
+      name: "version opt-in",
       opts: {version: "v1.50.1/developer-feature/80c248b", advertiseVersion: true},
       expected: "lodestar/v1.50.1/developer-feature/80c248b",
     },

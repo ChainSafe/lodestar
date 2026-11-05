@@ -21,7 +21,7 @@ describe("cmds / beacon / args handler", () => {
 
   it.each([
     ["mainnet", false],
-    ["gnosis", false],
+    ["gnosis", true],
     [undefined, false],
     ["sepolia", true],
     ["hoodi", true],
@@ -121,7 +121,7 @@ describe("cmds / beacon / args handler", () => {
 
     // Okay to hardcode, since this value will never change
     expect(network).toBe(networkName);
-    expect(options.network.advertiseVersion).toBe(false);
+    expect(options.network.advertiseVersion).toBe(true);
   });
 
   it("accepts native Gloas and rejects a scheduled unsupported Heze fork", async () => {
