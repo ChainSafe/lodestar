@@ -44,6 +44,7 @@ COPY --from=build_src /usr/app .
 # NodeJS applications have a default memory limit of 4GB on most machines.
 # This limit is bit tight for a Mainnet node, it is recommended to raise the limit
 # since memory may spike during certain network conditions.
-ENV NODE_OPTIONS=--max-old-space-size=8192
+# Node 26 halved V8's default semi-space to 32MB, 64 keeps Node 24's young generation size.
+ENV NODE_OPTIONS="--max-old-space-size=8192 --max-semi-space-size=64"
 
 ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]

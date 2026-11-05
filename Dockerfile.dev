@@ -77,6 +77,6 @@ RUN pnpm -r --filter "!@lodestar/native" --filter "!{.}" build
 ARG COMMIT
 RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
-ENV NODE_OPTIONS=--max-old-space-size=8192
+ENV NODE_OPTIONS="--max-old-space-size=8192 --max-semi-space-size=64"
 
 ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]
