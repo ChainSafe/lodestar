@@ -3,7 +3,7 @@ import {ExecutionStatus, IForkChoice, LVHInvalidResponse, ProtoBlock} from "@lod
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {ExecutionInvalidSource} from "../../../src/chain/forkChoice/index.js";
-import {OptimisticExecutionEngine} from "../../../src/chain/optimisticExecutionEngine.js";
+import {ForkChoiceExecutionEngine} from "../../../src/chain/forkChoiceExecutionEngine.js";
 import {
   ExecutionPayloadStatus,
   ForkchoiceUpdatedResult,
@@ -11,8 +11,8 @@ import {
   PayloadAttributes,
 } from "../../../src/execution/index.js";
 
-describe("OptimisticExecutionEngine", () => {
-  const logger = testLogger("optimisticExecutionEngine");
+describe("ForkChoiceExecutionEngine", () => {
+  const logger = testLogger("forkChoiceExecutionEngine");
   const fork = ForkName.fulu;
   const headBlockRoot = "0x" + "aa".repeat(32);
   const headBlockHash = "0x" + "bb".repeat(32);
@@ -30,7 +30,7 @@ describe("OptimisticExecutionEngine", () => {
     const validateLatestHash = vi.fn().mockReturnValue(true);
     const recomputeHeadAfterELInvalidResponse = vi.fn();
 
-    const engine = new OptimisticExecutionEngine({notifyForkchoiceUpdate} as unknown as IExecutionEngine, {
+    const engine = new ForkChoiceExecutionEngine({notifyForkchoiceUpdate} as unknown as IExecutionEngine, {
       forkChoice: {getBlockHexAndBlockHash, validateLatestHash} as unknown as IForkChoice,
       recomputeHeadAfterELInvalidResponse,
       logger,
@@ -52,7 +52,7 @@ describe("OptimisticExecutionEngine", () => {
     } as ForkchoiceUpdatedResult;
   }
 
-  function notifyFcu(engine: OptimisticExecutionEngine, attrs?: PayloadAttributes) {
+  function notifyFcu(engine: ForkChoiceExecutionEngine, attrs?: PayloadAttributes) {
     return engine.notifyForkchoiceUpdate(fork, headBlockRoot, headBlockHash, safeBlockHash, finalizedBlockHash, attrs);
   }
 

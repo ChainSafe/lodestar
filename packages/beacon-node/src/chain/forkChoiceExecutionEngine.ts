@@ -20,7 +20,7 @@ import {
 import {Metrics} from "../metrics/index.js";
 import {ExecutionInvalidSource} from "./forkChoice/index.js";
 
-export type OptimisticExecutionEngineModules = {
+export type ForkChoiceExecutionEngineModules = {
   forkChoice: IForkChoice;
   /** Recompute and switch the chain head, fork choice is already updated when this runs */
   recomputeHeadAfterELInvalidResponse: () => void;
@@ -32,7 +32,7 @@ export type OptimisticExecutionEngineModules = {
  * The only handle on the execution engine. Payloads are imported optimistically, so every engine verdict that can
  * change fork choice is applied here.
  */
-export class OptimisticExecutionEngine {
+export class ForkChoiceExecutionEngine {
   private readonly forkChoice: IForkChoice;
   private readonly recomputeHeadAfterELInvalidResponse: () => void;
   private readonly logger: Logger;
@@ -40,7 +40,7 @@ export class OptimisticExecutionEngine {
 
   constructor(
     private readonly engine: IExecutionEngine,
-    modules: OptimisticExecutionEngineModules
+    modules: ForkChoiceExecutionEngineModules
   ) {
     this.forkChoice = modules.forkChoice;
     this.recomputeHeadAfterELInvalidResponse = modules.recomputeHeadAfterELInvalidResponse;

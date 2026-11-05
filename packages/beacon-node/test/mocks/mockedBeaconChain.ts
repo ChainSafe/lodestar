@@ -8,6 +8,7 @@ import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
+import {ForkChoiceExecutionEngine} from "../../src/chain/forkChoiceExecutionEngine.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
 import {
@@ -16,7 +17,6 @@ import {
   OpPool,
   SyncContributionAndProofPool,
 } from "../../src/chain/opPools/index.js";
-import {OptimisticExecutionEngine} from "../../src/chain/optimisticExecutionEngine.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
@@ -29,7 +29,7 @@ import {getMockedLogger} from "./loggerMock.js";
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
   forkChoice: MockedForkChoice;
-  executionEngine: Mocked<OptimisticExecutionEngine>;
+  executionEngine: Mocked<ForkChoiceExecutionEngine>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
   builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
   executionPayloadBidPool: Mocked<ExecutionPayloadBidPool>;
