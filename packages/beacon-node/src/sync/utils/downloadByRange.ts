@@ -160,7 +160,7 @@ export function cacheByRangeResponses({
     }
 
     // Seed seenPayloadEnvelopeInputCache the instant we have the block, before any
-    // later step can throw and abort the batch — otherwise a gloas block would sit in
+    // later step can throw and abort the batch. Otherwise a gloas block would sit in
     // seenBlockInputCache but unseeded here, and payload-by-root sync would later throw "Missing
     // PayloadEnvelopeInput for known block" (see issue #9306). add() is idempotent.
     if (isForkPostGloas(blockInput.forkName) && !payloadEnvelopes.has(blockInput.slot)) {

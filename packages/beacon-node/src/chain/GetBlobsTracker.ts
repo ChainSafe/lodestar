@@ -47,6 +47,10 @@ export class GetBlobsTracker {
   }
 
   triggerGetBlobs(input: IBlockInput | PayloadEnvelopeInput): void {
+    if (!(input instanceof PayloadEnvelopeInput) && !isBlockInputColumns(input)) {
+      return;
+    }
+
     if (this.activeReconstructions.has(input.blockRootHex)) {
       this.pendingTriggers.add(input.blockRootHex);
       return;
@@ -70,13 +74,6 @@ export class GetBlobsTracker {
       }
     }
 
-    // The request is sent right away, before block processing issues newPayload: ELs that drop a
-    // transaction's blobs once the payload is validated can only answer a request that gets there first
-    if (!(input instanceof PayloadEnvelopeInput) && !isBlockInputColumns(input)) {
-      // getBlobs from the execution engine is only supported for post-fulu data columns
-      return;
-    }
-
     let freeIndex = this.blobsAndProofsBuffers.findIndex(({inUse}) => !inUse);
     if (freeIndex === -1) {
       freeIndex = this.blobsAndProofsBuffers.length;
@@ -98,6 +95,8 @@ export class GetBlobsTracker {
     const logCtx = {slot: input.slot, root: input.blockRootHex};
     this.logger.verbose("Trigger getBlobsV2 for block", logCtx);
     let requestFailed = false;
+    // The request is sent right away, before block processing issues newPayload: ELs that drop a
+    // transaction's blobs once the payload is validated can only answer a request that gets there first
     getDataColumnSidecarsFromExecution(
       this.config,
       this.executionEngine,

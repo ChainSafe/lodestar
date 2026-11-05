@@ -139,7 +139,6 @@ function generateRoots<F extends ForkPostCapella>(
   };
 }
 
-/** Build legacy deneb..electra blob sidecars for test fixtures */
 function getBlobSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,

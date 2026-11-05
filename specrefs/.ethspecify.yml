@@ -122,9 +122,7 @@ exceptions:
     - validate_merge_block#bellatrix
 
     # deneb
-    # Legacy blob sidecar networking and production are not implemented: blob sidecars are
-    # replaced by data columns from fulu, and blob_sidecars_by_range/root are deprecated as of
-    # FULU_FORK_EPOCH + MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS.
+    # Pre-fulu blob sidecar functions, replaced by data columns in fulu
     - compute_subnet_for_blob_sidecar#deneb
     - get_blob_sidecars#deneb
     - is_within_epoch#deneb
@@ -132,7 +130,6 @@ exceptions:
     - verify_blob_sidecar_inclusion_proof#deneb
 
     # electra
-    # See compute_subnet_for_blob_sidecar#deneb for why legacy blob sidecar functions are not implemented
     - compute_subnet_for_blob_sidecar#electra
     - get_eth1_vote#electra
     - validate_blob_sidecar_gossip#electra
