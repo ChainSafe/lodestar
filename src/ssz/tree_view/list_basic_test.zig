@@ -1681,3 +1681,42 @@ test "memory_safety: failed list commit preserves pending edits for retry" {
     }
     try std.testing.expectEqual(baseline, pool.getNodesInUse());
 }
+
+test "ListBasicTreeView hashChunkedLeaves should hash every ChunkedLeaf and keep the value root" {
+    const allocator = std.testing.allocator;
+    const ST = FixedListType(UintType(64), 1 << 20, .{ .chunked_leaf = true });
+    const items_per_chunked_leaf = 4 * ChunkedLeafType.K;
+    // Empty, one item, a partial last ChunkedLeaf, and whole ChunkedLeaves.
+    const lengths = [_]usize{ 0, 1, items_per_chunked_leaf + 3, 2 * items_per_chunked_leaf };
+    for (lengths) |len| {
+        var pool = try Node.Pool.init(.{
+            .page_allocator = allocator,
+            .allocator = allocator,
+            .pool_size = 1 << 10,
+        });
+        defer pool.deinit();
+
+        var value: ST.Type = .empty;
+        defer value.deinit(allocator);
+        try value.resize(allocator, len);
+        for (value.items, 0..) |*item, i| item.* = i * 7919 + 1;
+
+        const view = try ST.TreeView.fromValue(allocator, &pool, &value);
+        defer view.deinit();
+
+        // A pending write must be committed before the ChunkedLeaves are collected.
+        if (len > 0) {
+            try view.set(len - 1, 42);
+            value.items[len - 1] = 42;
+        }
+        try view.hashChunkedLeaves(std.testing.io);
+
+        for (pool.nodes.items(.state), pool.nodes.items(.root)) |state, *root| {
+            if (state.kind() != .chunked_leaf) continue;
+            try std.testing.expect(!std.mem.eql(u8, root, &Node.lazy_sentinel));
+        }
+        var expected: [32]u8 = undefined;
+        try ST.hashTreeRoot(allocator, &value, &expected);
+        try std.testing.expectEqualSlices(u8, &expected, try view.hashTreeRoot());
+    }
+}

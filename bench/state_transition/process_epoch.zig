@@ -82,12 +82,14 @@ fn ProcessInactivityUpdatesBench(comptime fork: ForkSeq) type {
 fn ProcessRewardsAndPenaltiesBench(comptime fork: ForkSeq) type {
     return struct {
         epoch_transition_cache: *EpochTransitionCache,
+        io: std.Io,
 
         pub fn run(self: *@This(), _: std.mem.Allocator) void {
             const cache = self.epoch_transition_cache;
 
             state_transition.processRewardsAndPenalties(
                 fork,
+                self.io,
                 BenchState.cloned_cached_state.config,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state.castToFork(fork),
@@ -517,6 +519,7 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
             const rewards_start = time.start(io);
             state_transition.processRewardsAndPenalties(
                 fork,
+                io,
                 BenchState.cloned_cached_state.config,
                 epoch_cache,
                 fork_state,
@@ -782,6 +785,7 @@ fn runBenchmark(
 
     try bench.addParam("rewards_and_penalties", &ProcessRewardsAndPenaltiesBench(fork){
         .epoch_transition_cache = &epoch_transition_cache,
+        .io = io,
     }, .{ .hooks = hooks });
 
     try bench.addParam("registry_updates", &ProcessRegistryUpdatesBench(fork){

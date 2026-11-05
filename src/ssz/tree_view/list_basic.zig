@@ -108,6 +108,24 @@ pub fn ListBasicTreeView(comptime ST: type) type {
             return self.chunks.state.root.getRoot(self.chunks.state.pool);
         }
 
+        /// Commits, then hashes every ChunkedLeaf in parallel on `io` so `hashTreeRoot` only
+        /// combines cached roots. No-op for lists without chunked leaves.
+        pub fn hashChunkedLeaves(self: *Self, io: std.Io) !void {
+            if (comptime !ST.opts.chunked_leaf) return;
+            try self.commit();
+
+            const chunk_count = (self._len + items_per_chunk - 1) / items_per_chunk;
+            const chunked_leaf_count = (chunk_count + ChunkedLeaf.K - 1) / ChunkedLeaf.K;
+            if (chunked_leaf_count == 0) return;
+
+            const ids = try self.allocator.alloc(Node.Id, chunked_leaf_count);
+            defer self.allocator.free(ids);
+
+            const pool = self.chunks.state.pool;
+            try self.chunks.state.root.getNodesAtDepth(pool, chunked_leaf_depth, 0, ids);
+            try Node.Id.computeChunkedLeafRoots(pool, io, ids);
+        }
+
         pub fn fromValue(allocator: Allocator, pool: *Node.Pool, value: *const ST.Type) !*Self {
             const root = try ST.tree.fromValue(pool, value);
             errdefer pool.unref(root);

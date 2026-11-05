@@ -609,3 +609,45 @@ test "ProgressiveListBasicTreeView push and growTo should respect the type limit
     }
     try std.testing.expectEqual(@as(usize, zero_nodes), pool.getNodesInUse());
 }
+
+test "ProgressiveListBasicTreeView hashChunkedLeaves should hash every ChunkedLeaf and keep the value root" {
+    const items_per_chunk = 4;
+    // Subtree ends sit at 21, 85 and 341 chunks; ChunkedLeaves start at chunk 21.
+    const lengths = [_]usize{
+        0,
+        1,
+        21 * items_per_chunk,
+        21 * items_per_chunk + 1,
+        85 * items_per_chunk,
+        341 * items_per_chunk - 1,
+    };
+    for (lengths) |len| {
+        var pool = try Node.Pool.init(.{
+            .page_allocator = allocator,
+            .allocator = allocator,
+            .pool_size = 1 << 10,
+        });
+        defer pool.deinit();
+
+        var value: ChunkedList.Type = .empty;
+        defer value.deinit(allocator);
+        try value.resize(allocator, len);
+        for (value.items, 0..) |*item, i| item.* = i * 7919 + 1;
+
+        const view = try ChunkedList.TreeView.fromValue(allocator, &pool, &value);
+        defer view.deinit();
+
+        // A pending write must be committed before the ChunkedLeaves are collected.
+        if (len > 0) {
+            try view.set(len - 1, 42);
+            value.items[len - 1] = 42;
+        }
+        try view.hashChunkedLeaves(std.testing.io);
+
+        for (pool.nodes.items(.state), pool.nodes.items(.root)) |state, *root| {
+            if (state.kind() != .chunked_leaf) continue;
+            try std.testing.expect(!std.mem.eql(u8, root, &Node.lazy_sentinel));
+        }
+        try expectRoot(ChunkedList, view, &value);
+    }
+}

@@ -10,6 +10,7 @@ const getRewardsAndPenaltiesAltair = @import("./get_rewards_and_penalties.zig").
 
 pub fn processRewardsAndPenalties(
     comptime fork: ForkSeq,
+    io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
@@ -43,6 +44,10 @@ pub fn processRewardsAndPenalties(
     // get from tree view state which has to commit.
     var new_balances: std.ArrayList(u64) = .fromOwnedSlice(balances);
     try state.setBalances(&new_balances);
+    // setBalances rebuilds every balances leaf. Hashing them here in parallel takes that work off
+    // the single-threaded state-root walk.
+    const balances_view = try state.balances();
+    try balances_view.hashChunkedLeaves(io);
 
     if (cache.balances) |*old_balances| {
         old_balances.deinit(cache.allocator);
