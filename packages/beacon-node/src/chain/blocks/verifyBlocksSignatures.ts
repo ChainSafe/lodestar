@@ -36,10 +36,9 @@ export async function verifyBlocksSignatures(
     ? preState0.currentSyncCommitteeIndexed
     : new SyncCommitteeCacheEmpty();
 
-  // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
-  // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
-  // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
-  // so the attester and proposer shufflings are correct.
+  // Runs concurrently with the state transition. Signature sets are built from preState0, which
+  // verifyBlocksInEpoch() guarantees is in the same epoch as every block, so the proposer and attester shufflings
+  // and the sync committee are the ones the blocks were signed under.
   for (const [i, block] of blocks.entries()) {
     // Use [i] to make clear that the index has to be correct to blame the right block below on BlockError()
     isValidPromises[i] = opts.validSignatures
