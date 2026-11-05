@@ -3,6 +3,7 @@ import os from "node:os";
 import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {validateNetworkOptions} from "@lodestar/beacon-node/network";
 import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "../../util/index.js";
 
@@ -42,6 +43,11 @@ export function hasGlobalIPv6Address(interfaces = os.networkInterfaces()): boole
 }
 
 export type NetworkArgs = {
+  "network.backend"?: "libp2p" | "native";
+  "network.native.traceGossip"?: boolean;
+  "network.native.receiveBudgetBytes"?: number;
+  "network.native.initialCongestionWindowPackets"?: number;
+  "network.native.receiveDatagramsPerTurn"?: number;
   discv5?: boolean;
   listenAddress?: string;
   port?: number;
@@ -123,10 +129,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const quic = args.quic ?? defaultOptions.network.quic;
   const tcp = args.tcp ?? defaultOptions.network.tcp;
 
-  if (!quic && !tcp) {
-    throw new YargsError("Cannot disable both TCP and QUIC transports");
-  }
-
   // validate ip, ip6, ports
   const muArgs = {
     listenAddress: listenAddress ? `/ip4/${listenAddress}` : undefined,
@@ -179,9 +181,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 
   const targetPeers = args.targetPeers;
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
-  if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
-    throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
-  }
   // Set discv5 opts to null to disable only if explicitly disabled
   const enableDiscv5 = args.discv5 ?? true;
 
@@ -196,7 +195,14 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     }
   }
 
-  return {
+  const native = {
+    traceGossip: args["network.native.traceGossip"],
+    receiveBudgetBytes: args["network.native.receiveBudgetBytes"],
+    initialCongestionWindowPackets: args["network.native.initialCongestionWindowPackets"],
+    receiveDatagramsPerTurn: args["network.native.receiveDatagramsPerTurn"],
+  };
+
+  const opts: IBeaconNodeOptions["network"] = {
     discv5: enableDiscv5
       ? {
           config: {},
@@ -212,6 +218,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [quicMu, quicMu6, localMu, localMu6].filter(Boolean) as string[],
+    backend: args["network.backend"] ?? defaultOptions.network.backend,
+    native: Object.values(native).some((value) => value !== undefined) ? native : undefined,
     subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
@@ -235,9 +243,58 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
     directPeers: args.directPeers,
   };
+  try {
+    validateNetworkOptions(opts);
+  } catch (error) {
+    if (error instanceof Error) throw new YargsError(error.message);
+    throw error;
+  }
+  if (!quic && !tcp) {
+    throw new YargsError("Cannot disable both TCP and QUIC transports");
+  }
+  if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
+    throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
+  }
+  return opts;
 }
 
 export const options: CliCommandOptions<NetworkArgs> = {
+  "network.native.traceGossip": {
+    type: "boolean",
+    group: "network",
+    description: "Emit bounded lifecycle logs for blocks and a stable 1/64 sample of columns",
+    defaultDescription: "false",
+    hidden: true,
+  },
+  "network.native.receiveBudgetBytes": {
+    type: "number",
+    group: "network",
+    description: "Native QUIC receive flow-control budget shared across connection slots, in bytes",
+    defaultDescription: String(512 * 1024 * 1024),
+    hidden: true,
+  },
+  "network.native.initialCongestionWindowPackets": {
+    type: "number",
+    group: "network",
+    description: "Native QUIC initial congestion window in packets (1-64); congestion control adapts it afterwards",
+    defaultDescription: "10",
+    hidden: true,
+  },
+  "network.native.receiveDatagramsPerTurn": {
+    type: "number",
+    group: "network",
+    description: "Maximum native QUIC datagrams received per network turn (1-256)",
+    defaultDescription: "32",
+    hidden: true,
+  },
+  "network.backend": {
+    type: "string",
+    choices: ["libp2p", "native"],
+    default: "libp2p",
+    group: "network",
+    description:
+      "Networking backend. Native requires TCP disabled and QUIC enabled, supports one listener per IP family, and remembers qualified peers when a peer store is configured.",
+  },
   discv5: {
     type: "boolean",
     // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type
@@ -504,6 +561,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "boolean",
     hidden: true,
     group: "network",
+    description: "Run libp2p in a JavaScript worker. Native networking always uses its own network thread",
   },
 
   "network.maxYoungGenerationSizeMb": {

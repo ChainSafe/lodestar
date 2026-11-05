@@ -9,6 +9,15 @@
 // Tests: fixed-length bitfield validation, trailing zeros enforcement.
 
 const std = @import("std");
+
+/// Exit 99 lets AFL detect panics without waiting for symbolization or a core dump handler.
+pub const panic = std.debug.FullPanic(fuzzPanic);
+
+fn fuzzPanic(text: []const u8, ret_addr: ?usize) noreturn {
+    const addr = (ret_addr orelse @returnAddress()) -% std.process.getBaseAddress();
+    std.debug.print("panic: {s} at +0x{x}\n", .{ text, addr });
+    std.process.exit(99);
+}
 const assert = std.debug.assert;
 const ssz = @import("ssz");
 

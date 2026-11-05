@@ -1,0 +1,44 @@
+pub const policy = @import("policy.zig");
+pub const Demand = types.Demand;
+pub const Coverage = types.Coverage;
+pub const custody = @import("custody.zig");
+pub const Discovery = @import("discovery.zig").Discovery;
+pub const enr = @import("enr.zig");
+pub const Control = @import("control.zig").Control;
+pub const Dialing = @import("dialing.zig").Dialing;
+pub const types = @import("types.zig");
+pub const remembered = @import("remembered.zig");
+pub const remembered_file = @import("remembered_file.zig");
+pub const RememberedCheckpoint = @import("remembered_checkpoint.zig");
+pub const identity_index = @import("identity_index.zig");
+pub const reputation = @import("reputation.zig");
+pub const Catalog = @import("catalog.zig").Catalog;
+pub const PeerRef = types.PeerRef;
+pub const Status = types.Status;
+pub const Metadata = types.Metadata;
+pub const ForkContext = types.ForkContext;
+pub const LocalState = types.LocalState;
+pub const PeerAction = types.PeerAction;
+pub const DisconnectReason = types.DisconnectReason;
+pub const Snapshot = types.Snapshot;
+pub const Event = types.Event;
+
+test {
+    _ = @import("goodbye.zig");
+    _ = custody;
+    _ = policy;
+    _ = @import("discovery.zig");
+    _ = @import("enr.zig");
+    _ = @import("types.zig");
+    _ = @import("catalog.zig");
+    _ = @import("reputation.zig");
+    _ = @import("dialing.zig");
+    _ = @import("control.zig");
+    _ = @import("control_metrics.zig");
+    _ = @import("identity_index.zig");
+    _ = @import("coverage.zig");
+    _ = @import("dial_history.zig");
+    _ = @import("remembered.zig");
+    _ = remembered_file;
+    _ = RememberedCheckpoint;
+}

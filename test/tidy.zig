@@ -51,6 +51,14 @@ const inline_test_allowlist = [_][]const u8{
     "src/fork_choice/fork_choice.zig",
     // Private method on ProtoArray: init.
     "src/fork_choice/proto_array.zig",
+    // Private frame enqueue path: Outbox.appendControl.
+    "src/network/gossipsub/outbox.zig",
+    // Private mesh selection helper: Overlay.shuffle.
+    "src/network/gossipsub/overlay.zig",
+    // Private CPU probe and accelerated-hash seams: x86ShaAvx2, aarch64Sha2, hash.
+    "src/network/gossipsub/sha256.zig",
+    // Private score counters: PeerScore.load, PeerScore.store.
+    "src/network/gossipsub/score.zig",
     // Private helper: compatibleUnionOptionsAreCompatible.
     "src/ssz/type/compatible_union.zig",
     // Private diff internals: findModifiedIndices, loadValidators.
@@ -69,6 +77,8 @@ const unimported_file_allowlist = [_][]const u8{
     // Narrow roots for running one subtree's tests without compiling the rest.
     "src/state_transition/block_test_root.zig",
     "src/state_transition/utils_test_root.zig",
+    // The accelerated gossip SHA-256 object's root, which build.zig compiles with extra CPU features.
+    "src/network/gossipsub/sha256_accelerated.zig",
 };
 
 /// Rule scoping.
@@ -237,10 +247,12 @@ const File = struct {
 
     /// Imports the file from inside a `test` block, which is the only form that
     /// actually causes its tests to run.
-    fn wiresTests(file: File, basename: []const u8) bool {
+    fn wiresTests(file: File, gpa: Allocator, target: []const u8) !bool {
         for (file.imports) |import| {
             if (!import.in_test_block) continue;
-            if (std.mem.eql(u8, std.fs.path.basenamePosix(import.path), basename)) return true;
+            const path = try resolveImport(gpa, file.dir, import.path) orelse continue;
+            defer gpa.free(path);
+            if (std.mem.eql(u8, path, target)) return true;
         }
         return false;
     }
@@ -494,8 +506,24 @@ fn pairedFile(
 // Rules
 // -------------------------------------------------------------------------
 
-/// Every `_test.zig` must be imported, must pair with a file of the same
-/// name, and must be wired from that file rather than from a module root.
+/// Scenario suites use `<file>_<scenario>_test.zig`. The longest matching
+/// file name owns the suite, so adding a more specific file cannot silently
+/// leave its tests wired from a less specific owner.
+fn testOwner(gpa: Allocator, files: []const File, file: File) !?*const File {
+    var stem = file.basename[0 .. file.basename.len - "_test.zig".len];
+    while (stem.len > 0) {
+        const snake = try pairedFile(gpa, file.dir, stem, .snake);
+        defer gpa.free(snake);
+        const title = try pairedFile(gpa, file.dir, stem, .title);
+        defer gpa.free(title);
+        if (findFile(files, snake) orelse findFile(files, title)) |owner| return owner;
+        const separator = std.mem.findScalarLast(u8, stem, '_') orelse break;
+        stem = stem[0..separator];
+    }
+    return null;
+}
+
+/// Every `_test.zig` must be wired from the file it covers.
 fn tidyTestFileWiring(gpa: Allocator, files: []const File, errors: *Errors) !void {
     for (files) |file| {
         if (!isTestFile(file.basename)) continue;
@@ -503,7 +531,7 @@ fn tidyTestFileWiring(gpa: Allocator, files: []const File, errors: *Errors) !voi
         var wired = false;
         for (files) |other| {
             if (std.mem.eql(u8, other.path, file.path)) continue;
-            if (other.wiresTests(file.basename)) {
+            if (try other.wiresTests(gpa, file.path)) {
                 wired = true;
                 break;
             }
@@ -515,13 +543,12 @@ fn tidyTestFileWiring(gpa: Allocator, files: []const File, errors: *Errors) !voi
 
         const stem = file.basename[0 .. file.basename.len - "_test.zig".len];
         const snake = try pairedFile(gpa, file.dir, stem, .snake);
-        const title = try pairedFile(gpa, file.dir, stem, .title);
-
-        const pair = findFile(files, snake) orelse findFile(files, title) orelse {
+        defer gpa.free(snake);
+        const pair = try testOwner(gpa, files, file) orelse {
             errors.addUnpairedTestFile(file.path, snake);
             continue;
         };
-        if (!pair.wiresTests(file.basename)) {
+        if (!try pair.wiresTests(gpa, file.path)) {
             errors.addTestFileWiredElsewhere(file.path, pair.path);
         }
     }
@@ -1004,6 +1031,78 @@ test "rule: TitleCase file pairs with a snake_case test file" {
     try tidyTestFileWiring(fixture.arena(), files, errors);
 
     try expectDiagnostics(fixture.output(), "");
+}
+
+test "rule: scenario suites pair with snake_case and TitleCase owners" {
+    var fixture: Fixture = .init();
+    defer fixture.deinit();
+    const errors = fixture.start();
+
+    const files = try analyzeAll(fixture.arena(), &.{
+        .{ "src/peer_io.zig", "test { _ = @import(\"peer_io_partial_write_test.zig\"); }\n" },
+        .{ "src/peer_io_partial_write_test.zig", "test \"t\" {}\n" },
+        .{ "src/Engine.zig", "test { _ = @import(\"engine_handshake_test.zig\"); }\n" },
+        .{ "src/engine_handshake_test.zig", "test \"t\" {}\n" },
+    }, errors);
+    try tidyTestFileWiring(fixture.arena(), files, errors);
+
+    try expectDiagnostics(fixture.output(), "");
+}
+
+test "rule: scenario suites require the most specific owner" {
+    var fixture: Fixture = .init();
+    defer fixture.deinit();
+    const errors = fixture.start();
+
+    const files = try analyzeAll(fixture.arena(), &.{
+        .{ "src/engine.zig", "test { _ = @import(\"engine_handshake_test.zig\"); _ = @import(\"engine_handshake_retry_test.zig\"); }\n" },
+        .{ "src/engine_handshake.zig", "pub const x = 1;\n" },
+        .{ "src/engine_handshake_test.zig", "test \"t\" {}\n" },
+        .{ "src/engine_handshake_retry_test.zig", "test \"t\" {}\n" },
+    }, errors);
+    try tidyTestFileWiring(fixture.arena(), files, errors);
+
+    try expectDiagnostics(fixture.output(),
+        \\src/engine_handshake_test.zig: error: src/engine_handshake.zig does not pull it in from a test block, wire it from the module under test
+        \\src/engine_handshake_retry_test.zig: error: src/engine_handshake.zig does not pull it in from a test block, wire it from the module under test
+        \\
+    );
+}
+
+test "rule: scenario suites still require analyzed test imports" {
+    var fixture: Fixture = .init();
+    defer fixture.deinit();
+    const errors = fixture.start();
+
+    const files = try analyzeAll(fixture.arena(), &.{
+        .{ "src/engine.zig", "const tests = @import(\"engine_handshake_test.zig\");\n" },
+        .{ "src/engine_handshake_test.zig", "test \"t\" {}\n" },
+    }, errors);
+    try tidyTestFileWiring(fixture.arena(), files, errors);
+
+    try expectDiagnostics(fixture.output(),
+        \\src/engine_handshake_test.zig: error: no `test { _ = @import(...); }` pulls this in, so its tests never run
+        \\
+    );
+}
+
+test "rule: identical suite names in different directories do not share wiring" {
+    var fixture: Fixture = .init();
+    defer fixture.deinit();
+    const errors = fixture.start();
+
+    const files = try analyzeAll(fixture.arena(), &.{
+        .{ "src/a/engine.zig", "test { _ = @import(\"../b/engine_handshake_test.zig\"); }\n" },
+        .{ "src/a/engine_handshake_test.zig", "test \"t\" {}\n" },
+        .{ "src/b/engine.zig", "test { _ = @import(\"engine_handshake_test.zig\"); }\n" },
+        .{ "src/b/engine_handshake_test.zig", "test \"t\" {}\n" },
+    }, errors);
+    try tidyTestFileWiring(fixture.arena(), files, errors);
+
+    try expectDiagnostics(fixture.output(),
+        \\src/a/engine_handshake_test.zig: error: no `test { _ = @import(...); }` pulls this in, so its tests never run
+        \\
+    );
 }
 
 test "rule: root.zig without a test block hides sibling tests" {

@@ -7,6 +7,7 @@ import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
+import {collectHeadRange} from "./beaconBlocksByRange.js";
 
 export async function* onBlobSidecarsByRange(
   request: deneb.BlobSidecarsByRangeRequest,
@@ -29,6 +30,7 @@ export async function* onBlobSidecarsByRange(
   if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
+      limit: count,
       gte: startSlot,
       lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {
@@ -38,21 +40,13 @@ export async function* onBlobSidecarsByRange(
 
   // Non-finalized range of blobs
   if (endSlot > archiveMaxSlot) {
-    const headBlock = chain.forkChoice.getHead();
-    const headRoot = headBlock.blockRoot;
-    // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
-    // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
-
-    // Iterate head chain with ascending block numbers
-    for (let i = headChain.length - 1; i >= 0; i--) {
-      const block = headChain[i];
-
+    const headChain = collectHeadRange(chain, startSlot, endSlot, archiveMaxSlot);
+    for (const block of headChain) {
       // Must include only blobs in the range requested, and skip anything the archive loop
       // above already served via the block.slot > archiveMaxSlot filter.
       if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
-        // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
+        // after the archive reads. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
@@ -112,6 +106,9 @@ export function validateBlobSidecarsByRangeRequest(
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
+  if (!Number.isSafeInteger(startSlot)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot is not a safe integer");
+  }
 
   // Spec: [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
   const minimumRequestEpoch = Math.max(
@@ -127,6 +124,10 @@ export function validateBlobSidecarsByRangeRequest(
 
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
     count = config.MAX_REQUEST_BLOCKS_DENEB;
+  }
+
+  if (!Number.isSafeInteger(startSlot + count)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "range end is not a safe integer");
   }
 
   return {startSlot, count};

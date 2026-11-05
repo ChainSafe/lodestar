@@ -94,8 +94,12 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       getHeadState: () => ({slot: headSlot}),
       forkChoice: {
         getFinalizedBlock: () => ({slot: headSlot - SLOTS_PER_EPOCH}),
-        getHead: () => ({blockRoot: "0x" + "00".repeat(32), payloadStatus: PayloadStatus.FULL}),
-        getAllAncestorBlocks: () => [],
+        getHead: () => ({
+          slot: headSlot,
+          blockRoot: "0x" + "00".repeat(32),
+          payloadStatus: PayloadStatus.FULL,
+        }),
+        iterateAncestorBlocks: () => [].values(),
       },
       custodyConfig: {custodyColumns: [0, 1], custodyColumnsIndex: new Uint8Array(NUMBER_OF_COLUMNS).fill(1)},
       earliestAvailableSlot: 0,
@@ -167,10 +171,16 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
     await db.init();
     const chain = makeChain();
     if (source === "fork choice") {
-      vi.spyOn(chain.forkChoice, "getAllAncestorBlocks").mockReturnValue([
-        {slot: 11, blockRoot: "0x" + "11".repeat(32), payloadStatus: PayloadStatus.FULL},
-        {slot: 9, blockRoot: "0x" + "09".repeat(32), payloadStatus: PayloadStatus.FULL},
-      ] as ReturnType<IBeaconChain["forkChoice"]["getAllAncestorBlocks"]>);
+      vi.spyOn(chain.forkChoice, "getHead").mockReturnValue({
+        slot: 11,
+        blockRoot: "0x" + "11".repeat(32),
+        payloadStatus: PayloadStatus.FULL,
+      } as ReturnType<IBeaconChain["forkChoice"]["getHead"]>);
+      vi.spyOn(chain.forkChoice, "iterateAncestorBlocks").mockReturnValue(
+        [{slot: 0, blockRoot: "0x" + "00".repeat(32), payloadStatus: PayloadStatus.FULL}].values() as ReturnType<
+          IBeaconChain["forkChoice"]["iterateAncestorBlocks"]
+        >
+      );
     } else {
       vi.spyOn(chain, "getHeadState").mockReturnValue({
         slot: 100,

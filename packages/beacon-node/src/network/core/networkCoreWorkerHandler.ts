@@ -8,7 +8,8 @@ import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
+import {NativePeerReportContext} from "@lodestar/native/network";
+import {ResponseOutgoing} from "@lodestar/reqresp";
 import {Status} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {GoodByeReasonCode} from "../../constants/index.js";
@@ -19,7 +20,7 @@ import {terminateWorkerThread, wireEventsOnMainThread} from "../../util/workerEv
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
-import {GetReqRespHandlerFn, IncomingRequestArgs, OutgoingRequestArgs} from "../reqresp/types.js";
+import {GetReqRespHandlerFn, IncomingRequestArgs, OutgoingRequestArgs, ResponseIncoming} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 import {
   NetworkWorkerThreadEventType,
@@ -101,7 +102,7 @@ export class WorkerNetworkCore implements INetworkCore {
       this.modules.logger.error("Network worker thread error", {}, err);
     });
 
-    const {metrics} = modules;
+    const metrics = modules.metrics?.networkJs;
     if (metrics) {
       metrics.networkWorkerHandler.reqRespBridgeReqCallerPending.addCollect(() => {
         metrics.networkWorkerHandler.reqRespBridgeReqCallerPending.set(this.reqRespBridgeReqCaller.pendingCount);
@@ -209,8 +210,13 @@ export class WorkerNetworkCore implements INetworkCore {
   goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void> {
     return this.getApi().goodbyeAndDisconnect(peer, reason);
   }
-  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
-    return this.getApi().reportPeer(peer, action, actionName);
+  reportPeer(
+    peer: PeerIdStr,
+    action: PeerAction,
+    actionName: string,
+    context?: NativePeerReportContext
+  ): Promise<void> {
+    return this.getApi().reportPeer(peer, action, actionName, context);
   }
 
   // TODO: Should this just be events? Do they need to report errors back?

@@ -289,6 +289,7 @@ jobs:
       - uses: ./.github/actions/restore-build
         with:
           node: 24
+      - uses: ./.github/actions/setup-llvm
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       - name: Restore era files cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -301,7 +302,12 @@ jobs:
       - name: Download ere verifier fixtures
         run: |
           zig build run:download_ere_fixtures
+      - name: Build network test peer
+        run: zig build build-exe:network_interop_peer -Doptimize=ReleaseSafe
       - name: Test bindings
+        env:
+          LODESTAR_Z_NETWORK_STOCK_HOST: installed
+          LODESTAR_Z_NETWORK_NATIVE_PEER: ${{ github.workspace }}/zig-out/bin/network_interop_peer
         run: |
           pnpm --filter @lodestar/native test
 
@@ -345,6 +351,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-llvm
       - name: Install Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
@@ -435,6 +442,18 @@ jobs:
         run: |
           zig build test:ere_verifier
 
+      - name: Run discovery and network tests
+        run: |
+          zig build test:discv5
+          zig build test:discv5_crawl_batch
+          zig build test:discv5 -Doptimize=ReleaseSafe
+          zig build test:discv5_crawl_batch -Doptimize=ReleaseSafe
+          zig build test:fault_io
+          zig build test:udp
+          zig build test:network
+          zig build test:network_runtime
+          zig build check:network-tools
+
       - name: Build benchmarks
         run: |
           zig build build-exe:bench_hashing build-exe:bench_merkle_gindex build-exe:bench_merkle_node build-exe:bench_ssz_attestation build-exe:bench_ssz_block build-exe:bench_ssz_state build-exe:bench_process_block build-exe:bench_process_epoch build-exe:bench_fork_choice_update_head build-exe:bench_fork_choice_compute_deltas build-exe:bench_fork_choice_on_attestation
@@ -449,6 +468,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-llvm
       - name: Install Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
@@ -473,6 +493,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-llvm
       - name: Install Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
@@ -530,6 +551,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-llvm
       - name: Install Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
@@ -566,6 +588,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-llvm
       - name: Install Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
@@ -614,6 +637,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-llvm
       - name: Install Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
@@ -642,6 +666,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-llvm
       - name: Install Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
@@ -649,23 +674,51 @@ jobs:
       - name: Install AFL++ and LLVM
         run: |
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y afl++ llvm
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y afl++ llvm libc++-18-dev libc++abi-18-dev libunwind-18-dev
+      - name: Configure reliable local core dumps for AFL
+        run: |
+          sudo sysctl -w kernel.core_pattern=core
+          test "$(cat /proc/sys/kernel/core_pattern)" = core
       - name: Verify AFL++ and LLVM are available
         run: |
           afl-cc --version
+          for name in libc++.so libc++abi.so libunwind.so; do
+            linker_input=$(clang++ -print-file-name="$name")
+            test "$linker_input" != "$name" && test -e "$linker_input"
+          done
           if command -v llvm-config >/dev/null 2>&1; then
             llvm-config --version
           else
             llvm-config-18 --version
           fi
       - name: Build fuzz harnesses
-        # ReleaseSafe, as Dockerfile.fuzz: the harnesses' asserts and Zig's
-        # bounds/overflow checks must stay compiled in, or fuzzing cannot see
-        # those bugs. Not Debug: Zig 0.16's `sanitize_c = .full` emits
-        # `__ubsan_handle_*` calls into blst's C objects that `afl-cc` can't
-        # resolve without `libubsan`.
+        # Keep assertions and Zig safety checks enabled in fuzz campaigns.
         run: |
           cd test/fuzz && zig build -Doptimize=ReleaseSafe
+      - name: Replay and smoke bounded network parsers with safety checks
+        run: |
+          cd test/fuzz
+          zig build build-network -Doptimize=ReleaseSafe
+          generated=$(mktemp -d)
+          zig build network-corpus -Doptimize=ReleaseSafe -- "$generated"
+          bash ./check-network-corpus.sh "$generated"
+          NETWORK_GENERATED_CORPUS="$generated" ./smoke-network.sh
+      - name: Replay Debug harnesses that link Zig-built C and C++ archives
+        # Only Debug C code calls the UBSan runtime bundled into the snappy,
+        # blst and hashtree archives; ReleaseFast and ReleaseSafe link without it.
+        run: |
+          cd test/fuzz
+          out=$(mktemp -d)
+          zig build build-network_reqresp build-bls_public_key build-ssz_chunked_leaf_set --prefix "$out"
+          for target in network_reqresp bls_public_key ssz_chunked_leaf_set; do
+            count=0
+            for seed in corpus/"$target"-*/*; do
+              count=$((count + 1))
+              test "$count" -le 4096
+              __AFL_DEFER_FORKSRV=1 "$out/bin/fuzz-$target" < "$seed" >/dev/null
+            done
+            echo "$target: $count Debug seeds replayed"
+          done
 
   bindings-artifacts:
     name: Native platform builds
@@ -676,7 +729,10 @@ jobs:
       - uses: ./.github/actions/setup-node
         with:
           node: 24
+      - uses: ./.github/actions/setup-llvm
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Install Rust release targets
+        run: rustup target add $(node -p 'require("./bindings/package.json").zapi.targets.join(" ")')
       - name: Build release artifacts
         run: |
           pnpm --filter @lodestar/native exec zapi build-artifacts --optimize ReleaseSafe --zig-cwd .. --artifacts-dir "$PWD/bindings/artifacts"

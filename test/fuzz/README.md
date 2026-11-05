@@ -7,18 +7,89 @@ for SSZ deserialization in lodestar-z.
 
 ### SSZ
 
-| Target                 | Binary                      | Description                                                                                                                 |
-| ---------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `ssz_basic`            | `fuzz-ssz_basic`            | Bool, Uint8/16/32/64/128/256                                                                                                |
-| `ssz_bitlist`          | `fuzz-ssz_bitlist`          | BitList(8/64/2048)                                                                                                          |
-| `ssz_bitvector`        | `fuzz-ssz_bitvector`        | BitVector(4/32/64/512)                                                                                                      |
-| `ssz_bytelist`         | `fuzz-ssz_bytelist`         | ByteList(32/256/1024)                                                                                                       |
-| `ssz_containers`       | `fuzz-ssz_containers`       | Fork, Checkpoint, Eth1Data, Attestation, etc.                                                                               |
-| `ssz_lists`            | `fuzz-ssz_lists`            | FixedList(Uint64/32/Bool), VariableList(ByteList)                                                                           |
-| `ssz_chunked_leaf_set` | `fuzz-ssz_chunked_leaf_set` | FixedList(Uint64, chunked_leaf=true): replay set/commit/get op stream, assert root equivalence against fromValue(reference) |
+| Target                 | Binary                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ssz_basic`            | `fuzz-ssz_basic`            | Bool, Uint8/16/32/64/128/256                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `ssz_bitlist`          | `fuzz-ssz_bitlist`          | BitList(8/64/2048)                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `ssz_bitvector`        | `fuzz-ssz_bitvector`        | BitVector(4/32/64/512)                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `ssz_bytelist`         | `fuzz-ssz_bytelist`         | ByteList(32/256/1024)                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `ssz_containers`       | `fuzz-ssz_containers`       | Fork, Checkpoint, Eth1Data, Attestation, etc.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `ssz_lists`            | `fuzz-ssz_lists`            | FixedList(Uint64/32/Bool), VariableList(ByteList)                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `ssz_chunked_leaf_set` | `fuzz-ssz_chunked_leaf_set` | FixedList(Uint64, chunked_leaf=true): replay set/commit/get op stream, assert root equivalence against fromValue(reference)                                                                                                                                                                                                                                                                                                                                          |
+| `ssz_wire_types`       | `fuzz-ssz_wire_types`       | Every consensus type that arrives over gossip or reqresp, phase0 through gloas (blocks, blinded blocks, blob and data column sidecars, attestations, aggregates, slashings, exits, sync messages, light client updates, payload envelopes and bids): the value decoder, the serialized validator and the tree decoder must agree on acceptance, re-encoded bytes and hash tree root, through a leak-checking allocator. Selector table in `tools/ssz_wire_types.zig` |
 
 Each SSZ input is `[selector_byte][ssz_data...]`. The first byte selects
 which SSZ type to test within the target. See source files for the mapping.
+`zig build extract-corpus` writes the `-initial` seed directories from the
+downloaded spec vectors (`zig build run:download_spec_tests` at the repository
+root); `ssz_wire_types` gets one default-value seed per selector plus every
+mainnet `ssz_static` vector up to 1 MiB.
+
+### Network (stateful)
+
+Single-shot decoders cover the wire formats; these harnesses drive the state machines. Each
+input is an opcode stream: one byte selects the operation and the following bytes supply
+its parameters, so AFL mutations become session histories. Every step ends with the owner's
+own invariant checks (`checkInvariants`, `checkScheduling`, the reqresp route invariant) and
+the harness's whole-table accounting.
+
+| Target                        | Drives                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Invariants                                                                                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `network_gossip_sessions`     | One `Gossipsub` without a transport: SUBSCRIBE, GRAFT, PRUNE, IHAVE, IWANT, IDONTWANT and messages from several sessions, clock advances, heartbeats, verdicts, outbox drains, disconnects and reconnects                                                                                                                                                                                                                                                                                                                             | store pages and entries, validation pins, promise balance, delivery pool reserves, finite scores, ready-list scheduling                                                    |
+| `network_gossip_recovery`     | IHAVE floods, announced-then-delivered ids, IWANT, promise expiry and cancellation, reconnects with the same identity, penalties and decay                                                                                                                                                                                                                                                                                                                                                                                            | as above, with promise reserves exercised at capacity                                                                                                                      |
+| `network_processor_admission` | `Gossipsub` feeding a `GossipProcessor`: mixed kinds, sources and sizes, newest-first eviction, dependency checks and waits, claim, finish, report, verdict pumping, expiry, slot changes, `dropQueued` and `dropPeer`                                                                                                                                                                                                                                                                                                                | per-kind items and bytes, per-source charges, state counts, execution credits, store entries, empty table at close                                                         |
+| `network_reqresp_session`     | Two `ReqResp` instances per side over an in-process QUIC pair: requests, responses, error responses, finish, cancel, serving retain and release, raw request and response bytes with arbitrary splits and FIN placement, stream resets, clock advances for every timeout                                                                                                                                                                                                                                                              | route invariant, slot and event accounting, no pending request after `cancelAll`                                                                                           |
+| `network_quic_session`        | Two engines through a real handshake, then stream opens, writes, reads, capacity polls, shutdowns, closes, route binds, hostile datagrams on the established path, time jumps, connection close, one further dial per input with its handshake under the same operations (more attempts hit the dialing and connection limits), streams on it, abandon and close, stop admission, close all, a datagram-loss policy toward either address, and the host's read-only queries                                                           | engine invariants after every step, route and connection counts, clean teardown                                                                                            |
+| `network_discv5_session`      | A discv5 `Engine` with three real peers over an in-process link: PING, FINDNODE and TALKREQ in both directions, standard responses, TALKRESP and NODES answers with chosen record counts, delivery in order, reordered, duplicated, corrupted, truncated, dropped or replayed from spoofed addresses and to the wrong engine, random datagrams, floods from many sources, time advances to the next deadline, call cancel and fail, routing confirmations, unresponsive marks, local record updates, and the host's read-only queries | calls held equal the call table, sessions and challenges within capacity, routing table within capacity, every held call cancellable and the call tables empty at teardown |
+
+These harnesses link both snappy and quiche where needed (`all` in `network-targets.tsv`)
+and run in snapshot mode (`snapshot` in the same table): `zig_fuzz_init` builds the
+protocol state once, including the QUIC handshake, and the fork server starts after it.
+Every input runs in a fresh fork of that state and checks cleanup on its own copy.
+The gossip fixture closes peers and checks pooled resources without freeing its large
+allocations: the kernel reclaims them when the child exits, avoiding the copy-on-write
+cost of filling freed memory with undefined bytes. The processor, QUIC and reqresp
+instances still run their deinitializers. Nothing is rebuilt per input and every input
+sees the identical starting state.
+
+quiche keeps its timers on the libc clock, so every harness run preloads
+`zig-out/lib/libfuzz_clock.so` (`pkg/afl++/fuzz_clock.c`, built with the harnesses): a
+process-local clock that starts at a fixed instant and moves only when the harness advances
+its own logical clock (the QUIC and reqresp harnesses call `fuzz_clock_advance` from their
+time-advance operations), or by `FUZZ_CLOCK_STEP_NS` per read. A fork child inherits the
+parent's value by copy, so every input starts at the same time and advances independently,
+while loss recovery and idle timers still expire as the input advances time. The same
+library pins entropy (`getrandom`, `getentropy` and the raw syscall) to a generator in
+process memory: BoringSSL reseeds itself after it detects a fork, so without this every
+child's handshake drew different TLS randoms and the map varied run to run. `fuzz-env.sh`
+holds this policy and the AFL environment; `fuzz-loop.sh`, `replay-crashes.sh`,
+`smoke-network.sh` and the build's `run-<target>` steps all apply it, and `fuzz-loop.sh`
+refuses to start a snapshot target without the library (`NO_FAKE_CLOCK=1` overrides, with
+aging snapshots). Replay an input by hand with the same policy:
+
+```sh
+source fuzz-env.sh
+fuzz_run_harness zig-out/bin/fuzz-network_quic_session < input
+```
+
+Use ReleaseSafe for campaigns; gossip uses an input-driven clock.
+
+A harness panic prints the assertion's return address as an offset into the binary, plus
+the failing step for the QUIC session harness; `addr2line -e zig-out/bin/fuzz-<target>
+<offset>` names the source line.
+
+```sh
+zig build -Doptimize=ReleaseSafe build-network
+zig build -Doptimize=ReleaseSafe test-harnesses
+./smoke-network.sh network_gossip_sessions network_processor_admission
+```
+
+The build instruments quiche with LLVM sanitizer coverage (`RUSTFLAGS` set on
+quiche-zig's cargo step, so it is part of the step's cache key): its guards land
+in the section the AFL shim registers for the Zig code, so AFL sees edges inside
+quiche as well as in the engine. The quic_session harness went from a plateau of
+about 800 edges to over 5,000 within a minute of the first instrumented run.
+`-Dquiche_sancov=false` builds the plain library.
 
 ### BLS
 
@@ -63,9 +134,12 @@ zig build run-ssz_containers
 Or invoke `afl-fuzz` directly:
 
 ```sh
-afl-fuzz -i corpus/ssz_basic-cmin -o afl-out/ssz_basic \
-  -- zig-out/bin/fuzz-ssz_basic @@
+AFL_CRASH_EXITCODE=99 afl-fuzz -i corpus/ssz_basic-cmin -o afl-out/ssz_basic \
+  -- zig-out/bin/fuzz-ssz_basic
 ```
+
+Harness panics exit with code 99. The launch scripts and build steps configure
+`AFL_CRASH_EXITCODE` so AFL records these as crashes.
 
 The fuzzer runs indefinitely. Let it run for as long as you like; meaningful
 coverage is usually reached within a few hours, but longer runs can find
@@ -89,35 +163,56 @@ zig build run-bls_aggregate_sig
 
 ### Running targets in a loop
 
-`fuzz-loop.sh` runs fuzzers in parallel, [minimizes the corpus]()
-with `afl-cmin` after each round, and repeats indefinitely:
+`fuzz-loop.sh` starts afl-fuzz for each target and keeps it running: a main
+instance plus any number of secondaries share `afl-out/<target>`, exchange
+queue entries, and run different power schedules. Instances are never restarted on a timer, so AFL's calibration and
+scheduling state is kept; a restart resumes each instance in place through
+`AFL_AUTORESUME`.
 
 ```sh
 ./fuzz-loop.sh --help
-Usage: ./fuzz-loop.sh [targets...]
-
-Groups:  all, ssz, bls
-Targets: ssz_basic ssz_bitlist ssz_bitvector ssz_bytelist ssz_containers ssz_lists bls_public_key bls_signature bls_aggregate_pk bls_aggregate_sig
+Usage: ./fuzz-loop.sh [--status | --stop | --cmin] [target[=instances]...]
 
 Examples:
-  ./fuzz-loop.sh                    # fuzz all targets
-  ./fuzz-loop.sh ssz                # fuzz all SSZ targets
-  ./fuzz-loop.sh bls                # fuzz all BLS targets
-  ./fuzz-loop.sh ssz bls_signature  # mix groups and individual targets
-
-Environment:
-  ROUND_DURATION=3600               # seconds per round (default: 3600)
+  ./fuzz-loop.sh network                                  # one instance per network target
+  ./fuzz-loop.sh network_quic_session=3 network_wire=2    # per-target instance counts
+  INSTANCES=2 ./fuzz-loop.sh ssz                          # default count for every target
+  TIMEOUT_MS=1000 ./fuzz-loop.sh network_gossip_sessions  # fixed per-run timeout
+  ./fuzz-loop.sh --status network                         # statistics without stopping
+  ./fuzz-loop.sh --stop                                   # stop everything under afl-out
 ```
 
-Logs are written to `logs/<target>.log`. Crashes are reported at the end of
-each round; run `./replay-crashes.sh` to inspect them.
+`TIMEOUT_MS` passes `-t <ms>` so a seed that exceeds it is skipped rather
+than fatal; the stateful harnesses run at tens of executions per second, where
+AFL's auto-scaled timeout files load spikes as hangs. The loop never adds AFL's
+`+` suffix: AFL++ 4.09c stores the slowest seed's exec time in microseconds as
+the millisecond timeout, a thousandfold too long.
+
+Each instance records its pid with the process start time from `/proc`, so
+`--stop` and the already-running check never act on a reused pid. `--cmin`
+writes to `corpus/<target>-cmin-new` when `corpus/<target>-cmin` is tracked by
+git, since a committed corpus is a reviewed seed set rather than campaign
+output.
+
+Logs are written to `logs/<target>.<instance>.log`. `--status` prints
+executions, paths, pending favorites, stability, crashes and hangs per
+instance; run `./replay-crashes.sh` to inspect crashes. `--cmin` merges every
+instance queue of a target and minimizes it into `corpus/<target>-cmin`; use it
+before a restart that needs fresh seeds, such as after a harness change, not on
+a schedule.
+
+To keep a campaign running after the shell exits, start the loop detached, for
+example `TIMEOUT_MS=1000 setsid nohup ./fuzz-loop.sh network_quic_session=2 >>
+logs/loop.log 2>&1 < /dev/null &`; `--status` and `--stop` work from any shell.
 
 ## Finding Crashes and Hangs
 
-After (or during) a run, results are written to `afl-out/<target>/default/`:
+After (or during) a run, results are written to `afl-out/<target>/<instance>/`,
+where `<instance>` is `main` or `s1`, `s2`, ... (`default` for a run started
+by hand without `-M`/`-S`):
 
 ```
-afl-out/ssz_basic/default/
+afl-out/ssz_basic/main/
 ├── crashes/ # Inputs that triggered crashes
 ├── hangs/   # Inputs that triggered hangs/timeouts
 └── queue/   # All interesting inputs (the evolved corpus)
@@ -129,22 +224,21 @@ issue. The filename encodes metadata about how it was found (e.g.
 
 ## Reproducing a Crash
 
-Replay any crashing input by piping it into the harness:
+Replay any crashing input by piping it into the harness. The harness embeds AFL's deferred
+fork-server marker, so outside afl-fuzz set `__AFL_DEFER_FORKSRV=1` or the runtime aborts
+with "forkserver is already up" (`fuzz_run_harness` from `fuzz-env.sh` does this and applies
+the clock policy):
 
 ```sh
-cat afl-out/ssz_basic/default/crashes/<filename> | __AFL_DEFER_FORKSRV=1 zig-out/bin/fuzz-ssz_basic
+__AFL_DEFER_FORKSRV=1 zig-out/bin/fuzz-ssz_basic < afl-out/ssz_basic/main/crashes/<filename>
 ```
-
-`__AFL_DEFER_FORKSRV=1` is required outside `afl-fuzz`: the harness starts the
-fork server itself, and without it the binary aborts with "forkserver is
-already up" before reading any input.
 
 ## Corpus Management
 
-After a fuzzing run, the queue in `afl-out/<target>/default/queue/` typically
-contains many redundant inputs. Use `afl-cmin` to find the smallest
-subset that preserves full edge coverage, and `afl-tmin` to shrink
-individual test cases.
+After a fuzzing run, the queues in `afl-out/<target>/<instance>/queue/`
+typically contain many redundant inputs. `./fuzz-loop.sh --cmin <target>`
+merges them and keeps the smallest subset that preserves full edge coverage in
+`corpus/<target>-cmin`; use `afl-tmin` to shrink individual test cases.
 
 > **Important:** The instrumented binary reads input from **stdin**, not
 > from file arguments. Do **not** use `@@` with `afl-cmin`, `afl-tmin`,
@@ -167,7 +261,7 @@ Reduce the evolved queue to a minimal set covering all discovered edges:
 
 ```sh
 AFL_NO_FORKSRV=1 afl-cmin.bash \
-  -i afl-out/ssz_basic/default/queue \
+  -i afl-out/ssz_basic/main/queue \
   -o corpus/ssz_basic-cmin \
   -- zig-out/bin/fuzz-ssz_basic
 ```
@@ -187,16 +281,17 @@ rename the output files to replace colons with underscores before committing:
 
 ### Corpus directories
 
-| Directory                  | Contents                                        |
-| -------------------------- | ----------------------------------------------- |
-| `corpus/<target>-initial/` | Hand-crafted seeds + spec test vectors          |
-| `corpus/<target>-cmin/`    | Output of `afl-cmin` (edge-deduplicated corpus) |
+| Directory                  | Contents                                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `corpus/<target>-initial/` | Hand-crafted seeds + spec test vectors                                                                              |
+| `corpus/<target>-cmin/`    | Output of `afl-cmin` (edge-deduplicated corpus); tracked for the SSZ and BLS targets, local for the network targets |
 
 ## Container image
 
 `Dockerfile.fuzz` (repository root) packages **every target** into one image,
 `ghcr.io/chainsafe/lodestar-z-fuzz`, for the ChainSafe fuzz platform. The
-image contains the instrumented binaries, `afl-fuzz`, `afl-cmin` and the seed corpora; the
+image contains the ReleaseSafe instrumented binaries, the clock shim, `afl-fuzz`,
+`afl-cmin` and the seed corpora; the
 Zig and LLVM toolchain stays in the build stage. `FUZZ_TARGET` picks the
 target a container runs.
 
@@ -316,7 +411,8 @@ crash with `--init`, or the target runs as PID 1, ignores `SIGABRT`, and the
 crash reports as `SIGTRAP`:
 
 ```sh
-docker run --rm -i --init --entrypoint /opt/fuzz/bin/fuzz-ssz_basic \
+docker run --rm -i --init -e LD_PRELOAD=/opt/fuzz/lib/libfuzz_clock.so \
+  --entrypoint /opt/fuzz/bin/fuzz-ssz_basic \
   lodestar-z-fuzz < /tmp/fuzz/failures/crash-<hash>
 ```
 

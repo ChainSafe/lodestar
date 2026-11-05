@@ -1,0 +1,16 @@
+network_wire	initial	131072	none
+network_reqresp	initial	131072	snappy
+network_gossip	initial	131072	snappy
+network_gossip_lifecycle	initial	512	none
+network_control	initial	302	none
+network_identify	initial	82021	none
+network_topic_policy	initial	256	none
+network_tls	initial	4096	quiche
+network_quic_receive	initial	1500	quiche
+discv5_wire	initial	1281	none
+network_gossip_sessions	initial	4096	snappy	snapshot
+network_gossip_recovery	initial	4096	snappy	snapshot
+network_processor_admission	initial	4096	snappy	snapshot
+network_quic_session	initial	4096	quiche	snapshot
+network_reqresp_session	initial	8192	all	snapshot
+network_discv5_session	initial	4096	none	snapshot
