@@ -12,7 +12,6 @@ import {fromHex} from "@lodestar/utils";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
-import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
 import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateCachedBellatrixState, generateState, zeroProtoBlock} from "../../utils/state.js";
@@ -43,10 +42,7 @@ describe("PrepareNextSlot scheduler", () => {
 
     getForkStub = vi.spyOn(config, "getForkName");
     executionEngineStub = chainStub.executionEngine;
-    executionEngineStub.notifyForkchoiceUpdate.mockResolvedValue({
-      payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
-      payloadId: "0x1234",
-    });
+    executionEngineStub.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
     vi.spyOn(chainStub, "opts", "get").mockReturnValue({emitPayloadAttributes} as IChainOptions);
 
     scheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);
@@ -192,6 +188,7 @@ describe("PrepareNextSlot scheduler", () => {
       expect.any(String),
       expect.any(String),
       expect.any(String),
+      expect.any(String),
       expect.objectContaining({withdrawals: [], parentBeaconBlockRoot: expect.any(Uint8Array)})
     );
     expect(spy).toHaveBeenCalledTimes(1);
@@ -201,7 +198,7 @@ describe("PrepareNextSlot scheduler", () => {
     );
     expect(spy.mock.invocationCallOrder[0]).toBeLessThan(computeStateHashTreeRoot.mock.invocationCallOrder[0]);
     // attributes computed for the event are reused for the EL payload preparation
-    expect(executionEngineStub.notifyForkchoiceUpdate.mock.calls[0][4]).toBe(
+    expect(executionEngineStub.notifyForkchoiceUpdate.mock.calls[0][5]).toBe(
       spy.mock.calls[0][0].data.payloadAttributes
     );
     expect(loggerStub.error).not.toHaveBeenCalled();
@@ -262,6 +259,7 @@ describe("PrepareNextSlot scheduler", () => {
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
       expect.any(String),
+      expect.any(String),
       safeBlockHash,
       finalizedBlockHash,
       spy.mock.calls[0][0].data.payloadAttributes
@@ -320,6 +318,7 @@ describe("PrepareNextSlot scheduler", () => {
     });
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
+      expect.any(String),
       expect.any(String),
       expect.any(String),
       expect.any(String),

@@ -1,7 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
-  AncestorStatus,
   ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
@@ -43,7 +42,7 @@ import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
-import {ChainEvent, ReorgEventData} from "../emitter.js";
+import {ChainEvent} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
@@ -321,18 +320,10 @@ export async function importBlock(
   }
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
-    // Set head state as strong reference
-    this.regen.updateHeadState(newHead, postState);
+    this.onHeadChanged(oldHead, newHead, postState);
 
     const delaySec = this.clock.secFromSlot(newHead.slot);
-    this.logger.verbose("New chain head", {
-      slot: newHead.slot,
-      root: newHead.blockRoot,
-      delaySec,
-    });
-
     if (this.metrics) {
-      this.metrics.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
       const headFork = this.config.getForkName(newHead.slot);
@@ -343,32 +334,6 @@ export async function importBlock(
           this.metrics.importBlock.setHeadAfterCutoff.inc();
         }
       }
-    }
-
-    this.onNewHead(newHead);
-
-    this.metrics?.forkChoice.changedHead.inc();
-
-    const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
-    if (ancestorResult.code === AncestorStatus.CommonAncestor) {
-      // CommonAncestor = chain reorg, old head and new head not direct descendants
-
-      const forkChoiceReorgEventData: ReorgEventData = {
-        depth: ancestorResult.depth,
-        epoch: computeEpochAtSlot(newHead.slot),
-        slot: newHead.slot,
-        newHeadBlock: newHead.blockRoot,
-        oldHeadBlock: oldHead.blockRoot,
-        newHeadState: newHead.stateRoot,
-        oldHeadState: oldHead.stateRoot,
-        executionOptimistic: isOptimisticBlock(newHead),
-      };
-
-      this.emitter.emit(routes.events.EventType.chainReorg, forkChoiceReorgEventData);
-      this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
-
-      this.metrics?.forkChoice.reorg.inc();
-      this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
     }
 
     // Lightclient server support (only after altair)
@@ -469,8 +434,13 @@ export async function importBlock(
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
-        .notifyForkchoiceUpdate(this.config.getForkName(fcuHead.slot), headBlockHash, safeBlockHash, finalizedBlockHash)
-        .then((result) => this.onForkchoiceUpdated(fcuHead.blockRoot, headBlockHash, result))
+        .notifyForkchoiceUpdate(
+          this.config.getForkName(fcuHead.slot),
+          fcuHead.blockRoot,
+          headBlockHash,
+          safeBlockHash,
+          finalizedBlockHash
+        )
         .catch((e) => {
           if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
             this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);

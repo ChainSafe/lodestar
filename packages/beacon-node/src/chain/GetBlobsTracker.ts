@@ -16,7 +16,7 @@ import {ChainEventEmitter} from "./emitter.js";
 
 export type GetBlobsTrackerInit = {
   logger: Logger;
-  executionEngine: IExecutionEngine;
+  executionEngine: Pick<IExecutionEngine, "getBlobs">;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;
@@ -27,7 +27,7 @@ export type GetBlobsTrackerInit = {
  */
 export class GetBlobsTracker {
   logger: Logger;
-  executionEngine: IExecutionEngine;
+  executionEngine: Pick<IExecutionEngine, "getBlobs">;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;
