@@ -20,6 +20,7 @@ import {
 } from "@lodestar/params";
 import {
   EffectiveBalanceIncrements,
+  G2_POINT_AT_INFINITY,
   IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
@@ -30,7 +31,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
-import {Logger, MapDef, assert, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, assert, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
@@ -409,20 +410,34 @@ export class AggregatedAttestationPool {
 
     const sortedConsolidationsByScore = Array.from(consolidations.entries())
       .sort((a, b) => b[1] - a[1])
-      .map(([consolidation, _]) => consolidation)
-      .slice(0, MAX_ATTESTATIONS_ELECTRA);
+      .map(([consolidation, _]) => consolidation);
 
     // on chain aggregation is expensive, only do it after all
     const packedAttestationsMetrics = this.metrics?.opPool.aggregatedAttestationPool.packedAttestations;
-    const packedAttestations: electra.Attestation[] = new Array(sortedConsolidationsByScore.length);
-    for (const [i, consolidation] of sortedConsolidationsByScore.entries()) {
-      packedAttestations[i] = aggregateConsolidation(consolidation);
+    const packedAttestations: electra.Attestation[] = [];
+    for (const consolidation of sortedConsolidationsByScore) {
+      if (packedAttestations.length >= MAX_ATTESTATIONS_ELECTRA) {
+        break;
+      }
+
+      const attestation = aggregateConsolidation(consolidation);
+      // The point at infinity is not a valid aggregate signature, exclude it from the block
+      if (byteArrayEquals(attestation.signature, G2_POINT_AT_INFINITY)) {
+        this.logger?.debug("Excluding aggregate with infinity signature", {
+          slot: stateSlot,
+          attestationSlot: attestation.data.slot,
+          committees: consolidation.byCommittee.size,
+        });
+        continue;
+      }
+
+      const i = packedAttestations.push(attestation) - 1;
 
       // record metrics of packed attestations
       packedAttestationsMetrics?.committeeCount.set({index: i}, consolidation.byCommittee.size);
       packedAttestationsMetrics?.totalAttesters.set({index: i}, consolidation.totalAttesters);
       packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
-      packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - packedAttestations[i].data.slot);
+      packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - attestation.data.slot);
       packedAttestationsMetrics?.newSeenAttesters.set({index: i}, consolidation.newSeenAttesters);
       packedAttestationsMetrics?.totalEffectiveBalance.set({index: i}, consolidation.totalNewSeenEffectiveBalance);
     }
@@ -462,7 +477,8 @@ export class AggregatedAttestationPool {
         attestations.push(...attestationGroup.getAttestations());
       }
     }
-    return attestations;
+    // The point at infinity is not a valid aggregate signature, do not serve such an aggregate
+    return attestations.filter((attestation) => !byteArrayEquals(attestation.signature, G2_POINT_AT_INFINITY));
   }
 
   private onScrapeMetrics(metrics: Metrics): void {

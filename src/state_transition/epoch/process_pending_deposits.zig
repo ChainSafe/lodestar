@@ -152,7 +152,7 @@ fn applyPendingDeposit(
             // this is to fix the double deposit issue found in mekong
             // see https://github.com/ChainSafe/lodestar/pull/7255
             if (cache.balances) |*balances| {
-                try balances.append(cache.allocator, amount);
+                balances.appendAssumeCapacity(amount);
             }
         } else |_| {
             // invalid deposit signature, ignore the deposit

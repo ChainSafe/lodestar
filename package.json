@@ -68,7 +68,6 @@
     "dotenv": "^16.4.5",
     "inquirer": "^9.1.5",
     "libp2p": "3.4.0",
-    "node-gyp": "^9.4.0",
     "playwright": "^1.60.0",
     "pretty-format": "^29.7.0",
     "semver": "^7.7.3",
