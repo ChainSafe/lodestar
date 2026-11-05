@@ -27,6 +27,7 @@ const max_depth = @import("hashing").max_depth;
 const Depth = @import("hashing").Depth;
 const Gindex = @import("gindex.zig").Gindex;
 const ChunkedLeaf = @import("ChunkedLeaf.zig");
+const verify_invariants = @import("root.zig").verify_invariants;
 
 // Flat node fields (file-as-struct). Order doesn't affect SoA layout.
 payload: u64,
@@ -873,19 +874,23 @@ pub const Id = enum(u32) {
         std.debug.assert(intra_chunk < valid_chunks);
         std.debug.assert(valid_chunks <= ChunkedLeaf.K);
         const storage = try node_id.getChunkedLeafPtr(pool);
-        std.debug.assert(storage.len <= valid_chunks);
+        // Only this check loads `len`, past the 2 KiB of chunks; the store below doesn't stall.
+        if (verify_invariants) std.debug.assert(storage.len <= valid_chunks);
 
         write(&storage.chunks[intra_chunk], index, value);
         storage.len = valid_chunks;
         pool.nodes.items(.root)[@intFromEnum(node_id)] = lazy_sentinel;
     }
 
+    /// Returns a new chunked_leaf `Id` with chunk `intra_index` replaced by `chunk`.
+    /// `intra_index` must be below the leaf's `len`.
     pub fn setChunkedLeafChunk(node_id: Id, pool: *Pool, intra_index: u16, chunk: *const [32]u8) Error!Id {
         std.debug.assert(intra_index < ChunkedLeaf.K);
 
         const idx = @intFromEnum(node_id);
         if (pool.nodes.items(.state)[idx].kind() != .chunked_leaf) return error.InvalidNode;
         const old_storage = chunkedLeafPtr(pool.nodes.items(.payload), idx);
+        std.debug.assert(intra_index < old_storage.len);
 
         const new_storage = try pool.allocator.create(ChunkedLeaf);
         errdefer pool.allocator.destroy(new_storage);
@@ -905,7 +910,8 @@ pub const Id = enum(u32) {
     /// Returns a new chunked_leaf `Id` with each `intra_indices[i]` chunk replaced by
     /// `new_chunks[i]`. Heap blob cloned once; all updates applied in-place
     /// in the new blob. Returns `error.InvalidNode` if the receiver is not
-    /// a chunked_leaf variant. `intra_indices` and `new_chunks` must have equal length.
+    /// a chunked_leaf variant. `intra_indices` and `new_chunks` must have equal length,
+    /// and each index must be below the leaf's `len`.
     pub fn setChunkedLeafChunks(
         node_id: Id,
         pool: *Pool,
@@ -926,6 +932,7 @@ pub const Id = enum(u32) {
 
         for (intra_indices, new_chunks) |i, ptr| {
             std.debug.assert(i < ChunkedLeaf.K);
+            std.debug.assert(i < old_storage.len);
             new_storage.chunks[i] = ptr.*;
         }
 

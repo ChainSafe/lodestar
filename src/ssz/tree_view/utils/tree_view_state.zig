@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const Node = @import("persistent_merkle_tree").Node;
 const Gindex = @import("persistent_merkle_tree").Gindex;
 const ChunkedLeaf = @import("persistent_merkle_tree").ChunkedLeaf;
+const verify_invariants = @import("persistent_merkle_tree").verify_invariants;
 const CloneOpts = @import("clone_opts.zig").CloneOpts;
 
 /// Common state for tree views that use runtime gindex-based child caching.
@@ -85,7 +86,8 @@ pub const TreeViewState = struct {
         const state = node.getState(self.pool);
 
         if (state.kind() == .chunked_leaf and state.refCount() == 0) {
-            std.debug.assert(self.changed.contains(gindex));
+            // setChildNode stages owned leaves in both maps; checking costs a lookup per write.
+            if (verify_invariants) std.debug.assert(self.changed.contains(gindex));
         } else {
             const replacement = switch (state.kind()) {
                 .zero => blk: {
