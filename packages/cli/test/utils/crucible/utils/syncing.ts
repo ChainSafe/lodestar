@@ -1,4 +1,5 @@
 import {routes} from "@lodestar/api";
+import {kzg} from "@lodestar/beacon-node/util";
 import {ForkPostDeneb, ForkPreGloas, isForkPostFulu} from "@lodestar/params";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
@@ -115,10 +116,9 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   const currentHeadRoot = toHex(
     env.forkConfig.getForkTypes(currentHead.message.slot).BeaconBlock.hashTreeRoot(currentHead.message)
   );
-  // Legacy deneb..electra blob sidecars are not persisted, so only post-fulu heads
-  // (reconstructed from data columns) can include blobs on publish
-  const currentSidecars = isForkPostFulu(env.forkConfig.getForkName(currentHead.message.slot))
-    ? (await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})).value()
+  // Pre-fulu blobs are no longer persisted, and sims still run pre-fulu heads
+  const currentBlobs = isForkPostFulu(env.forkConfig.getForkName(currentHead.message.slot))
+    ? (await env.nodes[0].beacon.api.beacon.getBlobs({blockId: currentHead.message.slot})).value()
     : [];
 
   const directPeers = env.nodes.map((n) => n.beacon.multiaddr).filter((m): m is string => m != null);
@@ -157,8 +157,8 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
       await unknownBlockSync.beacon.api.beacon.publishBlockV2({
         signedBlockContents: {
           signedBlock: currentHead as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>,
-          blobs: currentSidecars.map((b) => b.blob),
-          kzgProofs: currentSidecars.map((b) => b.kzgProof),
+          blobs: currentBlobs,
+          kzgProofs: currentBlobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs),
         },
         broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       })

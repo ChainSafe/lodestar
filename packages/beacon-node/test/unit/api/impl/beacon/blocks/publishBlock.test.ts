@@ -1,8 +1,10 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
+import {ApiError} from "@lodestar/api/server";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
@@ -17,7 +19,11 @@ import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
 import {validateGossipBlock} from "../../../../../../src/chain/validation/block.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
-import {config as forkConfig, generateBlockWithColumnSidecars} from "../../../../../utils/blocksAndData.js";
+import {
+  ELECTRA_FORK_EPOCH,
+  config as forkConfig,
+  generateBlockWithColumnSidecars,
+} from "../../../../../utils/blocksAndData.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 vi.mock("../../../../../../src/chain/blocks/verifyBlock.js");
@@ -279,6 +285,56 @@ describe("api - beacon - publishBlockV2", () => {
         expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
       }
     );
+  });
+
+  it("rejects a pre-fulu block with blob commitments", async () => {
+    const signedBlock = ssz.electra.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH);
+    signedBlock.message.body.blobKzgCommitments = [new Uint8Array(48)];
+    modules = getApiTestModules({config: forkConfig});
+
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
+    await expect(
+      api.publishBlockV2({
+        signedBlockContents: {signedBlock, blobs: [], kzgProofs: []},
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      })
+    ).rejects.toThrow(ApiError);
+
+    expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+  });
+
+  it("accepts a pre-fulu block without blob commitments", async () => {
+    const signedBlock = ssz.electra.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH);
+    const blockRoot = toRootHex(
+      forkConfig.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+    );
+    modules = getApiTestModules({config: forkConfig});
+    Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
+    Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
+    modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
+      BlockInputPreData.createFromBlock({
+        forkName: ForkName.electra,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+      })
+    );
+    modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+    modules.network.publishBeaconBlock = vi.fn();
+
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
+    await expect(
+      api.publishBlockV2({
+        signedBlockContents: {signedBlock, blobs: [], kzgProofs: []},
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(modules.network.publishBeaconBlock).toHaveBeenCalledOnce();
   });
 
   it("tracks data column publication results", async () => {

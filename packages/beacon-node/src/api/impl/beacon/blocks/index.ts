@@ -4,6 +4,7 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkPostBellatrix,
+  ForkPostDeneb,
   ForkPostFulu,
   ForkPostGloas,
   ForkPreBellatrix,
@@ -109,6 +110,13 @@ export function getBeaconBlockApi(
     const signedBlock = signedBlockContents.signedBlock;
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
+    if (
+      isForkPostDeneb(fork) &&
+      !isForkPostFulu(fork) &&
+      getBlobKzgCommitments(fork, signedBlock as SignedBeaconBlock<ForkPostDeneb>).length > 0
+    ) {
+      throw new ApiError(400, `Blocks with blobs are not supported for pre-fulu fork=${fork}`);
+    }
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
     const blockForImport = chain.seenBlockInputCache.getByBlock({
@@ -131,7 +139,6 @@ export function getBeaconBlockApi(
     }
 
     // After gloas, data columns are not published with the block but when publishing the execution payload envelope.
-    // Legacy pre-fulu block contents are accepted, but their blobs are discarded.
     let dataColumnSidecars: fulu.DataColumnSidecar[] = [];
 
     if (isDenebBlockContents(signedBlockContents) && isForkPostFulu(fork) && !isForkPostGloas(fork)) {
