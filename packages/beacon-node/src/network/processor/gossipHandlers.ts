@@ -705,8 +705,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
           // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
           // which is all the information we need so there is no reason to delay until execution payload arrives
-          // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
-          // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
+          // Columns fetched here feed payloadInput.addColumn, which resolves the waitForAllData of a
+          // pending payload import. No processExecutionPayload trigger needed from this path.
           chain.getBlobsTracker.triggerGetBlobs(payloadInput);
         }
       })
@@ -927,7 +927,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             }
 
             // NOTE: we do NOT call chain.processExecutionPayload here. That is triggered only by
-            // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
+            // envelope arrival (gossip or API). A pending payload import is awaiting
             // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
 
             scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
