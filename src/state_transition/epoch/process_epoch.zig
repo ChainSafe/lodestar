@@ -48,7 +48,7 @@ pub fn processEpoch(
 
     if (comptime fork.gte(.altair)) {
         timer = time.start(io);
-        try processInactivityUpdates(fork, allocator, config, epoch_cache, state, cache);
+        try processInactivityUpdates(fork, config, epoch_cache, state, cache);
         try observeEpochTransitionStep(.{ .step = .process_inactivity_updates }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
     }
 
