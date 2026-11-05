@@ -24,8 +24,8 @@ RUN case "${TARGETARCH}" in \
 
 WORKDIR /usr/app
 
-# Enable corepack for pnpm support
-RUN corepack enable
+# Node 26 no longer bundles corepack
+RUN npm install -g corepack@0.36.0 && corepack enable
 
 # Copy dependency manifests first for optimal layer caching.
 # Only changes to package.json or lockfile will invalidate the install layer,

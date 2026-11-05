@@ -22,7 +22,7 @@ RUN case "${TARGETARCH}" in \
 COPY . .
 
 ENV CI=true
-RUN corepack enable && corepack prepare --activate && \
+RUN npm install -g corepack@0.36.0 && corepack enable && corepack prepare --activate && \
   pnpm install --frozen-lockfile && \
   pnpm build && \
   pnpm clean:nm && \
