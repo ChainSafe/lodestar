@@ -1,32 +1,15 @@
 name: Benchmark
 
-# Actions access a common cache entry and may corrupt it.
-concurrency:
-  # If PR, cancel prev commits. head_ref = source branch name on pull_request, null if push
-  # if push, default to github.run_id so retries of the same commit do not overwrite each other
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
-
 on:
-  push:
-    branches:
-      - stable
-      - unstable
-      - benchmark # For debugging
-  pull_request:
-    branches:
-      - stable
-      - unstable
+  schedule:
+    - cron: "30 1 * * *" # 1:30 am UTC
   workflow_dispatch:
 
 jobs:
   run:
     runs-on: warp-ubuntu-2204-x64-4x
-    # Skip for dependabot PRs, secrets are not made available and will fail
-    # Don't run on forks. Forks don't have access to the S3 credentials and the workflow will fail
-    if: |
-      github.actor != 'dependabot[bot]' &&
-      ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository )
+    # Forks don't have access to the S3 credentials and the workflow will fail
+    if: github.repository == 'ChainSafe/lodestar'
 
     steps:
       # <common-build> - Uses YAML anchors in the future
@@ -44,10 +27,12 @@ jobs:
           key: perf-states-${{ hashFiles('packages/state-transition/test/perf/params.ts') }}
 
       - name: Run benchmarks
-        run: pnpm benchmark
+        id: benchmarks
+        # An explicit bash shell enables pipefail, without it tee hides a failed run
+        shell: bash
+        # @chainsafe/benchmark only infers the baseline and posts comments on push and pull_request events
+        run: pnpm benchmark --compareBranch unstable --skipPostComment 2>&1 | tee "$RUNNER_TEMP/benchmark.log"
         env:
-          # To write to PRs and commits
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # benchmark options
           BENCHMARK_S3: true
           # S3 credentials
@@ -58,3 +43,17 @@ jobs:
           S3_ENDPOINT: ${{ secrets.S3_BENCH_LODESTAR_ENDPOINT }}
           # Key prefix to separate benchmark data from multiple repositories
           S3_KEY_PREFIX: ${{ github.repository }}/${{ runner.os }}
+
+      - name: Report failed benchmarks in the job summary
+        if: failure() && steps.benchmarks.outcome == 'failure'
+        run: |
+          log=$(sed -E 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/benchmark.log")
+          {
+            echo "### Failed benchmarks"
+            echo
+            grep "Found previous benchmark" <<< "$log" || echo "No previous benchmark found"
+            echo
+            echo '```'
+            grep -E '^\s*(!|✖) ' <<< "$log" || echo "No failed benchmarks found, see the job log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
