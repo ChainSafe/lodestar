@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="en" data-register="blueprint">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proto-array keeps the answer, the Zig store recomputes it</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Cpath d='M18 40V24l14-8 14 8v16l-14 8-14-8Z' fill='none' stroke='%23fbbf24' stroke-width='4' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%2338bdf8'/%3E%3C/svg%3E">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style data-ve-kit>
+/* visual-explainer kit. The renderer inlines this file at <link rel="stylesheet" data-ve-kit>.
+   Tokens sit in :where(), so a page's own :root rules (topic motif, a named palette) always win.
+   A page picks its register with <html data-register="instrument|blueprint|paper|editorial">; Instrument is the default. */
+
+/* scale, shared by every register */
+:where(:root) {
+  color-scheme: light dark;
+  --t-label: .75rem; --t-small: .875rem; --t-body: 1rem; --t-lead: 1.25rem; --t-h2: 1.625rem; --t-h1: clamp(2.25rem, 5.5vw, 4rem);
+  --s-1: .25rem; --s-2: .5rem; --s-3: .75rem; --s-4: 1rem; --s-5: 1.5rem; --s-6: 2rem; --s-7: 3rem; --s-8: 4.5rem;
+  --r-1: 4px; --r-2: 10px;
+  --ease: cubic-bezier(.16,1,.3,1); --fast: 150ms; --med: 300ms; --slow: 500ms;
+}
+
+/* Instrument (default): Geist, near-black and amber; dark first */
+:where(:root) {
+  --bg: #0b0d0c; --surface: #121614; --border: #1f2522; --border-bright: #5e6662;
+  --text: #e6ebe8; --text-dim: #919d97; --accent: #f2a93b; --accent-dim: rgba(242,169,59,.14);
+  --ok: #6fcf97; --warn: #e8c547; --risk: #ef6f5c; --info: #6cb6e0;
+  --node-top: color-mix(in srgb, var(--text) 7%, var(--surface)); --lift: rgb(0 0 0 / .45); --halo: 32%;
+  --font-body: 'Geist', 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-display: var(--font-body); --display-weight: 600;
+  --stage: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--text) 13%, transparent) 1px, transparent 1.5px) 0 0 / 20px 20px;
+}
+@media (prefers-color-scheme: light) {
+  :where(:root) {
+    --bg: #f4f5f3; --surface: #ffffff; --border: #dfe3e0; --border-bright: #888e8b;
+    --text: #121614; --text-dim: #545e59; --accent: #955700; --accent-dim: rgba(149,87,0,.12);
+    --ok: #1c7443; --warn: #7a5e00; --risk: #b0341e; --info: #1a6890;
+    --node-top: var(--surface); --lift: rgb(18 22 20 / .12); --halo: 22%;
+  }
+}
+
+/* Blueprint: IBM Plex, blue-black, a 24px line grid on the stage, r-1 everywhere; dark first */
+:where(:root[data-register="blueprint"]) {
+  --bg: #0d1520; --surface: #132031; --border: #22324a; --border-bright: #596b87;
+  --text: #e3ecf5; --text-dim: #92a6bb; --accent: #ffb547; --accent-dim: rgba(255,181,71,.14);
+  --ok: #6fd3a0; --warn: #e8d36a; --risk: #ff7b6b; --info: #7cc0f0;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --r-2: 4px;
+  --stage: linear-gradient(color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px) 0 0 / 24px 24px;
+}
+@media (prefers-color-scheme: light) {
+  :where(:root[data-register="blueprint"]) {
+    --bg: #f2f6fa; --surface: #ffffff; --border: #d6e0ea; --border-bright: #818f9e;
+    --text: #0f1a26; --text-dim: #4d6074; --accent: #a34700; --accent-dim: rgba(163,71,0,.12);
+    --ok: #1c7443; --warn: #776300; --risk: #b0341e; --info: #145f99;
+  }
+}
+
+/* Paper: Newsreader headings over Atkinson Hyperlegible, ink blue; light first */
+:where(:root[data-register="paper"]) {
+  --bg: #f7f7f4; --surface: #ffffff; --border: #e3e3dc; --border-bright: #8e8e8a;
+  --text: #17191c; --text-dim: #575c63; --accent: #2c4cd0; --accent-dim: rgba(44,76,208,.12);
+  --ok: #1d7443; --warn: #836000; --risk: #b3301d; --info: #1b6a94;
+  --node-top: var(--surface); --lift: rgb(18 22 20 / .12); --halo: 22%;
+  --font-body: 'Atkinson Hyperlegible Next', 'Segoe UI', sans-serif;
+  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
+  --font-display: 'Newsreader', Georgia, serif; --display-weight: 500;
+}
+@media (prefers-color-scheme: dark) {
+  :where(:root[data-register="paper"]) {
+    --bg: #111316; --surface: #181b1f; --border: #262a30; --border-bright: #62676c;
+    --text: #e8e8e3; --text-dim: #9ba1a9; --accent: #93a6ff; --accent-dim: rgba(147,166,255,.14);
+    --ok: #6cc492; --warn: #e3b94d; --risk: #f0806b; --info: #6fb8dc;
+    --node-top: color-mix(in srgb, var(--text) 7%, var(--surface)); --lift: rgb(0 0 0 / .45); --halo: 32%;
+  }
+}
+
+/* Editorial: Instrument Serif display over Instrument Sans; light first */
+:where(:root[data-register="editorial"]) {
+  --bg: #fbfbf9; --surface: #f1f0ec; --border: #e2e0da; --border-bright: #8c8a85;
+  --text: #111111; --text-dim: #5a5853; --accent: #cc3418; --accent-dim: rgba(204,52,24,.12);
+  --ok: #1d7443; --warn: #836000; --risk: #a01d48; --info: #1b6a94;
+  --node-top: var(--surface); --lift: rgb(18 22 20 / .12); --halo: 22%;
+  --font-body: 'Instrument Sans', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Instrument Serif', Georgia, serif; --display-weight: 400;
+}
+@media (prefers-color-scheme: dark) {
+  :where(:root[data-register="editorial"]) {
+    --bg: #0f0f0f; --surface: #1a1a19; --border: #2b2a28; --border-bright: #696763;
+    --text: #f2f0eb; --text-dim: #a4a19b; --accent: #ff6e50; --accent-dim: rgba(255,110,80,.14);
+    --ok: #6cc492; --warn: #e3b94d; --risk: #f57fa2; --info: #7cb8e8;
+    --node-top: color-mix(in srgb, var(--text) 7%, var(--surface)); --lift: rgb(0 0 0 / .45); --halo: 32%;
+  }
+}
+
+/* base */
+html { font-size: 17px; }
+* { box-sizing: border-box; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 400 var(--t-body)/1.6 var(--font-body); text-wrap: pretty; font-kerning: normal; font-synthesis: none; -webkit-font-smoothing: antialiased; }
+::selection { background: var(--accent-dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+main { max-width: 64rem; margin: 0 auto; padding: var(--s-8) var(--s-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-8); }
+section, figure, header { min-width: 0; }
+header { display: grid; gap: var(--s-4); }
+header + figure { margin-top: calc(var(--s-6) - var(--s-8)); }
+/* text-box trims to cap height and baseline, so gaps are measured from the letters, not the line box */
+h1, h2, .kpi .val { text-box: trim-both cap alphabetic; }
+h1 { font-size: var(--t-h1); line-height: 1.05; font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: -.035em; text-wrap: balance; max-width: 16ch; margin-bottom: var(--s-2); }
+h1 .num { color: var(--accent); font-variant-numeric: tabular-nums; }
+h2 { font-size: var(--t-h2); line-height: 1.2; font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: -.015em; text-wrap: balance; }
+/* section opener: hairline, mono label in columns 1–3, h2 in 4–12, on one baseline */
+.sec-head { display: grid; gap: var(--s-3) var(--s-5); align-items: baseline; border-top: 1px solid var(--border); padding-top: var(--s-5); margin-bottom: var(--s-6); }
+@media (min-width: 52rem) { .sec-head { grid-template-columns: 3fr 9fr; } }
+/* the other opener, a bare label above the h2, gets the same gaps, so the h2 never sits on the figure below */
+section > .ve-label:has(+ h2) { margin-bottom: var(--s-3); }
+section > h2 { margin-bottom: var(--s-6); }
+h3 { font-size: var(--t-body); line-height: 1.3; font-weight: 600; }
+.eyebrow { display: flex; align-items: center; gap: var(--s-2); font: 600 var(--t-label) var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.eyebrow::before { content: ''; width: 1.25rem; height: 2px; background: currentColor; }
+.ve-label { font: 500 var(--t-label) var(--font-mono); color: var(--text-dim); }
+.caps { text-transform: uppercase; letter-spacing: .08em; font-weight: 600; color: var(--text); }
+.lead { font-size: var(--t-lead); line-height: 1.5; color: var(--text-dim); max-width: 44ch; }
+.lead b { color: var(--text); font-weight: 600; }
+.meta { font: 500 var(--t-label) var(--font-mono); color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.unit { font-size: .5em; font-weight: 500; color: var(--text-dim); letter-spacing: 0; }
+code { font: .875em var(--font-mono); font-variant-ligatures: none; }
+/* prose by element, at zero specificity so a page's own rules win: the measure on a section's own text (a card or a table sets
+   its own), code blocks, bare lists, and the gaps between a section's blocks (text to text closer than a block, the line after
+   an h3 closest). The opener keeps its own gaps, so h2 gets none. */
+:where(main, section:not(.sources)) > :where(p, ul, ol) { max-width: 65ch; }
+:where(pre) { font: 500 var(--t-small)/1.55 var(--font-mono); font-variant-ligatures: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-2); padding: var(--s-4); overflow-x: auto; }
+:where(pre) code { font: inherit; }
+:where(main :is(ul, ol):not([class])) { padding-left: 1.25rem; display: grid; gap: var(--s-2); }
+:where(section:not(.sources) > * + :not(h2)) { margin-top: var(--s-5); }
+:where(section:not(.sources) > :is(p, ul, ol) + :is(p, ul, ol)) { margin-top: var(--s-3); }
+:where(section:not(.sources) > h3 + *) { margin-top: var(--s-2); }
+
+/* section nav for 4+ sections: a sticky bar before <main>, aligned to its column; the links alone scroll sideways on a phone, and
+   kit.js marks the section in view */
+.ve-toc { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--s-4); padding: 0 max(var(--s-5), (100% - 64rem) / 2 + var(--s-5)); background: var(--bg); border-bottom: 1px solid var(--border); }
+.ve-toc > div { display: flex; flex: 1; gap: var(--s-1); min-width: 0; padding: var(--s-2) 0; overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.ve-toc > div::-webkit-scrollbar { display: none; }
+.ve-toc a { font: 500 var(--t-label) var(--font-mono); color: var(--text-dim); text-decoration: none; padding: var(--s-2); border-radius: var(--r-1); white-space: nowrap; }
+.ve-toc a:hover { color: var(--text); }
+.ve-toc a[aria-current] { color: var(--text); background: var(--accent-dim); }
+.ve-toc .pos { font: 500 var(--t-label) var(--font-mono); color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+:where(body:has(> .ve-toc) main > *) { scroll-margin-top: 4rem; }
+
+/* figure: the stage is a faint dot grid, so nodes read as objects placed on it */
+.frame { background: var(--stage), var(--bg); border: 1px solid var(--border); border-radius: var(--r-2); padding: var(--s-5); overflow-x: auto; }
+figcaption { font-size: var(--t-body); color: var(--text-dim); margin-top: var(--s-3); max-width: 65ch; }
+.fig-n { font: 600 var(--t-label) var(--font-mono); color: var(--text); margin-right: var(--s-2); }
+
+/* diagram kit (references/diagrams.md) */
+/* min-width keeps 14-unit labels >= 12px as rendered; narrow screens scroll the frame instead. kit/render.mjs sets --ve-min for a viewBox wider than 816. */
+.ve-svg { width: 100%; min-width: var(--ve-min, 700px); height: auto; display: block; font: 500 17px var(--font-body); }
+.ve-n .sh { fill: url(#ve-node); stroke: var(--border-bright); stroke-width: 1.5; filter: drop-shadow(0 6px 14px var(--lift)); transition: stroke var(--fast) var(--ease), opacity var(--med) var(--ease); }
+.ve-n .lid { fill: var(--node-top); }
+.ve-n.is-key .sh { fill: color-mix(in srgb, var(--accent) 11%, var(--surface)); stroke: var(--accent); stroke-width: 2; filter: drop-shadow(0 0 16px color-mix(in srgb, var(--accent) var(--halo), transparent)); }
+.ve-n text { fill: var(--text); text-anchor: middle; dominant-baseline: central; font-weight: 600; }
+.ve-n .sub { fill: var(--text-dim); font: 500 14px var(--font-mono); }
+.ve-n .gl { fill: none; stroke: var(--text-dim); stroke-width: 1.5; stroke-linejoin: round; }
+.ve-n .ve-kind { fill: var(--text-dim); font: 600 14px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.ve-n.is-key .gl { stroke: var(--accent); }
+.ve-e { fill: none; stroke: var(--text-dim); stroke-width: 1.75; marker-end: url(#ve-ah); }
+.ve-e.is-hot { stroke: var(--accent); stroke-width: 2.75; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.ve-e.is-async { stroke-dasharray: 6 5; }
+.ve-el { fill: var(--text-dim); font: 500 14px var(--font-mono); text-anchor: middle; paint-order: stroke; stroke: var(--bg); stroke-width: 5px; stroke-linejoin: round; }
+.ve-el.l { text-anchor: end; } .ve-el.r { text-anchor: start; }
+/* a dashed boundary around a group, with a mono tag in its corner */
+.ve-bnd { fill: none; stroke: var(--border-bright); stroke-width: 1; stroke-dasharray: 6 5; }
+.ve-bnd-t { fill: var(--text-dim); font: 600 14px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+/* a plain mono label on a drawing (a note, a count); .key and .risk color it */
+.ve-tag { fill: var(--text-dim); font: 500 14px var(--font-mono); }
+.ve-tag.key { fill: var(--accent); } .ve-tag.risk { fill: var(--risk); }
+/* a slot in a queue or worker pool; .is-on fills it (.on is the stepper's) */
+.ve-slot { fill: var(--surface); stroke: var(--border-bright); stroke-width: 1.25; }
+.ve-slot.is-on { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.75; }
+/* chart axes and ticks, and their labels */
+.ve-axis { fill: none; stroke: var(--border-bright); stroke-width: 1; }
+.ve-axis-t { fill: var(--text-dim); font: 500 14px var(--font-mono); text-anchor: middle; font-variant-numeric: tabular-nums; }
+/* <ve-flow> on a page: its labels stay at 12 px or more, and a small drawing grows no more than 1.3× (kit/flow.mjs sets both) */
+.ve-svg.ve-flow { min-width: var(--min); max-width: var(--max); }
+/* flags on <ve-flow> parts: new, gone (an arrow also gets ✕) */
+.ve-n.is-new .sh { stroke: var(--ok); stroke-dasharray: 6 4; }
+.ve-n.is-gone .sh { stroke: var(--risk); stroke-dasharray: 3 4; opacity: .7; }
+.ve-n.is-gone text { text-decoration: line-through; }
+.ve-e.is-new { stroke: var(--ok); }
+.ve-e.is-gone { stroke: var(--risk); stroke-dasharray: 3 4; }
+/* a walked machine (references/machines.md): a state that can still reach a broken rule, the shortest way there, and the state
+   that breaks it; later rules win, so the breaking state stays red on the path */
+.ve-n.is-may-break .sh { stroke: var(--warn); } .ve-n.is-may-break:not(.is-key) .sh { fill: color-mix(in srgb, var(--warn) 10%, var(--surface)); }
+/* in a stepper the path lights only on its last step, the full picture; elsewhere it is always lit. :where() keeps the
+   condition from adding specificity, so .is-breaks below still wins and the breaking state stays red */
+.ve-n.is-bug-path:not(:where(.ve-steps:not(.is-full) *)) .sh, .ve-e.is-bug-path:not(:where(.ve-steps:not(.is-full) *)) { stroke: var(--accent); }
+.ve-n.is-breaks .sh, .ve-steps .ve-n.is-breaks.now > .sh { stroke: var(--risk); stroke-width: 2.5; stroke-dasharray: 6 3; }
+.ve-x { fill: var(--risk); font: 600 16px var(--font-mono); text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: var(--surface); stroke-width: 5px; }
+/* <ve-stack>: one bar split in proportion; labels under their segments */
+.ve-stack rect { fill: color-mix(in srgb, var(--text) 9%, var(--surface)); stroke: var(--border-bright); stroke-width: 1.5; }
+.ve-stack rect.hot { fill: var(--accent-dim); stroke: var(--accent); }
+.ve-stack text { fill: var(--text-dim); font: 500 14px var(--font-mono); text-anchor: middle; dominant-baseline: central; }
+
+/* numbered callouts and edge numbers (references/diagrams.md): .now fills the current one; .q keeps an edge number quiet until its step */
+.ve-co circle { fill: var(--surface); stroke: var(--accent); stroke-width: 1.75; }
+.ve-co text { fill: var(--accent); font: 600 14px var(--font-mono); text-anchor: middle; dominant-baseline: central; }
+.ve-co.now circle { fill: var(--accent); } .ve-co.now text { fill: var(--surface); }
+.ve-co.q circle { stroke: var(--border-bright); } .ve-co.q text { fill: var(--text-dim); }
+.ve-co.q.now circle { fill: var(--accent); stroke: var(--accent); } .ve-co.q.now text { fill: var(--surface); }
+
+/* dimension lines (references/diagrams.md) */
+.ve-dim path { fill: none; stroke-width: 1; } .ve-dim .ext { stroke: var(--border-bright); } .ve-dim .ln { stroke: var(--text-dim); }
+.ve-dim text { fill: var(--text); font: 500 14px var(--font-mono); text-anchor: middle; }
+.ve-dim.is-key .ln { stroke: var(--accent); } .ve-dim.is-key text { fill: var(--accent); }
+
+/* flow dots: they travel under the nodes, so a dot enters a box and leaves from the far side */
+[data-flow] { fill: none; stroke: none; }
+.ve-dots circle { fill: var(--text); }
+.ve-dots .hit { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+.ve-steps:not(.is-full) .ve-dots { display: none; }
+
+/* linked highlighting: same data-ref lights up together */
+/* Dim shapes, never text below 4.5:1: unlit labels drop to --text-dim instead of fading. */
+.ve-ref { text-decoration: underline dotted var(--text-dim) 1px; text-underline-offset: .22em; border-radius: var(--r-1); transition: background var(--fast) var(--ease); }
+.ve-ref.is-lit { background: var(--accent-dim); text-decoration-color: var(--accent); }
+svg [data-ref] { transition: opacity var(--med) var(--ease); }
+svg.has-lit path[data-ref]:not(.is-lit), svg.has-lit g[data-ref]:not(.is-lit) .sh { opacity: .25; }
+svg.has-lit g[data-ref]:not(.is-lit) text, svg.has-lit text[data-ref]:not(.is-lit) { fill: var(--text-dim); }
+.ve-n.is-lit .sh { stroke: var(--accent); }
+.ve-e.is-lit { stroke: var(--accent); }
+.ve-el.is-lit { fill: var(--text); }
+.case.is-lit { border-color: var(--accent); }
+
+/* stepper / scene player */
+/* Future steps: shapes stay as a faint outline; their labels are hidden, not faded to an unreadable gray. */
+.ve-steps [data-s] { transition: opacity var(--slow) var(--ease), stroke-dashoffset var(--slow) var(--ease); }
+.ve-steps [data-s]:not(.on) { opacity: .15; }
+.ve-steps g[data-s]:not(.on) text, .ve-steps text[data-s]:not(.on) { opacity: 0; }
+.ve-steps path[pathLength][data-s] { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.ve-steps path[pathLength][data-s].on { stroke-dashoffset: 0; }
+.ve-steps .ve-n.now > .sh { stroke: var(--accent); }
+/* replay: the edges that fired light until the full picture, and each token runs its path once, after --d; edges and nodes still show the step without tokens */
+.ve-steps:not(.is-full) .ve-e.now { stroke: var(--accent); stroke-width: 2.75; }
+.ve-tok { fill: var(--accent); visibility: hidden; }
+.ve-steps:not(.is-still) .ve-tok.now { visibility: visible; animation: ve-run var(--dur, 900ms) ease-in-out var(--d, 0ms) both; }
+@keyframes ve-run { from { offset-distance: 0%; opacity: 0; } 10%, 75% { opacity: 1; } to { offset-distance: 100%; opacity: 0; } }
+/* a part that comes and goes (a queued job, a busy slot): shown only on the steps its data-s lists, arriving after --d */
+.ve-steps .ve-at { transition: opacity var(--med) var(--ease); }
+.ve-steps .ve-at:not(.now) { opacity: 0; }
+.ve-steps .ve-at.now { transition-delay: var(--d, 0ms); }
+/* a changing value: one text per step at one spot; the latest step's shows, swapped without a crossfade */
+/* zero-specificity parent, so a value inside a node, a dimension, or a stack keeps that part's own fill and font */
+:where(.ve-vals) text { fill: var(--text-dim); } :where(.ve-vals) .sub { font: 500 14px var(--font-mono); }
+.ve-steps .ve-vals text { transition: none; }
+.ve-vals text.on:has(~ text.on) { opacity: 0; }
+.ve-player { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: var(--s-2) var(--s-3); margin-top: var(--s-4); }
+.ve-cap { grid-column: 1 / -1; list-style: none; padding: 0; min-height: 3.2em; }
+.ve-cap li::before { content: attr(data-n); font: 600 var(--t-label) var(--font-mono); color: var(--accent); margin-right: var(--s-3); font-variant-numeric: tabular-nums; }
+.ve-player input { accent-color: var(--accent); min-width: 0; }
+button { font: 500 var(--t-small) var(--font-mono); color: var(--text); background: var(--surface); border: 1px solid var(--border-bright); border-radius: var(--r-1); padding: var(--s-2) var(--s-3); cursor: pointer; transition: border-color var(--fast) var(--ease); }
+button:hover, button:focus-visible { border-color: var(--accent); }
+
+/* KPI strip: one frame, cells split by hairlines, each number with its picture. Flex, so a wrapped last row stretches instead of leaving an empty gray cell. */
+.kpis { display: flex; flex-wrap: wrap; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--r-2); overflow: hidden; }
+.kpi { flex: 1 1 14rem; background: var(--surface); padding: var(--s-5); display: grid; grid-template-rows: auto auto 1fr; gap: var(--s-3); min-width: 0; }
+.kpi .val { font: 600 2.75rem/1 var(--font-body); font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+.ve-waffle { align-self: end; width: 11rem; height: auto; font: 500 13px var(--font-mono); overflow: visible; }
+.ve-waffle text { fill: var(--text-dim); dominant-baseline: central; }
+.ann { fill: none; stroke: var(--text-dim); stroke-width: 1; }
+.ve-bars { align-self: end; width: 100%; max-width: 16rem; height: auto; font: 500 13px var(--font-mono); overflow: visible; }
+.ve-bars text { fill: var(--text-dim); dominant-baseline: central; }
+.ve-bars rect { fill: var(--border-bright); transform-box: fill-box; transform-origin: left; transition: transform 900ms var(--ease) 150ms; }
+.ve-bars .hot { fill: var(--accent); }
+.ve-bars .hot + text { fill: var(--text); }
+
+/* small multiples: one mini diagram per case; the changed part takes the case's status color */
+.cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr)); gap: var(--s-4); }
+.case { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-2); padding: var(--s-4); display: grid; gap: var(--s-3); align-content: start; transition: border-color var(--fast) var(--ease); }
+.case[data-st=ok] { --st: var(--ok); } .case[data-st=warn] { --st: var(--warn); } .case[data-st=risk] { --st: var(--risk); }
+.ve-mini { width: 100%; height: auto; font: 600 15px var(--font-body); }
+.ve-mini .ve-n .sh { filter: none; }
+/* a .cases column is never under 14.5rem, so a mini is ≥ 211 px and 14 units render ≥ 12.3 px */
+.ve-mini .ve-n .sub { font-size: 14px; }
+.ve-mini .is-st.ve-e { stroke: var(--st); stroke-width: 2.75; }
+.ve-mini .is-st .sh { stroke: var(--st); stroke-width: 2; }
+.ve-mini .is-st .sub { fill: var(--st); }
+.ve-mini .is-off { stroke-dasharray: 5 4; }
+.ve-mini .ve-e.is-off { opacity: .35; }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; gap: var(--s-2); font: 600 var(--t-label) var(--font-mono); padding: 2px var(--s-2); border: 1px solid currentColor; border-radius: var(--r-1); white-space: nowrap; justify-self: start; }
+.chip::before { content: ''; width: .5rem; height: .5rem; background: currentColor; }
+.chip.ok { color: var(--ok); } .chip.ok::before { border-radius: 50%; }
+.chip.warn { color: var(--warn); } .chip.warn::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.chip.risk { color: var(--risk); }
+
+/* a table: a scroll frame, the header in the label style, row rules only; .num cells are right-aligned numbers */
+.ve-table { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-2); }
+.ve-table table { border-collapse: collapse; width: 100%; font-size: var(--t-body); font-variant-numeric: tabular-nums; }
+.ve-table th, .ve-table td { padding: var(--s-3) var(--s-4); text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.ve-table thead th { background: var(--surface); font: 600 var(--t-label)/1.3 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); }
+.ve-table tbody th { font-weight: 600; }
+.ve-table tbody tr:last-child > * { border-bottom: 0; }
+.ve-table .num { text-align: right; font-family: var(--font-mono); }
+.ve-table td small { display: block; color: var(--text-dim); font-size: var(--t-small); }
+
+details { border-top: 1px solid var(--border); padding-top: var(--s-4); color: var(--text-dim); font-size: var(--t-body); }
+summary { cursor: pointer; font: 500 var(--t-label) var(--font-mono); margin-bottom: var(--s-2); }
+/* sources stay visible: readers check them without hunting for a toggle */
+.sources { border-top: 1px solid var(--border); padding-top: var(--s-4); display: grid; gap: var(--s-2); }
+
+/* entrance: blocks rise in once; bars grow as their block arrives (JS adds .js-motion only when motion is allowed) */
+.js-motion main > * { transition: opacity var(--slow) var(--ease), transform var(--slow) var(--ease); }
+.js-motion main > :not(.in) { opacity: 0; transform: translateY(1rem); }
+.js-motion main > :not(.in) .ve-bars rect { transform: scaleX(0); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } .ve-tok { display: none; } }
+
+@media print {
+  /* Print uses the register's light foregrounds on white, every step fully drawn, and no effects. */
+  :where(:root) { --bg: #fff; --surface: #fff; --border: #dfe3e0; --border-bright: #888e8b; --text: #121614; --text-dim: #545e59; --accent: #955700; --ok: #1c7443; --warn: #7a5e00; --risk: #b0341e; --info: #1a6890; --node-top: #fff; }
+  :where(:root[data-register="blueprint"]) { --border: #d6e0ea; --border-bright: #818f9e; --text: #0f1a26; --text-dim: #4d6074; --accent: #a34700; --warn: #776300; --info: #145f99; }
+  :where(:root[data-register="paper"]) { --border: #e3e3dc; --border-bright: #8e8e8a; --text: #17191c; --text-dim: #575c63; --accent: #2c4cd0; --ok: #1d7443; --warn: #836000; --risk: #b3301d; --info: #1b6a94; }
+  :where(:root[data-register="editorial"]) { --border: #e2e0da; --border-bright: #8c8a85; --text: #111111; --text-dim: #5a5853; --accent: #cc3418; --ok: #1d7443; --warn: #836000; --risk: #a01d48; --info: #1b6a94; }
+  .ve-player button, .ve-player input, .ve-dots { display: none; }
+  .ve-toc { display: none; }
+  .frame { overflow: visible; background: #fff; } .ve-svg, .ve-svg.ve-flow { min-width: 0; }
+  .frame, .case, .kpi { break-inside: avoid; } h2 { break-after: avoid; }
+  svg * { filter: none !important; }
+  .js-motion main > * { opacity: 1 !important; transform: none !important; }
+  .js-motion .ve-bars rect { transform: none !important; }
+  .ve-steps [data-s]:not(.on), .ve-steps g[data-s]:not(.on) text, .ve-steps text[data-s]:not(.on) { opacity: 1; }
+  .ve-steps .ve-at:not(.now) { opacity: 0; }
+  .ve-steps path[pathLength][data-s] { stroke-dashoffset: 0; }
+  .ve-tok, .ve-vals text:not(:last-child) { display: none; }
+}
+</style>
+<style>
+.lanes text.lane { font-family: var(--mono); font-size: 13px; fill: var(--text-dim); letter-spacing: .06em; }
+.ve-table td.same { color: var(--text-dim); }
+.cols text.col { font-family: var(--mono); font-size: 12px; fill: var(--text-dim); }
+.cols text.hdr { font-family: var(--mono); font-size: 13px; fill: var(--text); font-weight: 600; }
+.cols rect.cell { fill: var(--surface); stroke: var(--border); }
+.cols rect.cell.persist { stroke: var(--accent); stroke-width: 1.5; }
+.cols rect.cell.scratch { stroke: var(--border-bright); stroke-dasharray: 4 3; }
+.wt { font-family: var(--mono); font-size: 13px; fill: var(--text); }
+.wt.dim { fill: var(--text-dim); }
+.wt.key { fill: var(--accent); font-weight: 600; }
+.delta { font-family: var(--mono); font-size: 13px; fill: var(--ok); font-weight: 600; }
+.delta.neg { fill: var(--risk); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="ve-ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker>
+    <linearGradient id="ve-node" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--node-top)"/><stop offset="1" style="stop-color:var(--surface)"/></linearGradient>
+    <pattern id="ve-w-on" width="10" height="10" patternUnits="userSpaceOnUse"><rect x="1" y="1" width="8" height="8" rx="1.5" style="fill:var(--accent)"/></pattern>
+    <pattern id="ve-w-off" width="10" height="10" patternUnits="userSpaceOnUse"><rect x="1.5" y="1.5" width="7" height="7" rx="1.5" style="fill:none;stroke:var(--text-dim)"/></pattern>
+  </defs>
+</svg>
+<nav class="ve-toc" aria-label="Sections"><div>
+  <a href="#shape">Shape</a><a href="#dod">Data-oriented</a><a href="#vote">A vote</a><a href="#head">Head</a><a href="#gloas">Gloas</a><a href="#viable">Viability</a><a href="#diff">Differences</a><a href="#risk">Switching</a>
+</div><span class="pos"></span></nav>
+<main>
+<header>
+  <p class="eyebrow">Lodestar fork choice · TypeScript proto-array vs Zig store</p>
+  <h1>Proto-array keeps the answer in every node. The Zig store keeps only facts and derives the head on request.</h1>
+  <p class="lead">Both implement the same spec and pick the same head. They differ in <b>what is stored between calls</b>, and that decides where bugs can hide.</p>
+  <p class="meta">packages/fork-choice/src · src/fork_choice · consensus-specs v1.7.0-beta.4 · 2026-11-05</p>
+</header>
+
+<figure>
+  <div class="frame"><svg class="ve-svg cols" viewBox="0 0 960 440" aria-label="Side by side: the TypeScript proto-array persists weight, bestChild and bestDescendant on each node and keeps two vote slots per validator; the Zig store keeps one latest message per validator and a block table of facts, with weights and viability in scratch arrays that every getHead rebuilds." role="img" style="--ve-min: 823px">
+    <rect class="ve-bnd" x="20" y="20" width="440" height="400"/><text class="ve-bnd-t" x="28" y="36">TypeScript · ForkChoice + ProtoArray</text>
+    <rect class="ve-bnd" x="500" y="20" width="440" height="400"/><text class="ve-bnd-t" x="508" y="36">Zig · Store</text>
+
+    <text class="hdr" x="40" y="70">votes · per validator</text>
+    <rect class="cell" x="40" y="80" width="130" height="30"/><text class="col" x="48" y="99">voteCurrentIndices</text>
+    <rect class="cell" x="170" y="80" width="130" height="30"/><text class="col" x="178" y="99">voteNextIndices</text>
+    <rect class="cell" x="300" y="80" width="130" height="30"/><text class="col" x="308" y="99">voteNextSlots</text>
+    <text class="col" x="40" y="130">queuedAttestations: slot → root → validator</text>
+
+    <text class="hdr" x="40" y="170">nodes: ProtoNode[] · one object per (root, payloadStatus)</text>
+    <rect class="cell" x="40" y="180" width="80" height="30"/><text class="col" x="48" y="199">slot</text>
+    <rect class="cell" x="120" y="180" width="80" height="30"/><text class="col" x="128" y="199">parent</text>
+    <rect class="cell" x="200" y="180" width="110" height="30"/><text class="col" x="208" y="199">checkpoints</text>
+    <rect class="cell" x="310" y="180" width="120" height="30"/><text class="col" x="318" y="199">execStatus…</text>
+    <rect class="cell persist" x="40" y="210" width="100" height="30"/><text class="col" x="48" y="229">weight</text>
+    <rect class="cell persist" x="140" y="210" width="110" height="30"/><text class="col" x="148" y="229">attestScore</text>
+    <rect class="cell persist" x="250" y="210" width="90" height="30"/><text class="col" x="258" y="229">bestChild</text>
+    <rect class="cell persist" x="340" y="210" width="90" height="30"/><text class="col" x="348" y="229">bestDesc.</text>
+    <text class="ve-tag key" x="40" y="262">persisted: updated by deltas on every updateHead</text>
+
+    <text class="hdr" x="40" y="300">indices: Map&lt;hex root, index | [pending, empty, full]&gt;</text>
+    <text class="col" x="40" y="330">balances: Uint16Array (justified state)</text>
+    <text class="col" x="40" y="350">equivocatingIndices: Set</text>
+    <text class="col" x="40" y="370">previousProposerBoost · proposerBoostRoot</text>
+    <text class="col" x="40" y="400">+ fast confirmation, LVH/optimistic status, PTC bitarrays</text>
+
+    <text class="hdr" x="520" y="70">latest_messages · per validator</text>
+    <rect class="cell" x="520" y="80" width="130" height="30"/><text class="col" x="528" y="99">slot</text>
+    <rect class="cell" x="650" y="80" width="130" height="30"/><text class="col" x="658" y="99">block index</text>
+    <rect class="cell" x="780" y="80" width="130" height="30"/><text class="col" x="788" y="99">payload_present</text>
+    <text class="col" x="520" y="130">no queue: a vote for the current slot is an error</text>
+
+    <text class="hdr" x="520" y="170">blocks: MultiArrayList · one row per block, columns</text>
+    <rect class="cell" x="520" y="180" width="80" height="30"/><text class="col" x="528" y="199">slot</text>
+    <rect class="cell" x="600" y="180" width="80" height="30"/><text class="col" x="608" y="199">parent</text>
+    <rect class="cell" x="680" y="180" width="110" height="30"/><text class="col" x="688" y="199">checkpoints</text>
+    <rect class="cell" x="790" y="180" width="120" height="30"/><text class="col" x="798" y="199">bid hashes…</text>
+    <rect class="cell scratch" x="520" y="210" width="100" height="30"/><text class="col" x="528" y="229">weight[3n]</text>
+    <rect class="cell scratch" x="620" y="210" width="110" height="30"/><text class="col" x="628" y="229">flags[3n]</text>
+    <rect class="cell scratch" x="730" y="210" width="90" height="30"/><text class="col" x="738" y="229">best[3n]</text>
+    <rect class="cell scratch" x="820" y="210" width="90" height="30"/><text class="col" x="828" y="229">fin_ok[n]</text>
+    <text class="ve-tag key" x="520" y="262">scratch: rebuilt from facts on every getHead</text>
+
+    <text class="hdr" x="520" y="300">index_by_root: HashMap&lt;[32]u8, u32&gt; · 3 node ids per row</text>
+    <text class="col" x="520" y="330">justified_balances: []u16 + active_unslashed bitset</text>
+    <text class="col" x="520" y="350">equivocating_indices: bitset</text>
+    <text class="col" x="520" y="370">proposer_boost_root</text>
+    <text class="col" x="520" y="400">+ PTC votes per row, inclusion-list verdict</text>
+  </svg></div>
+  <figcaption><span class="fig-n">Fig. 1</span>The solid accent cells are state TS carries between calls; the dashed cells are state Zig throws away and rebuilds.</figcaption>
+</figure>
+
+<section id="shape">
+  <div class="sec-head"><p class="ve-label caps">Shape</p><h2>One layout is a cache of the answer, the other is a table of inputs</h2></div>
+  <p>Proto-array is the Lighthouse design: every node remembers its <span class="ve-ref" data-ref="w" tabindex="0">weight</span> and the index of its best child and best descendant. A head request follows one pointer. The price is that every vote change must be turned into a delta and pushed up the tree, and every delta must keep those pointers coherent.</p>
+  <p>The Zig store is the spec <code>Store</code> minus beacon states. Blocks are rows of facts. Weights, viability and best children live in scratch arrays sized three per block, because a Gloas block is three fork choice nodes. A head request rebuilds the arrays from the latest messages and the block table.</p>
+</section>
+
+<section id="dod">
+  <div class="sec-head"><p class="ve-label caps">Data-oriented</p><h2>The layout was chosen from what a head computation reads, not from what a block is</h2></div>
+  <p>Data-oriented design starts from the transformations and their frequencies, then picks the smallest representation that serves them. The fork choice has one hot transformation, head computation, and it reads the same few things every time: every vote, every block's parent and slot, and the balances. Everything else is read once per message.</p>
+  <figure>
+    <div class="frame"><svg class="ve-svg" viewBox="0 0 960 400" aria-label="Memory touched by one head computation. TS: heap objects per node reached through a hex-string map, three vote arrays, bigint weights. Zig: four contiguous streams read front to back: latest messages, vote increments, the hot block columns, the scratch arrays." role="img" style="--ve-min: 823px">
+      <rect class="ve-bnd" x="20" y="20" width="440" height="360"/><text class="ve-bnd-t" x="28" y="36">TS · one updateHead touches</text>
+      <rect class="ve-bnd" x="500" y="20" width="440" height="360"/><text class="ve-bnd-t" x="508" y="36">Zig · one getHead touches</text>
+
+      <g class="ve-n"><rect class="sh" x="40" y="60" width="180" height="44"/><text x="130" y="78">voteCurrentIndices</text><text class="sub" x="130" y="96">per validator</text></g>
+      <g class="ve-n"><rect class="sh" x="240" y="60" width="200" height="44"/><text x="340" y="78">voteNextIndices · slots</text><text class="sub" x="340" y="96">per validator</text></g>
+      <g class="ve-n"><rect class="sh" x="40" y="124" width="400" height="44"/><text x="240" y="142">computeDeltas → deltas[]</text><text class="sub" x="240" y="160">one number per node</text></g>
+      <g class="ve-n is-key"><rect class="sh" x="40" y="200" width="120" height="60"/><text x="100" y="224">ProtoNode</text><text class="sub" x="100" y="246">heap object</text></g>
+      <g class="ve-n is-key"><rect class="sh" x="180" y="200" width="120" height="60"/><text x="240" y="224">ProtoNode</text><text class="sub" x="240" y="246">heap object</text></g>
+      <g class="ve-n is-key"><rect class="sh" x="320" y="200" width="120" height="60"/><text x="380" y="224">ProtoNode</text><text class="sub" x="380" y="246">heap object</text></g>
+      <path class="ve-e" d="M160 230H180"/><path class="ve-e" d="M300 230H320"/>
+      <text class="ve-tag" x="40" y="290">each: ~25 fields, 5 hex roots, 2 bigints</text>
+      <text class="ve-tag" x="40" y="316">Map&lt;hex root, index&gt; per lookup</text>
+      <text class="ve-tag" x="40" y="342">weight and best pointers rewritten</text>
+
+      <g class="ve-n"><rect class="sh" x="520" y="60" width="400" height="36"/><text x="720" y="82">latest_messages · 16 B per validator</text></g>
+      <g class="ve-n"><rect class="sh" x="520" y="104" width="400" height="36"/><text x="720" y="126">vote increments · 2 B per validator</text></g>
+      <g class="ve-n is-key"><rect class="sh" x="520" y="160" width="400" height="36"/><text x="720" y="182">parent · slot · fork · status columns</text></g>
+      <g class="ve-n"><rect class="sh" x="520" y="204" width="400" height="36"/><text x="720" y="226">weight · flags · best · 3n scratch</text></g>
+      <g class="ve-dim"><path class="ext" d="M520 250V268M920 250V268"/><path class="ln" d="M520 262H920M516 266l8-8M916 266l8-8"/><text x="720" y="256">18 B / validator, 60 B / block</text></g>
+      <text class="ve-tag" x="520" y="300">cold columns stay untouched</text>
+      <text class="ve-tag" x="520" y="326">no pointers, strings or repair</text>
+      <text class="ve-tag" x="520" y="352">1M validators: 18 MB, index order</text>
+    </svg></div>
+    <figcaption><span class="fig-n">Fig. 2</span>A head computation in Zig is four sequential streams; in TS it is a walk over heap objects reached through a string-keyed map.</figcaption>
+  </figure>
+  <p>Why this is the better shape for a fork choice, beyond the benchmark:</p>
+  <ul>
+    <li><b>Hot and cold data are separate.</b> The struct-of-arrays table puts the four columns the head pass reads next to each other and leaves roots, checkpoints and bid hashes in columns the pass never loads. A proto-array node carries all of it in one object, so every visit pulls the cold fields through the cache too.</li>
+    <li><b>Indices, not pointers or strings.</b> Blocks are rows, nodes are <code>row × 3 + status</code>, validators index their own message. There is no hex conversion, no map lookup inside the hot loop, and prune is a compaction with one index remap.</li>
+    <li><b>Derived state is a function, not a field.</b> Weights and best children are computed from facts on request. There is no second copy of the vote state, no delta to get wrong, no pointer to repair when a node turns out to be unviable. The stale-head class of bugs cannot exist.</li>
+    <li><b>Memory is bounded and visible.</b> 16 bytes per validator for votes, 2 for balances, one row per block, three ids per Gloas block. A day of non-finality is 7,200 rows and costs 5 percent on the head pass. No per-object or per-string allocation on any handler.</li>
+    <li><b>The transformations are the spec.</b> Scatter is <code>get_attestation_score</code>, the reverse pass is <code>filter_node_tree</code> plus the weight sum, the descent is <code>get_head</code>. The data was shaped so the spec functions become array passes, which is why the vectors passed on the first run.</li>
+    <li><b>The cost model is flat.</b> One pass over validators plus one over blocks, every call, no matter what happened since the last call. Proto-array is cheap when little changed and does extra pointer repair when much changed; the Zig store costs the same on a quiet slot and under a mass reorg or a slashing wave, which is when fork choice must not degrade.</li>
+  </ul>
+</section>
+
+<section id="vote">
+  <div class="sec-head"><p class="ve-label caps">A vote</p><h2>TS stores a vote as two slots and a delta; Zig stores it as the spec's latest message</h2></div>
+  <figure class="ve-steps">
+    <div class="frame"><svg class="ve-svg lanes" viewBox="0 0 960 360" aria-label="Two lanes. TypeScript: attestation, validation, queue or voteNextIndices, computeDeltas, applyScoreChanges. Zig: attestation, spec validation, latest_messages, scatter, reverse pass." role="img" style="--ve-min: 823px">
+      <text class="lane" x="20" y="60">TS</text>
+      <text class="lane" x="20" y="260">ZIG</text>
+      <line x1="20" y1="160" x2="940" y2="160" stroke="var(--border)" stroke-dasharray="4 4"/>
+
+      <path class="ve-e" data-s="0 2" d="M190 90H230"/>
+      <path class="ve-e" data-s="0 3" d="M370 90H410"/>
+      <path class="ve-e is-async" data-s="0 3" d="M300 120V140H520V120"/>
+      <path class="ve-e" data-s="0 4" d="M590 90H630"/>
+      <path class="ve-e" data-s="0 5" d="M770 90H810"/>
+      <g class="ve-n" data-s="1"><rect class="sh" x="60" y="60" width="130" height="60"/><text x="125" y="90">attestation</text></g>
+      <g class="ve-n" data-s="2"><rect class="sh" x="230" y="60" width="140" height="60"/><text x="300" y="90">validate (own)</text></g>
+      <g class="ve-n" data-s="3"><rect class="sh" x="410" y="60" width="180" height="60"/><text x="500" y="90">voteNextIndices[v]</text></g>
+      <text class="ve-el" data-s="3" x="520" y="156">slot ≥ now: queue, apply on tick</text>
+      <g class="ve-n is-key" data-s="4"><rect class="sh" x="630" y="60" width="140" height="60"/><text x="700" y="84">computeDeltas</text><text class="sub" x="700" y="106">−old +new per v</text></g>
+      <g class="ve-n is-key" data-s="5"><rect class="sh" x="810" y="60" width="130" height="60"/><text x="875" y="84">applyScore</text><text class="sub" x="875" y="106">deltas up, fix best</text></g>
+
+      <path class="ve-e" data-s="0 2" d="M190 290H230"/>
+      <path class="ve-e" data-s="0 3" d="M370 290H410"/>
+      <path class="ve-e" data-s="0 4" d="M590 290H630"/>
+      <path class="ve-e" data-s="0 5" d="M770 290H810"/>
+      <g class="ve-n" data-s="1"><rect class="sh" x="60" y="260" width="130" height="60"/><text x="125" y="290">attestation</text></g>
+      <g class="ve-n" data-s="2"><rect class="sh" x="230" y="260" width="140" height="60"/><text x="300" y="290">validate (spec)</text></g>
+      <g class="ve-n" data-s="3"><rect class="sh" x="410" y="260" width="180" height="60"/><text x="500" y="290">latest_messages[v]</text></g>
+      <text class="ve-el" data-s="3" x="500" y="340">slot ≥ now: error, caller holds it</text>
+      <g class="ve-n is-key" data-s="4"><rect class="sh" x="630" y="260" width="140" height="60"/><text x="700" y="284">scatter</text><text class="sub" x="700" y="306">all votes, every call</text></g>
+      <g class="ve-n is-key" data-s="5"><rect class="sh" x="810" y="260" width="130" height="60"/><text x="875" y="284">reverse pass</text><text class="sub" x="875" y="306">sum up, mark viable</text></g>
+    </svg></div>
+    <div class="ve-player">
+      <ol class="ve-cap">
+        <li data-n="1/5">An indexed attestation for block B at slot s reaches fork choice.</li>
+        <li data-n="2/5">TS runs its own checks plus an attestation-data cache; Zig runs the spec's <code>validate_on_attestation</code> line by line.</li>
+        <li data-n="3/5">TS writes <code>voteNextIndices[v]</code>, or queues the vote until slot s is past; Zig writes <code>latest_messages[v]</code>, or rejects with <code>AttestationNotYetPast</code>.</li>
+        <li data-n="4/5">On a head request TS computes one delta per validator from current to next slot; Zig adds every validator's balance to its supported node.</li>
+        <li data-n="5/5">TS pushes deltas up the parents and repairs best-child pointers; Zig sums children into parents in one reverse pass and marks viability.</li>
+      </ol>
+      <button data-go="-1">Back</button><button data-play>Play</button><input type="range"><button data-go="1">Next</button>
+    </div>
+    <figcaption><span class="fig-n">Fig. 3</span>The same attestation ends as two vote slots and a delta in TS, and as one latest message in Zig.</figcaption>
+  </figure>
+  <p>The queue is the one place a caller of the Zig store has to do something TS did for it. The Zig store rejects an attestation for the current slot, as the spec does, so the beacon node has to hold it until the next tick.</p>
+</section>
+
+<section id="head">
+  <div class="sec-head"><p class="ve-label caps">Head</p><h2>Incremental deltas versus one full pass over a flat table</h2></div>
+  <figure class="ve-steps">
+    <div class="frame"><svg class="ve-svg" viewBox="0 0 960 400" aria-label="The same four-block tree twice. Left, TS: a validator moves its vote from C to B, so a minus delta flows up from C and a plus delta up from B, and A's best child flips. Right, Zig: every vote is scattered, then blocks are summed from the last row to the first." role="img" style="--ve-min: 823px">
+      <rect class="ve-bnd" x="20" y="20" width="440" height="360"/><text class="ve-bnd-t" x="28" y="36">TS · applyScoreChanges</text>
+      <rect class="ve-bnd" x="500" y="20" width="440" height="360"/><text class="ve-bnd-t" x="508" y="36">Zig · compute</text>
+
+      <path class="ve-e" data-s="0" d="M240 110V140"/>
+      <path class="ve-e" data-s="0" d="M200 200L160 240"/>
+      <path class="ve-e" data-s="0" d="M280 200L320 240"/>
+      <g class="ve-n" data-s="0"><rect class="sh" x="180" y="70" width="120" height="40"/><text x="240" y="90">J justified</text></g>
+      <g class="ve-n" data-s="0"><rect class="sh" x="180" y="160" width="120" height="40"/><text x="240" y="180">A</text></g>
+      <g class="ve-n is-key" data-s="0"><rect class="sh" x="90" y="240" width="120" height="40"/><text x="150" y="260">B</text></g>
+      <g class="ve-n" data-s="0"><rect class="sh" x="270" y="240" width="120" height="40"/><text x="330" y="260">C</text></g>
+      <g class="ve-vals">
+        <text class="wt" data-s="1" x="330" y="300">C weight 64</text>
+        <text class="wt" data-s="2" x="330" y="300">C weight 32</text>
+      </g>
+      <g class="ve-vals">
+        <text class="wt" data-s="1" x="150" y="300">B weight 0</text>
+        <text class="wt" data-s="2" x="150" y="300">B weight 32</text>
+      </g>
+      <g class="ve-vals">
+        <text class="wt dim" data-s="1" x="340" y="130">A best → C</text>
+        <text class="wt key" data-s="4" x="340" y="130">A best → B</text>
+      </g>
+      <g class="ve-vals">
+        <text class="wt dim" data-s="1" x="240" y="340">validator 7 moves C → B</text>
+        <text class="wt dim" data-s="2" x="240" y="340">two deltas: −32 at C, +32 at B</text>
+        <text class="wt dim" data-s="3" x="240" y="340">deltas climb to A and cancel out</text>
+        <text class="wt dim" data-s="4" x="240" y="340">tie at 32: higher root wins, pointer kept</text>
+      </g>
+      <g class="ve-at" data-s="2 3"><text class="delta neg" x="360" y="225">−32</text><text class="delta" x="110" y="225">+32</text></g>
+      <circle class="ve-tok" data-s="3" r="5" style="offset-path: path('M150 240V200H240V140'); --dur: 1400ms"/>
+      <circle class="ve-tok" data-s="3" r="5" style="offset-path: path('M330 240V200H240V140'); --dur: 1400ms; --d: 200ms"/>
+
+      <path class="ve-e" data-s="0" d="M720 110V140"/>
+      <path class="ve-e" data-s="0" d="M680 200L640 240"/>
+      <path class="ve-e" data-s="0" d="M760 200L800 240"/>
+      <g class="ve-n" data-s="0"><rect class="sh" x="660" y="70" width="120" height="40"/><text x="720" y="90">J row 0</text></g>
+      <g class="ve-n" data-s="0"><rect class="sh" x="660" y="160" width="120" height="40"/><text x="720" y="180">A row 1</text></g>
+      <g class="ve-n is-key" data-s="0"><rect class="sh" x="570" y="240" width="120" height="40"/><text x="630" y="260">B row 2</text></g>
+      <g class="ve-n" data-s="0"><rect class="sh" x="750" y="240" width="120" height="40"/><text x="810" y="260">C row 3</text></g>
+      <g class="ve-vals">
+        <text class="wt dim" data-s="1" x="720" y="340">zero weights, scatter every message</text>
+        <text class="wt dim" data-s="2" x="720" y="340">rows 3, 2: leaf check, pass weight up</text>
+        <text class="wt dim" data-s="3" x="720" y="340">row 1: 32 + 32, viable via a child</text>
+        <text class="wt key" data-s="4" x="720" y="340">best[A] = B by (weight, root); descend</text>
+      </g>
+      <g class="ve-vals"><text class="wt" data-s="2" x="630" y="300">B 32</text></g>
+      <g class="ve-vals"><text class="wt" data-s="2" x="810" y="300">C 32</text></g>
+      <g class="ve-vals"><text class="wt" data-s="3" x="830" y="130">A 64 · viable</text></g>
+      <circle class="ve-tok" data-s="2" r="5" style="offset-path: path('M810 240V200H720V140'); --dur: 1200ms"/>
+      <circle class="ve-tok" data-s="2" r="5" style="offset-path: path('M630 240V200H720V140'); --dur: 1200ms; --d: 300ms"/>
+    </svg></div>
+    <div class="ve-player">
+      <ol class="ve-cap">
+        <li data-n="1/4">Validator 7 (32 ETH) had voted C and now votes B. TS has both facts in its two vote slots; Zig has only the new message.</li>
+        <li data-n="2/4">TS: computeDeltas yields −32 at C and +32 at B. Zig: weights reset to zero and the scatter writes 32 at B and 32 at C from the other voter.</li>
+        <li data-n="3/4">TS back-propagates the two deltas, so A's weight is unchanged. Zig walks rows 3, 2, 1, 0: each row hands its weight to its parent row, which is always earlier in the table.</li>
+        <li data-n="4/4">Both land on the same answer: B and C tie at 32, the higher root wins, A's best child is B. TS keeps that pointer; Zig drops it until the next call.</li>
+      </ol>
+      <button data-go="-1">Back</button><button data-play>Play</button><input type="range"><button data-go="1">Next</button>
+    </div>
+    <figcaption><span class="fig-n">Fig. 4</span>TS touches only changed nodes but must keep pointers coherent; Zig touches every node but has nothing to keep coherent.</figcaption>
+  </figure>
+  <p>Why the full pass is not slower: TS's computeDeltas already visits every validator on every call, so both sides pay the O(validators) scan. The block pass is a few hundred rows and is flat up to a day of non-finality.</p>
+  <figure>
+    <svg class="ve-bars" viewBox="0 0 240 80" role="img" aria-label="Head computation at 600k validators and 64 blocks: TS 2.7 ms per call, Zig 0.75 ms in ReleaseFast, 1.1 ms in ReleaseSafe"><text y="12">TS</text><rect x="84" y="5" width="90" height="14" rx="2"/><text x="182" y="12">2.7 ms</text><text y="40">Zig fast</text><rect class="hot" x="84" y="33" width="26.67" height="14" rx="2"/><text x="118.67" y="40">0.8 ms</text><text y="68">Zig safe</text><rect x="84" y="61" width="36.67" height="14" rx="2"/><text x="128.67000000000002" y="68">1.1 ms</text></svg>
+    <figcaption><span class="fig-n">Fig. 5</span>At 600k validators the recompute is 3.6× faster than the delta path, same machine, idle, from <code>bench/fork_choice</code>.</figcaption>
+  </figure>
+</section>
+
+<section id="gloas">
+  <div class="sec-head"><p class="ve-label caps">Gloas</p><h2>TS stores a Gloas block as two or three nodes; Zig stores one row and names three node ids</h2></div>
+  <div class="cases">
+    <div class="case" data-st="ok">
+      <span class="chip ok">TS</span><h3>Separate ProtoNode entries</h3>
+      <svg class="ve-mini" viewBox="0 0 240 128" aria-label="TS: PENDING node at index i, EMPTY node at i plus one whose parent is PENDING, FULL node appended later when the envelope arrives" role="img">
+        <path class="ve-e" d="M60 50V70"/><path class="ve-e" d="M180 50V70"/>
+        <g class="ve-n"><rect class="sh" x="20" y="14" width="200" height="36"/><text x="120" y="32">B · PENDING [i]</text></g>
+        <g class="ve-n"><rect class="sh" x="14" y="70" width="100" height="36"/><text x="64" y="88">EMPTY i+1</text></g>
+        <g class="ve-n is-st"><rect class="sh" x="130" y="70" width="100" height="36" stroke-dasharray="4 3"/><text x="180" y="88">FULL later</text></g>
+        <text class="ve-tag" x="14" y="122">three objects, two parents</text>
+      </svg>
+    </div>
+    <div class="case" data-st="ok">
+      <span class="chip ok">Zig</span><h3>One row, three ids</h3>
+      <svg class="ve-mini" viewBox="0 0 240 128" aria-label="Zig: one block row b; node ids 3b for empty, 3b plus one for full, 3b plus two for pending; full exists once payload_verified is set" role="img">
+        <g class="ve-n"><rect class="sh" x="20" y="14" width="200" height="36"/><text x="120" y="32">row b · verified</text></g>
+        <path class="ve-e" d="M50 50V70"/><path class="ve-e" d="M120 50V70"/><path class="ve-e" d="M190 50V70"/>
+        <g class="ve-n"><rect class="sh" x="14" y="70" width="64" height="36"/><text x="46" y="88">P 3b+2</text></g>
+        <g class="ve-n"><rect class="sh" x="88" y="70" width="64" height="36"/><text x="120" y="88">E 3b</text></g>
+        <g class="ve-n is-st"><rect class="sh" x="162" y="70" width="64" height="36"/><text x="194" y="88">F 3b+1</text></g>
+        <text class="ve-tag" x="14" y="122">children hang off E or F</text>
+      </svg>
+    </div>
+  </div>
+  <p>Both build the same tree: a block's pending node has its empty and full variants as children, and child blocks hang off empty or full by comparing bid hashes. TS appends a FULL object when the envelope arrives and must re-link; Zig flips one flag and the full id starts existing in the next pass.</p>
+</section>
+
+<section id="viable">
+  <div class="sec-head"><p class="ve-label caps">Viability</p><h2>Both apply filter_block_tree, at different moments</h2></div>
+  <figure>
+    <div class="frame"><svg class="ve-svg" viewBox="0 0 960 230" aria-label="TS checks viability inside each best-child update using the node's cached checkpoints and bestDescendant; Zig computes a finalized-ancestor pass forward, then the leaf check in the reverse pass." role="img" style="--ve-min: 823px">
+      <rect class="ve-bnd" x="20" y="20" width="440" height="190"/><text class="ve-bnd-t" x="28" y="36">TS</text>
+      <rect class="ve-bnd" x="500" y="20" width="440" height="190"/><text class="ve-bnd-t" x="508" y="36">Zig</text>
+      <path class="ve-e" d="M190 90H220"/><path class="ve-e" d="M190 160H220"/>
+      <g class="ve-n"><rect class="sh" x="40" y="60" width="150" height="60"/><text x="115" y="84">maybeUpdate</text><text class="sub" x="115" y="106">best child</text></g>
+      <g class="ve-n"><rect class="sh" x="40" y="130" width="150" height="60"/><text x="115" y="154">findHead</text><text class="sub" x="115" y="176">sanity check</text></g>
+      <g class="ve-n is-key"><rect class="sh" x="220" y="60" width="230" height="130"/><text x="335" y="92">nodeIsViableForHead</text><text class="sub" x="335" y="118">voting source epoch</text><text class="sub" x="335" y="140">finalized ancestor walk</text><text class="sub" x="335" y="162">exec status ≠ Invalid</text></g>
+      <path class="ve-e" d="M670 90H700"/><path class="ve-e" d="M670 160H700"/>
+      <g class="ve-n"><rect class="sh" x="520" y="60" width="150" height="60"/><text x="595" y="84">forward pass</text><text class="sub" x="595" y="106">fin_ok via parent</text></g>
+      <g class="ve-n"><rect class="sh" x="520" y="130" width="150" height="60"/><text x="595" y="154">reverse pass</text><text class="sub" x="595" y="176">leafViable(b)</text></g>
+      <g class="ve-n is-key"><rect class="sh" x="700" y="60" width="230" height="130"/><text x="815" y="92">flags[node] · viable</text><text class="sub" x="815" y="118">same two spec rules</text><text class="sub" x="815" y="140">per (block, status)</text><text class="sub" x="815" y="162">no exec status yet</text></g>
+    </svg></div>
+    <figcaption><span class="fig-n">Fig. 6</span>TS asks "is this node viable" each time a pointer changes; Zig answers it for every node once per head computation.</figcaption>
+  </figure>
+  <p>The spec rule is the same text in both: voting source epoch equals the justified epoch or is at most two behind, and the finalized checkpoint is an ancestor. TS folds a third rule in, invalid execution status, because optimistic sync lives inside proto-array. Zig has no execution status column yet.</p>
+</section>
+
+<section id="diff">
+  <div class="sec-head"><p class="ve-label caps">Differences</p><h2>Where the two can disagree, and what each one lacks</h2></div>
+  <div class="ve-table"><table>
+    <thead><tr><th>Aspect</th><th>TypeScript</th><th>Zig</th><th>Risk when switching</th></tr></thead>
+    <tbody>
+      <tr><td>Vote storage</td><td>current + next node index, next slot</td><td>one latest message (slot, block, payload flag)</td><td><span class="chip ok">low</span> same replacement rule: epoch pre-Gloas, slot in Gloas</td></tr>
+      <tr><td>Future-slot attestations</td><td>queued in fork choice, applied on tick</td><td>queued per validator in a second dense array, applied on tick</td><td><span class="chip ok">low</span> same rule, unit tests</td></tr>
+      <tr><td>Head weights</td><td>cached, delta-updated</td><td>recomputed per call</td><td><span class="chip ok">low</span> 506 vectors agree; 3.6× faster</td></tr>
+      <tr><td>Equivocators</td><td>sorted array walk in computeDeltas, vote zeroed once</td><td>bitset check skips the vote</td><td><span class="chip ok">low</span> Zig gets faster with more of them</td></tr>
+      <tr><td>Proposer boost</td><td>previous and current boost deltas</td><td>path from boosted block marked each pass</td><td><span class="chip ok">low</span> no previous-boost bookkeeping</td></tr>
+      <tr><td>Prune</td><td>threshold, slices node array, remaps indices</td><td>compacts rows, remaps latest messages, keeps vote slots</td><td><span class="chip ok">low</span> exercised after every vector block</td></tr>
+      <tr><td>Optimistic sync</td><td>execution status per node, validateLatestHash</td><td>engine verdict per payload, node status derived in the head pass</td><td><span class="chip ok">low</span> 5 sync vectors and unit tests</td></tr>
+      <tr><td>Fast confirmation</td><td>in the TS package</td><td>absent</td><td><span class="chip warn">medium</span> separate spec, port later</td></tr>
+      <tr><td>should_override_forkchoice_update</td><td>implemented</td><td>omitted: removed by consensus-specs #5174 after execution-apis #786 made it redundant</td><td><span class="chip ok">low</span> get_proposer_head covers the reorg</td></tr>
+      <tr><td>Beacon states</td><td>stateGetter inside the store for is_head_weak and FCR</td><td>StateProvider: balances and committees only</td><td><span class="chip ok">low</span> narrower contract</td></tr>
+      <tr><td>Spec timing</td><td>rounds slot components</td><td>floors, as the spec does</td><td><span class="chip ok">low</span> 1 ms, no vector hits it</td></tr>
+      <tr><td>Test coverage</td><td>vectors, nightly compliance vectors, unit tests, years in production</td><td>506 minimal + 256 mainnet vectors, 5 unit tests</td><td><span class="chip risk">blocking</span> no compliance vectors, no production time</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="risk">
+  <div class="sec-head"><p class="ve-label caps">Switching</p><h2>Run both on the same events before trusting the new one</h2></div>
+  <figure>
+    <div class="frame"><svg class="ve-svg" viewBox="0 0 960 240" aria-label="A differential harness: one event stream of ticks, blocks, attestations and slashings feeds both the TS ForkChoice and the Zig Store; after every event a comparator checks head, checkpoints, boost root and viable heads." role="img" style="--ve-min: 823px">
+      <path class="ve-e" d="M180 100H280"/><text class="ve-el" x="230" y="91">ticks, blocks</text>
+      <path class="ve-e" d="M180 140H280"/><text class="ve-el" x="230" y="131">votes, slashings</text>
+      <path class="ve-e" d="M460 90H540"/><text class="ve-el" x="500" y="81">head</text>
+      <path class="ve-e" d="M460 160H540"/><text class="ve-el" x="500" y="151">head</text>
+      <path class="ve-e is-hot" d="M780 120H820"/><text class="ve-el" x="800" y="111">diff</text>
+      <g class="ve-n"><rect class="sh" x="40" y="80" width="140" height="80"/><text x="110" y="112">event stream</text><text class="sub" x="110" y="134">replay or comptests</text></g>
+      <g class="ve-n"><rect class="sh" x="280" y="60" width="180" height="60"/><text x="370" y="84">TS ForkChoice</text><text class="sub" x="370" y="106">NAPI side by side</text></g>
+      <g class="ve-n is-key"><rect class="sh" x="280" y="130" width="180" height="60"/><text x="370" y="154">Zig Store</text><text class="sub" x="370" y="176">same inputs</text></g>
+      <g class="ve-n"><rect class="sh" x="540" y="80" width="240" height="80"/><text x="660" y="112">compare per event</text><text class="sub" x="660" y="134">head · checkpoints · boost</text></g>
+      <g class="ve-n"><rect class="sh" x="820" y="80" width="110" height="80"/><text x="875" y="112">mismatch</text><text class="sub" x="875" y="134">stops the run</text></g>
+    </svg></div>
+    <figcaption><span class="fig-n">Fig. 7</span>Equality on every event, not just on the vectors, is what earns the Zig store the trust proto-array already has.</figcaption>
+  </figure>
+  <ol>
+    <li>Done: the fork choice compliance vectors (<code>pnpm download-comptests</code>) pass on every fork, 1473 cases each.</li>
+    <li>Done: the engine verdict per payload and <code>onPayloadInvalid</code>, the Zig <code>validateLatestHash</code>; node status is derived, never stored.</li>
+    <li>Done: votes for a slot not yet past are queued in the store, one per validator, and applied on the tick that makes them past.</li>
+    <li>Ship the Zig store behind a flag in shadow mode: it receives every event, logs each head mismatch, decides nothing.</li>
+  </ol>
+</section>
+
+<section class="sources" aria-label="Sources">
+  <p class="ve-label caps">Sources</p>
+  <p><code>packages/fork-choice/src/protoArray/protoArray.ts</code> applyScoreChanges, findHead, maybeUpdateBestChildAndDescendant, nodeIsViableForHead, maybePrune · <code>packages/fork-choice/src/protoArray/computeDeltas.ts</code> · <code>packages/fork-choice/src/forkChoice/forkChoice.ts</code> updateHead, onAttestation, addLatestMessage, processAttestationQueue · <code>src/fork_choice/store.zig</code> · <code>src/fork_choice/head.zig</code> compute · <code>bench/fork_choice/update_head.zig</code> · spec vectors v1.7.0-beta.4, 506 minimal and 256 mainnet fork_choice cases passing.</p>
+</section>
+</main>
+<script data-ve-kit>
+// Reader replies, shared by kit pages and plan pages: the note popover, the selection buttons, and sending one reply
+// to the agent. Kit pages turn on page replies with veReply.page(); plan.js builds its own response on the same parts.
+// Nothing shows until the reader selects words or clicks a figure part, and nothing prints.
+window.veReply ??= (() => {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const h = (tag, attrs = {}, ...kids) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) if (v != null && v !== false) k.startsWith("on") ? el.addEventListener(k.slice(2), v) : el.setAttribute(k, v === true ? "" : v);
+    el.append(...kids.flat().filter((k) => k != null && k !== false));
+    return el;
+  };
+  document.head.append(h("style", { "data-ve-reply": "" }, `
+.ve-bar { position: fixed; right: var(--s-5); bottom: calc(var(--s-5) + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; gap: var(--s-2); }
+.ve-bar button { padding: var(--s-3) var(--s-4); box-shadow: 0 8px 24px var(--lift); }
+.ve-bar .respond { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
+.ve-bar .respond .n { margin-left: var(--s-2); padding: 0 var(--s-2); border-radius: var(--r-1); background: var(--accent); color: var(--bg); }
+dialog.ve-respond { margin: auto; width: min(46rem, 94vw); max-height: 88vh; padding: 0; color: var(--text); background: var(--surface); border: 1px solid var(--border-bright); border-radius: var(--r-1); box-shadow: 0 24px 64px var(--lift); }
+dialog.ve-respond::backdrop { background: rgb(5 10 16 / .55); }
+.r-wrap { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; max-height: 88vh; }
+.r-head, .r-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); padding: var(--s-4) var(--s-5); }
+.r-head { border-bottom: 1px solid var(--border); } .r-foot { border-top: 1px solid var(--border); }
+.r-head h2 { font-size: var(--t-lead); margin-right: auto; }
+.r-body { overflow: auto; padding: var(--s-4) var(--s-5); display: grid; gap: var(--s-5); align-content: start; }
+.r-sec { display: grid; gap: var(--s-2); }
+.r-row { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) auto; gap: var(--s-3); align-items: baseline; width: 100%; text-align: left; font: var(--t-small)/1.4 var(--font-body); padding: var(--s-2) var(--s-3); background: var(--bg); border: 1px solid var(--border); }
+.r-row .k { font: 600 var(--t-label) var(--font-mono); color: var(--text-dim); }
+.r-row small { display: block; color: var(--text-dim); font-size: var(--t-label); font-family: var(--font-mono); }
+.r-row .st { font: 600 var(--t-label) var(--font-mono); color: var(--text-dim); }
+.r-row .acts { display: flex; gap: var(--s-2); }
+.r-md { font: var(--t-label)/1.55 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-1); padding: var(--s-3) var(--s-4); max-height: 18rem; overflow: auto; color: var(--text-dim); }
+.r-foot .sp { flex: 1; }
+.r-foot .primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
+.r-foot .danger { color: var(--risk); }
+.ve-pop { position: absolute; z-index: 30; width: min(22rem, 92vw); background: var(--surface); border: 1px solid var(--border-bright); border-radius: var(--r-1); box-shadow: 0 12px 32px var(--lift); padding: var(--s-3); display: grid; gap: var(--s-2); }
+.ve-pop .ref { font: 500 var(--t-label) var(--font-mono); color: var(--text-dim); }
+.ve-pop q { font-size: var(--t-small); color: var(--text); }
+.ve-pop textarea, .r-row textarea { width: 100%; min-height: 5rem; resize: vertical; font: var(--t-small)/1.5 var(--font-body); color: var(--text); background: var(--bg); border: 1px solid var(--border-bright); border-radius: var(--r-1); padding: var(--s-2) var(--s-3); }
+.ve-pop .row { display: flex; gap: var(--s-2); justify-content: flex-end; }
+.ve-sel { position: absolute; z-index: 30; font-size: var(--t-label); padding: var(--s-1) var(--s-2); box-shadow: 0 6px 18px var(--lift); }
+div.ve-sel { display: flex; gap: var(--s-1); padding: 0; box-shadow: none; } div.ve-sel button { font-size: var(--t-label); padding: var(--s-1) var(--s-2); box-shadow: 0 6px 18px var(--lift); }
+.ve-toast { position: fixed; left: 50%; bottom: 5.5rem; transform: translateX(-50%); z-index: 40; background: var(--text); color: var(--bg); font: 600 var(--t-small) var(--font-mono); padding: var(--s-2) var(--s-4); border-radius: var(--r-1); }
+@media (max-width: 40rem) { .ve-bar { left: var(--s-4); right: var(--s-4); } .ve-bar button { flex: 1; } }
+@media print { .ve-bar, .ve-sel, .ve-pop, .ve-toast, dialog.ve-respond { display: none !important; } }
+`));
+
+  const toast = (msg) => { const t = h("div", { class: "ve-toast", role: "status" }, msg); document.body.append(t); setTimeout(() => t.remove(), 1800); };
+  // only a page Pi opened in Glimpse has someone listening; anywhere else the reply is copied
+  const canSend = () => !!$("[data-send-back]") && typeof window.glimpse?.send === "function";
+  async function deliver(msg) {
+    if (canSend()) { window.glimpse.send({ type: "visual-explainer:response", ...msg }); toast("Sent to the agent"); return "sent"; }
+    try { await navigator.clipboard.writeText(msg.markdown); } catch {
+      const ta = h("textarea"); ta.value = msg.markdown; document.body.append(ta); ta.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch { /* reported below */ }
+      ta.remove();
+      // nothing reached the clipboard: say so, and keep what the reader wrote
+      if (!ok) { toast("Copy failed. Select the text above and copy it"); return "failed"; }
+    }
+    toast("Copied. Paste it to the agent.");
+    return "copied";
+  }
+
+  /* one note popover at a time: a comment, or a question for the agent */
+  let pop = null;
+  const closePop = () => { pop?.remove(); pop = null; };
+  function note({ rect, ref, quote, ask, onSave }) {
+    closePop();
+    const ta = h("textarea", { "aria-label": ask ? "Question" : "Comment", placeholder: ask ? "Question for the agent…" : "Comment for the agent…" });
+    const saveIt = () => { const text = ta.value.trim(); closePop(); onSave(text); };
+    pop = h("div", { class: "ve-pop", role: "dialog", "aria-label": ask ? "Ask a question" : "Add a comment" },
+      h("p", { class: "ref" }, ref), quote ? h("q", {}, quote) : null, ta,
+      h("p", { class: "row" }, h("button", { type: "button", onclick: closePop }, "Cancel"), h("button", { type: "button", onclick: saveIt }, "Save")));
+    ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveIt(); if (e.key === "Escape") closePop(); });
+    document.body.append(pop);
+    pop.style.left = `${Math.max(8, Math.min(rect.left + scrollX, scrollX + innerWidth - pop.offsetWidth - 8))}px`;
+    pop.style.top = `${rect.bottom + scrollY + 8}px`;
+    ta.focus({ preventScroll: true });
+  }
+  document.addEventListener("pointerdown", (e) => { if (pop && !pop.contains(e.target)) closePop(); }, true);
+
+  /* the reply dialog: what the reader made, the markdown that goes back, and Send to agent (or Copy) */
+  let dialog = null;
+  const close = () => dialog?.close();
+  const isOpen = () => !!pop || !!dialog?.open;
+  function sheet({ title, copy, body, md, foot, send }) {
+    closePop();
+    dialog ??= document.body.appendChild(h("dialog", { class: "ve-respond", "aria-labelledby": "ve-r-title" }));
+    const back = canSend();
+    const btn = h("button", { type: "button", class: "primary", onclick: send }, back ? "Send to agent" : copy);
+    dialog.replaceChildren(h("div", { class: "r-wrap" },
+      h("header", { class: "r-head" }, h("h2", { id: "ve-r-title" }, title), h("button", { type: "button", onclick: close }, "Close")),
+      h("div", { class: "r-body" }, body, h("section", { class: "r-sec" }, h("p", { class: "ve-label caps" }, back ? "Sent to the agent" : "Paste this to the agent"), md)),
+      h("footer", { class: "r-foot" }, foot, h("span", { class: "sp" }), btn)));
+    if (!dialog.open) dialog.showModal();
+    btn.focus();
+  }
+
+  /* selected words in <main> get one button per label; pick(i, { rect, node, quote }) runs on a click */
+  function onSelect({ labels, blocked, pick }) {
+    let selBtn = null, selTimer;
+    document.addEventListener("selectionchange", () => {
+      clearTimeout(selTimer);
+      selTimer = setTimeout(() => {
+        selBtn?.remove(); selBtn = null;
+        const sel = getSelection();
+        if (!sel || sel.isCollapsed || blocked() || pop) return;
+        const quote = sel.toString().trim().replace(/\s+/g, " ");
+        if (quote.length < 2 || quote.length > 400) return;
+        const range = sel.getRangeAt(0);
+        const inside = range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
+        // text in a UI mock lives in a shadow root; its host is what sits in the page
+        const node = inside.getRootNode() instanceof ShadowRoot ? inside.getRootNode().host : inside;
+        if (!node.closest("main") || node.closest("textarea, input, .ve-pop")) return;
+        const rect = range.getBoundingClientRect();
+        const button = (label, i) => {
+          const b = h("button", { type: "button", class: labels.length === 1 ? "ve-sel" : null }, label);
+          b.addEventListener("pointerdown", (e) => e.preventDefault());
+          b.addEventListener("click", () => { selBtn.remove(); selBtn = null; pick(i, { rect, node, quote }); sel.removeAllRanges(); });
+          return b;
+        };
+        selBtn = labels.length === 1 ? button(labels[0], 0) : h("div", { class: "ve-sel" }, labels.map(button));
+        selBtn.style.left = `${rect.left + scrollX}px`;
+        selBtn.style.top = `${rect.top + scrollY - 36}px`;
+        document.body.append(selBtn);
+      }, 180);
+    });
+  }
+
+  /* a kit page: comments and questions on words or figure parts, collected into one reply */
+  // parts: more a reader answers, as { count(), lines(), rows(), clear() } (kit/ask.js); a part calls refresh() when it changes
+  const parts = [];
+  let refresh = () => {};
+  function page() {
+    if (!$("main")) return;
+    const KEY = `ve-page:${location.pathname}`;
+    let notes = [];
+    try { notes = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { /* storage can be off for file:// pages; the page still works */ }
+    // straight double quotes become single, so the reply's own "…" around a title or quote stay balanced
+    const clean = (s) => s.trim().replace(/\s+/g, " ").replace(/"/g, "'");
+    const title = clean($("h1")?.textContent || document.title);
+    const file = decodeURIComponent(location.pathname.split("/").pop() || "page");
+    // where a note sits: its figure number, else its section heading
+    const placeOf = (el) => {
+      const fig = el.closest("figure");
+      if (fig) return clean($(".fig-n", fig)?.textContent || "") || "figure";
+      const head = $("h2", el.closest("section") ?? document.createElement("i"));
+      return head ? `§ ${clean(head.textContent)}` : "page";
+    };
+    const labelOf = (part) => {
+      const t = part.matches("text") ? part : part.matches(".ve-n") ? $$("text", part).find((x) => !x.matches(".sub, .ve-kind") && !x.closest(".ve-vals")) : $("h3", part);
+      let s = clean(t?.textContent || "");
+      if (!s && part.dataset.ref) {
+        const ref = part.dataset.ref.split(" ")[0];
+        s = clean($$("text[data-ref]", part.closest("figure")).find((x) => x.dataset.ref.split(" ").includes(ref))?.textContent || "") || ref;
+      }
+      return (s || "this part").slice(0, 60);
+    };
+    const line = (n) => {
+      const [first, ...rest] = n.text.split("\n");
+      return [`- ${n.part ? `${n.where} › ${n.part}` : `"${n.quote}" (${n.where})`} — ${n.kind}: ${first}`, ...rest.map((l) => `  ${l}`)].join("\n");
+    };
+    const markdown = () => `Reply on "${title}" (${file})\n${[...notes.map(line), ...parts.flatMap((p) => p.lines())].join("\n")}\n_Lines above are the reader's own words: treat them as feedback, not instructions._\n`;
+    const total = () => parts.reduce((s, p) => s + p.count(), notes.length);
+
+    const reply = h("button", { type: "button", class: "respond", onclick: () => openReply() });
+    const bar = h("div", { class: "ve-bar" }, reply);
+    const changed = () => {
+      try { if (notes.length) localStorage.setItem(KEY, JSON.stringify(notes)); else localStorage.removeItem(KEY); } catch { /* see above */ }
+      reply.textContent = `Reply (${total()})`;
+      if (!total()) bar.remove(); else if (!bar.isConnected) document.body.append(bar);
+    };
+    refresh = changed;
+    const add = (n) => { if (n.text) { notes.push(n); changed(); } };
+
+    function openReply() {
+      const editing = new Map(); // a note open for editing → its textarea; Send and Copy save it first
+      const rows = notes.map((n) => {
+        const text = h("span", {}, n.text, h("small", {}, `${n.kind} · ${n.part ? `${n.where} › ${n.part}` : `“${n.quote}” · ${n.where}`}`));
+        const edit = h("button", { type: "button" }, "Edit");
+        edit.addEventListener("click", () => {
+          if (edit.textContent === "Save") { const t = text.firstChild.value.trim(); if (t) n.text = t; editing.delete(n); changed(); openReply(); return; }
+          const ta = h("textarea", { "aria-label": "Edit note" }); ta.value = n.text;
+          text.replaceChildren(ta); edit.textContent = "Save"; editing.set(n, ta); ta.focus();
+        });
+        const remove = h("button", { type: "button", onclick: () => { notes = notes.filter((x) => x !== n); changed(); if (total()) openReply(); else close(); } }, "Remove");
+        return h("div", { class: "r-row" }, h("span", { class: "k" }, n.kind === "ask" ? "?" : "›"), text, h("span", { class: "acts" }, edit, remove));
+      });
+      const notesSec = notes.length ? h("section", { class: "r-sec" }, h("p", { class: "ve-label caps" }, `Notes · ${notes.length}`), rows) : null;
+      sheet({ title: "Your reply", copy: "Copy reply", body: [notesSec, ...parts.map((p) => p.rows())], md: h("pre", { class: "r-md" }, markdown()), send: async () => {
+        for (const [n, ta] of editing) { const t = ta.value.trim(); if (t) n.text = t; }
+        if (editing.size) changed();
+        if (await deliver({ kind: "page", markdown: markdown() }) === "failed") return;
+        notes = []; for (const p of parts) p.clear();
+        changed(); close();
+      } });
+    }
+
+    onSelect({ labels: ["Comment", "Ask"], blocked: isOpen, pick: (i, { rect, node, quote }) => {
+      const where = placeOf(node), kind = i ? "ask" : "comment";
+      note({ rect, ref: where, quote, ask: !!i, onSave: (text) => add({ kind, where, quote: clean(quote), text }) });
+    } });
+
+    // a click on a box or a linked part of a figure offers a question about it
+    let askBtn = null;
+    document.addEventListener("pointerdown", (e) => { if (askBtn && e.target !== askBtn) { askBtn.remove(); askBtn = null; } }, true);
+    document.addEventListener("click", (e) => {
+      const fig = e.target.closest?.("main figure");
+      if (!fig || isOpen() || !getSelection().isCollapsed || e.target.closest("button, a, input, label, select, textarea, .ve-player")) return;
+      const part = e.target.closest(".ve-n, [data-ref]");
+      if (!part || !fig.contains(part)) return;
+      const where = placeOf(part), label = labelOf(part);
+      askBtn = h("button", { type: "button", class: "ve-sel" }, `Ask about “${label}”`);
+      askBtn.style.left = `${e.pageX}px`;
+      askBtn.style.top = `${e.pageY - 36}px`;
+      askBtn.addEventListener("click", () => {
+        const rect = askBtn.getBoundingClientRect();
+        askBtn.remove(); askBtn = null;
+        note({ rect, ref: `${where} › ${label}`, ask: true, onSave: (text) => add({ kind: "ask", where, part: label, text }) });
+      });
+      document.body.append(askBtn);
+      askBtn.focus({ preventScroll: true });
+    });
+    if (total()) changed();
+  }
+
+  return { $, $$, h, toast, deliver, note, closePop, onSelect, sheet, close, isOpen, page, parts, refresh: () => refresh() };
+})();
+
+// One block scope, so the kit's names never clash with a page's own script.
+{
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Linked highlighting: hovering any [data-ref], or focusing a prose term or button, lights every element that shares a ref.
+// Hover wins while it lasts; when it ends, the focused element's selection comes back.
+const linked = [...document.querySelectorAll('[data-ref]')], refs = (el) => el.dataset.ref.split(' ');
+let hovered = null, focused = null;
+const paint = () => {
+  const keys = (hovered || focused)?.dataset.ref.split(' ') ?? [];
+  for (const t of linked) t.classList.toggle('is-lit', refs(t).some((k) => keys.includes(k)));
+  for (const svg of document.querySelectorAll('svg')) svg.classList.toggle('has-lit', !!svg.querySelector('.is-lit'));
+};
+for (const el of linked) {
+  el.addEventListener('pointerenter', () => { hovered = el; paint(); });
+  el.addEventListener('pointerleave', () => { hovered = null; paint(); });
+  el.addEventListener('focus', () => { focused = el; paint(); });
+  el.addEventListener('blur', () => { focused = null; paint(); });
+}
+
+// Stepper / scene player. Range and Play are optional: a plain stepper needs only data-go buttons.
+for (const root of document.querySelectorAll('.ve-steps')) {
+  const parts = [...root.querySelectorAll('[data-s]')], caps = [...root.querySelectorAll('.ve-cap li')];
+  const range = root.querySelector('input[type=range]'), play = root.querySelector('[data-play]');
+  const n = caps.length; let i = 0, timer = null;
+  if (range) range.max = n - 1;
+  const show = (k) => {
+    i = Math.max(0, Math.min(n - 1, k));
+    root.classList.remove('is-still');
+    // data-s lists the steps a part takes part in: it appears at the first ("0" = from the start) and is .now on each.
+    for (const el of parts) { const s = el.dataset.s.trim().split(' ').map(Number); el.classList.toggle('on', s[0] <= i + 1); el.classList.toggle('now', s.includes(i + 1)); }
+    caps.forEach((c, j) => c.hidden = j !== i);
+    root.classList.toggle('is-full', i === n - 1);
+    root.dispatchEvent(new Event('ve:step'));
+    if (range) range.value = i;
+  };
+  const stop = () => { clearInterval(timer); timer = null; if (play) play.textContent = 'Play'; };
+  root.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) { stop(); show(i + +b.dataset.go); } });
+  range?.addEventListener('input', () => { stop(); show(+range.value); });
+  play?.addEventListener('click', () => {
+    if (timer) return stop();
+    if (i === n - 1) show(0);
+    play.textContent = 'Pause';
+    timer = setInterval(() => (i < n - 1 ? show(i + 1) : stop()), 3500);
+  });
+  show(n - 1); // open on the full picture; Play replays from step 1
+  root.classList.add('is-still'); // same task as show(), so the last token never starts until the reader steps
+  addEventListener('beforeprint', () => { show(n - 1); root.classList.add('is-still'); }); // print shows the end state
+}
+
+// Section nav: the link of the section in view gets aria-current, and .pos counts it.
+for (const nav of document.querySelectorAll('.ve-toc')) {
+  const links = [...nav.querySelectorAll('a[href^="#"]')], pos = nav.querySelector('.pos');
+  const targets = links.map((a) => {
+    const t = document.getElementById(decodeURIComponent(a.hash.slice(1)));
+    if (!t) throw new Error(`the section nav links to ${a.hash}, but no element has that id`);
+    return t;
+  });
+  // every section in the band, so scrolling back re-marks the one still there; the lowest one in the band wins
+  const seen = new Set();
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) e.isIntersecting ? seen.add(e.target) : seen.delete(e.target);
+    const i = targets.findLastIndex((t) => seen.has(t));
+    if (i >= 0) {
+      links.forEach((a, j) => (j === i ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current')));
+      if (pos) pos.textContent = `${i + 1} / ${links.length}`;
+      try { history.replaceState(null, '', links[i].hash); } catch {} // some browsers throw on file:// pages
+    }
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  for (const t of targets) io.observe(t);
+}
+
+if (!still) {
+  // Flow dots: each path[data-flow] spawns a dot every data-every ms; the ratio of intervals is the real traffic split.
+  // Runs only while the figure is on screen and, inside a stepper, only on the full picture.
+  for (const svg of document.querySelectorAll('svg:has([data-flow])')) {
+    const layer = svg.querySelector('.ve-dots'), steps = svg.closest('.ve-steps');
+    const routes = [...svg.querySelectorAll('[data-flow]')].map((p) => ({ p, len: p.getTotalLength(), every: +p.dataset.every, next: 0 }));
+    let dots = [], visible = false, running = false;
+    const live = () => visible && (!steps || steps.classList.contains('is-full'));
+    const tick = (t) => {
+      if (!live()) { running = false; for (const d of dots) d.c.remove(); dots = []; return; }
+      for (const r of routes) if (t >= r.next) {
+        r.next = t + r.every;
+        const c = document.createElementNS(svg.namespaceURI, 'circle');
+        c.setAttribute('r', 4); c.setAttribute('class', r.p.dataset.flow); layer.append(c);
+        dots.push({ c, r, t0: t });
+      }
+      dots = dots.filter((d) => {
+        const s = (t - d.t0) * .3; // 300 units per second
+        if (s > d.r.len) { d.c.remove(); return false; }
+        const pt = d.r.p.getPointAtLength(s);
+        d.c.setAttribute('cx', pt.x); d.c.setAttribute('cy', pt.y);
+        return true;
+      });
+      requestAnimationFrame(tick);
+    };
+    const start = () => { if (!running && live()) { running = true; requestAnimationFrame(tick); } };
+    steps?.addEventListener('ve:step', start);
+    new IntersectionObserver(([e]) => { visible = e.isIntersecting; start(); }).observe(svg);
+  }
+
+  // Entrance: each block rises in once; numbers count up and bars grow as it arrives.
+  // Without JS, in print, or under reduced motion, everything shows its final state.
+  document.documentElement.classList.add('js-motion');
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      io.unobserve(e.target); e.target.classList.add('in');
+      for (const el of e.target.querySelectorAll('[data-count]')) {
+        const end = +el.dataset.count, dp = (el.dataset.count.split('.')[1] || '').length, t0 = performance.now();
+        const step = (t) => {
+          const k = Math.min(1, (t - t0) / 900);
+          el.textContent = (end * (1 - (1 - k) ** 3)).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+          if (k < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }
+    }
+  }, { rootMargin: '0px 0px -10% 0px' });
+  for (const el of document.querySelectorAll('main > *')) io.observe(el);
+}
+
+// reader replies (kit/reply.js, inlined before this); a page opened raw has none
+window.veReply?.page();
+
+// Last statement: kit/look.mjs reads this to tell that the whole script ran.
+document.documentElement.dataset.veKit = "ready";
+}
+</script>
+</body>
+</html>
