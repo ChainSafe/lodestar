@@ -422,6 +422,9 @@ jobs:
       - name: Run state-transition tests
         run: |
           zig build test:state_transition
+      - name: Run fork-choice tests
+        run: |
+          zig build test:fork_choice
       - name: Run clock tests
         run: |
           zig build test:clock
@@ -434,7 +437,7 @@ jobs:
 
       - name: Build benchmarks
         run: |
-          zig build build-exe:bench_hashing build-exe:bench_merkle_gindex build-exe:bench_merkle_node build-exe:bench_ssz_attestation build-exe:bench_ssz_block build-exe:bench_ssz_state build-exe:bench_process_block build-exe:bench_process_epoch
+          zig build build-exe:bench_hashing build-exe:bench_merkle_gindex build-exe:bench_merkle_node build-exe:bench_ssz_attestation build-exe:bench_ssz_block build-exe:bench_ssz_state build-exe:bench_process_block build-exe:bench_process_epoch build-exe:bench_fork_choice_update_head build-exe:bench_fork_choice_on_attestation
       - name: Build gnosis bindings
         run: |
           zig build build-lib:bindings -Dpreset=gnosis
