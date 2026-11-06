@@ -251,6 +251,10 @@
             .root_source_file = "src/era/root.zig",
             .imports = .{ .consensus_types, .config, .fork_types, .preset, .state_transition, .snappy, .persistent_merkle_tree },
         },
+        .fork_choice = .{
+            .root_source_file = "src/fork_choice/root.zig",
+            .imports = .{ .consensus_types, .config, .preset, .constants, .state_transition, .fork_types, .persistent_merkle_tree },
+        },
         .beacon_node = .{
             .root_source_file = "src/beacon_node/root.zig",
             .imports = .{ .consensus_types, .state_transition, .persistent_merkle_tree, .testing_allocators, .metrics, .hex, .time },
@@ -377,6 +381,18 @@
                 .imports = .{ .state_transition, .fork_types, .consensus_types, .config, .persistent_merkle_tree, .time },
             },
         },
+        .bench_fork_choice_update_head = .{
+            .root_module = .{
+                .root_source_file = "bench/fork_choice/update_head.zig",
+                .imports = .{ .fork_choice, .config, .constants, .preset, .zbench },
+            },
+        },
+        .bench_fork_choice_on_attestation = .{
+            .root_module = .{
+                .root_source_file = "bench/fork_choice/on_attestation.zig",
+                .imports = .{ .fork_choice, .fork_types, .consensus_types, .config, .constants, .preset, .zbench },
+            },
+        },
     },
     .libraries = .{
         .bindings = .{
@@ -424,6 +440,7 @@
         .swap_or_not_shuffle = .{ .root_module = .swap_or_not_shuffle },
         .state_transition = .{ .root_module = .state_transition },
         .era = .{ .root_module = .era },
+        .fork_choice = .{ .root_module = .fork_choice },
         .clock = .{ .root_module = .clock },
         .beacon_node = .{ .root_module = .beacon_node },
         .ere_verifier = .{ .root_module = .ere_verifier },
@@ -461,6 +478,8 @@
                     .preset,
                     .snappy,
                     .state_transition,
+                    .fork_choice,
+                    .constants,
                     .ssz,
                     .bls,
                     .persistent_merkle_tree,

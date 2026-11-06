@@ -25,6 +25,9 @@ const supported_test_runners = [_]RunnerKind{
     .transition,
     .random,
     .finality,
+    .fork_choice,
+    .fork_choice_compliance,
+    .sync,
 };
 
 const presets = [_][]const u8{
@@ -57,6 +60,9 @@ fn TestWriter(comptime kind: RunnerKind) type {
         .transition => @import("./writer/transition.zig"),
         .random => @import("./writer/random.zig"),
         .finality => @import("./writer/finality.zig"),
+        .fork_choice => @import("./writer/fork_choice.zig"),
+        .fork_choice_compliance => @import("./writer/fork_choice_compliance.zig"),
+        .sync => @import("./writer/sync.zig"),
         else => @compileError("Unsupported test runner"),
     };
 }
@@ -124,6 +130,10 @@ pub fn writeTests(
     writer: *std.Io.Writer,
 ) !void {
     @setEvalBranchQuota(8000);
+    const preset_dirs: []const []const u8 = comptime if (@hasDecl(TestWriter(kind), "preset_dirs"))
+        &TestWriter(kind).preset_dirs
+    else
+        &presets;
     try TestWriter(kind).writeHeader(writer);
 
     var root_dir = try std.Io.Dir.openDir(.cwd(), io, spec_test_options.spec_test_out_dir ++ "/" ++ spec_test_options.spec_test_version, .{});
@@ -139,7 +149,7 @@ pub fn writeTests(
 
             var keys: std.ArrayList(Key) = .empty;
 
-            for (presets) |preset| {
+            for (preset_dirs) |preset| {
                 try collectCases(io, a, root_dir, preset, fork_path, comptime handler.suiteName(), comptime kind.hasSuiteCase(), &keys);
             }
 
