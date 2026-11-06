@@ -7,7 +7,7 @@
 #            discards it, so the next start fuzzes from corpus/
 
 : "${FUZZ_TARGET:?FUZZ_TARGET is required, e.g. ssz-basic -- see /opt/fuzz/bin}"
-FUZZ_PROJECT="${FUZZ_PROJECT:-lodestar-z}"
+FUZZ_PROJECT="${FUZZ_PROJECT:-lodestar}"
 FUZZ_STATE="${FUZZ_STATE:-/fuzz/state}"
 FUZZ_FAILURES="${FUZZ_FAILURES:-/fuzz/failures}"
 FUZZ_METRICS="${FUZZ_METRICS:-/fuzz/metrics}"
