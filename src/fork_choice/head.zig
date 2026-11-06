@@ -120,7 +120,7 @@ fn compute(store: *Store) !void {
     const own_status = store.blocks.items(.execution_status);
     for (0..n) |i| {
         const index: BlockIndex = @intCast(i);
-        const base: ExecutionStatus = if (parents[i] == NO_BLOCK) .pre_merge else exec[nodeId(.{ .block = parents[i], .payload_status = parent_statuses[i] })];
+        const base: ExecutionStatus = if (parents[i] == NO_BLOCK) store.root_base_status else exec[nodeId(.{ .block = parents[i], .payload_status = parent_statuses[i] })];
         const with_own = base.worst(own_status[i]);
         const gloas = forks[i].gte(.gloas);
         exec[nodeId(Store.pendingNode(index))] = if (gloas) base else with_own;

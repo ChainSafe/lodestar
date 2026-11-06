@@ -322,6 +322,10 @@ pub const Store = struct {
     justified_total_balance: u64,
     provider: StateProvider,
     head_cache: head_mod.Cache,
+    /// The status of the node the root block hangs from. `.pre_merge` for an anchor,
+    /// whose ancestors count as validated; `prune` carries the dropped ancestors'
+    /// derived status here so a Gloas root's `pending` and `empty` nodes keep it.
+    root_base_status: ExecutionStatus,
 
     /// Spec `get_forkchoice_store`. `execution_status` is the verdict on the anchor's own
     /// payload: `.valid` at genesis, `.syncing` for a checkpoint the engine has not seen.
@@ -374,6 +378,7 @@ pub const Store = struct {
             .justified_total_balance = 0,
             .provider = provider,
             .head_cache = .empty,
+            .root_base_status = .pre_merge,
         };
         errdefer self.deinit();
         self.time_ms = self.timing.timeAtSlotMs(anchor.slot);
@@ -1042,16 +1047,23 @@ pub const Store = struct {
         const statuses = self.blocks.items(.execution_status);
         var count: usize = 0;
         var chain = self.payloadChain(node);
+        var reached_root = true;
         while (chain.next()) |block| {
             switch (statuses[block]) {
                 .invalid => return error.PayloadInvalidToValid,
-                .valid, .pre_merge => break,
+                .valid, .pre_merge => {
+                    reached_root = false;
+                    break;
+                },
                 .syncing => count += 1,
             }
         }
-        if (count == 0) return;
+        if (reached_root and self.root_base_status == .invalid) return error.PayloadInvalidToValid;
+        const validates_root_base = reached_root and self.root_base_status == .syncing;
+        if (count == 0 and !validates_root_base) return;
         chain = self.payloadChain(node);
         while (count > 0) : (count -= 1) statuses[chain.next().?] = .valid;
+        if (validates_root_base) self.root_base_status = .valid;
         self.head_cache.dirty = true;
     }
 
@@ -1174,10 +1186,15 @@ pub const Store = struct {
     pub fn prune(self: *Store) !usize {
         const finalized = self.blockIndex(self.finalized_checkpoint.root) orelse return error.UnknownBlock;
         if (finalized == 0) return 0;
+        try head_mod.ensureComputed(self);
         const n = self.blocks.len;
         const remap = try self.allocator.alloc(BlockIndex, n);
         defer self.allocator.free(remap);
         const parents = self.blocks.items(.parent);
+        if (parents[finalized] != NO_BLOCK) {
+            const hung_from: ForkChoiceNode = .{ .block = parents[finalized], .payload_status = self.blocks.items(.parent_payload_status)[finalized] };
+            self.root_base_status = self.head_cache.execution.items[head_mod.nodeId(hung_from)];
+        }
         var kept: BlockIndex = 0;
         for (0..n) |i| {
             const parent = parents[i];
