@@ -23,7 +23,7 @@ export type BlobParameters = {epoch: Epoch; maxBlobsPerBlock: UintNum64};
  * Fork schedule and helper methods
  */
 export type ForkConfig = {
-  /** Forks in order order of occurence, `phase0` first */
+  /** Forks in order order of occurrence, `phase0` first */
   forks: {[K in ForkName]: ForkInfo};
   forksAscendingEpochOrder: ForkInfo[];
   forksDescendingEpochOrder: ForkInfo[];

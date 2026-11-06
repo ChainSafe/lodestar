@@ -95,7 +95,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevForkName: ForkName.gloas,
   };
 
-  /** Forks in order order of occurence, `phase0` first */
+  /** Forks in order order of occurrence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
   const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, heze};
 
