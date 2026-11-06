@@ -593,3 +593,45 @@ test "queued votes: a vote for the current slot lands on the next tick" {
     try testing.expectEqual(NO_BLOCK, store.latestMessage(3).?.block);
     try testing.expectEqual(@as(u64, 6), store.latestMessage(3).?.slot);
 }
+
+test "optimistic sync: pruning keeps the status a Gloas root inherited from dropped ancestors" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 0,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas }), Provider.stateProvider());
+    defer store.deinit();
+    try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    // 0x20 and 0x30 extend the previous payload (full links); 0x30's payload is syncing.
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
+    try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 0x20 }));
+    try store.onExecutionPayloadEnvelope(tagRoot(0x30), .syncing, null);
+    // 0x40 hangs off 0x30's empty node, so it stands on 0x20's syncing payload.
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x40, .parent = 0x30, .slot = 3, .fork = .gloas, .bid_parent = 0x20 }));
+    try store.onExecutionPayloadEnvelope(tagRoot(0x40), .syncing, null);
+    try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 0x30)));
+    try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 0x40)));
+
+    store.finalized_checkpoint = .{ .epoch = 0, .root = tagRoot(0x30) };
+    store.justified_checkpoint = store.finalized_checkpoint;
+    try testing.expectEqual(@as(usize, 2), try store.prune());
+    try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 0x30)));
+    try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 0x40)));
+    try testing.expect(try store.isOptimistic(pendingOf(&store, 0x40)));
+
+    // Validating 0x40's payload validates the dropped ancestors' too.
+    try store.onPayloadValid(tagHash(0x40));
+    try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x30)));
+    try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(fullOf(&store, 0x40)));
+    try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(fullOf(&store, 0x30)));
+}

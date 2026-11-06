@@ -99,6 +99,13 @@ their own payload, `empty` links skip the parent's. Both check the whole walk be
 writing, so a `valid` to `invalid` or `invalid` to `valid` transition is reported as a
 consensus failure with nothing changed.
 
+The root block hangs from nothing, so the store keeps the status of the node it hung
+from in `root_base_status`: `pre_merge` for an anchor, whose ancestors count as
+validated, and after `prune` the derived status of the dropped parent node, so a
+Gloas root's `pending` and `empty` nodes still read as optimistic while the payloads
+below the finalized block await the engine. A valid walk that reaches the root
+validates that too.
+
 ### Gloas nodes
 
 A fork choice node is `(block index, payload_status)` with the spec's numeric values
