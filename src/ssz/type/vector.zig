@@ -241,11 +241,8 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
                     while (byte_idx < data.len) {
                         const remaining = data.len - byte_idx;
                         const chunked_leaf_bytes = @min(remaining, bytes_per_chunked_leaf);
-                        const valid_chunks: u16 = @intCast((chunked_leaf_bytes + 31) / 32);
-                        var chunked_leaf_id_opt: ?Node.Id = try pool.createChunkedLeafEmpty(valid_chunks);
+                        var chunked_leaf_id_opt: ?Node.Id = try pool.createChunkedLeafFromBytes(data[byte_idx..][0..chunked_leaf_bytes]);
                         errdefer if (chunked_leaf_id_opt) |id| pool.unref(id);
-                        const storage = try chunked_leaf_id_opt.?.getChunkedLeafPtr(pool);
-                        @memcpy(@as([*]u8, @ptrCast(&storage.chunks))[0..chunked_leaf_bytes], data[byte_idx..][0..chunked_leaf_bytes]);
                         try it.append(chunked_leaf_id_opt.?);
                         chunked_leaf_id_opt = null;
                         byte_idx += chunked_leaf_bytes;
