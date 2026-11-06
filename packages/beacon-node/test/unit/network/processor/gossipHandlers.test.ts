@@ -438,10 +438,28 @@ describe("getGossipHandlers", () => {
       execStatus: ExecutionPayloadStatus.INVALID,
       errorMessage: "invalid payload",
     },
-  ])("evicts the cached envelope when payload processing fails with $code", async (errorType) => {
-    const {removeInvalid, payloadInput} = await runExecutionPayloadProcessingError(errorType);
+  ])("evicts the cached envelope and reports the peer when payload processing fails with $code", async (errorType) => {
+    const {removeInvalid, payloadInput, reportPeer, peerIdStr} = await runExecutionPayloadProcessingError(errorType);
 
     expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
+    expect(reportPeer).toHaveBeenCalledExactlyOnceWith(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+  });
+
+  it.each<PayloadErrorType>([
+    {code: PayloadErrorCode.INVALID_SIGNATURE},
+    {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
+    {
+      code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+      execStatus: ExecutionPayloadStatus.INVALID,
+      errorMessage: "invalid payload",
+    },
+  ])("does not report the gossip peer when an envelope added by another source fails with $code", async (errorType) => {
+    const {removeInvalid, payloadInput, reportPeer} = await runExecutionPayloadProcessingError(errorType, {
+      addedByAnotherSource: true,
+    });
+
+    expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
+    expect(reportPeer).not.toHaveBeenCalled();
   });
 
   it("keeps the cached envelope when payload data is unavailable", async () => {
@@ -461,9 +479,14 @@ describe("getGossipHandlers", () => {
   });
 });
 
-async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): Promise<{
+async function runExecutionPayloadProcessingError(
+  errorType: PayloadErrorType,
+  opts: {addedByAnotherSource?: boolean} = {}
+): Promise<{
   removeInvalid: ReturnType<typeof vi.fn>;
   payloadInput: PayloadEnvelopeInput;
+  reportPeer: ReturnType<typeof vi.fn>;
+  peerIdStr: PeerIdStr;
 }> {
   const config = createBeaconConfig(
     {
@@ -497,7 +520,17 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
   signedEnvelope.message.beaconBlockRoot = blockRoot;
   signedEnvelope.message.payload.slotNumber = 1;
 
+  if (opts.addedByAnotherSource) {
+    const byRootEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(signedEnvelope);
+    payloadInput.addPayloadEnvelope({
+      envelope: byRootEnvelope,
+      source: PayloadEnvelopeInputSource.byRoot,
+      seenTimestampSec: 0,
+    });
+  }
+
   const removeInvalid = vi.fn();
+  const reportPeer = vi.fn();
   const chain = {
     clock: new ClockStopped(1),
     emitter: new ChainEventEmitter(),
@@ -515,7 +548,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
       aggregatorTracker: {} as AggregatorTracker,
       chain,
       config,
-      core: {reportPeer: vi.fn()} as unknown as INetworkCore,
+      core: {reportPeer} as unknown as INetworkCore,
       events: new NetworkEventBus(),
       logger,
       metrics: null,
@@ -539,7 +572,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {removeInvalid, payloadInput};
+  return {removeInvalid, payloadInput, reportPeer, peerIdStr};
 }
 
 async function runBeaconBlockProcessingError(
