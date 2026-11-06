@@ -12,6 +12,9 @@ const BeaconState = @import("fork_types").BeaconState;
 const Slot = types.primitive.Slot.Type;
 const PendingAttestation = types.phase0.PendingAttestation.Type;
 
+pub const MAX_AGGREGATION_BITS =
+    preset.MAX_VALIDATORS_PER_COMMITTEE * preset.MAX_COMMITTEES_PER_SLOT;
+
 pub fn processAttestationPhase0(
     allocator: Allocator,
     io: std.Io,
@@ -110,33 +113,27 @@ pub fn validateAttestation(
             return error.InvalidAttestationInvalidLstCommitteeIndex;
         }
 
-        var aggregation_bits_buffer: [preset.MAX_VALIDATORS_PER_COMMITTEE * preset.MAX_COMMITTEES_PER_SLOT]bool = undefined;
-        if (attestation.aggregation_bits.bit_len > aggregation_bits_buffer.len) return error.InvalidAttestationAggregationBitsTooLong;
-        var aggregation_bits_slice = aggregation_bits_buffer[0..attestation.aggregation_bits.bit_len];
-        try attestation.aggregation_bits.toBoolSlice(&aggregation_bits_slice);
-        const aggregation_bits_array = aggregation_bits_slice;
+        const aggregation_bits = &attestation.aggregation_bits;
+        if (aggregation_bits.bit_len > MAX_AGGREGATION_BITS) {
+            return error.InvalidAttestationAggregationBitsTooLong;
+        }
         // instead of implementing/calling getBeaconCommittees(slot, committee_indices.items), we call getBeaconCommittee(slot, index)
         var committee_offset: usize = 0;
         for (committee_indices) |committee_index| {
             const committee_validators = try epoch_cache.getBeaconCommittee(data.slot, committee_index);
-            if (committee_offset + committee_validators.len > aggregation_bits_array.len) {
+            const committee_end = committee_offset + committee_validators.len;
+            if (committee_end > aggregation_bits.bit_len) {
                 return error.InvalidAttestationCommitteeAggregationBitsLengthTooShort;
             }
-            const committee_aggregation_bits = aggregation_bits_array[committee_offset..(committee_offset + committee_validators.len)];
 
             // Assert aggregation bits in this committee have at least one true bit
-            var all_false: bool = true;
-            for (committee_aggregation_bits) |bit| {
-                if (bit == true) {
-                    all_false = false;
-                    break;
-                }
-            }
-
-            if (all_false) {
+            const has_true_bit = for (committee_offset..committee_end) |bit_index| {
+                if (aggregation_bits.get(bit_index) catch unreachable) break true;
+            } else false;
+            if (!has_true_bit) {
                 return error.InvalidAttestationCommitteeAggregationBitsAllFalse;
             }
-            committee_offset += committee_validators.len;
+            committee_offset = committee_end;
         }
 
         if (attestation.aggregation_bits.bit_len != committee_offset) {

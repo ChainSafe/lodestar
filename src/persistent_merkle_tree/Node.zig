@@ -427,7 +427,7 @@ pub const Pool = struct {
     /// lazy root; `Id.getRoot` will compute and cache it on first access.
     pub fn createChunkedLeaf(self: *Pool, chunks: *align(64) const [ChunkedLeaf.K][32]u8, len: u16) Error!Id {
         std.debug.assert(len <= ChunkedLeaf.K);
-        const storage = try self.allocator.create(ChunkedLeaf);
+        const storage = try self.allocChunkedLeaf();
         errdefer self.allocator.destroy(storage);
 
         storage.chunks = chunks.*;
@@ -445,7 +445,7 @@ pub const Pool = struct {
     /// `ChunkedLeaf`. Caller fills via `Id.getChunkedLeafPtr`.
     pub fn createChunkedLeafEmpty(self: *Pool, len: u16) Error!Id {
         std.debug.assert(len <= ChunkedLeaf.K);
-        const storage = try self.allocator.create(ChunkedLeaf);
+        const storage = try self.allocChunkedLeaf();
         errdefer self.allocator.destroy(storage);
 
         @memset(std.mem.asBytes(&storage.chunks), 0);
@@ -457,6 +457,17 @@ pub const Pool = struct {
         self.nodes.items(.root)[idx] = lazy_sentinel;
         self.nodes.items(.state)[idx] = State.initInUse(.chunked_leaf, 0);
         return node_id;
+    }
+
+    /// Skips `Allocator.create`'s safe-build fill because every caller writes all chunks and
+    /// `len` right away. Free with `allocator.destroy`.
+    fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
+        const bytes = self.allocator.rawAlloc(
+            @sizeOf(ChunkedLeaf),
+            .of(ChunkedLeaf),
+            @returnAddress(),
+        ) orelse return error.OutOfMemory;
+        return @ptrCast(@alignCast(bytes));
     }
 
     /// Create a `.container_struct` Node holding a cloned `T` instance.
@@ -887,7 +898,7 @@ pub const Id = enum(u32) {
         if (pool.nodes.items(.state)[idx].kind() != .chunked_leaf) return error.InvalidNode;
         const old_storage = chunkedLeafPtr(pool.nodes.items(.payload), idx);
 
-        const new_storage = try pool.allocator.create(ChunkedLeaf);
+        const new_storage = try pool.allocChunkedLeaf();
         errdefer pool.allocator.destroy(new_storage);
 
         new_storage.chunks = old_storage.chunks;
@@ -918,7 +929,7 @@ pub const Id = enum(u32) {
         if (pool.nodes.items(.state)[idx].kind() != .chunked_leaf) return error.InvalidNode;
         const old_storage = chunkedLeafPtr(pool.nodes.items(.payload), idx);
 
-        const new_storage = try pool.allocator.create(ChunkedLeaf);
+        const new_storage = try pool.allocChunkedLeaf();
         errdefer pool.allocator.destroy(new_storage);
 
         new_storage.chunks = old_storage.chunks;

@@ -362,3 +362,61 @@ test "memory_safety: attesting indices belong to the caller's allocator, not the
     try epoch_cache.computeIndexedAttestationElectra(caller_allocator, &electra_attestation, &indexed_electra);
     ct.electra.IndexedAttestation.deinit(caller_allocator, &indexed_electra);
 }
+
+test "getAttestingIndicesInto should write set committee members and reject a length mismatch" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 500_000,
+    });
+    defer pool.deinit();
+
+    // 250 validators give the first committee 7 members, so its only byte has a spare bit.
+    var test_state = try TestCachedBeaconState.init(allocator, &pool, 250);
+    defer test_state.deinit();
+
+    const epoch_cache = test_state.cached_state.epoch_cache;
+    var data = std.mem.zeroes(ct.phase0.AttestationData.Type);
+    data.slot = epoch_cache.epoch * SLOTS_PER_EPOCH;
+    const committee = try epoch_cache.getBeaconCommittee(data.slot, 0);
+    try std.testing.expectEqual(@as(usize, 7), committee.len);
+
+    var attestation: ct.electra.Attestation.Type = .{
+        .aggregation_bits = try .fromBitLen(allocator, 7),
+        .data = data,
+        .signature = std.mem.zeroes(ct.primitive.BLSSignature.Type),
+        .committee_bits = .empty,
+    };
+    defer attestation.aggregation_bits.deinit(allocator);
+    try attestation.committee_bits.set(0, true);
+
+    const ValidatorIndex = ct.primitive.ValidatorIndex.Type;
+    const unwritten = std.math.maxInt(ValidatorIndex);
+    var out: [16]ValidatorIndex = @splat(unwritten);
+
+    const none = try epoch_cache.getAttestingIndicesInto(.electra, &attestation, &out);
+    try std.testing.expectEqual(@as(usize, 0), none.len);
+
+    try attestation.aggregation_bits.set(allocator, 0, true);
+    try attestation.aggregation_bits.set(allocator, 3, true);
+    try attestation.aggregation_bits.set(allocator, 6, true);
+    // Bit 7 is past `bit_len`. `BitList.set` would grow the list, so write the byte directly.
+    attestation.aggregation_bits.data.items[0] |= 0b1000_0000;
+
+    const selected = try epoch_cache.getAttestingIndicesInto(.electra, &attestation, &out);
+    const expected = [_]ValidatorIndex{ committee[0], committee[3], committee[6] };
+    try std.testing.expectEqualSlices(ValidatorIndex, &expected, selected);
+    for (out[3..]) |index| try std.testing.expectEqual(unwritten, index);
+
+    try attestation.aggregation_bits.resize(allocator, 8);
+    try std.testing.expectError(
+        error.InvalidSize,
+        epoch_cache.getAttestingIndicesInto(.electra, &attestation, &out),
+    );
+    try attestation.aggregation_bits.resize(allocator, 6);
+    try std.testing.expectError(
+        error.InvalidSize,
+        epoch_cache.getAttestingIndicesInto(.electra, &attestation, &out),
+    );
+}
