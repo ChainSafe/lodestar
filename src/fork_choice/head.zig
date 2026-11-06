@@ -115,38 +115,37 @@ fn compute(store: *Store) !void {
     const exec = cache.execution.items;
     const current_epoch = store.currentEpoch();
 
-    // A node stands on the node it hangs from plus, before Gloas and for `.full` nodes,
-    // the block's own payload.
     const own_status = store.blocks.items(.execution_status);
-    for (0..n) |i| {
-        const index: BlockIndex = @intCast(i);
-        const base: ExecutionStatus = if (parents[i] == NO_BLOCK) store.root_base_status else exec[nodeId(.{ .block = parents[i], .payload_status = parent_statuses[i] })];
-        const with_own = base.worst(own_status[i]);
-        const gloas = forks[i].gte(.gloas);
-        exec[nodeId(Store.pendingNode(index))] = if (gloas) base else with_own;
-        exec[nodeId(.{ .block = index, .payload_status = .empty })] = if (gloas) base else with_own;
-        exec[nodeId(.{ .block = index, .payload_status = .full })] = with_own;
-    }
-
-    // Spec `get_checkpoint_block(store, root, store.finalized_checkpoint.epoch)` for every block.
     const finalized_slot = computeStartSlotAtEpoch(store.finalized_checkpoint.epoch);
     const finalized_index = store.blockIndex(store.finalized_checkpoint.root) orelse NO_BLOCK;
     const finalized_at_genesis = store.finalized_checkpoint.epoch == GENESIS_EPOCH;
+    // Each block reads only its own row and its parent's results, so one forward pass fills all three.
     for (0..n) |i| {
-        const ancestor = if (slots[i] <= finalized_slot or parents[i] == NO_BLOCK) @as(BlockIndex, @intCast(i)) else cache.finalized_ancestor.items[parents[i]];
+        const index: BlockIndex = @intCast(i);
+        const parent = parents[i];
+        const gloas = forks[i].gte(.gloas);
+        const pending = nodeId(Store.pendingNode(index));
+        const empty = nodeId(.{ .block = index, .payload_status = .empty });
+        const full = nodeId(.{ .block = index, .payload_status = .full });
+
+        // A node stands on the node it hangs from plus, before Gloas and for `.full` nodes,
+        // the block's own payload.
+        const base: ExecutionStatus = if (parent == NO_BLOCK) store.root_base_status else exec[nodeId(.{ .block = parent, .payload_status = parent_statuses[i] })];
+        const with_own = base.worst(own_status[i]);
+        exec[pending] = if (gloas) base else with_own;
+        exec[empty] = if (gloas) base else with_own;
+        exec[full] = with_own;
+
+        // Spec `get_checkpoint_block(store, root, store.finalized_checkpoint.epoch)`.
+        const ancestor = if (slots[i] <= finalized_slot or parent == NO_BLOCK) index else cache.finalized_ancestor.items[parent];
         cache.finalized_ancestor.items[i] = ancestor;
         cache.finalized_ok.items[i] = finalized_at_genesis or ancestor == finalized_index;
-    }
 
-    for (0..n) |b| {
-        const index: BlockIndex = @intCast(b);
-        const pending = nodeId(Store.pendingNode(index));
         if (exec[pending] == .invalid) continue;
         flags[pending] |= Flag.exists;
-        if (forks[b].gte(.gloas)) {
-            flags[nodeId(.{ .block = index, .payload_status = .empty })] |= Flag.exists;
-            const full = nodeId(.{ .block = index, .payload_status = .full });
-            if (payload_verified[b] and exec[full] != .invalid) flags[full] |= Flag.exists;
+        if (gloas) {
+            flags[empty] |= Flag.exists;
+            if (payload_verified[i] and exec[full] != .invalid) flags[full] |= Flag.exists;
         }
     }
 
