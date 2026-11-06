@@ -1,11 +1,10 @@
-import {readFile} from "node:fs/promises";
 import path from "node:path";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {CliCommand} from "@lodestar/utils";
-import {Interchange} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";
+import {interchangeFileOption, readInterchangeFile} from "../../../util/interchange.js";
 import {parseLoggerArgs} from "../../../util/logger.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getValidatorPaths} from "../paths.js";
@@ -30,11 +29,7 @@ export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & Account
     ],
 
     options: {
-      file: {
-        description: "The slashing protection interchange file to import (.json).",
-        demandOption: true,
-        type: "string",
-      },
+      file: {...interchangeFileOption, description: "The slashing protection interchange file to import (.json)."},
     },
 
     handler: async (args) => {
@@ -60,11 +55,9 @@ export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & Account
       const genesisValidatorsRoot =
         (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
-      logger.verbose("Reading slashing protection data", {file});
-      const interchangeStr = await readFile(file, "utf8");
-      const interchangeJson = JSON.parse(interchangeStr) as Interchange;
+      const interchange = await readInterchangeFile(file, logger);
 
-      await slashingProtection.importInterchange(interchangeJson, genesisValidatorsRoot, logger);
+      await slashingProtection.importInterchange(interchange, genesisValidatorsRoot, logger);
       logger.info("Import completed successfully");
     },
   };

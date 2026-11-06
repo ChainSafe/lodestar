@@ -1,11 +1,15 @@
 import path from "node:path";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {CliCommand, toPubkeyHex} from "@lodestar/utils";
-import {InterchangeFormatVersion} from "@lodestar/validator";
+import {CliCommand} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";
-import {YargsError, ensure0xPrefix, isValidatePubkeyHex, writeFile600Perm} from "../../../util/index.js";
+import {
+  exportInterchangeFile,
+  interchangeFileOption,
+  interchangeFormatVersion,
+  interchangePubkeysOption,
+} from "../../../util/interchange.js";
 import {parseLoggerArgs} from "../../../util/logger.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getValidatorPaths} from "../paths.js";
@@ -31,23 +35,12 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
     ],
 
     options: {
-      file: {
-        description: "The slashing protection interchange file to export to (.json).",
-        demandOption: true,
-        type: "string",
-      },
-      pubkeys: {
-        description: "Export slashing protection data only for a given subset of public keys",
-        type: "array",
-        string: true, // Ensures the pubkey string is not automatically converted to numbers
-        coerce: (pubkeys: string[]): string[] =>
-          // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-          pubkeys.flatMap((item) => item.split(",")).map(ensure0xPrefix),
-      },
+      file: {...interchangeFileOption, description: "The slashing protection interchange file to export to (.json)."},
+      pubkeys: interchangePubkeysOption,
     },
 
     handler: async (args) => {
-      const {file} = args;
+      const {file, pubkeys} = args;
 
       const {config, network} = getBeaconConfigFromArgs(args);
       const validatorPaths = getValidatorPaths(args, network);
@@ -58,8 +51,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
 
       const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
-      const formatVersion: InterchangeFormatVersion = {version: "5"};
-      logger.info("Exporting slashing protection data", {...formatVersion, dbPath});
+      logger.info("Exporting slashing protection data", {...interchangeFormatVersion, dbPath});
 
       const {slashingProtection, metadata} = await getSlashingProtection(args, network, logger);
 
@@ -70,39 +62,6 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
       const genesisValidatorsRoot =
         (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
-      logger.verbose("Fetching pubkeys from slashing protection db");
-      const allPubkeys = await slashingProtection.listPubkeys();
-      let pubkeysToExport = allPubkeys;
-
-      if (args.pubkeys) {
-        logger.verbose("Filtering by pubkeys from args", {count: args.pubkeys.length});
-        const filteredPubkeys = [];
-
-        for (const pubkeyHex of args.pubkeys) {
-          if (!isValidatePubkeyHex(pubkeyHex)) {
-            throw new YargsError(`Invalid pubkey ${pubkeyHex}`);
-          }
-          const existingPubkey = allPubkeys.find((pubkey) => toPubkeyHex(pubkey) === pubkeyHex);
-          if (!existingPubkey) {
-            logger.warn("Pubkey not found in slashing protection db", {pubkey: pubkeyHex});
-          } else {
-            filteredPubkeys.push(existingPubkey);
-          }
-        }
-
-        pubkeysToExport = filteredPubkeys;
-      }
-
-      logger.info("Starting export for pubkeys found", {count: pubkeysToExport.length});
-      const interchange = await slashingProtection.exportInterchange(
-        genesisValidatorsRoot,
-        pubkeysToExport,
-        formatVersion,
-        logger
-      );
-
-      logger.info("Writing slashing protection data", {file});
-      writeFile600Perm(file, interchange);
-      logger.info("Export completed successfully");
+      await exportInterchangeFile(slashingProtection, genesisValidatorsRoot, {file, pubkeys}, logger);
     },
   };

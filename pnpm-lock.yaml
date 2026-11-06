@@ -488,6 +488,9 @@ importers:
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
+      '@lodestar/signer':
+        specifier: workspace:^
+        version: link:../signer
       '@lodestar/state-transition':
         specifier: workspace:^
         version: link:../state-transition
@@ -750,6 +753,52 @@ importers:
       libp2p:
         specifier: 3.4.0
         version: 3.4.0
+
+  packages/signer:
+    dependencies:
+      '@chainsafe/ssz':
+        specifier: ^1.9.0
+        version: 1.9.0
+      '@lodestar/api':
+        specifier: workspace:^
+        version: link:../api
+      '@lodestar/config':
+        specifier: workspace:^
+        version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
+      '@lodestar/params':
+        specifier: workspace:^
+        version: link:../params
+      '@lodestar/state-transition':
+        specifier: workspace:^
+        version: link:../state-transition
+      '@lodestar/types':
+        specifier: workspace:^
+        version: link:../types
+      '@lodestar/utils':
+        specifier: workspace:^
+        version: link:../utils
+      '@lodestar/validator':
+        specifier: workspace:^
+        version: link:../validator
+    devDependencies:
+      '@lodestar/db':
+        specifier: workspace:^
+        version: link:../db
+      '@lodestar/logger':
+        specifier: workspace:^
+        version: link:../logger
+      '@types/tmp':
+        specifier: ^0.2.3
+        version: 0.2.3
+      fastify:
+        specifier: ^5.8.1
+        version: 5.12.6
+      tmp:
+        specifier: ^0.2.4
+        version: 0.2.7
 
   packages/spec-test-util:
     dependencies:

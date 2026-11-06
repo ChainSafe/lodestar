@@ -26,6 +26,7 @@ Here's a quick list of the available CLI commands:
 | `./bin/lodestar beacon`    | Run a beacon node using a configuration from disk, by default `./.lodestar`              |
 | `./bin/lodestar account`   | Run various sub-commands for creating/managing Ethereum Consensus accounts               |
 | `./bin/lodestar validator` | Run one or more validator clients                                                        |
+| `./bin/lodestar signer`    | Run a remote signer serving the Ethereum remote signing API for local keystores          |
 | `./bin/lodestar dev`       | Quickly bootstrap a beacon node and multiple validators. Use for development and testing |
 
 Append `--help` to any of these commands to print out all options for each command.

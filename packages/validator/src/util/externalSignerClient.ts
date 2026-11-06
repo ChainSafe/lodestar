@@ -1,146 +1,37 @@
-import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkPostGloas, ForkSeq, isForkPostDeneb} from "@lodestar/params";
-import {blindedOrFullBlockToHeader, computeEpochAtSlot} from "@lodestar/state-transition";
 import {
-  AggregateAndProof,
-  BeaconBlock,
-  BlindedBeaconBlock,
-  Epoch,
-  Root,
-  RootHex,
-  Slot,
-  altair,
-  gloas,
-  heze,
-  phase0,
-  ssz,
-  sszTypesFor,
-} from "@lodestar/types";
-import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
-import {fetch, toHex, toRootHex} from "@lodestar/utils";
+  ApiClient,
+  ForkInfo,
+  SignRequest,
+  SignableMessage,
+  SignableMessageType,
+  getClient,
+  requiresForkInfo,
+} from "@lodestar/api/signer";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkName, isForkPostDeneb} from "@lodestar/params";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {BLSSignature, Root, Slot} from "@lodestar/types";
 import {PubkeyHex} from "../types.js";
 
-export enum SignableMessageType {
-  AGGREGATION_SLOT = "AGGREGATION_SLOT",
-  AGGREGATE_AND_PROOF = "AGGREGATE_AND_PROOF",
-  AGGREGATE_AND_PROOF_V2 = "AGGREGATE_AND_PROOF_V2",
-  ATTESTATION = "ATTESTATION",
-  BLOCK_V2 = "BLOCK_V2",
-  DEPOSIT = "DEPOSIT",
-  RANDAO_REVEAL = "RANDAO_REVEAL",
-  VOLUNTARY_EXIT = "VOLUNTARY_EXIT",
-  SYNC_COMMITTEE_MESSAGE = "SYNC_COMMITTEE_MESSAGE",
-  SYNC_COMMITTEE_SELECTION_PROOF = "SYNC_COMMITTEE_SELECTION_PROOF",
-  SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
-  VALIDATOR_REGISTRATION = "VALIDATOR_REGISTRATION",
-  EXECUTION_PAYLOAD_ENVELOPE = "EXECUTION_PAYLOAD_ENVELOPE",
-  PAYLOAD_ATTESTATION_MESSAGE = "PAYLOAD_ATTESTATION_MESSAGE",
-  PROPOSER_PREFERENCES = "PROPOSER_PREFERENCES",
-  BUILDER_REQUEST_AUTH = "BUILDER_REQUEST_AUTH",
-  INCLUSION_LIST = "INCLUSION_LIST",
-}
+export type {SignableMessage};
+export {SignableMessageType};
 
-const AggregationSlotType = new ContainerType({
-  slot: ssz.Slot,
-});
+const clientByUrl = new Map<string, ApiClient>();
 
-const DepositType = new ContainerType(
-  {
-    pubkey: ssz.BLSPubkey,
-    withdrawalCredentials: ssz.Bytes32,
-    amount: ssz.UintNum64,
-    genesisForkVersion: ssz.Bytes4,
-  },
-  {jsonCase: "eth2"}
-);
-
-const RandaoRevealType = new ContainerType({
-  epoch: ssz.Epoch,
-});
-
-const SyncCommitteeMessageType = new ContainerType(
-  {
-    beaconBlockRoot: ssz.Root,
-    slot: ssz.Slot,
-  },
-  {jsonCase: "eth2"}
-);
-
-const SyncAggregatorSelectionDataType = new ContainerType(
-  {
-    slot: ssz.Slot,
-    subcommitteeIndex: ssz.SubcommitteeIndex,
-  },
-  {jsonCase: "eth2"}
-);
-
-export type SignableMessage =
-  | {type: SignableMessageType.AGGREGATION_SLOT; data: {slot: Slot}}
-  | {type: SignableMessageType.AGGREGATE_AND_PROOF; data: phase0.AggregateAndProof}
-  | {type: SignableMessageType.AGGREGATE_AND_PROOF_V2; data: AggregateAndProof}
-  | {type: SignableMessageType.ATTESTATION; data: phase0.AttestationData}
-  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock | BlindedBeaconBlock}
-  | {type: SignableMessageType.DEPOSIT; data: ValueOf<typeof DepositType>}
-  | {type: SignableMessageType.RANDAO_REVEAL; data: {epoch: Epoch}}
-  | {type: SignableMessageType.VOLUNTARY_EXIT; data: phase0.VoluntaryExit}
-  | {type: SignableMessageType.SYNC_COMMITTEE_MESSAGE; data: ValueOf<typeof SyncCommitteeMessageType>}
-  | {type: SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF; data: ValueOf<typeof SyncAggregatorSelectionDataType>}
-  | {type: SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF; data: altair.ContributionAndProof}
-  | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1}
-  | {type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE; data: gloas.ExecutionPayloadEnvelope}
-  | {type: SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE; data: gloas.PayloadAttestationData}
-  | {type: SignableMessageType.PROPOSER_PREFERENCES; data: gloas.ProposerPreferences}
-  | {type: SignableMessageType.BUILDER_REQUEST_AUTH; data: gloas.BuilderRequestAuth}
-  | {type: SignableMessageType.INCLUSION_LIST; data: heze.InclusionList};
-
-const requiresForkInfo: Record<SignableMessageType, boolean> = {
-  [SignableMessageType.AGGREGATION_SLOT]: true,
-  [SignableMessageType.AGGREGATE_AND_PROOF]: true,
-  [SignableMessageType.AGGREGATE_AND_PROOF_V2]: true,
-  [SignableMessageType.ATTESTATION]: true,
-  [SignableMessageType.BLOCK_V2]: true,
-  [SignableMessageType.DEPOSIT]: false,
-  [SignableMessageType.RANDAO_REVEAL]: true,
-  [SignableMessageType.VOLUNTARY_EXIT]: true,
-  [SignableMessageType.SYNC_COMMITTEE_MESSAGE]: true,
-  [SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF]: true,
-  [SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF]: true,
-  [SignableMessageType.VALIDATOR_REGISTRATION]: false,
-  [SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE]: true,
-  [SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE]: true,
-  [SignableMessageType.PROPOSER_PREFERENCES]: true,
-  [SignableMessageType.BUILDER_REQUEST_AUTH]: false,
-  [SignableMessageType.INCLUSION_LIST]: true,
-};
-
-type Web3SignerSerializedRequest = {
-  type: SignableMessageType;
-  fork_info?: {
-    fork: {
-      previous_version: RootHex;
-      current_version: RootHex;
-      epoch: string;
-    };
-    genesis_validators_root: RootHex;
-  };
-  signingRoot: RootHex;
-};
-
-enum MediaType {
-  json = "application/json",
+function getSignerClient(externalSignerUrl: string): ApiClient {
+  let client = clientByUrl.get(externalSignerUrl);
+  if (client === undefined) {
+    client = getClient({baseUrl: externalSignerUrl});
+    clientByUrl.set(externalSignerUrl, client);
+  }
+  return client;
 }
 
 /**
  * Return public keys from the server.
  */
 export async function externalSignerGetKeys(externalSignerUrl: string): Promise<string[]> {
-  const res = await fetch(`${externalSignerUrl}/api/v1/eth2/publicKeys`, {
-    method: "GET",
-    headers: {Accept: MediaType.json},
-  });
-
-  return handleExternalSignerResponse<string[]>(res);
+  return (await getSignerClient(externalSignerUrl).listPublicKeys()).value();
 }
 
 /**
@@ -153,203 +44,34 @@ export async function externalSignerPostSignature(
   signingRoot: Root,
   signingSlot: Slot,
   signableMessage: SignableMessage
-): Promise<string> {
-  const requestObj = serializerSignableMessagePayload(config, signableMessage) as Web3SignerSerializedRequest;
-
-  requestObj.type = signableMessage.type;
-  requestObj.signingRoot = toRootHex(signingRoot);
+): Promise<BLSSignature> {
+  const request: SignRequest = {pubkey: pubkeyHex, signingRoot, message: signableMessage};
 
   if (requiresForkInfo[signableMessage.type]) {
-    const forkInfo = getForkInfoForSigning(config, signingSlot, signableMessage.type);
-    requestObj.fork_info = {
-      fork: {
-        previous_version: toHex(forkInfo.prevVersion),
-        current_version: toHex(forkInfo.version),
-        epoch: String(forkInfo.epoch),
-      },
-      genesis_validators_root: toRootHex(config.genesisValidatorsRoot),
-    };
+    request.forkInfo = getForkInfoForSigning(config, signingSlot, signableMessage.type);
   }
 
-  const res = await fetch(`${externalSignerUrl}/api/v1/eth2/sign/${pubkeyHex}`, {
-    method: "POST",
-    headers: {
-      Accept: MediaType.json,
-      "Content-Type": MediaType.json,
-    },
-    body: JSON.stringify(requestObj),
-  });
-
-  const data = await handleExternalSignerResponse<{signature: string}>(res);
-  return data.signature;
+  return (await getSignerClient(externalSignerUrl).sign(request)).value().signature;
 }
 
 /**
  * Return upcheck status from server.
  */
 export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean> {
-  const res = await fetch(`${remoteUrl}/upcheck`, {
-    method: "GET",
-    headers: {Accept: MediaType.json},
-  });
-
-  const data = await handleExternalSignerResponse<{status: string}>(res);
-  return data.status === "OK";
+  return (await getSignerClient(remoteUrl).upcheck()).value().status === "OK";
 }
 
-async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const errBody = await res.text();
-    throw Error(errBody || res.statusText);
-  }
-
-  const contentType = res.headers.get("content-type");
-  if (contentType === null) {
-    throw Error("No Content-Type header found in response");
-  }
-
-  const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
-  if (mediaType !== MediaType.json) {
-    throw Error(`Unsupported response media type: ${mediaType}`);
-  }
-
-  try {
-    return (await res.json()) as T;
-  } catch (e) {
-    throw Error(`Invalid json response: ${(e as Error).message}`);
-  }
-}
-
-function serializerSignableMessagePayload(config: BeaconConfig, payload: SignableMessage): Record<string, unknown> {
-  switch (payload.type) {
-    case SignableMessageType.AGGREGATION_SLOT:
-      return {aggregation_slot: AggregationSlotType.toJson(payload.data)};
-
-    case SignableMessageType.AGGREGATE_AND_PROOF:
-      return {aggregate_and_proof: ssz.phase0.AggregateAndProof.toJson(payload.data)};
-
-    case SignableMessageType.AGGREGATE_AND_PROOF_V2: {
-      const fork = config.getForkName(payload.data.aggregate.data.slot);
-      return {
-        aggregate_and_proof: {
-          version: fork.toUpperCase(),
-          data: sszTypesFor(fork).AggregateAndProof.toJson(payload.data),
-        },
-      };
-    }
-
-    case SignableMessageType.ATTESTATION:
-      return {attestation: ssz.phase0.AttestationData.toJson(payload.data)};
-
-    // Note: `type: BLOCK` not implemented
-    case SignableMessageType.BLOCK_V2: {
-      const fork = config.getForkInfo(payload.data.slot);
-      // web3signer requires capitalized names: PHASE0, ALTAIR, etc
-      const version = fork.name.toUpperCase();
-      if (fork.seq >= ForkSeq.bellatrix) {
-        return {
-          beacon_block: {
-            version,
-            block_header: ssz.phase0.BeaconBlockHeader.toJson(blindedOrFullBlockToHeader(config, payload.data)),
-          },
-        };
-      }
-
-      return {
-        beacon_block: {
-          version,
-          block: config.getForkTypes(payload.data.slot).BeaconBlock.toJson(payload.data),
-        },
-      };
-    }
-
-    case SignableMessageType.DEPOSIT:
-      return {deposit: DepositType.toJson(payload.data)};
-
-    case SignableMessageType.RANDAO_REVEAL:
-      return {randao_reveal: RandaoRevealType.toJson(payload.data)};
-
-    case SignableMessageType.VOLUNTARY_EXIT:
-      return {voluntary_exit: ssz.phase0.VoluntaryExit.toJson(payload.data)};
-
-    case SignableMessageType.SYNC_COMMITTEE_MESSAGE:
-      return {sync_committee_message: SyncCommitteeMessageType.toJson(payload.data)};
-
-    case SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF:
-      return {sync_aggregator_selection_data: SyncAggregatorSelectionDataType.toJson(payload.data)};
-
-    case SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF:
-      return {contribution_and_proof: ssz.altair.ContributionAndProof.toJson(payload.data)};
-
-    case SignableMessageType.VALIDATOR_REGISTRATION:
-      return {validator_registration: ssz.bellatrix.ValidatorRegistrationV1.toJson(payload.data)};
-
-    case SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE: {
-      const slot = payload.data.payload.slotNumber;
-      return {
-        execution_payload_envelope: {
-          version: config.getForkName(slot).toUpperCase(),
-          data: config.getForkTypes<ForkPostGloas>(slot).ExecutionPayloadEnvelope.toJson(payload.data),
-        },
-      };
-    }
-
-    case SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE: {
-      const slot = payload.data.slot;
-      return {
-        payload_attestation_message: {
-          version: config.getForkName(slot).toUpperCase(),
-          data: config.getForkTypes<ForkPostGloas>(slot).PayloadAttestationData.toJson(payload.data),
-        },
-      };
-    }
-
-    case SignableMessageType.PROPOSER_PREFERENCES: {
-      const slot = payload.data.proposalSlot;
-      return {
-        proposer_preferences: {
-          version: config.getForkName(slot).toUpperCase(),
-          data: config.getForkTypes<ForkPostGloas>(slot).ProposerPreferences.toJson(payload.data),
-        },
-      };
-    }
-
-    case SignableMessageType.BUILDER_REQUEST_AUTH: {
-      const slot = payload.data.slot;
-      return {
-        builder_request_auth: {
-          version: config.getForkName(slot).toUpperCase(),
-          data: config.getForkTypes<ForkPostGloas>(slot).BuilderRequestAuth.toJson(payload.data),
-        },
-      };
-    }
-
-    case SignableMessageType.INCLUSION_LIST:
-      return {inclusion_list: ssz.heze.InclusionList.toJson(payload.data)};
-  }
-}
-
-function getForkInfoForSigning(
-  config: BeaconConfig,
-  signingSlot: Slot,
-  messageType: SignableMessageType
-): {version: Uint8Array; prevVersion: Uint8Array; epoch: number} {
+function getForkInfoForSigning(config: BeaconConfig, signingSlot: Slot, messageType: SignableMessageType): ForkInfo {
   const forkInfo = config.getForkInfo(signingSlot);
 
-  if (messageType === SignableMessageType.VOLUNTARY_EXIT && isForkPostDeneb(forkInfo.name)) {
-    // Always uses Capella fork post-Deneb (EIP-7044)
-    const capellaFork = config.forks[ForkName.capella];
-    return {
-      version: capellaFork.version,
-      prevVersion: capellaFork.prevVersion,
-      epoch: capellaFork.epoch,
-    };
-  }
+  // Always uses Capella fork post-Deneb (EIP-7044)
+  const {version, prevVersion, epoch} =
+    messageType === SignableMessageType.VOLUNTARY_EXIT && isForkPostDeneb(forkInfo.name)
+      ? config.forks[ForkName.capella]
+      : {version: forkInfo.version, prevVersion: forkInfo.prevVersion, epoch: computeEpochAtSlot(signingSlot)};
 
-  // Use the fork at the signing slot by default
   return {
-    version: forkInfo.version,
-    prevVersion: forkInfo.prevVersion,
-    epoch: computeEpochAtSlot(signingSlot),
+    fork: {previousVersion: prevVersion, currentVersion: version, epoch},
+    genesisValidatorsRoot: config.genesisValidatorsRoot,
   };
 }

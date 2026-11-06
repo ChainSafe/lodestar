@@ -78,6 +78,7 @@
     "@lodestar/logger": "workspace:^",
     "@lodestar/native": "workspace:^",
     "@lodestar/params": "workspace:^",
+    "@lodestar/signer": "workspace:^",
     "@lodestar/state-transition": "workspace:^",
     "@lodestar/types": "workspace:^",
     "@lodestar/utils": "workspace:^",

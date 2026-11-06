@@ -53,6 +53,16 @@
       "typescript": "./src/keymanager/server/index.ts",
       "types": "./lib/keymanager/server/index.d.ts",
       "import": "./lib/keymanager/server/index.js"
+    },
+    "./signer": {
+      "typescript": "./src/signer/index.ts",
+      "types": "./lib/signer/index.d.ts",
+      "import": "./lib/signer/index.js"
+    },
+    "./signer/server": {
+      "typescript": "./src/signer/server/index.ts",
+      "types": "./lib/signer/server/index.d.ts",
+      "import": "./lib/signer/server/index.js"
     }
   },
   "files": [

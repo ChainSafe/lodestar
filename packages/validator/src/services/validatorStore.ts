@@ -696,7 +696,8 @@ export class ValidatorStore {
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.BLOCK_V2,
-      data: blindedOrFull,
+      version: this.config.getForkName(signingSlot),
+      data: {block: blindedOrFull},
     };
 
     return {
@@ -730,6 +731,7 @@ export class ValidatorStore {
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE,
+      version: this.config.getForkName(signingSlot),
       data: envelope,
     };
 
@@ -829,10 +831,13 @@ export class ValidatorStore {
       domain
     );
 
-    const signableMessage: SignableMessage = {
-      type: isPostElectra ? SignableMessageType.AGGREGATE_AND_PROOF_V2 : SignableMessageType.AGGREGATE_AND_PROOF,
-      data: aggregateAndProof,
-    };
+    const signableMessage: SignableMessage = isPostElectra
+      ? {
+          type: SignableMessageType.AGGREGATE_AND_PROOF_V2,
+          version: this.config.getForkName(signingSlot),
+          data: aggregateAndProof,
+        }
+      : {type: SignableMessageType.AGGREGATE_AND_PROOF, data: aggregateAndProof as phase0.AggregateAndProof};
 
     return {
       message: aggregateAndProof,
@@ -913,6 +918,7 @@ export class ValidatorStore {
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE,
+      version: this.config.getForkName(signingSlot),
       data,
     };
 
@@ -948,6 +954,7 @@ export class ValidatorStore {
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.PROPOSER_PREFERENCES,
+      version: this.config.getForkName(signingSlot),
       data: message,
     };
 
@@ -1101,6 +1108,7 @@ export class ValidatorStore {
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.BUILDER_REQUEST_AUTH,
+      version: this.config.getForkName(proposalSlot),
       data: message,
     };
 
@@ -1194,7 +1202,7 @@ export class ValidatorStore {
       case SignerType.Remote: {
         const timer = this.metrics?.remoteSignTime.startTimer();
         try {
-          const signatureHex = await externalSignerPostSignature(
+          return await externalSignerPostSignature(
             this.config,
             signer.url,
             pubkeyHex,
@@ -1202,7 +1210,6 @@ export class ValidatorStore {
             signingSlot,
             signableMessage
           );
-          return fromHex(signatureHex);
         } catch (e) {
           this.metrics?.remoteSignErrors.inc();
           throw e;

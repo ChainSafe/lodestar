@@ -4,9 +4,14 @@ export const commandPaths = {
   beacon: "run/beacon-management/beacon-cli",
   validator: "run/validator-management/validator-cli",
   builder: "run/builder-management/builder-cli",
+  signer: "run/signer-management/signer-cli",
 };
 
-export const builderSince = "1.46.0";
+/** First release that ships each command, versions before it have no CLI reference for it */
+export const commandSince = {
+  builder: "1.46.0",
+  signer: "1.51.0",
+};
 
 const legacyOmittedDefaults = ["false", "0", '""', "", "[]"];
 

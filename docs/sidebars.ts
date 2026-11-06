@@ -52,6 +52,14 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
+          label: "Remote Signer",
+          items: [
+            "run/signer-management/remote-signer",
+            "run/signer-management/signer-cli",
+          ],
+        },
+        {
+          type: "category",
           label: "Logging and Metrics",
           items: [
             "run/logging-and-metrics/prometheus-grafana",

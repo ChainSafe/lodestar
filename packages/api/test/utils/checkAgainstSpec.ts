@@ -20,7 +20,15 @@ ajv.addKeyword({
   errors: false,
 });
 
+// OpenAPI discriminator hints are not needed to validate, `oneOf` branches are distinguished by their `type` enum
+ajv.addKeyword({
+  keyword: "discriminator",
+  validate: () => true,
+  errors: false,
+});
+
 ajv.addFormat("hex", /^0x[a-fA-F0-9]*$/);
+ajv.addFormat("uint64", /^[0-9]+$/);
 ajv.addFormat("uri", {type: "string", validate: (value) => URL.canParse(value)});
 
 /**
@@ -187,7 +195,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
   }
 }
 
-function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown, id: string): void {
+export function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown, id: string): void {
   let validate: ReturnType<typeof ajv.compile>;
 
   try {

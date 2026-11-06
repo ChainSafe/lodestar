@@ -208,6 +208,7 @@ test("build data loads retained manifests, legacy references, and missing local 
     beacon: null,
     validator: null,
     builder: null,
+    signer: null,
   });
   await mkdir(path.join(directory, "pages"));
   const commands = {beacon: [option("flag")], validator: []};

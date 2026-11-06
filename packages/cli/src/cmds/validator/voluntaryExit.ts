@@ -11,7 +11,7 @@ import {
   getCurrentSlot,
 } from "@lodestar/state-transition";
 import {Epoch, ValidatorIndex, phase0, ssz} from "@lodestar/types";
-import {CliCommand, fromHex, toPubkeyHex} from "@lodestar/utils";
+import {CliCommand, toPubkeyHex} from "@lodestar/utils";
 import {SignableMessageType, Signer, SignerType, externalSignerPostSignature} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
@@ -204,11 +204,12 @@ async function createSignedVoluntaryExit(
       signature = signer.secretKey.sign(signingRoot);
       break;
     case SignerType.Remote: {
-      const signatureHex = await externalSignerPostSignature(config, signer.url, pubkey, signingRoot, slot, {
-        data: voluntaryExit,
-        type: SignableMessageType.VOLUNTARY_EXIT,
-      });
-      signature = Signature.fromBytes(fromHex(signatureHex));
+      signature = Signature.fromBytes(
+        await externalSignerPostSignature(config, signer.url, pubkey, signingRoot, slot, {
+          data: voluntaryExit,
+          type: SignableMessageType.VOLUNTARY_EXIT,
+        })
+      );
       break;
     }
     default:

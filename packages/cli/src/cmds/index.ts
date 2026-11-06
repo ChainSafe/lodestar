@@ -4,12 +4,14 @@ import {beacon} from "./beacon/index.js";
 import {bootnode} from "./bootnode/index.js";
 import {builder} from "./builder/index.js";
 import {dev} from "./dev/index.js";
+import {signer} from "./signer/index.js";
 import {validator} from "./validator/index.js";
 
 export const cmds: Required<CliCommand<GlobalArgs, Record<never, never>>>["subcommands"] = [
   beacon,
   validator,
   builder,
+  signer,
   dev,
   bootnode,
 ];

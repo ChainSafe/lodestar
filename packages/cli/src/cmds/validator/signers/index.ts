@@ -3,17 +3,33 @@ import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-key
 import {SecretKey} from "@lodestar/native/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
-import {Signer, SignerType, externalSignerGetKeys} from "@lodestar/validator";
+import {Signer, SignerLocal, SignerType, externalSignerGetKeys} from "@lodestar/validator";
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
 import {YargsError, assertValidPubkeysHex} from "../../../util/index.js";
 import {showProgress} from "../../../util/progress.js";
 import {decryptKeystoreDefinitions} from "../keymanager/decryptKeystoreDefinitions.js";
 import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
-import {IValidatorCliArgs} from "../options.js";
+import {AccountValidatorArgs, IValidatorCliArgs} from "../options.js";
 import {getAccountPaths} from "../paths.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
+
+type SignersContext = {logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>; signal: AbortSignal};
+
+/** Args required to load local signers, shared by the validator and signer commands */
+export type LocalSignersArgs = Pick<
+  IValidatorCliArgs,
+  | "interopIndexes"
+  | "fromMnemonic"
+  | "mnemonicIndexes"
+  | "importKeystores"
+  | "importKeystoresPassword"
+  | "disableKeystoresThreadPool"
+  | "force"
+> &
+  AccountValidatorArgs &
+  GlobalArgs;
 
 /**
  * Options processing hierarchy
@@ -43,18 +59,48 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 export async function getSignersFromArgs(
   args: IValidatorCliArgs & GlobalArgs,
   network: string,
-  {logger, signal}: {logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>; signal: AbortSignal}
+  context: SignersContext
 ): Promise<Signer[]> {
+  const useRemoteSigners = Boolean(args["externalSigner.pubkeys"] || args["externalSigner.fetch"]);
+
+  // ONLY USE FOR TESTNETS - Using a remote signer with interop keys
+  if (args.interopIndexes && useRemoteSigners) {
+    return getRemoteSigners(args, context.logger);
+  }
+
+  if (args.interopIndexes || args.fromMnemonic || args.importKeystores) {
+    return getLocalSignersFromArgs(args, network, context);
+  }
+
+  // Remote keys are declared manually or will be fetched from external signer
+  if (useRemoteSigners) {
+    return getRemoteSigners(args, context.logger);
+  }
+
+  // Read and decrypt local keystores, imported via keymanager api or import cmd
+  const keystoreSigners = await getLocalSignersFromArgs(args, network, context);
+
+  // Read local remote keys, imported via keymanager api
+  const persistedKeysBackend = new PersistedKeysBackend(getAccountPaths(args, network));
+  const signerDefinitions = persistedKeysBackend.readAllRemoteKeys();
+  const remoteSigners = signerDefinitions.map(({url, pubkey}): Signer => ({type: SignerType.Remote, url, pubkey}));
+
+  return [...keystoreSigners, ...remoteSigners];
+}
+
+/**
+ * Loads local signers following the hierarchy documented in {@link getSignersFromArgs}, without remote signers
+ */
+export async function getLocalSignersFromArgs(
+  args: LocalSignersArgs,
+  network: string,
+  {logger, signal}: SignersContext
+): Promise<SignerLocal[]> {
   const accountPaths = getAccountPaths(args, network);
 
   // ONLY USE FOR TESTNETS - Derive interop keys
   if (args.interopIndexes) {
-    const indexes = args.interopIndexes;
-    // Using a remote signer with TESTNETS
-    if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-      return getRemoteSigners(args, logger);
-    }
-    return indexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
+    return args.interopIndexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
   }
 
   // UNSAFE, ONLY USE FOR TESTNETS - Derive keys directly from a mnemonic
@@ -103,11 +149,6 @@ export async function getSignersFromArgs(
     });
   }
 
-  // Remote keys are declared manually or will be fetched from external signer
-  if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-    return getRemoteSigners(args, logger);
-  }
-
   // Read keys from local account manager
   const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
 
@@ -127,7 +168,7 @@ export async function getSignersFromArgs(
     },
   });
 
-  const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {
+  return decryptKeystoreDefinitions(keystoreDefinitions, {
     ignoreLockFile: args.force,
     onDecrypt: needle,
     cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
@@ -135,12 +176,6 @@ export async function getSignersFromArgs(
     logger,
     signal,
   });
-
-  // Read local remote keys, imported via keymanager api
-  const signerDefinitions = persistedKeysBackend.readAllRemoteKeys();
-  const remoteSigners = signerDefinitions.map(({url, pubkey}): Signer => ({type: SignerType.Remote, url, pubkey}));
-
-  return [...keystoreSigners, ...remoteSigners];
 }
 
 export function getSignerPubkeyHex(signer: Signer): string {
