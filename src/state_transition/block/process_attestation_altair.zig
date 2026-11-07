@@ -72,6 +72,23 @@ pub fn processAttestationsAltair(
     const attesting_indices_buffer = try allocator.alloc(ValidatorIndex, buffer_len);
     defer allocator.free(attesting_indices_buffer);
 
+    // Gloas participation lists are progressive and have no editor.
+    const Participation = if (comptime fork.gte(.gloas))
+        *ForkTypes(fork).EpochParticipation.TreeView
+    else
+        ForkTypes(fork).EpochParticipation.TreeView.Editor;
+    var current_participation: Participation = if (comptime fork.gte(.gloas))
+        try state.currentEpochParticipation()
+    else
+        try (try state.currentEpochParticipation()).editor();
+    defer if (comptime fork.lt(.gloas)) current_participation.deinit();
+
+    var previous_participation: Participation = if (comptime fork.gte(.gloas))
+        try state.previousEpochParticipation()
+    else
+        try (try state.previousEpochParticipation()).editor();
+    defer if (comptime fork.lt(.gloas)) previous_participation.deinit();
+
     for (attestations) |*attestation| {
         const data = &attestation.data;
         try validateAttestation(fork, epoch_cache, state, attestation);
@@ -100,7 +117,8 @@ pub fn processAttestationsAltair(
         }
 
         const in_current_epoch = data.target.epoch == current_epoch;
-        var epoch_participation = if (in_current_epoch) try state.currentEpochParticipation() else try state.previousEpochParticipation();
+        const epoch_participation =
+            if (in_current_epoch) &current_participation else &previous_participation;
         const flags_attestation = try getAttestationParticipationStatus(fork, data, state_slot - data.slot, current_epoch, root_cache, parent_slot);
         const same_slot = if (comptime fork.gte(.gloas)) try isAttestationSameSlotRootCache(fork, root_cache, data) else false;
 
@@ -108,7 +126,7 @@ pub fn processAttestationsAltair(
         // In epoch processing, this participation info is used to calculate balance updates
         var total_balance_increments_with_weight: u64 = 0;
         for (attesting_indices) |validator_index| {
-            const flags = try epoch_participation.get(validator_index);
+            const flags = try epoch_participation.*.get(validator_index);
             // Returns flags that are NOT set before (~ bitwise NOT) AND are set after
             const flags_new_set = ~flags & flags_attestation;
             if (flags_new_set == 0) continue;
@@ -118,7 +136,7 @@ pub fn processAttestationsAltair(
             // so we want to update the participation flag tree in batch
 
             // no setBitwiseOR implemented in zig ssz, so we do it manually here
-            try epoch_participation.set(validator_index, flags_attestation | flags);
+            try epoch_participation.*.set(validator_index, flags_attestation | flags);
 
             if (comptime fork.gte(.gloas)) {
                 if (same_slot and flags == 0) {

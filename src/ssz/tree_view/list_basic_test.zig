@@ -1681,3 +1681,220 @@ test "memory_safety: failed list commit preserves pending edits for retry" {
     }
     try std.testing.expectEqual(baseline, pool.getNodesInUse());
 }
+
+test "ListBasicTreeView editor should match get and set across chunked leaves" {
+    const allocator = std.testing.allocator;
+    inline for (.{ UintType(8), UintType(64) }) |ST| {
+        const ListT = FixedListType(ST, 1 << 20, .{ .chunked_leaf = true });
+        const items_per_chunk = 32 / ST.fixed_size;
+        const items_per_leaf = ChunkedLeafType.K * items_per_chunk;
+        // The last leaf holds two full chunks and ends mid-chunk.
+        const len = 3 * items_per_leaf + 2 * items_per_chunk + 3;
+        var pool = try Node.Pool.init(.{
+            .page_allocator = allocator,
+            .allocator = allocator,
+            .pool_size = 4096,
+        });
+        defer pool.deinit();
+
+        var value: ListT.Type = .empty;
+        defer value.deinit(allocator);
+        try value.resize(allocator, len);
+        for (value.items, 0..) |*item, i| item.* = @truncate(i + 1);
+        const expected = try ListT.TreeView.fromValue(allocator, &pool, &value);
+        defer expected.deinit();
+        const view = try ListT.TreeView.fromValue(allocator, &pool, &value);
+        defer view.deinit();
+
+        // Leaf 0 is staged through the view before the editor starts. Leaves 0 and 1 are read
+        // through the editor before their writes; leaves 2 and 3 are written before any read.
+        try expected.set(1, 200);
+        try view.set(1, 200);
+        {
+            var editor = try view.editor();
+            defer editor.deinit();
+            try std.testing.expectEqual(@as(ST.Type, 200), try editor.get(1));
+            const read_index = items_per_leaf + 2;
+            try std.testing.expectEqual(try expected.get(read_index), try editor.get(read_index));
+
+            const writes = [_]usize{
+                0,
+                items_per_leaf - 1,
+                items_per_leaf,
+                2 * items_per_leaf + 33,
+                len - 1,
+            };
+            for (writes, 0..) |index, i| {
+                const new_value: ST.Type = @intCast(100 + i);
+                try editor.set(index, new_value);
+                try expected.set(index, new_value);
+                try std.testing.expectEqual(new_value, try editor.get(index));
+            }
+            for (0..len) |index| {
+                try std.testing.expectEqual(try expected.get(index), try editor.get(index));
+            }
+        }
+
+        const expected_root = (try expected.hashTreeRoot()).*;
+        try std.testing.expectEqualSlices(u8, &expected_root, try view.hashTreeRoot());
+        const cl_depth: Depth = ListT.chunk_depth + 1 - ChunkedLeafType.k_log2;
+        const last_leaf = try view.getRoot().getNodeAtDepth(&pool, cl_depth, 3);
+        try std.testing.expectEqual(@as(u16, 3), try last_leaf.getChunkedLeafLen(&pool));
+    }
+}
+
+test "ListBasicTreeView editor should leave an earlier clone unchanged" {
+    const allocator = std.testing.allocator;
+    const ListT = FixedListType(UintType(8), 1 << 20, .{ .chunked_leaf = true });
+    const items_per_leaf = ChunkedLeafType.K * 32;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 4096,
+    });
+    defer pool.deinit();
+
+    var value: ListT.Type = .empty;
+    defer value.deinit(allocator);
+    try value.appendNTimes(allocator, 1, items_per_leaf + 10);
+    const view = try ListT.TreeView.fromValue(allocator, &pool, &value);
+    defer view.deinit();
+    const snapshot = try view.clone(.{ .transfer_cache = false });
+    defer snapshot.deinit();
+    const snapshot_root = (try snapshot.hashTreeRoot()).*;
+
+    {
+        var editor = try view.editor();
+        defer editor.deinit();
+        try std.testing.expectEqual(@as(u8, 1), try editor.get(0));
+        try editor.set(0, 2);
+        try editor.set(items_per_leaf + 9, 3);
+    }
+    try view.commit();
+
+    try std.testing.expectEqual(@as(u8, 2), try view.get(0));
+    try std.testing.expectEqual(@as(u8, 3), try view.get(items_per_leaf + 9));
+    try std.testing.expectEqual(@as(u8, 1), try snapshot.get(0));
+    try std.testing.expectEqual(@as(u8, 1), try snapshot.get(items_per_leaf + 9));
+    try std.testing.expectEqualSlices(u8, &snapshot_root, try snapshot.hashTreeRoot());
+}
+
+test "ListBasicTreeView editor should read and materialize a zero-sentinel leaf" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 4096,
+    });
+    defer pool.deinit();
+
+    const ListT = FixedListType(UintType(64), 1 << 20, .{ .chunked_leaf = true });
+    const raw: [ChunkedLeafType.K][32]u8 align(64) = @splat(@splat(7));
+    const items_in_cl0: usize = ChunkedLeafType.K * 4;
+    const item_count = items_in_cl0 + 100;
+    const subtree_depth: Depth = @intCast(ListT.chunk_depth - ChunkedLeafType.k_log2);
+    var expected = try ListT.TreeView.init(
+        allocator,
+        &pool,
+        try buildChunkedLeafListWithZeroBoundary(&pool, &raw, item_count, subtree_depth),
+    );
+    defer expected.deinit();
+    var view = try ListT.TreeView.init(
+        allocator,
+        &pool,
+        try buildChunkedLeafListWithZeroBoundary(&pool, &raw, item_count, subtree_depth),
+    );
+    defer view.deinit();
+
+    {
+        var editor = try view.editor();
+        defer editor.deinit();
+        for (items_in_cl0..item_count) |index| {
+            try std.testing.expectEqual(@as(u64, 0), try editor.get(index));
+        }
+        try editor.set(items_in_cl0 + 10, 77);
+        try std.testing.expectEqual(@as(u64, 77), try editor.get(items_in_cl0 + 10));
+        try std.testing.expectEqual(@as(u64, 0), try editor.get(items_in_cl0 + 11));
+    }
+    try expected.set(items_in_cl0 + 10, 77);
+
+    const expected_root = (try expected.hashTreeRoot()).*;
+    try std.testing.expectEqualSlices(u8, &expected_root, try view.hashTreeRoot());
+    const leaf = try view.getRoot().getNodeAtDepth(&pool, subtree_depth + 1, 1);
+    try std.testing.expectEqual(@as(u16, 25), try leaf.getChunkedLeafLen(&pool));
+}
+
+test "ListBasicTreeView editor should reject indices at or past the length" {
+    const allocator = std.testing.allocator;
+    const ListT = FixedListType(UintType(8), 1 << 20, .{ .chunked_leaf = true });
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 64,
+    });
+    defer pool.deinit();
+
+    var value: ListT.Type = .empty;
+    defer value.deinit(allocator);
+    try value.appendNTimes(allocator, 5, 33);
+    const view = try ListT.TreeView.fromValue(allocator, &pool, &value);
+    defer view.deinit();
+    var editor = try view.editor();
+    defer editor.deinit();
+    try std.testing.expectEqual(@as(u8, 5), try editor.get(32));
+    try std.testing.expectError(error.IndexOutOfBounds, editor.get(33));
+    try std.testing.expectError(error.IndexOutOfBounds, editor.set(33, 1));
+    try std.testing.expectEqual(@as(usize, 0), view.chunks.state.changed.count());
+
+    const empty = try ListT.TreeView.fromValue(allocator, &pool, &.empty);
+    defer empty.deinit();
+    var empty_editor = try empty.editor();
+    defer empty_editor.deinit();
+    try std.testing.expectError(error.IndexOutOfBounds, empty_editor.get(0));
+    try std.testing.expectError(error.IndexOutOfBounds, empty_editor.set(0, 1));
+}
+
+fn editWithAllocationFailures(allocator: std.mem.Allocator) !void {
+    const ListT = FixedListType(UintType(8), 1 << 20, .{ .chunked_leaf = true });
+    const items_per_leaf = ChunkedLeafType.K * 32;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = std.testing.allocator,
+        .allocator = allocator,
+        .pool_size = 64,
+    });
+    defer pool.deinit();
+
+    var value: ListT.Type = .empty;
+    defer value.deinit(allocator);
+    try value.appendNTimes(allocator, 1, 2 * items_per_leaf);
+    const view = try ListT.TreeView.fromValue(allocator, &pool, &value);
+    defer view.deinit();
+    const root = view.getRoot();
+
+    var editor = try view.editor();
+    defer editor.deinit();
+    try std.testing.expectEqual(@as(u8, 1), try editor.get(0));
+    // Leaf 0 becomes writable after a read, leaf 1 without one.
+    for ([_]usize{ 0, items_per_leaf }) |index| {
+        const nodes_before = pool.getNodesInUse();
+        const changed_before = view.chunks.state.changed.count();
+        editor.set(index, 2) catch |err| {
+            try std.testing.expectEqual(error.OutOfMemory, err);
+            try std.testing.expectEqual(nodes_before, pool.getNodesInUse());
+            try std.testing.expectEqual(changed_before, view.chunks.state.changed.count());
+            try std.testing.expectEqual(root, view.getRoot());
+            try std.testing.expectEqual(@as(u8, 1), try editor.get(index));
+            return err;
+        };
+    }
+    try std.testing.expectEqual(@as(u8, 2), try editor.get(0));
+    try std.testing.expectEqual(@as(u8, 2), try editor.get(items_per_leaf));
+}
+
+test "memory_safety: ListBasicTreeView editor should keep the view consistent on OOM" {
+    try std.testing.checkAllAllocationFailures(
+        std.testing.allocator,
+        editWithAllocationFailures,
+        .{},
+    );
+}
