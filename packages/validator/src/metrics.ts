@@ -66,6 +66,16 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       help: "Time between ATTESTATION_DUE_BPS of slot and call publish attestation",
       buckets: [-3, -1, 0, 1, 2, 3, 6, 12],
     }),
+    attesterProduceMarginSlotFraction: register.histogram({
+      name: "vc_attester_produce_attestation_margin_slot_fraction",
+      help: "Offset from the attestation due point when produce was called, as a fraction of the duty slot's duration (negative = before due)",
+      buckets: [-0.25, -0.167, -0.083, 0, 0.083, 0.167, 0.25, 0.5, 1],
+    }),
+    attesterPublishMarginSlotFraction: register.histogram({
+      name: "vc_attester_publish_attestation_margin_slot_fraction",
+      help: "Offset from the attestation due point when publish was called, as a fraction of the duty slot's duration (negative = before due)",
+      buckets: [-0.25, -0.167, -0.083, 0, 0.083, 0.167, 0.25, 0.5, 1],
+    }),
 
     attesterStepCallProduceAggregate: register.histogram({
       name: "vc_attester_step_call_produce_aggregate_seconds",
@@ -113,6 +123,12 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       name: "vc_ptc_step_call_publish_payload_attestation_seconds",
       help: "Time between PAYLOAD_ATTESTATION_DUE_BPS of slot and call publish payload attestation",
       buckets: [-3, -1, 0, 1, 2, 3, 6, 12],
+    }),
+    ptcPublishMarginSlotFraction: register.histogram<{slot_position: "epoch_end" | "other"}>({
+      name: "vc_ptc_publish_payload_attestation_margin_slot_fraction",
+      help: "Offset from the payload attestation due point when publish was called, as a fraction of the duty slot's duration (negative = before due). Measures the publish call, not delivery",
+      labelNames: ["slot_position"],
+      buckets: [-0.25, -0.167, -0.083, -0.042, 0, 0.042, 0.083, 0.167, 0.25, 0.5, 1],
     }),
 
     // Min wait time it 0. CallProduceBlock step is a bit redundant since it must be 0, but let's check

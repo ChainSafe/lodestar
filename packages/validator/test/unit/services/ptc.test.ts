@@ -15,6 +15,7 @@ import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
 import {loggerVc} from "../../utils/logger.js";
+import {createFakeMetrics} from "../../utils/metrics.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");
@@ -109,6 +110,71 @@ describe("PtcService", () => {
     expect(api.beacon.submitPayloadAttestationMessages).toHaveBeenCalledWith({
       payloadAttestationMessages: [payloadAttestationMessage],
     });
+  });
+
+  describe("publish margin slot fraction", () => {
+    it.each([
+      // PAYLOAD_ATTESTATION_DUE_BPS=7500: 9s of a 12s slot, 7.5s of a 10s slot. Publish is called 0.5s past due
+      {
+        name: "gloas epoch-end slot at 12s",
+        chainConfig: {GLOAS_FORK_EPOCH: 0},
+        slot: SLOTS_PER_EPOCH - 1,
+        slotDurationMs: 12000,
+        slotPosition: "epoch_end",
+      },
+      {
+        name: "heze ordinary slot at 10s",
+        chainConfig: {GLOAS_FORK_EPOCH: 0, HEZE_FORK_EPOCH: 0, SLOT_DURATION_MS_HEZE: 10000},
+        slot: SLOTS_PER_EPOCH,
+        slotDurationMs: 10000,
+        slotPosition: "other",
+      },
+    ])(
+      "observes the publish offset at the due-time fallback: $name",
+      async ({chainConfig, slot, slotDurationMs, slotPosition}) => {
+        const dueMs = (slotDurationMs * 7500) / 10000;
+        const clock = new ClockMock();
+        clock.getSlotDurationMs = () => slotDurationMs;
+        // At the due point when the duty starts, so the due-time fallback fires without a payload event
+        clock.msFromSlot = () => dueMs;
+        clock.secFromSlot = () => (dueMs + 500) / 1000;
+        const config = createChainForkConfig({...defaultConfig, ...chainConfig});
+        const metrics = createFakeMetrics();
+        const ptcService = new PtcService(
+          config,
+          loggerVc,
+          api,
+          clock,
+          validatorStore,
+          emitter,
+          chainHeadTracker,
+          syncingStatusTracker,
+          metrics
+        );
+        const duty: routes.validator.PtcDuty = {slot, validatorIndex: 0, pubkey: pubkeys[0]};
+        const payloadAttestationData = ssz.gloas.PayloadAttestationData.defaultValue();
+        vi.spyOn(ptcService["dutiesService"], "getDutiesAtSlot").mockReturnValue([duty]);
+        ptcService["waitForCanonicalPayload"] = vi.fn().mockReturnValue(new Promise(() => {}));
+        api.validator.producePayloadAttestationData.mockResolvedValue(
+          mockApiResponse({data: payloadAttestationData, meta: {version: config.getForkName(slot)}})
+        );
+        validatorStore.signPayloadAttestation.mockResolvedValue({
+          validatorIndex: 0,
+          data: payloadAttestationData,
+          signature: ZERO_HASH,
+        });
+        api.beacon.submitPayloadAttestationMessages.mockResolvedValue(mockApiResponse({}));
+
+        await clock.tickSlotFns(slot, controller.signal);
+
+        expect(api.beacon.submitPayloadAttestationMessages).toHaveBeenCalledOnce();
+        expect(metrics.ptcStepCallPublishPayloadAttestation.observe).toHaveBeenCalledWith(0.5);
+        expect(metrics.ptcPublishMarginSlotFraction.observe).toHaveBeenCalledWith(
+          {slot_position: slotPosition},
+          0.5 / (slotDurationMs / 1000)
+        );
+      }
+    );
   });
 
   it("Should skip submission when no beacon block has been seen for the assigned slot", async () => {
