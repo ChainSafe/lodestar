@@ -188,8 +188,8 @@ function onboardBuildersFromPendingDeposits(
   // deposit queue, and its cost is dominated by whichever branch the queue happens to
   // hit. `verified` signature checks are the ones the pre-verify cache missed, i.e. BLS
   // running inline on the fork transition's critical path. The signature totals include
-  // the checks hasPendingValidator() does internally, which dominate when a builder
-  // deposit is preceded by same-pubkey validator deposits.
+  // the checks hasPendingValidator() does internally for invalid builder deposits that are
+  // preceded by same-pubkey validator deposits.
   let onboarded = 0;
   let topups = 0;
   let kept = 0;
@@ -207,12 +207,11 @@ function onboardBuildersFromPendingDeposits(
 
   for (const deposit of state.pendingDeposits.getAllReadonly()) {
     const depositValue = deposit.toValue();
-
-    const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
     const pubkeyHex = toPubkeyHex(deposit.pubkey);
 
-    // Deposits for existing validators stay in the pending queue
-    if (isValidatorKnown(state, validatorIndex)) {
+    // Only builder-credential deposits can fund builders at the fork, everything else stays in
+    // the pending queue even if a builder uses the same pubkey
+    if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
       pendingDeposits.push(deposit);
       pendingDepositsLookup.add(depositValue, pubkeyHex);
       kept++;
@@ -227,29 +226,9 @@ function onboardBuildersFromPendingDeposits(
       continue;
     }
 
-    // Deposits for non-builders stay in the pending queue. If there is a valid pending
-    // deposit for a new validator with this pubkey, keep this deposit pending so the validator
-    // can pick it up later.
-    if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
-      pendingDeposits.push(deposit);
-      pendingDepositsLookup.add(depositValue, pubkeyHex);
-      kept++;
-      continue;
-    }
-    if (
-      pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex, state.epochCtx.builderDepositSignatureCache)
-    ) {
-      pendingDeposits.push(deposit);
-      pendingDepositsLookup.add(depositValue, pubkeyHex);
-      kept++;
-      continue;
-    }
-
-    // Verify the deposit signature (proof of possession). If invalid the deposit is silently
-    // dropped — stake is forfeited, matching the validator deposit contract behavior.
-    //
-    // The prepareNextSlot scheduler pre-verifies these signatures in the epochs before the fork
-    // A cache miss falls back to verifying this one deposit — no worse than pre-cache.
+    // Verify the deposit signature (proof of possession). The prepareNextSlot scheduler
+    // pre-verifies these signatures in the epochs before the fork, a cache miss falls back to
+    // verifying this one deposit
     const cached = state.epochCtx.builderDepositSignatureCache.getSignatureValidity(depositValue);
     if (cached === null) {
       sigVerified++;
@@ -266,7 +245,18 @@ function onboardBuildersFromPendingDeposits(
         deposit.signature
       );
     if (!isValid) {
-      dropped++;
+      // Keep the deposit as a validator top-up if a validator with this pubkey exists or a valid
+      // pending deposit will create one, otherwise it is dropped and the stake is forfeited
+      if (
+        isValidatorKnown(state, state.epochCtx.getValidatorIndex(deposit.pubkey)) ||
+        pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex, state.epochCtx.builderDepositSignatureCache)
+      ) {
+        pendingDeposits.push(deposit);
+        pendingDepositsLookup.add(depositValue, pubkeyHex);
+        kept++;
+      } else {
+        dropped++;
+      }
       continue;
     }
 

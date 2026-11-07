@@ -11,7 +11,74 @@ const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const PubkeyCache = @import("../cache/pubkey_cache.zig").PubkeyCache;
 const upgradeStateToGloas = @import("upgrade_state_to_gloas.zig").upgradeStateToGloas;
 
+const bls = @import("bls");
+const computeDomain = @import("../utils/domain.zig").computeDomain;
+const computeSigningRoot = @import("../utils/signing_root.zig").computeSigningRoot;
+const PendingDeposit = ct.electra.PendingDeposit.Type;
+
 const validator_count = 96;
+
+fn routingConfig() BeaconConfig {
+    const active_config = if (@import("preset").active_preset == .mainnet) config_module.mainnet.chain_config else config_module.minimal.chain_config;
+    var config = BeaconConfig.init(active_config, c.ZERO_HASH);
+    config.chain.GLOAS_FORK_EPOCH = 1;
+    return config;
+}
+
+fn signedDeposit(config: *const BeaconConfig, seed: u8, prefix: u8, amount: u64) !PendingDeposit {
+    const secret_key = try bls.SecretKey.keyGen(&(@as([32]u8, @splat(seed))), null);
+    var deposit = ct.electra.PendingDeposit.default_value;
+    deposit.pubkey = secret_key.toPublicKey().compress();
+    deposit.withdrawal_credentials[0] = prefix;
+    @memset(deposit.withdrawal_credentials[12..], seed);
+    deposit.amount = amount;
+    const message = ct.phase0.DepositMessage.Type{
+        .pubkey = deposit.pubkey,
+        .withdrawal_credentials = deposit.withdrawal_credentials,
+        .amount = deposit.amount,
+    };
+    var domain: [32]u8 = undefined;
+    try computeDomain(c.DOMAIN_DEPOSIT, config.chain.GENESIS_FORK_VERSION, c.ZERO_HASH, &domain);
+    var signing_root: [32]u8 = undefined;
+    try computeSigningRoot(ct.phase0.DepositMessage, &message, &domain, &signing_root);
+    deposit.signature = secret_key.sign(&signing_root, bls.DST, null).compress();
+    return deposit;
+}
+
+test "Gloas upgrade rechecks pending validators queued after a dropped invalid builder deposit" {
+    const allocator = std.testing.allocator;
+    const config = routingConfig();
+    const validator = try signedDeposit(&config, 4, c.COMPOUNDING_WITHDRAWAL_PREFIX, 20);
+    var invalid_validator = validator;
+    invalid_validator.signature = @splat(0);
+    var invalid_builder = try signedDeposit(&config, 4, c.BUILDER_WITHDRAWAL_PREFIX, 10);
+    invalid_builder.signature = @splat(0);
+
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer pool.deinit();
+    var state = try sourceState(allocator, &pool, &config, false);
+    defer state.deinit();
+    const queue = [_]PendingDeposit{ invalid_validator, invalid_builder, validator, invalid_builder, invalid_validator, invalid_builder };
+    var pending = try state.castToFork(.fulu).pendingDeposits();
+    for (&queue) |*deposit| try pending.pushValue(deposit);
+    var pubkeys = PubkeyCache.init(allocator, std.testing.io);
+    defer pubkeys.deinit();
+    const epoch_cache = try EpochCache.createFromState(allocator, std.testing.io, &state, .{ .config = &config, .pubkey_cache = &pubkeys }, .{ .skip_sync_committee_cache = true, .skip_sync_pubkeys = true });
+    defer epoch_cache.deinit();
+    var upgraded = try upgradeStateToGloas(allocator, std.testing.io, &config, epoch_cache, state.castToFork(.fulu));
+    state = .{ .gloas = upgraded.inner };
+
+    var builders = try upgraded.inner.get("builders");
+    try std.testing.expectEqual(0, try builders.length());
+    const expected_pending = [_]PendingDeposit{ invalid_validator, validator, invalid_builder, invalid_validator, invalid_builder };
+    var remaining = try upgraded.pendingDeposits();
+    try std.testing.expectEqual(expected_pending.len, try remaining.length());
+    for (expected_pending, 0..) |expected, index| {
+        var actual: PendingDeposit = undefined;
+        try remaining.getValue(undefined, index, &actual);
+        try std.testing.expectEqualDeep(expected, actual);
+    }
+}
 
 fn sourceState(allocator: std.mem.Allocator, pool: *Node.Pool, config: *const BeaconConfig, include_pending: bool) !AnyBeaconState {
     var value = ct.fulu.BeaconState.default_value;
