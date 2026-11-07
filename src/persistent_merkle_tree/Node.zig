@@ -27,6 +27,7 @@ const max_depth = @import("hashing").max_depth;
 const Depth = @import("hashing").Depth;
 const Gindex = @import("gindex.zig").Gindex;
 const ChunkedLeaf = @import("ChunkedLeaf.zig");
+const verify_invariants = @import("root.zig").verify_invariants;
 
 // Flat node fields (file-as-struct). Order doesn't affect SoA layout.
 payload: u64,
@@ -873,7 +874,8 @@ pub const Id = enum(u32) {
         std.debug.assert(intra_chunk < valid_chunks);
         std.debug.assert(valid_chunks <= ChunkedLeaf.K);
         const storage = try node_id.getChunkedLeafPtr(pool);
-        std.debug.assert(storage.len <= valid_chunks);
+        // Only this check loads `len`, past the 2 KiB of chunks; the store below doesn't stall.
+        if (verify_invariants) std.debug.assert(storage.len <= valid_chunks);
 
         write(&storage.chunks[intra_chunk], index, value);
         storage.len = valid_chunks;

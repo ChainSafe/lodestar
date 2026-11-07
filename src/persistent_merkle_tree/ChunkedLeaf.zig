@@ -6,6 +6,7 @@
 const std = @import("std");
 const hashing = @import("hashing");
 const hash = hashing.hash;
+const verify_invariants = @import("root.zig").verify_invariants;
 
 // K = 2^k_log2 = 64 chunks per blob (2 KiB). Larger K folds more of the subtree
 // (fewer Node.Ids, more SIMD lanes per root → faster bulk build/read) but copies the
@@ -38,7 +39,10 @@ len: u16,
 /// in-place mutation that `hashing.merkleize` would require on `*const
 /// chunks`). Later rounds halve in-place on `scratch`.
 pub fn computeRoot(self: *const ChunkedLeaf, scratch: *align(64) [K / 2][32]u8, out: *[32]u8) void {
-    for (self.chunks[self.len..]) |*chunk| std.debug.assert(std.mem.allEqual(u8, chunk, 0));
+    // Only this check reads `len`, on its own cache line.
+    if (verify_invariants) {
+        for (self.chunks[self.len..]) |*chunk| std.debug.assert(std.mem.allEqual(u8, chunk, 0));
+    }
     hash(scratch[0..], self.chunks[0..]) catch unreachable;
 
     var width: usize = K / 2;
