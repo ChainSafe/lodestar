@@ -1342,12 +1342,13 @@ pub fn serialize(self: *BeaconStateView) !js.Uint8Array {
 }
 
 pub fn preVerifyBuilderDepositsPreGloas(self: *BeaconStateView, max_deposits: js.Number, max_duration_ms: js.Number) !js_types.PreVerifyBuilderDepositsResult {
+    const max_verification_duration_ms = std.time.ms_per_min;
     const cached_state = try self.acquireState();
     defer self.finishState();
     const limit = max_deposits.toU32Exact() catch return error.InvalidDepositVerificationLimit;
     const duration = max_duration_ms.toU32Exact() catch return error.InvalidDepositVerificationDuration;
-    if (limit > 10_000) return error.InvalidDepositVerificationLimit;
-    if (duration > 60_000) return error.InvalidDepositVerificationDuration;
+    if (limit > st.builder_deposit_signature_cache.max_deposits_per_call) return error.InvalidDepositVerificationLimit;
+    if (duration > max_verification_duration_ms) return error.InvalidDepositVerificationDuration;
     const thread_pool = @import("blst.zig").state.thread_pool orelse return error.ThreadPoolNotInitialized;
     const result = try st.preVerifyBuilderDepositsPreGloas(js.io(), thread_pool, cached_state, limit, duration);
     const object = try js.env().createObject();

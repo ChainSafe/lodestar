@@ -23,7 +23,8 @@ pub const SyncCommitteeCache = @import("./cache/sync_committee_cache.zig").SyncC
 
 pub const committee_indices = @import("./utils/committee_indices.zig");
 pub const PubkeyCache = @import("./cache/pubkey_cache.zig").PubkeyCache;
-pub const BuilderDepositSignatureCacheRc = @import("./cache/builder_deposit_signature_cache.zig").BuilderDepositSignatureCacheRc;
+pub const builder_deposit_signature_cache = @import("./cache/builder_deposit_signature_cache.zig");
+pub const BuilderDepositSignatureCacheRc = builder_deposit_signature_cache.BuilderDepositSignatureCacheRc;
 pub const preVerifyBuilderDepositsPreGloas = @import("./utils/pre_verify_builder_deposits.zig").preVerifyBuilderDepositsPreGloas;
 pub const pkix = @import("./cache/pkix.zig");
 pub const signature_set_verifier = @import("./signature_sets/verifier.zig");

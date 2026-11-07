@@ -57,8 +57,10 @@ pub fn preVerifyBuilderDepositsPreGloas(
     while (result.scanned_pending_deposits < scan_limit and verified < verification_limit and cache.validity.count() < cache.capacity) {
         var deposits: [batch_size]ct.electra.PendingDeposit.Type = undefined;
         var count: usize = 0;
-        const scan_end = @min(scan_limit, result.scanned_pending_deposits + batch_size);
-        while (result.scanned_pending_deposits < scan_end and verified + count < verification_limit and cache.validity.count() + count < cache.capacity) {
+        const scan_count = @min(batch_size, scan_limit - result.scanned_pending_deposits);
+        const batch_limit = @min(verification_limit - verified, cache.capacity - cache.validity.count());
+        for (0..scan_count) |_| {
+            if (count == batch_limit) break;
             const deposit = try iterator.nextValue();
             result.scanned_pending_deposits += 1;
             cache.scan_cursor += 1;
