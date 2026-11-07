@@ -9,12 +9,18 @@ export class ProposerTracker {
   /** Local proposal slots that have not passed yet */
   private readonly proposalSlots = new Set<Slot>();
   /** Vote slots `proposalSlot - singleAttestationSlotsBeforeProposal ... proposalSlot - 1` of tracked proposals */
-  private readonly collectableVoteSlots = new Set<Slot>();
+  private readonly collectableSlots = new Set<Slot>();
+  private clockSlot = 0;
 
   /**
    * @param singleAttestationSlotsBeforeProposal validated to be in `[0, SLOTS_PER_EPOCH]`, 0 disables the tracker
+   * @param ignoreProposalDuty dev only, collect the last `singleAttestationSlotsBeforeProposal` vote slots regardless
+   * of local proposals
    */
-  constructor(private readonly singleAttestationSlotsBeforeProposal: number) {}
+  constructor(
+    private readonly singleAttestationSlotsBeforeProposal: number,
+    private readonly ignoreProposalDuty = false
+  ) {}
 
   /**
    * Idempotent, a known proposal is ignored
@@ -31,13 +37,20 @@ export class ProposerTracker {
       voteSlot <= proposalSlot - MIN_ATTESTATION_INCLUSION_DELAY;
       voteSlot++
     ) {
-      this.collectableVoteSlots.add(voteSlot);
+      this.collectableSlots.add(voteSlot);
     }
     return true;
   }
 
   shouldCollect(attestationSlot: Slot): boolean {
-    return this.collectableVoteSlots.has(attestationSlot);
+    if (this.ignoreProposalDuty) {
+      // to test block production without proposal duties
+      return (
+        this.singleAttestationSlotsBeforeProposal > 0 &&
+        attestationSlot >= this.clockSlot - this.singleAttestationSlotsBeforeProposal
+      );
+    }
+    return this.collectableSlots.has(attestationSlot);
   }
 
   /**
@@ -45,6 +58,7 @@ export class ProposerTracker {
    * available until the block is produced. Vote slots are dropped once no remaining proposal can include them.
    */
   prune(clockSlot: Slot): void {
+    this.clockSlot = clockSlot;
     for (const proposalSlot of this.proposalSlots) {
       if (proposalSlot < clockSlot) {
         this.proposalSlots.delete(proposalSlot);
@@ -52,15 +66,15 @@ export class ProposerTracker {
     }
 
     if (this.proposalSlots.size === 0) {
-      this.collectableVoteSlots.clear();
+      this.collectableSlots.clear();
       return;
     }
 
     // Each remaining proposal covers its own vote slots, so a vote slot below the lowest one is covered by none
     const lowestCollectableVoteSlot = Math.min(...this.proposalSlots) - this.singleAttestationSlotsBeforeProposal;
-    for (const voteSlot of this.collectableVoteSlots) {
+    for (const voteSlot of this.collectableSlots) {
       if (voteSlot < lowestCollectableVoteSlot) {
-        this.collectableVoteSlots.delete(voteSlot);
+        this.collectableSlots.delete(voteSlot);
       }
     }
   }

@@ -511,33 +511,39 @@ export class AggregatedAttestationPool {
       packedAttestationsMetrics?.totalEffectiveBalance.set({index: i}, consolidation.totalNewSeenEffectiveBalance);
     }
 
-    if (packedAttestationsMetrics) {
-      // value is proportional to the proposer reward of the attestations, singles are disjoint from aggregates
-      // so their part is exactly what they add on top of an aggregates only block
-      let totalValue = 0;
-      let singlesValue = 0;
-      let singlesNewSeenAttesters = 0;
-      let singlesNewSeenEffectiveBalance = 0;
-      let singlesOnlyConsolidations = 0;
-      let singlesCommittees = 0;
-      for (const consolidation of packedConsolidations) {
-        totalValue += consolidation.totalNewSeenEffectiveBalance * consolidation.weight;
-        singlesValue += consolidation.singlesNewSeenEffectiveBalance * consolidation.weight;
-        singlesNewSeenAttesters += consolidation.singlesNewSeenAttesters;
-        singlesNewSeenEffectiveBalance += consolidation.singlesNewSeenEffectiveBalance;
-        singlesCommittees += consolidation.singlesByCommittee.size;
-        if (consolidation.byCommittee.size === 0) {
-          singlesOnlyConsolidations++;
-        }
+    // value is proportional to the proposer reward of the attestations, singles are disjoint from aggregates
+    // so their part is exactly what they add on top of an aggregates only block
+    let totalValue = 0;
+    let singlesValue = 0;
+    let singlesNewSeenAttesters = 0;
+    let singlesNewSeenEffectiveBalance = 0;
+    let singlesOnlyConsolidations = 0;
+    let singlesCommittees = 0;
+    for (const consolidation of packedConsolidations) {
+      totalValue += consolidation.totalNewSeenEffectiveBalance * consolidation.weight;
+      singlesValue += consolidation.singlesNewSeenEffectiveBalance * consolidation.weight;
+      singlesNewSeenAttesters += consolidation.singlesNewSeenAttesters;
+      singlesNewSeenEffectiveBalance += consolidation.singlesNewSeenEffectiveBalance;
+      singlesCommittees += consolidation.singlesByCommittee.size;
+      if (consolidation.byCommittee.size === 0) {
+        singlesOnlyConsolidations++;
       }
-      packedAttestationsMetrics.attestationValue.inc({source: "aggregate"}, totalValue - singlesValue);
-      packedAttestationsMetrics.attestationValue.inc({source: "single"}, singlesValue);
-      packedAttestationsMetrics.singlesValueRatio.observe(totalValue > 0 ? singlesValue / totalValue : 0);
-      packedAttestationsMetrics.singlesNewSeenAttesters.observe(singlesNewSeenAttesters);
-      packedAttestationsMetrics.singlesNewSeenEffectiveBalance.observe(singlesNewSeenEffectiveBalance);
-      packedAttestationsMetrics.singlesOnlyConsolidations.observe(singlesOnlyConsolidations);
-      packedAttestationsMetrics.singlesFoldedCommittees.observe(singlesCommittees);
     }
+    packedAttestationsMetrics?.attestationValue.inc({source: "aggregate"}, totalValue - singlesValue);
+    packedAttestationsMetrics?.attestationValue.inc({source: "single"}, singlesValue);
+    packedAttestationsMetrics?.singlesValueRatio.observe(totalValue > 0 ? singlesValue / totalValue : 0);
+    packedAttestationsMetrics?.singlesNewSeenAttesters.observe(singlesNewSeenAttesters);
+    packedAttestationsMetrics?.singlesNewSeenEffectiveBalance.observe(singlesNewSeenEffectiveBalance);
+    packedAttestationsMetrics?.singlesOnlyConsolidations.observe(singlesOnlyConsolidations);
+    packedAttestationsMetrics?.singlesFoldedCommittees.observe(singlesCommittees);
+    this.logger?.debug("Packed single attestations into block", {
+      slot: stateSlot,
+      singlesNewSeenAttesters,
+      singlesNewSeenEffectiveBalance,
+      singlesCommittees,
+      singlesOnlyConsolidations,
+      packedAttestations: packedAttestations.length,
+    });
 
     if (stopReason === null) {
       stopReason = ScannedSlotsTerminationReason.ScannedAllSlots;

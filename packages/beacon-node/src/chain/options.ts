@@ -96,6 +96,11 @@ export type PoolOpts = {
    * In `[0, SLOTS_PER_EPOCH]`, 0 disables
    */
   singleAttestationSlotsBeforeProposal?: number;
+  /**
+   * Dev only: collect single attestations of the last `singleAttestationSlotsBeforeProposal` slots regardless of
+   * proposal duties, so that any produced block can pack them. Combine with `subscribeAllSubnets`
+   */
+  singleAttestationIgnoreProposalDuty?: boolean;
 };
 
 export type SeenCacheOpts = {

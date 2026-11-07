@@ -26,6 +26,7 @@ export type ChainArgs = {
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
   "chain.singleAttestationSlotsBeforeProposal"?: number;
+  "chain.singleAttestationIgnoreProposalDuty"?: boolean;
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
   "chain.fastConfirmation"?: boolean;
@@ -82,6 +83,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     singleAttestationSlotsBeforeProposal,
+    singleAttestationIgnoreProposalDuty: args["chain.singleAttestationIgnoreProposalDuty"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     fastConfirmation: args["chain.fastConfirmation"],
@@ -253,6 +255,15 @@ Will double processing times. Use only for debugging purposes.",
     description:
       "Number of slots before a block proposal of a connected validator to collect single attestations for the block, the node subscribes to all attestation subnets for these slots. 0 disables",
     defaultDescription: String(defaultOptions.chain.singleAttestationSlotsBeforeProposal),
+    group: "chain",
+  },
+
+  "chain.singleAttestationIgnoreProposalDuty": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "collect single attestations of the last chain.singleAttestationSlotsBeforeProposal slots regardless of block proposal duties, could be used with --subscribeAllSubnets",
+    defaultDescription: "false",
     group: "chain",
   },
 

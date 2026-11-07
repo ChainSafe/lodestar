@@ -340,7 +340,10 @@ export class BeaconChain implements IBeaconChain {
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics, logger);
     this.singleAttestationPool = new SingleAttestationPool(metrics);
-    this.proposerTracker = new ProposerTracker(this.opts.singleAttestationSlotsBeforeProposal ?? 0);
+    this.proposerTracker = new ProposerTracker(
+      this.opts.singleAttestationSlotsBeforeProposal ?? 0,
+      this.opts.singleAttestationIgnoreProposalDuty ?? false
+    );
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
