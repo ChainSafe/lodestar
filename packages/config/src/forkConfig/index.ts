@@ -225,6 +225,11 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
       return undefined;
     },
+    getMinEpochsForBlockRequests(epoch: Epoch): number {
+      return epoch < config.HEZE_FORK_EPOCH
+        ? config.MIN_EPOCHS_FOR_BLOCK_REQUESTS
+        : config.MIN_EPOCHS_FOR_BLOCK_REQUESTS_HEZE;
+    },
     getAttestationDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
         return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS_GLOAS);

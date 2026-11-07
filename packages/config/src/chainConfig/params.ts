@@ -195,6 +195,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_REQUEST_BLOCKS: false,
     MAX_REQUEST_BLOCKS_DENEB: false,
     MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
+    MIN_EPOCHS_FOR_BLOCK_REQUESTS_HEZE: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
     MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
     MIN_BLOB_DATA_RETENTION_MS: hezeForkRelevant,
