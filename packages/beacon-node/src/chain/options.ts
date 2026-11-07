@@ -90,6 +90,17 @@ export type PoolOpts = {
    * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
    */
   preaggregateSlotDistance?: number;
+  /**
+   * Collect single attestations of this many slots before a block proposal of a connected validator, to pack them into
+   * the block. The network subscribes to all attestation subnets for these slots (`slotsToSubscribeBeforeProposalDuty`).
+   * In `[0, SLOTS_PER_EPOCH]`, 0 disables
+   */
+  singleAttestationSlotsBeforeProposal?: number;
+  /**
+   * Dev only: collect single attestations of the last `singleAttestationSlotsBeforeProposal` slots regardless of
+   * proposal duties, so that any produced block can pack them. Combine with `subscribeAllSubnets`
+   */
+  singleAttestationIgnoreProposalDuty?: boolean;
 };
 
 export type SeenCacheOpts = {
@@ -119,6 +130,8 @@ export const defaultChainOptions: IChainOptions = {
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
+  // up to the max number of attestations per block
+  singleAttestationSlotsBeforeProposal: 8,
   disableProposerSlashings: false,
   // should be less than or equal to MIN_SIGNATURE_SETS_TO_BATCH_VERIFY
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32

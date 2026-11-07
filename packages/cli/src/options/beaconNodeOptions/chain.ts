@@ -1,6 +1,8 @@
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
+import {YargsError} from "../../util/index.js";
 import {CircuitBreakerArgs} from "./builder.js";
 
 export type ChainArgs = {
@@ -23,6 +25,8 @@ export type ChainArgs = {
   "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
+  "chain.singleAttestationSlotsBeforeProposal"?: number;
+  "chain.singleAttestationIgnoreProposalDuty"?: boolean;
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
   "chain.fastConfirmation"?: boolean;
@@ -44,6 +48,19 @@ export type ChainArgs = {
 };
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
+  const singleAttestationSlotsBeforeProposal = args["chain.singleAttestationSlotsBeforeProposal"];
+  if (
+    singleAttestationSlotsBeforeProposal !== undefined &&
+    (!Number.isInteger(singleAttestationSlotsBeforeProposal) ||
+      singleAttestationSlotsBeforeProposal < 0 ||
+      // proposers are only known one epoch ahead (fulu proposer lookahead)
+      singleAttestationSlotsBeforeProposal > SLOTS_PER_EPOCH)
+  ) {
+    throw new YargsError(
+      `chain.singleAttestationSlotsBeforeProposal must be an integer in [0, ${SLOTS_PER_EPOCH}], got ${singleAttestationSlotsBeforeProposal}`
+    );
+  }
+
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,
@@ -65,6 +82,8 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     proposerBoostReorg: args["chain.proposerBoostReorg"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
+    singleAttestationSlotsBeforeProposal,
+    singleAttestationIgnoreProposalDuty: args["chain.singleAttestationIgnoreProposalDuty"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     fastConfirmation: args["chain.fastConfirmation"],
@@ -227,6 +246,24 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "number",
     description: "Only preaggregate attestations or sync committee message since clockSlot - preaggregateSlotDistance",
+    group: "chain",
+  },
+
+  "chain.singleAttestationSlotsBeforeProposal": {
+    hidden: true,
+    type: "number",
+    description:
+      "Number of slots before a block proposal of a connected validator to collect single attestations for the block, the node subscribes to all attestation subnets for these slots. 0 disables",
+    defaultDescription: String(defaultOptions.chain.singleAttestationSlotsBeforeProposal),
+    group: "chain",
+  },
+
+  "chain.singleAttestationIgnoreProposalDuty": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "collect single attestations of the last chain.singleAttestationSlotsBeforeProposal slots regardless of block proposal duties, could be used with --subscribeAllSubnets",
+    defaultDescription: "false",
     group: "chain",
   },
 

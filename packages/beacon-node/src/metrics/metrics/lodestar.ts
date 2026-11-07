@@ -1342,7 +1342,57 @@ export function createLodestarMetrics(
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_missing_shuffling_committees_total",
             help: "Total number of committees skipped due to missing shuffling when producing packed attestations",
           }),
+          attestationValue: register.counter<{source: "aggregate" | "single"}>({
+            name: "lodestar_oppool_packed_attestation_value_total",
+            help: "Sum of new seen effective balance increments times participation flag weight of packed attestations, by source",
+            labelNames: ["source"],
+          }),
+          singlesValueRatio: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_value_ratio",
+            help: "Ratio of attestation value contributed by single attestations per produced block",
+            buckets: [0, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1],
+          }),
+          singlesNewSeenAttesters: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_new_seen_attesters",
+            help: "Number of attesters newly included only thanks to single attestations per produced block",
+            buckets: [0, 1, 5, 10, 25, 50, 100, 250, 500, 1000, 1024],
+          }),
+          singlesNewSeenEffectiveBalance: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_new_seen_effective_balance",
+            help: "Effective balance increments of attesters newly included only thanks to single attestations per produced block",
+            buckets: [0, 32, 160, 320, 800, 1600, 3200, 8000, 32000],
+          }),
+          singlesOnlyConsolidations: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_only_consolidations",
+            help: "Number of packed attestations built only from single attestations per produced block",
+            buckets: [0, 1, 2, 4, 8],
+          }),
+          singlesFoldedCommittees: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_folded_committees",
+            help: "Number of committees in packed attestations that received single attestations per produced block",
+            buckets: [0, 1, 2, 4, 8, 16, 32, 64],
+          }),
         },
+      },
+      singleAttestationPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_single_attestation_pool_size",
+          help: "Current number of single attestations in the SingleAttestationPool",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_single_attestation_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a single attestation from gossip to the SingleAttestationPool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_single_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a single attestation from api to the SingleAttestationPool",
+          labelNames: ["insertOutcome"],
+        }),
+        deletedByAggregate: register.counter({
+          name: "lodestar_oppool_single_attestation_pool_deleted_by_aggregate_total",
+          help: "Total number of single attestations deleted because a validated aggregate covers them",
+        }),
       },
       attestationPool: {
         size: register.gauge({

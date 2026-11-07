@@ -19,6 +19,7 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
+  Slot,
   SlotRootHex,
   SubnetID,
   altair,
@@ -156,6 +157,7 @@ export class Network implements INetwork {
     this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.on(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
+    this.chain.emitter.on(ChainEvent.localProposalSlots, this.onLocalProposalSlots);
   }
 
   static async init({
@@ -176,6 +178,8 @@ export class Network implements INetwork {
     const activeValidatorCount = chain.getHeadState().activeValidatorCount;
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
+    // subscribe to all attestation subnets for the slots whose single attestations the chain collects before a proposal
+    const slotsToSubscribeBeforeProposalDuty = chain.opts.singleAttestationSlotsBeforeProposal ?? 0;
 
     if (opts.useWorker) {
       logger.info("running libp2p instance in worker thread");
@@ -191,6 +195,7 @@ export class Network implements INetwork {
             genesisTime: chain.genesisTime,
             initialStatus,
             initialCustodyGroupCount,
+            slotsToSubscribeBeforeProposalDuty,
           },
           config,
           privateKey,
@@ -211,6 +216,7 @@ export class Network implements INetwork {
           metricsRegistry: metrics ? new RegistryMetricCreator() : null,
           initialStatus,
           initialCustodyGroupCount,
+          slotsToSubscribeBeforeProposalDuty,
           activeValidatorCount,
         });
 
@@ -254,6 +260,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.off(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
+    this.chain.emitter.off(ChainEvent.localProposalSlots, this.onLocalProposalSlots);
     await this.core.close();
 
     // Used only for sleep() statements
@@ -278,6 +285,13 @@ export class Network implements INetwork {
 
     return this.core.prepareBeaconCommitteeSubnets(subscriptions);
   }
+
+  /** The core subscribes to all attestation subnets before these proposals, see `slotsToSubscribeBeforeProposalDuty` */
+  private onLocalProposalSlots = (proposalSlots: Slot[]): void => {
+    this.core.addLocalProposalSlots(proposalSlots).catch((e) => {
+      this.logger.debug("Error adding local proposal slots", {slots: proposalSlots.join(",")}, e as Error);
+    });
+  };
 
   async prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     return this.core.prepareSyncCommitteeSubnets(subscriptions);
