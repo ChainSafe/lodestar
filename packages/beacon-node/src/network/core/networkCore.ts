@@ -8,7 +8,7 @@ import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
+import {Epoch, Slot, Status, fulu, sszTypesFor} from "@lodestar/types";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {GoodByeReasonCode} from "../../constants/index.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
@@ -69,6 +69,7 @@ export type BaseNetworkInit = {
   activeValidatorCount: number;
   initialStatus: Status;
   initialCustodyGroupCount: number;
+  slotsToSubscribeBeforeProposalDuty: number;
 };
 
 /** Counts of what is still keeping this thread's event loop alive, e.g. `TCPWrap=3,Timeout=1` */
@@ -152,6 +153,7 @@ export class NetworkCore implements INetworkCore {
     activeValidatorCount,
     initialStatus,
     initialCustodyGroupCount,
+    slotsToSubscribeBeforeProposalDuty,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
@@ -216,16 +218,10 @@ export class NetworkCore implements INetworkCore {
     // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
     await gossip.start();
 
-    const attnetsService = new AttnetsService(
-      config,
-      clock,
-      gossip,
-      metadata,
-      logger,
-      metrics,
-      networkConfig.nodeId,
-      opts
-    );
+    const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, networkConfig.nodeId, {
+      ...opts,
+      slotsToSubscribeBeforeProposalDuty,
+    });
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(
@@ -343,6 +339,11 @@ export class NetworkCore implements INetworkCore {
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     this.attnetsService.addCommitteeSubscriptions(subscriptions);
     if (subscriptions.length > 0) this.peerManager.onCommitteeSubscriptions();
+  }
+
+  async addLocalProposalSlots(slots: Slot[]): Promise<void> {
+    // no peerManager.onCommitteeSubscriptions(): the extra subscription relies on connected peers, no discovery
+    this.attnetsService.addLocalProposalSlots(slots);
   }
 
   async prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {

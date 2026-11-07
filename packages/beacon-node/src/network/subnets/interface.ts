@@ -25,6 +25,8 @@ export type SubnetsService = {
 
 export interface IAttnetsService extends SubnetsService {
   shouldProcess(subnet: SubnetID, slot: Slot): boolean;
+  /** Block proposal slots of validators connected to this node, see `slotsToSubscribeBeforeProposalDuty` */
+  addLocalProposalSlots(slots: Slot[]): void;
 }
 
 export type RandBetweenFn = (min: number, max: number) => number;
@@ -33,6 +35,11 @@ export type ShuffleFn = <T>(arr: T[]) => T[];
 export type SubnetsServiceOpts = {
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty: number;
+};
+
+export type AttnetsServiceOpts = SubnetsServiceOpts & {
+  /** Owned by the chain options, in `[0, SLOTS_PER_EPOCH]`, 0 disables subscribing to all subnets before a proposal */
+  slotsToSubscribeBeforeProposalDuty: number;
 };
 
 export type SubnetsServiceTestOpts = {

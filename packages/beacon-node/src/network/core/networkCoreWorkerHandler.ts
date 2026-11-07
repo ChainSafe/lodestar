@@ -9,7 +9,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
-import {Status} from "@lodestar/types";
+import {Slot, Status} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {GoodByeReasonCode} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -41,6 +41,7 @@ export type WorkerNetworkCoreOpts = NetworkOptions & {
   genesisTime: number;
   initialStatus: Status;
   initialCustodyGroupCount: number;
+  slotsToSubscribeBeforeProposalDuty: number;
 };
 
 export type WorkerNetworkCoreInitModules = {
@@ -119,6 +120,7 @@ export class WorkerNetworkCore implements INetworkCore {
       metricsEnabled,
       initialStatus,
       initialCustodyGroupCount,
+      slotsToSubscribeBeforeProposalDuty,
     } = opts;
 
     const workerData: NetworkWorkerData = {
@@ -132,6 +134,7 @@ export class WorkerNetworkCore implements INetworkCore {
       genesisTime,
       initialStatus,
       initialCustodyGroupCount,
+      slotsToSubscribeBeforeProposalDuty,
       activeValidatorCount,
       loggerOpts: modules.logger.toOpts(),
     };
@@ -219,6 +222,9 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     return this.getApi().prepareSyncCommitteeSubnets(subscriptions);
+  }
+  addLocalProposalSlots(slots: Slot[]): Promise<void> {
+    return this.getApi().addLocalProposalSlots(slots);
   }
   subscribeGossipCoreTopics(): Promise<void> {
     return this.getApi().subscribeGossipCoreTopics();

@@ -24,6 +24,7 @@ import {
   deneb,
   fulu,
   gloas,
+  isElectraAttestation,
   isGloasBeaconBlock,
   isGloasDataColumnSidecar,
   ssz,
@@ -1070,6 +1071,24 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           }
 
           chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
+
+          // last so that fork choice never depends on it: committee members covered by a validated aggregate no
+          // longer need their single attestations
+          if (
+            isElectraAttestation(aggregatedAttestation) &&
+            chain.proposerTracker.shouldCollect(aggregatedAttestation.data.slot)
+          ) {
+            const committeeIndex = aggregatedAttestation.committeeBits.getSingleTrueBit();
+            if (committeeIndex !== null) {
+              const deleted = chain.singleAttestationPool.onAggregate(
+                aggregatedAttestation.data.slot,
+                attDataRootHex,
+                committeeIndex,
+                aggregatedAttestation.aggregationBits
+              );
+              metrics?.opPool.singleAttestationPool.deletedByAggregate.inc(deleted);
+            }
+          }
         } catch (e) {
           logger.debug(
             "Error handling gossip aggregate and proof",
@@ -1644,6 +1663,32 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               }
             } catch (e) {
               logger.debug("Error adding gossip unaggregated attestation to pool", {subnet}, e as Error);
+            }
+
+            // Collected only for vote slots that an upcoming block of a connected validator can include
+            if (isForkPostElectra(fork) && chain.proposerTracker.shouldCollect(indexedAttestation.data.slot)) {
+              try {
+                const insertOutcome = chain.singleAttestationPool.add(
+                  attestation as SingleAttestation<ForkPostElectra>,
+                  attDataRootHex,
+                  validatorCommitteeIndex,
+                  committeeSize
+                );
+                metrics?.opPool.singleAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+              } catch (e) {
+                logger.debug(
+                  "Error adding gossip single attestation to pool",
+                  {
+                    slot: indexedAttestation.data.slot,
+                    committeeIndex,
+                    validatorCommitteeIndex,
+                    validatorIndex: (attestation as SingleAttestation<ForkPostElectra>).attesterIndex,
+                    subnet,
+                    attDataRoot: attDataRootHex,
+                  },
+                  e as Error
+                );
+              }
             }
 
             // Separate boundary: a pool insertion error above must not skip the fork-choice vote

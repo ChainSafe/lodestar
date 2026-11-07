@@ -85,6 +85,7 @@ describe("network / peers / PeerManager", () => {
       getActiveSubnets: () => [],
       shouldProcess: () => true,
       addCommitteeSubscriptions: () => {},
+      addLocalProposalSlots: () => {},
       close: () => {},
       subscribeSubnetsNextBoundary: () => {},
       unsubscribeSubnetsPrevBoundary: () => {},

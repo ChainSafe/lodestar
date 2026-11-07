@@ -108,6 +108,7 @@ const core = await NetworkCore.init({
   activeValidatorCount: workerData.activeValidatorCount,
   initialStatus: workerData.initialStatus,
   initialCustodyGroupCount: workerData.initialCustodyGroupCount,
+  slotsToSubscribeBeforeProposalDuty: workerData.slotsToSubscribeBeforeProposalDuty,
 });
 
 wireEventsOnWorkerThread<NetworkEventData>(
@@ -136,6 +137,7 @@ const libp2pWorkerApi: NetworkWorkerApi = {
 
   prepareBeaconCommitteeSubnets: (subscriptions) => core.prepareBeaconCommitteeSubnets(subscriptions),
   prepareSyncCommitteeSubnets: (subscriptions) => core.prepareSyncCommitteeSubnets(subscriptions),
+  addLocalProposalSlots: (slots) => core.addLocalProposalSlots(slots),
   reportPeer: (peer, action, actionName) => core.reportPeer(peer, action, actionName),
   reStatusPeers: (peers) => core.reStatusPeers(peers),
   goodbyeAndDisconnect: (peer, reason) => core.goodbyeAndDisconnect(peer, reason),
