@@ -7,6 +7,7 @@ const signature_set_verifier = @import("state_transition").signature_set_verifie
 
 const blst_bindings = @import("./blst.zig");
 const pubkeys = @import("./pubkeys.zig");
+const committee_pubkeys = @import("./committee_pubkeys.zig");
 
 /// Bound synchronous NAPI work and the fixed stack buffers below. Lodestar's
 /// worker jobs normally contain at most 128 sets, so 256 provides headroom while
@@ -22,6 +23,7 @@ pub const SetType = enum(u32) {
     indexed = 0,
     aggregate = 1,
     single = 2,
+    committee = 3,
 };
 
 const CommonSet = struct {
@@ -33,6 +35,16 @@ const CommonSet = struct {
 const IndexedSet = struct { index: js.Number };
 const AggregateSet = struct { indices: js.Uint32Array };
 const SingleSet = struct { pubkey: js.Uint8Array };
+/// An attestation over whole committees. `indices` lists the participants and
+/// is used when the committee pubkeys are not cached.
+const CommitteeSet = struct {
+    indices: js.Uint32Array,
+    committeePubkeysId: js.Number,
+    slot: js.Number,
+    committeeIndices: js.Uint32Array,
+    aggregationBits: js.Uint8Array,
+    bitLen: js.Number,
+};
 
 const SameMessageSet = struct {
     index: js.Number,
@@ -61,6 +73,7 @@ pub fn verifySignatureSets(sets: js.Array) !js.Boolean {
             @intFromEnum(SetType.indexed) => .indexed,
             @intFromEnum(SetType.aggregate) => .aggregate,
             @intFromEnum(SetType.single) => .single,
+            @intFromEnum(SetType.committee) => .committee,
             else => return error.InvalidSetType,
         };
 
@@ -80,6 +93,36 @@ pub fn verifySignatureSets(sets: js.Array) !js.Boolean {
                 const aggregate = try (try value.asObject(AggregateSet)).get();
                 const indices = try aggregate.indices.toSlice();
                 if (indices.len > max_indices_per_set) return error.TooManyIndices;
+                break :blk pubkeys.state.cache.aggregateIndices(io, u32, indices) catch |err| switch (err) {
+                    error.InvalidIndex => return error.PubkeyIndexNotFound,
+                    error.InvalidLength => return error.EmptyIndices,
+                };
+            },
+            .committee => blk: {
+                if (!pubkeys.state.initialized) return error.PubkeyIndexNotInitialized;
+                const committee = try (try value.asObject(CommitteeSet)).get();
+                const indices = try committee.indices.toSlice();
+                if (indices.len > max_indices_per_set) return error.TooManyIndices;
+                const committee_indices = try committee.committeeIndices.toSlice();
+                if (committee_indices.len > preset.MAX_COMMITTEES_PER_SLOT) return error.TooManyCommittees;
+
+                const cached = committee_pubkeys.state.aggregateParticipants(
+                    io,
+                    &pubkeys.state.cache,
+                    try committee.committeePubkeysId.toU32Exact(),
+                    (try committee.slot.toU64Exact()) % preset.SLOTS_PER_EPOCH,
+                    committee_indices,
+                    try committee.aggregationBits.toSlice(),
+                    try committee.bitLen.toU32Exact(),
+                ) catch |err| switch (err) {
+                    error.InvalidIndex => return error.PubkeyIndexNotFound,
+                    else => return err,
+                };
+                if (cached) |participants| {
+                    // Both describe the same attestation, so a mismatch is a caller bug.
+                    if (participants.count != indices.len) return error.CommitteeParticipantsMismatch;
+                    break :blk participants.public_key;
+                }
                 break :blk pubkeys.state.cache.aggregateIndices(io, u32, indices) catch |err| switch (err) {
                     error.InvalidIndex => return error.PubkeyIndexNotFound,
                     error.InvalidLength => return error.EmptyIndices,

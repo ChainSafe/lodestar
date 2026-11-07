@@ -23,6 +23,18 @@ pub fn add(self: *Self, other: *const PublicKey) void {
     c.blst_p1_add_or_double_affine(&self.point, &self.point, &other.point);
 }
 
+/// Add another aggregate public key to this one.
+pub fn addAggregate(self: *Self, other: *const Self) void {
+    c.blst_p1_add_or_double(&self.point, &self.point, &other.point);
+}
+
+/// Subtract another aggregate public key from this one.
+pub fn subtractAggregate(self: *Self, other: *const Self) void {
+    var negated = other.point;
+    c.blst_p1_cneg(&negated, true);
+    c.blst_p1_add_or_double(&self.point, &self.point, &negated);
+}
+
 /// Aggregates multiple public keys into a single aggregate public key.
 /// If pks_validate is true, validates each public key before aggregation.
 ///

@@ -272,6 +272,48 @@ pub const PubkeyCache = struct {
         return aggregate_pubkey.toPublicKey();
     }
 
+    /// Add the pubkeys at `indices` to `sum`.
+    pub fn sumIndices(
+        self: *const PubkeyCache,
+        io: std.Io,
+        indices: []const u32,
+        sum: *bls.AggregatePublicKey,
+    ) !void {
+        self.lockShared(io);
+        defer self.unlockShared(io);
+
+        const values = self.entries.values();
+        for (indices) |index| {
+            if (index >= values.len) return error.InvalidIndex;
+            sum.add(&values[index]);
+        }
+    }
+
+    /// Add to `sum` the pubkeys of the `members` whose bit at `bit_offset + i`
+    /// in `bits` equals `participating`. `bits` must cover every member.
+    pub fn sumMembersByBit(
+        self: *const PubkeyCache,
+        io: std.Io,
+        members: []const u32,
+        bits: []const u8,
+        bit_offset: usize,
+        participating: bool,
+        sum: *bls.AggregatePublicKey,
+    ) !void {
+        std.debug.assert(bit_offset + members.len <= bits.len * 8);
+
+        self.lockShared(io);
+        defer self.unlockShared(io);
+
+        const values = self.entries.values();
+        for (members, bit_offset..) |index, bit| {
+            const is_set = (bits[bit / 8] >> @intCast(bit % 8)) & 1 == 1;
+            if (is_set != participating) continue;
+            if (index >= values.len) return error.InvalidIndex;
+            sum.add(&values[index]);
+        }
+    }
+
     /// Append a compressed pubkey at the next validator index. Supplying an
     /// already-cached index is an idempotent consistency check.
     pub fn append(

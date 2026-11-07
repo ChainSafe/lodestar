@@ -32,7 +32,7 @@ export function chunkSameMessageSignatureSets(sets: SameMessageSignatureSet[]): 
 export function getAggregatedPubkeysCount(signatureSets: ISignatureSet[]): number {
   let pubkeysCount = 0;
   for (const set of signatureSets) {
-    if (set.type === SignatureSetType.aggregate) {
+    if (set.type === SignatureSetType.aggregate || set.type === SignatureSetType.committee) {
       pubkeysCount += set.indices.length;
     }
   }

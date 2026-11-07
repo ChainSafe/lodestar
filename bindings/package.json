@@ -23,6 +23,10 @@
       "types": "./src/pubkeys.d.ts",
       "import": "./src/pubkeys.js"
     },
+    "./committee-pubkeys": {
+      "types": "./src/committee-pubkeys.d.ts",
+      "import": "./src/committee-pubkeys.js"
+    },
     "./state-transition": {
       "types": "./src/state-transition.d.ts",
       "import": "./src/state-transition.js"

@@ -1,5 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {
+  EpochShuffling,
   IBeaconStateView,
   SyncCommitteeCacheEmpty,
   getBlockSignatureSets,
@@ -28,6 +29,7 @@ export async function verifyBlocksSignatures(
   preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
   indexedAttestationsByBlock: IndexedAttestation[][],
+  attestationShufflingsByBlock: EpochShuffling[][],
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
@@ -50,6 +52,7 @@ export async function verifyBlocksSignatures(
         bls.verifySignatureSets(
           getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
+            attestationShufflings: attestationShufflingsByBlock[i],
           })
         );
 

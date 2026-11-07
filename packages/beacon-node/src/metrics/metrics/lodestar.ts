@@ -1718,6 +1718,15 @@ export function createLodestarMetrics(
         help: "Time from promise insertion until promise resolution when shuffling was ready in seconds",
         buckets: [0.5, 1, 1.5, 2],
       }),
+      committeePubkeysComputeTime: register.histogram({
+        name: "lodestar_shuffling_cache_committee_pubkeys_compute_seconds",
+        help: "Time to aggregate the committee pubkeys of a shuffling off the main thread in seconds",
+        buckets: [0.1, 0.25, 0.5, 1, 2, 5],
+      }),
+      committeePubkeysErrors: register.counter({
+        name: "lodestar_shuffling_cache_committee_pubkeys_errors_total",
+        help: "Total number of shufflings whose committee pubkeys could not be computed",
+      }),
     },
 
     seenCache: {

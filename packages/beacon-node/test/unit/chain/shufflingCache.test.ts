@@ -1,4 +1,6 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {releaseCommitteePubkeys} from "@lodestar/native/committee-pubkeys";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {BeaconStateView, EpochShuffling} from "@lodestar/state-transition";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ShufflingCache, ShufflingPromiseCancelReason} from "../../../src/chain/shufflingCache.js";
@@ -68,6 +70,19 @@ describe("ShufflingCache", () => {
     // insert shuffling at a newer epoch prunes the current epoch
     shufflingCache["set"](shufflingAtEpoch(currentEpoch + 1), "0x01");
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toBeNull();
+  });
+
+  it("should compute committee pubkeys of a cached shuffling and release them when it is pruned", async () => {
+    pubkeyCache.syncPubkeys(state.validators.getAllReadonlyValues());
+    shufflingCache = new ShufflingCache(null, null, {maxShufflingCacheEpochs: 1});
+    const shuffling = shufflingAtEpoch(currentEpoch);
+    shufflingCache["set"](shuffling, currentDecisionRoot);
+    await vi.waitFor(() => expect(shuffling.committeePubkeysId).toBeDefined());
+    const id = shuffling.committeePubkeysId as number;
+
+    shufflingCache["set"](shufflingAtEpoch(currentEpoch + 1), currentDecisionRoot);
+    expect(shuffling.committeePubkeysId).toBeUndefined();
+    expect(releaseCommitteePubkeys(id)).toBe(false);
   });
 
   it("should prune the smallest epochs, not the first inserted ones", () => {

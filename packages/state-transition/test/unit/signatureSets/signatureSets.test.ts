@@ -1,21 +1,29 @@
 import crypto from "node:crypto";
 import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {createChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {SecretKey} from "@lodestar/native/blst";
+import {SecretKey, aggregateSignatures} from "@lodestar/native/blst";
+import {computeCommitteePubkeys, releaseCommitteePubkeys} from "@lodestar/native/committee-pubkeys";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   FAR_FUTURE_EPOCH,
+  ForkSeq,
+  MAX_COMMITTEES_PER_SLOT,
   MAX_EFFECTIVE_BALANCE,
   PTC_SIZE,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {BLSSignature, ValidatorIndex, capella, gloas, phase0, ssz} from "@lodestar/types";
+import {BLSSignature, ValidatorIndex, capella, electra, gloas, phase0, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY, ZERO_HASH} from "../../../src/constants/index.js";
-import {BeaconStateView} from "../../../src/index.js";
-import {getBlockSignatureSets, getPayloadAttestationDataSigningRoot} from "../../../src/signatureSets/index.js";
+import {BeaconStateView, EpochShuffling, getIndexedAttestation} from "../../../src/index.js";
+import {
+  getAttestationDataSigningRoot,
+  getAttestationsSignatureSets,
+  getBlockSignatureSets,
+  getPayloadAttestationDataSigningRoot,
+} from "../../../src/signatureSets/index.js";
 import {createCachedBeaconStateTest, generateCachedState} from "../../../src/testUtils/state.js";
 import {SignatureSetType, toBlsSignatureSet, verifySignatureSet} from "../../../src/util/signatureSets.js";
 import {generateValidators} from "../../utils/validator.js";
@@ -141,6 +149,78 @@ describe("signatureSets", () => {
         // 1 x voluntaryExits
         1
     );
+  });
+
+  it("verifies block attestations with committee pubkeys", async () => {
+    const committeesPerSlot = 2;
+    const committeeCount = SLOTS_PER_EPOCH * committeesPerSlot;
+    const validatorCount = committeeCount * 8;
+    const secretKeys = Array.from({length: validatorCount}, (_, i) => {
+      const ikm = Buffer.alloc(32);
+      ikm.writeUInt32BE(i + 1);
+      return SecretKey.fromKeygen(ikm);
+    });
+    pubkeyCache.reset();
+    for (const [index, secretKey] of secretKeys.entries()) {
+      pubkeyCache.append(index, secretKey.toPublicKey().toBytes());
+    }
+
+    const shuffled = Uint32Array.from({length: validatorCount}, (_, i) => validatorCount - 1 - i);
+    const committee = (index: number): Uint32Array =>
+      shuffled.subarray(
+        Math.floor((validatorCount * index) / committeeCount),
+        Math.floor((validatorCount * (index + 1)) / committeeCount)
+      );
+    const shuffling: EpochShuffling = {
+      epoch: 0,
+      activeIndices: Uint32Array.from({length: validatorCount}, (_, i) => i),
+      shuffling: shuffled,
+      committees: Array.from({length: SLOTS_PER_EPOCH}, (_, slot) =>
+        Array.from({length: committeesPerSlot}, (_, index) => committee(slot * committeesPerSlot + index))
+      ),
+      committeesPerSlot,
+    };
+    shuffling.committeePubkeysId = await computeCommitteePubkeys(shuffling.shuffling, committeesPerSlot);
+
+    const electraConfig = createBeaconConfig(
+      createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+      }),
+      ZERO_HASH
+    );
+    const blockSlot = 6;
+    const data = {...getAttestationData(), slot: blockSlot - 1};
+    const committeeBits = BitArray.fromBitLen(MAX_COMMITTEES_PER_SLOT);
+    committeeBits.set(0, true);
+    committeeBits.set(1, true);
+    // Absent members are subtracted from the committee aggregates
+    const aggregationBits = BitArray.fromBoolArray(Array.from({length: 16}, (_, i) => i !== 3 && i !== 12));
+    const attestation: electra.Attestation = {aggregationBits, data, committeeBits, signature: EMPTY_SIGNATURE};
+    const indexedAttestation = getIndexedAttestation(shuffling, ForkSeq.electra, attestation);
+    const signingRoot = getAttestationDataSigningRoot(electraConfig, blockSlot, data);
+    attestation.signature = aggregateSignatures(
+      indexedAttestation.attestingIndices.map((index) => secretKeys[index].sign(signingRoot))
+    ).toBytes();
+
+    const signedBlock: electra.SignedBeaconBlock = {
+      message: {
+        ...ssz.electra.BeaconBlock.defaultValue(),
+        slot: blockSlot,
+        body: {...ssz.electra.BeaconBlockBody.defaultValue(), attestations: [attestation]},
+      },
+      signature: EMPTY_SIGNATURE,
+    };
+    const [set] = getAttestationsSignatureSets(electraConfig, signedBlock, [indexedAttestation], [shuffling]);
+
+    expect(set).toMatchObject({type: SignatureSetType.committee, slot: blockSlot - 1, committeeIndices: [0, 1]});
+    expect(indexedAttestation.attestingIndices).toHaveLength(14);
+    expect(verifySignatureSet(set)).toBe(true);
+    expect(verifySignatureSet({...set, signingRoot: Buffer.alloc(32, 1)})).toBe(false);
+    expect(releaseCommitteePubkeys(shuffling.committeePubkeysId)).toBe(true);
   });
 
   it("should include payload attestation signatures from a gloas block", () => {
