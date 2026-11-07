@@ -163,6 +163,17 @@ describe("External signer sync", () => {
     expect(validatorStore.hasSomeValidators()).toBe(false);
   });
 
+  it("should not add any remote signer if a public key fetched from external signer has uncompressed length", async () => {
+    const uncompressedPubkey = secretKeys[1].toPublicKey().toHex(false);
+    externalSignerGetKeysStub.mockResolvedValueOnce([pubkeys[0], uncompressedPubkey]);
+
+    pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, opts);
+
+    await waitForFetchInterval();
+
+    expect(validatorStore.hasSomeValidators()).toBe(false);
+  });
+
   it("should not add remote signers if fetching public keys from external signer is disabled", async () => {
     externalSignerGetKeysStub.mockResolvedValueOnce(pubkeys);
 

@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
-import {isValidatePubkeyHex, parseRange} from "../../../src/util/index.js";
+import {SecretKey} from "@lodestar/native/blst";
+import {assertValidPubkeysHex, isValidatePubkeyHex, parseRange} from "../../../src/util/index.js";
 
 describe("util / format / parseRange", () => {
   const testCases: {range: string; res: number[]}[] = [
@@ -29,4 +30,20 @@ describe("util / format / isValidatePubkeyHex", () => {
       expect(isValidatePubkeyHex(pubkeyHex)).toBe(isValid);
     });
   }
+});
+
+describe("util / format / assertValidPubkeysHex", () => {
+  const publicKey = SecretKey.fromKeygen(new Uint8Array(32).fill(1)).toPublicKey();
+
+  it("accepts compressed public keys", () => {
+    expect(() => assertValidPubkeysHex([publicKey.toHex(true)])).not.toThrow();
+  });
+
+  it("rejects uncompressed public keys", () => {
+    expect(() => assertValidPubkeysHex([publicKey.toHex(false)])).toThrow("Invalid pubkey length 96");
+  });
+
+  it("rejects public keys with too few bytes", () => {
+    expect(() => assertValidPubkeysHex(["0x1234"])).toThrow("Invalid pubkey length 2");
+  });
 });

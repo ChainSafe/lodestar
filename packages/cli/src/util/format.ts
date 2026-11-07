@@ -51,6 +51,9 @@ export function parseRange(range: string): number[] {
 export function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
     const pubkeyBytes = fromHex(pubkeyHex);
+    if (pubkeyBytes.length !== PublicKey.COMPRESS_SIZE) {
+      throw Error(`Invalid pubkey length ${pubkeyBytes.length}, expected ${PublicKey.COMPRESS_SIZE} bytes`);
+    }
     PublicKey.fromBytes(pubkeyBytes, true);
   }
 }
