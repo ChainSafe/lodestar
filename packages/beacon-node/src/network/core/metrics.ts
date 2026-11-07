@@ -221,6 +221,16 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         help: "Total peer relevance checks on Status, labeled by result (relevant or irrelevant reason code)",
         labelNames: ["result"],
       }),
+      /**
+       * Penalties dropped by the REPEAT_PENALTY_COOLDOWN_MS rate limit, labeled by action name.
+       * A sustained rate here means a failure source is firing far faster than once per cooldown,
+       * i.e. the peer set would have been scored down on a single incident without the limit.
+       */
+      penaltiesSuppressed: register.counter<{reason: string}>({
+        name: "lodestar_peer_penalties_suppressed_total",
+        help: "Total peer score penalties suppressed by the repeat penalty cooldown, labeled by action name",
+        labelNames: ["reason"],
+      }),
     },
     leakedConnectionsCount: register.gauge({
       name: "lodestar_peer_manager_leaked_connections_count",
