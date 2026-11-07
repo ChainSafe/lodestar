@@ -295,6 +295,37 @@ describe("block archive repository", () => {
     expect(await blockArchive.get(count - 1)).not.toBeNull();
   });
 
+  it("should read block roots of a slot range from the slot index", async () => {
+    const slots = [3, 4, 7, 8, 12];
+    const roots = new Map<number, Uint8Array>();
+    await blockArchive.batchPut(
+      slots.map((slot) => {
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+        block.message.slot = slot;
+        roots.set(slot, ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+        return {key: slot, value: block};
+      })
+    );
+
+    const entries = await blockArchive.getRootsBySlotRange(4, 12);
+    expect(entries.map((e) => e.slot)).toEqual([4, 7, 8]);
+    for (const {slot, root} of entries) {
+      expect(toRootHex(root), `wrong root at slot ${slot}`).toBe(toRootHex(roots.get(slot) as Uint8Array));
+    }
+    expect(await blockArchive.getRootsBySlotRange(9, 12)).toEqual([]);
+
+    expect(await blockArchive.getLatestRootBeforeSlot(3)).toBeNull();
+    expect(toRootHex((await blockArchive.getLatestRootBeforeSlot(4)) as Uint8Array)).toBe(
+      toRootHex(roots.get(3) as Uint8Array)
+    );
+    expect(toRootHex((await blockArchive.getLatestRootBeforeSlot(7)) as Uint8Array)).toBe(
+      toRootHex(roots.get(4) as Uint8Array)
+    );
+    expect(toRootHex((await blockArchive.getLatestRootBeforeSlot(100)) as Uint8Array)).toBe(
+      toRootHex(roots.get(12) as Uint8Array)
+    );
+  });
+
   it.each([ForkName.gloas, ForkName.heze])("archives and removes block root indexes in %s", async (fork) => {
     blockArchive = new BlockArchiveRepository(getConfig(fork), db);
     const forkTypes = sszTypesFor(fork);
