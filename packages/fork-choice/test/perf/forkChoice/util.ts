@@ -57,8 +57,28 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
   const balances = new Uint16Array(Array.from({length: opts.initialValidatorCount}, () => 32));
 
   // Lightweight stub state so the FCR's FFG-justification path (getCurrentEpochState ->
-  // getHeadState -> ...) has a state to read. Reuses the same stub the unit tests use.
-  const stubState = makeState(opts.initialValidatorCount, 32, []);
+  // getHeadState -> ...) has a state to read. Reuses the same stub the unit tests use, with
+  // mainnet-shaped committees: each epoch spreads the validator set over its slots, rotated per
+  // epoch so ranges crossing an epoch boundary see validators in both epochs' committees.
+  const baseState = makeState(opts.initialValidatorCount, 32, []);
+  const committeeSize = Math.ceil(opts.initialValidatorCount / SLOTS_PER_EPOCH);
+  const indicesByEpoch = new Map<number, Uint32Array>();
+  for (let epoch = 0; epoch <= Math.ceil(opts.initialBlockCount / SLOTS_PER_EPOCH); epoch++) {
+    const shift = (epoch * 7919) % opts.initialValidatorCount;
+    indicesByEpoch.set(
+      epoch,
+      Uint32Array.from({length: opts.initialValidatorCount}, (_, i) => (i + shift) % opts.initialValidatorCount)
+    );
+  }
+  const stubState = {
+    ...baseState,
+    getBeaconCommittee: (slot: number) => {
+      const indices = indicesByEpoch.get(Math.floor(slot / SLOTS_PER_EPOCH));
+      if (!indices) throw Error(`no committee stub for slot ${slot}`);
+      const start = (slot % SLOTS_PER_EPOCH) * committeeSize;
+      return indices.subarray(start, start + committeeSize);
+    },
+  } as typeof baseState;
 
   // The first block of epoch 1 is used as the confirmed root.
   // This ensures confirmedEpoch + 1 >= currentEpoch so findLatestConfirmedDescendant runs.
