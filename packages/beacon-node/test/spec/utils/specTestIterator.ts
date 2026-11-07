@@ -98,7 +98,6 @@ export const defaultSkipOpts: SkipOpts = {
     "gossip_data_column_sidecar",
     "gossip_partial_data_column_sidecar",
     "gossip_execution_payload_bid",
-    "gossip_execution_payload_envelope",
     "gossip_payload_attestation_message",
     "gossip_proposer_preferences",
   ],
