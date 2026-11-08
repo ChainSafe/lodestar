@@ -842,9 +842,6 @@ function isExecutionEngineFailure(code: BlockErrorCode | PayloadErrorCode | null
  */
 function isPeerAttributableFailure(code: BlockErrorCode | PayloadErrorCode | null): boolean {
   switch (code) {
-    // EL returned a definitive INVALID verdict on the payload
-    case BlockErrorCode.EXECUTION_ENGINE_INVALID:
-    case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
     // a block or envelope signature is invalid
     case BlockErrorCode.INVALID_SIGNATURE:
     case PayloadErrorCode.INVALID_SIGNATURE:
@@ -862,6 +859,7 @@ function isPeerAttributableFailure(code: BlockErrorCode | PayloadErrorCode | nul
     case BlockErrorCode.BLACKLISTED_BLOCK:
       return true;
     default:
+      // Optimistic peers can serve payloads that the execution engine later rejects.
       return false;
   }
 }
