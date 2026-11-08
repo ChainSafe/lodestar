@@ -480,7 +480,10 @@ describe("cacheByRangeResponses", () => {
   envelope.message.payload.slotNumber = block.message.slot;
   envelope.message.payload.blockHash = parentPayload.bid.blockHash;
 
-  function cacheParentEnvelope(entries: Map<RootHex, PayloadEnvelopeInput>): Map<number, PayloadEnvelopeInput> | null {
+  function cacheEnvelope(
+    entries: Map<RootHex, PayloadEnvelopeInput>,
+    {inBatch = false, imported = false} = {}
+  ): Map<number, PayloadEnvelopeInput> | null {
     const seenPayloadEnvelopeInputCache = {
       add: (): PayloadEnvelopeInput => {
         throw new Error("Not expected to add a block");
@@ -496,17 +499,18 @@ describe("cacheByRangeResponses", () => {
     };
     return cacheByRangeResponses({
       cache: {
-        getByBlock: () => {
-          throw new Error("Not expected to add a block");
-        },
+        getByBlock: (props) =>
+          BlockInputNoData.createFromBlock({...props, block, forkName: ForkName.gloas, daOutOfRange: false}),
       },
       seenPayloadEnvelopeInputCache,
+      getFullPayloadBlockHash: (root) =>
+        imported && root === parentPayload.blockRootHex ? toRootHex(parentPayload.bid.blockHash) : null,
       peerIdStr: "peer",
-      responses: {},
+      responses: inBatch ? {validatedBlocks: [{block, blockRoot}]} : {},
       batchBlocks: [],
       downloadedPayloadEnvelopes: new Map([[block.message.slot, envelope]]),
       existingPayloadEnvelopes: null,
-      parentPayload,
+      parentPayload: inBatch ? undefined : parentPayload,
       custodyConfig: {sampledColumns: [], custodyColumns: []},
       seenTimestampSec: 0,
     }).payloadEnvelopes;
@@ -514,7 +518,7 @@ describe("cacheByRangeResponses", () => {
 
   it("recreates the dangling parent entry if it was evicted from the seen cache", () => {
     const entries = new Map<RootHex, PayloadEnvelopeInput>();
-    const payloadEnvelopes = cacheParentEnvelope(entries);
+    const payloadEnvelopes = cacheEnvelope(entries);
     const entry = entries.get(parentPayload.blockRootHex);
     expect(entry?.getPayloadEnvelope()).toBe(envelope);
     expect(payloadEnvelopes?.get(block.message.slot)).toBe(entry);
@@ -530,9 +534,20 @@ describe("cacheByRangeResponses", () => {
       daOutOfRange: false,
     });
     const entries = new Map([[parentPayload.blockRootHex, existing]]);
-    const payloadEnvelopes = cacheParentEnvelope(entries);
+    const payloadEnvelopes = cacheEnvelope(entries);
     expect(entries.size).toBe(1);
     expect(existing.getPayloadEnvelope()).toBe(envelope);
     expect(payloadEnvelopes?.get(block.message.slot)).toBe(existing);
+  });
+
+  it.each([
+    {path: "in-batch", inBatch: true},
+    {path: "dangling parent", inBatch: false},
+  ])("does not cache a downloaded $path envelope for an imported FULL block", ({inBatch}) => {
+    const entries = new Map<RootHex, PayloadEnvelopeInput>();
+    const payloadEnvelopes = cacheEnvelope(entries, {inBatch, imported: true});
+
+    expect(entries.size).toBe(0);
+    expect(payloadEnvelopes?.size).toBe(0);
   });
 });

@@ -96,6 +96,7 @@ export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
 export type CacheByRangeResponsesProps = {
   cache: Pick<SeenBlockInput, "getByBlock">;
   seenPayloadEnvelopeInputCache: Pick<SeenPayloadEnvelopeInput, "add" | "addFromBid">;
+  getFullPayloadBlockHash: (blockRoot: RootHex) => RootHex | null;
   peerIdStr: string;
   responses: ValidatedResponses;
   batchBlocks: IBlockInput[];
@@ -137,6 +138,7 @@ export type ValidatedResponses = {
 export function cacheByRangeResponses({
   cache,
   seenPayloadEnvelopeInputCache,
+  getFullPayloadBlockHash,
   peerIdStr,
   responses,
   batchBlocks,
@@ -150,6 +152,11 @@ export function cacheByRangeResponses({
   const updatedBatchBlocks = new Map<Slot, IBlockInput>(batchBlocks.map((block) => [block.slot, block]));
 
   const payloadEnvelopes = new Map<Slot, PayloadEnvelopeInput>(existingPayloadEnvelopes);
+  for (const [slot, payloadInput] of payloadEnvelopes) {
+    if (getFullPayloadBlockHash(payloadInput.blockRootHex) !== null) {
+      payloadEnvelopes.delete(slot);
+    }
+  }
 
   const blocks = responses.validatedBlocks ?? [];
   for (let i = 0; i < blocks.length; i++) {
@@ -187,7 +194,11 @@ export function cacheByRangeResponses({
     // later step) can throw and abort the batch — otherwise a gloas block would sit in
     // seenBlockInputCache but unseeded here, and payload-by-root sync would later throw "Missing
     // PayloadEnvelopeInput for known block" (see issue #9306). add() is idempotent.
-    if (isForkPostGloas(blockInput.forkName) && !payloadEnvelopes.has(blockInput.slot)) {
+    if (
+      isForkPostGloas(blockInput.forkName) &&
+      !payloadEnvelopes.has(blockInput.slot) &&
+      getFullPayloadBlockHash(blockInput.blockRootHex) === null
+    ) {
       const payloadInput = seenPayloadEnvelopeInputCache.add({
         blockRootHex: blockInput.blockRootHex,
         block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
@@ -241,10 +252,14 @@ export function cacheByRangeResponses({
 
   if (downloadedPayloadEnvelopes !== null) {
     for (const [slot, envelope] of downloadedPayloadEnvelopes) {
+      const blockRootHex = toRootHex(envelope.message.beaconBlockRoot);
+      // FULL payloads are already imported, so this response would never be verified.
+      if (getFullPayloadBlockHash(blockRootHex) !== null) {
+        continue;
+      }
       // the only PayloadEnvelopeInput miss is the dangling parent
       let payloadInput = payloadEnvelopes.get(slot);
       if (payloadInput === undefined) {
-        const blockRootHex = toRootHex(envelope.message.beaconBlockRoot);
         if (updatedBatchBlocks.has(slot)) {
           throw new Error(`Missing PayloadEnvelopeInput for in-batch slot ${slot} root ${blockRootHex}`);
         }
@@ -295,7 +310,7 @@ export function cacheByRangeResponses({
       const dataSlot = firstColumn.slot;
       const payloadInput = payloadEnvelopes.get(dataSlot);
       if (!payloadInput) {
-        // Should not happen: we built payloadInputs for all gloas blocks above
+        // Already-imported FULL blocks do not need another payload input.
         continue;
       }
       for (const columnSidecar of columnSidecars as gloas.DataColumnSidecar[]) {

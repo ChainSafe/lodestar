@@ -1,8 +1,9 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
-import {Epoch, Status, fulu, ssz} from "@lodestar/types";
+import {Epoch, RootHex, Status, fulu, ssz} from "@lodestar/types";
 import {Logger, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
@@ -276,6 +277,10 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     }
   };
 
+  private getFullPayloadBlockHash = (blockRoot: RootHex): RootHex | null => {
+    return this.chain.forkChoice.getBlockHex(blockRoot, PayloadStatus.FULL)?.executionPayloadBlockHash ?? null;
+  };
+
   private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
     const batchBlocks = batch.getBlocks();
     const requests = batch.getRequestsForPeer(peer);
@@ -294,6 +299,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     const {blocks, payloadEnvelopes} = cacheByRangeResponses({
       cache: this.chain.seenBlockInputCache,
       seenPayloadEnvelopeInputCache: this.chain.seenPayloadEnvelopeInputCache,
+      getFullPayloadBlockHash: this.getFullPayloadBlockHash,
       peerIdStr: peer.peerId,
       responses,
       batchBlocks,
@@ -320,7 +326,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
     if (segmentBlocks.length > 1) {
       try {
-        assertLinearChainSegment(this.config, segmentBlocks, payloadEnvelopes, null);
+        assertLinearChainSegment(this.config, segmentBlocks, payloadEnvelopes, null, this.getFullPayloadBlockHash);
       } catch (err) {
         if (err instanceof BlockError) {
           this.logger.debug(
@@ -417,7 +423,8 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           custodyConfig: this.chain.custodyConfig,
           metrics: this.metrics,
         },
-        parentPayload
+        parentPayload,
+        this.getFullPayloadBlockHash
       );
       this.chains.set(syncType, syncChain);
 

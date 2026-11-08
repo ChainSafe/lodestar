@@ -399,6 +399,13 @@ describe("sync / range / batch", async () => {
             expected: true,
           },
           {
+            name: "parent payload is already imported",
+            parentRoot,
+            parentBlockHash: parentBid.blockHash,
+            imported: true,
+            expected: false,
+          },
+          {
             name: "parent block hash matches but parent root does not",
             parentRoot: Buffer.alloc(32, 0x44),
             parentBlockHash: parentBid.blockHash,
@@ -412,7 +419,7 @@ describe("sync / range / batch", async () => {
           },
         ];
 
-        for (const {name, parentRoot, parentBlockHash, expected} of testCases) {
+        for (const {name, parentRoot, parentBlockHash, imported, expected} of testCases) {
           const batch = new Batch(
             startEpoch,
             config,
@@ -420,7 +427,8 @@ describe("sync / range / batch", async () => {
             custodyConfig,
             true,
             parentPayload,
-            Number.MAX_SAFE_INTEGER
+            Number.MAX_SAFE_INTEGER,
+            () => (imported ? toRootHex(parentBid.blockHash) : null)
           );
           batch.startDownloading(peerSyncMeta);
           const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
@@ -866,6 +874,38 @@ describe("sync / range / batch", async () => {
         expect(batch.failedProcessingAttempts.length).toBe(1);
         expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(true);
         expect(batch.getFailedPeers()).toContain(peer);
+      });
+
+      it.each([
+        {source: PayloadEnvelopeInputSource.gossip, peerAttributable: false},
+        {source: PayloadEnvelopeInputSource.byRoot, peerAttributable: false},
+        {source: PayloadEnvelopeInputSource.byRange, peerAttributable: true},
+      ])("attributes envelope failures by the envelope's $source source", ({source, peerAttributable}) => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+
+        const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+        const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+        const envelopeInput = PayloadEnvelopeInput.createFromBlock({
+          block,
+          blockRootHex: toRootHex(blockRoot),
+          forkName: ForkName.gloas,
+          sampledColumns: [],
+          custodyColumns: [],
+          seenTimestampSec: 0,
+          source: PayloadEnvelopeInputSource.byRange,
+          daOutOfRange: false,
+        });
+        const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+        envelope.message.beaconBlockRoot = blockRoot;
+        envelopeInput.addPayloadEnvelope({envelope, source, seenTimestampSec: 0, peerIdStr: peer});
+
+        batch.processingError(
+          new PayloadError(envelopeInput, {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "invalid"})
+        );
+
+        expect(batch.failedProcessingAttempts).toHaveLength(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(peerAttributable);
       });
 
       it("PER_BLOCK_PROCESSING_ERROR (invalid block) => failedProcessingAttempts, peer attributable", () => {
