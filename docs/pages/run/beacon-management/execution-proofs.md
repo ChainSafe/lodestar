@@ -80,7 +80,7 @@ cd "$L" && pnpm install --frozen-lockfile && pnpm build
 
 ### 2. Check the verifier
 
-The `ere` verifier is part of the native bindings, so there is nothing else to install. `build.zig.zon` pins the [`ere.zig`](https://github.com/ChainSafe/ere.zig) revision and with it the `ere` release the verifier comes from, ERE v0.19.2 at the time of writing. That release verifies the OpenVM 2.1.0-preview proofs the Sepolia provers publish. SP1 6.9.0 and ZisK 1.3.2-alpha proofs need ERE v0.19.6, which means moving the pin and rebuilding.
+The `ere` verifier is part of the native bindings, so there is nothing else to install. `build.zig.zon` pins the [`ere.zig`](https://github.com/ChainSafe/ere.zig) revision and with it the `ere` release the verifier comes from, ERE v0.19.6 at the time of writing. That release verifies the OpenVM 2.1.0-preview proofs the Sepolia provers publish and the SP1 6.9.0 and ZisK 1.3.2-alpha proofs of the `zkboost` v0.19.1 generation. A newer prover generation can need a newer pin.
 
 ```bash
 cd "$L/packages/beacon-node" && node -e 'import("@lodestar/native/execution-proof-verifier").then((m) => console.log("verifier available:", m.EXECUTION_PROOF_VERIFIER_AVAILABLE))'

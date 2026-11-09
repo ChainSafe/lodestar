@@ -26,6 +26,6 @@ The dedicated EIP-8025 CI job runs the download command before `pnpm test:8025`.
 does not download execution-proof fixtures.
 
 The `ere` fixture revision must match the `ere` release behind the `ere.zig` pin in `build.zig.zon`, which
-the native verifier is built from; both are ERE v0.19.2 today. The Sepolia fixtures were proven with SP1 6.9.0
-and ZisK 1.3.2-alpha: the OpenVM and SP1 proofs verify with ERE v0.19.2, every ZisK proof fails until the pin
-moves to ERE v0.19.6 or newer. Bump the revisions here together with the pin.
+the native verifier is built from; both are ERE v0.19.6 today. The Sepolia fixtures were proven with SP1 6.9.0
+and ZisK 1.3.2-alpha, which that release verifies; an ERE v0.19.2 verifier failed every ZisK proof. Bump the
+revisions here together with the pin.

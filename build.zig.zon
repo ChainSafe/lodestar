@@ -56,8 +56,8 @@
             .hash = "zio-0.14.0-xHbVVPxFHgBCop4CvfF4u360kzWlHD4FS8Ud-RIkPcZ7",
         },
         .ere = .{
-            .url = "git+https://github.com/ChainSafe/ere.zig#66d27cc300e467cae55335f673fad13569bf56cf",
-            .hash = "ere_zig-0.1.0-UBcsLXo1AADfv1_PF3kwGLo9wx-O0Usjf-4SnZKi-3mM",
+            .url = "git+https://github.com/ChainSafe/ere.zig#6b14c324cf1890f69b3435a0446849e03c6fafd7",
+            .hash = "ere_zig-0.1.0-UBcsLbU1AADMIS1RQyvPWeGvpdG5RuGKl7X4nGkiBsBb",
         },
     },
     .options_modules = .{
@@ -102,8 +102,8 @@
         .download_ere_fixture_options = .{
             .ere_fixture_base_url = .{
                 .type = .string,
-                .default = "https://raw.githubusercontent.com/eth-act/ere/c0c411ae9215e0f72a00d52e32e267b30ef48606",
-                .description = "Base URL of the eth-act/ere tree (v0.19.2) that holds the verifier fixtures.",
+                .default = "https://raw.githubusercontent.com/eth-act/ere/24118285f6e9b8115b3ad568775f7fe55ff78bf5",
+                .description = "Base URL of the eth-act/ere tree (v0.19.6) that holds the verifier fixtures.",
             },
             .ere_fixture_out_dir = .{
                 .type = .string,

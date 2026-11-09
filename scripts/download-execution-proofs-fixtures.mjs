@@ -8,7 +8,7 @@ import {fileURLToPath} from "node:url";
 import axios from "axios";
 
 // ere's own fixtures: test programs proven by each zkVM, at the ere release behind the ere.zig pin in build.zig.zon
-const ereRevision = "c0c411ae9215e0f72a00d52e32e267b30ef48606";
+const ereRevision = "24118285f6e9b8115b3ad568775f7fe55ff78bf5";
 const ereArchiveRoot = `ere-${ereRevision}`;
 const ereZkvms = ["openvm", "sp1", "zisk"];
 const ereFiles = ["program_vk.bin", "proof.bin", "public_values.bin"];
