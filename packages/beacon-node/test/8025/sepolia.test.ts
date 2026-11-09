@@ -1,6 +1,6 @@
 import {existsSync, readFileSync} from "node:fs";
 import {beforeAll, describe, expect, it} from "vitest";
-import {EXECUTION_PROOF_VERIFIER_AVAILABLE} from "@chainsafe/lodestar-z/execution-proof-verifier";
+import {EXECUTION_PROOF_VERIFIER_AVAILABLE} from "@lodestar/native/execution-proof-verifier";
 import {EXECUTION_PROOF_TYPES} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";

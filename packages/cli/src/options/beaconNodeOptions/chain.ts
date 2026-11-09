@@ -388,7 +388,7 @@ Will double processing times. Use only for debugging purposes.",
       "The proof type selects the guest program and zkVM from the EIP-8025 proof type table, and the file must hold " +
       "that type's raw verification key, checked by SHA-256 against the table. " +
       "Use <proofType>:<zkvm>:<verificationKeyPath> to assign a type explicitly, skipping the table and its check. " +
-      "Requires a lodestar-z build with the ere verifier. Unset means the node ignores execution proofs.",
+      "Requires native bindings built with the ere verifier. Unset means the node ignores execution proofs.",
     group: "chain",
   },
 

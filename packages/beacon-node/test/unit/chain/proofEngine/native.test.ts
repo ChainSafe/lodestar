@@ -1,8 +1,5 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import type {
-  registerExecutionProofVerifier,
-  verifyExecutionProof,
-} from "@chainsafe/lodestar-z/execution-proof-verifier";
+import type {registerExecutionProofVerifier, verifyExecutionProof} from "@lodestar/native/execution-proof-verifier";
 import {eip8025, ssz} from "@lodestar/types";
 import {LodestarError, toHex} from "@lodestar/utils";
 import {ExecutionProofInput} from "../../../../src/chain/proofEngine/executionProof.js";
@@ -38,7 +35,7 @@ const assignments = await vi.hoisted(async () => {
   };
 });
 
-vi.mock("@chainsafe/lodestar-z/execution-proof-verifier", () => verifier);
+vi.mock("@lodestar/native/execution-proof-verifier", () => verifier);
 vi.mock("@lodestar/params", async (importActual) => ({
   ...(await importActual<typeof import("@lodestar/params")>()),
   EXECUTION_PROOF_TYPES: assignments.table,

@@ -6,7 +6,7 @@ import {
   ZKVM_KIND,
   hasExecutionProofVerifier,
   registerExecutionProofVerifier,
-} from "@chainsafe/lodestar-z/execution-proof-verifier";
+} from "@lodestar/native/execution-proof-verifier";
 import {verifyNativeExecutionProof} from "../../src/chain/proofEngine/native.js";
 
 // The ere fixtures prove test programs under keys outside the EIP-8025 proof type table, so they
@@ -19,7 +19,7 @@ describe.skipIf(!EXECUTION_PROOF_VERIFIER_AVAILABLE)("native execution proof ver
     registerExecutionProofVerifier(proofType, ZKVM_KIND.sp1, new Uint8Array(32));
   });
 
-  it("registers the verifier through lodestar-z", () => {
+  it("registers the verifier through the native binding", () => {
     expect(hasExecutionProofVerifier(proofType)).toBe(true);
   });
 

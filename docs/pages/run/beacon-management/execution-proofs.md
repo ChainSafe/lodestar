@@ -6,8 +6,8 @@ Lodestar is a proof-verifying node as soon as it holds at least one verification
 
 ## Requirements
 
-- A `@chainsafe/lodestar-z` build with the `ere` verifier. The published Linux packages include it. The macOS package does not, and a node configured with verification keys refuses to start there with `EXECUTION_PROOF_VERIFIER_UNAVAILABLE`.
-- A verifier built against the same `ere` release as the provers. A proof made with a newer SP1 or ZisK than the verifier knows fails verification even when it is valid, so check the `ere` version in the lodestar-z release notes against the provers you expect to see.
+- A Lodestar build whose native bindings include the `ere` verifier. Building from source needs Zig 0.16.0 and one of the platforms `ere` ships a prebuilt verifier library for: `linux-amd64`, `linux-arm64` or `darwin-arm64`. A node configured with verification keys refuses to start without it, with `EXECUTION_PROOF_VERIFIER_UNAVAILABLE`.
+- A verifier built against the same `ere` release as the provers. A proof made with a newer SP1 or ZisK than the verifier knows fails verification even when it is valid, so check the `ere` release behind the `ere.zig` pin in `build.zig.zon` against the provers you expect to see.
 - One raw verification key file per proof type you want to verify, taken from the [`eth-act/ere-guests`](https://github.com/eth-act/ere-guests/releases) release the provers run. Each release ships a `minisign.pub` and a `.minisig` per file to check the download.
 
 ## Proof types
@@ -55,24 +55,15 @@ Every type you configure counts as supported on gossip. A proof for a type Lodes
 
 ## Running a Sepolia proof-verifying node
 
-This walkthrough was last run on 2026-10-30 against the Sepolia provers described above. It assumes a Linux host with a public address, since provers are usually outbound-only and dial you, plus Node.js 22 or newer, `pnpm`, `git` and `curl`. Pick a working directory and keep both checkouts in it:
+This walkthrough was last run on 2026-10-30 against the Sepolia provers described above. It assumes a Linux host with a public address, since provers are usually outbound-only and dial you, plus Node.js 24, `pnpm`, `git` and `curl`. Pick a working directory:
 
 ```bash
-export WORK=$PWD L=$PWD/lodestar-8025 Z=$PWD/lodestar-z-ere
+export WORK=$PWD L=$PWD/lodestar
 ```
 
 ### 1. Build Lodestar
 
-Until the EIP-8025 branch is merged and released, build it from source:
-
-```bash
-git clone --branch bing/eip-8025 --depth 1 https://github.com/ChainSafe/lodestar.git "$L"
-cd "$L" && pnpm install --frozen-lockfile && pnpm build
-```
-
-### 2. Use a verifier built for the provers' `ere` release
-
-The published `@chainsafe/lodestar-z` 2.2.0 carries the ERE v0.19.2 verifier. Until a release with ERE v0.19.6 is out, build the bindings from the `bing/ere-0.19.6` branch with Zig 0.16.0 and point the whole monorepo at them. Skip this step once `pnpm install` brings a lodestar-z release that lists ERE v0.19.6 or newer.
+Until the EIP-8025 branch is merged and released, build it from source. `pnpm build` compiles the native bindings, so Zig 0.16.0 has to be on `PATH`:
 
 ```bash
 cd "$WORK"
@@ -83,17 +74,19 @@ export PATH="$WORK/zig-x86_64-linux-0.16.0:$PATH"
 ```
 
 ```bash
-git clone --branch bing/ere-0.19.6 --depth 1 https://github.com/ChainSafe/lodestar-z.git "$Z"
-cd "$Z" && zig build build-lib:bindings -Doptimize=ReleaseSafe && pnpm install --frozen-lockfile --ignore-scripts
+git clone --branch optional-proofs --depth 1 https://github.com/ChainSafe/lodestar.git "$L"
+cd "$L" && pnpm install --frozen-lockfile && pnpm build
 ```
 
-Replace the single pnpm store entry, not one package's link. The BLS worker threads load lodestar-z as well, and two copies of the native module split the pubkey cache, after which every block batch fails with `PubkeyIndexNotFound`:
+### 2. Check the verifier
+
+The `ere` verifier is part of the native bindings, so there is nothing else to install. `build.zig.zon` pins the [`ere.zig`](https://github.com/ChainSafe/ere.zig) revision and with it the `ere` release the verifier comes from, ERE v0.19.2 at the time of writing. That release verifies the OpenVM 2.1.0-preview proofs the Sepolia provers publish. SP1 6.9.0 and ZisK 1.3.2-alpha proofs need ERE v0.19.6, which means moving the pin and rebuilding.
 
 ```bash
-cd "$L/node_modules/.pnpm/@chainsafe+lodestar-z@2.2.0/node_modules/@chainsafe"
-mv lodestar-z lodestar-z.orig && ln -s "$Z" lodestar-z
-cd "$L" && node -e 'import("@chainsafe/lodestar-z/execution-proof-verifier").then((m) => console.log("verifier available:", m.EXECUTION_PROOF_VERIFIER_AVAILABLE))'
+cd "$L/packages/beacon-node" && node -e 'import("@lodestar/native/execution-proof-verifier").then((m) => console.log("verifier available:", m.EXECUTION_PROOF_VERIFIER_AVAILABLE))'
 ```
+
+`false` means the bindings were built without a prebuilt `ere` verifier library. `ere` publishes one for `linux-amd64`, `linux-arm64` and `darwin-arm64`.
 
 ### 3. Download the verification keys
 
@@ -155,8 +148,7 @@ Provers such as the OpenVM one described above are outbound-only, so they have t
 ### Troubleshooting
 
 - Discovery finds no peers behind a VPN or a high-latency link: discv5 gives up on a request after one second and the bootnodes drop out of the table. Start with `--rest.namespace '*'` and feed peers through `POST /eth/v1/lodestar/connect_peer?peerId=<id>&multiaddr=/ip4/<ip>/tcp/<port>`.
-- Every block batch fails with `PubkeyIndexNotFound`: the binding was linked for a single package. Redo the store swap in step 2.
-- `EXECUTION_PROOF_VERIFIER_UNAVAILABLE` at startup: the installed lodestar-z has no `ere` verifier for this platform. The published macOS package is one such case; build the bindings as in step 2.
+- `EXECUTION_PROOF_VERIFIER_UNAVAILABLE` at startup: the native bindings have no `ere` verifier for this platform. `ere` ships a prebuilt library for `linux-amd64`, `linux-arm64` and `darwin-arm64`; rebuild with `pnpm build:native` on one of those.
 - `EXECUTION_PROOF_VERIFICATION_KEY_MISMATCH`: the file for that proof type belongs to another key generation. Use the explicit form if the provers you follow are on newer keys than the spec table.
 
 ## Submitting proofs

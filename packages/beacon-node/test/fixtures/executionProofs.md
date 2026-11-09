@@ -25,7 +25,7 @@ tests fail with the download command. They do not skip missing fixtures or downl
 The dedicated EIP-8025 CI job runs the download command before `pnpm test:8025`. The unit-test CI job
 does not download execution-proof fixtures.
 
-The pinned revisions must match the `ere` release the installed `lodestar-z` verifier was built with.
-With the ERE v0.19.2 verifier of `lodestar-z` 2.2.0 the OpenVM and SP1 proofs still verify, but every ZisK
-proof from the v0.19.6 fixtures fails, so bump the revisions here together with the `@chainsafe/lodestar-z`
-catalog entry.
+The `ere` fixture revision must match the `ere` release behind the `ere.zig` pin in `build.zig.zon`, which
+the native verifier is built from; both are ERE v0.19.2 today. The Sepolia fixtures were proven with SP1 6.9.0
+and ZisK 1.3.2-alpha: the OpenVM and SP1 proofs verify with ERE v0.19.2, every ZisK proof fails until the pin
+moves to ERE v0.19.6 or newer. Bump the revisions here together with the pin.

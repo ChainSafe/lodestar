@@ -1,4 +1,4 @@
-/** Proof systems with a prebuilt ere verifier, keyed as in `ZKVM_KIND` of `@chainsafe/lodestar-z/execution-proof-verifier` */
+/** Proof systems with a prebuilt ere verifier, keyed as in `ZKVM_KIND` of `@lodestar/native/execution-proof-verifier` */
 export type ExecutionProofZkvm = "openvm" | "sp1" | "zisk";
 
 export type ExecutionProofTypeAssignment = {

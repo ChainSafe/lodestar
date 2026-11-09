@@ -4,7 +4,7 @@ import {
   ZKVM_KIND,
   registerExecutionProofVerifier,
   verifyExecutionProof,
-} from "@chainsafe/lodestar-z/execution-proof-verifier";
+} from "@lodestar/native/execution-proof-verifier";
 import {EXECUTION_PROOF_TYPES, ExecutionProofZkvm} from "@lodestar/params";
 import {eip8025, ssz} from "@lodestar/types";
 import {LodestarError, fromHex, toHex} from "@lodestar/utils";
