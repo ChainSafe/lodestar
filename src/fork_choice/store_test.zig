@@ -318,6 +318,87 @@ test "summary-only chain: blocks are viable and the tip is the head" {
     try testing.expectEqual(@as(u64, 63), store.blockSlot(head.block));
 }
 
+test "vote weights: incremental updates match a full recount" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    const zero: [32]u8 = @splat(0);
+    var anchor_root: [32]u8 = zero;
+    anchor_root[31] = 1;
+    const genesis: Checkpoint = .{ .epoch = 0, .root = anchor_root };
+    var store = try Store.initFromSummary(allocator, config, 0, .{
+        .root = anchor_root,
+        .parent_root = zero,
+        .slot = 0,
+        .proposer_index = 0,
+        .state_root = zero,
+        .fork = .electra,
+        .justified_checkpoint = genesis,
+        .finalized_checkpoint = genesis,
+        .unrealized_justified_checkpoint = genesis,
+        .unrealized_finalized_checkpoint = genesis,
+        .execution_status = .pre_merge,
+    }, Provider.stateProvider());
+    defer store.deinit();
+    try store.onTick(store.timing.timeAtSlotMs(6 * preset.SLOTS_PER_EPOCH));
+
+    var prng = std.Random.DefaultPrng.init(0x5eed);
+    const random = prng.random();
+    var tips = [2][32]u8{ anchor_root, anchor_root };
+    var expected: std.ArrayList(u64) = .empty;
+    defer expected.deinit(allocator);
+    for (0..4) |epoch| {
+        // Each round grows both branches by an epoch, so new nodes appear between runs.
+        for (0..preset.SLOTS_PER_EPOCH) |offset| {
+            const slot = epoch * preset.SLOTS_PER_EPOCH + offset + 1;
+            for (&tips, 0..) |*tip, branch| {
+                var root: [32]u8 = anchor_root;
+                std.mem.writeInt(u64, root[0..8], slot, .little);
+                root[8] = @intCast(branch + 1);
+                try store.onBlockSummary(.{
+                    .root = root,
+                    .parent_root = tip.*,
+                    .slot = slot,
+                    .proposer_index = 0,
+                    .state_root = root,
+                    .fork = .electra,
+                    .justified_checkpoint = genesis,
+                    .finalized_checkpoint = genesis,
+                    .unrealized_justified_checkpoint = genesis,
+                    .unrealized_finalized_checkpoint = genesis,
+                    .execution_status = .pre_merge,
+                });
+                tip.* = root;
+            }
+        }
+        const vote_slot = (epoch + 1) * preset.SLOTS_PER_EPOCH - 1;
+        for (0..validator_count) |validator| {
+            // A quarter of the validators vote per round, below the full recount threshold.
+            if (random.uintLessThan(u8, 4) != 0) continue;
+            var block = store.blockIndex(tips[random.uintLessThan(usize, 2)]).?;
+            for (0..1 + random.uintLessThan(usize, preset.SLOTS_PER_EPOCH)) |_| block = store.blocks.items(.parent)[block];
+            const target_block = store.getCheckpointBlock(block, epoch);
+            const target: Checkpoint = .{ .epoch = epoch, .root = store.blockRoot(target_block) };
+            var indices = [_]u64{validator};
+            var vote = indexedAttestation(&indices, vote_slot, store.blockRoot(block), target);
+            try store.onAttestation(.{ .electra = &vote }, true);
+            if (random.uintLessThan(u8, 16) == 0) {
+                var slashing = ct.electra.AttesterSlashing.default_value;
+                slashing.attestation_1 = vote;
+                slashing.attestation_2 = vote;
+                slashing.attestation_2.data.slot -= 1;
+                try store.onAttesterSlashing(.{ .electra = &slashing });
+            }
+        }
+        _ = try store.getHead();
+        expected.clearRetainingCapacity();
+        try expected.appendSlice(allocator, store.head_cache.vote_weight.items);
+        store.head_cache.rescan_votes = true;
+        store.head_cache.dirty = true;
+        _ = try store.getHead();
+        try testing.expectEqualSlices(u64, expected.items, store.head_cache.vote_weight.items);
+    }
+}
+
 const ExecutionStatus = store_mod.ExecutionStatus;
 const ZERO: [32]u8 = @splat(0);
 
