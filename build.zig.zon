@@ -416,6 +416,7 @@
                     .config,
                     .fork_types,
                     .state_transition,
+                    .fork_choice,
                     .hex,
                     .ere_verifier,
                     "zapi:zapi",
