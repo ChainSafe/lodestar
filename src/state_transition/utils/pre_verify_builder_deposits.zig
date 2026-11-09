@@ -85,11 +85,19 @@ pub fn preVerifyBuilderDepositsPreGloas(
             batch_verify = std.mem.allEqual(bool, results[0..count], true);
             for (deposits[0..count], results[0..count]) |*deposit, valid| {
                 try cache.put(allocator, state.config, deposit, valid);
-                if (valid and resolved.count() < cache_module.max_deposits_per_call) try resolved.putContext(allocator, deposit.pubkey, {}, cache.hash_context);
-                if (isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
-                    if (valid) result.valid_builder_signatures_count += 1 else result.invalid_builder_signatures_count += 1;
+                const is_builder = isBuilderWithdrawalCredential(&deposit.withdrawal_credentials);
+                if (valid) {
+                    if (resolved.count() < cache_module.max_deposits_per_call)
+                        try resolved.putContext(allocator, deposit.pubkey, {}, cache.hash_context);
+                    if (is_builder)
+                        result.valid_builder_signatures_count += 1
+                    else
+                        result.valid_validator_signatures_count += 1;
                 } else {
-                    if (valid) result.valid_validator_signatures_count += 1 else result.invalid_validator_signatures_count += 1;
+                    if (is_builder)
+                        result.invalid_builder_signatures_count += 1
+                    else
+                        result.invalid_validator_signatures_count += 1;
                 }
             }
             verified += count;
