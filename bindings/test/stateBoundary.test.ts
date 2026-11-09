@@ -31,6 +31,7 @@ describe("native state transition boundaries", () => {
       ["--import", "tsx", fileURLToPath(new URL("./fixtures/stateBoundary.ts", import.meta.url)), scenario, error],
       {cwd: new URL("..", import.meta.url), encoding: "utf8", timeout: 30_000}
     );
+    expect(result.error).toBeUndefined();
     expect(result.signal, result.stderr).toBeNull();
     expect(result.status, result.stderr).toBe(0);
   });
