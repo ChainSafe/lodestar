@@ -25,6 +25,10 @@ const AnyIndexedAttestation = fork_types.AnyIndexedAttestation;
 const AnyAttesterSlashing = fork_types.AnyAttesterSlashing;
 const ForkTypes = fork_types.ForkTypes;
 const head_mod = @import("head.zig");
+const vote_targets_mod = @import("vote_targets.zig");
+const VoteTargets = vote_targets_mod.VoteTargets;
+const TargetId = vote_targets_mod.TargetId;
+const NO_TARGET = vote_targets_mod.NO_TARGET;
 
 pub const Slot = ct.primitive.Slot.Type;
 pub const Epoch = ct.primitive.Epoch.Type;
@@ -308,12 +312,13 @@ pub const Store = struct {
     index_by_root: RootIndexMap,
     /// Parallel to `blocks`; only meaningful for Gloas blocks.
     ptc_votes: std.ArrayList(PtcVotes),
-    /// Dense by validator index.
-    latest_messages: std.ArrayList(LatestMessage),
-    /// Votes whose slot is not yet past, one per validator like `latest_messages`; applied
+    /// Dense by validator index: each validator's latest message as an id into `vote_targets`.
+    latest_votes: std.ArrayList(TargetId),
+    /// Votes whose slot is not yet past, one per validator like `latest_votes`; applied
     /// by the tick that makes their slot past. The spec rejects such attestations and
     /// expects the caller to retry; gossip delivers them in their own slot.
-    queued_messages: std.ArrayList(LatestMessage),
+    queued_votes: std.ArrayList(TargetId),
+    vote_targets: VoteTargets,
     justified_balances: JustifiedBalances,
     /// `effective_balance_increments` with inactive and slashed validators zeroed:
     /// the per-validator weight `get_attestation_score` sums.
@@ -356,6 +361,8 @@ pub const Store = struct {
         provider: StateProvider,
     ) !Store {
         const checkpoint: Checkpoint = .{ .epoch = computeEpochAtSlot(anchor.slot), .root = anchor.root };
+        var vote_targets = try VoteTargets.init(allocator);
+        errdefer vote_targets.deinit(allocator);
         var self: Store = .{
             .allocator = allocator,
             .config = config,
@@ -371,8 +378,9 @@ pub const Store = struct {
             .blocks = .empty,
             .index_by_root = .empty,
             .ptc_votes = .empty,
-            .latest_messages = .empty,
-            .queued_messages = .empty,
+            .latest_votes = .empty,
+            .queued_votes = .empty,
+            .vote_targets = vote_targets,
             .justified_balances = .empty,
             .justified_vote_increments = &.{},
             .justified_total_balance = 0,
@@ -409,8 +417,9 @@ pub const Store = struct {
         self.head_cache.deinit(self.allocator);
         self.allocator.free(self.justified_vote_increments);
         self.justified_balances.deinit(self.allocator);
-        self.latest_messages.deinit(self.allocator);
-        self.queued_messages.deinit(self.allocator);
+        self.latest_votes.deinit(self.allocator);
+        self.queued_votes.deinit(self.allocator);
+        self.vote_targets.deinit(self.allocator);
         self.ptc_votes.deinit(self.allocator);
         self.index_by_root.deinit(self.allocator);
         self.blocks.deinit(self.allocator);
@@ -571,7 +580,7 @@ pub const Store = struct {
             out.* = if (active) increment else 0;
             total += out.*;
         }
-        self.head_cache.applyBalanceChange(self.justified_vote_increments, vote_increments);
+        self.head_cache.applyBalanceChange(self.vote_targets.nodes.items, self.justified_vote_increments, vote_increments);
         self.justified_balances.deinit(self.allocator);
         self.allocator.free(self.justified_vote_increments);
         self.justified_balances = balances;
@@ -828,72 +837,80 @@ pub const Store = struct {
             .payload_present = self.config.forkSeq(data.slot).gte(.gloas) and data.index == 1,
         };
         const indices = attestation.attestingIndices();
-        if (self.currentSlot() < data.slot + 1) return self.queueVotes(indices, message);
-        try self.updateLatestMessages(indices, message);
+        const queue = self.currentSlot() < data.slot + 1;
+        try self.ensureValidatorSlots(&self.latest_votes, indices);
+        if (queue) try self.ensureValidatorSlots(&self.queued_votes, indices);
+        const id = try self.internVoteTarget(message);
+        if (queue) return self.queueVotes(indices, id, message);
+        for (indices) |index| self.applyVote(index, id, message);
     }
 
-    fn ensureValidatorSlots(self: *Store, list: *std.ArrayList(LatestMessage), attesting_indices: []const ValidatorIndex) !void {
+    fn ensureValidatorSlots(self: *Store, list: *std.ArrayList(TargetId), attesting_indices: []const ValidatorIndex) !void {
         var max_index: usize = 0;
         for (attesting_indices) |index| max_index = @max(max_index, index);
         if (max_index >= list.items.len) {
-            try list.appendNTimes(self.allocator, .none, max_index + 1 - list.items.len);
+            try list.appendNTimes(self.allocator, NO_TARGET, max_index + 1 - list.items.len);
         }
     }
 
-    /// Spec `update_latest_messages`.
-    fn updateLatestMessages(self: *Store, attesting_indices: []const ValidatorIndex, message: LatestMessage) !void {
-        try self.ensureValidatorSlots(&self.latest_messages, attesting_indices);
-        for (attesting_indices) |index| self.applyVote(index, message);
+    /// The id of `message` in `vote_targets`, compacting the table first when it has grown.
+    fn internVoteTarget(self: *Store, message: LatestMessage) !TargetId {
+        if (self.vote_targets.needsCompaction()) {
+            try self.vote_targets.compact(self.allocator, &.{ self.latest_votes.items, self.queued_votes.items, self.head_cache.applied_votes.items });
+        }
+        return self.vote_targets.getOrInsert(self.allocator, message, head_mod.nodeId(head_mod.supportedNode(self, message)));
     }
 
-    /// The replacement rule of `update_latest_messages` for one validator: a later target
-    /// epoch before Gloas, a later slot from Gloas on. `message.slot` is in the target
-    /// epoch, which `checkAttestationData` asserted.
-    fn applyVote(self: *Store, index: ValidatorIndex, message: LatestMessage) void {
+    /// The replacement rule of spec `update_latest_messages` for one validator: a later
+    /// target epoch before Gloas, a later slot from Gloas on. `message.slot` is in the
+    /// target epoch, which `checkAttestationData` asserted.
+    fn applyVote(self: *Store, index: ValidatorIndex, id: TargetId, message: LatestMessage) void {
         if (self.isEquivocating(index)) return;
-        const current = &self.latest_messages.items[index];
-        const newer = current.isNone() or
+        const current_id = &self.latest_votes.items[index];
+        const current = self.vote_targets.messages.items[current_id.*];
+        const newer = current_id.* == NO_TARGET or
             (if (self.config.forkSeq(message.slot).gte(.gloas)) message.slot > current.slot else computeEpochAtSlot(message.slot) > computeEpochAtSlot(current.slot));
         if (newer) {
-            current.* = message;
+            current_id.* = id;
             self.head_cache.markVoteChanged(index);
         }
     }
 
     /// Holds a vote until its slot is past. The first vote of a slot wins, as applying
     /// them in order would, and a vote for a later slot replaces an earlier one.
-    fn queueVotes(self: *Store, attesting_indices: []const ValidatorIndex, message: LatestMessage) !void {
-        try self.ensureValidatorSlots(&self.queued_messages, attesting_indices);
-        try self.ensureValidatorSlots(&self.latest_messages, attesting_indices);
+    fn queueVotes(self: *Store, attesting_indices: []const ValidatorIndex, id: TargetId, message: LatestMessage) void {
+        const messages = self.vote_targets.messages.items;
         for (attesting_indices) |index| {
             if (self.isEquivocating(index)) continue;
-            const queued = &self.queued_messages.items[index];
-            if (queued.isNone() or message.slot > queued.slot) queued.* = message;
+            const queued = &self.queued_votes.items[index];
+            if (queued.* == NO_TARGET or message.slot > messages[queued.*].slot) queued.* = id;
         }
     }
 
     /// Applies the queued votes whose slot is now past.
     fn drainQueuedMessages(self: *Store, current_slot: Slot) void {
-        const queued = self.queued_messages.items;
-        std.debug.assert(queued.len <= self.latest_messages.items.len);
-        for (queued, 0..) |*message, index| {
-            if (message.isNone() or message.slot >= current_slot) continue;
-            self.applyVote(index, message.*);
-            message.* = .none;
+        const queued = self.queued_votes.items;
+        std.debug.assert(queued.len <= self.latest_votes.items.len);
+        for (queued, 0..) |*id, index| {
+            if (id.* == NO_TARGET) continue;
+            const message = self.vote_targets.messages.items[id.*];
+            if (message.slot >= current_slot) continue;
+            self.applyVote(index, id.*, message);
+            id.* = NO_TARGET;
         }
     }
 
     /// Validators with a vote waiting for its slot to pass.
     pub fn queuedVoteCount(self: *const Store) usize {
         var count: usize = 0;
-        for (self.queued_messages.items) |message| count += @intFromBool(!message.isNone());
+        for (self.queued_votes.items) |id| count += @intFromBool(id != NO_TARGET);
         return count;
     }
 
     pub fn latestMessage(self: *const Store, validator_index: ValidatorIndex) ?LatestMessage {
-        if (validator_index >= self.latest_messages.items.len) return null;
-        const message = self.latest_messages.items[validator_index];
-        return if (message.isNone()) null else message;
+        if (validator_index >= self.latest_votes.items.len) return null;
+        const id = self.latest_votes.items[validator_index];
+        return if (id == NO_TARGET) null else self.vote_targets.messages.items[id];
     }
 
     // --- on_attester_slashing ---------------------------------------------------------
@@ -1190,10 +1207,8 @@ pub const Store = struct {
         if (finalized == 0) return 0;
         try head_mod.ensureComputed(self);
         const n = self.blocks.len;
-        // One extra slot maps `NO_BLOCK`, so the per-validator pass needs no branch.
-        const remap = try self.allocator.alloc(BlockIndex, n + 1);
+        const remap = try self.allocator.alloc(BlockIndex, n);
         defer self.allocator.free(remap);
-        remap[n] = NO_BLOCK;
         const parents = self.blocks.items(.parent);
         var kept: BlockIndex = 0;
         for (0..n) |i| {
@@ -1202,7 +1217,9 @@ pub const Store = struct {
             remap[i] = if (keep) kept else NO_BLOCK;
             if (keep) kept += 1;
         }
-        try self.head_cache.remapVotes(self.allocator, remap[0..n], kept);
+        // Votes hold target ids, so renumbering the target table carries every vote over.
+        self.vote_targets.remap(remap);
+        self.head_cache.remapVoteWeight(remap, kept);
         if (parents[finalized] != NO_BLOCK) {
             const hung_from: ForkChoiceNode = .{ .block = parents[finalized], .payload_status = self.blocks.items(.parent_payload_status)[finalized] };
             self.root_base_status = self.head_cache.execution.items[head_mod.nodeId(hung_from)];
@@ -1220,9 +1237,6 @@ pub const Store = struct {
         self.index_by_root.clearRetainingCapacity();
         for (self.blocks.items(.root), 0..) |root, i| {
             self.index_by_root.putAssumeCapacityNoClobber(root, @intCast(i));
-        }
-        for ([_][]LatestMessage{ self.latest_messages.items, self.queued_messages.items }) |messages| {
-            for (messages) |*message| message.block = remap[@min(message.block, n)];
         }
         self.head_cache.dirty = true;
         return n - kept;

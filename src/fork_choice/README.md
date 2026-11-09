@@ -33,13 +33,16 @@ recursing or keeping child lists. Columns hold what the spec reads from a block 
 its post-state: slot, parent, proposer, realized and unrealized checkpoints,
 timeliness bits, Gloas bid hashes, payload flags.
 
-Latest messages are a dense array indexed by validator, one `LatestMessage` each,
-exactly as in the spec. Queued votes, those whose slot is not yet past, are a second
-array of the same shape: the first vote of a slot wins, as applying them in order at
-the next slot would, a vote for a later slot replaces an earlier one, and each tick
-walks both arrays in lockstep applying what became past. Memory is bounded by the
-validator set however many duplicates gossip delivers, and `prune` remaps both
-arrays alike. Equivocators are a bitset. Justified balances arrive through
+Latest messages are a dense array indexed by validator holding 4-byte ids into
+`vote_targets.zig`, a table of the distinct `LatestMessage`s. Hundreds of thousands
+of validators vote alike, so an epoch adds a few hundred entries; each entry also
+caches the node it counts on (`get_supported_node`). Queued votes, those whose slot
+is not yet past, are a second id array of the same shape: the first vote of a slot
+wins, as applying them in order at the next slot would, a vote for a later slot
+replaces an earlier one, and each tick walks both arrays in lockstep applying what
+became past. `prune` renumbers only the table's entries, never a validator's vote,
+and the table compacts itself once it doubles, so it stays small without finality.
+Equivocators are a bitset. Justified balances arrive through
 a `StateProvider` callback when the justified checkpoint changes and are kept as raw
 effective-balance increments plus an active-and-unslashed bitset.
 

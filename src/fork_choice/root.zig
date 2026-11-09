@@ -12,6 +12,7 @@ const std = @import("std");
 pub const store = @import("store.zig");
 pub const head = @import("head.zig");
 pub const proposer_head = @import("proposer_head.zig");
+pub const vote_targets = @import("vote_targets.zig");
 
 pub const Store = store.Store;
 pub const Error = store.Error;
@@ -21,6 +22,7 @@ pub const PayloadStatus = store.PayloadStatus;
 pub const BlockIndex = store.BlockIndex;
 pub const Checkpoint = store.Checkpoint;
 pub const LatestMessage = store.LatestMessage;
+pub const TargetId = vote_targets.TargetId;
 pub const JustifiedBalances = store.JustifiedBalances;
 pub const StateProvider = store.StateProvider;
 pub const ViableHead = head.ViableHead;
