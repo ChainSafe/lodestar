@@ -3,21 +3,21 @@
 Spec-driven rewrite of the beacon chain fork choice, written against
 [consensus-specs v1.7.0-beta.4](https://github.com/ethereum/consensus-specs/tree/v1.7.0-beta.4/specs)
 `fork-choice.md` for phase0 through heze. This document records the design, how it
-differs from the TypeScript proto-array in `packages/fork-choice`, the benchmark
-comparison, and what is still missing. It stays here while the rewrite is under
-review; `comparison.html` next to it is a self-contained visual walkthrough of the
-same material.
+differs from the TypeScript proto-array in `packages/fork-choice`, the benchmarks,
+and what is still missing. It stays here while the rewrite is under review;
+`data_flow.html` next to it animates how each input moves through the store's arrays.
 
 ## Files
 
-| File                               | Contents                                                                            | Spec functions                                                                                                                                                                                                                                                                                  |
-| ---------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `store.zig`                        | `Store`: the spec `Store` minus beacon states, every handler, optimistic sync       | `get_forkchoice_store`, `on_tick`, `on_block`, `on_attestation`, `on_attester_slashing`, `on_payload_attestation_message`, `on_execution_payload_envelope`, `get_ancestor`, `get_checkpoint_block`, `update_checkpoints`, `should_extend_payload`, `payload_timeliness`, `should_build_on_full` |
-| `head.zig`                         | Head computation as array passes                                                    | `get_weight`, `filter_node_tree`, `get_head`, `get_supported_node`, `should_apply_proposer_boost`, `is_head_weak`, `is_parent_strong`                                                                                                                                                           |
-| `proposer_head.zig`                | Proposer reorg helpers                                                              | `get_proposer_head` and its predicates                                                                                                                                                                                                                                                          |
-| `store_test.zig`                   | Unit tests on a real two-branch chain                                               |                                                                                                                                                                                                                                                                                                 |
-| `test/spec/runner/fork_choice.zig` | Spec vector runner, plays the role of `block_states` and `checkpoint_states`        |                                                                                                                                                                                                                                                                                                 |
-| `bench/fork_choice/`               | `getHead` and `onAttestation` benchmarks mirroring `packages/fork-choice/test/perf` |                                                                                                                                                                                                                                                                                                 |
+| File                               | Contents                                                                           | Spec functions                                                                                                                                                                                                                                                                                  |
+| ---------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store.zig`                        | `Store`: the spec `Store` minus beacon states, every handler, optimistic sync      | `get_forkchoice_store`, `on_tick`, `on_block`, `on_attestation`, `on_attester_slashing`, `on_payload_attestation_message`, `on_execution_payload_envelope`, `get_ancestor`, `get_checkpoint_block`, `update_checkpoints`, `should_extend_payload`, `payload_timeliness`, `should_build_on_full` |
+| `head.zig`                         | Head computation as array passes, persistent vote totals                           | `get_weight`, `filter_node_tree`, `get_head`, `get_supported_node`, `should_apply_proposer_boost`, `is_head_weak`, `is_parent_strong`                                                                                                                                                           |
+| `proposer_head.zig`                | Proposer reorg helpers                                                             | `get_proposer_head` and its predicates                                                                                                                                                                                                                                                          |
+| `vote_targets.zig`                 | Interned vote targets: the distinct latest messages and the node each counts on    | `get_supported_node` (cached per target)                                                                                                                                                                                                                                                        |
+| `store_test.zig`                   | Unit tests on a real two-branch chain                                              |                                                                                                                                                                                                                                                                                                 |
+| `test/spec/runner/fork_choice.zig` | Spec vector runner, plays the role of `block_states` and `checkpoint_states`       |                                                                                                                                                                                                                                                                                                 |
+| `bench/fork_choice/`               | `getHead` and `onAttestation` benchmarks, including mainnet-shaped `getHead` cases |                                                                                                                                                                                                                                                                                                 |
 
 Every helper keeps its spec name in camelCase so the Zig and the Python read side
 by side.
@@ -46,9 +46,11 @@ Equivocators are a bitset. Justified balances arrive through
 a `StateProvider` callback when the justified checkpoint changes and are kept as raw
 effective-balance increments plus an active-and-unslashed bitset.
 
-Only the per-node vote totals are carried between calls. Weights, viability and best
-children live in scratch arrays that every `getHead` rebuilds; a `dirty` flag on the
-cache makes repeated reads free.
+Only the vote accounting is carried between calls: the per-node vote totals, the
+target each validator's vote is counted on, and a bitset with a count of the
+validators whose vote or weight changed since the last call. Weights, viability and
+best children live in scratch arrays that every `getHead` rebuilds from those totals;
+a `dirty` flag on the cache makes repeated reads free.
 
 ### Head computation
 
@@ -59,8 +61,10 @@ recurses. `head.zig` produces every node's weight and viability at once:
 2. Vote totals: each latest message of an active, unslashed, non-equivocating
    validator counts its balance on `get_supported_node`. The totals persist; a run
    moves only the votes of validators whose message changed or who equivocated since
-   the last run. New justified balances move only the weights that changed, and
-   `prune` renumbers the counted nodes in place; neither recounts every vote.
+   the last run, and a run with no changes skips the bitset entirely. New justified
+   balances move only the weights that changed, and `prune` renumbers the counted
+   nodes in place; neither recounts every vote. More than half the validators
+   changing at once falls back to a full recount, which is then cheaper.
 3. Reverse pass: each block applies the leaf viability rule, then hands its weight and
    viability to the parent node it hangs from. A message supports exactly the nodes on
    the path from its supported node to the justified root, which is what this
@@ -151,66 +155,72 @@ The boundary:
 ### Pruning
 
 The spec never drops blocks. `prune` drops everything that is not the finalized block
-or one of its descendants, compacts the table, remaps block indices in latest messages
-and keeps a pruned vote's slot so the spec's replacement rule still holds. The spec
-runner calls it once at the end of every vector and checks that the head stays put.
+or one of its descendants and compacts the block table. Votes hold target ids, so it
+renumbers the blocks in the vote target table and the per-node vote totals, and never
+touches a validator's vote. A target on a dropped block keeps its slot, so the spec's
+replacement rule still holds, and stops counting. The spec runner calls `prune` once
+at the end of every vector and checks that the head stays put.
 
 ## Comparison with the TypeScript proto-array
 
-| Aspect                              | TypeScript                                                  | Zig                                                                       | Risk when switching             |
-| ----------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------- |
-| Vote storage                        | current + next node index, next slot                        | one latest message (slot, block, payload flag)                            | low: same replacement rule      |
-| Future-slot attestations            | queued in fork choice, applied on tick                      | queued per validator, applied on tick                                     | low: same rule, unit tests      |
-| Head weights                        | cached per node, delta-updated                              | recomputed per call                                                       | low: 506 vectors agree          |
-| Equivocators                        | sorted array walked in `computeDeltas`                      | bitset check skips the vote                                               | low                             |
-| Proposer boost                      | previous and current boost deltas                           | path marked each pass                                                     | low                             |
-| Prune                               | threshold, slices node array                                | compacts rows, remaps messages                                            | low                             |
-| Optimistic sync                     | execution status per node, `validateLatestHash`             | verdict per payload, node status derived                                  | low: 5 sync vectors, unit tests |
-| Fast confirmation                   | in the package                                              | absent                                                                    | medium, separate spec           |
-| `should_override_forkchoice_update` | implemented                                                 | omitted, removed from the spec                                            | low, see Deviations             |
-| Beacon states                       | `stateGetter` inside the store                              | `StateProvider`, balances and committees only                             | low                             |
-| Slot component timing               | rounds                                                      | floors, as the spec does                                                  | low, 1 ms, no vector hits it    |
-| Test coverage                       | vectors, nightly compliance vectors, unit tests, production | 506 minimal + 256 mainnet vectors, 10311 compliance vectors, 5 unit tests | blocking: no production time    |
+| Aspect                              | TypeScript                                                  | Zig                                                                        | Risk when switching             |
+| ----------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------- |
+| Vote storage                        | current + next node index, next slot                        | 4-byte id into a table of distinct (slot, block, payload flag) targets     | low: same replacement rule      |
+| Future-slot attestations            | queued in fork choice, applied on tick                      | queued per validator, applied on tick                                      | low: same rule, unit tests      |
+| Head weights                        | cached per node, deltas from a scan of every vote           | vote totals per node updated for changed votes only; tree passes per call  | low: 506 vectors agree          |
+| Equivocators                        | sorted array walked in `computeDeltas`                      | bitset check skips the vote                                                | low                             |
+| Proposer boost                      | previous and current boost deltas                           | path marked each pass                                                      | low                             |
+| Prune                               | threshold, slices node array                                | compacts rows, renumbers the vote target table                             | low                             |
+| Optimistic sync                     | execution status per node, `validateLatestHash`             | verdict per payload, node status derived                                   | low: 5 sync vectors, unit tests |
+| Fast confirmation                   | in the package                                              | absent                                                                     | medium, separate spec           |
+| `should_override_forkchoice_update` | implemented                                                 | omitted, removed from the spec                                             | low, see Deviations             |
+| Beacon states                       | `stateGetter` inside the store                              | `StateProvider`, balances and committees only                              | low                             |
+| Slot component timing               | rounds                                                      | floors, as the spec does                                                   | low, 1 ms, no vector hits it    |
+| Test coverage                       | vectors, nightly compliance vectors, unit tests, production | 506 minimal + 256 mainnet vectors, 10311 compliance vectors, 11 unit tests | blocking: no production time    |
 
 ## Benchmarks
 
-Same machine (Apple Silicon), sequential idle runs, 2026-11-05. TS via Node 24.22.1
-and tsx; Zig 0.16 native. The "Zig proto-array" column is the implementation this
-rewrite replaced, rebuilt at commit `0586e6e617` with the same scenarios.
+The `getHead` workload that matters follows Lodestar's mainnet `computeDeltas`
+metrics: about 2.43M validator indices of which about 838k vote, 2 to 3 head updates
+per slot, one of them after the slot's ~25.3k new votes and the rest with none, and
+about 80 blocks since finality. The `mainnet:` cases in `bench/fork_choice/update_head.zig`
+model that, with the voters scattered over the index range and the changed votes
+shuffled as committees are.
 
-| Case                         | TS proto-array | Zig proto-array (old) | Zig store (new) | TS to new | Old Zig to new |
-| ---------------------------- | -------------: | --------------------: | --------------: | --------: | -------------: |
-| getHead vc 100k, bc 64       |       0.464 ms |              0.136 ms |        0.124 ms |      3.7x |          1.10x |
-| getHead vc 600k, bc 64       |       2.706 ms |              0.808 ms |        0.748 ms |      3.6x |          1.08x |
-| getHead vc 1M, bc 64         |       4.555 ms |              1.381 ms |        1.246 ms |      3.7x |          1.11x |
-| getHead vc 600k, bc 320      |       2.815 ms |              0.834 ms |        0.773 ms |      3.6x |          1.08x |
-| getHead vc 600k, bc 1200     |       2.905 ms |              0.848 ms |        0.759 ms |      3.8x |          1.12x |
-| getHead vc 600k, bc 7200     |       3.190 ms |              0.903 ms |        0.784 ms |      4.1x |          1.15x |
-| getHead eq 1k                |       3.069 ms |              0.935 ms |        0.745 ms |      4.1x |          1.26x |
-| getHead eq 10k               |       3.162 ms |              0.837 ms |        0.740 ms |      4.3x |          1.13x |
-| getHead eq 300k              |       5.822 ms |              0.952 ms |        0.580 ms |     10.0x |          1.64x |
-| getHead gloas boosted        |       3.036 ms |                   n/a |        0.805 ms |      3.8x |            n/a |
-| onAttestation, 1109 per slot |       4.116 ms |              0.876 ms |        0.505 ms |      8.2x |          1.73x |
+Apple Silicon, ReleaseFast, 2026-11-09:
 
-ReleaseSafe adds about 45 percent on the head cases (1.096 ms at 600k validators)
-and 6 percent on attestations.
+| Case                                    | Time per `getHead` |
+| --------------------------------------- | -----------------: |
+| mainnet: slot start, 25.3k new votes    |         0.62 ms \* |
+| mainnet: after block, 0 new votes       |          0.0006 ms |
+| mainnet: full recount (fallback)        |             7.2 ms |
+| vc 600k, bc 64, 1/32 of votes changed   |           0.115 ms |
+| vc 1M, bc 64, 1/32 of votes changed     |           0.210 ms |
+| vc 600k, bc 7200, 1/32 of votes changed |           0.168 ms |
 
-Reading the three columns:
+\* includes writing the 25.3k votes, about 0.45 ms of it; `getHead` alone is about
+0.37 ms.
 
-- TS to old Zig is the language: 3.3 to 3.5x on every head case with the same
-  proto-array algorithm on both sides.
-- Old Zig to new Zig is the design: 5 to 8 percent on the common cases. Both sides do
-  the same O(validators) scan, so no algorithmic win was available. The design buys
-  simplicity, not speed.
-- Equivocators are the one place the design shows: proto-array walks a sorted list
-  beside the vote scan and slows down as it grows; the bitset check gets faster.
-- The onAttestation gain over old Zig is design: no validation cache, hex conversion
-  or vote-slot indirection. Both Zig benches hash the attestation data, as TS does.
+The epoch events, measured separately on the same workload: the balance diff for
+10k changed balances takes about 0.35 ms, `prune` about 0.007 ms, and the vote
+target compaction (about every 40 epochs) about 3.5 ms.
 
-Fixtures differ in a way that favours TS: the TS fixture never ticks its clock, so
-viability short-circuits on the genesis epoch, while the Zig fixture ticks to the chain
-tip and runs a chain that justifies every epoch. The old Zig bench flipped votes inside
-the timed region, so its true numbers are a few percent better than shown.
+A one-off comparison on the same workload with silver (`gattaca-com/silver`
+`a467bc4`) and Lighthouse `proto_array` (`unstable` `eab341b`), using harnesses that
+are not in this repository:
+
+| Per epoch, 2.5 head updates per slot plus one balance change and one prune |     Time |
+| -------------------------------------------------------------------------- | -------: |
+| Zig store                                                                  | ~12.5 ms |
+| silver                                                                     |   ~22 ms |
+| Lighthouse                                                                 |  ~700 ms |
+
+Lighthouse scans every vote on every head update, as proto-array does. silver, like
+this store, moves only changed votes; it compacts its vote table on every prune.
+
+During non-finality the passes over blocks grow by about 7 ns per block per
+`getHead` (measured up to 7200 blocks), an estimated 1.5 ms after a month; silver's
+apply pass grows the same way.
 
 Run with:
 
