@@ -325,6 +325,61 @@ test "compact multiproof reconstruction should reject empty leaves" {
     );
 }
 
+test "compact multiproof traversal distinguishes terminal chunks from internal failures" {
+    var pool = try Node.Pool.init(.{ .page_allocator = testing.allocator, .allocator = testing.allocator, .pool_size = 16 });
+    defer pool.deinit();
+    const leaf = try pool.createLeafFromUint(42);
+    defer pool.unref(leaf);
+    const zero: Node.Id = @enumFromInt(0);
+
+    for ([_]Node.Id{ leaf, zero }) |root| {
+        const leaves = try proof.createCompactMultiProof(testing.allocator, &pool, root, &.{0x80});
+        defer testing.allocator.free(leaves);
+        try testing.expectEqual(@as(usize, 1), leaves.len);
+        try testing.expectEqualSlices(u8, root.getRoot(&pool), &leaves[0]);
+        try testing.expectError(error.InvalidProofTraversal, proof.createCompactMultiProof(testing.allocator, &pool, root, &.{0x60}));
+    }
+
+    const released = try pool.createLeafFromUint(43);
+    pool.unref(released);
+    try testing.expect(released.getState(&pool).isFree());
+    try testing.expectError(error.InvalidNode, proof.createCompactMultiProof(testing.allocator, &pool, released, &.{0x60}));
+}
+
+test "compact multiproof traversal permits zero subtrees up to their terminal chunks" {
+    var pool = try Node.Pool.init(.{ .page_allocator = testing.allocator, .allocator = testing.allocator, .pool_size = 0 });
+    defer pool.deinit();
+    const root: Node.Id = @enumFromInt(2);
+    const leaves = try proof.createCompactMultiProof(testing.allocator, &pool, root, &.{0x36});
+    defer testing.allocator.free(leaves);
+    try testing.expectEqual(@as(usize, 4), leaves.len);
+    for (leaves) |chunk| try testing.expectEqualSlices(u8, &([_]u8{0} ** 32), &chunk);
+
+    var descriptor_buffer: [2]u8 = undefined;
+    const descriptor = fullTreeDescriptor(3, false, &descriptor_buffer);
+    try testing.expectError(error.InvalidProofTraversal, proof.createCompactMultiProof(testing.allocator, &pool, root, descriptor));
+}
+
+test "memory_safety: compact multiproof traversal releases materialized chunks on failure" {
+    var pool = try Node.Pool.init(.{ .page_allocator = testing.allocator, .allocator = testing.allocator, .pool_size = ChunkedLeaf.K * 4 });
+    defer pool.deinit();
+    const valid = ChunkedLeaf.K / 2 + 1;
+    var chunks: [ChunkedLeaf.K][32]u8 align(64) = undefined;
+    fillChunks(&chunks, valid);
+    const root = try pool.createChunkedLeaf(&chunks, valid);
+    defer pool.unref(root);
+    const expected_root = root.getRoot(&pool).*;
+    const baseline = pool.getNodesInUse();
+
+    for ([_]usize{ 0, valid - 1, valid, ChunkedLeaf.K - 1 }) |index| {
+        const descriptor = try proof.computeDescriptor(testing.allocator, &.{Gindex.fromDepth(ChunkedLeaf.k_log2 + 1, index * 2)});
+        defer testing.allocator.free(descriptor);
+        try testing.expectError(error.InvalidProofTraversal, proof.createCompactMultiProof(testing.allocator, &pool, root, descriptor));
+        try testing.expectEqual(baseline, pool.getNodesInUse());
+        try testing.expectEqualSlices(u8, &expected_root, root.getRoot(&pool));
+    }
+}
+
 fn spineDescriptor(depth: usize, left: bool, out: []u8) []const u8 {
     const bit_length = 2 * depth + 1;
     const bytes = out[0 .. (bit_length + 7) / 8];
@@ -654,7 +709,7 @@ test "memory_safety: impossible compact proof paths do not reserve the declared 
         var output_buffer: [1024]u8 = undefined;
         var bounded = std.heap.FixedBufferAllocator.init(&output_buffer);
 
-        try testing.expectError(error.InvalidNode, proof.createCompactMultiProof(bounded.allocator(), &pool, root, descriptor));
+        try testing.expectError(error.InvalidProofTraversal, proof.createCompactMultiProof(bounded.allocator(), &pool, root, descriptor));
         try testing.expectEqual(0, bounded.end_index);
         try testing.expectEqual(baseline, pool.getNodesInUse());
     }
