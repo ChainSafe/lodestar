@@ -154,7 +154,10 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         } catch (e) {
           // If we start from unfinalized state, we don't have checkpoint state so there is this error
           // "No state in cache for finalized checkpoint state epoch"
-          logger.warn("Error closing beacon node", {}, e as Error);
+          // The logger prints only the message and stack of an AggregateError, not its causes
+          for (const error of e instanceof AggregateError ? e.errors : [e]) {
+            logger.warn("Error closing beacon node", {}, error as Error);
+          }
           process.exitCode = 1;
         }
         savePubkeysFile(pubkeyCache, beaconPaths.pubkeysFile, logger);
