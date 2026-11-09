@@ -56,8 +56,8 @@ recurses. `head.zig` produces every node's weight and viability at once:
 2. Vote totals: each latest message of an active, unslashed, non-equivocating
    validator counts its balance on `get_supported_node`. The totals persist; a run
    moves only the votes of validators whose message changed or who equivocated since
-   the last run. New justified balances and `prune`, which renumbers nodes, recount
-   every vote.
+   the last run. New justified balances move only the weights that changed, and
+   `prune` renumbers the counted nodes in place; neither recounts every vote.
 3. Reverse pass: each block applies the leaf viability rule, then hands its weight and
    viability to the parent node it hangs from. A message supports exactly the nodes on
    the path from its supported node to the justified root, which is what this

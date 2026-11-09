@@ -10,8 +10,9 @@
 //! `get_attestation_score` stays available for the reorg helpers.
 //!
 //! The per-node message weights persist between runs. A run recounts only the
-//! validators whose message or weight changed since the last one; new justified
-//! balances and `prune`, which moves node ids, force a full recount.
+//! validators whose message or weight changed since the last one. New justified
+//! balances move only the weights that changed, and `prune` renumbers the counted
+//! nodes in place, so neither recounts every vote.
 //!
 //! Optimistic sync: each block stores the engine's verdict on its own payload; a node's
 //! status is the worst verdict on the payloads it stands on, derived here in one forward
@@ -88,6 +89,61 @@ pub const Cache = struct {
         self.applied_votes.deinit(allocator);
         self.changed_votes.deinit(allocator);
         self.* = .empty;
+    }
+
+    /// Moves the counted votes from the `old` to the `new` per-validator vote increments.
+    /// A validator whose weight changed is marked, so the next run re-checks whether its
+    /// vote counts at all.
+    pub fn applyBalanceChange(self: *Cache, old: []const u16, new: []const u16) void {
+        if (self.rescan_votes) return;
+        const validator_count = self.applied_votes.items.len;
+        const shared = @min(validator_count, old.len, new.len);
+        // Few balances change per epoch, so whole equal chunks are skipped.
+        const chunk = 64;
+        var start: usize = 0;
+        while (start < shared) : (start += chunk) {
+            const end = @min(start + chunk, shared);
+            if (std.mem.eql(u16, old[start..end], new[start..end])) continue;
+            for (start..end) |validator_index| self.moveVoteWeight(validator_index, old[validator_index], new[validator_index]);
+        }
+        for (shared..validator_count) |validator_index| {
+            const old_increment = if (validator_index < old.len) old[validator_index] else 0;
+            const new_increment = if (validator_index < new.len) new[validator_index] else 0;
+            self.moveVoteWeight(validator_index, old_increment, new_increment);
+        }
+    }
+
+    fn moveVoteWeight(self: *Cache, validator_index: usize, old_increment: u64, new_increment: u64) void {
+        if (old_increment == new_increment) return;
+        const node = self.applied_votes.items[validator_index];
+        if (node != NO_NODE) {
+            self.vote_weight.items[node] -= old_increment * preset.EFFECTIVE_BALANCE_INCREMENT;
+            self.vote_weight.items[node] += new_increment * preset.EFFECTIVE_BALANCE_INCREMENT;
+        }
+        self.markVoteChanged(validator_index);
+    }
+
+    /// Carries the counted votes over a `prune` that moved block `b` to `remap[b]`,
+    /// `NO_BLOCK` when dropped. Votes on a dropped block stop counting. The cache must
+    /// be up to date.
+    pub fn remapVotes(self: *Cache, allocator: Allocator, remap: []const BlockIndex, kept: usize) !void {
+        std.debug.assert(!self.rescan_votes and self.vote_weight.items.len == remap.len * 3);
+        const node_count = remap.len * 3;
+        // One extra slot maps `NO_NODE`, so the per-validator pass needs no branch.
+        const node_remap = try allocator.alloc(u32, node_count + 1);
+        defer allocator.free(node_remap);
+        for (node_remap[0..node_count], 0..) |*target, id| {
+            const block = remap[id / 3];
+            target.* = if (block == NO_BLOCK) NO_NODE else block * 3 + @as(u32, @intCast(id % 3));
+        }
+        node_remap[node_count] = NO_NODE;
+        for (self.applied_votes.items) |*node| node.* = node_remap[@min(node.*, node_count)];
+        const vote_weight = self.vote_weight.items;
+        for (remap, 0..) |target, block| {
+            if (target == NO_BLOCK) continue;
+            std.mem.copyForwards(u64, vote_weight[target * 3 ..][0..3], vote_weight[block * 3 ..][0..3]);
+        }
+        self.vote_weight.shrinkRetainingCapacity(kept * 3);
     }
 
     /// Validators past the end of `applied_votes` are counted as new on the next run.
@@ -277,7 +333,7 @@ fn updateVoteWeights(store: *Store, node_count: usize) !void {
         const applied = &cache.applied_votes.items[validator_index];
         const counted = countedNode(store, validator_index);
         if (counted == applied.*) continue;
-        // Balances only change with a full recount, so the applied weight is the current one.
+        // `applyBalanceChange` keeps the applied weight at the current balance.
         const message_weight = voteWeight(store, validator_index);
         if (applied.* != NO_NODE) vote_weight[applied.*] -= message_weight;
         if (counted != NO_NODE) vote_weight[counted] += message_weight;
