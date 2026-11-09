@@ -4,7 +4,7 @@ import {
   DataAvailabilityStatus,
   IBeaconStateView,
   computeEpochAtSlot,
-  getIndexedAttestation,
+  getAttestingIndices,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
@@ -119,7 +119,13 @@ export async function verifyBlocksInEpoch(
         const shuffling =
           this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
           preState0.getShufflingAtEpoch(attEpoch);
-        return getIndexedAttestation(shuffling, fork, attestation);
+        // Unlike getIndexedAttestation, keep attestingIndices in committee order: sorting them dominates building
+        // these on mainnet blocks. See FullyVerifiedBlock.indexedAttestations.
+        return {
+          attestingIndices: getAttestingIndices(shuffling, fork, attestation),
+          data: attestation.data,
+          signature: attestation.signature,
+        };
       });
     }
 
