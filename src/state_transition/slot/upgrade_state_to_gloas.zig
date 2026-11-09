@@ -101,7 +101,8 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
     var builders = try state.inner.get("builders");
     var it = pending.iteratorReadonly(0);
     for (0..len) |index| {
-        const deposit = try it.nextValue();
+        const item = try it.nextValueWithRoot();
+        const deposit = item.value;
         const result = try lookup.getOrPutContext(allocator, deposit.pubkey, context);
         if (!result.found_existing) result.value_ptr.* = .{};
         const entry = result.value_ptr;
@@ -123,12 +124,14 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                     const pending_index = entry.unchecked_head;
                     var prior: ct.electra.PendingDeposit.Type = undefined;
                     try pending.getValue(undefined, pending_index, &prior);
+                    const prior_root = (try pending.getFieldRoot(pending_index)).*;
                     entry.unchecked_head = next[pending_index];
                     if (!try isValidCachedDeposit(
                         epoch_cache.builder_deposit_signature_cache.allocator,
                         config,
                         signature_cache,
                         &prior,
+                        prior_root,
                         &checks,
                     )) {
                         continue;
@@ -141,6 +144,7 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                         config,
                         signature_cache,
                         &deposit,
+                        item.root,
                         &checks,
                     )) {
                         dropped += 1;
@@ -189,9 +193,10 @@ fn isValidCachedDeposit(
     config: *const BeaconConfig,
     cache: *BuilderDepositSignatureCache,
     deposit: *const ct.electra.PendingDeposit.Type,
+    deposit_root: [32]u8,
     checks: *SignatureChecks,
 ) !bool {
-    if (try cache.get(config, deposit)) |valid| {
+    if (cache.get(deposit_root)) |valid| {
         checks.from_cache += 1;
         return valid;
     }
@@ -206,7 +211,7 @@ fn isValidCachedDeposit(
         error.BadEncoding, error.PointNotOnCurve, error.PointNotInGroup, error.VerifyFail, error.PkIsInfinity => false,
         else => return err,
     };
-    cache.put(allocator, config, deposit, valid) catch {};
+    cache.put(allocator, deposit_root, valid) catch {};
     return valid;
 }
 

@@ -83,6 +83,14 @@ test "ProgressiveListCompositeTreeView iteratorReadonly should walk struct eleme
     var it_offset = view.iteratorReadonly(3);
     try std.testing.expectEqual(@as(u64, 4), (try it_offset.nextValuePtr()).epoch);
     try std.testing.expectEqual(@as(u64, 5), (try it_offset.nextValuePtr()).epoch);
+
+    var value_with_root_it = view.iteratorReadonly(0);
+    var root_it = view.iteratorReadonly(0);
+    for (0..5) |i| {
+        const item = try value_with_root_it.nextValueWithRoot();
+        try std.testing.expectEqual(@as(u64, @intCast(i + 1)), item.value.epoch);
+        try std.testing.expectEqualSlices(u8, try root_it.nextRoot(), &item.root);
+    }
 }
 
 test "ProgressiveListCompositeTreeView sliceFrom should match the value suffix at every start" {

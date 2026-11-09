@@ -240,6 +240,11 @@ pub fn ProgressiveListCompositeTreeView(comptime ST: type) type {
         }
 
         pub const ReadonlyIterator = struct {
+            pub const ValueWithRoot = struct {
+                value: ST.Element.Type,
+                root: [32]u8,
+            };
+
             tree_view: *const Self,
             depth_iterator: ?Node.DepthIterator = null,
             subtree_end: usize = 0,
@@ -284,6 +289,17 @@ pub fn ProgressiveListCompositeTreeView(comptime ST: type) type {
                 var value: ST.Element.Type = undefined;
                 try ST.Element.tree.toValue(node, self.tree_view.chunks.state.pool, &value);
                 return value;
+            }
+
+            pub fn nextValueWithRoot(self: *ReadonlyIterator) !ValueWithRoot {
+                if (comptime !isFixedType(ST.Element)) @compileError("nextValueWithRoot requires a fixed-size element type");
+                const node = try self.nextNode();
+                var value: ST.Element.Type = undefined;
+                try ST.Element.tree.toValue(node, self.tree_view.chunks.state.pool, &value);
+                return .{
+                    .value = value,
+                    .root = node.getRoot(self.tree_view.chunks.state.pool).*,
+                };
             }
 
             fn nextValueAlloc(self: *ReadonlyIterator, allocator: Allocator) !ST.Element.Type {

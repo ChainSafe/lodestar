@@ -254,6 +254,7 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     try std.testing.expectEqual(@as(usize, 23), result.invalid_builder_signatures_count);
     try pending.pushValue(&builder);
     try state.state.commit();
+    const builder_root = (try pending.getFieldRoot((try pending.length()) - 1)).*;
     try metrics.init(allocator, std.testing.io, .{});
     defer metrics.deinit();
     const upgraded = try upgradeStateToGloas(allocator, std.testing.io, state.config, state.epoch_cache, state.state.castToFork(.fulu));
@@ -262,7 +263,7 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     try std.testing.expectEqual(@as(usize, 2), try builders.length());
     try std.testing.expectEqual(
         @as(?bool, true),
-        try state.epoch_cache.builder_deposit_signature_cache.instance.get(state.config, &builder),
+        state.epoch_cache.builder_deposit_signature_cache.instance.get(builder_root),
     );
     var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();
