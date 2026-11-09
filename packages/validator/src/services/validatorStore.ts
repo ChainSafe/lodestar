@@ -1,8 +1,8 @@
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BuilderConfigData, BuilderEntryConfig} from "@lodestar/api/keymanager";
 import {BeaconConfig} from "@lodestar/config";
+import {SecretKey} from "@lodestar/native/blst";
 import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_APPLICATION_BUILDER,
@@ -635,7 +635,8 @@ export class ValidatorStore {
   removeSigner(pubkeyHex: PubkeyHex): boolean {
     this.doppelgangerService?.unregisterValidator(pubkeyHex);
 
-    return this.indicesService.removeForKey(pubkeyHex) || this.validators.delete(pubkeyHex);
+    this.indicesService.removeForKey(pubkeyHex);
+    return this.validators.delete(pubkeyHex);
   }
 
   /** Return true if there is at least 1 pubkey registered */

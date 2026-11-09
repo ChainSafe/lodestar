@@ -8,6 +8,7 @@ import {
   computeDescriptor,
   createProof,
 } from "@chainsafe/persistent-merkle-tree";
+// biome-ignore lint/correctness/useImportExtensions: the fixture is JSON and requires its .json extension
 import vectors from "../../../../../docs/static/proofs/compact-proof-vectors.json" with {type: "json"};
 import {CompactMultiProofType} from "../../../src/beacon/routes/proof.js";
 import {

@@ -356,9 +356,13 @@ export class HttpClient implements IHttpClient {
     init.signal = controller.signal;
 
     // Attach global/local signal to this request's controller
+    // Check already-aborted after subscribe to avoid a race where abort fires between the check and addEventListener
     const onSignalAbort = (): void => controller.abort();
     for (const s of abortSignals) {
       s?.addEventListener("abort", onSignalAbort);
+      if (s?.aborted) {
+        controller.abort();
+      }
     }
 
     const routeId = definition.operationId;

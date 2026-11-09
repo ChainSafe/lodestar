@@ -254,13 +254,13 @@ export function getValidatorApi(
         genesisBlockRoot = state.computeAnchorCheckpoint().checkpoint.root;
       } else if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
         genesisBlockRoot = state.getBlockRootAtSlot(GENESIS_SLOT);
-      }
-
-      const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
-      if (blockRes) {
-        genesisBlockRoot = config
-          .getForkTypes(blockRes.block.message.slot)
-          .SignedBeaconBlock.hashTreeRoot(blockRes.block);
+      } else {
+        const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+        if (blockRes) {
+          genesisBlockRoot = config
+            .getForkTypes(blockRes.block.message.slot)
+            .BeaconBlock.hashTreeRoot(blockRes.block.message);
+        }
       }
     }
 
@@ -1756,7 +1756,10 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
+      // The fork epoch PTC is computed at the fork from effective balances updated at the end of the
+      // last pre-fork epoch, so its dependent root is one epoch later than for other epochs
+      const dependentRootEpoch = epoch === config.GLOAS_FORK_EPOCH ? epoch + 1 : epoch;
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(dependentRootEpoch));
 
       return {
         data: duties,

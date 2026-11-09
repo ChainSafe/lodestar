@@ -62,7 +62,7 @@ import {
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
 import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
-import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
+import {validateGossipExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
@@ -79,6 +79,7 @@ import {
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
+import {ApiOptions} from "../../../options.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
@@ -96,16 +97,10 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
  */
 const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 
-export function getBeaconBlockApi({
-  chain,
-  config,
-  metrics,
-  network,
-  db,
-}: Pick<
-  ApiModules,
-  "chain" | "config" | "metrics" | "network" | "db"
->): ApplicationMethods<routes.beacon.block.Endpoints> {
+export function getBeaconBlockApi(
+  opts: ApiOptions,
+  {chain, config, metrics, network, db}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">
+): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation, builderUrl},
     context,
@@ -321,18 +316,8 @@ export function getBeaconBlockApi({
         break;
       }
 
-      case routes.beacon.BroadcastValidation.none: {
-        chain.logger.debug("Skipping broadcast validation", valLogMeta);
-        break;
-      }
-
       default: {
-        // error or log warning we do not support this validation
-        const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
-        if (chain.opts.broadcastValidationStrictness === "error") {
-          throw Error(message);
-        }
-        chain.logger.warn(message, valLogMeta);
+        throw new ApiError(400, `Invalid broadcast validation level ${broadcastValidation}`);
       }
     }
 
@@ -402,26 +387,24 @@ export function getBeaconBlockApi({
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
-        chain
-          .processBlock(blockForImport, opts)
-          .catch((e) => {
-            if (e instanceof BlockError) {
-              switch (e.type.code) {
-                case BlockErrorCode.ALREADY_KNOWN:
-                  // Block was imported while publishing, e.g. received via gossip
-                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-                  return;
-                case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
-                case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
-                  chain.emitter.emit(ChainEvent.blockUnknownParent, {
-                    blockInput: blockForImport,
-                    peer: IDENTITY_PEER_ID,
-                    source: BlockInputSource.api,
-                  });
-              }
+        chain.processBlock(blockForImport, opts).catch((e) => {
+          if (e instanceof BlockError) {
+            switch (e.type.code) {
+              case BlockErrorCode.ALREADY_KNOWN:
+                // Block was imported while publishing, e.g. received via gossip
+                chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                return;
+              case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
+              case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
+                chain.emitter.emit(ChainEvent.blockUnknownParent, {
+                  blockInput: blockForImport,
+                  peer: IDENTITY_PEER_ID,
+                  source: BlockInputSource.api,
+                });
             }
-            throw e;
-          }),
+          }
+          throw e;
+        }),
     ];
     const sentPeersArr = await promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
       publishPromises
@@ -809,11 +792,6 @@ export function getBeaconBlockApi({
       };
       try {
         switch (broadcastValidation) {
-          case routes.beacon.BroadcastValidation.none: {
-            chain.logger.debug("Skipping broadcast validation of execution payload envelope", valLogMeta);
-            break;
-          }
-
           case routes.beacon.BroadcastValidation.gossip: {
             await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
             break;
@@ -852,11 +830,7 @@ export function getBeaconBlockApi({
           }
 
           default: {
-            const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
-            if (chain.opts.broadcastValidationStrictness === "error") {
-              throw Error(message);
-            }
-            chain.logger.warn(message, valLogMeta);
+            throw new ApiError(400, `Invalid broadcast validation level ${broadcastValidation}`);
           }
         }
       } catch (error) {
@@ -1008,9 +982,13 @@ export function getBeaconBlockApi({
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-        // Import execution payload. Signature is verified during broadcast validation, an already
-        // known envelope was verified by its original source and `none` deliberately skips validation
-        () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
+        // Import execution payload
+        () =>
+          chain.processExecutionPayload(payloadInput, {
+            // Signature is verified during broadcast validation only for the submitted envelope,
+            // an envelope cached by another source is verified at import
+            validSignature: payloadInput.getPayloadEnvelope() === signedExecutionPayloadEnvelope,
+          }),
       ];
 
       const publishPromise = promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
@@ -1077,14 +1055,24 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
-      // TODO: once the builder is tested and can be trusted, skip this local validation
-      // to publish faster, accepting peer-score risk if it ever emits an invalid bid.
-      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
-      validationTimer?.();
-
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
+
+      if (!opts.disableBidValidation) {
+        const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
+        const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, signedExecutionPayloadBid);
+        validationTimer?.();
+
+        // Gossip does not deliver our own messages back to us, so a validated bid is added to the
+        // pool here to allow a proposer on this node to select it
+        const insertOutcome = chain.executionPayloadBidPool.add(
+          signedExecutionPayloadBid,
+          Math.floor(elapsedSec * 1000)
+        );
+        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
+
+        chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.api, proposerIndex, bid);
+      }
 
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
 
@@ -1104,7 +1092,7 @@ export function getBeaconBlockApi({
     },
 
     async getSignedExecutionPayloadEnvelope({blockId}, context) {
-      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const {block, finalized} = await getBlockResponse(chain, blockId);
       const slot = block.message.slot;
       const fork = config.getForkName(slot);
 
@@ -1117,6 +1105,13 @@ export function getBeaconBlockApi({
 
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
+
+      // The block's own flag is the status of the payload it builds on, the envelope's is that of its
+      // FULL variant. An unfinalized block without one has not imported its envelope yet.
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
+      if (!finalized && payload === null) {
+        throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
+      }
 
       let data: Uint8Array | gloas.SignedExecutionPayloadEnvelope | null;
       try {
@@ -1142,7 +1137,7 @@ export function getBeaconBlockApi({
 
       return {
         data,
-        meta: {executionOptimistic, finalized, version: fork},
+        meta: {executionOptimistic: payload !== null && isOptimisticBlock(payload), finalized, version: fork},
       };
     },
 

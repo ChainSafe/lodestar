@@ -1,10 +1,11 @@
 import {fastify} from "fastify";
 import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {createFastifyRoutes} from "@lodestar/api/server";
 import {createBeaconConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {IBeaconStateView, createBeaconStateView} from "@lodestar/state-transition";
+// biome-ignore lint/correctness/useImportExtensions: the fixture is JSON and requires its .json extension
 import vectors from "../../../../../../../docs/static/proofs/compact-proof-vectors.json" with {type: "json"};
 import {getProofApi} from "../../../../../src/api/impl/proof/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";

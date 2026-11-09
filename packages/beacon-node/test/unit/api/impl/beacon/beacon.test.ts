@@ -3,6 +3,7 @@ import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {getBeaconApi} from "../../../../../src/api/impl/beacon/index.js";
+import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {ProposerPreferencesPool} from "../../../../../src/chain/opPools/proposerPreferencesPool.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {Mutable} from "../../../../utils/types.js";
@@ -13,7 +14,7 @@ describe("beacon api implementation", () => {
 
   beforeAll(() => {
     modules = getApiTestModules();
-    api = getBeaconApi(modules);
+    api = getBeaconApi(defaultApiOptions, modules);
   });
 
   describe("getGenesis", () => {
@@ -43,7 +44,7 @@ describe("beacon api implementation", () => {
 
     it("returns the known preferences, optionally of a single slot", async () => {
       const gloasModules = getApiTestModules({config: gloasConfig});
-      const gloasApi = getBeaconApi({...gloasModules, config: gloasConfig});
+      const gloasApi = getBeaconApi(defaultApiOptions, {...gloasModules, config: gloasConfig});
       vi.spyOn(gloasModules.chain.clock, "currentEpoch", "get").mockReturnValue(0);
       const pool = new ProposerPreferencesPool();
       (gloasModules.chain as Mutable<typeof gloasModules.chain, "proposerPreferencesPool">).proposerPreferencesPool =
@@ -69,7 +70,7 @@ describe("beacon api implementation", () => {
     it("returns the preferences of the first Gloas slots in the epoch before the fork", async () => {
       const preGloasConfig = createChainForkConfig({...gloasConfig, GLOAS_FORK_EPOCH: 1});
       const preGloasModules = getApiTestModules({config: preGloasConfig});
-      const preGloasApi = getBeaconApi({...preGloasModules, config: preGloasConfig});
+      const preGloasApi = getBeaconApi(defaultApiOptions, {...preGloasModules, config: preGloasConfig});
       vi.spyOn(preGloasModules.chain.clock, "currentEpoch", "get").mockReturnValue(0);
       const pool = new ProposerPreferencesPool();
       (

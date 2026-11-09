@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import {fastify} from "fastify";
 import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {
   CompactMultiProof,
   ProofType,
@@ -14,6 +13,7 @@ import {Type} from "@chainsafe/ssz";
 import {WireFormat, getClient, routes} from "@lodestar/api";
 import {createFastifyRoutes} from "@lodestar/api/server";
 import {createBeaconConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {IBeaconStateView, createBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {hash, toHex} from "@lodestar/utils";

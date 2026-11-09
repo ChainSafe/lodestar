@@ -21,7 +21,7 @@ import {
   IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
-  computeTimeAtSlot,
+  computeTimeAtSlotMs,
   getBeaconCommittees,
   isStatePostAltair,
   isStatePostBellatrix,
@@ -105,8 +105,9 @@ export async function importBlock(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-  const receiveDelaySec =
-    fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
+  const receiveDelayMs =
+    Math.round(fullyVerifiedBlock.seenTimestampSec * 1000) -
+    computeTimeAtSlotMs(this.config, blockSlot, postState.genesisTime * 1000);
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
 
@@ -148,12 +149,12 @@ export async function importBlock(
     executionStatus = parentBlock.executionStatus;
   }
 
-  const importDelaySec = this.clock.secFromSlot(blockSlot);
+  const importDelayMs = this.clock.msFromSlot(blockSlot);
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
-    receiveDelaySec,
-    importDelaySec,
+    receiveDelayMs,
+    importDelayMs,
     currentSlot,
     executionStatus,
     dataAvailabilityStatus
@@ -417,7 +418,7 @@ export async function importBlock(
         //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
         const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
           blockSummary,
-          this.clock.secFromSlot(currentSlot),
+          this.clock.msFromSlot(currentSlot),
           currentSlot
         );
         shouldOverrideFcu = result.shouldOverrideFcu;

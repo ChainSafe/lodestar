@@ -1,13 +1,26 @@
+import fs from "node:fs";
 import path from "node:path";
 import {getClient} from "@lodestar/api";
-import {RegistryMetricCreator, collectNodeJSMetrics, getHttpMetricsServer} from "@lodestar/beacon-node";
-import {Builder, getMetrics} from "@lodestar/builder";
+import {
+  RegistryMetricCreator,
+  collectNodeJSMetrics,
+  defaultExecutionEngineHttpOpts,
+  getHttpMetricsServer,
+  initializeExecutionEngine,
+} from "@lodestar/beacon-node";
+import {Builder, EnginePayloadResult, EnginePayloadSource, getMetrics} from "@lodestar/builder";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";
-import {cleanOldLogFiles, onGracefulShutdown, parseFeeRecipient, parseLoggerArgs} from "../../util/index.js";
+import {
+  cleanOldLogFiles,
+  extractJwtHexSecret,
+  onGracefulShutdown,
+  parseFeeRecipient,
+  parseLoggerArgs,
+} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs, builderMetricsDefaultOptions} from "./options.js";
@@ -71,6 +84,47 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
 
   logger.info("Beacon node", {beaconNode: toPrintableUrl(args.beaconNodeUrl), timeoutMs: args.requestTimeout});
 
+  // Payload ids are local to the execution client that issued them, fallback urls can't be used
+  if (args["execution.urls"].length !== 1) {
+    throw Error("Exactly one execution client url is required");
+  }
+  const executionUrl = args["execution.urls"][0];
+  const engine = initializeExecutionEngine(
+    {
+      mode: "http",
+      urls: [executionUrl],
+      timeout: args["execution.timeout"] ?? defaultExecutionEngineHttpOpts.timeout,
+      retries: args["execution.retries"],
+      retryDelay: args["execution.retryDelay"],
+      jwtSecretHex: args["execution.jwtSecret"]
+        ? extractJwtHexSecret(fs.readFileSync(args["execution.jwtSecret"], "utf-8").trim())
+        : undefined,
+      version,
+      commit,
+    },
+    {signal: abortController.signal, logger}
+  );
+  const payloadSource = new EnginePayloadSource(toPrintableUrl(executionUrl), {
+    notifyForkchoiceUpdate: async (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) => {
+      try {
+        return await engine.notifyForkchoiceUpdate(
+          fork,
+          headBlockHash,
+          safeBlockHash,
+          finalizedBlockHash,
+          payloadAttributes
+        );
+      } catch (e) {
+        // Only retry while the execution client is syncing, it has not imported the parent payload yet.
+        // The engine interface does not expose the fcU status, this matches the error thrown for the SYNCING status
+        // in ExecutionEngineHttp.notifyForkchoiceUpdate until a typed error is added to the beacon node
+        if (e instanceof Error && e.message === "Execution Layer Syncing") return null;
+        throw e;
+      }
+    },
+    getPayload: async (fork, payloadId) => (await engine.getPayload(fork, payloadId)) as EnginePayloadResult,
+  });
+
   const builder = await Builder.init({
     keypair,
     logger,
@@ -79,6 +133,17 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     api,
     executionFeeRecipient: fromHex(executionFeeRecipient),
     metrics,
+    payloadSource,
+    bidding: {
+      shareBps: args["bidding.shareBps"],
+      fixedCostGwei: args["bidding.fixedCostGwei"],
+      minValueGwei: args["bidding.minValueGwei"],
+      maxValueGwei: args["bidding.maxValueGwei"],
+      deadlineBps: args["bidding.deadlineBps"],
+      getPayloadTimeout: args["bidding.getPayloadTimeout"],
+      minOperatingBalanceGwei: args["bidding.minOperatingBalanceGwei"],
+    },
+    reveal: {cutoffBps: args["reveal.cutoffBps"]},
   });
 
   onGracefulShutdownCbs.push(() => builder.close());

@@ -893,7 +893,7 @@ export class PeerManager {
     }
   }
 
-  private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
+  async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
     const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
     const peerIdStr = peer.toString();
     try {

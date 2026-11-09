@@ -1,10 +1,10 @@
 import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ProtoBlock} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";

@@ -1,11 +1,11 @@
-import bindings from "@chainsafe/lodestar-z";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
+import bindings from "@lodestar/native";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {createCachedBeaconState} from "../cache/stateCache.js";
-import {getStateTypeFromBytes} from "../util/sszBytes.js";
+import {getStateSlotFromBytes, getStateTypeFromBytes} from "../util/sszBytes.js";
 import {BeaconStateView} from "./beaconStateView.js";
 import {IBeaconStateView, IBeaconStateViewNative} from "./interface.js";
-import {NativeBeaconStateView} from "./nativeBeaconStateView.js";
+import {NativeBeaconStateView, assertNativeForkSupported} from "./nativeBeaconStateView.js";
 
 // ---- createBeaconStateView (startup path) ----
 
@@ -62,6 +62,7 @@ export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | 
 }
 
 function createNativeBeaconStateView(config: BeaconConfig, stateBytes: Uint8Array): IBeaconStateView {
+  assertNativeForkSupported(config, getStateSlotFromBytes(stateBytes));
   const nativeConfig = new bindings.BeaconConfig(config, config.genesisValidatorsRoot);
   return new NativeBeaconStateView(
     config,

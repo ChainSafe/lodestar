@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {concatGindices} from "@chainsafe/persistent-merkle-tree";
 import {
   ArrayType,
@@ -16,11 +15,15 @@ import {
   ProgressiveBitListType,
   ProgressiveByteListType,
   ProgressiveContainerType,
+  ProgressiveSerializedListType,
+  SerializedList,
+  SerializedListType,
   Type,
   UintBigintType,
   UintNumberType,
 } from "@chainsafe/ssz";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fulu, gloas, ssz} from "@lodestar/types";
 
@@ -39,6 +42,9 @@ function isFieldContainer(type: Type<unknown>): type is FieldContainer {
 }
 
 export function populatedValue(type: Type<unknown>, path = "", populated = true): unknown {
+  if (type instanceof SerializedListType || type instanceof ProgressiveSerializedListType) {
+    return SerializedList.fromArray(populatedValue(type.inner, path, populated) as Uint8Array[]);
+  }
   const seed = createHash("sha256").update(path).digest();
   if (type instanceof UintNumberType) return seed.readUInt16LE() % (type.byteLength === 1 ? 255 : 65535);
   if (type instanceof UintBigintType) return BigInt(seed.readUInt16LE());
@@ -124,6 +130,7 @@ export function createProofFixture(fork: ProofFork, populated = true) {
 }
 
 export function schemaManifest(type: Type<unknown>, path = ""): string[] {
+  if (type instanceof SerializedListType || type instanceof ProgressiveSerializedListType) type = type.inner;
   const result = [`${path || "."}: ${type.typeName}`];
   if (isFieldContainer(type)) {
     for (const [key, field] of Object.entries(type.fields)) result.push(...schemaManifest(field, `${path}.${key}`));
@@ -134,6 +141,10 @@ export function schemaManifest(type: Type<unknown>, path = ""): string[] {
 }
 
 export function proofTargets(type: Type<unknown>, value: unknown, path = "", gindex = 1n): ProofTarget[] {
+  if (type instanceof SerializedListType || type instanceof ProgressiveSerializedListType) {
+    assert(value instanceof SerializedList);
+    return proofTargets(type.inner, value.toArray(), path, gindex);
+  }
   const targets: ProofTarget[] = [{path: path || ".", gindex, root: type.hashTreeRoot(value)}];
   if (type instanceof ContainerNodeStructType) type = new ContainerType(type.fields);
   if (isFieldContainer(type)) {

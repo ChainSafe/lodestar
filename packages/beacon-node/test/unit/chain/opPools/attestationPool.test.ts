@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {GENESIS_SLOT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {electra, phase0, ssz} from "@lodestar/types";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
@@ -133,5 +134,33 @@ describe("AttestationPool", () => {
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(phase0AttestationDataWithElectraSlot));
 
     expect(() => pool.add(0, attestation, attDataRootHex, validatorCommitteeIndex, committeeSize)).toThrow();
+  });
+
+  it("getAll excludes an aggregate whose signature is the point at infinity", () => {
+    const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(electraSingleAttestation.data));
+    pool.add(
+      0,
+      {...electraSingleAttestation, signature: G2_POINT_AT_INFINITY},
+      attDataRootHex,
+      validatorCommitteeIndex,
+      committeeSize
+    );
+
+    expect(pool.getAll()).toEqual([]);
+    expect(pool.getAll(electraAttestationData.slot)).toEqual([]);
+  });
+
+  it("getAggregate returns null when the aggregate signature is the point at infinity", () => {
+    const committeeIndex = 0;
+    const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(electraSingleAttestation.data));
+    pool.add(
+      committeeIndex,
+      {...electraSingleAttestation, signature: G2_POINT_AT_INFINITY},
+      attDataRootHex,
+      validatorCommitteeIndex,
+      committeeSize
+    );
+
+    expect(pool.getAggregate(electraAttestationData.slot, attDataRootHex, committeeIndex)).toBeNull();
   });
 });

@@ -25,6 +25,8 @@ export interface NetworkOptions
   mdns?: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
+  /** Include the version in libp2p Identify. Private mode takes precedence. */
+  advertiseVersion?: boolean;
   private?: boolean;
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;

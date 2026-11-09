@@ -1,17 +1,17 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {DOMAIN_BEACON_PROPOSER, DOMAIN_BUILDER_REQUEST_AUTH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ZERO_HASH, computeDomain, computeEpochAtSlot, computeSigningRoot} from "@lodestar/state-transition";
 import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
 import {InvalidBlockErrorCode} from "../../src/slashingProtection/index.js";
-import {getApiClientStub} from "../utils/apiStub.js";
+import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
 import {getMockedLogger} from "../utils/logger.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
 
@@ -407,6 +407,29 @@ describe("ValidatorStore", () => {
     // Per-key builders replace the default entries
     store.setBuilderConfig(pubkey, {builders: []});
     expect(store.getResolvedBuilderEntries(pubkey)).toEqual([]);
+  });
+
+  it("Should remove a signer whose validator index is known", async () => {
+    const pubkeyHex = toHexString(pubkeys[0]);
+    api.beacon.postStateValidators.mockResolvedValue(
+      mockApiResponse({
+        data: [
+          {
+            index: 0,
+            balance: 32e9,
+            status: "active_ongoing",
+            validator: {...ssz.phase0.Validator.defaultValue(), pubkey: pubkeys[0]},
+          },
+        ],
+        meta: {executionOptimistic: false, finalized: false},
+      })
+    );
+    await validatorStore.pollValidatorIndices();
+    expect(validatorStore.getPubkeyOfIndex(0)).toBe(pubkeyHex);
+
+    expect(validatorStore.removeSigner(pubkeyHex)).toBe(true);
+    expect(validatorStore.hasVotingPubkey(pubkeyHex)).toBe(false);
+    expect(validatorStore.getPubkeyOfIndex(0)).toBeUndefined();
   });
 
   it("signs a Heze block over the fork-specific block root", async () => {

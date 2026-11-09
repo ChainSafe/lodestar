@@ -45,6 +45,13 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
+          label: "Builder Client",
+          items: [
+            "run/builder-management/builder-cli",
+          ],
+        },
+        {
+          type: "category",
           label: "Logging and Metrics",
           items: [
             "run/logging-and-metrics/prometheus-grafana",

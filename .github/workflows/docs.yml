@@ -43,10 +43,8 @@ jobs:
           check-latest: true
           cache: pnpm
 
-      # Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+      # Required to build the @lodestar/native workspace package
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
-        with:
-          version: 0.16.0
 
       - name: Node.js version
         id: node
@@ -59,6 +57,7 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
+            bindings/node_modules
           key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/pnpm-lock.yaml', '**/package.json') }}
 
       - name: Install & build
@@ -71,9 +70,6 @@ jobs:
 
       - name: Build and collect docs
         run: pnpm docs:build
-
-      - name: Lint built docs
-        run: pnpm docs:lint:fix
 
       # Fetch versioned docs from docs-versions branch (if it exists)
       - name: Fetch versioned docs

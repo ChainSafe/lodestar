@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {
   CompactMultiProof,
   ProofType,
@@ -13,6 +12,7 @@ import {ContainerType} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateView,

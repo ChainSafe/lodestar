@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   BUILDER_INDEX_SELF_BUILD,
   DOMAIN_BEACON_PROPOSER,

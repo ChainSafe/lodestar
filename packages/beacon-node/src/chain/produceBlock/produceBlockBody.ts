@@ -781,7 +781,6 @@ export async function prepareExecutionPayload(
 
   const payloadIdCached = chain.executionEngine.payloadIdCache.get({
     headBlockHash: toRootHex(parentBlockHash),
-    finalizedBlockHash,
     timestamp: numToQuantity(timestamp),
     prevRandao: toHex(prevRandao),
     suggestedFeeRecipient,

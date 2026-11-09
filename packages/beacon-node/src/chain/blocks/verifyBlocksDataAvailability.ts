@@ -1,4 +1,6 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {TimeoutError} from "@lodestar/utils";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {DAData, DAType, IBlockInput} from "./blockInput/index.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
@@ -22,7 +24,14 @@ export async function verifyBlocksDataAvailability(
   for (const blockInput of blocks) {
     // block verification is triggered on a verified gossip block so we only need to wait for all data
     if (!blockInput.hasAllData()) {
-      promises.push(blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT, signal));
+      promises.push(
+        blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT, signal).catch((e) => {
+          if (e instanceof TimeoutError) {
+            throw new BlockError(blockInput.getBlock(), {code: BlockErrorCode.DATA_UNAVAILABLE});
+          }
+          throw e;
+        })
+      );
     }
   }
   await Promise.all(promises);

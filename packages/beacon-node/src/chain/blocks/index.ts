@@ -147,7 +147,7 @@ export async function processBlocks(
         proposerBalanceDelta: proposerBalanceDeltas[i],
         indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+        seenTimestampSec: opts.seenTimestampSec ?? Date.now() / 1000,
       });
     }
 
@@ -292,7 +292,11 @@ async function importPayloadEnvelopesOfKnownBlocks(
     return result;
   }
 
-  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(payloadInputs, new AbortController().signal);
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(
+    this.config,
+    payloadInputs,
+    new AbortController().signal
+  );
   for (let i = 0; i < payloadInputs.length; i++) {
     this.logger.debug("Importing payload envelope of known block", {
       slot: payloadInputs[i].slot,

@@ -123,7 +123,7 @@ export interface IForkChoice {
    */
   shouldOverrideForkChoiceUpdate(
     headBlock: ProtoBlock,
-    secFromSlot: number,
+    msFromSlot: number,
     currentSlot: Slot
   ): ShouldOverrideForkChoiceUpdateResult;
   /**
@@ -159,8 +159,8 @@ export interface IForkChoice {
   onBlock(
     block: BeaconBlock,
     state: IBeaconStateView,
-    receiveDelaySec: number,
-    importDelaySec: number,
+    receiveDelayMs: number,
+    importDelayMs: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
@@ -350,7 +350,9 @@ export interface IForkChoice {
    * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
    */
   forwardIterateDescendantsDefaultStatus(blockRoot: RootHex): IterableIterator<ProtoBlock>;
+  /** One summary per block, its default variant (FULL pre-Gloas, PENDING for Gloas) */
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
+  /** One summary per block, its default variant (FULL pre-Gloas, PENDING for Gloas) */
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
