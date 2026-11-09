@@ -15,6 +15,9 @@ pub const Opts = struct {
     initial_block_count: u32 = 64,
     initial_validator_count: u32 = 600_000,
     initial_equivocated_count: u32 = 0,
+    /// Only about this many of the `initial_validator_count` indices are active, spread
+    /// over the whole index range as on mainnet; all are active when null.
+    active_validator_count: ?u32 = null,
     /// Build a Gloas chain and boost the tip so `getHead` takes `should_apply_proposer_boost`.
     gloas_boosted: bool = false,
 };
@@ -30,8 +33,46 @@ const gloas_chain_config = config_mod.mainnet.chain_config.merge(.{
 });
 pub const gloas_config = BeaconConfig.init(gloas_chain_config, config_mod.mainnet.genesis_validators_root);
 
+/// Deterministic and scattered: about `active_count` of `validator_count` indices pass.
+/// Uses 32-bit integer math so the TS and old Zig harnesses pick the same set.
+pub fn isActive(index: u64, validator_count: u32, active_count: ?u32) bool {
+    const count = active_count orelse return true;
+    return fmix32(@truncate(index)) % validator_count < count;
+}
+
+pub fn fmix32(input: u32) u32 {
+    var h = input ^ 0x5eed;
+    h ^= h >> 16;
+    h *%= 0x85ebca6b;
+    h ^= h >> 13;
+    h *%= 0xc2b2ae35;
+    h ^= h >> 16;
+    return h;
+}
+
+pub fn xorshift32(state: *u32) u32 {
+    var x = state.*;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    state.* = x;
+    return x;
+}
+
+/// Fisher-Yates with `xorshift32`, matching the TS and old Zig harnesses.
+pub fn shuffle(items: []u32) void {
+    var state: u32 = 0x9e3779b9;
+    var i = items.len;
+    while (i > 1) {
+        i -= 1;
+        const j = xorshift32(&state) % (i + 1);
+        std.mem.swap(u32, &items[i], &items[j]);
+    }
+}
+
 const Provider = struct {
     validator_count: u32,
+    active_count: ?u32,
 
     fn justifiedBalances(ctx: *anyopaque, allocator: Allocator, _: Checkpoint) anyerror!fork_choice.JustifiedBalances {
         const self: *Provider = @ptrCast(@alignCast(ctx));
@@ -40,6 +81,9 @@ const Provider = struct {
         @memset(increments, 32);
         var active = try std.DynamicBitSetUnmanaged.initFull(allocator, self.validator_count);
         errdefer active.deinit(allocator);
+        for (0..self.validator_count) |i| {
+            if (!isActive(i, self.validator_count, self.active_count)) active.unset(i);
+        }
         return .{ .effective_balance_increments = increments, .active_unslashed = active };
     }
 
@@ -62,6 +106,12 @@ pub const Bench = struct {
         allocator.destroy(self.provider);
     }
 };
+
+/// Interns a vote for `block` at the block's own slot, as `onAttestation` would.
+pub fn voteTarget(store: *Store, block: fork_choice.BlockIndex) !fork_choice.TargetId {
+    const message: fork_choice.LatestMessage = .{ .slot = store.blockSlot(block), .block = block, .payload_present = false };
+    return store.vote_targets.getOrInsert(store.allocator, message, fork_choice.head.nodeId(fork_choice.head.supportedNode(store, message)));
+}
 
 /// Never the zero root, which the store reserves for "no proposer boost".
 pub fn rootFromSlot(slot: u64) [32]u8 {
@@ -88,7 +138,7 @@ fn payloadHash(slot: u64) [32]u8 {
 pub fn initStore(allocator: Allocator, opts: Opts) !Bench {
     const provider = try allocator.create(Provider);
     errdefer allocator.destroy(provider);
-    provider.* = .{ .validator_count = opts.initial_validator_count };
+    provider.* = .{ .validator_count = opts.initial_validator_count, .active_count = opts.active_validator_count };
     const state_provider: fork_choice.StateProvider = .{ .ctx = provider, .vtable = &Provider.vtable };
 
     const config = if (opts.gloas_boosted) &gloas_config else &config_mod.mainnet.config;
