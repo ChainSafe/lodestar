@@ -1,17 +1,39 @@
 const std = @import("std");
+const PendingDeposit = @import("consensus_types").electra.PendingDeposit;
 const Cache = @import("builder_deposit_signature_cache.zig").BuilderDepositSignatureCache;
 const CacheRc = @import("builder_deposit_signature_cache.zig").BuilderDepositSignatureCacheRc;
 
-test "deposit signature cache uses PendingDeposit roots" {
+test "deposit signature cache roots distinguish every PendingDeposit field" {
     const allocator = std.testing.allocator;
     var cache: Cache = .{ .hash_context = .{ .hash_key = @splat(0) } };
     defer cache.deinit(allocator);
-    const root: [32]u8 = @splat(0);
+
+    const deposit = PendingDeposit.default_value;
+    var root: [32]u8 = undefined;
+    try PendingDeposit.hashTreeRoot(&deposit, &root);
     try cache.put(allocator, root, false);
     try std.testing.expectEqual(@as(?bool, false), cache.get(root));
-    var changed = root;
-    changed[0] = 1;
-    try std.testing.expectEqual(@as(?bool, null), cache.get(changed));
+
+    inline for (.{ "pubkey", "withdrawal_credentials", "signature", "amount", "slot" }) |field| {
+        var changed = deposit;
+        if (comptime @TypeOf(@field(changed, field)) == u64) {
+            @field(changed, field) += 1;
+        } else {
+            @field(changed, field)[0] = 1;
+        }
+        var changed_root: [32]u8 = undefined;
+        try PendingDeposit.hashTreeRoot(&changed, &changed_root);
+        try std.testing.expectEqual(@as(?bool, null), cache.get(changed_root));
+        try cache.put(allocator, changed_root, false);
+        try std.testing.expectEqual(@as(?bool, false), cache.get(changed_root));
+    }
+
+    const copied = deposit;
+    var copied_root: [32]u8 = undefined;
+    try PendingDeposit.hashTreeRoot(&copied, &copied_root);
+    try std.testing.expectEqual(@as(?bool, false), cache.get(copied_root));
+    try cache.put(allocator, copied_root, false);
+    try std.testing.expectEqual(@as(usize, 6), cache.validity.count());
 }
 
 test "deposit signature cache bounds both maps and clear releases shared contents" {

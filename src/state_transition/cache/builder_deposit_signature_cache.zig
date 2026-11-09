@@ -9,7 +9,8 @@ pub const BuilderDepositSignatureCacheRc = RefCount(BuilderDepositSignatureCache
 
 /// Signature results are independent of queue order and shared across state clones and reloads.
 /// Access must stay on the owning state thread. Keys are PendingDeposit hash tree roots, not
-/// recycled node IDs or deposit indexes.
+/// recycled node IDs or deposit indexes. Callers must use the same GENESIS_FORK_VERSION for
+/// all cached results and lookups; PendingDeposit roots do not include the deposit signing domain.
 pub const BuilderDepositSignatureCache = struct {
     const RootHashContext = struct {
         pubkey_context: PubkeyHashContext,
