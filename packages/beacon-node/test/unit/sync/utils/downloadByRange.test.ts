@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {ForkName} from "@lodestar/params";
+import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
@@ -466,6 +466,7 @@ describe("cacheByRangeResponses", () => {
   const block = ssz.gloas.SignedBeaconBlock.defaultValue();
   block.message.slot = 5;
   block.message.body.signedExecutionPayloadBid.message.blockHash = Buffer.alloc(32, 0x11);
+  block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = [Buffer.alloc(48, 0x11)];
   const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
   const parentPayload: ParentPayload = {
     blockRoot,
@@ -482,9 +483,20 @@ describe("cacheByRangeResponses", () => {
 
   function cacheEnvelope(
     entries: Map<RootHex, PayloadEnvelopeInput>,
-    {inBatch = false, imported = false} = {}
+    {
+      inBatch = false,
+      imported = false,
+      existingInput,
+      columnSidecars = [],
+    }: {
+      inBatch?: boolean;
+      imported?: boolean;
+      existingInput?: PayloadEnvelopeInput;
+      columnSidecars?: gloas.DataColumnSidecar[];
+    } = {}
   ): Map<number, PayloadEnvelopeInput> | null {
     const seenPayloadEnvelopeInputCache = {
+      get: (root: RootHex) => entries.get(root),
       add: (): PayloadEnvelopeInput => {
         throw new Error("Not expected to add a block");
       },
@@ -506,10 +518,13 @@ describe("cacheByRangeResponses", () => {
       getFullPayloadBlockHash: (root) =>
         imported && root === parentPayload.blockRootHex ? toRootHex(parentPayload.bid.blockHash) : null,
       peerIdStr: "peer",
-      responses: inBatch ? {validatedBlocks: [{block, blockRoot}]} : {},
+      responses: {
+        validatedBlocks: inBatch ? [{block, blockRoot}] : undefined,
+        validatedColumnSidecars: columnSidecars.length > 0 ? [{blockRoot, columnSidecars}] : undefined,
+      },
       batchBlocks: [],
       downloadedPayloadEnvelopes: new Map([[block.message.slot, envelope]]),
-      existingPayloadEnvelopes: null,
+      existingPayloadEnvelopes: existingInput ? new Map([[block.message.slot, existingInput]]) : null,
       parentPayload: inBatch ? undefined : parentPayload,
       custodyConfig: {sampledColumns: [], custodyColumns: []},
       seenTimestampSec: 0,
@@ -549,5 +564,59 @@ describe("cacheByRangeResponses", () => {
 
     expect(entries.size).toBe(0);
     expect(payloadEnvelopes?.size).toBe(0);
+  });
+
+  it.each([
+    {path: "previous batch download", inBatch: false, inSeenCache: false},
+    {path: "in-batch block", inBatch: true, inSeenCache: true},
+    {path: "dangling parent", inBatch: false, inSeenCache: true},
+  ])("completes columns for an imported FULL payload from the $path", ({inBatch, inSeenCache}) => {
+    const reconstructionThreshold = NUMBER_OF_COLUMNS / 2;
+    const sampledColumns = Array.from({length: reconstructionThreshold + 2}, (_, index) => index);
+    const input = PayloadEnvelopeInput.createFromBid({
+      ...parentPayload,
+      sampledColumns,
+      custodyColumns: sampledColumns,
+      seenTimestampSec: 0,
+      source: PayloadEnvelopeInputSource.gossip,
+      daOutOfRange: false,
+    });
+    const importedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+    input.addPayloadEnvelope({
+      envelope: importedEnvelope,
+      source: PayloadEnvelopeInputSource.gossip,
+      seenTimestampSec: 0,
+    });
+    const columns = sampledColumns.map((index) => ({
+      ...ssz.gloas.DataColumnSidecar.defaultValue(),
+      index,
+      slot: block.message.slot,
+      beaconBlockRoot: blockRoot,
+    }));
+    for (const columnSidecar of columns.slice(0, reconstructionThreshold)) {
+      input.addColumn({columnSidecar, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+    }
+    expect(input.hasAllData()).toBe(true);
+    expect(input.hasComputedAllData()).toBe(false);
+
+    const entries = new Map<RootHex, PayloadEnvelopeInput>();
+    if (inSeenCache) entries.set(parentPayload.blockRootHex, input);
+    const partial = cacheEnvelope(entries, {
+      inBatch,
+      imported: true,
+      existingInput: inSeenCache ? undefined : input,
+      columnSidecars: [columns[reconstructionThreshold]],
+    });
+    expect(partial?.get(block.message.slot)).toBe(input);
+    expect(input.hasColumn(reconstructionThreshold)).toBe(true);
+    expect(input.hasComputedAllData()).toBe(false);
+
+    cacheEnvelope(entries, {
+      imported: true,
+      existingInput: partial?.get(block.message.slot),
+      columnSidecars: [columns[reconstructionThreshold + 1]],
+    });
+    expect(input.hasComputedAllData()).toBe(true);
+    expect(input.getPayloadEnvelope()).toBe(importedEnvelope);
   });
 });

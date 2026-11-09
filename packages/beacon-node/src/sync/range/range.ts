@@ -3,11 +3,12 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
-import {Epoch, RootHex, Status, fulu, ssz} from "@lodestar/types";
+import {Epoch, RootHex, Slot, Status, fulu, ssz} from "@lodestar/types";
 import {Logger, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
+import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {assertLinearChainSegment} from "../../chain/blocks/utils/chainSegment.js";
 import {BlockError} from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/index.js";
@@ -211,17 +212,18 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     };
 
     try {
+      const unimportedPayloads = this.getUnimportedPayloads(payloadEnvelopes);
       if (this.opts?.disableProcessAsChainSegment) {
         // Should only be used for debugging or testing
         for (const block of blocks) {
           await this.chain.processBlock(block, flags);
-          const payloadEnvelope = payloadEnvelopes?.get(block.slot);
+          const payloadEnvelope = unimportedPayloads?.get(block.slot);
           if (payloadEnvelope?.hasPayloadEnvelope()) {
             await this.chain.processExecutionPayload(payloadEnvelope);
           }
         }
       } else {
-        const {orphaned, skipped} = await this.chain.processChainSegment(blocks, payloadEnvelopes, flags);
+        const {orphaned, skipped} = await this.chain.processChainSegment(blocks, unimportedPayloads, flags);
         // We log orphaned payloads to work with different clients
         // in the future, consider applying penalties in certain conditions
         // make sure the payload source was from range sync in that case
@@ -281,6 +283,16 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     return this.chain.forkChoice.getBlockHex(blockRoot, PayloadStatus.FULL)?.executionPayloadBlockHash ?? null;
   };
 
+  private getUnimportedPayloads(
+    payloads: Map<Slot, PayloadEnvelopeInput> | null
+  ): Map<Slot, PayloadEnvelopeInput> | null {
+    // A batch can track already-imported envelopes while their remaining columns are downloaded.
+    return (
+      payloads &&
+      new Map([...payloads].filter(([, input]) => this.getFullPayloadBlockHash(input.blockRootHex) === null))
+    );
+  }
+
   private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
     const batchBlocks = batch.getBlocks();
     const requests = batch.getRequestsForPeer(peer);
@@ -326,7 +338,13 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
     if (segmentBlocks.length > 1) {
       try {
-        assertLinearChainSegment(this.config, segmentBlocks, payloadEnvelopes, null, this.getFullPayloadBlockHash);
+        assertLinearChainSegment(
+          this.config,
+          segmentBlocks,
+          this.getUnimportedPayloads(payloadEnvelopes),
+          null,
+          this.getFullPayloadBlockHash
+        );
       } catch (err) {
         if (err instanceof BlockError) {
           this.logger.debug(
