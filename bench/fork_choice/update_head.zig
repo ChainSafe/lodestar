@@ -46,6 +46,7 @@ const UpdateHeadBench = struct {
         } else {
             store.latest_votes = self.votes[@intFromBool(self.flip.*)];
             store.head_cache.changed_votes.setAll();
+            store.head_cache.changed_count = store.head_cache.changed_votes.bit_length;
             self.flip.* = !self.flip.*;
         }
         store.head_cache.dirty = true;
