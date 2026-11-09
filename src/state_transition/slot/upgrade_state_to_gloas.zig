@@ -124,13 +124,25 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                     var prior: ct.electra.PendingDeposit.Type = undefined;
                     try pending.getValue(undefined, pending_index, &prior);
                     entry.unchecked_head = next[pending_index];
-                    if (!try isValidCachedDeposit(epoch_cache.builder_deposit_signature_cache.allocator, config, signature_cache, &prior, &checks)) {
+                    if (!try isValidCachedDeposit(
+                        epoch_cache.builder_deposit_signature_cache.allocator,
+                        config,
+                        signature_cache,
+                        &prior,
+                        &checks,
+                    )) {
                         continue;
                     }
                     entry.has_pending_validator = true;
                 }
                 if (!entry.has_pending_validator) {
-                    if (!try isValidCachedDeposit(epoch_cache.builder_deposit_signature_cache.allocator, config, signature_cache, &deposit, &checks)) {
+                    if (!try isValidCachedDeposit(
+                        epoch_cache.builder_deposit_signature_cache.allocator,
+                        config,
+                        signature_cache,
+                        &deposit,
+                        &checks,
+                    )) {
                         dropped += 1;
                         continue;
                     }
@@ -172,13 +184,25 @@ const SignatureChecks = struct {
     verified: u64 = 0,
 };
 
-fn isValidCachedDeposit(allocator: Allocator, config: *const BeaconConfig, cache: *BuilderDepositSignatureCache, deposit: *const ct.electra.PendingDeposit.Type, checks: *SignatureChecks) !bool {
+fn isValidCachedDeposit(
+    allocator: Allocator,
+    config: *const BeaconConfig,
+    cache: *BuilderDepositSignatureCache,
+    deposit: *const ct.electra.PendingDeposit.Type,
+    checks: *SignatureChecks,
+) !bool {
     if (try cache.get(config, deposit)) |valid| {
         checks.from_cache += 1;
         return valid;
     }
     checks.verified += 1;
-    const valid = if (validateDepositSignature(config, &deposit.pubkey, &deposit.withdrawal_credentials, deposit.amount, deposit.signature)) true else |err| switch (err) {
+    const valid = if (validateDepositSignature(
+        config,
+        &deposit.pubkey,
+        &deposit.withdrawal_credentials,
+        deposit.amount,
+        deposit.signature,
+    )) true else |err| switch (err) {
         error.BadEncoding, error.PointNotOnCurve, error.PointNotInGroup, error.VerifyFail, error.PkIsInfinity => false,
         else => return err,
     };

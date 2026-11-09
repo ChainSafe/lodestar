@@ -32,7 +32,12 @@ fn signedDeposit(config: *const BeaconConfig, seed: u8, prefix: u8, amount: u64)
     var domain: [32]u8 = undefined;
     try computeDomain(c.DOMAIN_DEPOSIT, config.chain.GENESIS_FORK_VERSION, c.ZERO_HASH, &domain);
     var signing_root: [32]u8 = undefined;
-    try computeSigningRoot(ct.phase0.DepositMessage, &.{ .pubkey = deposit.pubkey, .withdrawal_credentials = deposit.withdrawal_credentials, .amount = amount }, &domain, &signing_root);
+    try computeSigningRoot(
+        ct.phase0.DepositMessage,
+        &.{ .pubkey = deposit.pubkey, .withdrawal_credentials = deposit.withdrawal_credentials, .amount = amount },
+        &domain,
+        &signing_root,
+    );
     deposit.signature = sk.sign(&signing_root, bls.DST, null).compress();
     return deposit;
 }
@@ -43,7 +48,12 @@ test "deposit preverify batches agree with individual proof-of-possession checks
     const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 4 });
     defer pool.deinit(std.testing.io);
     var deposits: [8]ct.electra.PendingDeposit.Type = undefined;
-    for (&deposits, 0..) |*deposit, index| deposit.* = try signedDeposit(&config, @intCast(index + 40), c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
+    for (&deposits, 0..) |*deposit, index| deposit.* = try signedDeposit(
+        &config,
+        @intCast(index + 40),
+        c.BUILDER_WITHDRAWAL_PREFIX,
+        1_000_000_000,
+    );
     deposits[1].amount += 1;
     deposits[2].withdrawal_credentials[0] = 1;
     deposits[3].signature = @splat(0);
@@ -56,7 +66,13 @@ test "deposit preverify batches agree with individual proof-of-possession checks
     for ([_]bool{ true, false }) |batch_verify| {
         try deposit_module.verifyDepositSignatures(std.testing.io, pool, &config, &deposits, &results, batch_verify);
         for (deposits, results) |deposit, result| {
-            const valid = if (deposit_module.validateDepositSignature(&config, &deposit.pubkey, &deposit.withdrawal_credentials, deposit.amount, deposit.signature)) true else |_| false;
+            const valid = if (deposit_module.validateDepositSignature(
+                &config,
+                &deposit.pubkey,
+                &deposit.withdrawal_credentials,
+                deposit.amount,
+                deposit.signature,
+            )) true else |_| false;
             try std.testing.expectEqual(valid, result);
         }
         try std.testing.expectEqualSlices(bool, &.{ true, false, false, false, false, false, false, true }, &results);
@@ -69,7 +85,12 @@ test "deposit preverify rejects subgroup failures and cancelling invalid signatu
     const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 4 });
     defer pool.deinit(std.testing.io);
     var deposits: [32]ct.electra.PendingDeposit.Type = undefined;
-    for (&deposits, 0..) |*deposit, index| deposit.* = try signedDeposit(&config, @intCast(index + 40), c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
+    for (&deposits, 0..) |*deposit, index| deposit.* = try signedDeposit(
+        &config,
+        @intCast(index + 40),
+        c.BUILDER_WITHDRAWAL_PREFIX,
+        1_000_000_000,
+    );
     deposits[17].amount += 1;
     var results: [deposits.len]bool = undefined;
     try deposit_module.verifyDepositSignatures(std.testing.io, pool, &config, &deposits, &results, true);
@@ -98,7 +119,10 @@ test "deposit preverify rejects subgroup failures and cancelling invalid signatu
 
     deposits[0] = try signedDeposit(&config, 40, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
     deposits[1] = try signedDeposit(&config, 41, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
-    const original = [_]bls.Signature{ try bls.Signature.uncompress(&deposits[0].signature), try bls.Signature.uncompress(&deposits[1].signature) };
+    const original = [_]bls.Signature{
+        try bls.Signature.uncompress(&deposits[0].signature),
+        try bls.Signature.uncompress(&deposits[1].signature),
+    };
     const offset = try bls.Signature.uncompress(&deposits[2].signature);
     var negated: bls.c.blst_p2 = undefined;
     bls.c.blst_p2_from_affine(&negated, &offset.point);
@@ -166,8 +190,12 @@ test "deposit preverify resumes bounded work and warms validator prefixes across
     var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();
     try metrics.write(&output.writer);
-    try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 0\n") != null);
-    try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 41\n") != null);
+    try std.testing.expect(
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 0\n") != null,
+    );
+    try std.testing.expect(
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 41\n") != null,
+    );
 }
 
 test "deposit preverify bounds scans even when no deposit needs verification" {
@@ -232,12 +260,19 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     state.state.* = .{ .gloas = upgraded.inner };
     var builders = try upgraded.inner.get("builders");
     try std.testing.expectEqual(@as(usize, 2), try builders.length());
-    try std.testing.expectEqual(@as(?bool, true), try state.epoch_cache.builder_deposit_signature_cache.instance.get(state.config, &builder));
+    try std.testing.expectEqual(
+        @as(?bool, true),
+        try state.epoch_cache.builder_deposit_signature_cache.instance.get(state.config, &builder),
+    );
     var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();
     try metrics.write(&output.writer);
-    try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 1\n") != null);
-    try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 41\n") != null);
+    try std.testing.expect(
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 1\n") != null,
+    );
+    try std.testing.expect(
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 41\n") != null,
+    );
 }
 
 test "deposit preverify valid validator prefix suppresses later signatures at the fork" {
@@ -272,6 +307,10 @@ test "deposit preverify valid validator prefix suppresses later signatures at th
     var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();
     try metrics.write(&output.writer);
-    try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 0\n") != null);
-    try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 1\n") != null);
+    try std.testing.expect(
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 0\n") != null,
+    );
+    try std.testing.expect(
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 1\n") != null,
+    );
 }

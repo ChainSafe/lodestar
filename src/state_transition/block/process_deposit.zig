@@ -215,7 +215,13 @@ pub fn validateDepositSignature(
     try verify(&signing_root, &public_key, &signature, .{});
 }
 
-fn depositSigningRoot(config: *const BeaconConfig, pubkey: *const BLSPubkey, withdrawal_credentials: *const WithdrawalCredentials, amount: u64, signing_root: *Root) !void {
+fn depositSigningRoot(
+    config: *const BeaconConfig,
+    pubkey: *const BLSPubkey,
+    withdrawal_credentials: *const WithdrawalCredentials,
+    amount: u64,
+    signing_root: *Root,
+) !void {
     // verify the deposit signature (proof of posession) which is not checked by the deposit contract
     const deposit_message = DepositMessage{
         .pubkey = pubkey.*,
@@ -235,7 +241,14 @@ pub const deposit_signature_batch_size = 32;
 
 /// Equivalent to validateDepositSignature for each entry. Invalid signatures are false;
 /// verifier infrastructure failures propagate and must never be cached as invalid deposits.
-pub fn verifyDepositSignatures(io: std.Io, pool: *bls.ThreadPool, config: *const BeaconConfig, deposits: []const types.electra.PendingDeposit.Type, results: []bool, batch_verify: bool) !void {
+pub fn verifyDepositSignatures(
+    io: std.Io,
+    pool: *bls.ThreadPool,
+    config: *const BeaconConfig,
+    deposits: []const types.electra.PendingDeposit.Type,
+    results: []bool,
+    batch_verify: bool,
+) !void {
     std.debug.assert(deposits.len <= deposit_signature_batch_size);
     std.debug.assert(deposits.len == results.len);
     @memset(results, false);

@@ -22,11 +22,22 @@ pub const BuilderDepositSignatureCache = struct {
         pubkey_context: PubkeyHashContext,
 
         pub fn hash(self: KeyContext, value: Key) u32 {
-            return @truncate(std.hash.SipHash64(1, 3).toInt(&(value.deposit_root ++ value.genesis_fork_version), &self.pubkey_context.hash_key));
+            return @truncate(std.hash.SipHash64(1, 3).toInt(
+                &(value.deposit_root ++ value.genesis_fork_version),
+                &self.pubkey_context.hash_key,
+            ));
         }
 
         pub fn eql(_: KeyContext, lhs: Key, rhs: Key, _: usize) bool {
-            return std.mem.eql(u8, &lhs.deposit_root, &rhs.deposit_root) and std.mem.eql(u8, &lhs.genesis_fork_version, &rhs.genesis_fork_version);
+            return std.mem.eql(
+                u8,
+                &lhs.deposit_root,
+                &rhs.deposit_root,
+            ) and std.mem.eql(
+                u8,
+                &lhs.genesis_fork_version,
+                &rhs.genesis_fork_version,
+            );
         }
     };
 
@@ -59,13 +70,23 @@ pub const BuilderDepositSignatureCache = struct {
         return result;
     }
 
-    pub fn get(self: *const BuilderDepositSignatureCache, config: *const BeaconConfig, deposit: *const ct.electra.PendingDeposit.Type) !?bool {
+    pub fn get(
+        self: *const BuilderDepositSignatureCache,
+        config: *const BeaconConfig,
+        deposit: *const ct.electra.PendingDeposit.Type,
+    ) !?bool {
         return self.validity.getContext(try key(config, deposit), .{ .pubkey_context = self.hash_context });
     }
 
     /// Only insert results from full deposit proof-of-possession verification, including
     /// public-key and signature subgroup/infinity checks. Capacity exhaustion is a cache miss.
-    pub fn put(self: *BuilderDepositSignatureCache, allocator: std.mem.Allocator, config: *const BeaconConfig, deposit: *const ct.electra.PendingDeposit.Type, valid: bool) !void {
+    pub fn put(
+        self: *BuilderDepositSignatureCache,
+        allocator: std.mem.Allocator,
+        config: *const BeaconConfig,
+        deposit: *const ct.electra.PendingDeposit.Type,
+        valid: bool,
+    ) !void {
         const deposit_key = try key(config, deposit);
         const context: KeyContext = .{ .pubkey_context = self.hash_context };
         if (self.validity.getPtrContext(deposit_key, context)) |value| {

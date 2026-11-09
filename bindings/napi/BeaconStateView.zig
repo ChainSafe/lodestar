@@ -1297,7 +1297,14 @@ pub fn loadOtherState(
     }
 
     const io = js.io();
-    try initCachedState(allocator, new_cached_state, io, new_state, old_cached_state.config, old_cached_state.epoch_cache.builder_deposit_signature_cache);
+    try initCachedState(
+        allocator,
+        new_cached_state,
+        io,
+        new_state,
+        old_cached_state.config,
+        old_cached_state.epoch_cache.builder_deposit_signature_cache,
+    );
     new_cached_state_initialized = true;
 
     if (opts) |value| {
@@ -1341,7 +1348,11 @@ pub fn serialize(self: *BeaconStateView) !js.Uint8Array {
     return .{ .val = try numberSliceToNapiValue(env, u8, result, .{ .typed_array = .uint8 }) };
 }
 
-pub fn preVerifyBuilderDepositsPreGloas(self: *BeaconStateView, max_deposits: js.Number, max_duration_ms: js.Number) !js_types.PreVerifyBuilderDepositsResult {
+pub fn preVerifyBuilderDepositsPreGloas(
+    self: *BeaconStateView,
+    max_deposits: js.Number,
+    max_duration_ms: js.Number,
+) !js_types.PreVerifyBuilderDepositsResult {
     const max_verification_duration_ms = std.time.ms_per_min;
     const cached_state = try self.acquireState();
     defer self.finishState();
@@ -1353,7 +1364,10 @@ pub fn preVerifyBuilderDepositsPreGloas(self: *BeaconStateView, max_deposits: js
     const result = try st.preVerifyBuilderDepositsPreGloas(js.io(), thread_pool, cached_state, limit, duration);
     const object = try js.env().createObject();
     inline for (@typeInfo(@TypeOf(result)).@"struct".fields) |field| {
-        try object.setNamedProperty(comptime snakeToCamel(field.name), try js.env().createDouble(@floatFromInt(@field(result, field.name))));
+        try object.setNamedProperty(
+            comptime snakeToCamel(field.name),
+            try js.env().createDouble(@floatFromInt(@field(result, field.name))),
+        );
     }
     return js_types.wrap(js_types.PreVerifyBuilderDepositsResult, object);
 }

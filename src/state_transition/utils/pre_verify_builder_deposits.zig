@@ -67,10 +67,19 @@ pub fn preVerifyBuilderDepositsPreGloas(
             if (isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
                 try cache.addBuilderPubkey(allocator, deposit.pubkey);
             }
-            const known = try isValidatorKnown(.fulu, state.state.castToFork(.fulu), state.epoch_cache.pubkey_cache.get(io, deposit.pubkey));
+            const known = try isValidatorKnown(
+                .fulu,
+                state.state.castToFork(.fulu),
+                state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
+            );
             if (!known and !resolved.containsContext(deposit.pubkey, cache.hash_context)) {
                 if (try cache.get(state.config, &deposit)) |valid| {
-                    if (valid and resolved.count() < cache_module.max_deposits_per_call) try resolved.putContext(allocator, deposit.pubkey, {}, cache.hash_context);
+                    if (valid and resolved.count() < cache_module.max_deposits_per_call) try resolved.putContext(
+                        allocator,
+                        deposit.pubkey,
+                        {},
+                        cache.hash_context,
+                    );
                 } else {
                     deposits[count] = deposit;
                     count += 1;
