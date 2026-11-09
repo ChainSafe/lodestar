@@ -103,10 +103,12 @@ describe("ForkChoice", () => {
     forkChoice.onAttestation(1, 0, root(0x0a), 0, ANCHOR, Uint32Array.from([0, 1, 2]), false);
     expect(forkChoice.queuedVoteCount).toBe(3);
     expect(forkChoice.getHead()).toBe(pendingNode(2));
+    expect(forkChoice.voteChangesTotal).toBe(0);
 
     forkChoice.onTick(forkChoice.timeAtSlotMs(2));
     expect(forkChoice.queuedVoteCount).toBe(0);
     expect(forkChoice.getHead()).toBe(pendingNode(1));
+    expect(forkChoice.voteChangesTotal).toBe(3);
     expect(forkChoice.weights()[pendingNode(1)]).toBe(3n * GWEI_PER_VALIDATOR);
     expect(forkChoice.attestationScores()[pendingNode(0)]).toBe(3n * GWEI_PER_VALIDATOR);
     expect(forkChoice.bestChildren()[pendingNode(0)]).toBe(pendingNode(1));

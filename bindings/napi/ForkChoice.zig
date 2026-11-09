@@ -39,6 +39,7 @@ pub const js_meta = js.class(.{ .properties = .{
     .voteCount = js.prop(.{ .get = true, .set = false }),
     .queuedVoteCount = js.prop(.{ .get = true, .set = false }),
     .equivocatingCount = js.prop(.{ .get = true, .set = false }),
+    .voteChangesTotal = js.prop(.{ .get = true, .set = false }),
     .proposerBoostRoot = js.prop(.{ .get = true, .set = false }),
     .justifiedTotalBalance = js.prop(.{ .get = true, .set = false }),
 } });
@@ -495,6 +496,10 @@ pub fn voteCount(self: *ForkChoice) js.Number {
 
 pub fn queuedVoteCount(self: *ForkChoice) js.Number {
     return js.Number.from(self.inner.store.queuedVoteCount());
+}
+
+pub fn voteChangesTotal(self: *ForkChoice) js.Number {
+    return js.Number.from(self.inner.store.head_cache.vote_changes_total);
 }
 
 pub fn equivocatingCount(self: *ForkChoice) js.Number {

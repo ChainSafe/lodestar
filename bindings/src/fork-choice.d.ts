@@ -96,6 +96,8 @@ export declare class ForkChoice {
   readonly voteCount: number;
   readonly queuedVoteCount: number;
   readonly equivocatingCount: number;
+  /** Validators whose vote or weight the head computation re-checked or first counted, summed over every run */
+  readonly voteChangesTotal: number;
   readonly proposerBoostRoot: Uint8Array;
   /** Total active unslashed balance of the justified state in Gwei */
   readonly justifiedTotalBalance: bigint;

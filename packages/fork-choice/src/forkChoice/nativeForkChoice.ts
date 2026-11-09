@@ -153,6 +153,8 @@ export class NativeForkChoice implements IForkChoice {
   private head: ProtoBlock;
   private pruneThreshold = DEFAULT_PRUNE_THRESHOLD;
   private previousProposerBoostRoot: RootHex = HEX_ZERO_HASH;
+  private queuedAttestationsPreviousSlot = 0;
+  private voteChangesTotal = 0;
   /** Post-state of the block being imported, the fallback source of justified balances */
   private importingState: IBeaconStateView | null = null;
   /** Balances the provider last handed to the store, for the checkpoint they belong to */
@@ -221,9 +223,9 @@ export class NativeForkChoice implements IForkChoice {
 
     metrics?.forkChoice.votes.addCollect(() => {
       metrics.forkChoice.votes.set(this.store.voteCount);
-      metrics.forkChoice.queuedAttestations.set(this.store.queuedVoteCount);
+      metrics.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot);
       metrics.forkChoice.balancesLength.set(this.fcStore.justified.balances.length);
-      metrics.forkChoice.nodes.set(this.nodes.reduce((count, node) => count + (node === undefined ? 0 : 1), 0));
+      metrics.forkChoice.nodes.set(this.nodeCount());
       metrics.forkChoice.indices.set(this.blockIndexByRoot.size);
     });
   }
@@ -245,6 +247,15 @@ export class NativeForkChoice implements IForkChoice {
       throw Error("Native fork choice head has no block summary");
     }
     this.head = head;
+
+    const computeDeltasMetrics = this.metrics?.forkChoice.computeDeltas;
+    if (computeDeltasMetrics) {
+      const voteChangesTotal = this.store.voteChangesTotal;
+      computeDeltasMetrics.deltasCount.set(this.nodeCount());
+      computeDeltasMetrics.equivocatingValidators.set(this.store.equivocatingCount);
+      computeDeltasMetrics.newVoteValidators.set(voteChangesTotal - this.voteChangesTotal);
+      this.voteChangesTotal = voteChangesTotal;
+    }
     return head;
   }
 
@@ -567,7 +578,9 @@ export class NativeForkChoice implements IForkChoice {
     while (this.fcStore.currentSlot < currentSlot) {
       const slot = this.fcStore.currentSlot + 1;
       this.mutated();
+      const queuedVoteCount = this.store.queuedVoteCount;
       this.store.onTick(this.store.timeAtSlotMs(slot));
+      this.queuedAttestationsPreviousSlot = queuedVoteCount - this.store.queuedVoteCount;
       this.fcStore.currentSlot = slot;
       const didUpdateCheckpoints = this.syncCheckpoints();
       const didRecomputeHead = this.runFastConfirmation();
@@ -1480,6 +1493,14 @@ export class NativeForkChoice implements IForkChoice {
   }
 
   // Node bookkeeping
+
+  private nodeCount(): number {
+    let count = 0;
+    for (const node of this.nodes) {
+      if (node !== undefined) count++;
+    }
+    return count;
+  }
 
   private mutated(): void {
     this.scores = null;
