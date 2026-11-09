@@ -427,7 +427,7 @@ export class Network implements INetwork {
   }
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
-    const publishChanges = [];
+    const publishChanges: Promise<number>[] = [];
     for (const boundary of getActiveForkBoundaries(this.config, this.clock.currentEpoch)) {
       const fork = ForkSeq[boundary.fork];
 
@@ -443,7 +443,11 @@ export class Network implements INetwork {
     if (publishChanges.length === 0) {
       throw Error("No capella+ fork active yet to publish blsToExecutionChange");
     }
-    return Promise.any(publishChanges);
+    try {
+      return await Promise.any(publishChanges);
+    } finally {
+      await Promise.allSettled(publishChanges);
+    }
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
