@@ -1016,7 +1016,7 @@ export function createLodestarMetrics(
       receivedToConsensusVerifiedTime: register.histogram({
         name: "lodestar_gossip_block_received_to_consensus_verified_seconds",
         help: "Time from gossip block arrival until both the state transition and all block signature verifications are complete, excluding execution payload verification",
-        buckets: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1],
+        buckets: [0.01, 0.015, 0.020, 0.025, 0.030, 0.4, 0.5, 1],
       }),
       verifiedToBlobsAvailabiltyTime: register.histogram<{numBlobs: number}>({
         name: "lodestar_gossip_block_verified_to_blobs_availability_time",
