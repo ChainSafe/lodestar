@@ -459,9 +459,10 @@ pub const Pool = struct {
         return node_id;
     }
 
-    /// Skips `Allocator.create`'s 0xAA fill outside Debug: ReleaseSafe would fill 2 KiB on every
-    /// copy-on-write, and callers write all chunks and `len` right away. Debug keeps the fill so a
-    /// read before write shows 0xAA. Free with `allocator.destroy`.
+    /// Keeps `Allocator.create`'s 0xAA fill only in Debug, where it exposes a read before write.
+    /// ReleaseSafe would fill 2 KiB per copy-on-write on a hot path, and the caller then
+    /// overwrites every field. A new caller must also write all chunks and `len` before reading.
+    /// std intends `rawAlloc` only for `Allocator` implementations. Free with `allocator.destroy`.
     fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
         if (builtin.mode == .Debug) return self.allocator.create(ChunkedLeaf);
         const bytes = self.allocator.rawAlloc(
