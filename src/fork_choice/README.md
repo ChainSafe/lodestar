@@ -43,9 +43,9 @@ arrays alike. Equivocators are a bitset. Justified balances arrive through
 a `StateProvider` callback when the justified checkpoint changes and are kept as raw
 effective-balance increments plus an active-and-unslashed bitset.
 
-Nothing derived is carried between calls. Weights, viability and best children live
-in scratch arrays that every `getHead` rebuilds; a `dirty` flag on the cache makes
-repeated reads free.
+Only the per-node vote totals are carried between calls. Weights, viability and best
+children live in scratch arrays that every `getHead` rebuilds; a `dirty` flag on the
+cache makes repeated reads free.
 
 ### Head computation
 
@@ -53,8 +53,11 @@ The spec's `get_weight` scans every latest message per node and `filter_node_tre
 recurses. `head.zig` produces every node's weight and viability at once:
 
 1. Forward pass: the finalized-checkpoint ancestor of every block, via its parent.
-2. Scatter: each latest message of an active, unslashed, non-equivocating validator
-   adds its balance to `get_supported_node`.
+2. Vote totals: each latest message of an active, unslashed, non-equivocating
+   validator counts its balance on `get_supported_node`. The totals persist; a run
+   moves only the votes of validators whose message changed or who equivocated since
+   the last run. New justified balances and `prune`, which renumbers nodes, recount
+   every vote.
 3. Reverse pass: each block applies the leaf viability rule, then hands its weight and
    viability to the parent node it hangs from. A message supports exactly the nodes on
    the path from its supported node to the justified root, which is what this

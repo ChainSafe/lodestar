@@ -577,6 +577,7 @@ pub const Store = struct {
         self.justified_vote_increments = vote_increments;
         self.justified_total_balance = total * preset.EFFECTIVE_BALANCE_INCREMENT;
         self.head_cache.dirty = true;
+        self.head_cache.rescan_votes = true;
     }
 
     /// Spec `calculate_committee_fraction` over the justified checkpoint state.
@@ -855,7 +856,7 @@ pub const Store = struct {
             (if (self.config.forkSeq(message.slot).gte(.gloas)) message.slot > current.slot else computeEpochAtSlot(message.slot) > computeEpochAtSlot(current.slot));
         if (newer) {
             current.* = message;
-            self.head_cache.dirty = true;
+            self.head_cache.markVoteChanged(index);
         }
     }
 
@@ -916,6 +917,7 @@ pub const Store = struct {
         while (i < indices_1.len and j < indices_2.len) {
             if (indices_1[i] == indices_2[j]) {
                 self.equivocating_indices.set(indices_1[i]);
+                self.head_cache.markVoteChanged(indices_1[i]);
                 i += 1;
                 j += 1;
             } else if (indices_1[i] < indices_2[j]) {
@@ -1223,6 +1225,7 @@ pub const Store = struct {
             }
         }
         self.head_cache.dirty = true;
+        self.head_cache.rescan_votes = true;
         return n - kept;
     }
 
