@@ -260,6 +260,49 @@ zig build run:bench_fork_choice_update_head -Doptimize=ReleaseFast
 zig build run:bench_fork_choice_on_attestation -Doptimize=ReleaseFast
 ```
 
+## Lodestar integration
+
+`--chain.nativeForkChoice` (hidden, off by default) makes the beacon node use the store
+instead of proto-array. Three layers:
+
+- `bindings/napi/ForkChoice.zig` exposes the store as the `ForkChoice` class of
+  `@lodestar/native/fork-choice`. Blocks are addressed by block index and nodes by node
+  id (`block * 3 + status`); roots cross as 32-byte arrays. The `StateProvider` is two
+  JavaScript callbacks that run synchronously inside the call that needs them.
+- `NativeForkChoice` in `packages/fork-choice` implements `IForkChoice` on that class. It
+  keeps one `ProtoBlock` per node id for the rest of the node to read and mirrors the
+  store's checkpoints into `ForkChoiceStore`, whose setters emit the chain events.
+- `initializeForkChoice` in the beacon node picks the implementation from the flag.
+
+What the store's API gained for a client, each a handler that takes facts instead of
+SSZ objects or the store's own clock: `BlockSummary.arrival_ms_into_slot` (a client
+imports later than it receives), `onAttestationData`, `onAttesterSlashingData`,
+`onPtcVotes`, `recordInclusionListSatisfaction` and `proposer_head.decide`, which
+reports why `get_proposer_head` keeps the head.
+
+Run the consensus vectors through the whole beacon node on the store with:
+
+```
+LODESTAR_NATIVE_FORK_CHOICE=true pnpm vitest run --project spec-minimal test/spec/presets/fork_choice.test.ts
+```
+
+Behaviour that differs from proto-array under the flag:
+
+- The anchor is both the justified and the finalized checkpoint, as in
+  `get_forkchoice_store`. Proto-array starts with the justified epoch one ahead.
+- Only a finalized anchor state is supported; starting from an unfinalized state throws.
+- `shouldOverrideForkChoiceUpdate` never overrides and `predictProposerHead` returns the
+  head (see Deviations).
+- `prune` drops every block that does not descend from the finalized block, not only
+  the blocks imported before it.
+- `proposerBoost: false` is rejected; the store always applies the boost.
+- Justified balances reach the store with inactive and slashed validators already
+  zeroed, which is all the beacon node's balances cache keeps. `is_head_weak` therefore
+  adds nothing back for an equivocating committee member that is slashed or inactive in
+  the justified state, where the spec adds its effective balance.
+- The fast confirmation rule is the TypeScript one, reading votes through
+  `latestMessages`.
+
 ## Deviations from the spec
 
 - `should_override_forkchoice_update` is not ported. Lodestar's TS store still has it
@@ -351,6 +394,7 @@ On macOS 27 with Zig 0.16 the C++-linking test targets need
 2. Done: execution status per payload and `onPayloadInvalid` (see Optimistic sync).
 3. Done: votes for a slot not yet past are queued in the store and applied on tick.
 4. Done: the fast confirmation rule (see Fast confirmation).
-   `should_override_forkchoice_update` is omitted on purpose (see Deviations).
-5. Run the store in shadow mode behind a flag: it receives every event, logs each
-   head mismatch against proto-array, decides nothing.
+   `should_override_forkchoice_update` is omitted on purpose (see Deviations). Lodestar
+   still runs the TypeScript rule on top of the store (see Lodestar integration).
+5. Done: the store runs in Lodestar behind `--chain.nativeForkChoice` (see Lodestar
+   integration). It decides; there is no shadow mode comparing it against proto-array.

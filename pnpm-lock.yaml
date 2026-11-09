@@ -643,6 +643,9 @@ importers:
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
+      '@lodestar/native':
+        specifier: workspace:^
+        version: link:../../bindings
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
