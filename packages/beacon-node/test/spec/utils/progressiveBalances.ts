@@ -1,5 +1,5 @@
 import {expect} from "vitest";
-import * as nativeMetrics from "@chainsafe/lodestar-z/metrics";
+import * as nativeMetrics from "@lodestar/native/metrics";
 import {
   BeaconStateTransitionMetrics,
   BeaconStateView,

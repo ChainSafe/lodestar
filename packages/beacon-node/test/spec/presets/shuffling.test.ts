@@ -1,5 +1,5 @@
 import path from "node:path";
-import {unshuffleList} from "@chainsafe/lodestar-z/shuffle";
+import {unshuffleList} from "@lodestar/native/shuffle";
 import {ACTIVE_PRESET, SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {bnToNum, fromHex} from "@lodestar/utils";

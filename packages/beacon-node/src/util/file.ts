@@ -1,25 +1,24 @@
-import fs from "node:fs";
-import {promisify} from "node:util";
+import {readFile as fsReadFile, mkdir, readdir, stat, unlink, writeFile} from "node:fs/promises";
 
 /** Ensure a directory exists */
 export async function ensureDir(path: string): Promise<void> {
   try {
-    await promisify(fs.stat)(path);
+    await stat(path);
   } catch (_) {
     // not exists
-    await promisify(fs.mkdir)(path, {recursive: true});
+    await mkdir(path, {recursive: true});
   }
 }
 
 /** Write data to a file if it does not exist */
 export async function writeIfNotExist(filepath: string, bytes: Uint8Array): Promise<boolean> {
   try {
-    await promisify(fs.stat)(filepath);
+    await stat(filepath);
     return false;
     // file exists, do nothing
   } catch (_) {
     // not exists
-    await promisify(fs.writeFile)(filepath, bytes);
+    await writeFile(filepath, bytes);
     return true;
   }
 }
@@ -27,7 +26,7 @@ export async function writeIfNotExist(filepath: string, bytes: Uint8Array): Prom
 /** Remove a file if it exists */
 export async function removeFile(path: string): Promise<boolean> {
   try {
-    await promisify(fs.unlink)(path);
+    await unlink(path);
     return true;
   } catch (_) {
     // may not exists
@@ -37,7 +36,7 @@ export async function removeFile(path: string): Promise<boolean> {
 
 export async function readFile(path: string): Promise<Uint8Array | null> {
   try {
-    return await fs.promises.readFile(path);
+    return await fsReadFile(path);
   } catch (_) {
     return null;
   }
@@ -45,7 +44,7 @@ export async function readFile(path: string): Promise<Uint8Array | null> {
 
 export async function readFileNames(folderPath: string): Promise<string[]> {
   try {
-    return await fs.promises.readdir(folderPath);
+    return await readdir(folderPath);
   } catch (_) {
     return [];
   }

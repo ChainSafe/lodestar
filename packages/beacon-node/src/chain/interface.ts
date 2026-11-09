@@ -1,7 +1,7 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {
   BeaconBlock,

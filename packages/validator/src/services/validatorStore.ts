@@ -1,8 +1,8 @@
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BuilderConfigData, BuilderEntryConfig} from "@lodestar/api/keymanager";
 import {BeaconConfig} from "@lodestar/config";
+import {SecretKey} from "@lodestar/native/blst";
 import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_APPLICATION_BUILDER,

@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,

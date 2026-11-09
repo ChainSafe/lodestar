@@ -1,10 +1,10 @@
 import tmp from "tmp";
 import {vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {ApiClient, ApiError, ApiResponse, HttpStatusCode} from "@lodestar/api";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {mapValues} from "@lodestar/utils";
 import {Signer, SignerType, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";

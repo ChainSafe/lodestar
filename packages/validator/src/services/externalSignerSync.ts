@@ -1,5 +1,5 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {ChainForkConfig} from "@lodestar/config";
+import {PublicKey} from "@lodestar/native/blst";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {externalSignerGetKeys} from "../util/externalSignerClient.js";

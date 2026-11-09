@@ -3,12 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import snappyWasm from "@chainsafe/snappy-wasm";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   ForkName,
   ForkPostDeneb,

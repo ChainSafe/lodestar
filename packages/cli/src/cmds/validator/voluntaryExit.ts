@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import inquirer from "inquirer";
-import {Signature} from "@chainsafe/lodestar-z/blst";
 import {ApiClient, getClient} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
+import {Signature} from "@lodestar/native/blst";
 import {
   computeEpochAtSlot,
   computeSigningRoot,

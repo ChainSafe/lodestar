@@ -1,7 +1,6 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {
   BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS,
@@ -12,6 +11,7 @@ import {
 import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ACTIVE_PRESET, PresetName, isForkPostGloas} from "@lodestar/params";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -224,8 +224,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({network: {private: true}, api: {private: true}});
   } else {
     const versionStr = `Lodestar/${version}`;
-    // Add version string for libp2p agent version
-    beaconNodeOptions.set({network: {version}});
+    const advertiseVersion = network !== "mainnet";
+    beaconNodeOptions.set({network: {version, advertiseVersion}});
     // Add User-Agent header to all builder requests
     beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
     // Set jwt version with version string

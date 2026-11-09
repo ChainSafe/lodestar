@@ -175,16 +175,29 @@ export async function verifyBlocksInEpoch(
     const [
       segmentExecStatus,
       {blockDAStatuses, payloadDAStatuses, availableTime},
-      {postStates, proposerBalanceDeltas, verifyStateTime},
       {verifySignaturesTime},
+      {postStates, proposerBalanceDeltas, verifyStateTime},
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
 
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
 
+      // All signatures at once. Must be called before verifyBlocksStateTransitionOnly()
+      // so we hand the BLS job to the worker pool before the main thread
+      // is busy with the state transition.
+      verifyBlocksSignatures(
+        this.config,
+        this.bls,
+        this.logger,
+        this.metrics,
+        preState0,
+        blocks,
+        indexedAttestationsByBlock,
+        opts
+      ),
+
       // Run state transition only
-      // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(
         preState0,
         blockInputs,
@@ -198,21 +211,16 @@ export async function verifyBlocksInEpoch(
         opts
       ),
 
-      // All signatures at once
-      verifyBlocksSignatures(
-        this.config,
-        this.bls,
-        this.logger,
-        this.metrics,
-        preState0,
-        blocks,
-        indexedAttestationsByBlock,
-        opts
-      ),
-
       // TODO GLOAS: can verify payload signatures in batch too
       // maybe chain with the above verifyBlocksSignatures()
     ]);
+
+    if (blockInputs.length === 1 && opts.seenTimestampSec !== undefined) {
+      const consensusVerifiedTime = Math.max(verifyStateTime, verifySignaturesTime);
+      this.metrics?.gossipBlock.receivedToConsensusVerifiedTime.observe(
+        consensusVerifiedTime / 1000 - opts.seenTimestampSec
+      );
+    }
 
     for (const blockInput of blockInputs) {
       const block = blockInput.getBlock();
