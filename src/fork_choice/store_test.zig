@@ -604,6 +604,28 @@ fn fullOf(store: *Store, tag: u8) store_mod.ForkChoiceNode {
     return .{ .block = store.blockIndex(tagRoot(tag)).?, .payload_status = .full };
 }
 
+const FailingProvider = struct {
+    fn justifiedBalances(_: *anyopaque, _: std.mem.Allocator, _: Checkpoint) anyerror!store_mod.JustifiedBalances {
+        return error.StateUnavailable;
+    }
+
+    const vtable: StateProvider.VTable = .{
+        .justifiedBalances = justifiedBalances,
+        .slotCommitteeMembers = Provider.vtable.slotCommitteeMembers,
+    };
+};
+
+test "anchor store: a provider failure during init releases everything once" {
+    const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
+    try testing.expectError(error.StateUnavailable, Store.initFromSummary(
+        testing.allocator,
+        &@import("config").minimal.config,
+        0,
+        anchor,
+        .{ .ctx = &Provider.instance, .vtable = &FailingProvider.vtable },
+    ));
+}
+
 test "optimistic sync: valid walks down to the merge boundary, invalid removes the branch" {
     const allocator = testing.allocator;
     const config = &@import("config").mainnet.config;

@@ -68,6 +68,7 @@ pub const Error = error{
     NotSlashableAttestationData,
     UnknownBlock,
     ValidatorNotInPtc,
+    InvalidPtcPosition,
     PtcMessageNotCurrentSlot,
     ProposerBoostNotWornOff,
     PayloadNotFromPreviousSlot,
@@ -207,6 +208,10 @@ pub const BlockSummary = struct {
     /// `payload_block_hash` is zero, and `.syncing` for Gloas blocks, whose payload only
     /// arrives with the envelope.
     execution_status: ExecutionStatus,
+    /// Milliseconds into the block's slot at which the block arrived, the time
+    /// `record_block_timeliness` judges. Null means the store's time, as in the spec; a
+    /// client that imports a block later than it received it passes the arrival.
+    arrival_ms_into_slot: ?u64 = null,
 
     /// `execution_status` is the engine's `newPayload` verdict; it is normalized to
     /// `.pre_merge` for blocks without a payload and `.syncing` for Gloas blocks.
@@ -361,8 +366,8 @@ pub const Store = struct {
         provider: StateProvider,
     ) !Store {
         const checkpoint: Checkpoint = .{ .epoch = computeEpochAtSlot(anchor.slot), .root = anchor.root };
-        var vote_targets = try VoteTargets.init(allocator);
-        errdefer vote_targets.deinit(allocator);
+        // Owned by `self` from here on: `self.deinit` is the only cleanup.
+        const vote_targets = try VoteTargets.init(allocator);
         var self: Store = .{
             .allocator = allocator,
             .config = config,
@@ -726,7 +731,7 @@ pub const Store = struct {
         });
         if (summary.execution_status == .valid) try self.markChainValid(parent_node);
 
-        self.recordBlockTimeliness(index);
+        self.recordBlockTimeliness(index, summary.arrival_ms_into_slot orelse self.timeIntoSlotMs());
         self.updateProposerBoostRoot(head.block, index);
         try self.updateCheckpoints(summary.justified_checkpoint, summary.finalized_checkpoint);
 
@@ -745,8 +750,7 @@ pub const Store = struct {
     }
 
     /// Spec `record_block_timeliness`.
-    fn recordBlockTimeliness(self: *Store, index: BlockIndex) void {
-        const time_into_slot_ms = self.timeIntoSlotMs();
+    fn recordBlockTimeliness(self: *Store, index: BlockIndex, time_into_slot_ms: u64) void {
         const is_current_slot = self.currentSlot() == self.blockSlot(index);
         self.blocks.items(.timely)[index] = .{
             is_current_slot and time_into_slot_ms < self.attestationDueMs(),
@@ -829,14 +833,18 @@ pub const Store = struct {
     /// spec's rejection for callers that want it.
     pub fn onAttestation(self: *Store, attestation: AnyIndexedAttestation, is_from_block: bool) !void {
         const data = attestation.attestationData();
-        try self.checkAttestationData(&data, is_from_block);
+        return self.onAttestationData(&data, attestation.attestingIndices(), is_from_block);
+    }
+
+    /// `onAttestation` from the attestation's data and its attesting indices.
+    pub fn onAttestationData(self: *Store, data: *const AttestationData, indices: []const ValidatorIndex, is_from_block: bool) !void {
+        try self.checkAttestationData(data, is_from_block);
         const block = self.blockIndex(data.beacon_block_root).?;
         const message: LatestMessage = .{
             .slot = data.slot,
             .block = block,
             .payload_present = self.config.forkSeq(data.slot).gte(.gloas) and data.index == 1,
         };
-        const indices = attestation.attestingIndices();
         const queue = self.currentSlot() < data.slot + 1;
         try self.ensureValidatorSlots(&self.latest_votes, indices);
         if (queue) try self.ensureValidatorSlots(&self.queued_votes, indices);
@@ -921,9 +929,19 @@ pub const Store = struct {
         const data_1, const data_2 = switch (slashing) {
             inline else => |s| .{ &s.attestation_1.data, &s.attestation_2.data },
         };
+        return self.onAttesterSlashingData(data_1, slashing.attestingIndices1(), data_2, slashing.attestingIndices2());
+    }
+
+    /// `onAttesterSlashing` from the two attestations' data and their attesting indices,
+    /// each sorted ascending as `is_valid_indexed_attestation` requires.
+    pub fn onAttesterSlashingData(
+        self: *Store,
+        data_1: *const AttestationData,
+        indices_1: []const ValidatorIndex,
+        data_2: *const AttestationData,
+        indices_2: []const ValidatorIndex,
+    ) !void {
         if (!isSlashableAttestationData(data_1, data_2)) return error.NotSlashableAttestationData;
-        const indices_1 = slashing.attestingIndices1();
-        const indices_2 = slashing.attestingIndices2();
         var max_index: usize = 0;
         for (indices_1) |index| max_index = @max(max_index, index);
         if (max_index >= self.equivocating_indices.bit_length) {
@@ -989,11 +1007,46 @@ pub const Store = struct {
         try self.validatePayloadAttestationMessage(data, validator_index, ptc, is_from_block, &positions);
         if (positions.len == 0) return;
         const block = self.blockIndex(data.beacon_block_root).?;
+        self.setPtcVotes(block, positions.slice(), data.payload_present, data.blob_data_available);
+    }
+
+    /// Spec `notify_ptc_messages` for one payload attestation the caller already indexed:
+    /// `positions` are the PTC positions of its set aggregation bits. Does nothing when
+    /// the attestation is for another slot than the block's.
+    pub fn onPtcVotes(
+        self: *Store,
+        beacon_block_root: Root,
+        slot: Slot,
+        positions: []const u16,
+        payload_present: bool,
+        blob_data_available: bool,
+    ) Error!void {
+        const block = self.blockIndex(beacon_block_root) orelse return error.UnknownBlock;
+        if (slot != self.blockSlot(block)) return;
+        for (positions) |position| {
+            if (position >= preset.PTC_SIZE) return error.InvalidPtcPosition;
+        }
+        self.setPtcVotes(block, positions, payload_present, blob_data_available);
+    }
+
+    fn setPtcVotes(self: *Store, block: BlockIndex, positions: []const u16, payload_present: bool, blob_data_available: bool) void {
         const votes = &self.ptc_votes.items[block];
-        for (positions.slice()) |position| {
-            votes[position] = .{ .voted = true, .payload_present = data.payload_present, .blob_data_available = data.blob_data_available };
+        for (positions) |position| {
+            votes[position] = .{ .voted = true, .payload_present = payload_present, .blob_data_available = blob_data_available };
         }
         self.head_cache.dirty = true;
+    }
+
+    /// Records the engine's inclusion list verdict on the payload of `block` outside
+    /// `onExecutionPayloadEnvelope`, for an engine that reports it separately. Returns
+    /// whether the verdict changed.
+    pub fn recordInclusionListSatisfaction(self: *Store, block: BlockIndex, satisfied: bool) bool {
+        const verdict: InclusionListSatisfaction = if (satisfied) .satisfied else .unsatisfied;
+        const current = &self.blocks.items(.inclusion_list_satisfaction)[block];
+        if (current.* == verdict) return false;
+        current.* = verdict;
+        self.head_cache.dirty = true;
+        return true;
     }
 
     /// Spec `on_execution_payload_envelope` after the caller verified the envelope and
