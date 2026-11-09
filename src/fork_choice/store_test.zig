@@ -318,6 +318,46 @@ test "summary-only chain: blocks are viable and the tip is the head" {
     try testing.expectEqual(@as(u64, 63), store.blockSlot(head.block));
 }
 
+/// Balances that change with the checkpoint epoch: increments vary, some validators
+/// drop to zero and return, and the list alternately shrinks and grows.
+const VaryingProvider = struct {
+    fn justifiedBalances(_: *anyopaque, allocator: std.mem.Allocator, checkpoint: Checkpoint) anyerror!JustifiedBalances {
+        const count = validator_count - 4 + (checkpoint.epoch % 2) * 8;
+        const increments = try allocator.alloc(u16, count);
+        errdefer allocator.free(increments);
+        for (increments, 0..) |*increment, i| increment.* = 32 - @as(u16, @intFromBool(i % 8 == checkpoint.epoch % 8));
+        var active = try std.DynamicBitSetUnmanaged.initFull(allocator, count);
+        errdefer active.deinit(allocator);
+        for (0..count) |i| {
+            if ((i + checkpoint.epoch) % 13 == 0) active.unset(i);
+        }
+        return .{ .effective_balance_increments = increments, .active_unslashed = active };
+    }
+
+    const vtable: StateProvider.VTable = .{
+        .justifiedBalances = justifiedBalances,
+        .slotCommitteeMembers = Provider.slotCommitteeMembers,
+    };
+};
+
+/// Compares the incremental totals with a full recount, then puts the incremental state
+/// back so a wrong count keeps showing in later rounds.
+fn expectVoteWeightsMatchRecount(store: *Store) !void {
+    const cache = &store.head_cache;
+    _ = try store.getHead();
+    const weights = try testing.allocator.dupe(u64, cache.vote_weight.items);
+    defer testing.allocator.free(weights);
+    const applied = try testing.allocator.dupe(u32, cache.applied_votes.items);
+    defer testing.allocator.free(applied);
+    cache.rescan_votes = true;
+    cache.dirty = true;
+    _ = try store.getHead();
+    try testing.expectEqualSlices(u64, cache.vote_weight.items, weights);
+    try testing.expectEqualSlices(u32, cache.applied_votes.items, applied);
+    @memcpy(cache.vote_weight.items, weights);
+    @memcpy(cache.applied_votes.items, applied);
+}
+
 test "vote weights: incremental updates match a full recount" {
     const allocator = testing.allocator;
     const config = &@import("config").mainnet.config;
@@ -337,20 +377,19 @@ test "vote weights: incremental updates match a full recount" {
         .unrealized_justified_checkpoint = genesis,
         .unrealized_finalized_checkpoint = genesis,
         .execution_status = .pre_merge,
-    }, Provider.stateProvider());
+    }, .{ .ctx = &Provider.instance, .vtable = &VaryingProvider.vtable });
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(6 * preset.SLOTS_PER_EPOCH));
+    try store.onTick(store.timing.timeAtSlotMs(7 * preset.SLOTS_PER_EPOCH));
 
     var prng = std.Random.DefaultPrng.init(0x5eed);
     const random = prng.random();
     var tips = [2][32]u8{ anchor_root, anchor_root };
-    var expected: std.ArrayList(u64) = .empty;
-    defer expected.deinit(allocator);
-    for (0..4) |epoch| {
-        // Each round grows both branches by an epoch, so new nodes appear between runs.
+    var branches: usize = 2;
+    for (0..6) |epoch| {
+        // Each round grows the branches by an epoch, so new nodes appear between runs.
         for (0..preset.SLOTS_PER_EPOCH) |offset| {
             const slot = epoch * preset.SLOTS_PER_EPOCH + offset + 1;
-            for (&tips, 0..) |*tip, branch| {
+            for (tips[0..branches], 0..) |*tip, branch| {
                 var root: [32]u8 = anchor_root;
                 std.mem.writeInt(u64, root[0..8], slot, .little);
                 root[8] = @intCast(branch + 1);
@@ -374,7 +413,7 @@ test "vote weights: incremental updates match a full recount" {
         for (0..validator_count) |validator| {
             // A quarter of the validators vote per round, below the full recount threshold.
             if (random.uintLessThan(u8, 4) != 0) continue;
-            var block = store.blockIndex(tips[random.uintLessThan(usize, 2)]).?;
+            var block = store.blockIndex(tips[random.uintLessThan(usize, branches)]).?;
             for (0..1 + random.uintLessThan(usize, preset.SLOTS_PER_EPOCH)) |_| block = store.blocks.items(.parent)[block];
             const target_block = store.getCheckpointBlock(block, epoch);
             const target: Checkpoint = .{ .epoch = epoch, .root = store.blockRoot(target_block) };
@@ -389,13 +428,26 @@ test "vote weights: incremental updates match a full recount" {
                 try store.onAttesterSlashing(.{ .electra = &slashing });
             }
         }
-        _ = try store.getHead();
-        expected.clearRetainingCapacity();
-        try expected.appendSlice(allocator, store.head_cache.vote_weight.items);
-        store.head_cache.rescan_votes = true;
-        store.head_cache.dirty = true;
-        _ = try store.getHead();
-        try testing.expectEqualSlices(u64, expected.items, store.head_cache.vote_weight.items);
+        try expectVoteWeightsMatchRecount(&store);
+
+        // A new justified checkpoint installs different balances.
+        const justified_root = if (branches == 2) anchor_root else store.blockRoot(0);
+        try store.updateCheckpoints(.{ .epoch = epoch + 1, .root = justified_root }, store.finalized_checkpoint);
+        // Below the full recount threshold, so the balance diff itself is checked.
+        try testing.expect(store.head_cache.changed_votes.count() * 2 <= store.head_cache.applied_votes.items.len);
+        try expectVoteWeightsMatchRecount(&store);
+
+        // Finalizing the first branch at epoch 1 drops the second branch and its votes.
+        if (epoch == 2) {
+            var finalized_root: [32]u8 = anchor_root;
+            std.mem.writeInt(u64, finalized_root[0..8], preset.SLOTS_PER_EPOCH, .little);
+            finalized_root[8] = 1;
+            const finalized: Checkpoint = .{ .epoch = 1, .root = finalized_root };
+            try store.updateCheckpoints(.{ .epoch = epoch + 2, .root = finalized_root }, finalized);
+            try testing.expect(try store.prune() > 0);
+            branches = 1;
+            try expectVoteWeightsMatchRecount(&store);
+        }
     }
 }
 

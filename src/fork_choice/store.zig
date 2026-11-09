@@ -571,13 +571,13 @@ pub const Store = struct {
             out.* = if (active) increment else 0;
             total += out.*;
         }
+        self.head_cache.applyBalanceChange(self.justified_vote_increments, vote_increments);
         self.justified_balances.deinit(self.allocator);
         self.allocator.free(self.justified_vote_increments);
         self.justified_balances = balances;
         self.justified_vote_increments = vote_increments;
         self.justified_total_balance = total * preset.EFFECTIVE_BALANCE_INCREMENT;
         self.head_cache.dirty = true;
-        self.head_cache.rescan_votes = true;
     }
 
     /// Spec `calculate_committee_fraction` over the justified checkpoint state.
@@ -1190,19 +1190,22 @@ pub const Store = struct {
         if (finalized == 0) return 0;
         try head_mod.ensureComputed(self);
         const n = self.blocks.len;
-        const remap = try self.allocator.alloc(BlockIndex, n);
+        // One extra slot maps `NO_BLOCK`, so the per-validator pass needs no branch.
+        const remap = try self.allocator.alloc(BlockIndex, n + 1);
         defer self.allocator.free(remap);
+        remap[n] = NO_BLOCK;
         const parents = self.blocks.items(.parent);
-        if (parents[finalized] != NO_BLOCK) {
-            const hung_from: ForkChoiceNode = .{ .block = parents[finalized], .payload_status = self.blocks.items(.parent_payload_status)[finalized] };
-            self.root_base_status = self.head_cache.execution.items[head_mod.nodeId(hung_from)];
-        }
         var kept: BlockIndex = 0;
         for (0..n) |i| {
             const parent = parents[i];
             const keep = i == finalized or (parent != NO_BLOCK and i > finalized and remap[parent] != NO_BLOCK);
             remap[i] = if (keep) kept else NO_BLOCK;
             if (keep) kept += 1;
+        }
+        try self.head_cache.remapVotes(self.allocator, remap[0..n], kept);
+        if (parents[finalized] != NO_BLOCK) {
+            const hung_from: ForkChoiceNode = .{ .block = parents[finalized], .payload_status = self.blocks.items(.parent_payload_status)[finalized] };
+            self.root_base_status = self.head_cache.execution.items[head_mod.nodeId(hung_from)];
         }
         for (0..n) |i| {
             const target = remap[i];
@@ -1219,13 +1222,9 @@ pub const Store = struct {
             self.index_by_root.putAssumeCapacityNoClobber(root, @intCast(i));
         }
         for ([_][]LatestMessage{ self.latest_messages.items, self.queued_messages.items }) |messages| {
-            for (messages) |*message| {
-                if (message.isNone() or message.block == NO_BLOCK) continue;
-                message.block = remap[message.block];
-            }
+            for (messages) |*message| message.block = remap[@min(message.block, n)];
         }
         self.head_cache.dirty = true;
-        self.head_cache.rescan_votes = true;
         return n - kept;
     }
 
