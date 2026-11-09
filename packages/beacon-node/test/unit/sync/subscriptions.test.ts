@@ -1,3 +1,4 @@
+import {setImmediate as yieldToIO} from "node:timers/promises";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
@@ -59,7 +60,7 @@ function fixture() {
       applied = item.target;
       item.completion.resolve();
     }
-    await Promise.resolve();
+    await yieldToIO();
   };
   return {sync, update, complete, pending, network, logger: chain.logger};
 }
@@ -67,40 +68,88 @@ function fixture() {
 describe("sync gossip subscriptions", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("requests unsubscribe when sync falls behind during a pending subscribe", async () => {
+  it("applies an unsubscribe requested during a pending subscribe after it completes", async () => {
     const node = fixture();
     try {
       node.update(true);
       node.update(true);
       node.update(false);
-      expect(node.pending.map(({target}) => target)).toEqual([true, false]);
+      expect(node.pending.map(({target}) => target)).toEqual([true]);
       await node.complete(0);
-      expect(node.logger.info).not.toHaveBeenCalledWith("Subscribed gossip core topics");
+      expect(node.pending.map(({target}) => target)).toEqual([true, false]);
       await node.complete(1);
       expect(node.network.isSubscribedToGossipCoreTopics()).toBe(false);
-      expect(node.logger.info).toHaveBeenCalledExactlyOnceWith("Un-subscribed gossip core topics");
+      expect(node.logger.info).toHaveBeenLastCalledWith("Un-subscribed gossip core topics");
     } finally {
       node.sync.close();
     }
   });
 
-  it("ignores superseded completions and retries the current target after failure", async () => {
+  it("resubscribes when sync recovers during a pending unsubscribe", async () => {
+    const node = fixture();
+    try {
+      node.update(true);
+      await node.complete(0);
+      node.update(false);
+      node.update(true);
+      expect(node.pending.map(({target}) => target)).toEqual([true, false]);
+      await node.complete(1);
+      expect(node.pending.map(({target}) => target)).toEqual([true, false, true]);
+      await node.complete(2);
+      expect(node.network.isSubscribedToGossipCoreTopics()).toBe(true);
+      expect(node.logger.info).toHaveBeenLastCalledWith("Subscribed gossip core topics");
+    } finally {
+      node.sync.close();
+    }
+  });
+
+  it("skips a request that the pending one already satisfies", async () => {
     const node = fixture();
     try {
       node.update(true);
       node.update(false);
       node.update(true);
-      expect(node.pending.map(({target}) => target)).toEqual([true, false, true]);
       await node.complete(0);
-      await node.complete(1);
-      expect(node.logger.info).not.toHaveBeenCalled();
-      const failure = new Error("subscription failed");
-      await node.complete(2, failure);
-      expect(node.logger.error).toHaveBeenCalledExactlyOnceWith("Error subscribing to gossip core topics", {}, failure);
-      node.update(true);
-      expect(node.pending).toHaveLength(4);
-      await node.complete(3);
+      expect(node.pending).toHaveLength(1);
       expect(node.logger.info).toHaveBeenCalledExactlyOnceWith("Subscribed gossip core topics");
+    } finally {
+      node.sync.close();
+    }
+  });
+
+  it("retries the same target on the next update after a failure", async () => {
+    const node = fixture();
+    try {
+      node.update(true);
+      const failure = new Error("subscription failed");
+      await node.complete(0, failure);
+      expect(node.logger.error).toHaveBeenCalledExactlyOnceWith("Error subscribing to gossip core topics", {}, failure);
+      expect(node.pending).toHaveLength(1);
+      node.update(true);
+      expect(node.pending).toHaveLength(2);
+      await node.complete(1);
+      expect(node.logger.info).toHaveBeenCalledExactlyOnceWith("Subscribed gossip core topics");
+    } finally {
+      node.sync.close();
+    }
+  });
+
+  it("applies the latest target after a superseded request fails", async () => {
+    const node = fixture();
+    try {
+      node.update(true);
+      await node.complete(0);
+      node.update(false);
+      node.update(true);
+      const failure = new Error("unsubscribe failed");
+      await node.complete(1, failure);
+      expect(node.logger.error).toHaveBeenCalledExactlyOnceWith(
+        "Error unsubscribing to gossip core topics",
+        {},
+        failure
+      );
+      expect(node.pending).toHaveLength(2);
+      expect(node.network.isSubscribedToGossipCoreTopics()).toBe(true);
     } finally {
       node.sync.close();
     }

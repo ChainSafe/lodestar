@@ -33,7 +33,8 @@ export class BeaconSync implements IBeaconSync {
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
   private readonly slotImportTolerance: Slot;
-  private gossipSubscription: {target: boolean} | undefined;
+  /** Set while a subscription change is being applied */
+  private gossipSubscriptionTarget: boolean | undefined;
 
   constructor(opts: SyncOptions, modules: SyncModules) {
     const {config, chain, db, metrics, network, logger} = modules;
@@ -90,7 +91,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   close(): void {
-    this.gossipSubscription = undefined;
+    this.gossipSubscriptionTarget = undefined;
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
@@ -328,29 +329,40 @@ export class BeaconSync implements IBeaconSync {
   };
 
   private setGossipSubscription(target: boolean): boolean {
-    if ((this.gossipSubscription?.target ?? this.network.isSubscribedToGossipCoreTopics()) === target) return false;
-    const request = {target};
-    this.gossipSubscription = request;
-    const applying = target ? this.network.subscribeGossipCoreTopics() : this.network.unsubscribeGossipCoreTopics();
-    void applying.then(
-      () => {
-        if (this.gossipSubscription !== request) return;
-        this.gossipSubscription = undefined;
-        if (this.network.isSubscribedToGossipCoreTopics() !== target) return;
-        this.metrics?.syncSwitchGossipSubscriptions.inc({action: target ? "subscribed" : "unsubscribed"});
-        this.logger.info(target ? "Subscribed gossip core topics" : "Un-subscribed gossip core topics");
-      },
-      (error: unknown) => {
-        if (this.gossipSubscription !== request) return;
-        this.gossipSubscription = undefined;
+    if ((this.gossipSubscriptionTarget ?? this.network.isSubscribedToGossipCoreTopics()) === target) return false;
+    const applying = this.gossipSubscriptionTarget !== undefined;
+    this.gossipSubscriptionTarget = target;
+    if (!applying) void this.applyGossipSubscription();
+    return true;
+  }
+
+  /**
+   * Applies the latest target one request at a time. Network skips a subscribe issued while an unsubscribe is
+   * in flight, so opposite requests must not overlap.
+   */
+  private async applyGossipSubscription(): Promise<void> {
+    for (;;) {
+      const target = this.gossipSubscriptionTarget;
+      if (target === undefined || target === this.network.isSubscribedToGossipCoreTopics()) break;
+      try {
+        await (target ? this.network.subscribeGossipCoreTopics() : this.network.unsubscribeGossipCoreTopics());
+      } catch (e) {
         this.logger.error(
           target ? "Error subscribing to gossip core topics" : "Error unsubscribing to gossip core topics",
           {},
-          error as Error
+          e as Error
         );
+        // Leave a retry of the same target to the next sync state update
+        if (this.gossipSubscriptionTarget === target) break;
+        continue;
       }
-    );
-    return true;
+      if (this.gossipSubscriptionTarget === undefined || this.network.isSubscribedToGossipCoreTopics() !== target) {
+        break;
+      }
+      this.metrics?.syncSwitchGossipSubscriptions.inc({action: target ? "subscribed" : "unsubscribed"});
+      this.logger.info(target ? "Subscribed gossip core topics" : "Un-subscribed gossip core topics");
+    }
+    this.gossipSubscriptionTarget = undefined;
   }
 
   private onClockEpoch = (): void => {
