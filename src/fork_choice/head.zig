@@ -74,6 +74,8 @@ pub const Cache = struct {
     applied_votes: std.ArrayList(TargetId) = .empty,
     /// Validators below `applied_votes.items.len` whose message or weight changed since the last run.
     changed_votes: std.DynamicBitSetUnmanaged = .{},
+    /// Set bits in `changed_votes`, so a run with no changes skips scanning it.
+    changed_count: usize = 0,
     rescan_votes: bool = true,
     apply_proposer_boost: bool = false,
     proposer_score: u64 = 0,
@@ -141,7 +143,10 @@ pub const Cache = struct {
 
     /// Validators past the end of `applied_votes` are counted as new on the next run.
     pub fn markVoteChanged(self: *Cache, validator_index: usize) void {
-        if (validator_index < self.changed_votes.bit_length) self.changed_votes.set(validator_index);
+        if (validator_index < self.changed_votes.bit_length and !self.changed_votes.isSet(validator_index)) {
+            self.changed_votes.set(validator_index);
+            self.changed_count += 1;
+        }
         self.dirty = true;
     }
 };
@@ -311,11 +316,12 @@ fn updateVoteWeights(store: *Store, node_count: usize) !void {
     try cache.applied_votes.ensureTotalCapacity(allocator, validator_count);
     try cache.changed_votes.resize(allocator, validator_count, false);
     // Moving a vote costs about twice counting one, so past half the validators a recount is cheaper.
-    if (cache.changed_votes.count() * 2 > cache.applied_votes.items.len) cache.rescan_votes = true;
+    if (cache.changed_count * 2 > cache.applied_votes.items.len) cache.rescan_votes = true;
     if (cache.rescan_votes) {
         cache.vote_weight.clearRetainingCapacity();
         cache.applied_votes.clearRetainingCapacity();
-        cache.changed_votes.unsetAll();
+        if (cache.changed_count > 0) cache.changed_votes.unsetAll();
+        cache.changed_count = 0;
         cache.rescan_votes = false;
     }
     cache.vote_weight.appendNTimesAssumeCapacity(0, node_count - cache.vote_weight.items.len);
@@ -323,7 +329,9 @@ fn updateVoteWeights(store: *Store, node_count: usize) !void {
 
     const applied_count = cache.applied_votes.items.len;
     var changed = cache.changed_votes.iterator(.{});
-    while (changed.next()) |validator_index| {
+    // The scan stops at the last changed validator.
+    for (0..cache.changed_count) |_| {
+        const validator_index = changed.next().?;
         const applied = &cache.applied_votes.items[validator_index];
         const counted = countedTarget(store, validator_index);
         if (counted == applied.*) continue;
@@ -335,7 +343,8 @@ fn updateVoteWeights(store: *Store, node_count: usize) !void {
         if (to != NO_NODE) vote_weight[to] += message_weight;
         applied.* = counted;
     }
-    cache.changed_votes.unsetAll();
+    if (cache.changed_count > 0) cache.changed_votes.unsetAll();
+    cache.changed_count = 0;
 
     const applied = cache.applied_votes.addManyAsSliceAssumeCapacity(validator_count - applied_count);
     for (store.latest_votes.items[applied_count..], applied, applied_count..) |id, *counted, validator_index| {

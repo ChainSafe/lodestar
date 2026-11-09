@@ -346,8 +346,13 @@ const VaryingProvider = struct {
 fn expectVoteWeightsMatchRecount(store: *Store) !void {
     const cache = &store.head_cache;
     _ = try store.getHead();
+    try testing.expectEqual(@as(usize, 0), cache.changed_count);
     const weights = try testing.allocator.dupe(u64, cache.vote_weight.items);
     defer testing.allocator.free(weights);
+    // A run with no changes leaves the totals as they are.
+    cache.dirty = true;
+    _ = try store.getHead();
+    try testing.expectEqualSlices(u64, weights, cache.vote_weight.items);
     const applied = try testing.allocator.dupe(u32, cache.applied_votes.items);
     defer testing.allocator.free(applied);
     cache.rescan_votes = true;
@@ -440,7 +445,8 @@ test "vote weights: incremental updates match a full recount" {
         const justified_root = if (branches == 2) anchor_root else store.blockRoot(0);
         try store.updateCheckpoints(.{ .epoch = epoch + 1, .root = justified_root }, store.finalized_checkpoint);
         // Below the full recount threshold, so the balance diff itself is checked.
-        try testing.expect(store.head_cache.changed_votes.count() * 2 <= store.head_cache.applied_votes.items.len);
+        try testing.expect(store.head_cache.changed_count * 2 <= store.head_cache.applied_votes.items.len);
+        try testing.expectEqual(store.head_cache.changed_votes.count(), store.head_cache.changed_count);
         try expectVoteWeightsMatchRecount(&store);
 
         // Finalizing the first branch at epoch 1 drops the second branch and its votes.
