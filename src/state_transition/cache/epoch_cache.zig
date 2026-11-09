@@ -775,6 +775,7 @@ pub const EpochCache = struct {
         attestation: *const ForkTypes(fork).Attestation.Type,
     ) !std.ArrayList(ValidatorIndex) {
         const bit_len = attestation.aggregation_bits.bit_len;
+
         var indices = try std.ArrayList(ValidatorIndex).initCapacity(allocator, bit_len);
         errdefer indices.deinit(allocator);
 
@@ -802,7 +803,8 @@ pub const EpochCache = struct {
             break :blk committees_buffer[0..1];
         } else blk: {
             // There is a naming conflict on the term `committeeIndices`
-            // In Lodestar it usually means a list of validator indices of participants in a committee
+            // In Lodestar it usually means a list of validator indices of
+            // participants in a committee
             // In the spec it means a list of committee indices according to committeeBits
             // This `committeeIndices` refers to the latter
             // TODO Electra: resolve the naming conflicts
