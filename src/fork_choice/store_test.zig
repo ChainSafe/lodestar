@@ -630,6 +630,46 @@ test "anchor store: a provider failure during init releases everything once" {
     ));
 }
 
+const FlakyProvider = struct {
+    fail: bool = false,
+    count: usize = validator_count,
+
+    fn justifiedBalances(ctx: *anyopaque, allocator: std.mem.Allocator, _: Checkpoint) anyerror!JustifiedBalances {
+        const self: *FlakyProvider = @ptrCast(@alignCast(ctx));
+        if (self.fail) return error.StateUnavailable;
+        const increments = try allocator.alloc(u16, self.count);
+        errdefer allocator.free(increments);
+        @memset(increments, 32);
+        var active = try std.DynamicBitSetUnmanaged.initFull(allocator, self.count);
+        errdefer active.deinit(allocator);
+        return .{ .effective_balance_increments = increments, .active_unslashed = active };
+    }
+
+    const vtable: StateProvider.VTable = .{
+        .justifiedBalances = justifiedBalances,
+        .slotCommitteeMembers = Provider.vtable.slotCommitteeMembers,
+    };
+};
+
+test "checkpoints: a provider failure keeps the old justified checkpoint so a retry reloads balances" {
+    var provider: FlakyProvider = .{};
+    const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
+    var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, .{ .ctx = &provider, .vtable = &FlakyProvider.vtable });
+    defer store.deinit();
+    const previous = store.justified_checkpoint;
+    const justified: Checkpoint = .{ .epoch = previous.epoch + 1, .root = tagRoot(1) };
+
+    provider.fail = true;
+    try testing.expectError(error.StateUnavailable, store.updateCheckpoints(justified, store.finalized_checkpoint));
+    try testing.expectEqual(previous, store.justified_checkpoint);
+
+    provider.fail = false;
+    provider.count = validator_count + 4;
+    try store.updateCheckpoints(justified, store.finalized_checkpoint);
+    try testing.expectEqual(justified, store.justified_checkpoint);
+    try testing.expectEqual(validator_count + 4, store.justified_vote_increments.len);
+}
+
 test "optimistic sync: valid walks down to the merge boundary, invalid removes the branch" {
     const allocator = testing.allocator;
     const config = &@import("config").mainnet.config;

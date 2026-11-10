@@ -414,7 +414,7 @@ pub const Store = struct {
             .payload_verified = false,
             .inclusion_list_satisfaction = .unknown,
         });
-        try self.refreshJustifiedBalances();
+        try self.refreshJustifiedBalances(self.justified_checkpoint);
         return self;
     }
 
@@ -554,9 +554,8 @@ pub const Store = struct {
     /// Spec `update_checkpoints`.
     pub fn updateCheckpoints(self: *Store, justified: Checkpoint, finalized: Checkpoint) !void {
         if (justified.epoch > self.justified_checkpoint.epoch) {
+            try self.refreshJustifiedBalances(justified);
             self.justified_checkpoint = justified;
-            self.head_cache.dirty = true;
-            try self.refreshJustifiedBalances();
         }
         if (finalized.epoch > self.finalized_checkpoint.epoch) {
             self.finalized_checkpoint = finalized;
@@ -574,8 +573,8 @@ pub const Store = struct {
         }
     }
 
-    fn refreshJustifiedBalances(self: *Store) !void {
-        var balances = try self.provider.justifiedBalances(self.allocator, self.justified_checkpoint);
+    fn refreshJustifiedBalances(self: *Store, checkpoint: Checkpoint) !void {
+        var balances = try self.provider.justifiedBalances(self.allocator, checkpoint);
         errdefer balances.deinit(self.allocator);
         const increments = balances.effective_balance_increments;
         const vote_increments = try self.allocator.alloc(u16, increments.len);
