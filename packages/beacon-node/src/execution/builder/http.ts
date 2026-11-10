@@ -1,4 +1,4 @@
-import {WireFormat} from "@lodestar/api";
+import {ApiRequestInit, WireFormat} from "@lodestar/api";
 import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
@@ -18,8 +18,9 @@ import {
   deneb,
   electra,
 } from "@lodestar/types";
-import {toPrintableUrl} from "@lodestar/utils";
+import {TimeoutError, toPrintableUrl} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {IClock} from "../../util/clock.js";
 import {DEFAULT_BUILDER_BID_DEADLINE_MS} from "./apiClient.js";
 import {ValidatorRegistration, ValidatorRegistrationCache} from "./cache.js";
 import {IExecutionBuilder} from "./interface.js";
@@ -118,6 +119,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly config: ChainForkConfig;
   readonly registrations: ValidatorRegistrationCache;
   readonly issueLocalFcUWithFeeRecipient?: string;
+  private readonly clock: IClock;
+  private readonly timeoutMs: number;
   // Builder needs to be explicity enabled using updateStatus
   status = BuilderStatus.disabled;
   faultInspectionWindow: number;
@@ -133,6 +136,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   constructor(
     opts: ExecutionBuilderHttpOpts,
     config: ChainForkConfig,
+    clock: IClock,
     metrics: Metrics | null = null,
     logger?: Logger
   ) {
@@ -150,6 +154,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     );
     logger?.info("External builder", {url: toPrintableUrl(baseUrl)});
     this.config = config;
+    this.clock = clock;
+    this.timeoutMs = opts.timeout ?? Infinity;
     this.registrations = new ValidatorRegistrationCache();
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
@@ -219,9 +225,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   async submitBlindedBlock(
     signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
   ): Promise<SignedBlockContents> {
-    const res = await this.api.submitBlindedBlock(
-      {signedBlindedBlock},
-      {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
+    const res = await this.submitBeforeSlotEnd(signedBlindedBlock.data.message.slot, (init) =>
+      this.api.submitBlindedBlock({signedBlindedBlock}, init)
     );
 
     const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(res.value());
@@ -237,10 +242,30 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
 
   async submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void> {
     (
-      await this.api.submitBlindedBlockV2(
-        {signedBlindedBlock},
-        {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
+      await this.submitBeforeSlotEnd(signedBlindedBlock.data.message.slot, (init) =>
+        this.api.submitBlindedBlockV2({signedBlindedBlock}, init)
       )
     ).assertOk();
+  }
+
+  /**
+   * A block submitted after its slot has ended can no longer be timely, so attempts and retries stop at the slot end
+   */
+  private async submitBeforeSlotEnd<T>(slot: Slot, submit: (init: ApiRequestInit) => Promise<T>): Promise<T> {
+    const msUntilSlotEnd = Math.max(0, -this.clock.msFromSlot(slot + 1));
+    const signal = AbortSignal.timeout(msUntilSlotEnd);
+    try {
+      return await submit({
+        retries: 2,
+        timeoutMs: Math.min(this.timeoutMs, msUntilSlotEnd),
+        signal,
+        requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json,
+      });
+    } catch (e) {
+      if (signal.aborted) {
+        throw new TimeoutError(`submitting blinded block of slot ${slot} before the slot ended`);
+      }
+      throw e;
+    }
   }
 }
