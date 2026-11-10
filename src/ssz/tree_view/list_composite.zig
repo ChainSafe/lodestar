@@ -259,10 +259,7 @@ pub fn ListCompositeTreeView(comptime ST: type) type {
                 const node = try self.depth_iterator.next();
                 // Variable-size elements: toValue reads `out` (it resizes embedded ArrayLists),
                 // so initialize it before the call.
-                var value: ST.Element.Type = if (comptime @hasDecl(ST.Element, "default_value"))
-                    ST.Element.default_value
-                else
-                    std.mem.zeroes(ST.Element.Type);
+                var value = ST.Element.init;
                 errdefer if (comptime @hasDecl(ST.Element, "deinit")) {
                     ST.Element.deinit(allocator, &value);
                 };
