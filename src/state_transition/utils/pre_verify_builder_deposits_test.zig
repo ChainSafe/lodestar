@@ -162,7 +162,9 @@ test "deposit preverify resumes bounded work and warms validator prefixes across
     defer pool.deinit(std.testing.io);
 
     const first = try preVerify(std.testing.io, pool, state, 7, 60_000);
-    try std.testing.expectEqual(@as(usize, 7), first.invalid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 0), first.invalid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 1), first.valid_builder_signatures_count);
+    try std.testing.expectEqual(@as(usize, 1), first.valid_validator_signatures_count);
     const clone = try state.clone(allocator, .{});
     defer {
         clone.deinit();
@@ -172,9 +174,9 @@ test "deposit preverify resumes bounded work and warms validator prefixes across
     const second = try preVerify(std.testing.io, pool, clone, 10_000, 0);
     try std.testing.expectEqual(@as(usize, 32), second.invalid_validator_signatures_count);
     const third = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
-    try std.testing.expectEqual(@as(usize, 1), third.invalid_validator_signatures_count);
-    try std.testing.expectEqual(@as(usize, 1), third.valid_builder_signatures_count);
-    try std.testing.expectEqual(@as(usize, 1), third.valid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 8), third.invalid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 0), third.valid_builder_signatures_count);
+    try std.testing.expectEqual(@as(usize, 0), third.valid_validator_signatures_count);
     try std.testing.expectEqual(@as(usize, 42), third.total_cached_deposits);
     try std.testing.expectEqualSlices(u8, &root, try state.state.hashTreeRoot());
 
@@ -287,7 +289,7 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 4 });
     defer pool.deinit(std.testing.io);
     const result = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
-    try std.testing.expectEqual(@as(usize, 40), result.invalid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 0), result.invalid_validator_signatures_count);
     try std.testing.expectEqual(@as(usize, 1), result.valid_builder_signatures_count);
     try std.testing.expectEqual(@as(usize, 23), result.invalid_builder_signatures_count);
     try pending.pushValue(&builder);
@@ -307,10 +309,10 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     defer output.deinit();
     try metrics.write(&output.writer);
     try std.testing.expect(
-        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 1\n") != null,
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 41\n") != null,
     );
     try std.testing.expect(
-        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 41\n") != null,
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 1\n") != null,
     );
 }
 
@@ -333,8 +335,12 @@ test "deposit preverify valid validator prefix suppresses later signatures at th
     try state.state.commit();
     const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 4 });
     defer pool.deinit(std.testing.io);
-    const result = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
-    try std.testing.expectEqual(@as(usize, 32), result.total_cached_deposits);
+    const first = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 1), first.total_cached_deposits);
+    try std.testing.expectEqual(@as(usize, 0), first.valid_validator_signatures_count);
+    const second = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 33), second.total_cached_deposits);
+    try std.testing.expectEqual(@as(usize, 1), second.valid_validator_signatures_count);
     try metrics.init(allocator, std.testing.io, .{});
     defer metrics.deinit();
     const upgraded = try upgradeStateToGloas(allocator, std.testing.io, state.config, state.epoch_cache, state.state.castToFork(.fulu));
