@@ -62,7 +62,10 @@ pub fn preVerifyBuilderDepositsPreGloas(
     var resolved: std.array_hash_map.Custom([48]u8, void, PubkeyHashContext, true) = .empty;
     defer resolved.deinit(allocator);
 
-    while (result.scanned_pending_deposits < scan_limit and verified < verification_limit and cache.validity.count() < cache.capacity) {
+    while (result.scanned_pending_deposits < scan_limit and
+        verified < verification_limit and
+        cache.validity.count() < cache.capacity)
+    {
         var deposits: [batch_size]ct.electra.PendingDeposit.Type = undefined;
         var deposit_roots: [batch_size][32]u8 = undefined;
         var count: usize = 0;
