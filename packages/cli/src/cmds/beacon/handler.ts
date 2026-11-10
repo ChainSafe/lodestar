@@ -66,6 +66,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
   // forkchoice errors
   const processShutdownCallback: ProcessShutdownCallback = (err) => {
+    process.exitCode = 1;
     logger.error("Process shutdown requested", {}, err);
     process.kill(process.pid, "SIGINT");
   };
@@ -147,21 +148,21 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     abortController.signal.addEventListener(
       "abort",
       async () => {
-        let exitCode = 0;
         try {
           await node.close();
           logger.debug("Beacon node closed");
         } catch (e) {
           // If we start from unfinalized state, we don't have checkpoint state so there is this error
           // "No state in cache for finalized checkpoint state epoch"
-          logger.warn("Error closing beacon node", {}, e as Error);
-          // Make sure db is always closed gracefully
-          await db.close();
-          exitCode = 1;
+          // The logger prints only the message and stack of an AggregateError, not its causes
+          for (const error of e instanceof AggregateError ? e.errors : [e]) {
+            logger.warn("Error closing beacon node", {}, error as Error);
+          }
+          process.exitCode = 1;
         }
         savePubkeysFile(pubkeyCache, beaconPaths.pubkeysFile, logger);
         // Explicitly exit process due to potential active handles
-        process.exit(exitCode);
+        process.exit(process.exitCode ?? 0);
       },
       {once: true}
     );
