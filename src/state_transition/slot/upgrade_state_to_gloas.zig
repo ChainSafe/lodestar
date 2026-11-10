@@ -12,7 +12,7 @@ const computeEpochAtSlot = @import("../utils/epoch.zig").computeEpochAtSlot;
 const validateDepositSignature = @import("../block/process_deposit.zig").validateDepositSignature;
 const isValidatorKnown = @import("../utils/electra.zig").isValidatorKnown;
 const PubkeyHashContext = @import("../cache/pubkey_cache.zig").PubkeyHashContext;
-const BuilderDepositSignatureCache = @import("../cache/builder_deposit_signature_cache.zig").BuilderDepositSignatureCache;
+const BuilderDepositSignatureCacheRc = @import("../cache/builder_deposit_signature_cache.zig").BuilderDepositSignatureCacheRc;
 const metrics = @import("../metrics.zig");
 const time = @import("time");
 
@@ -76,7 +76,6 @@ fn migrateComposite(comptime Before: type, comptime After: type, allocator: Allo
 
 fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig, epoch_cache: *const EpochCache, state: *BeaconState(.gloas)) !void {
     const started = time.start(io);
-    const signature_cache = &epoch_cache.builder_deposit_signature_cache.instance;
     var checks: SignatureChecks = .{};
     var onboarded: u64 = 0;
     var topups: u64 = 0;
@@ -126,7 +125,7 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                     entry.unchecked_head = next[pending_index];
                     if (!try isValidCachedDeposit(
                         config,
-                        signature_cache,
+                        epoch_cache.builder_deposit_signature_cache,
                         &prior.value,
                         prior.root,
                         &checks,
@@ -138,7 +137,7 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                 if (!entry.has_pending_validator) {
                     if (!try isValidCachedDeposit(
                         config,
-                        signature_cache,
+                        epoch_cache.builder_deposit_signature_cache,
                         &deposit,
                         item.root,
                         &checks,
@@ -186,11 +185,12 @@ const SignatureChecks = struct {
 
 fn isValidCachedDeposit(
     config: *const BeaconConfig,
-    cache: *BuilderDepositSignatureCache,
+    cache_rc: *BuilderDepositSignatureCacheRc,
     deposit: *const ct.electra.PendingDeposit.Type,
     deposit_root: [32]u8,
     checks: *SignatureChecks,
 ) !bool {
+    const cache = &cache_rc.instance;
     if (cache.get(deposit_root)) |valid| {
         checks.from_cache += 1;
         return valid;
@@ -206,6 +206,11 @@ fn isValidCachedDeposit(
         error.BadEncoding, error.PointNotOnCurve, error.PointNotInGroup, error.VerifyFail, error.PkIsInfinity => false,
         else => return err,
     };
+    // Same write scope as the pre-Gloas scanner: only builder-related deposits enter the
+    // cache, so a fork transition on a cloned head reuses this result instead of re-verifying.
+    if (gloas.isBuilderWithdrawalCredential(&deposit.withdrawal_credentials) or cache.isBuilderPubkey(deposit.pubkey)) {
+        try cache.put(cache_rc.allocator, deposit_root, valid);
+    }
     return valid;
 }
 

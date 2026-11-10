@@ -12,21 +12,22 @@ pub const BuilderDepositSignatureCacheRc = RefCount(BuilderDepositSignatureCache
 /// recycled node IDs or deposit indexes. Callers must use the same GENESIS_FORK_VERSION for
 /// all cached results and lookups; PendingDeposit roots do not include the deposit signing domain.
 pub const BuilderDepositSignatureCache = struct {
-    const RootHashContext = struct {
+    const RootContext = struct {
         pubkey_context: PubkeyHashContext,
 
-        pub fn hash(self: RootHashContext, root: [32]u8) u32 {
+        pub fn hash(self: RootContext, root: [32]u8) u32 {
             return @truncate(std.hash.SipHash64(1, 3).toInt(&root, &self.pubkey_context.hash_key));
         }
 
-        pub fn eql(_: RootHashContext, lhs: [32]u8, rhs: [32]u8, _: usize) bool {
+        pub fn eql(_: RootContext, lhs: [32]u8, rhs: [32]u8, _: usize) bool {
             return std.mem.eql(u8, &lhs, &rhs);
         }
     };
 
-    validity: std.array_hash_map.Custom([32]u8, bool, RootHashContext, true) = .empty,
+    validity: std.array_hash_map.Custom([32]u8, bool, RootContext, true) = .empty,
     builder_pubkeys: std.array_hash_map.Custom([48]u8, void, PubkeyHashContext, true) = .empty,
     hash_context: PubkeyHashContext,
+    validity_context: RootContext,
     scan_cursor: usize = 0,
     capacity: usize = max_cached_deposits,
 
@@ -43,7 +44,7 @@ pub const BuilderDepositSignatureCache = struct {
     }
 
     pub fn get(self: *const BuilderDepositSignatureCache, deposit_root: [32]u8) ?bool {
-        return self.validity.getContext(deposit_root, .{ .pubkey_context = self.hash_context });
+        return self.validity.getContext(deposit_root, self.validity_context);
     }
 
     /// Only insert results from full deposit proof-of-possession verification, including
@@ -54,7 +55,7 @@ pub const BuilderDepositSignatureCache = struct {
         pending_deposit_root: [32]u8,
         valid: bool,
     ) !void {
-        const context: RootHashContext = .{ .pubkey_context = self.hash_context };
+        const context = self.validity_context;
         if (self.validity.getPtrContext(pending_deposit_root, context)) |value| {
             std.debug.assert(value.* == valid);
             return;

@@ -5,7 +5,10 @@ const CacheRc = @import("builder_deposit_signature_cache.zig").BuilderDepositSig
 
 test "deposit signature cache roots distinguish every PendingDeposit field" {
     const allocator = std.testing.allocator;
-    var cache: Cache = .{ .hash_context = .{ .hash_key = @splat(0) } };
+    var cache: Cache = .{
+        .hash_context = .{ .hash_key = @splat(0) },
+        .validity_context = .{ .pubkey_context = .{ .hash_key = @splat(0) } },
+    };
     defer cache.deinit(allocator);
 
     const deposit = PendingDeposit.default_value;
@@ -38,7 +41,11 @@ test "deposit signature cache roots distinguish every PendingDeposit field" {
 
 test "deposit signature cache bounds both maps and clear releases shared contents" {
     const allocator = std.testing.allocator;
-    const rc = try CacheRc.create(allocator, .{ .hash_context = .{ .hash_key = @splat(0) }, .capacity = 2 });
+    const rc = try CacheRc.create(allocator, .{
+        .hash_context = .{ .hash_key = @splat(0) },
+        .validity_context = .{ .pubkey_context = .{ .hash_key = @splat(0) } },
+        .capacity = 2,
+    });
     defer rc.unref();
     const shared = rc.ref();
     defer shared.unref();
@@ -61,7 +68,10 @@ test "deposit signature cache bounds both maps and clear releases shared content
 }
 
 fn insertWithAllocationFailures(allocator: std.mem.Allocator) !void {
-    const rc = try CacheRc.create(allocator, .{ .hash_context = .{ .hash_key = @splat(0) } });
+    const rc = try CacheRc.create(allocator, .{
+        .hash_context = .{ .hash_key = @splat(0) },
+        .validity_context = .{ .pubkey_context = .{ .hash_key = @splat(0) } },
+    });
     defer rc.unref();
     try rc.instance.addBuilderPubkey(allocator, @splat(0));
     try rc.instance.put(allocator, @splat(0), false);
