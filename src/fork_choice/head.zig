@@ -43,12 +43,13 @@ const NO_TARGET = vote_targets.NO_TARGET;
 
 const NO_NODE: u32 = std.math.maxInt(u32);
 
-const Flag = struct {
-    const exists: u8 = 1 << 0;
-    const viable: u8 = 1 << 1;
-    const has_children: u8 = 1 << 2;
-    const any_viable_child: u8 = 1 << 3;
-    const on_boost_chain: u8 = 1 << 4;
+const NodeFlags = packed struct(u8) {
+    exists: bool = false,
+    viable: bool = false,
+    has_children: bool = false,
+    any_viable_child: bool = false,
+    on_boost_chain: bool = false,
+    _: u3 = 0,
 };
 
 pub const ViableHead = struct {
@@ -61,7 +62,7 @@ pub const Cache = struct {
     dirty: bool = true,
     /// Spec `get_attestation_score` per node, in Gwei.
     weight: std.ArrayList(u64) = .empty,
-    flags: std.ArrayList(u8) = .empty,
+    flags: std.ArrayList(NodeFlags) = .empty,
     /// Per node: the worst engine verdict on the payloads the node stands on.
     execution: std.ArrayList(ExecutionStatus) = .empty,
     best_child: std.ArrayList(u32) = .empty,
@@ -180,7 +181,7 @@ fn compute(store: *Store) !void {
     try cache.finalized_ancestor.resize(allocator, n);
     try updateVoteWeights(store, node_count);
     @memcpy(cache.weight.items, cache.vote_weight.items);
-    @memset(cache.flags.items, 0);
+    @memset(cache.flags.items, .{});
     @memset(cache.best_child.items, NO_NODE);
 
     const slots = store.blocks.items(.slot);
@@ -220,10 +221,10 @@ fn compute(store: *Store) !void {
         cache.finalized_ok.items[i] = finalized_at_genesis or ancestor == finalized_index;
 
         if (exec[pending] == .invalid) continue;
-        flags[pending] |= Flag.exists;
+        flags[pending].exists = true;
         if (gloas) {
-            flags[empty] |= Flag.exists;
-            if (payload_verified[i] and exec[full] != .invalid) flags[full] |= Flag.exists;
+            flags[empty].exists = true;
+            if (payload_verified[i] and exec[full] != .invalid) flags[full].exists = true;
         }
     }
 
@@ -233,30 +234,33 @@ fn compute(store: *Store) !void {
         b -= 1;
         const index: BlockIndex = @intCast(b);
         const pending = nodeId(Store.pendingNode(index));
-        if (flags[pending] & Flag.exists == 0) continue;
+        if (!flags[pending].exists) continue;
         const leaf_viable = leafViable(store, index, current_epoch, cache.finalized_ok.items[b]);
         if (forks[b].gte(.gloas)) {
             var any_viable = false;
             for ([_]PayloadStatus{ .empty, .full }) |status| {
                 const id = nodeId(.{ .block = index, .payload_status = status });
-                if (flags[id] & Flag.exists == 0) continue;
-                const viable = if (flags[id] & Flag.has_children != 0) flags[id] & Flag.any_viable_child != 0 else leaf_viable;
-                if (viable) flags[id] |= Flag.viable;
+                if (!flags[id].exists) continue;
+                const viable = if (flags[id].has_children) flags[id].any_viable_child else leaf_viable;
+                if (viable) flags[id].viable = true;
                 any_viable = any_viable or viable;
                 weight_col[pending] += weight_col[id];
             }
-            flags[pending] |= Flag.has_children;
-            if (any_viable) flags[pending] |= Flag.viable | Flag.any_viable_child;
+            flags[pending].has_children = true;
+            if (any_viable) {
+                flags[pending].viable = true;
+                flags[pending].any_viable_child = true;
+            }
         } else {
-            const viable = if (flags[pending] & Flag.has_children != 0) flags[pending] & Flag.any_viable_child != 0 else leaf_viable;
-            if (viable) flags[pending] |= Flag.viable;
+            const viable = if (flags[pending].has_children) flags[pending].any_viable_child else leaf_viable;
+            if (viable) flags[pending].viable = true;
         }
         const parent = parents[b];
         if (parent == NO_BLOCK) continue;
         const parent_node = nodeId(.{ .block = parent, .payload_status = parent_statuses[b] });
         weight_col[parent_node] += weight_col[pending];
-        flags[parent_node] |= Flag.has_children;
-        if (flags[pending] & Flag.viable != 0) flags[parent_node] |= Flag.any_viable_child;
+        flags[parent_node].has_children = true;
+        if (flags[pending].viable) flags[parent_node].any_viable_child = true;
     }
 
     // Spec `get_weight` proposer boost: `is_ancestor(proposer_boost_node, node)` holds
@@ -269,10 +273,10 @@ fn compute(store: *Store) !void {
     if (cache.apply_proposer_boost) {
         var node = Store.pendingNode(store.blockIndex(store.proposer_boost_root).?);
         while (true) {
-            flags[nodeId(node)] |= Flag.on_boost_chain;
+            flags[nodeId(node)].on_boost_chain = true;
             const parent = parents[node.block];
             if (parent == NO_BLOCK) break;
-            flags[nodeId(.{ .block = parent, .payload_status = parent_statuses[node.block] })] |= Flag.on_boost_chain;
+            flags[nodeId(.{ .block = parent, .payload_status = parent_statuses[node.block] })].on_boost_chain = true;
             node = Store.pendingNode(parent);
         }
     }
@@ -281,14 +285,14 @@ fn compute(store: *Store) !void {
     for (0..n) |i| {
         const index: BlockIndex = @intCast(i);
         const pending: ForkChoiceNode = Store.pendingNode(index);
-        if (parents[i] != NO_BLOCK and flags[nodeId(pending)] & Flag.viable != 0) {
+        if (parents[i] != NO_BLOCK and flags[nodeId(pending)].viable) {
             try offerChild(store, nodeId(.{ .block = parents[i], .payload_status = parent_statuses[i] }), pending);
         }
         if (forks[i].gte(.gloas)) {
             for ([_]PayloadStatus{ .empty, .full }) |status| {
                 const child: ForkChoiceNode = .{ .block = index, .payload_status = status };
                 const id = nodeId(child);
-                if (flags[id] & Flag.exists != 0 and flags[id] & Flag.viable != 0) try offerChild(store, nodeId(pending), child);
+                if (flags[id].exists and flags[id].viable) try offerChild(store, nodeId(pending), child);
             }
         }
     }
@@ -296,7 +300,7 @@ fn compute(store: *Store) !void {
     const justified = store.blockIndex(store.justified_checkpoint.root) orelse return error.UnknownBlock;
     var head = Store.pendingNode(justified);
     if (exec[nodeId(head)] == .invalid) return error.InvalidJustifiedPayload;
-    if (forks[justified].gte(.gloas) and flags[nodeId(head)] & Flag.viable == 0) {
+    if (forks[justified].gte(.gloas) and !flags[nodeId(head)].viable) {
         head = .{ .block = justified, .payload_status = .empty };
     } else {
         while (cache.best_child.items[nodeId(head)] != NO_NODE) {
@@ -428,7 +432,7 @@ pub fn weight(store: *const Store, node: ForkChoiceNode) u64 {
     const cache = &store.head_cache;
     const id = nodeId(node);
     var total = cache.weight.items[id];
-    if (cache.apply_proposer_boost and cache.flags.items[id] & Flag.on_boost_chain != 0) total += cache.proposer_score;
+    if (cache.apply_proposer_boost and cache.flags.items[id].on_boost_chain) total += cache.proposer_score;
     return total;
 }
 
@@ -510,9 +514,9 @@ pub fn viableHeads(store: *Store, allocator: Allocator) ![]ViableHead {
     for (flags, 0..) |flag, id| {
         const node = nodeAt(@intCast(id));
         if (!in_subtree[node.block]) continue;
-        if (flag & Flag.exists == 0 or flag & Flag.any_viable_child != 0) continue;
+        if (!flag.exists or flag.any_viable_child) continue;
         const is_root = node.block == justified and node.payload_status == .pending;
-        if (!is_root and flag & Flag.viable == 0) continue;
+        if (!is_root and !flag.viable) continue;
         try out.append(allocator, .{ .root = roots[node.block], .payload_status = node.payload_status, .weight = weight(store, node) });
     }
     return out.toOwnedSlice(allocator);
