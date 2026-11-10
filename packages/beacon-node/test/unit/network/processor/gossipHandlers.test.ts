@@ -319,7 +319,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     expect(onIncomplete).not.toHaveBeenCalled();
   });
 
-  it("rejects an envelope with more transactions than the parent payload's gas limit allows before deserializing", async () => {
+  it("ignores an envelope with more transactions than the parent payload's gas limit allows before deserializing", async () => {
     const {config, payloadInput, sendEnvelope} = setup(0, 2n ** 62n, 30_000_000);
     vi.mocked(validateGossipExecutionPayloadEnvelope).mockClear();
     const maxTransactionCount = Math.floor(
@@ -327,7 +327,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     );
 
     await expect(sendEnvelope(maxTransactionCount + 1)).rejects.toThrow(
-      new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
         code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
         slot: 1,
         root: payloadInput.blockRootHex,
@@ -348,7 +348,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     const maxTransactionCount = Math.floor(30_000_000 / config.MIN_TRANSACTION_GAS);
 
     await expect(sendEnvelope(maxTransactionCount + 1)).rejects.toThrow(
-      new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
         code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
         slot: 1,
         root: payloadInput.blockRootHex,
