@@ -24,7 +24,6 @@ import {
   deneb,
   fulu,
   gloas,
-  isElectraAttestation,
   isGloasBeaconBlock,
   isGloasDataColumnSidecar,
   ssz,
@@ -1071,24 +1070,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           }
 
           chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
-
-          // last so that fork choice never depends on it: committee members covered by a validated aggregate no
-          // longer need their single attestations
-          if (
-            isElectraAttestation(aggregatedAttestation) &&
-            chain.proposerTracker.shouldCollect(aggregatedAttestation.data.slot)
-          ) {
-            const committeeIndex = aggregatedAttestation.committeeBits.getSingleTrueBit();
-            if (committeeIndex !== null) {
-              const deleted = chain.singleAttestationPool.onAggregate(
-                aggregatedAttestation.data.slot,
-                attDataRootHex,
-                committeeIndex,
-                aggregatedAttestation.aggregationBits
-              );
-              metrics?.opPool.singleAttestationPool.deletedByAggregate.inc(deleted);
-            }
-          }
         } catch (e) {
           logger.debug(
             "Error handling gossip aggregate and proof",

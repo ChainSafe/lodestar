@@ -1,9 +1,8 @@
 import {describe, expect, it} from "vitest";
-import {BitArray} from "@chainsafe/ssz";
 import {ForkPostElectra} from "@lodestar/params";
 import {SingleAttestation, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {SingleAttestationPool} from "../../../../src/chain/opPools/singleAttestationPool.js";
+import {IncludedAttesters, SingleAttestationPool} from "../../../../src/chain/opPools/singleAttestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {ProposerTracker} from "../../../../src/chain/proposerTracker.js";
 
@@ -67,6 +66,8 @@ describe("chain / opPools / SingleAttestationPool", () => {
     expect(uncovered?.newSeenEffectiveBalance).toBe(64);
 
     expect(getUncoveredPositions(pool, [0, 6])).toBeNull();
+    // more not seen members than singles
+    expect(getUncoveredPositions(pool, [1, 2, 3, 4, 5, 6])).toEqual([1, 2, 5]);
   });
 
   it("bounds uncovered singles to the highest effective balances without removing the rest", () => {
@@ -85,17 +86,43 @@ describe("chain / opPools / SingleAttestationPool", () => {
     expect(Array.from(notSeen)).toEqual([1, 2, 5]);
   });
 
-  it("deletes single attestations covered by an aggregate", () => {
+  it("deletes single attestations included by the parent of the new head", () => {
     const pool = new SingleAttestationPool();
     addSingles(pool, [1, 2, 5]);
+    // validator index = 100 + position in committee, not sorted like in block import
+    const included: IncludedAttesters[] = [{slot, attDataRootHex, attestingIndices: [105, 99, 101]}];
 
-    const aggregationBits = BitArray.fromBoolArray([false, true, false, false, false, true, false, false]);
-    expect(pool.onAggregate(slot, attDataRootHex, committeeIndex, aggregationBits)).toBe(2);
+    // the head itself is kept, a proposer boost reorg may orphan it
+    expect(pool.onHead("0xb1", "0xb0", included)).toBe(0);
+    expect(getUncoveredPositions(pool, [1, 2, 5])).toEqual([1, 2, 5]);
+
+    expect(pool.onHead("0xb2", "0xb1", [])).toBe(2);
     expect(getUncoveredPositions(pool, [1, 2, 5])).toEqual([2]);
 
-    // unknown committee or data root
-    expect(pool.onAggregate(slot, attDataRootHex, committeeIndex + 1, aggregationBits)).toBe(0);
-    expect(pool.onAggregate(slot, "0x00", committeeIndex, aggregationBits)).toBe(0);
+    // two attestations of the same data, validator 101 already deleted, last single empties the pool
+    const included2: IncludedAttesters[] = [
+      {slot, attDataRootHex, attestingIndices: [101, 103]},
+      {slot, attDataRootHex, attestingIndices: [102, 101]},
+    ];
+    pool.onHead("0xb3", "0xb2", included2);
+    expect(pool.onHead("0xb4", "0xb3", [])).toBe(1);
+    expect(pool.getStoredSlots()).toEqual([]);
+    expect(pool.add(getSingle(2), attDataRootHex, 2, committeeSize)).toBe(InsertOutcome.NewData);
+  });
+
+  it("does not delete single attestations of a reorged head", () => {
+    const pool = new SingleAttestationPool();
+    addSingles(pool, [1, 2, 5]);
+    const included: IncludedAttesters[] = [{slot, attDataRootHex, attestingIndices: [105, 101]}];
+
+    expect(pool.onHead("0xb1", "0xb0", included)).toBe(0);
+    // new head builds on 0xb0, not on 0xb1
+    expect(pool.onHead("0xb1b", "0xb0", [{slot, attDataRootHex, attestingIndices: [102]}])).toBe(0);
+    expect(getUncoveredPositions(pool, [1, 2, 5])).toEqual([1, 2, 5]);
+
+    // fewer attesters than singles
+    expect(pool.onHead("0xb2", "0xb1b", [])).toBe(1);
+    expect(getUncoveredPositions(pool, [1, 2, 5])).toEqual([1, 5]);
   });
 
   it("prunes vote slots that no upcoming proposal can include", () => {
@@ -107,10 +134,14 @@ describe("chain / opPools / SingleAttestationPool", () => {
     pool.prune(proposerTracker);
     expect(pool.getStoredSlots()).toEqual([slot]);
 
+    pool.onHead("0xb1", "0xb0", [{slot, attDataRootHex, attestingIndices: [101]}]);
     proposerTracker.prune(slot + 2);
     pool.prune(proposerTracker);
     expect(pool.getStoredSlots()).toEqual([]);
     // size is consistent again, so the same member can be added
     expect(pool.add(getSingle(1), attDataRootHex, 1, committeeSize)).toBe(InsertOutcome.NewData);
+    // pending head was dropped with the window
+    expect(pool.onHead("0xb2", "0xb1", [])).toBe(0);
+    expect(getUncoveredPositions(pool, [1])).toEqual([1]);
   });
 });

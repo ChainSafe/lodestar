@@ -50,7 +50,6 @@ import {
   bellatrix,
   getValidatorStatus,
   gloas,
-  isElectraAttestation,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -1883,22 +1882,6 @@ export function getValidatorApi(
 
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
             chain.validatorMonitor?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
-
-            // last so that publishing never depends on it: committee members covered by a validated aggregate no
-            // longer need their single attestations
-            const aggregate = signedAggregateAndProof.message.aggregate;
-            if (isElectraAttestation(aggregate) && chain.proposerTracker.shouldCollect(aggregate.data.slot)) {
-              const committeeIndex = aggregate.committeeBits.getSingleTrueBit();
-              if (committeeIndex !== null) {
-                const deleted = chain.singleAttestationPool.onAggregate(
-                  aggregate.data.slot,
-                  attDataRootHex,
-                  committeeIndex,
-                  aggregate.aggregationBits
-                );
-                metrics?.opPool.singleAttestationPool.deletedByAggregate.inc(deleted);
-              }
-            }
           } catch (e) {
             const logCtx = {
               slot: signedAggregateAndProof.message.aggregate.data.slot,

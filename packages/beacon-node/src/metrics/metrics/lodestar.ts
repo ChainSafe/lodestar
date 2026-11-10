@@ -1393,9 +1393,9 @@ export function createLodestarMetrics(
           help: "Total number of InsertOutcome as a result of adding a single attestation from api to the SingleAttestationPool",
           labelNames: ["insertOutcome"],
         }),
-        deletedByAggregate: register.counter({
-          name: "lodestar_oppool_single_attestation_pool_deleted_by_aggregate_total",
-          help: "Total number of single attestations deleted because a validated aggregate covers them",
+        deletedByBlock: register.counter({
+          name: "lodestar_oppool_single_attestation_pool_deleted_by_block_total",
+          help: "Total number of single attestations deleted because a canonical block includes them",
         }),
       },
       attestationPool: {
