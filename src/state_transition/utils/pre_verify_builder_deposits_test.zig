@@ -230,9 +230,11 @@ test "deposit preverify unrelated validators do not exhaust capacity before a bu
 
     try std.testing.expectEqualSlices(u8, &root, try state.state.hashTreeRoot());
     try std.testing.expectEqual(@as(usize, 1), valid_builder_signatures);
-    try std.testing.expectEqual(@as(?bool, true), try cache.get(state.config, &builder));
-    for (&unrelated) |*deposit| {
-        try std.testing.expectEqual(@as(?bool, null), try cache.get(state.config, deposit));
+    const builder_root = (try pending.getFieldRoot(unrelated.len)).*;
+    try std.testing.expectEqual(@as(?bool, true), cache.get(builder_root));
+    for (&unrelated, 0..) |*deposit, index| {
+        const deposit_root = (try pending.getFieldRoot(index)).*;
+        try std.testing.expectEqual(@as(?bool, null), cache.get(deposit_root));
         try std.testing.expect(!cache.isBuilderPubkey(deposit.pubkey));
     }
     try std.testing.expectEqual(@as(usize, 1), cache.validity.count());
