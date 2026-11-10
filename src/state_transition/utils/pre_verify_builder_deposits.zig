@@ -45,6 +45,14 @@ pub fn preVerifyBuilderDepositsPreGloas(
     var result: PreVerifyBuilderDepositsResult = .{ .pending_deposits_count = len };
     const verification_limit = @min(max_deposits, cache_module.max_deposits_per_call);
     const scan_limit = @min(len, max_scanned_deposits_per_call);
+    // Unlike the NodeJS scanner, which rescans from 0 each tick so a forked head state's
+    // different pendingDeposits gets full coverage, the scan resumes from the persisted cursor
+    // because each scanned element here decodes a value and runs a validator-known lookup.
+    // The cursor stays correct when the list changes (fork, epoch compaction, appends): the
+    // cache is keyed by deposit root, not list position, and the cursor wraps to 0 at the list
+    // end, so entries shifted before the cursor are pre-verified at most one wrap cycle late.
+    // The fork transition verifies on cache miss, so this timing difference costs CPU only,
+    // never correctness.
     const start_cursor = if (cache.scan_cursor < len) cache.scan_cursor else 0;
     cache.scan_cursor = start_cursor;
     errdefer cache.scan_cursor = start_cursor;
