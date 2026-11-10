@@ -175,7 +175,6 @@ function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutionPayload
     case ExecutionPayloadStatus.UNAVAILABLE:
       return ExecutionEngineState.OFFLINE;
 
-    // A verdict on the payload, the execution client answered but it tells nothing about its sync status
     case ExecutionPayloadStatus.INVALID:
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
       return ExecutionEngineState.ONLINE;
