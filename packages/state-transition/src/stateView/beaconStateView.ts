@@ -1,4 +1,4 @@
-import {CompactMultiProof, ProofType, Tree, createProof, descriptorToBitlist} from "@chainsafe/persistent-merkle-tree";
+import {CompactMultiProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
@@ -54,6 +54,7 @@ import {computeSyncCommitteeRewards} from "../rewards/syncCommitteeRewards.js";
 import {StateTransitionModules, StateTransitionOpts, processSlots, stateTransition} from "../stateTransition.js";
 import {getEffectiveBalanceIncrementsZeroInactive} from "../util/balance.js";
 import {getBlockRootAtSlot} from "../util/blockRoot.js";
+import {createCompactMultiProof} from "../util/compactMultiProof.js";
 import {computeAnchorCheckpoint} from "../util/computeAnchorCheckpoint.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "../util/epoch.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
@@ -789,18 +790,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   createMultiProof(descriptor: Uint8Array): CompactMultiProof {
-    const stateNode = this.cachedState.node;
-    // Check terminal chunks explicitly; the proof library throws untyped traversal errors.
-    const nodes = [stateNode];
-    for (const terminal of descriptorToBitlist(descriptor)) {
-      const node = nodes.pop();
-      if (node === undefined) throw new Error("Invalid compact proof traversal stack");
-      if (!terminal) {
-        if (node.isLeaf()) throw new InvalidProofTraversalError();
-        nodes.push(node.right, node.left);
-      }
-    }
-    return createProof(stateNode, {type: ProofType.compactMulti, descriptor}) as CompactMultiProof;
+    return createCompactMultiProof(this.cachedState.node, descriptor);
   }
 
   // Fork choice
@@ -931,14 +921,5 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     }
 
     return stateView;
-  }
-}
-
-class InvalidProofTraversalError extends Error {
-  readonly code = "INVALID_PROOF_TRAVERSAL";
-
-  constructor() {
-    super("Proof descriptor requests children of a terminal chunk");
-    this.name = "InvalidProofTraversalError";
   }
 }

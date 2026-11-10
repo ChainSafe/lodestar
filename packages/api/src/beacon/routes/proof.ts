@@ -15,6 +15,7 @@ export type Endpoints = {
   /**
    * Returns a multiproof of `descriptor` at the requested `stateId`.
    * The requested `stateId` may not be available. Regular nodes only keep recent states in memory.
+   * Descriptors that descend below a terminal SSZ chunk are rejected with HTTP 400.
    */
   getStateProof: Endpoint<
     "GET",
@@ -26,6 +27,7 @@ export type Endpoints = {
   /**
    * Returns a multiproof of `descriptor` at the requested `blockId`.
    * The requested `blockId` may not be available. Regular nodes only keep recent states in memory.
+   * Descriptors that descend below a terminal SSZ chunk are rejected with HTTP 400.
    */
   getBlockProof: Endpoint<
     "GET",

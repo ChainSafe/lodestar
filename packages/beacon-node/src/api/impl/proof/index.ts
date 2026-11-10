@@ -1,9 +1,11 @@
-import {CompactMultiProof, ProofType, createProof} from "@chainsafe/persistent-merkle-tree";
+import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {createCompactMultiProof} from "@lodestar/state-transition";
 import {ApiOptions} from "../../options.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ValidationError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {validateProofRequest} from "./validation.js";
 
@@ -30,7 +32,7 @@ export function getProofApi(
 
       try {
         return {
-          data: state.createMultiProof(descriptor),
+          data: createProofWithValidation(() => state.createMultiProof(descriptor)),
           meta: {version: config.getForkName(state.slot)},
         };
       } finally {
@@ -42,15 +44,25 @@ export function getProofApi(
 
       const {block} = await getBlockResponse(chain, blockId);
 
-      // Commit any changes before computing the state root. In normal cases the state should have no changes here
       const blockNode = config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;
 
-      const proof = createProof(blockNode, {type: ProofType.compactMulti, descriptor});
+      const proof = createProofWithValidation(() => createCompactMultiProof(blockNode, descriptor));
 
       return {
-        data: proof as CompactMultiProof,
+        data: proof,
         meta: {version: config.getForkName(block.message.slot)},
       };
     },
   };
+}
+
+function createProofWithValidation(create: () => CompactMultiProof): CompactMultiProof {
+  try {
+    return create();
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "INVALID_PROOF_TRAVERSAL") {
+      throw new ValidationError(error.message);
+    }
+    throw error;
+  }
 }
