@@ -22,6 +22,8 @@ export type VerifySignatureOpts = {
   verifyOnMainThread?: boolean;
   /**
    * Some signature sets are more important than others, and should be verified first.
+   * Non-batchable priority jobs are posted to an idle worker before this call returns, so the caller
+   * can run synchronous work right after without delaying the verification.
    */
   priority?: boolean;
 };
