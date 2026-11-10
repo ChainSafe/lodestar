@@ -206,11 +206,6 @@ fn isValidCachedDeposit(
         error.BadEncoding, error.PointNotOnCurve, error.PointNotInGroup, error.VerifyFail, error.PkIsInfinity => false,
         else => return err,
     };
-    // Same write scope as the pre-Gloas scanner: only builder-related deposits enter the
-    // cache, so a fork transition on a cloned head reuses this result instead of re-verifying.
-    if (gloas.isBuilderWithdrawalCredential(&deposit.withdrawal_credentials) or cache.isBuilderPubkey(deposit.pubkey)) {
-        try cache.put(cache_rc.allocator, deposit_root, valid);
-    }
     return valid;
 }
 
