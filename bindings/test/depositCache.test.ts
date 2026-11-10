@@ -5,7 +5,7 @@ import {init, scrapeMetrics} from "../src/metrics.js";
 import {createNative, signedDeposit} from "./depositCacheFixture.js";
 
 describe("native pre-Gloas deposit signature cache", () => {
-  beforeAll(init);
+  beforeAll(() => init());
 
   it("warms the adversarial prefix even when a valid same-key validator deposit follows the builder", () => {
     const builder = signedDeposit(91);
