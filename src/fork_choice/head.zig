@@ -76,6 +76,9 @@ pub const Cache = struct {
     changed_votes: std.DynamicBitSetUnmanaged = .{},
     /// Set bits in `changed_votes`, so a run with no changes skips scanning it.
     changed_count: usize = 0,
+    /// Validators whose message or weight was re-checked, plus validators counted for the
+    /// first time, summed over every run. A full recount adds only the pending changes.
+    vote_changes_total: u64 = 0,
     rescan_votes: bool = true,
     apply_proposer_boost: bool = false,
     proposer_score: u64 = 0,
@@ -315,6 +318,7 @@ fn updateVoteWeights(store: *Store, node_count: usize) !void {
     try cache.vote_weight.ensureTotalCapacity(allocator, node_count);
     try cache.applied_votes.ensureTotalCapacity(allocator, validator_count);
     try cache.changed_votes.resize(allocator, validator_count, false);
+    cache.vote_changes_total += cache.changed_count + (validator_count -| cache.applied_votes.items.len);
     // Moving a vote costs about twice counting one, so past half the validators a recount is cheaper.
     if (cache.changed_count * 2 > cache.applied_votes.items.len) cache.rescan_votes = true;
     if (cache.rescan_votes) {

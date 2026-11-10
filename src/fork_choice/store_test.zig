@@ -347,6 +347,10 @@ fn expectVoteWeightsMatchRecount(store: *Store) !void {
     const cache = &store.head_cache;
     _ = try store.getHead();
     try testing.expectEqual(@as(usize, 0), cache.changed_count);
+    const vote_changes_total = cache.vote_changes_total;
+    cache.dirty = true;
+    _ = try store.getHead();
+    try testing.expectEqual(vote_changes_total, cache.vote_changes_total);
     const weights = try testing.allocator.dupe(u64, cache.vote_weight.items);
     defer testing.allocator.free(weights);
     // A run with no changes leaves the totals as they are.
