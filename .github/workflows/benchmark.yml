@@ -31,6 +31,7 @@ jobs:
         # An explicit bash shell enables pipefail, without it tee hides a failed run
         shell: bash
         # @chainsafe/benchmark only infers the baseline and posts comments on push and pull_request events
+        # Results are not posted as PR comments, failed benches are written to the job summary below
         run: pnpm benchmark --compareBranch unstable --skipPostComment 2>&1 | tee "$RUNNER_TEMP/benchmark.log"
         env:
           # benchmark options
@@ -46,14 +47,36 @@ jobs:
 
       - name: Report failed benchmarks in the job summary
         if: failure() && steps.benchmarks.outcome == 'failure'
+        # pipefail lets the gh fallbacks below take effect
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
           log=$(sed -E 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/benchmark.log")
+          baseline=$(grep -oE 'Found previous benchmark .* at commit [0-9a-f]+' <<< "$log" | grep -oE '[0-9a-f]+$' | head -n 1 || true)
+          link_prs() { sed -E "s|\(#([0-9]+)\)|([#\1]($REPO_URL/pull/\1))|g"; }
           {
             echo "### Failed benchmarks"
-            echo
-            grep "Found previous benchmark" <<< "$log" || echo "No previous benchmark found"
             echo
             echo '```'
             grep -E '^\s*(!|✖) ' <<< "$log" || echo "No failed benchmarks found, see the job log"
             echo '```'
+            echo
+            if [ -z "$baseline" ]; then
+              echo "No previous benchmark found"
+            else
+              echo "### Baseline"
+              echo
+              gh api "repos/$GITHUB_REPOSITORY/commits/$baseline" \
+                --jq '"[`\(.sha[0:10])`](\(.html_url)) \(.commit.committer.date[0:10]): \(.commit.message | split("\n")[0])"' \
+                | link_prs || echo "$baseline"
+              echo
+              echo "### Commits since the baseline"
+              echo
+              # The compare API returns at most 250 commits
+              gh api "repos/$GITHUB_REPOSITORY/compare/$baseline...$GITHUB_SHA" \
+                --jq '.commits[] | "- \(.commit.message | split("\n")[0])"' \
+                | link_prs || echo "Could not list commits"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
