@@ -339,8 +339,9 @@ export class Network implements INetwork {
   async subscribeGossipCoreTopics(): Promise<void> {
     if (!this.subscribedToCoreTopics) {
       await this.core.subscribeGossipCoreTopics();
+      if (this.closed) return;
       // Only mark subscribedToCoreTopics if worker resolved this call
-      this.subscribedToCoreTopics = !this.closed;
+      this.subscribedToCoreTopics = true;
     }
   }
 

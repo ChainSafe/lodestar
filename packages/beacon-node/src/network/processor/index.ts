@@ -246,6 +246,10 @@ type SearchUnknownRootTarget =
 export class NetworkProcessor {
   private stopped = false;
   /** Replaced when queued and awaiting work is dropped, so a reprocessing batch across a yield stops */
+  /**
+   * Replaced by dropAllJobs(). Loops that yield while re-queueing awaiting messages compare it after each yield
+   * and stop, so no message is queued after a drop.
+   */
   private jobGeneration = Symbol();
   private readonly chain: IBeaconChain;
   private readonly core: INetworkCore;
