@@ -49,7 +49,6 @@ const ForkTypes = @import("fork_types").ForkTypes;
 pub const EpochCacheImmutableData = struct {
     config: *const BeaconConfig,
     pubkey_cache: *PubkeyCache,
-    /// Supplied cache results must use config.chain.GENESIS_FORK_VERSION.
     builder_deposit_signature_cache: ?*BuilderDepositSignatureCacheRc = null,
 };
 
