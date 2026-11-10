@@ -1016,14 +1016,8 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_attestation
    *
-   * It only approximates the specification since it does not perform
-   * `is_valid_indexed_attestation` since that should already have been called upstream and it's
-   * too expensive to call again.
-   *
-   * ## Notes:
-   *
-   * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
-   * will not be run here.
+   * Does not run `is_valid_indexed_attestation`. The caller must ensure all of its
+   * validity requirements except index ordering: `attestingIndices` may be unsorted.
    */
   onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
     // Ignore any attestations to the zero hash.
