@@ -230,9 +230,11 @@ test "deposit preverify unrelated validators do not exhaust capacity before a bu
 
     try std.testing.expectEqualSlices(u8, &root, try state.state.hashTreeRoot());
     try std.testing.expectEqual(@as(usize, 1), valid_builder_signatures);
-    try std.testing.expectEqual(@as(?bool, true), try cache.get(state.config, &builder));
-    for (&unrelated) |*deposit| {
-        try std.testing.expectEqual(@as(?bool, null), try cache.get(state.config, deposit));
+    const builder_root = (try pending.getFieldRoot(unrelated.len)).*;
+    try std.testing.expectEqual(@as(?bool, true), cache.get(builder_root));
+    for (&unrelated, 0..) |*deposit, index| {
+        const deposit_root = (try pending.getFieldRoot(index)).*;
+        try std.testing.expectEqual(@as(?bool, null), cache.get(deposit_root));
         try std.testing.expect(!cache.isBuilderPubkey(deposit.pubkey));
     }
     try std.testing.expectEqual(@as(usize, 1), cache.validity.count());
@@ -294,6 +296,7 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     try std.testing.expectEqual(@as(usize, 23), result.invalid_builder_signatures_count);
     try pending.pushValue(&builder);
     try state.state.commit();
+    const builder_root = (try pending.getFieldRoot((try pending.length()) - 1)).*;
     try metrics.init(allocator, std.testing.io, .{});
     defer metrics.deinit();
     const upgraded = try upgradeStateToGloas(allocator, std.testing.io, state.config, state.epoch_cache, state.state.castToFork(.fulu));
@@ -302,7 +305,7 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     try std.testing.expectEqual(@as(usize, 2), try builders.length());
     try std.testing.expectEqual(
         @as(?bool, true),
-        try state.epoch_cache.builder_deposit_signature_cache.instance.get(state.config, &builder),
+        state.epoch_cache.builder_deposit_signature_cache.instance.get(builder_root),
     );
     var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();

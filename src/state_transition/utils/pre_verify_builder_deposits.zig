@@ -62,14 +62,19 @@ pub fn preVerifyBuilderDepositsPreGloas(
     var resolved: std.array_hash_map.Custom([48]u8, void, PubkeyHashContext, true) = .empty;
     defer resolved.deinit(allocator);
 
-    while (result.scanned_pending_deposits < scan_limit and verified < verification_limit and cache.validity.count() < cache.capacity) {
+    while (result.scanned_pending_deposits < scan_limit and
+        verified < verification_limit and
+        cache.validity.count() < cache.capacity)
+    {
         var deposits: [batch_size]ct.electra.PendingDeposit.Type = undefined;
+        var deposit_roots: [batch_size][32]u8 = undefined;
         var count: usize = 0;
         const scan_count = @min(batch_size, scan_limit - result.scanned_pending_deposits);
         const batch_limit = @min(verification_limit - verified, cache.capacity - cache.validity.count());
         for (0..scan_count) |_| {
             if (count == batch_limit) break;
-            const deposit = try iterator.nextValue();
+            const item = try iterator.nextValueWithRoot();
+            const deposit = item.value;
             result.scanned_pending_deposits += 1;
             cache.scan_cursor += 1;
             const is_builder = isBuilderWithdrawalCredential(&deposit.withdrawal_credentials);
@@ -90,7 +95,7 @@ pub fn preVerifyBuilderDepositsPreGloas(
                 !resolved.containsContext(deposit.pubkey, cache.hash_context))
             {
                 // then find from cache,
-                if (try cache.get(state.config, &deposit)) |valid| {
+                if (cache.get(item.root)) |valid| {
                     // if valid, mark it as resolved,
                     if (valid and resolved.count() < cache_module.max_deposits_per_call)
                         try resolved.putContext(
@@ -103,6 +108,7 @@ pub fn preVerifyBuilderDepositsPreGloas(
                 // otherwise, put it in queue for verification
                 else {
                     deposits[count] = deposit;
+                    deposit_roots[count] = item.root;
                     count += 1;
                 }
             }
@@ -113,8 +119,8 @@ pub fn preVerifyBuilderDepositsPreGloas(
             try deposit_module.verifyDepositSignatures(io, pool, state.config, deposits[0..count], results[0..count], batch_verify);
             // Avoid repeating pairings in an invalid flood; resume batching after an all-valid chunk.
             batch_verify = std.mem.allEqual(bool, results[0..count], true);
-            for (deposits[0..count], results[0..count]) |*deposit, valid| {
-                try cache.put(allocator, state.config, deposit, valid);
+            for (deposits[0..count], deposit_roots[0..count], results[0..count]) |*deposit, deposit_root, valid| {
+                try cache.put(allocator, deposit_root, valid);
                 const is_builder = isBuilderWithdrawalCredential(&deposit.withdrawal_credentials);
                 if (valid) {
                     if (resolved.count() < cache_module.max_deposits_per_call)

@@ -444,7 +444,10 @@ pub const EpochCache = struct {
         const builder_deposit_signature_cache = if (immutable_data.builder_deposit_signature_cache) |cache|
             cache.ref()
         else
-            try BuilderDepositSignatureCacheRc.create(allocator, .{ .hash_context = pubkey_cache.hashContext() });
+            try BuilderDepositSignatureCacheRc.create(allocator, .{
+                .hash_context = pubkey_cache.hashContext(),
+                .validity_context = .{ .pubkey_context = pubkey_cache.hashContext() },
+            });
 
         epoch_cache_ptr.* = .{
             .allocator = allocator,
