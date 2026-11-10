@@ -274,12 +274,6 @@ instead of proto-array. Three layers:
   store's checkpoints into `ForkChoiceStore`, whose setters emit the chain events.
 - `initializeForkChoice` in the beacon node picks the implementation from the flag.
 
-What the store's API gained for a client, each a handler that takes facts instead of
-SSZ objects or the store's own clock: `BlockSummary.arrival_ms_into_slot` (a client
-imports later than it receives), `onAttestationData`, `onAttesterSlashingData`,
-`onPtcVotes`, `recordInclusionListSatisfaction` and `proposer_head.decide`, which
-reports why `get_proposer_head` keeps the head.
-
 Run the consensus vectors through the whole beacon node on the store with:
 
 ```
