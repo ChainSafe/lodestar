@@ -122,14 +122,15 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                 // signatures for this pubkey, matching the pre-verification scanner.
                 while (!entry.has_pending_validator and entry.unchecked_head != std.math.maxInt(usize)) {
                     const pending_index = entry.unchecked_head;
-                    const prior = try pending.getValueWithRoot(pending_index);
+                    var prior: ct.electra.PendingDeposit.Type = undefined;
+                    try pending.getValueWithRoot(undefined, pending_index, &prior);
+                    const prior_root = (try pending.getFieldRoot(pending_index)).*;
                     entry.unchecked_head = next[pending_index];
                     if (!try isValidCachedDeposit(
-                        epoch_cache.builder_deposit_signature_cache.allocator,
                         config,
                         signature_cache,
-                        &prior.value,
-                        prior.root,
+                        &prior,
+                        prior_root,
                         &checks,
                     )) {
                         continue;
@@ -138,7 +139,6 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                 }
                 if (!entry.has_pending_validator) {
                     if (!try isValidCachedDeposit(
-                        epoch_cache.builder_deposit_signature_cache.allocator,
                         config,
                         signature_cache,
                         &deposit,
@@ -187,7 +187,6 @@ const SignatureChecks = struct {
 };
 
 fn isValidCachedDeposit(
-    allocator: Allocator,
     config: *const BeaconConfig,
     cache: *BuilderDepositSignatureCache,
     deposit: *const ct.electra.PendingDeposit.Type,
@@ -209,7 +208,6 @@ fn isValidCachedDeposit(
         error.BadEncoding, error.PointNotOnCurve, error.PointNotInGroup, error.VerifyFail, error.PkIsInfinity => false,
         else => return err,
     };
-    cache.put(allocator, deposit_root, valid) catch {};
     return valid;
 }
 
