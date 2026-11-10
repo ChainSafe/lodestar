@@ -45,6 +45,14 @@ pub fn preVerifyBuilderDepositsPreGloas(
     var result: PreVerifyBuilderDepositsResult = .{ .pending_deposits_count = len };
     const verification_limit = @min(max_deposits, cache_module.max_deposits_per_call);
     const scan_limit = @min(len, max_scanned_deposits_per_call);
+    // Unlike the NodeJS scanner, which rescans from 0 each tick so a forked head state's
+    // different pendingDeposits gets full coverage, the scan resumes from the persisted cursor
+    // because each scanned element here decodes a value and runs a validator-known lookup.
+    // The cursor stays correct when the list changes (fork, epoch compaction, appends): the
+    // cache is keyed by deposit root, not list position, and the cursor wraps to 0 at the list
+    // end, so entries shifted before the cursor are pre-verified at most one wrap cycle late.
+    // The fork transition verifies on cache miss, so this timing difference costs CPU only,
+    // never correctness.
     const start_cursor = if (cache.scan_cursor < len) cache.scan_cursor else 0;
     cache.scan_cursor = start_cursor;
     errdefer cache.scan_cursor = start_cursor;
@@ -66,7 +74,8 @@ pub fn preVerifyBuilderDepositsPreGloas(
             const deposit = item.value;
             result.scanned_pending_deposits += 1;
             cache.scan_cursor += 1;
-            if (isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
+            const is_builder = isBuilderWithdrawalCredential(&deposit.withdrawal_credentials);
+            if (is_builder) {
                 try cache.addBuilderPubkey(allocator, deposit.pubkey);
             }
             const known = try isValidatorKnown(
@@ -74,15 +83,27 @@ pub fn preVerifyBuilderDepositsPreGloas(
                 state.state.castToFork(.fulu),
                 state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
             );
-            if (!known and !resolved.containsContext(deposit.pubkey, cache.hash_context)) {
+            if (
+            // is a builder,
+            (is_builder or cache.isBuilderPubkey(deposit.pubkey)) and
+                // is not a known pubkey,
+                !known and
+                // is not locally known as valid (or resolved),
+                !resolved.containsContext(deposit.pubkey, cache.hash_context))
+            {
+                // then find from cache,
                 if (cache.get(item.root)) |valid| {
-                    if (valid and resolved.count() < cache_module.max_deposits_per_call) try resolved.putContext(
-                        allocator,
-                        deposit.pubkey,
-                        {},
-                        cache.hash_context,
-                    );
-                } else {
+                    // if valid, mark it as resolved,
+                    if (valid and resolved.count() < cache_module.max_deposits_per_call)
+                        try resolved.putContext(
+                            allocator,
+                            deposit.pubkey,
+                            {},
+                            cache.hash_context,
+                        );
+                }
+                // otherwise, put it in queue for verification
+                else {
                     deposits[count] = deposit;
                     deposit_roots[count] = item.root;
                     count += 1;

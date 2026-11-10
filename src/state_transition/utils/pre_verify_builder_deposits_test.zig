@@ -198,6 +198,44 @@ test "deposit preverify resumes bounded work and warms validator prefixes across
     );
 }
 
+test "deposit preverify unrelated validators do not exhaust capacity before a builder" {
+    const allocator = std.testing.allocator;
+    var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer nodes.deinit();
+    var fixture = try fuluState(allocator, &nodes);
+    defer fixture.deinit();
+    const state = fixture.cached_state;
+    const unrelated = [_]ct.electra.PendingDeposit.Type{
+        try signedDeposit(state.config, 180, 1, 1_000_000_000),
+        try signedDeposit(state.config, 181, 1, 1_000_000_000),
+    };
+    const builder = try signedDeposit(state.config, 182, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
+    const cache = &state.epoch_cache.builder_deposit_signature_cache.instance;
+    cache.capacity = unrelated.len;
+    var pending = try state.state.castToFork(.fulu).pendingDeposits();
+    for (&unrelated) |*deposit| try pending.pushValue(deposit);
+    try pending.pushValue(&builder);
+    try state.state.commit();
+    const root = (try state.state.hashTreeRoot()).*;
+    const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 1 });
+    defer pool.deinit(std.testing.io);
+
+    var valid_builder_signatures: usize = 0;
+    for (0..3) |_| {
+        const result = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+        valid_builder_signatures += result.valid_builder_signatures_count;
+    }
+
+    try std.testing.expectEqualSlices(u8, &root, try state.state.hashTreeRoot());
+    try std.testing.expectEqual(@as(usize, 1), valid_builder_signatures);
+    try std.testing.expectEqual(@as(?bool, true), try cache.get(state.config, &builder));
+    for (&unrelated) |*deposit| {
+        try std.testing.expectEqual(@as(?bool, null), try cache.get(state.config, deposit));
+        try std.testing.expect(!cache.isBuilderPubkey(deposit.pubkey));
+    }
+    try std.testing.expectEqual(@as(usize, 1), cache.validity.count());
+}
+
 test "deposit preverify bounds scans even when no deposit needs verification" {
     const allocator = std.testing.allocator;
     var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
