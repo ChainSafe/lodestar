@@ -126,6 +126,7 @@ const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
  * Bounds the single attestation signatures decoded and aggregated synchronously in block production. Without
  * aggregates (e.g. during non-finality) the pool can hold far more uncovered singles than a block needs.
  * The budget is spent in scan order, also by candidates that later miss the top MAX_ATTESTATIONS_ELECTRA
+ * As tested on Nov 2026, we never this many not-seen attesters on mainnet.
  */
 const MAX_SINGLE_ATTESTATIONS_PER_BLOCK = 1024;
 
@@ -515,6 +516,7 @@ export class AggregatedAttestationPool {
     // so their part is exactly what they add on top of an aggregates only block
     let totalValue = 0;
     let singlesValue = 0;
+    let newSeenAttesters = 0;
     let singlesNewSeenAttesters = 0;
     let singlesNewSeenEffectiveBalance = 0;
     let singlesOnlyConsolidations = 0;
@@ -522,6 +524,7 @@ export class AggregatedAttestationPool {
     for (const consolidation of packedConsolidations) {
       totalValue += consolidation.totalNewSeenEffectiveBalance * consolidation.weight;
       singlesValue += consolidation.singlesNewSeenEffectiveBalance * consolidation.weight;
+      newSeenAttesters += consolidation.newSeenAttesters;
       singlesNewSeenAttesters += consolidation.singlesNewSeenAttesters;
       singlesNewSeenEffectiveBalance += consolidation.singlesNewSeenEffectiveBalance;
       singlesCommittees += consolidation.singlesByCommittee.size;
@@ -531,6 +534,7 @@ export class AggregatedAttestationPool {
     }
     packedAttestationsMetrics?.attestationValue.inc({source: "aggregate"}, totalValue - singlesValue);
     packedAttestationsMetrics?.attestationValue.inc({source: "single"}, singlesValue);
+    packedAttestationsMetrics?.blockNewSeenAttesters.set(newSeenAttesters);
     packedAttestationsMetrics?.singlesValueRatio.observe(totalValue > 0 ? singlesValue / totalValue : 0);
     packedAttestationsMetrics?.singlesNewSeenAttesters.observe(singlesNewSeenAttesters);
     packedAttestationsMetrics?.singlesNewSeenEffectiveBalance.observe(singlesNewSeenEffectiveBalance);

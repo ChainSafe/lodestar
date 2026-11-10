@@ -1347,6 +1347,10 @@ export function createLodestarMetrics(
             help: "Sum of new seen effective balance increments times participation flag weight of packed attestations, by source",
             labelNames: ["source"],
           }),
+          blockNewSeenAttesters: register.gauge({
+            name: "lodestar_oppool_packed_attestations_block_new_seen_attesters",
+            help: "Total number of new seen attesters across all packed attestations of the last produced block",
+          }),
           singlesValueRatio: register.histogram({
             name: "lodestar_oppool_packed_attestations_singles_value_ratio",
             help: "Ratio of attestation value contributed by single attestations per produced block",
