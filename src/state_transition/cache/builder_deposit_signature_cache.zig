@@ -15,6 +15,7 @@ pub const BuilderDepositSignatureCacheRc = RefCount(BuilderDepositSignatureCache
 /// `compute_domain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION, ZERO_HASH)`,
 /// so it's fork-agnostic and fixed per network, so it is not needed as part of the key.
 pub const BuilderDepositSignatureCache = struct {
+
     const RootContext = struct {
         pubkey_context: PubkeyHashContext,
 
