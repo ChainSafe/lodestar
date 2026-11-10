@@ -24,8 +24,9 @@ pub const PreVerifyBuilderDepositsResult = struct {
 };
 
 /// Called on committed Fulu head states during the scheduler's pre-Gloas window.
-/// Both scanning and BLS share one deadline, checked every batch. Unknown validator
-/// deposits are checked before a builder trigger arrives, including invalid prefixes.
+/// Both scanning and BLS share one deadline, checked every batch. Validator deposits are
+/// checked only once their pubkey has appeared on a builder deposit, so those preceding it
+/// in the queue are picked up on a later pass.
 /// A valid deposit can suppress only later entries in this scan, never earlier entries
 /// or entries in another state. A cache miss still falls back to verification at the fork.
 pub fn preVerifyBuilderDepositsPreGloas(
@@ -81,18 +82,17 @@ pub fn preVerifyBuilderDepositsPreGloas(
             if (is_builder) {
                 try cache.addBuilderPubkey(allocator, deposit.pubkey);
             }
-            const known = try isValidatorKnown(
-                .fulu,
-                state.state.castToFork(.fulu),
-                state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
-            );
             if (
             // is a builder,
             (is_builder or cache.isBuilderPubkey(deposit.pubkey)) and
-                // is not a known pubkey,
-                !known and
                 // is not locally known as valid (or resolved),
-                !resolved.containsContext(deposit.pubkey, cache.hash_context))
+                !resolved.containsContext(deposit.pubkey, cache.hash_context) and
+                // is not a known pubkey,
+                !try isValidatorKnown(
+                    .fulu,
+                    state.state.castToFork(.fulu),
+                    state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
+                ))
             {
                 // then find from cache,
                 if (cache.get(item.root)) |valid| {
