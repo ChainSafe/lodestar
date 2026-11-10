@@ -58,6 +58,58 @@ test "TreeView composite list iteratorReadonly nextValuePtr walks struct element
     }
 }
 
+test "TreeView composite list getValueWithRoot includes pending element changes" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 1024 });
+    defer pool.deinit();
+    const StructCheckpoint = StructContainerType(struct {
+        epoch: UintType(64),
+        root: ByteVectorType(32),
+    });
+
+    inline for (.{ Checkpoint, StructCheckpoint }) |ElementType| {
+        const ListType = FixedListType(ElementType, 16, .{});
+        const view = try ListType.TreeView.fromValue(allocator, &pool, &ListType.default_value);
+        defer view.deinit();
+        try std.testing.expectError(error.IndexOutOfBounds, view.getValueWithRoot(0));
+        const original = view.getRoot();
+        for (0..8) |index| {
+            try view.pushValue(&.{ .epoch = @intCast(index + 1), .root = @splat(@intCast(index)) });
+        }
+        for (0..8) |index| {
+            const item = try view.getValueWithRoot(index);
+            const expected: ElementType.Type = .{ .epoch = @intCast(index + 1), .root = @splat(@intCast(index)) };
+            var expected_root: [32]u8 = undefined;
+            try ElementType.hashTreeRoot(&expected, &expected_root);
+            try std.testing.expectEqualDeep(expected, item.value);
+            try std.testing.expectEqualSlices(u8, &expected_root, &item.root);
+        }
+        try std.testing.expectEqual(original, view.getRoot());
+
+        const replacement: ElementType.Type = .{ .epoch = 99, .root = @splat(9) };
+        try view.setValue(0, &replacement);
+        const child = try view.get(5);
+        try child.set("epoch", @as(u64, 100));
+        const changed = try view.getValueWithRoot(5);
+        try std.testing.expectEqual(@as(u64, 100), changed.value.epoch);
+        var changed_root: [32]u8 = undefined;
+        try ElementType.hashTreeRoot(&changed.value, &changed_root);
+        try std.testing.expectEqualSlices(u8, &changed_root, &changed.root);
+        try std.testing.expectEqualDeep(replacement, (try view.getValueWithRoot(0)).value);
+        try std.testing.expectEqual(original, view.getRoot());
+
+        try view.commit();
+        var iterator = view.iteratorReadonly(0);
+        for (0..8) |index| {
+            const expected = try iterator.nextValueWithRoot();
+            const actual = try view.getValueWithRoot(index);
+            try std.testing.expectEqualDeep(expected, actual);
+        }
+        try std.testing.expectError(error.IndexOutOfBounds, view.getValueWithRoot(8));
+        try std.testing.expectError(error.IndexOutOfBounds, view.getValueWithRoot(std.math.maxInt(usize)));
+    }
+}
+
 test "TreeView composite list sliceTo truncates elements" {
     const allocator = std.testing.allocator;
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 512 });
