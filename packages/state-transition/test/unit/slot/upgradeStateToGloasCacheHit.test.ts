@@ -166,9 +166,12 @@ describe("upgradeStateToGloas - builder-deposit signature cache", () => {
   it("Scenario 5: fork resolves same-pubkey validator deposits from the cache (no BLS fallback)", () => {
     isValidDepositSignatureSpy.mockClear();
 
-    const [builder] = generateBuilderPendingDeposits(config, 1, 2000);
-    // Many invalid 0x01 validator deposits, all targeting the builder's pubkey (each a distinct
-    // object). At the fork, hasPendingValidator(P) walks these — the unbounded-BLS DoS this guards.
+    const [validBuilder] = generateBuilderPendingDeposits(config, 1, 2000);
+    // Invalid builder deposit: only then does the fork consult hasPendingValidator(P), which walks
+    // every same-pubkey validator deposit — the unbounded-BLS DoS this guards.
+    const builder = {...validBuilder, signature: Buffer.alloc(96)};
+    // Many invalid 0x00 validator deposits, all targeting the builder's pubkey (each a distinct
+    // object).
     const validatorsForBuilder = Array.from({length: 40}, () => ({
       pubkey: builder.pubkey,
       withdrawalCredentials: Buffer.alloc(32), // 0x00 → validator, not builder-routed
@@ -219,13 +222,14 @@ describe("upgradeStateToGloas - builder-deposit signature cache", () => {
 
     const gloasState = upgradeStateToGloas(fuluState, metrics as unknown as Parameters<typeof upgradeStateToGloas>[1]);
 
-    // The builder onboards; hasPendingValidator resolved all 40 validator checks from the cache, so
-    // isValidDepositSignature (the BLS fallback) is never called on the transition's critical path.
-    expect(gloasState.builders.length).toBe(1);
+    // The invalid builder deposit is dropped; hasPendingValidator resolved all 40 validator checks
+    // from the cache, so isValidDepositSignature (the BLS fallback) is never called on the
+    // transition's critical path.
+    expect(gloasState.builders.length).toBe(0);
     expect(isValidDepositSignatureSpy).not.toHaveBeenCalled();
     // The 40 checks hasPendingValidator did internally are counted, not just the builder deposit's
     // own one — that scan is the dominant cost in this shape and would otherwise be invisible.
     expect(Object.fromEntries(sigChecks)).toEqual({cache: 41, verified: 0});
-    expect(Object.fromEntries(outcomes)).toEqual({onboarded: 1, topup: 0, kept: 40, dropped: 0});
+    expect(Object.fromEntries(outcomes)).toEqual({onboarded: 0, topup: 0, kept: 40, dropped: 1});
   });
 });
