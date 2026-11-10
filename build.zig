@@ -80,7 +80,8 @@ fn configureLeanvm(b: *std.Build, result: zbuild.BuildResult) void {
     const rust_triple = triple orelse return;
     const cpu = rust_cpu orelse leanvmDefaultCpu(target);
     const crate = "rust/leanvm";
-    const shared = b.graph.global_cache_root.join(b.allocator, &.{"lodestar-leanvm"}) catch @panic("OOM");
+    // Absolute, as cargo runs in another directory: the global cache's path may be relative.
+    const shared = b.pathResolve(&.{ b.graph.cache.cwd, b.graph.global_cache_root.path orelse ".", "lodestar-leanvm" });
     const key = leanvmArchiveKey(b, crate, rust_triple, cpu) catch |err|
         std.debug.panic("cannot read {s}: {t}", .{ crate, err });
     const archive = b.pathJoin(&.{ shared, &key, "liblodestar_leanvm.a" });
