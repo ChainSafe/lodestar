@@ -181,6 +181,8 @@ describe("validateGossipExecutionPayloadBid", () => {
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW},
     });
+
+    expect(chain.regen.getBlockSlotState).not.toHaveBeenCalled();
   });
 
   it("rejects a wrong randao mix", async () => {

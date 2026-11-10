@@ -1,8 +1,8 @@
 import {Mock, Mocked, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {Logger} from "@lodestar/utils";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
@@ -20,7 +20,7 @@ import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenExecutionPayloadBids} from "../../src/chain/seenCache/seenExecutionPayloadBids.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
-import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
+import {BuilderApiClient, DEFAULT_BUILDER_BID_DEADLINE_MS} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
@@ -180,6 +180,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         toPersisted: vi.fn(),
       },
       builderApiClient: {
+        bidDeadline: DEFAULT_BUILDER_BID_DEADLINE_MS,
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
         submitBuilderPreferences: vi.fn(),
         submitSignedBeaconBlock: vi.fn(),

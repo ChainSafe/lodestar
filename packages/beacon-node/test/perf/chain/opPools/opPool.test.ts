@@ -1,7 +1,7 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {
   ForkName,
   MAX_ATTESTER_SLASHINGS,

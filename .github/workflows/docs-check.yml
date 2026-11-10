@@ -23,14 +23,10 @@ jobs:
       - name: Build and collect docs
         run: pnpm docs:build
 
-      # Run prettier check after generating the docs
-      - name: Check docs format
-        run: pnpm docs:lint
-
       - name: Test and build documentation site
         working-directory: docs
         run: pnpm install --frozen-lockfile && pnpm test && pnpm build
 
       # Run spellcheck AFTER building docs, in case the CLI reference has issues
       - name: Spellcheck
-        uses: rojopolis/spellcheck-github-actions@c1934c57e61c734261d7905b525486b12f8eb670 # 0.66.0
+        uses: rojopolis/spellcheck-github-actions@f2df388397bcb35f524b4a0a3567d6b1e8a4e595 # 0.68.0

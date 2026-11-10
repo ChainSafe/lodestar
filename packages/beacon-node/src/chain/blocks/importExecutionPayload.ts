@@ -26,7 +26,6 @@ import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "./verifyExecutionPayloadEnvelope.js";
-import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
@@ -37,6 +36,7 @@ export enum PayloadErrorCode {
   MISS_BLOCK_STATE = "PAYLOAD_ERROR_MISS_BLOCK_STATE",
   ENVELOPE_VERIFICATION_ERROR = "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR",
   INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
+  DATA_UNAVAILABLE = "PAYLOAD_ERROR_DATA_UNAVAILABLE",
 }
 
 export type PayloadErrorType =
@@ -64,6 +64,9 @@ export type PayloadErrorType =
     }
   | {
       code: PayloadErrorCode.INVALID_SIGNATURE;
+    }
+  | {
+      code: PayloadErrorCode.DATA_UNAVAILABLE;
     };
 
 export class PayloadError extends Error {
@@ -95,7 +98,8 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * are applied on the next block via processParentExecutionPayload.
  *
  * The DA wait must have run upstream (range sync awaits DA in `verifyBlocksInEpoch` for the
- * whole segment; gossip / API path uses the `processExecutionPayload` wrapper below).
+ * whole segment; the gossip / API / unknown-payload sync path waits in `PayloadEnvelopeProcessor`
+ * before the import is queued).
  *
  * Steps:
  * 1. Emit `execution_payload_available` event for payload attestation
@@ -329,7 +333,13 @@ export async function importExecutionPayload(
 
   // 7. Queue notifyForkchoiceUpdate to engine api
   const head = this.forkChoice.getHead();
-  if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
+  if (
+    !this.opts.disableImportExecutionFcU &&
+    blockRootHex === head.blockRoot &&
+    // Skip a payload that does not satisfy the inclusion list constraints, fork choice keeps the EMPTY
+    // variant as head and the next prepare fcU keeps the engine on the parent payload
+    this.forkChoice.isPayloadInclusionListSatisfied(blockRootHex)
+  ) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
@@ -367,22 +377,4 @@ export async function importExecutionPayload(
     blockHash: blockHashHex,
     delaySec,
   });
-}
-
-/**
- * Process an execution payload envelope end-to-end: wait for DA, then import.
- *
- * Used by the PayloadEnvelopeProcessor queue (gossip / API / unknown-payload sync) — i.e.
- * callers that have NOT already awaited DA themselves. Range sync's inline dispatch in
- * processBlocks skips this wrapper and calls `importExecutionPayload` directly, since
- * `verifyBlocksInEpoch` already awaited DA for the segment.
- */
-export async function processExecutionPayload(
-  this: BeaconChain,
-  payloadInput: PayloadEnvelopeInput,
-  signal: AbortSignal,
-  opts: ImportPayloadOpts = {}
-): Promise<void> {
-  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], signal);
-  await importExecutionPayload.call(this, payloadInput, dataAvailabilityStatuses[0], opts);
 }

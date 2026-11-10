@@ -20,7 +20,8 @@ export const lighthousePeerScoreAssertion: Assertion<"lighthousePeerScore", {gos
     const errors: AssertionResult[] = [];
 
     try {
-      const peerScores = await (lighthousePeer?.beacon.api as LighthouseAPI).lighthouse.getPeers();
+      if (lighthousePeer === undefined) throw Error("No Lighthouse node found");
+      const peerScores = await (lighthousePeer.beacon.api as LighthouseAPI).lighthouse.getPeers();
       for (const peerScore of peerScores.body) {
         const {
           peer_id,

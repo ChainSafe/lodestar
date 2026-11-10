@@ -1,11 +1,8 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {
-  BLS_VERIFIER_MAX_BATCH_SIZE,
-  BLS_VERIFIER_MAX_SAME_MESSAGE_BATCH_SIZE,
-} from "@chainsafe/lodestar-z/bls-verifier";
-import {SecretKey, Signature} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {BLS_VERIFIER_MAX_BATCH_SIZE, BLS_VERIFIER_MAX_SAME_MESSAGE_BATCH_SIZE} from "@lodestar/native/bls-verifier";
+import {SecretKey, Signature} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";

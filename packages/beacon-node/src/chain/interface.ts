@@ -1,7 +1,7 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -77,8 +77,7 @@ import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPa
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
-export {BlockType, type AssembledBlockType};
-export {type ProposerPreparationData};
+export {type AssembledBlockType, BlockType, type ProposerPreparationData};
 export type BlockHash = RootHex;
 
 export type StateGetOpts = {
