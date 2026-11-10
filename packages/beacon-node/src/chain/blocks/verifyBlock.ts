@@ -120,18 +120,16 @@ export async function verifyBlocksInEpoch(
         // we should have the shuffling inside ShufflingCache most of the time
         return (
           this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
-          preState0.getShufflingAtEpoch(attEpoch);
-        // Unlike getIndexedAttestation, keep attestingIndices in committee order: sorting them dominates building
-        // these on mainnet blocks. See FullyVerifiedBlock.indexedAttestations.
-        return {
-          attestingIndices: getAttestingIndices(shuffling, fork, attestation),
-          data: attestation.data,
-          signature: attestation.signature,
-        };
+          preState0.getShufflingAtEpoch(attEpoch)
+        );
       });
-      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation, j) =>
-        getIndexedAttestation(attestationShufflingsByBlock[i][j], fork, attestation)
-      );
+      // Unlike getIndexedAttestation, keep attestingIndices in committee order: sorting them dominates building
+      // these on mainnet blocks. See FullyVerifiedBlock.indexedAttestations.
+      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation, j) => ({
+        attestingIndices: getAttestingIndices(attestationShufflingsByBlock[i][j], fork, attestation),
+        data: attestation.data,
+        signature: attestation.signature,
+      }));
     }
 
     // Pick the data-availability source by fork:
@@ -205,6 +203,7 @@ export async function verifyBlocksInEpoch(
         preState0,
         blocks,
         indexedAttestationsByBlock,
+        attestationShufflingsByBlock,
         opts
       ),
 
@@ -222,19 +221,6 @@ export async function verifyBlocksInEpoch(
         opts
       ),
 
-       // All signatures at once
-       verifyBlocksSignatures(
-         this.config,
-         this.bls,
-         this.logger,
-         this.metrics,
-         preState0,
-         blocks,
-         indexedAttestationsByBlock,
-         attestationShufflingsByBlock,
-         opts
-       ),
- 
       // TODO GLOAS: can verify payload signatures in batch too
       // maybe chain with the above verifyBlocksSignatures()
     ]);
