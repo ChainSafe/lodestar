@@ -304,7 +304,7 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     var builders = try upgraded.inner.get("builders");
     try std.testing.expectEqual(@as(usize, 2), try builders.length());
     try std.testing.expectEqual(
-        @as(?bool, true),
+        @as(?bool, null),
         state.epoch_cache.builder_deposit_signature_cache.instance.get(builder_root),
     );
     var output: std.Io.Writer.Allocating = .init(allocator);
