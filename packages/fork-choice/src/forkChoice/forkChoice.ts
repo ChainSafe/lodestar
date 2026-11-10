@@ -766,6 +766,9 @@ export class ForkChoice implements IForkChoice {
    *
    * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
+   *
+   * A block whose parent payload chain was invalidated is rejected. `executionStatus` is ignored for a gloas
+   * block: it has no payload of its own and inherits the status of the parent variant it builds on.
    */
   onBlock(
     block: BeaconBlock,
@@ -788,6 +791,19 @@ export class ForkChoice implements IForkChoice {
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.UNKNOWN_PARENT,
+          root: parentRootHex,
+          hash: parentHashHex,
+        },
+      });
+    }
+
+    // An execution engine verdict can invalidate the parent while this block is being verified. Inserting the
+    // block would put a viable node below an invalidated one, or poison the tree if this block is VALID
+    if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
+        err: {
+          code: InvalidBlockCode.PARENT_EXECUTION_INVALID,
           root: parentRootHex,
           hash: parentHashHex,
         },
@@ -955,7 +971,9 @@ export class ForkChoice implements IForkChoice {
               executionPayloadBlockHash: parentBlockHashFromBid,
               executionPayloadNumber: parentMeta.number,
               executionPayloadGasLimit: parentMeta.gasLimit,
-              executionStatus: this.getPostMergeExecStatus(executionStatus),
+              // The parent's default (PENDING) variant does not reflect a SYNCING parent payload, inheriting
+              // from the variant matching the bid's parent block hash keeps that payload from being marked VALID
+              executionStatus: this.getPostMergeExecStatus(parentBlock.executionStatus),
               dataAvailabilityStatus,
             };
           })()
@@ -1156,6 +1174,19 @@ export class ForkChoice implements IForkChoice {
     executionStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
   ): void {
+    // Same guard as onBlock: the PENDING variant carries the status of the payload chain this block builds on
+    const pendingBlock = this.getBlockHexDefaultStatus(blockRoot);
+    if (pendingBlock?.executionStatus === ExecutionStatus.Invalid) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
+        err: {
+          code: InvalidBlockCode.PARENT_EXECUTION_INVALID,
+          root: pendingBlock.parentRoot,
+          hash: pendingBlock.executionPayloadBlockHash,
+        },
+      });
+    }
+
     this.protoArray.onExecutionPayload(
       blockRoot,
       this.fcStore.currentSlot,

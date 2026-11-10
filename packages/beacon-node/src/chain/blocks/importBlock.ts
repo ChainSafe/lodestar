@@ -1,10 +1,11 @@
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
-  ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
+  InvalidBlockCode,
   NotReorgedReason,
+  ProtoBlock,
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
@@ -43,6 +44,7 @@ import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainEvent} from "../emitter.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
@@ -93,8 +95,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, dataAvailabilityStatus, indexedAttestations} = fullyVerifiedBlock;
-  let {executionStatus} = fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus, indexedAttestations} =
+    fullyVerifiedBlock;
   const block = blockInput.getBlock();
   const source = blockInput.getBlockSource();
   const {slot: blockSlot} = block.message;
@@ -130,34 +132,29 @@ export async function importBlock(
 
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
-  if (isGloasBeaconBlock(block.message)) {
-    // A gloas block has no payload of its own, it inherits the status of the payload it builds on,
-    // i.e. the parent variant matching the bid's parent block hash. The parent's default (PENDING)
-    // variant does not reflect a SYNCING parent payload, and onBlock would then mark that payload VALID.
-    const parentRootHex = toRootHex(block.message.parentRoot);
-    const parentBlockHashHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-    const parentBlock = this.forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHashHex);
-    if (parentBlock === null) {
-      throw Error(
-        `Parent block not found in forkChoice, parentRoot=${parentRootHex} parentBlockHash=${parentBlockHashHex}`
-      );
-    }
-    if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
-      throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
-    }
-    executionStatus = parentBlock.executionStatus;
-  }
-
   const importDelayMs = this.clock.msFromSlot(blockSlot);
-  const blockSummary = this.forkChoice.onBlock(
-    block.message,
-    postState,
-    receiveDelayMs,
-    importDelayMs,
-    currentSlot,
-    executionStatus,
-    dataAvailabilityStatus
-  );
+  let blockSummary: ProtoBlock;
+  try {
+    blockSummary = this.forkChoice.onBlock(
+      block.message,
+      postState,
+      receiveDelayMs,
+      importDelayMs,
+      currentSlot,
+      executionStatus,
+      dataAvailabilityStatus
+    );
+  } catch (e) {
+    // The parent can be invalidated by a forkchoiceUpdated verdict after verifyBlocksSanityChecks passed
+    if (
+      e instanceof ForkChoiceError &&
+      e.type.code === ForkChoiceErrorCode.INVALID_BLOCK &&
+      e.type.err.code === InvalidBlockCode.PARENT_EXECUTION_INVALID
+    ) {
+      throw new BlockError(block, {code: BlockErrorCode.PARENT_EXECUTION_INVALID, parentRoot: e.type.err.root});
+    }
+    throw e;
+  }
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block

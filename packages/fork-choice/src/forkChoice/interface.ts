@@ -155,6 +155,9 @@ export interface IForkChoice {
    * ## Notes:
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
+   *
+   * Throws `InvalidBlockCode.PARENT_EXECUTION_INVALID` if the parent payload chain was invalidated.
+   * `executionStatus` is ignored for a gloas block, it inherits the status of the parent variant it builds on.
    */
   onBlock(
     block: BeaconBlock,
