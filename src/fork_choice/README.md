@@ -147,6 +147,13 @@ The boundary:
   signature verification is the caller's job.
 - `onExecutionPayloadEnvelope` takes a verified envelope's block root, the engine's
   verdict on its payload and, for heze, the inclusion-list verdict.
+- For a client that never builds the SSZ objects: `onAttestationData` and
+  `onAttesterSlashingData` take attestation data and attesting indices, the slashing
+  ones sorted ascending; `onPtcVotes` takes resolved PTC positions;
+  `recordInclusionListSatisfaction` takes an inclusion-list verdict reported apart from
+  the envelope; `BlockSummary.arrival_ms_into_slot` judges timeliness by arrival
+  instead of import time; `proposer_head.decide` names the first condition that keeps
+  the head.
 - `executionStatus(node)` and `isOptimistic(node)` answer from the head cache, for
   `execution_optimistic` in API responses and for block production.
 - `StateProvider` supplies justified balances and, for `is_head_weak` with
