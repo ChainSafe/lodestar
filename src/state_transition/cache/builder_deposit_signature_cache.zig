@@ -51,16 +51,16 @@ pub const BuilderDepositSignatureCache = struct {
     pub fn put(
         self: *BuilderDepositSignatureCache,
         allocator: std.mem.Allocator,
-        deposit_root: [32]u8,
+        pending_deposit_root: [32]u8,
         valid: bool,
     ) !void {
         const context: RootHashContext = .{ .pubkey_context = self.hash_context };
-        if (self.validity.getPtrContext(deposit_root, context)) |value| {
+        if (self.validity.getPtrContext(pending_deposit_root, context)) |value| {
             std.debug.assert(value.* == valid);
             return;
         }
         if (self.validity.count() >= self.capacity) return;
-        try self.validity.putContext(allocator, deposit_root, valid, context);
+        try self.validity.putContext(allocator, pending_deposit_root, valid, context);
     }
 
     pub fn addBuilderPubkey(self: *BuilderDepositSignatureCache, allocator: std.mem.Allocator, pubkey: [48]u8) !void {
