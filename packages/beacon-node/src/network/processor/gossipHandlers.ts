@@ -1371,11 +1371,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                 case PayloadErrorCode.INVALID_SIGNATURE:
                 case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
                 case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
-                  core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  // Honest peers may relay envelopes that pass gossip validation but fail import.
+                  if (e.type.code === PayloadErrorCode.INVALID_SIGNATURE) {
+                    core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  }
                   // The builder may have signed another envelope that is valid, keeping this one would make
                   // by-root and range sync reuse it and never import the payload
                   chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
-                  // Misbehaving peer, but could highlight an issue in another client
                   logLevel = LogLevel.warn;
                   break;
               }

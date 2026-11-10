@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {Slot, isGloasBeaconBlock, ssz} from "@lodestar/types";
+import {RootHex, Slot, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../../errors/index.js";
 import {IBlockInput} from "../blockInput/types.js";
@@ -23,13 +23,14 @@ export type ChainSegmentResult = {warnings: OrphanedPayloadEnvelope[] | null};
  * - For gloas: verifies bid.parentBlockHash matches the tracked execution hash; if not, the
  *   previous FULL envelope is treated as orphaned (segment continues as if previous slot was EMPTY)
  * - If an envelope exists for this slot (or the parent's slot): verifies it references this block's root
- * - Advances the tracked execution hash (FULL if envelope present, EMPTY if not)
+ * - Advances the tracked execution hash when an envelope or an imported FULL payload is available
  */
 export function assertLinearChainSegment(
   config: ChainForkConfig,
   blocks: IBlockInput[],
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
-  parentBlock: ProtoBlock | null
+  parentBlock: ProtoBlock | null,
+  getFullPayloadBlockHash?: (blockRoot: RootHex) => RootHex | null
 ): ChainSegmentResult {
   if (blocks.length === 0) {
     return {warnings: null};
@@ -136,6 +137,7 @@ export function assertLinearChainSegment(
 
       const payloadInput = payloadEnvelopes?.get(slot) ?? null;
       const payloadEnvelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : null;
+      let fullBlockHash = getFullPayloadBlockHash?.(blocks[i].blockRootHex) ?? null;
       if (payloadEnvelope !== null) {
         // Verify the envelope references this block's root
         const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
@@ -148,10 +150,13 @@ export function assertLinearChainSegment(
           });
         }
 
-        // FULL variant: save state before advancing, then advance
+        fullBlockHash = toRootHex(payloadEnvelope.message.payload.blockHash);
+      }
+      if (fullBlockHash !== null) {
+        // FULL variant: save state before advancing, then advance.
         prevExecHash = currentExecHash;
-        lastFullSlot = slot;
-        currentExecHash = toRootHex(payloadEnvelope.message.payload.blockHash);
+        lastFullSlot = payloadEnvelope === null ? null : slot;
+        currentExecHash = fullBlockHash;
       }
       // EMPTY variant: currentExecHash unchanged
     }

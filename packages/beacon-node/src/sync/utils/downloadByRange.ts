@@ -95,7 +95,8 @@ export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
 
 export type CacheByRangeResponsesProps = {
   cache: Pick<SeenBlockInput, "getByBlock">;
-  seenPayloadEnvelopeInputCache: Pick<SeenPayloadEnvelopeInput, "add" | "addFromBid">;
+  seenPayloadEnvelopeInputCache: Pick<SeenPayloadEnvelopeInput, "add" | "addFromBid" | "get">;
+  getFullPayloadBlockHash: (blockRoot: RootHex) => RootHex | null;
   peerIdStr: string;
   responses: ValidatedResponses;
   batchBlocks: IBlockInput[];
@@ -137,6 +138,7 @@ export type ValidatedResponses = {
 export function cacheByRangeResponses({
   cache,
   seenPayloadEnvelopeInputCache,
+  getFullPayloadBlockHash,
   peerIdStr,
   responses,
   batchBlocks,
@@ -150,6 +152,23 @@ export function cacheByRangeResponses({
   const updatedBatchBlocks = new Map<Slot, IBlockInput>(batchBlocks.map((block) => [block.slot, block]));
 
   const payloadEnvelopes = new Map<Slot, PayloadEnvelopeInput>(existingPayloadEnvelopes);
+  // FULL can be reached at the reconstruction threshold, while the DB writer still waits for columns.
+  const getIncompleteFullInput = (blockRootHex: RootHex, batchInput?: PayloadEnvelopeInput) => {
+    const cachedInput = seenPayloadEnvelopeInputCache.get(blockRootHex);
+    const input = cachedInput?.hasPayloadEnvelope() ? cachedInput : batchInput;
+    return input?.hasPayloadEnvelope() && !input.hasComputedAllData() ? input : undefined;
+  };
+
+  for (const [slot, payloadInput] of payloadEnvelopes) {
+    if (getFullPayloadBlockHash(payloadInput.blockRootHex) !== null) {
+      const incomplete = getIncompleteFullInput(payloadInput.blockRootHex, payloadInput);
+      if (incomplete) {
+        payloadEnvelopes.set(slot, incomplete);
+      } else {
+        payloadEnvelopes.delete(slot);
+      }
+    }
+  }
 
   const blocks = responses.validatedBlocks ?? [];
   for (let i = 0; i < blocks.length; i++) {
@@ -188,6 +207,13 @@ export function cacheByRangeResponses({
     // seenBlockInputCache but unseeded here, and payload-by-root sync would later throw "Missing
     // PayloadEnvelopeInput for known block" (see issue #9306). add() is idempotent.
     if (isForkPostGloas(blockInput.forkName) && !payloadEnvelopes.has(blockInput.slot)) {
+      if (getFullPayloadBlockHash(blockInput.blockRootHex) !== null) {
+        const incomplete = getIncompleteFullInput(blockInput.blockRootHex);
+        if (incomplete) {
+          payloadEnvelopes.set(blockInput.slot, incomplete);
+        }
+        continue;
+      }
       const payloadInput = seenPayloadEnvelopeInputCache.add({
         blockRootHex: blockInput.blockRootHex,
         block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
@@ -241,10 +267,14 @@ export function cacheByRangeResponses({
 
   if (downloadedPayloadEnvelopes !== null) {
     for (const [slot, envelope] of downloadedPayloadEnvelopes) {
+      const blockRootHex = toRootHex(envelope.message.beaconBlockRoot);
+      // FULL payloads are already imported, so this response would never be verified.
+      if (getFullPayloadBlockHash(blockRootHex) !== null) {
+        continue;
+      }
       // the only PayloadEnvelopeInput miss is the dangling parent
       let payloadInput = payloadEnvelopes.get(slot);
       if (payloadInput === undefined) {
-        const blockRootHex = toRootHex(envelope.message.beaconBlockRoot);
         if (updatedBatchBlocks.has(slot)) {
           throw new Error(`Missing PayloadEnvelopeInput for in-batch slot ${slot} root ${blockRootHex}`);
         }
@@ -293,9 +323,15 @@ export function cacheByRangeResponses({
       // Gloas columns are attached to the matching PayloadEnvelopeInput, NOT to IBlockInput.
       // Gloas DataColumnSidecar has `slot` directly (no signedBlockHeader).
       const dataSlot = firstColumn.slot;
-      const payloadInput = payloadEnvelopes.get(dataSlot);
+      let payloadInput = payloadEnvelopes.get(dataSlot);
+      if (!payloadInput && getFullPayloadBlockHash(blockRootHex) !== null) {
+        // The dangling parent may have become FULL while its columns were in flight.
+        payloadInput = getIncompleteFullInput(blockRootHex);
+        if (payloadInput) {
+          payloadEnvelopes.set(dataSlot, payloadInput);
+        }
+      }
       if (!payloadInput) {
-        // Should not happen: we built payloadInputs for all gloas blocks above
         continue;
       }
       for (const columnSidecar of columnSidecars as gloas.DataColumnSidecar[]) {

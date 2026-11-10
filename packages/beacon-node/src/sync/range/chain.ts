@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Root, Slot} from "@lodestar/types";
+import {Epoch, Root, RootHex, Slot} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
@@ -168,7 +168,8 @@ export class SyncChain {
     syncType: RangeSyncType,
     fns: SyncChainFns,
     modules: SyncChainModules,
-    parentPayload: ParentPayload | undefined
+    parentPayload: ParentPayload | undefined,
+    private readonly getFullPayloadBlockHash?: (blockRoot: RootHex) => RootHex | null
   ) {
     const {config, clock, custodyConfig, logger, metrics} = modules;
     this.firstBatchEpoch = initialBatchEpoch;
@@ -538,7 +539,8 @@ export class SyncChain {
       this.isFirstBatch,
       // `parentPayload` is only meaningful for the first batch
       this.isFirstBatch ? this.parentPayload : undefined,
-      this.target.slot
+      this.target.slot,
+      this.getFullPayloadBlockHash
     );
     this.isFirstBatch = false;
     this.batches.set(startEpoch, batch);
