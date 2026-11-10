@@ -19,6 +19,21 @@ RUN case "${TARGETARCH}" in \
   rm /tmp/zig.tar.xz && \
   zig version
 
+# Install rustup, whose cargo fetches the toolchain `rust/leanvm/rust-toolchain.toml` pins.
+# Required to build leanVM into the @lodestar/native workspace package
+ARG RUSTUP_VERSION=1.28.2
+RUN case "${TARGETARCH}" in \
+  amd64) RUST_ARCH=x86_64; RUSTUP_SHA256=20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c ;; \
+  arm64) RUST_ARCH=aarch64; RUSTUP_SHA256=e3853c5a252fca15252d07cb23a1bdd9377a8c6f3efa01531109281ae47f841c ;; \
+  *) echo "unsupported TARGETARCH=${TARGETARCH}" && exit 1 ;; \
+  esac && \
+  curl -fsSL "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${RUST_ARCH}-unknown-linux-gnu/rustup-init" -o /tmp/rustup-init && \
+  echo "${RUSTUP_SHA256}  /tmp/rustup-init" | sha256sum -c - && \
+  chmod +x /tmp/rustup-init && \
+  /tmp/rustup-init -y --no-modify-path --default-toolchain none && \
+  rm /tmp/rustup-init
+ENV PATH=/root/.cargo/bin:$PATH
+
 COPY . .
 
 ENV CI=true

@@ -115,6 +115,10 @@ Zig modules live in `src/`, and the Node.js addon, wrappers, and binding tests l
 Run Zig commands from the repository root. The native package uses the root pnpm
 lockfile and shared monorepo version.
 
+`rust/leanvm` is a Rust crate that wraps leanVM for `src/leanvm`. `zig build` runs cargo on it
+through rustup, once per machine: the archive is kept in Zig's global cache and shared by every
+checkout until the crate changes.
+
 ### Tests and Formatting
 
 Run the tests relevant to your changes, for example:

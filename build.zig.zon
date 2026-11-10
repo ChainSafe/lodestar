@@ -9,6 +9,7 @@
         "build.zig.zon",
         "bench",
         "bindings",
+        "rust",
         "scripts",
         "src",
         "test",
@@ -259,6 +260,9 @@
             .root_source_file = "src/ere_verifier/root.zig",
             .imports = .{.ere},
         },
+        .leanvm = .{
+            .root_source_file = "src/leanvm/root.zig",
+        },
     },
     .executables = .{
         .download_era_files = .{
@@ -398,6 +402,7 @@
                     .state_transition,
                     .hex,
                     .ere_verifier,
+                    .leanvm,
                     "zapi:zapi",
                 },
             },
@@ -427,6 +432,7 @@
         .clock = .{ .root_module = .clock },
         .beacon_node = .{ .root_module = .beacon_node },
         .ere_verifier = .{ .root_module = .ere_verifier },
+        .leanvm = .{ .root_module = .leanvm },
         .bindings_allocator = .{
             .root_module = .{
                 .root_source_file = "bindings/napi/tracked_allocator.zig",

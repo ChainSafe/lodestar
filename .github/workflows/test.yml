@@ -431,6 +431,10 @@ jobs:
       - name: Run ere_verifier tests
         run: |
           zig build test:ere_verifier
+      # Runs the runner's cargo on `rust/leanvm` unless Zig's global cache already holds its archive.
+      - name: Run leanvm tests
+        run: |
+          zig build test:leanvm
 
       - name: Build benchmarks
         run: |
