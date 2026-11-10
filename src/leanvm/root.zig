@@ -373,5 +373,5 @@ pub fn aggregate(inputs: Inputs, log_inv_rate: u32) Error!*Proof {
 }
 
 test {
-    _ = @import("e2e_test.zig");
+    _ = @import("root_test.zig");
 }
