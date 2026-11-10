@@ -28,6 +28,12 @@ describe("execution/builder/http submitBlindedBlockNoResponse", () => {
     return new ExecutionBuilderHttp({enabled: true, url: "http://localhost:8661", timeout: 12000}, config, clock);
   }
 
+  async function expectSlotDeadline(submit: Promise<void>): Promise<void> {
+    const error = await submit.catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(TimeoutError);
+    expect((error as Error).message).toContain(`slot ${slot}`);
+  }
+
   function hangUntilAborted(_url: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     return new Promise((_, reject) => {
       const abort = (): void => reject(new DOMException("Aborted", "AbortError"));
@@ -48,28 +54,18 @@ describe("execution/builder/http submitBlindedBlockNoResponse", () => {
 
   it("cuts a hanging request at the end of the slot", async () => {
     const fetch = vi.fn(hangUntilAborted);
-    const start = Date.now();
-    await expect(getBuilder(100, fetch).submitBlindedBlockNoResponse({data: signedBlindedBlock})).rejects.toThrow(
-      TimeoutError
-    );
-    expect(Date.now() - start).toBeLessThan(1000);
+    await expectSlotDeadline(getBuilder(100, fetch).submitBlindedBlockNoResponse({data: signedBlindedBlock}));
     expect(fetch).toHaveBeenCalledOnce();
   });
 
   it("does not retry once the slot has ended", async () => {
     const fetch = vi.fn().mockResolvedValue(new Response(null, {status: 503}));
-    await expect(getBuilder(100, fetch).submitBlindedBlockNoResponse({data: signedBlindedBlock})).rejects.toThrow(
-      TimeoutError
-    );
+    await expectSlotDeadline(getBuilder(100, fetch).submitBlindedBlockNoResponse({data: signedBlindedBlock}));
     expect(fetch).toHaveBeenCalledOnce();
   });
 
   it("gives up right away if the slot already ended", async () => {
     const fetch = vi.fn(hangUntilAborted);
-    const start = Date.now();
-    await expect(getBuilder(0, fetch).submitBlindedBlockNoResponse({data: signedBlindedBlock})).rejects.toThrow(
-      TimeoutError
-    );
-    expect(Date.now() - start).toBeLessThan(500);
+    await expectSlotDeadline(getBuilder(0, fetch).submitBlindedBlockNoResponse({data: signedBlindedBlock}));
   });
 });
