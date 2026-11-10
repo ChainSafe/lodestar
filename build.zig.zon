@@ -393,6 +393,12 @@
                 .imports = .{ .fork_choice, .fork_types, .consensus_types, .config, .constants, .preset, .zbench },
             },
         },
+        .bench_fork_choice_on_tick = .{
+            .root_module = .{
+                .root_source_file = "bench/fork_choice/on_tick.zig",
+                .imports = .{ .fork_choice, .consensus_types, .config, .constants, .preset, .zbench },
+            },
+        },
     },
     .libraries = .{
         .bindings = .{

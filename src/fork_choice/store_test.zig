@@ -833,8 +833,15 @@ test "queued votes: a vote for the current slot lands on the next tick" {
     var v2 = [_]u64{2};
     var vote_2 = indexedAttestation(&v2, 5, tagRoot(0x30), target);
     try store.onAttestation(.{ .electra = &vote_2 }, false);
+    // A vote for the current slot lands on the next tick, which validator 2's vote waits
+    // through. Its validator index grows the per-validator arrays while validator 2 is queued.
+    var v200 = [_]u64{200};
+    var vote_200 = indexedAttestation(&v200, 4, tagRoot(0x20), target);
+    try store.onAttestation(.{ .electra = &vote_200 }, false);
+    try testing.expectEqual(@as(usize, 2), store.queuedVoteCount());
     try store.onTick(store.timing.timeAtSlotMs(5));
     try testing.expectEqual(@as(?store_mod.LatestMessage, null), store.latestMessage(2));
+    try testing.expectEqual(low, store.latestMessage(200).?.block);
     try testing.expectEqual(@as(usize, 1), store.queuedVoteCount());
     try store.onTick(store.timing.timeAtSlotMs(6));
     try testing.expectEqual(high, store.latestMessage(2).?.block);

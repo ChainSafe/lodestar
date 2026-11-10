@@ -39,9 +39,10 @@ of validators vote alike, so an epoch adds a few hundred entries; each entry als
 caches the node it counts on (`get_supported_node`). Queued votes, those whose slot
 is not yet past, are a second id array of the same shape: the first vote of a slot
 wins, as applying them in order at the next slot would, a vote for a later slot
-replaces an earlier one, and each tick walks both arrays in lockstep applying what
-became past. `prune` renumbers only the table's entries, never a validator's vote,
-and the table compacts itself once it doubles, so it stays small without finality.
+replaces an earlier one, and a bitset of the validators with a queued vote lets each
+tick visit only those and apply what became past. `prune` renumbers only the table's
+entries, never a validator's vote, and the table compacts itself once it doubles, so
+it stays small without finality.
 Equivocators are a bitset. Justified balances arrive through
 a `StateProvider` callback when the justified checkpoint changes and are kept as raw
 effective-balance increments plus an active-and-unslashed bitset.
@@ -210,7 +211,9 @@ Apple Silicon, ReleaseFast, 2026-11-09:
 
 The epoch events, measured separately on the same workload: the balance diff for
 10k changed balances takes about 0.35 ms, `prune` about 0.007 ms, and the vote
-target compaction (about every 40 epochs) about 3.5 ms.
+target compaction (about every 40 epochs) about 3.5 ms. The tick that starts a slot
+applies the ~25.3k votes queued during the previous one in about 0.46 ms
+(`bench/fork_choice/on_tick.zig`).
 
 A one-off comparison on the same workload with silver (`gattaca-com/silver`
 `a467bc4`) and Lighthouse `proto_array` (`unstable` `eab341b`), using harnesses that
@@ -234,6 +237,7 @@ Run with:
 ```
 zig build run:bench_fork_choice_update_head -Doptimize=ReleaseFast
 zig build run:bench_fork_choice_on_attestation -Doptimize=ReleaseFast
+zig build run:bench_fork_choice_on_tick -Doptimize=ReleaseFast
 ```
 
 ## Deviations from the spec

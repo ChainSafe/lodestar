@@ -323,6 +323,11 @@ pub const Store = struct {
     /// by the tick that makes their slot past. The spec rejects such attestations and
     /// expects the caller to retry; gossip delivers them in their own slot.
     queued_votes: std.ArrayList(TargetId),
+    /// The validators with a queued vote. Few validators attest per slot, so the tick
+    /// visits these instead of every entry of `queued_votes`.
+    queued_validators: std.DynamicBitSetUnmanaged,
+    /// Set bits in `queued_validators`, so a tick with nothing queued skips scanning it.
+    queued_count: usize,
     vote_targets: VoteTargets,
     justified_balances: JustifiedBalances,
     /// `effective_balance_increments` with inactive and slashed validators zeroed:
@@ -385,6 +390,8 @@ pub const Store = struct {
             .ptc_votes = .empty,
             .latest_votes = .empty,
             .queued_votes = .empty,
+            .queued_validators = .{},
+            .queued_count = 0,
             .vote_targets = vote_targets,
             .justified_balances = .empty,
             .justified_vote_increments = &.{},
@@ -424,6 +431,7 @@ pub const Store = struct {
         self.justified_balances.deinit(self.allocator);
         self.latest_votes.deinit(self.allocator);
         self.queued_votes.deinit(self.allocator);
+        self.queued_validators.deinit(self.allocator);
         self.vote_targets.deinit(self.allocator);
         self.ptc_votes.deinit(self.allocator);
         self.index_by_root.deinit(self.allocator);
@@ -847,7 +855,10 @@ pub const Store = struct {
         };
         const queue = self.currentSlot() < data.slot + 1;
         try self.ensureValidatorSlots(&self.latest_votes, indices);
-        if (queue) try self.ensureValidatorSlots(&self.queued_votes, indices);
+        if (queue) {
+            try self.ensureValidatorSlots(&self.queued_votes, indices);
+            try self.queued_validators.resize(self.allocator, self.queued_votes.items.len, false);
+        }
         const id = try self.internVoteTarget(message);
         if (queue) return self.queueVotes(indices, id, message);
         for (indices) |index| self.applyVote(index, id, message);
@@ -891,7 +902,13 @@ pub const Store = struct {
         for (attesting_indices) |index| {
             if (self.isEquivocating(index)) continue;
             const queued = &self.queued_votes.items[index];
-            if (queued.* == NO_TARGET or message.slot > messages[queued.*].slot) queued.* = id;
+            if (queued.* == NO_TARGET) {
+                self.queued_validators.set(index);
+                self.queued_count += 1;
+                queued.* = id;
+            } else if (message.slot > messages[queued.*].slot) {
+                queued.* = id;
+            }
         }
     }
 
@@ -899,20 +916,24 @@ pub const Store = struct {
     fn drainQueuedMessages(self: *Store, current_slot: Slot) void {
         const queued = self.queued_votes.items;
         std.debug.assert(queued.len <= self.latest_votes.items.len);
-        for (queued, 0..) |*id, index| {
-            if (id.* == NO_TARGET) continue;
+        var validators = self.queued_validators.iterator(.{});
+        // Bounded by the count, so the scan skips the empty words after the last queued validator.
+        for (0..self.queued_count) |_| {
+            const index = validators.next().?;
+            const id = &queued[index];
+            std.debug.assert(id.* != NO_TARGET);
             const message = self.vote_targets.messages.items[id.*];
             if (message.slot >= current_slot) continue;
             self.applyVote(index, id.*, message);
             id.* = NO_TARGET;
+            self.queued_validators.unset(index);
+            self.queued_count -= 1;
         }
     }
 
     /// Validators with a vote waiting for its slot to pass.
     pub fn queuedVoteCount(self: *const Store) usize {
-        var count: usize = 0;
-        for (self.queued_votes.items) |id| count += @intFromBool(id != NO_TARGET);
-        return count;
+        return self.queued_count;
     }
 
     pub fn latestMessage(self: *const Store, validator_index: ValidatorIndex) ?LatestMessage {
