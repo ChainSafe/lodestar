@@ -38,8 +38,9 @@ export type IncludedAttesters = {slot: Slot; attDataRootHex: DataRootHex; attest
 
 /**
  * Backstop only, single attestations included in a canonical block are deleted (see `onHead`) so the real retention is
- * far lower. Sized for the default 8-slot window with no block at all and up to 1024 attesters per committee,
- * i.e. ~2M active validators. Beyond it, newer single attestations are dropped
+ * far lower. Sized for all subnets during the default 8 slots before a proposal (`slotsToSubscribeBeforeProposalDuty`)
+ * with no block at all and up to 1024 attesters per committee, i.e. ~2M active validators. Earlier slots of the
+ * collected window only add the few subnets the node subscribes to anyway. Beyond it, newer singles are dropped
  */
 const MAX_SINGLE_ATTESTATIONS_RETAINED = 8 * ATTESTATION_SUBNET_COUNT * 1024;
 

@@ -108,7 +108,6 @@ const core = await NetworkCore.init({
   activeValidatorCount: workerData.activeValidatorCount,
   initialStatus: workerData.initialStatus,
   initialCustodyGroupCount: workerData.initialCustodyGroupCount,
-  slotsToSubscribeBeforeProposalDuty: workerData.slotsToSubscribeBeforeProposalDuty,
 });
 
 wireEventsOnWorkerThread<NetworkEventData>(

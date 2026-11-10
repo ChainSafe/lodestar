@@ -191,8 +191,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       inclusionListStore: new InclusionListStore(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
       singleAttestationPool: new SingleAttestationPool(),
-      // 0 disables collecting single attestations before a proposal
-      proposerTracker: new ProposerTracker(0),
+      proposerTracker: new ProposerTracker(),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
       payloadAttestationPool: {
         add: vi.fn(),

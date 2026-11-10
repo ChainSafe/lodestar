@@ -129,7 +129,7 @@ describe("chain / opPools / SingleAttestationPool", () => {
     const pool = new SingleAttestationPool();
     addSingles(pool, [1]);
 
-    const proposerTracker = new ProposerTracker(8);
+    const proposerTracker = new ProposerTracker();
     proposerTracker.addProposal(slot + 1);
     pool.prune(proposerTracker);
     expect(pool.getStoredSlots()).toEqual([slot]);

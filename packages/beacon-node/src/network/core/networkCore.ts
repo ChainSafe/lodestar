@@ -69,7 +69,6 @@ export type BaseNetworkInit = {
   activeValidatorCount: number;
   initialStatus: Status;
   initialCustodyGroupCount: number;
-  slotsToSubscribeBeforeProposalDuty: number;
 };
 
 /** Counts of what is still keeping this thread's event loop alive, e.g. `TCPWrap=3,Timeout=1` */
@@ -153,7 +152,6 @@ export class NetworkCore implements INetworkCore {
     activeValidatorCount,
     initialStatus,
     initialCustodyGroupCount,
-    slotsToSubscribeBeforeProposalDuty,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
@@ -218,10 +216,16 @@ export class NetworkCore implements INetworkCore {
     // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
     await gossip.start();
 
-    const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, networkConfig.nodeId, {
-      ...opts,
-      slotsToSubscribeBeforeProposalDuty,
-    });
+    const attnetsService = new AttnetsService(
+      config,
+      clock,
+      gossip,
+      metadata,
+      logger,
+      metrics,
+      networkConfig.nodeId,
+      opts
+    );
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(

@@ -178,8 +178,6 @@ export class Network implements INetwork {
     const activeValidatorCount = chain.getHeadState().activeValidatorCount;
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
-    // subscribe to all attestation subnets for the slots whose single attestations the chain collects before a proposal
-    const slotsToSubscribeBeforeProposalDuty = chain.opts.singleAttestationSlotsBeforeProposal ?? 0;
 
     if (opts.useWorker) {
       logger.info("running libp2p instance in worker thread");
@@ -195,7 +193,6 @@ export class Network implements INetwork {
             genesisTime: chain.genesisTime,
             initialStatus,
             initialCustodyGroupCount,
-            slotsToSubscribeBeforeProposalDuty,
           },
           config,
           privateKey,
@@ -216,7 +213,6 @@ export class Network implements INetwork {
           metricsRegistry: metrics ? new RegistryMetricCreator() : null,
           initialStatus,
           initialCustodyGroupCount,
-          slotsToSubscribeBeforeProposalDuty,
           activeValidatorCount,
         });
 

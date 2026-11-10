@@ -1,4 +1,5 @@
 import {MIN_ATTESTATION_INCLUSION_DELAY} from "@lodestar/params";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 
 /**
@@ -8,32 +9,28 @@ import {Slot} from "@lodestar/types";
 export class ProposerTracker {
   /** Local proposal slots that have not passed yet */
   private readonly proposalSlots = new Set<Slot>();
-  /** Vote slots `proposalSlot - singleAttestationSlotsBeforeProposal ... proposalSlot - 1` of tracked proposals */
+  /** Vote slots of tracked proposals, see `getFirstIncludableVoteSlot` */
   private readonly collectableSlots = new Set<Slot>();
   private clockSlot = 0;
 
   /**
-   * @param singleAttestationSlotsBeforeProposal validated to be in `[0, SLOTS_PER_EPOCH]`, 0 disables the tracker
-   * @param ignoreProposalDuty dev only, collect the last `singleAttestationSlotsBeforeProposal` vote slots regardless
-   * of local proposals
+   * @param ignoreProposalDuty dev only, collect every vote slot a block at the clock slot can include regardless of
+   * local proposals
    */
-  constructor(
-    private readonly singleAttestationSlotsBeforeProposal: number,
-    private readonly ignoreProposalDuty = false
-  ) {}
+  constructor(private readonly ignoreProposalDuty = false) {}
 
   /**
    * Idempotent, a known proposal is ignored
    * @returns true if the proposal was not tracked before
    */
   addProposal(proposalSlot: Slot): boolean {
-    if (this.singleAttestationSlotsBeforeProposal === 0 || this.proposalSlots.has(proposalSlot)) {
+    if (this.proposalSlots.has(proposalSlot)) {
       return false;
     }
 
     this.proposalSlots.add(proposalSlot);
     for (
-      let voteSlot = proposalSlot - this.singleAttestationSlotsBeforeProposal;
+      let voteSlot = getFirstIncludableVoteSlot(proposalSlot);
       voteSlot <= proposalSlot - MIN_ATTESTATION_INCLUSION_DELAY;
       voteSlot++
     ) {
@@ -45,10 +42,7 @@ export class ProposerTracker {
   shouldCollect(attestationSlot: Slot): boolean {
     if (this.ignoreProposalDuty) {
       // to test block production without proposal duties
-      return (
-        this.singleAttestationSlotsBeforeProposal > 0 &&
-        attestationSlot >= this.clockSlot - this.singleAttestationSlotsBeforeProposal
-      );
+      return attestationSlot >= getFirstIncludableVoteSlot(this.clockSlot);
     }
     return this.collectableSlots.has(attestationSlot);
   }
@@ -71,11 +65,19 @@ export class ProposerTracker {
     }
 
     // Each remaining proposal covers its own vote slots, so a vote slot below the lowest one is covered by none
-    const lowestCollectableVoteSlot = Math.min(...this.proposalSlots) - this.singleAttestationSlotsBeforeProposal;
+    const lowestCollectableVoteSlot = getFirstIncludableVoteSlot(Math.min(...this.proposalSlots));
     for (const voteSlot of this.collectableSlots) {
       if (voteSlot < lowestCollectableVoteSlot) {
         this.collectableSlots.delete(voteSlot);
       }
     }
   }
+}
+
+/**
+ * Since deneb (EIP-7045) a block includes attestations of its current and previous epoch, so the first vote slot it can
+ * include is the start of the previous epoch, 32 to 63 slots before it on mainnet
+ */
+function getFirstIncludableVoteSlot(blockSlot: Slot): Slot {
+  return computeStartSlotAtEpoch(Math.max(computeEpochAtSlot(blockSlot) - 1, 0));
 }

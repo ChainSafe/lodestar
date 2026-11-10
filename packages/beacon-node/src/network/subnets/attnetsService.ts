@@ -12,7 +12,7 @@ import {GOSSIP_D_LOW} from "../gossip/scoringParameters.js";
 import {stringifyGossipTopic} from "../gossip/topic.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
-import {AttnetsServiceOpts, CommitteeSubscription, GossipSubscriber, IAttnetsService, NodeId} from "./interface.js";
+import {CommitteeSubscription, GossipSubscriber, IAttnetsService, NodeId, SubnetsServiceOpts} from "./interface.js";
 import {computeSubscribedSubnet} from "./util.js";
 
 const gossipType = GossipType.beacon_attestation;
@@ -67,7 +67,7 @@ export class AttnetsService implements IAttnetsService {
     private readonly logger: Logger,
     private readonly metrics: NetworkCoreMetrics | null,
     private readonly nodeId: NodeId | null,
-    private readonly opts: AttnetsServiceOpts
+    private readonly opts: SubnetsServiceOpts
   ) {
     // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
     // so that we have enough subnet topic peers, see https://github.com/ChainSafe/lodestar/issues/4921

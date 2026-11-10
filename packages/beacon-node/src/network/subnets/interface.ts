@@ -35,10 +35,10 @@ export type ShuffleFn = <T>(arr: T[]) => T[];
 export type SubnetsServiceOpts = {
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty: number;
-};
-
-export type AttnetsServiceOpts = SubnetsServiceOpts & {
-  /** Owned by the chain options, in `[0, SLOTS_PER_EPOCH]`, 0 disables subscribing to all subnets before a proposal */
+  /**
+   * Subscribe to all attestation subnets this many slots before a block proposal of a connected validator, so that
+   * its single attestations can be packed into the block. In `[0, SLOTS_PER_EPOCH]`, 0 disables
+   */
   slotsToSubscribeBeforeProposalDuty: number;
 };
 

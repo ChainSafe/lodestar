@@ -41,7 +41,6 @@ export type WorkerNetworkCoreOpts = NetworkOptions & {
   genesisTime: number;
   initialStatus: Status;
   initialCustodyGroupCount: number;
-  slotsToSubscribeBeforeProposalDuty: number;
 };
 
 export type WorkerNetworkCoreInitModules = {
@@ -120,7 +119,6 @@ export class WorkerNetworkCore implements INetworkCore {
       metricsEnabled,
       initialStatus,
       initialCustodyGroupCount,
-      slotsToSubscribeBeforeProposalDuty,
     } = opts;
 
     const workerData: NetworkWorkerData = {
@@ -134,7 +132,6 @@ export class WorkerNetworkCore implements INetworkCore {
       genesisTime,
       initialStatus,
       initialCustodyGroupCount,
-      slotsToSubscribeBeforeProposalDuty,
       activeValidatorCount,
       loggerOpts: modules.logger.toOpts(),
     };
