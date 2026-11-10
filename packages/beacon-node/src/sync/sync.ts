@@ -33,8 +33,8 @@ export class BeaconSync implements IBeaconSync {
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
   private readonly slotImportTolerance: Slot;
-  /** Set while a subscription change is being applied */
-  private gossipSubscriptionTarget: boolean | undefined;
+  /** The requested subscription state, set while a change is being applied */
+  private pendingGossipSubscribed: boolean | undefined;
 
   constructor(opts: SyncOptions, modules: SyncModules) {
     const {config, chain, db, metrics, network, logger} = modules;
@@ -91,7 +91,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   close(): void {
-    this.gossipSubscriptionTarget = undefined;
+    this.pendingGossipSubscribed = undefined;
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
@@ -328,41 +328,41 @@ export class BeaconSync implements IBeaconSync {
     }
   };
 
-  private setGossipSubscription(target: boolean): boolean {
-    if ((this.gossipSubscriptionTarget ?? this.network.isSubscribedToGossipCoreTopics()) === target) return false;
-    const applying = this.gossipSubscriptionTarget !== undefined;
-    this.gossipSubscriptionTarget = target;
+  private setGossipSubscription(subscribe: boolean): boolean {
+    if ((this.pendingGossipSubscribed ?? this.network.isSubscribedToGossipCoreTopics()) === subscribe) return false;
+    const applying = this.pendingGossipSubscribed !== undefined;
+    this.pendingGossipSubscribed = subscribe;
     if (!applying) void this.applyGossipSubscription();
     return true;
   }
 
   /**
-   * Applies the latest target one request at a time. Network skips a subscribe issued while an unsubscribe is
+   * Applies the latest requested state one request at a time. Network skips a subscribe issued while an unsubscribe is
    * in flight, so opposite requests must not overlap.
    */
   private async applyGossipSubscription(): Promise<void> {
     for (;;) {
-      const target = this.gossipSubscriptionTarget;
-      if (target === undefined || target === this.network.isSubscribedToGossipCoreTopics()) break;
+      const subscribe = this.pendingGossipSubscribed;
+      if (subscribe === undefined || subscribe === this.network.isSubscribedToGossipCoreTopics()) break;
       try {
-        await (target ? this.network.subscribeGossipCoreTopics() : this.network.unsubscribeGossipCoreTopics());
+        await (subscribe ? this.network.subscribeGossipCoreTopics() : this.network.unsubscribeGossipCoreTopics());
       } catch (e) {
         this.logger.error(
-          target ? "Error subscribing to gossip core topics" : "Error unsubscribing to gossip core topics",
+          subscribe ? "Error subscribing to gossip core topics" : "Error unsubscribing to gossip core topics",
           {},
           e as Error
         );
-        // Leave a retry of the same target to the next sync state update
-        if (this.gossipSubscriptionTarget === target) break;
+        // Leave a retry of the same request to the next sync state update
+        if (this.pendingGossipSubscribed === subscribe) break;
         continue;
       }
-      if (this.gossipSubscriptionTarget === undefined || this.network.isSubscribedToGossipCoreTopics() !== target) {
+      if (this.pendingGossipSubscribed === undefined || this.network.isSubscribedToGossipCoreTopics() !== subscribe) {
         break;
       }
-      this.metrics?.syncSwitchGossipSubscriptions.inc({action: target ? "subscribed" : "unsubscribed"});
-      this.logger.info(target ? "Subscribed gossip core topics" : "Un-subscribed gossip core topics");
+      this.metrics?.syncSwitchGossipSubscriptions.inc({action: subscribe ? "subscribed" : "unsubscribed"});
+      this.logger.info(subscribe ? "Subscribed gossip core topics" : "Un-subscribed gossip core topics");
     }
-    this.gossipSubscriptionTarget = undefined;
+    this.pendingGossipSubscribed = undefined;
   }
 
   private onClockEpoch = (): void => {
