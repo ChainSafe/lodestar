@@ -64,12 +64,11 @@ fn ProcessInactivityUpdatesBench(comptime fork: ForkSeq) type {
     return struct {
         epoch_transition_cache: *EpochTransitionCache,
 
-        pub fn run(self: *@This(), allocator: std.mem.Allocator) void {
+        pub fn run(self: *@This(), _: std.mem.Allocator) void {
             const cache = self.epoch_transition_cache;
 
             state_transition.processInactivityUpdates(
                 fork,
-                allocator,
                 BenchState.cloned_cached_state.config,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state.castToFork(fork),
@@ -485,7 +484,6 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
                 const inactivity_start = time.start(io);
                 state_transition.processInactivityUpdates(
                     fork,
-                    allocator,
                     BenchState.cloned_cached_state.config,
                     epoch_cache,
                     fork_state,

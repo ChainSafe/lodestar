@@ -708,8 +708,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
           // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
           // which is all the information we need so there is no reason to delay until execution payload arrives
-          // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
-          // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
+          // Columns fetched here feed payloadInput.addColumn, which resolves the waitForAllData of a
+          // pending payload import. No processExecutionPayload trigger needed from this path.
           chain.getBlobsTracker.triggerGetBlobs(payloadInput);
         }
       })
@@ -930,7 +930,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             }
 
             // NOTE: we do NOT call chain.processExecutionPayload here. That is triggered only by
-            // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
+            // envelope arrival (gossip or API). A pending payload import is awaiting
             // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
 
             scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
@@ -1332,18 +1332,22 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         });
       }
 
+      // Add the envelope in the same tick as validation, otherwise a by-root download that completes
+      // before the next event loop sees no envelope, validates it again and adds it first
+      if (!payloadInput.hasPayloadEnvelope()) {
+        chain.serializedCache.set(signedEnvelope, serializedData);
+
+        payloadInput.addPayloadEnvelope({
+          envelope: signedEnvelope,
+          source: PayloadEnvelopeInputSource.gossip,
+          seenTimestampSec,
+          peerIdStr,
+        });
+      }
+
       // Handler - deferred to next event loop so the validation result propagates first
       callInNextEventLoop(() => {
         try {
-          chain.serializedCache.set(signedEnvelope, serializedData);
-
-          payloadInput.addPayloadEnvelope({
-            envelope: signedEnvelope,
-            source: PayloadEnvelopeInputSource.gossip,
-            seenTimestampSec,
-            peerIdStr,
-          });
-
           scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
 
           chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
@@ -1353,7 +1357,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             blockRoot: blockRootHex,
           });
 
-          chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+          // Signature is verified above only for this envelope, one added by another source is verified at import
+          const validSignature = payloadInput.getPayloadEnvelope() === signedEnvelope;
+          chain.processExecutionPayload(payloadInput, {validSignature}).catch((e) => {
             // Adjust verbosity based on error type
             let logLevel: LogLevel;
 
@@ -1371,11 +1377,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                   // Errors might indicate an issue with our node or the connected EL client
                   logLevel = LogLevel.error;
                   break;
-                // INVALID_SIGNATURE should not happen, signature is verified during gossip validation
+                // INVALID_SIGNATURE only happens for an envelope added by another source
                 case PayloadErrorCode.INVALID_SIGNATURE:
                 case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
                 case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
-                  core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  // Penalize only when the stored envelope is the one this peer sent, not one added by another source
+                  if (validSignature) {
+                    core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  }
                   // The builder may have signed another envelope that is valid, keeping this one would make
                   // by-root and range sync reuse it and never import the payload
                   chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);

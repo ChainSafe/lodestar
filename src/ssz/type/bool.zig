@@ -9,6 +9,7 @@ pub fn BoolType() type {
         pub const fixed_size: usize = 1;
 
         pub const default_value: Type = false;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = [_]u8{0} ** 32;
 

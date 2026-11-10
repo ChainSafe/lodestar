@@ -11,7 +11,6 @@ const hasMarkers = attester_status_utils.hasMarkers;
 
 pub fn processInactivityUpdates(
     comptime fork: ForkSeq,
-    allocator: std.mem.Allocator,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
@@ -32,8 +31,7 @@ pub fn processInactivityUpdates(
 
     var inactivity_scores = try state.inactivityScores();
     try inactivity_scores.commit();
-    const inactivity_scores_values = try inactivity_scores.getAll(allocator);
-    defer allocator.free(inactivity_scores_values);
+    const inactivity_scores_values = try inactivity_scores.getAllInto(cache.validator_scratch);
 
     std.debug.assert(flags.len <= inactivity_scores_values.len);
     for (0..flags.len) |i| {

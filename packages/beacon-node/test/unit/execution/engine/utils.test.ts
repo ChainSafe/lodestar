@@ -44,10 +44,10 @@ describe("execution / engine / utils", () => {
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
       [ExecutionPayloadStatus.INVALID]: [
-        [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
       [ExecutionPayloadStatus.SYNCING]: [
@@ -58,10 +58,10 @@ describe("execution / engine / utils", () => {
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
       [ExecutionPayloadStatus.INVALID_BLOCK_HASH]: [
-        [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
       [ExecutionPayloadStatus.UNAVAILABLE]: [
