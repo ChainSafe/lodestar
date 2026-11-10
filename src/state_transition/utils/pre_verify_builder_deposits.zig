@@ -72,7 +72,8 @@ pub fn preVerifyBuilderDepositsPreGloas(
             const deposit = try iterator.nextValue();
             result.scanned_pending_deposits += 1;
             cache.scan_cursor += 1;
-            if (isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
+            const is_builder = isBuilderWithdrawalCredential(&deposit.withdrawal_credentials);
+            if (is_builder) {
                 try cache.addBuilderPubkey(allocator, deposit.pubkey);
             }
             const known = try isValidatorKnown(
@@ -80,15 +81,27 @@ pub fn preVerifyBuilderDepositsPreGloas(
                 state.state.castToFork(.fulu),
                 state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
             );
-            if (!known and !resolved.containsContext(deposit.pubkey, cache.hash_context)) {
+            if (
+            // is a builder,
+            (is_builder or cache.isBuilderPubkey(deposit.pubkey)) and
+                // is not a known pubkey,
+                !known and
+                // is not locally known as valid (or resolved),
+                !resolved.containsContext(deposit.pubkey, cache.hash_context))
+            {
+                // then find from cache,
                 if (try cache.get(state.config, &deposit)) |valid| {
-                    if (valid and resolved.count() < cache_module.max_deposits_per_call) try resolved.putContext(
-                        allocator,
-                        deposit.pubkey,
-                        {},
-                        cache.hash_context,
-                    );
-                } else {
+                    // if valid, mark it as resolved,
+                    if (valid and resolved.count() < cache_module.max_deposits_per_call)
+                        try resolved.putContext(
+                            allocator,
+                            deposit.pubkey,
+                            {},
+                            cache.hash_context,
+                        );
+                }
+                // otherwise, put it in queue for verification
+                else {
                     deposits[count] = deposit;
                     count += 1;
                 }
