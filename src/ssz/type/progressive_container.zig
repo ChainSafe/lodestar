@@ -157,6 +157,7 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
             }
             break :blk out;
         };
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = defaultRoot(fields, &field_indices, active_fields);
 
@@ -447,6 +448,7 @@ pub fn StructProgressiveContainerType(comptime ST: type, comptime active_fields:
         pub const field_offsets: [fields.len]usize = FixedCT.field_offsets;
         pub const chunk_count: usize = FixedCT.chunk_count;
         pub const default_value: Type = FixedCT.default_value;
+        pub const init: Type = default_value;
 
         pub const equals = FixedCT.equals;
         pub const clone = FixedCT.clone;
@@ -605,6 +607,14 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
             var out: Type = undefined;
             for (fields) |field| {
                 @field(out, field.name) = field.type.default_value;
+            }
+            break :blk out;
+        };
+
+        pub const init: Type = blk: {
+            var out: Type = undefined;
+            for (fields) |field| {
+                @field(out, field.name) = field.type.init;
             }
             break :blk out;
         };
