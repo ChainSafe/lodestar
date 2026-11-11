@@ -27,6 +27,7 @@ import {
   aggregateConsolidation,
   aggregateInto,
 } from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
+import {SingleAttestationPool} from "../../../../src/chain/opPools/singleAttestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
@@ -259,7 +260,13 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       const shufflingCache = new ShufflingCache();
       const stateView = new BeaconStateView(electraState);
       shufflingCache.processState(stateView);
-      const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, shufflingCache, stateView);
+      const blockAttestations = pool.getAttestationsForBlock(
+        fork,
+        forkchoiceStub,
+        shufflingCache,
+        stateView,
+        new SingleAttestationPool()
+      );
       // make sure test data is correct
       expect(packedCommitteeBits.length).toBe(packedAggregationBitsLen.length);
       expect(blockAttestations.length).toBe(packedCommitteeBits.length);
@@ -271,7 +278,9 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       }
 
       // missing shuffling skips the committees instead of failing block production
-      expect(pool.getAttestationsForBlock(fork, forkchoiceStub, new ShufflingCache(), stateView)).toEqual([]);
+      expect(
+        pool.getAttestationsForBlock(fork, forkchoiceStub, new ShufflingCache(), stateView, new SingleAttestationPool())
+      ).toEqual([]);
     });
   }
 
@@ -320,13 +329,158 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
     const shufflingCache = new ShufflingCache(null, null, {}, [
       {shuffling: stateView.getPreviousShuffling(), decisionRoot: stateView.previousDecisionRoot},
     ]);
-    const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, shufflingCache, stateView);
+    const blockAttestations = pool.getAttestationsForBlock(
+      fork,
+      forkchoiceStub,
+      shufflingCache,
+      stateView,
+      new SingleAttestationPool()
+    );
 
     expect(blockAttestations.length).toBe(1);
     expect(blockAttestations[0].data.slot).toBe(attestation.data.slot);
     expect((blockAttestations[0] as Attestation<ForkPostElectra>).committeeBits.getTrueBitIndexes()).toStrictEqual(
       committeeIndices
     );
+  });
+
+  describe("single attestations", () => {
+    let singleAttestationPool: SingleAttestationPool;
+
+    beforeEach(() => {
+      // all validators are not seen
+      const epochParticipation = ssz.altair.EpochParticipation.toViewDU(newFilledArray(vc, 0b000));
+      (electraState as CachedBeaconStateElectra).previousEpochParticipation = epochParticipation;
+      (electraState as CachedBeaconStateElectra).currentEpochParticipation = epochParticipation.clone();
+      electraState.commit();
+      singleAttestationPool = new SingleAttestationPool();
+      forkchoiceStub.getBlockHexDefaultStatus.mockReturnValue(generateProtoBlock());
+      forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
+    });
+
+    function getPackedAttestations(): Attestation<ForkPostElectra>[] {
+      const stateView = new BeaconStateView(electraState);
+      const shufflingCache = new ShufflingCache();
+      shufflingCache.processState(stateView);
+      return pool.getAttestationsForBlock(
+        fork,
+        forkchoiceStub,
+        shufflingCache,
+        stateView,
+        singleAttestationPool
+      ) as Attestation<ForkPostElectra>[];
+    }
+
+    function addSingle(data: phase0.AttestationData, committeeIndex: number, validatorCommitteeIndex: number): void {
+      singleAttestationPool.add(
+        {
+          committeeIndex,
+          attesterIndex: committees[committeeIndex][validatorCommitteeIndex],
+          data,
+          signature: validSignature,
+        },
+        toHexString(ssz.phase0.AttestationData.hashTreeRoot(data)),
+        validatorCommitteeIndex,
+        committeeLength
+      );
+    }
+
+    it("adds single attestations of members not covered by the aggregate of the same committee", () => {
+      // the aggregate misses committee members 5 and 6
+      const aggregationBits = BitArray.fromBoolArray(
+        Array.from({length: committeeLength}, (_, i) => i !== 5 && i !== 6)
+      );
+      pool.add(
+        {...attestation, aggregationBits, committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0)},
+        attDataRootHex,
+        committeeLength - 2,
+        committees[0]
+      );
+      // single attestations of member 5 and of member 1, which the aggregate already covers
+      addSingle(attestation.data, 0, 5);
+      addSingle(attestation.data, 0, 1);
+
+      const packed = getPackedAttestations();
+      // no extra attestation in the block
+      expect(packed.length).toBe(1);
+      expect(packed[0].committeeBits.getTrueBitIndexes()).toEqual([0]);
+      expect(packed[0].aggregationBits.getTrueBitIndexes()).toEqual(
+        Array.from({length: committeeLength}, (_, i) => i).filter((i) => i !== 6)
+      );
+      // the aggregate signature and the signature of member 5 only
+      const signature = Signature.fromBytes(validSignature);
+      expect(packed[0].signature).toEqual(aggregateSignatures([signature, signature]).toBytes());
+    });
+
+    it("packs single attestations of data that no aggregate covers", () => {
+      // e.g. a minority head vote that nobody aggregated
+      const minorityData = ssz.phase0.AttestationData.clone(attestation.data);
+      minorityData.beaconBlockRoot = Buffer.alloc(32, 0xcc);
+      addSingle(minorityData, 1, 3);
+      addSingle(minorityData, 2, 7);
+
+      const packed = getPackedAttestations();
+      expect(packed.length).toBe(1);
+      expect(packed[0].data).toEqual(minorityData);
+      expect(packed[0].committeeBits.getTrueBitIndexes()).toEqual([1, 2]);
+      expect(packed[0].aggregationBits.getTrueBitIndexes()).toEqual([3, committeeLength + 7]);
+      const signature = Signature.fromBytes(validSignature);
+      expect(packed[0].signature).toEqual(aggregateSignatures([signature, signature]).toBytes());
+    });
+
+    it("packs at most MAX_SINGLE_ATTESTATIONS_PER_BLOCK singles and still packs older aggregates", () => {
+      const validatorCount = 2048;
+      electraState = generateCachedElectraState(
+        {slot: currentSlot + 1, validators: generateValidators(validatorCount, validatorOpts)},
+        electraForkEpoch
+      );
+      const participation = ssz.altair.EpochParticipation.toViewDU(newFilledArray(validatorCount, 0));
+      electraState.previousEpochParticipation = participation;
+      electraState.currentEpochParticipation = participation.clone();
+      electraState.commit();
+
+      for (let distance = 0; distance < 5; distance++) {
+        const data = ssz.phase0.AttestationData.clone(attestation.data);
+        data.slot = currentSlot - distance;
+        data.target.epoch = Math.floor(data.slot / SLOTS_PER_EPOCH);
+        const dataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(data));
+        const slotCommittees = electraState.epochCtx.getBeaconCommittees(data.slot, committeeIndices);
+        for (const [committeeIndex, committee] of slotCommittees.entries()) {
+          for (const [position, attesterIndex] of committee.entries()) {
+            singleAttestationPool.add(
+              {committeeIndex, attesterIndex, data, signature: validSignature},
+              dataRootHex,
+              position,
+              committee.length
+            );
+          }
+        }
+      }
+
+      const aggregateData = ssz.phase0.AttestationData.clone(attestation.data);
+      aggregateData.slot = currentSlot - 5;
+      aggregateData.target.epoch = Math.floor(aggregateData.slot / SLOTS_PER_EPOCH);
+      const committee = electraState.epochCtx.getBeaconCommittees(aggregateData.slot, [0])[0];
+      pool.add(
+        {
+          data: aggregateData,
+          aggregationBits: BitArray.fromBoolArray(newFilledArray(committee.length, true)),
+          committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0),
+          signature: validSignature,
+        },
+        toHexString(ssz.phase0.AttestationData.hashTreeRoot(aggregateData)),
+        committee.length,
+        committee
+      );
+
+      const packed = getPackedAttestations();
+      const aggregate = packed.find((item) => item.data.slot === aggregateData.slot);
+      expect(aggregate?.aggregationBits.getTrueBitIndexes()).toHaveLength(committee.length);
+      const singlesCount = packed
+        .filter((item) => item !== aggregate)
+        .reduce((count, item) => count + item.aggregationBits.getTrueBitIndexes().length, 0);
+      expect(singlesCount).toBe(1024);
+    });
   });
 
   describe("aggregate signature at the point at infinity", () => {
@@ -345,7 +499,8 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
         fork,
         forkchoiceStub,
         shufflingCache,
-        stateView
+        stateView,
+        new SingleAttestationPool()
       ) as Attestation<ForkPostElectra>[];
     }
 
@@ -789,11 +944,15 @@ describe("aggregateConsolidation", () => {
       const attData = ssz.phase0.AttestationData.defaultValue();
       const consolidation: AttestationsConsolidation = {
         byCommittee: new Map(),
+        singlesByCommittee: new Map(),
         attData: attData,
         totalNewSeenEffectiveBalance: 0,
         totalAttesters: 32,
         newSeenAttesters: 0,
         notSeenAttesters: 0,
+        singlesNewSeenEffectiveBalance: 0,
+        singlesNewSeenAttesters: 0,
+        weight: 0,
       };
       // to simplify, instead of signing the signingRoot, just sign the attData root
       const sigArr = skArr.map((sk) => sk.sign(ssz.phase0.AttestationData.hashTreeRoot(attData)));

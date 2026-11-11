@@ -992,6 +992,55 @@ test "memory_safety: createChunkedLeafEmpty should not consume slots or leak pay
     try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
 }
 
+test "createChunkedLeafFromBytes should zero the tail and set len" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 4 });
+    defer pool.deinit();
+
+    var bytes: [ChunkedLeaf.K * 32]u8 = undefined;
+    for (&bytes, 0..) |*byte, i| byte.* = @as(u8, @intCast(i % 255)) + 1;
+
+    for ([_]usize{ 0, 1, 33, bytes.len }) |len| {
+        const valid_chunks: u16 = @intCast((len + 31) / 32);
+        const node = try pool.createChunkedLeafFromBytes(bytes[0..len]);
+        defer pool.unref(node);
+
+        const chunk_bytes = std.mem.asBytes(try node.getChunkedLeafChunks(&pool));
+        try std.testing.expectEqualSlices(u8, bytes[0..len], chunk_bytes[0..len]);
+        try std.testing.expect(std.mem.allEqual(u8, chunk_bytes[len..], 0));
+        try std.testing.expectEqual(valid_chunks, try node.getChunkedLeafLen(&pool));
+    }
+}
+
+test "memory_safety: createChunkedLeafFromBytes should not consume slots or leak payloads on allocation failure" {
+    var failing = std.testing.FailingAllocator.init(
+        std.testing.allocator,
+        .{ .fail_index = 0 },
+    );
+    var pool = try Node.Pool.init(.{
+        .page_allocator = std.testing.allocator,
+        .allocator = failing.allocator(),
+        .pool_size = 1,
+    });
+    defer pool.deinit();
+
+    const bytes: [33]u8 = @splat(1);
+
+    // The first call fails before it can take a Pool slot.
+    const baseline = pool.getNodesInUse();
+    try std.testing.expectError(error.OutOfMemory, pool.createChunkedLeafFromBytes(&bytes));
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+
+    // With the only slot occupied, the next call allocates its payload and then fails to attach
+    // it. The payload must be freed on the way out.
+    failing.fail_index = std.math.maxInt(usize);
+    const leaf = try pool.createLeafFromUint(1);
+    defer pool.unref(leaf);
+
+    try std.testing.expectError(error.PoolExhausted, pool.createChunkedLeafFromBytes(&bytes));
+    try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
+}
+
 test "memory_safety: fillWithContents exhaustion should preserve inputs and restore pool slots" {
     const pool_exhaustion_cases = [_]struct {
         contents_len: usize,

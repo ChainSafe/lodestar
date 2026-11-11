@@ -66,11 +66,14 @@ export class SubnetMap {
     return subnets;
   }
 
-  /** Return subnetIds with a `toSlot` less than `currentSlot`. Also deletes expired entries */
-  getExpired(currentSlot: Slot): SubnetID[] {
+  /**
+   * Return subnetIds with a `toSlot` less than `currentSlot`. Also deletes expired entries
+   * @param keep expired subnets for which it returns true are neither returned nor deleted
+   */
+  getExpired(currentSlot: Slot, keep?: (subnet: SubnetID) => boolean): SubnetID[] {
     const subnetIds: SubnetID[] = [];
     for (const [subnet, toSlot] of this.subnets.entries()) {
-      if (toSlot < currentSlot) {
+      if (toSlot < currentSlot && keep?.(subnet) !== true) {
         subnetIds.push(subnet);
         this.subnets.delete(subnet);
       }
