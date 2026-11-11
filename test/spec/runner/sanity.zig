@@ -176,7 +176,8 @@ pub fn BlocksTestCase(comptime fork: ForkSeq) type {
         }
 
         pub fn process(self: *Self) !*state_transition.CachedBeaconState {
-            const verify = self.bls_setting.verify();
+            // The PQ vectors carry stub signatures and proofs, which the spec's reference does not check.
+            const verify = self.bls_setting.verify() and comptime fork != .pq;
             var result: ?*state_transition.CachedBeaconState = null;
             for (self.blocks) |*block| {
                 const signed_block = switch (fork) {

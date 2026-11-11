@@ -26,6 +26,7 @@ pub fn processExecutionPayloadBid(
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
     signed_bid: *const ForkTypes(fork).SignedExecutionPayloadBid.Type,
+    verify_signature: bool,
 ) !void {
     const bid = &signed_bid.message;
     const builder_index = bid.builder_index;
@@ -49,7 +50,9 @@ pub fn processExecutionPayloadBid(
 
         if (!(try canBuilderCoverBid(fork, state, builder_index, amount))) return error.BuilderInsufficientBalance;
 
-        if (!(try verifyExecutionPayloadBidSignature(fork, allocator, config, &builder.pubkey, signed_bid))) return error.InvalidBidSignature;
+        if (verify_signature) {
+            if (!(try verifyExecutionPayloadBidSignature(fork, allocator, config, &builder.pubkey, signed_bid))) return error.InvalidBidSignature;
+        }
     }
 
     if (bid.slot != state_slot) return error.BidSlotMismatch;

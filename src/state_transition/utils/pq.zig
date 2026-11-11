@@ -2,7 +2,6 @@
 //! the attestation proof.
 
 const std = @import("std");
-const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const c = @import("constants");
 const leanvm = @import("leanvm");
@@ -12,14 +11,6 @@ pub const XmssPubkey = [c.XMSS_PUBKEY_SIZE]u8;
 pub const XmssSignature = [c.XMSS_SIGNATURE_SIZE]u8;
 pub const VrfProof = [c.VRF_TREE_DEPTH + 1][32]u8;
 pub const Claim = leanvm.xmss.Claim;
-
-/// The spec's test vectors carry stub signatures and proofs, which its
-/// reference accepts with XMSS switched off. A test build can do the same.
-pub const testing = if (builtin.is_test) struct {
-    pub var xmss_active: bool = true;
-} else struct {
-    pub const xmss_active = true;
-};
 
 pub fn computeXmssAttestationLeafIndex(epoch: u64) u64 {
     return c.XMSS_RESERVED_LEAVES +| epoch;
@@ -42,7 +33,6 @@ pub fn xmssVerify(
     message: *const [32]u8,
     signature: *const XmssSignature,
 ) error{Unavailable}!bool {
-    if (!testing.xmss_active) return true;
     if (signatureLeafIndex(signature) != leaf_index) return false;
     leanvm.xmss.verify(pubkey, message, signature) catch |err| switch (err) {
         error.Unavailable => return error.Unavailable,
@@ -92,7 +82,6 @@ pub fn isValidVrfProof(vrf_root: *const [32]u8, slot: u64, proof: *const VrfProo
 /// drops duplicates: a leanVM proof is of a set of claims, at leaves it does
 /// not record.
 pub fn verifyAttestationProof(claims: []Claim, proof: []const u8) error{Unavailable}!bool {
-    if (!testing.xmss_active) return true;
     std.mem.sortUnstable(Claim, claims, {}, Claim.lessThan);
     var len: usize = 0;
     for (claims) |claim| {

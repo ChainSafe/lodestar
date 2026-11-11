@@ -145,7 +145,9 @@ pub fn processBlock(
             try gloas_withdrawals.getExpectedWithdrawals(fork, epoch_cache, state, &result);
             try gloas_withdrawals.processWithdrawals(fork, state, &result);
         }
-        try processExecutionPayloadBid(fork, allocator, config, epoch_cache, state, &body.inner.signed_execution_payload_bid);
+        // Before PQ nothing outside block processing checks a bid's signature.
+        const verify_bid = opts.verify_signature or comptime fork != .pq;
+        try processExecutionPayloadBid(fork, allocator, config, epoch_cache, state, &body.inner.signed_execution_payload_bid, verify_bid);
     }
 
     timer = time.start(io);

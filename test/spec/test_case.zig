@@ -102,8 +102,6 @@ pub fn TestCaseUtils(comptime fork: ForkSeq) type {
         }
 
         pub fn loadPreState(allocator: Allocator, pool: *Node.Pool, dir: std.Io.Dir) !TestCachedBeaconState {
-            // The PQ vectors carry stub signatures and proofs.
-            state_transition.pq.testing.xmss_active = fork != .pq;
             var pre_state = ForkTypes.BeaconState.default_value;
             try loadSszSnappyValue(ForkTypes.BeaconState, allocator, dir, "pre.ssz_snappy", &pre_state);
             defer ForkTypes.BeaconState.deinit(allocator, &pre_state);

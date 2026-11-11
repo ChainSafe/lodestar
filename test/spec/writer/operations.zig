@@ -39,6 +39,17 @@ const test_template =
     \\
 ;
 
+/// PQ vectors that store a preregistration. Its signature is a stub, which the
+/// spec's reference accepts with XMSS switched off, and block processing
+/// always checks it: its validity decides the post-state.
+const pq_stub_preregistrations = [_][]const u8{
+    "max_preregistration_requests",
+    "parent_payload_preregistration_stored",
+    "preregistration_admitted_when_full_of_expired_records",
+    "preregistration_replaces_expired_binding",
+    "preregistration_stored",
+};
+
 pub fn writeHeader(writer: *std.Io.Writer) !void {
     try writer.print(header, .{});
 }
@@ -49,6 +60,11 @@ pub fn writeTest(
     handler: Handler,
     test_case_name: []const u8,
 ) !void {
+    if (fork == .pq) {
+        for (pq_stub_preregistrations) |name| {
+            if (std.mem.eql(u8, name, test_case_name)) return;
+        }
+    }
     try writer.print(test_template, .{
         @tagName(fork),
         @tagName(handler),

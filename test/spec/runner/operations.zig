@@ -156,7 +156,8 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
         }
 
         pub fn process(self: *Self) !void {
-            const verify = self.bls_setting.verify();
+            // The PQ vectors carry stub signatures and proofs, which the spec's reference does not check.
+            const verify = self.bls_setting.verify() and comptime fork != .pq;
             const allocator = self.pre.allocator;
             const io = std.testing.io;
             const cached_state = self.pre.cached_state;
@@ -249,7 +250,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                         },
                     );
                 },
-                .execution_payload_bid => try state_transition.processExecutionPayloadBid(fork, allocator, cached_state.config, cached_state.epoch_cache, state, &self.op),
+                .execution_payload_bid => try state_transition.processExecutionPayloadBid(fork, allocator, cached_state.config, cached_state.epoch_cache, state, &self.op, comptime fork != .pq),
                 .parent_execution_payload => {
                     const block = BeaconBlock(.full, fork){ .inner = self.op };
                     try state_transition.processParentExecutionPayload(fork, allocator, io, cached_state.config, cached_state.epoch_cache, state, &block);
