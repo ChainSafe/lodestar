@@ -27,6 +27,7 @@ const supported_test_runners = [_]RunnerKind{
     .finality,
     .fork_choice,
     .fork_choice_compliance,
+    .fast_confirmation,
     .sync,
 };
 
@@ -62,6 +63,7 @@ fn TestWriter(comptime kind: RunnerKind) type {
         .finality => @import("./writer/finality.zig"),
         .fork_choice => @import("./writer/fork_choice.zig"),
         .fork_choice_compliance => @import("./writer/fork_choice_compliance.zig"),
+        .fast_confirmation => @import("./writer/fast_confirmation.zig"),
         .sync => @import("./writer/sync.zig"),
         else => @compileError("Unsupported test runner"),
     };

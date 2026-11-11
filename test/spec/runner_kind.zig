@@ -4,6 +4,7 @@ pub const RunnerKind = enum {
     finality,
     fork_choice,
     fork_choice_compliance,
+    fast_confirmation,
     sync,
     merkle_proof,
     operations,
