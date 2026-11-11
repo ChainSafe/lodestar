@@ -277,7 +277,8 @@ export async function importBlock(
 
   // 4.5. Import payload attestations to fork choice (Gloas)
   //
-  if (isGloasBeaconBlock(block.message)) {
+  // From pq a block carries no payload attestations: they reach fork choice from gossip only
+  if (isGloasBeaconBlock(block.message) && "payloadAttestations" in block.message.body) {
     for (const payloadAttestation of block.message.body.payloadAttestations) {
       try {
         // Extract PTC indices from aggregation bits
@@ -633,7 +634,7 @@ export function addAttestationPreElectra(
   target: phase0.Checkpoint,
   attDataRoot: string,
   attestation: Attestation,
-  indexedAttestation: phase0.IndexedAttestation
+  indexedAttestation: Pick<phase0.IndexedAttestation, "attestingIndices">
 ): void {
   this.seenAggregatedAttestations.add(
     target.epoch,
@@ -650,7 +651,7 @@ export function addAttestationPostElectra(
   target: phase0.Checkpoint,
   attDataRoot: string,
   attestation: Attestation<ForkPostElectra>,
-  indexedAttestation: electra.IndexedAttestation
+  indexedAttestation: Pick<electra.IndexedAttestation, "attestingIndices">
 ): void {
   const committeeIndices = attestation.committeeBits.getTrueBitIndexes();
   if (committeeIndices.length === 1) {

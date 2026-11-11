@@ -3,6 +3,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Signature, aggregateSignatures} from "@lodestar/native/blst";
 import {
+  ForkBls,
   ForkName,
   ForkSeq,
   MAX_ATTESTATIONS_ELECTRA,
@@ -30,7 +31,16 @@ import {
   isStatePostAltair,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
+import {
+  Attestation as AttestationAllForks,
+  Epoch,
+  RootHex,
+  Slot,
+  electra,
+  isElectraAttestation,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {Logger, MapDef, assert, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
@@ -38,6 +48,9 @@ import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+
+// This pool aggregates BLS signatures. From pq, `PqAttestationPool` holds proofs of leanXMSS ones.
+type Attestation = AttestationAllForks<ForkBls>;
 
 type DataRootHex = string;
 

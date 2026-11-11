@@ -1,14 +1,24 @@
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Signature, aggregateSignatures} from "@lodestar/native/blst";
-import {MAX_COMMITTEES_PER_SLOT, isForkPostElectra} from "@lodestar/params";
+import {ForkBls, MAX_COMMITTEES_PER_SLOT, isForkPostElectra} from "@lodestar/params";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
-import {Attestation, RootHex, SingleAttestation, Slot, isElectraSingleAttestation} from "@lodestar/types";
+import {
+  Attestation as AttestationAllForks,
+  RootHex,
+  SingleAttestation as SingleAttestationAllForks,
+  Slot,
+  isElectraSingleAttestation,
+} from "@lodestar/types";
 import {MapDef, assert, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {isElectraAggregate, pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+
+// This pool aggregates BLS signatures. From pq, `PqAttestationPool` holds leanXMSS ones.
+type Attestation = AttestationAllForks<ForkBls>;
+type SingleAttestation = SingleAttestationAllForks<ForkBls>;
 
 /**
  * The number of slots that will be stored in the pool.

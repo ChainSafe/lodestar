@@ -20,6 +20,7 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
+  computeXmssAttestationLeafIndex,
   createIndexedSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {
@@ -51,6 +52,7 @@ import {
 import {Result, wrapError} from "../../util/wrapError.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
+import {getXmssPubkey} from "../pq/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
   AttestationDataCacheEntry,
@@ -88,6 +90,17 @@ export type GossipAttestation = {
   attDataBase64: SeenAttDataKey;
   subnet: SubnetID;
 };
+
+function verifyPqAttestationSignature(chain: IBeaconChain, result: Step0Result): Promise<boolean> {
+  return chain.pq.verifySignatureSets([
+    {
+      pubkey: getXmssPubkey(result.validatorIndex),
+      leafIndex: computeXmssAttestationLeafIndex(result.attestation.data.target.epoch),
+      signingRoot: result.signatureSet.signingRoot,
+      signature: result.signatureSet.signature,
+    },
+  ]);
+}
 
 export type Step0Result = AttestationValidationResult & {
   signatureSet: IndexedSignatureSet;
@@ -139,8 +152,11 @@ export async function validateGossipAttestationsSameAttData(
   }
 
   let signatureValids: boolean[];
-  const batchableBls = signatureSets.length >= chain.opts.minSameMessageSignatureSetsToBatch;
-  if (batchableBls) {
+  const batchableBls = fork !== ForkName.pq && signatureSets.length >= chain.opts.minSameMessageSignatureSetsToBatch;
+  if (fork === ForkName.pq) {
+    // leanXMSS signatures do not batch: each is checked on its own, at the leaf of its target epoch
+    signatureValids = await Promise.all(step0Results.map((result) => verifyPqAttestationSignature(chain, result)));
+  } else if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
     signatureValids = await chain.bls.verifySignatureSetsSameMessage(signatureSets, signatureSets[0].signingRoot);
   } else {
@@ -210,7 +226,10 @@ export async function validateApiAttestation(
   try {
     const step0Result = await validateAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
     const {attestation, signatureSet, validatorIndex} = step0Result;
-    const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
+    const isValid =
+      fork === ForkName.pq
+        ? await verifyPqAttestationSignature(chain, step0Result)
+        : await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
 
     if (isValid) {
       const targetEpoch = attestation.data.target.epoch;

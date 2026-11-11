@@ -36,6 +36,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {IBlsVerifier} from "../bls/interface.js";
 import {BlockType} from "../interface.js";
+import {IPqVerifier, PqVerifier, verifyAttesterSlashingSignatures} from "../pq/index.js";
 import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
 import {
   getAttesterSlashingSignatureDomains,
@@ -84,7 +85,13 @@ export class OpPool {
     return this.blsToExecutionChanges.size;
   }
 
-  async fromPersisted(db: IBeaconDb, state: IBeaconStateView, bls: IBlsVerifier, currentSlot: Slot): Promise<void> {
+  async fromPersisted(
+    db: IBeaconDb,
+    state: IBeaconStateView,
+    bls: IBlsVerifier,
+    currentSlot: Slot,
+    pq: IPqVerifier = new PqVerifier()
+  ): Promise<void> {
     const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] = await Promise.all([
       db.attesterSlashing.entries(),
       db.proposerSlashing.values(),
@@ -101,9 +108,7 @@ export class OpPool {
         continue;
       }
       const verifiedDomains = getAttesterSlashingSignatureDomains(this.config, currentSlot, attesterSlashing);
-      if (
-        !(await bls.verifySignatureSets(getAttesterSlashingSignatureSets(this.config, currentSlot, attesterSlashing)))
-      ) {
+      if (!(await verifyAttesterSlashingSignatures(this.config, bls, pq, currentSlot, attesterSlashing))) {
         continue;
       }
       this.insertAttesterSlashing(ForkName.electra, attesterSlashing, verifiedDomains, key);

@@ -1,6 +1,8 @@
 import {digest} from "@chainsafe/as-sha256";
 import {verifyXmssSignature} from "@lodestar/native/leanvm";
 import {
+  DOMAIN_SELECTION_PROOF,
+  TARGET_AGGREGATORS_PER_COMMITTEE_PQ,
   VRF_TREE_DEPTH,
   XMSS_ATTESTATION_LEAVES,
   XMSS_LEAVES_PER_SLOT,
@@ -98,4 +100,26 @@ export function isValidVrfProof(vrfRoot: Uint8Array, slot: Slot, proof: pq.VRFPr
     value = digest(pair);
   }
   return Buffer.compare(value, vrfRoot) === 0;
+}
+
+/**
+ * Whether the validator whose VRF proof for the slot is `selectionProof` aggregates for a committee
+ * of `committeeLength`. `finalizedRoot` is the root of the head state's finalized checkpoint: it is
+ * unknown when a VRF tree is registered, so a validator cannot fill its tree with leaves that
+ * always select it.
+ */
+export function isPqAggregator(
+  committeeLength: number,
+  validatorIndex: number,
+  selectionProof: pq.VRFProof,
+  finalizedRoot: Uint8Array
+): boolean {
+  const modulo = Math.max(1, Math.floor(committeeLength / TARGET_AGGREGATORS_PER_COMMITTEE_PQ));
+  const input = new Uint8Array(32 + 4 + 8 + 32);
+  input.set(selectionProof[0], 0);
+  input.set(DOMAIN_SELECTION_PROOF, 32);
+  new DataView(input.buffer).setBigUint64(36, BigInt(validatorIndex), true);
+  input.set(finalizedRoot, 44);
+  const selection = digest(input);
+  return new DataView(selection.buffer, selection.byteOffset, 8).getBigUint64(0, true) % BigInt(modulo) === 0n;
 }

@@ -15,6 +15,7 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
+  XMSS_SIGNATURE_SIZE,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -32,6 +33,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
+  Attestation,
   BLSPubkey,
   BLSSignature,
   BeaconBlock,
@@ -57,6 +59,7 @@ import {
   gloas,
   heze,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {
   GWEI_TO_WEI,
@@ -251,16 +254,20 @@ export async function produceBlockBody<T extends BlockType>(
     );
     const parentExecutionRequests = isExtendingPayload
       ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
-      : ssz.gloas.ExecutionRequests.defaultValue();
+      : (sszTypesFor(fork as ForkPostGloas).ExecutionRequests.defaultValue() as gloas.ExecutionRequests);
     executionPayloadValue = (BigInt(builderBid.message.value) + builderBid.message.executionPayment) * GWEI_TO_WEI;
 
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = builderBid;
-    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
-      parentBlock.blockRoot,
-      blockSlot - 1
-    );
+    if (fork === ForkName.pq) {
+      toPqBody(gloasBody);
+    } else {
+      gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+        parentBlock.blockRoot,
+        blockSlot - 1
+      );
+    }
     gloasBody.parentExecutionRequests = parentExecutionRequests;
     gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
       currentState.withParentPayloadApplied(parentExecutionRequests)
@@ -311,7 +318,9 @@ export async function produceBlockBody<T extends BlockType>(
       stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
     } else {
       parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
-      parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+      parentExecutionRequests = sszTypesFor(
+        fork as ForkPostGloas
+      ).ExecutionRequests.defaultValue() as gloas.ExecutionRequests;
     }
     const prepareRes = await prepareExecutionPayload(
       this,
@@ -386,7 +395,9 @@ export async function produceBlockBody<T extends BlockType>(
       value: 0,
       executionPayment: 0n,
       blobKzgCommitments: blobsBundle.commitments,
-      executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
+      executionRequestsRoot: (
+        sszTypesFor(fork as ForkPostGloas).ExecutionRequests as typeof ssz.gloas.ExecutionRequests
+      ).hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };
     if (ForkSeq[fork] >= ForkSeq.heze) {
       // Built from the full view (only_timely=False), a superset of the receiver's timely-only
@@ -405,16 +416,21 @@ export async function produceBlockBody<T extends BlockType>(
     }
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
-      signature: G2_POINT_AT_INFINITY,
+      // A self-build bid carries no signature
+      signature: fork === ForkName.pq ? new Uint8Array(XMSS_SIGNATURE_SIZE) : G2_POINT_AT_INFINITY,
     };
 
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = signedBid;
-    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
-      parentBlock.blockRoot,
-      blockSlot - 1
-    );
+    if (fork === ForkName.pq) {
+      toPqBody(gloasBody);
+    } else {
+      gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+        parentBlock.blockRoot,
+        blockSlot - 1
+      );
+    }
     gloasBody.parentExecutionRequests = parentExecutionRequests;
     gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(
       commonBlockBody,
@@ -704,15 +720,17 @@ export async function produceBlockBody<T extends BlockType>(
     proposerSlashings: proposerSlashings.length,
   });
 
-  if (isForkPostAltair(fork)) {
+  if (isForkPostAltair(fork) && fork !== ForkName.pq) {
     const {syncAggregate} = blockBody as altair.BeaconBlockBody;
     Object.assign(logMeta, {
       syncAggregateParticipants: syncAggregate.syncCommitteeBits.getTrueBitIndexes().length,
     });
   }
 
-  if (ForkSeq[fork] >= ForkSeq.gloas) {
-    const {blsToExecutionChanges, payloadAttestations} = blockBody as BeaconBlockBody<ForkPostGloas>;
+  if (fork === ForkName.pq) {
+    Object.assign(logMeta, {proofSize: (blockBody as BeaconBlockBody<ForkName.pq>).proof.length});
+  } else if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blsToExecutionChanges, payloadAttestations} = blockBody as gloas.BeaconBlockBody;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
       payloadAttestations: payloadAttestations.length,
@@ -1097,6 +1115,16 @@ export function getPooledProposerPreferences(
   return chain.proposerPreferencesPool.get(slot, dependentRootHex)?.message ?? null;
 }
 
+/**
+ * A pq body has no sync aggregate, no BLS to execution changes and no payload attestations, which
+ * reach fork choice from gossip only. The common body builder leaves the first two behind.
+ */
+function toPqBody(body: Partial<gloas.BeaconBlockBody>): void {
+  delete body.syncAggregate;
+  delete body.blsToExecutionChanges;
+  delete body.payloadAttestations;
+}
+
 export async function produceCommonBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
@@ -1125,12 +1153,33 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
-    fork,
-    this.forkChoice,
-    this.shufflingCache,
-    currentState
-  );
+  // From pq, packing attestations is proving: the pool merges the proofs of the aggregates it
+  // picks into the one the block carries
+  let proof: Uint8Array | undefined;
+  let attestations: Attestation[];
+  if (fork === ForkName.pq) {
+    const blockEpoch = computeEpochAtSlot(slot);
+    const packed = await this.pqAttestationPool.getAttestationsForBlock(slot, (data) => {
+      const justified =
+        data.target.epoch === blockEpoch
+          ? currentState.currentJustifiedCheckpoint
+          : data.target.epoch === blockEpoch - 1
+            ? currentState.previousJustifiedCheckpoint
+            : null;
+      return (
+        justified !== null && data.source.epoch === justified.epoch && byteArrayEquals(data.source.root, justified.root)
+      );
+    });
+    attestations = packed.attestations;
+    proof = packed.proof;
+  } else {
+    attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
+      fork,
+      this.forkChoice,
+      this.shufflingCache,
+      currentState
+    );
+  }
   endAttestations?.({
     step: BlockProductionStep.attestations,
   });
@@ -1156,6 +1205,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
     voluntaryExits,
     blsToExecutionChanges,
     syncAggregate,
+    proof,
   };
 
   if (!isForkPostHeze(fork)) {

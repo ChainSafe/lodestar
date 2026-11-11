@@ -4,6 +4,8 @@ import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice"
 import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {
+  Attestation,
+  AttesterSlashing,
   BeaconBlock,
   BlindedBeaconBlock,
   DataColumnSidecar,
@@ -56,6 +58,7 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
+import {PqAttestationPool} from "./opPools/pqAttestationPool.js";
 import {IChainOptions} from "./options.js";
 import {IPqVerifier} from "./pq/index.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
@@ -128,6 +131,7 @@ export interface IBeaconChain {
   // Ops pool
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
+  readonly pqAttestationPool: PqAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
@@ -334,7 +338,15 @@ export type SSZObjectType =
   | "syncCommittee"
   | "contributionAndProof";
 
-export type CommonBlockBody = Omit<phase0.BeaconBlockBody, "eth1Data" | "deposits"> &
+export type CommonBlockBody = Omit<
+  phase0.BeaconBlockBody,
+  "eth1Data" | "deposits" | "attestations" | "attesterSlashings"
+> &
   Partial<Pick<phase0.BeaconBlockBody, "eth1Data" | "deposits">> &
   Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
-  Pick<altair.BeaconBlockBody, "syncAggregate">;
+  Pick<altair.BeaconBlockBody, "syncAggregate"> & {
+    attestations: Attestation[];
+    attesterSlashings: AttesterSlashing[];
+    /** From pq, the proof of the signatures of every attester of `attestations` */
+    proof?: Uint8Array;
+  };

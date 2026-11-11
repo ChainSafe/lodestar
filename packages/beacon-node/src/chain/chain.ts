@@ -107,6 +107,7 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
+import {PqAttestationPool} from "./opPools/pqAttestationPool.js";
 import {IChainOptions} from "./options.js";
 import {IPqVerifier, PqVerifier} from "./pq/index.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
@@ -196,6 +197,7 @@ export class BeaconChain implements IBeaconChain {
   // Ops pool
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
+  readonly pqAttestationPool = new PqAttestationPool();
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
@@ -625,7 +627,7 @@ export class BeaconChain implements IBeaconChain {
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
-    await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot);
+    await this.opPool.fromPersisted(this.db, this.getHeadState(), this.bls, this.clock.currentSlot, this.pq);
     await this.proposerPreferencesPool.fromPersisted(this.db, this.clock.currentSlot);
   }
 
@@ -1831,6 +1833,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
+    this.pqAttestationPool.prune(slot);
     this.syncCommitteeMessagePool.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);

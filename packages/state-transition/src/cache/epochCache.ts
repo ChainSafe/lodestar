@@ -896,7 +896,7 @@ export class EpochCache {
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
-  getIndexedAttestation(fork: ForkSeq, attestation: Attestation<ForkBls>): IndexedAttestation<ForkBls> {
+  getIndexedAttestation(fork: ForkSeq, attestation: Attestation): IndexedAttestation {
     const shuffling = this.getShufflingAtSlot(attestation.data.slot);
     return getIndexedAttestation(shuffling, fork, attestation);
   }

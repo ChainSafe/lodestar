@@ -1,13 +1,18 @@
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {XMSS_CLAIM_SIZE} from "@lodestar/native/leanvm";
+import {ForkBls, ForkName, ForkSeq} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createAggregateSignatureSetFromComponents,
+  getXmssAggregateAndProofSignatureSet,
   isAggregatorFromCommitteeLength,
+  isPqAggregator,
+  isValidVrfProof,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, ssz} from "@lodestar/types";
+import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, pq, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {getXmssPubkey} from "../pq/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
   getAttestationDataSigningRoot,
@@ -228,11 +233,12 @@ async function validateAggregateAndProof(
   }
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeValidatorIndices);
 
-  const indexedAttestation: IndexedAttestation = {
-    attestingIndices,
-    data: attData,
-    signature: aggregate.signature,
-  };
+  // From pq an aggregate carries no signature: the aggregate-and-proof carries a proof of its
+  // attesters' signatures
+  const indexedAttestation: IndexedAttestation =
+    "signature" in aggregate
+      ? {attestingIndices, data: attData, signature: aggregate.signature}
+      : {attestingIndices, data: attData, proof: (aggregateAndProof as pq.AggregateAndProof).proof};
 
   // TODO: Check this before regen
   // [REJECT] The attestation has participants -- that is,
@@ -244,7 +250,28 @@ async function validateAggregateAndProof(
 
   // [REJECT] aggregate_and_proof.selection_proof selects the validator as an aggregator for the slot
   // -- i.e. is_aggregator(state, aggregate.data.slot, aggregate.data.index, aggregate_and_proof.selection_proof) returns True.
-  if (!isAggregatorFromCommitteeLength(committeeValidatorIndices.length, aggregateAndProof.selectionProof)) {
+  if (fork === ForkName.pq) {
+    // The selection proof is the aggregator's VRF proof for the slot. Whether it selects the
+    // aggregator depends on the head state's finalized root.
+    const selectionProof = (aggregateAndProof as pq.AggregateAndProof).selectionProof;
+    const headState = chain.getHeadState();
+    if (
+      !isPqAggregator(
+        committeeValidatorIndices.length,
+        aggregatorIndex,
+        selectionProof,
+        headState.finalizedCheckpoint.root
+      )
+    ) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_AGGREGATOR});
+    }
+    const aggregator = headState.getValidator(aggregatorIndex) as unknown as pq.Validator;
+    if (!isValidVrfProof(aggregator.vrfRoot, attSlot, selectionProof)) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+    }
+  } else if (
+    !isAggregatorFromCommitteeLength(committeeValidatorIndices.length, aggregateAndProof.selectionProof as Uint8Array)
+  ) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_AGGREGATOR});
   }
 
@@ -259,20 +286,44 @@ async function validateAggregateAndProof(
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
   const signingRoot = cachedAttData ? cachedAttData.signingRoot : getAttestationDataSigningRoot(chain.config, attData);
-  const indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
-    indexedAttestation.attestingIndices,
-    signingRoot,
-    indexedAttestation.signature
-  );
-  const signatureSets = [
-    getSelectionProofSignatureSet(chain.config, attSlot, aggregatorIndex, signedAggregateAndProof),
-    getAggregateAndProofSignatureSet(chain.config, attEpoch, aggregatorIndex, signedAggregateAndProof),
-    indexedAttestationSignatureSet,
-  ];
-  // no need to write to SeenAttestationDatas
+  if ("proof" in indexedAttestation) {
+    // [REJECT] The aggregator signature is valid, at the leaf of the aggregate's slot.
+    // [REJECT] The proof covers a signature of every attester.
+    const claims = new Uint8Array(attestingIndices.length * XMSS_CLAIM_SIZE);
+    for (let i = 0; i < attestingIndices.length; i++) {
+      claims.set(getXmssPubkey(attestingIndices[i]), i * XMSS_CLAIM_SIZE);
+      claims.set(signingRoot, i * XMSS_CLAIM_SIZE + 32);
+    }
+    const [signatureValid, proofValid] = await Promise.all([
+      chain.pq.verifySignatureSets([
+        getXmssAggregateAndProofSignatureSet(
+          chain.config,
+          getXmssPubkey,
+          signedAggregateAndProof as SignedAggregateAndProof<ForkName.pq>
+        ),
+      ]),
+      chain.pq.verifyProofSets([{claims, proof: indexedAttestation.proof}]),
+    ]);
+    if (!signatureValid || !proofValid) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+    }
+  } else {
+    const indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
+      indexedAttestation.attestingIndices,
+      signingRoot,
+      indexedAttestation.signature
+    );
+    const blsSigned = signedAggregateAndProof as SignedAggregateAndProof<ForkBls>;
+    const signatureSets = [
+      getSelectionProofSignatureSet(chain.config, attSlot, aggregatorIndex, blsSigned),
+      getAggregateAndProofSignatureSet(chain.config, attEpoch, aggregatorIndex, blsSigned),
+      indexedAttestationSignatureSet,
+    ];
+    // no need to write to SeenAttestationDatas
 
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
-    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+    if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+    }
   }
 
   // It's important to double check that the attestation still hasn't been observed, since

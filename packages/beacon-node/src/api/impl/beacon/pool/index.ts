@@ -1,6 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
+  ForkBls,
   ForkPostElectra,
   ForkPreElectra,
   SYNC_COMMITTEE_SUBNET_SIZE,
@@ -8,7 +9,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
-import {Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {AttesterSlashing, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
@@ -19,6 +20,7 @@ import {
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../../chain/errors/index.js";
+import {addPqSingleAttestation, isPqSingleAttestation} from "../../../../chain/pq/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
@@ -70,7 +72,9 @@ export function getBeaconPoolApi({
 
     async getPoolAttesterSlashingsV2() {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
-      return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: fork}};
+      // Slashings of different forks never share a pool: the cast picks the list type of the fork
+      const data = chain.opPool.getAllAttesterSlashings() as AttesterSlashing<ForkBls>[];
+      return {data, meta: {version: fork}};
     },
 
     async getPoolProposerSlashings() {
@@ -108,14 +112,23 @@ export function getBeaconPoolApi({
             try {
               // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
               // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548
-              const insertOutcome = chain.attestationPool.add(
-                committeeIndex,
-                attestation,
-                attDataRootHex,
-                validatorCommitteeIndex,
-                committeeSize,
-                priority
-              );
+              const insertOutcome = isPqSingleAttestation(attestation)
+                ? addPqSingleAttestation(
+                    chain.config,
+                    chain.pqAttestationPool,
+                    attestation,
+                    attDataRootHex,
+                    validatorCommitteeIndex,
+                    committeeSize
+                  )
+                : chain.attestationPool.add(
+                    committeeIndex,
+                    attestation,
+                    attDataRootHex,
+                    validatorCommitteeIndex,
+                    committeeSize,
+                    priority
+                  );
               metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
             } catch (e) {
               // The pool is a local optimization, failing to insert must not stop us from publishing a

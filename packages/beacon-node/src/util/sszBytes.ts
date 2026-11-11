@@ -9,6 +9,8 @@ import {
   ForkPostGloas,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
+  VRF_TREE_DEPTH,
+  XMSS_SIGNATURE_SIZE,
   isForkPostElectra,
   isForkPostGloas,
   isForkPostHeze,
@@ -69,6 +71,12 @@ const SINGLE_ATTESTATION_ATTESTER_INDEX_OFFSET = 8;
 const SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + 8 + 8;
 const SINGLE_ATTESTATION_SIGNATURE_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + ATTESTATION_DATA_SIZE;
 const SINGLE_ATTESTATION_SIZE = SINGLE_ATTESTATION_SIGNATURE_OFFSET + SIGNATURE_SIZE;
+// From pq the signature is a leanXMSS one. It is the last field, so every other offset holds.
+const SINGLE_ATTESTATION_SIZE_PQ = SINGLE_ATTESTATION_SIGNATURE_OFFSET + XMSS_SIGNATURE_SIZE;
+
+function isSingleAttestationSize(length: number): boolean {
+  return length === SINGLE_ATTESTATION_SIZE || length === SINGLE_ATTESTATION_SIZE_PQ;
+}
 
 // shared Buffers to convert bytes to hex/base64
 const blockRootBuf = Buffer.alloc(ROOT_SIZE);
@@ -179,7 +187,7 @@ export function getSignatureFromAttestationSerialized(data: Uint8Array): BLSSign
  * Return null if data is not long enough to extract slot.
  */
 export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot | null {
-  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+  if (!isSingleAttestationSize(data.length)) {
     return null;
   }
 
@@ -195,7 +203,7 @@ export function getCommitteeIndexFromSingleAttestationSerialized(
   data: Uint8Array
 ): CommitteeIndex | null {
   if (isForkPostElectra(fork)) {
-    if (data.length !== SINGLE_ATTESTATION_SIZE) {
+    if (!isSingleAttestationSize(data.length)) {
       return null;
     }
 
@@ -218,7 +226,7 @@ export function getCommitteeIndexFromSingleAttestationSerialized(
  */
 export function getDataIndexFromSingleAttestationSerialized(fork: ForkName, data: Uint8Array): AttDataIndex | null {
   if (isForkPostElectra(fork)) {
-    if (data.length !== SINGLE_ATTESTATION_SIZE) {
+    if (!isSingleAttestationSize(data.length)) {
       return null;
     }
 
@@ -237,7 +245,7 @@ export function getDataIndexFromSingleAttestationSerialized(fork: ForkName, data
  * Return null if data is not long enough to extract index.
  */
 export function getAttesterIndexFromSingleAttestationSerialized(data: Uint8Array): ValidatorIndex | null {
-  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+  if (!isSingleAttestationSize(data.length)) {
     return null;
   }
 
@@ -249,7 +257,7 @@ export function getAttesterIndexFromSingleAttestationSerialized(data: Uint8Array
  * Return null if data is not long enough to extract block root.
  */
 export function getBlockRootFromSingleAttestationSerialized(data: Uint8Array): BlockRootHex | null {
-  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+  if (!isSingleAttestationSize(data.length)) {
     return null;
   }
 
@@ -264,7 +272,7 @@ export function getBlockRootFromSingleAttestationSerialized(data: Uint8Array): B
  * Return null if data is not long enough to extract attestation data.
  */
 export function getAttDataFromSingleAttestationSerialized(data: Uint8Array): AttDataBase64 | null {
-  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+  if (!isSingleAttestationSize(data.length)) {
     return null;
   }
 
@@ -280,11 +288,11 @@ export function getAttDataFromSingleAttestationSerialized(data: Uint8Array): Att
  * Return null if data is not long enough to extract signature.
  */
 export function getSignatureFromSingleAttestationSerialized(data: Uint8Array): BLSSignature | null {
-  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+  if (!isSingleAttestationSize(data.length)) {
     return null;
   }
 
-  return data.subarray(SINGLE_ATTESTATION_SIGNATURE_OFFSET, SINGLE_ATTESTATION_SIGNATURE_OFFSET + SIGNATURE_SIZE);
+  return data.subarray(SINGLE_ATTESTATION_SIGNATURE_OFFSET);
 }
 
 //
@@ -299,9 +307,33 @@ export function getSignatureFromSingleAttestationSerialized(data: Uint8Array): B
 
 const AGGREGATE_AND_PROOF_OFFSET = 4 + 96;
 const AGGREGATE_OFFSET = AGGREGATE_AND_PROOF_OFFSET + 8 + 4 + 96;
-const SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET = AGGREGATE_OFFSET + VARIABLE_FIELD_OFFSET;
-const SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + SLOT_SIZE;
-const SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + 8 + 8;
+
+// From pq the signature is a leanXMSS one, the selection proof is a VRF proof, the message gains a
+// `proof` and the aggregate loses its signature:
+//
+// class SignedAggregateAndProof(Container):
+//    message: AggregateAndProof - offset 4
+//    signature: XMSSSignature   - data 2404
+//
+// class AggregateAndProof(Container)
+//    aggregatorIndex: ValidatorIndex - data 8
+//    aggregate: Attestation          - offset 4
+//    selectionProof: VRFProof        - data 1024
+//    proof: AttestationProof         - offset 4
+const AGGREGATE_AND_PROOF_OFFSET_PQ = 4 + XMSS_SIGNATURE_SIZE;
+const AGGREGATE_OFFSET_PQ = AGGREGATE_AND_PROOF_OFFSET_PQ + 8 + 4 + 32 * (VRF_TREE_DEPTH + 1) + 4;
+
+/** The message's offset is the first field, and tells the two layouts apart */
+function isPqSignedAggregateAndProof(data: Uint8Array): boolean {
+  return (
+    data.length >= 4 && (data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24)) === AGGREGATE_AND_PROOF_OFFSET_PQ
+  );
+}
+
+/** Where the attestation data of the aggregate starts */
+function signedAggregateAndProofDataOffset(data: Uint8Array): number {
+  return (isPqSignedAggregateAndProof(data) ? AGGREGATE_OFFSET_PQ : AGGREGATE_OFFSET) + VARIABLE_FIELD_OFFSET;
+}
 
 /**
  * Extract slot from signed aggregate and proof serialized bytes
@@ -309,11 +341,11 @@ const SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET = SIGNED_AGGREGATE_AND_PROOF_
  * This works for both phase + electra
  */
 export function getSlotFromSignedAggregateAndProofSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + SLOT_SIZE) {
+  if (data.length < signedAggregateAndProofDataOffset(data) + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET);
+  return getSlotFromOffset(data, signedAggregateAndProofDataOffset(data));
 }
 
 /**
@@ -322,14 +354,14 @@ export function getSlotFromSignedAggregateAndProofSerialized(data: Uint8Array): 
  * This works for both phase + electra
  */
 export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Array): BlockRootHex | null {
-  if (data.length < SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET + ROOT_SIZE) {
+  if (data.length < signedAggregateAndProofDataOffset(data) + 8 + 8 + ROOT_SIZE) {
     return null;
   }
 
   blockRootBuf.set(
     data.subarray(
-      SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET,
-      SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET + ROOT_SIZE
+      signedAggregateAndProofDataOffset(data) + 8 + 8,
+      signedAggregateAndProofDataOffset(data) + 8 + 8 + ROOT_SIZE
     )
   );
   return "0x" + blockRootBuf.toString("hex");
@@ -341,11 +373,11 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
  * This works for both phase0 + electra (index is in attestation data at the same offset).
  */
 export function getDataIndexFromSignedAggregateAndProofSerialized(data: Uint8Array): AttDataIndex | null {
-  if (data.length < SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET + COMMITTEE_INDEX_SIZE) {
+  if (data.length < signedAggregateAndProofDataOffset(data) + SLOT_SIZE + COMMITTEE_INDEX_SIZE) {
     return null;
   }
 
-  return getIndexFromOffset(data, SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET);
+  return getIndexFromOffset(data, signedAggregateAndProofDataOffset(data) + SLOT_SIZE);
 }
 
 /**
@@ -353,10 +385,11 @@ export function getDataIndexFromSignedAggregateAndProofSerialized(data: Uint8Arr
  * Return null if data is not long enough
  */
 export function getAttDataFromSignedAggregateAndProofElectra(data: Uint8Array): AttDataBase64 | null {
-  const startIndex = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET;
+  const startIndex = signedAggregateAndProofDataOffset(data);
   const endIndex = startIndex + ATTESTATION_DATA_SIZE;
 
-  if (data.length < endIndex + SIGNATURE_SIZE + COMMITTEE_BITS_SIZE) {
+  const signatureSize = isPqSignedAggregateAndProof(data) ? 0 : SIGNATURE_SIZE;
+  if (data.length < endIndex + signatureSize + COMMITTEE_BITS_SIZE) {
     return null;
   }
   attDataBuf.set(data.subarray(startIndex, endIndex));
@@ -368,7 +401,8 @@ export function getAttDataFromSignedAggregateAndProofElectra(data: Uint8Array): 
  * Return null if data is not long enough
  */
 export function getCommitteeBitsFromSignedAggregateAndProofElectra(data: Uint8Array): CommitteeBitsBase64 | null {
-  const startIndex = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
+  const signatureSize = isPqSignedAggregateAndProof(data) ? 0 : SIGNATURE_SIZE;
+  const startIndex = signedAggregateAndProofDataOffset(data) + ATTESTATION_DATA_SIZE + signatureSize;
   const endIndex = startIndex + COMMITTEE_BITS_SIZE;
 
   if (data.length < endIndex) {
@@ -384,15 +418,15 @@ export function getCommitteeBitsFromSignedAggregateAndProofElectra(data: Uint8Ar
  * Return null if data is not long enough to extract attestation data.
  */
 export function getAttDataFromSignedAggregateAndProofPhase0(data: Uint8Array): AttDataBase64 | null {
-  if (data.length < SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE) {
+  if (data.length < signedAggregateAndProofDataOffset(data) + ATTESTATION_DATA_SIZE) {
     return null;
   }
 
   // base64 is a bit efficient than hex
   attDataBuf.set(
     data.subarray(
-      SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET,
-      SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE
+      signedAggregateAndProofDataOffset(data),
+      signedAggregateAndProofDataOffset(data) + ATTESTATION_DATA_SIZE
     )
   );
   return attDataBuf.toString("base64");

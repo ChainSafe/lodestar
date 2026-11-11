@@ -265,6 +265,11 @@ export class LightClientServer {
       return;
     }
 
+    // pq removes sync committees and with them the light client protocol
+    if (!("syncAggregate" in block.body)) {
+      return;
+    }
+
     // What is the syncAggregate signing?
     // From the state-transition
     // ```

@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {
+  ForkBls,
   ForkName,
   ForkPostDeneb,
   ForkPostElectra,
@@ -14,6 +15,7 @@ import {
 } from "@lodestar/params";
 import {computeTimeAtSlot, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
+  Attestation,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -60,6 +62,7 @@ import {
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
+import {addPqAggregate, addPqSingleAttestation, isPqSingleAttestation} from "../../chain/pq/index.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {
   validateGossipFuluDataColumnSidecar,
@@ -1057,12 +1060,22 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           );
           const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
-          const insertOutcome = chain.aggregatedAttestationPool.add(
-            aggregatedAttestation,
-            attDataRootHex,
-            indexedAttestation.attestingIndices.length,
-            committeeValidatorIndices
-          );
+          const {message} = signedAggregateAndProof;
+          const insertOutcome =
+            "proof" in message
+              ? addPqAggregate(
+                  chain.config,
+                  chain.pqAttestationPool,
+                  message,
+                  attDataRootHex,
+                  indexedAttestation.attestingIndices
+                )
+              : chain.aggregatedAttestationPool.add(
+                  aggregatedAttestation as Attestation<ForkBls>,
+                  attDataRootHex,
+                  indexedAttestation.attestingIndices.length,
+                  committeeValidatorIndices
+                );
           metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
 
           if (!options.dontSendGossipAttestationsToForkchoice) {
@@ -1633,13 +1646,22 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
               // but don't add to attestation pool, to save CPU and RAM
               if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
-                const insertOutcome = chain.attestationPool.add(
-                  committeeIndex,
-                  attestation,
-                  attDataRootHex,
-                  validatorCommitteeIndex,
-                  committeeSize
-                );
+                const insertOutcome = isPqSingleAttestation(attestation)
+                  ? addPqSingleAttestation(
+                      chain.config,
+                      chain.pqAttestationPool,
+                      attestation,
+                      attDataRootHex,
+                      validatorCommitteeIndex,
+                      committeeSize
+                    )
+                  : chain.attestationPool.add(
+                      committeeIndex,
+                      attestation,
+                      attDataRootHex,
+                      validatorCommitteeIndex,
+                      committeeSize
+                    );
                 metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
               }
             } catch (e) {

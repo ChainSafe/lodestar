@@ -8,6 +8,7 @@ import {AttesterSlashing, Domain} from "@lodestar/types";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {getAttesterSlashingSignatureDomains} from "../opPools/utils.js";
+import {verifyAttesterSlashingSignatures} from "../pq/index.js";
 
 export async function validateApiAttesterSlashing(
   chain: IBeaconChain,
@@ -61,9 +62,13 @@ export async function validateAttesterSlashing(
     });
   }
 
-  const signatureSets = getAttesterSlashingSignatureSets(chain.config, state.slot, attesterSlashing);
   const verifiedDomains = getAttesterSlashingSignatureDomains(chain.config, state.slot, attesterSlashing);
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  if (
+    !(await verifyAttesterSlashingSignatures(chain.config, chain.bls, chain.pq, state.slot, attesterSlashing, {
+      batchable: true,
+      priority: prioritizeBls,
+    }))
+  ) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID_SIGNATURE,
     });

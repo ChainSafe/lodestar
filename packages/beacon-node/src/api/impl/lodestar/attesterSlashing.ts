@@ -27,6 +27,8 @@ export function getAttesterSlashingsFromIndexedAttestations(
 
       if (getIntersectingIndices(first.attestingIndices, second.attestingIndices).length === 0) continue;
 
+      // A pq block's attestations share one proof, so no slashing can be built from them
+      if ("proof" in first || "proof" in second) continue;
       const firstBigint = toIndexedAttestationBigint(first, fork);
       const secondBigint = toIndexedAttestationBigint(second, fork);
 

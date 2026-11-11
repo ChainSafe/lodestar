@@ -55,7 +55,9 @@ type AttestationList = AttestationListPhase0 | AttestationListElectra;
 
 type AttesterSlashingListPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
 type AttesterSlashingListElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
-type AttesterSlashingList = AttesterSlashingListPhase0 | AttesterSlashingListElectra;
+const AttesterSlashingListTypePq = ArrayOf(ssz.pq.AttesterSlashing);
+type AttesterSlashingListPq = ValueOf<typeof AttesterSlashingListTypePq>;
+type AttesterSlashingList = AttesterSlashingListPhase0 | AttesterSlashingListElectra | AttesterSlashingListPq;
 
 type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;
@@ -263,8 +265,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: EmptyRequestCodec,
       resp: {
-        data: WithVersion((fork) =>
-          isForkPostElectra(fork) ? AttesterSlashingListTypeElectra : AttesterSlashingListTypePhase0
+        data: WithVersion(
+          (fork) =>
+            (fork === ForkName.pq
+              ? AttesterSlashingListTypePq
+              : isForkPostElectra(fork)
+                ? AttesterSlashingListTypeElectra
+                : AttesterSlashingListTypePhase0) as Type<AttesterSlashingList>
         ),
         meta: VersionCodec,
       },

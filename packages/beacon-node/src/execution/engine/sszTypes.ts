@@ -343,6 +343,8 @@ export const executionForkName: Record<ForkPostBellatrix, ExecutionForkName | nu
   [ForkName.electra]: "prague",
   [ForkName.fulu]: "osaka",
   [ForkName.gloas]: "amsterdam",
+  // pq builds on gloas and changes nothing in the execution layer
+  [ForkName.pq]: "amsterdam",
   [ForkName.heze]: null,
 };
 

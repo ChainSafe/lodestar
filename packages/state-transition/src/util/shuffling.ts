@@ -149,18 +149,17 @@ export function calculateCommitteeAssignments(
 export function getIndexedAttestation(
   epochShuffling: EpochShuffling,
   fork: ForkSeq,
-  attestation: Attestation<ForkBls>
-): IndexedAttestation<ForkBls> {
+  attestation: Attestation
+): IndexedAttestation {
   const {data} = attestation;
   const attestingIndices = getAttestingIndices(epochShuffling, fork, attestation);
 
   // sort in-place
   attestingIndices.sort((a, b) => a - b);
-  return {
-    attestingIndices: attestingIndices,
-    data: data,
-    signature: attestation.signature,
-  };
+  // From pq an attestation carries no signature. Whoever has the proof that covers it attaches it.
+  return "signature" in attestation
+    ? {attestingIndices, data, signature: attestation.signature}
+    : {attestingIndices, data, proof: new Uint8Array(0)};
 }
 
 /**
