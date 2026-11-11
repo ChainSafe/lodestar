@@ -14,6 +14,7 @@ pub const blsVerifier = @import("./bls_verifier.zig");
 pub const pubkeys = @import("./pubkeys.zig");
 pub const executionProofVerifier = @import("./execution_proof_verifier.zig");
 pub const leanvm = @import("./leanvm.zig");
+pub const vrfTree = @import("./vrf_tree.zig");
 
 const options = @import("bls_options");
 

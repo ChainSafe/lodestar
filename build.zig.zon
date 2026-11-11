@@ -264,6 +264,10 @@
         .leanvm = .{
             .root_source_file = "src/leanvm/root.zig",
         },
+        .vrf_tree = .{
+            .root_source_file = "src/vrf_tree/root.zig",
+            .imports = .{ .constants, .hashing },
+        },
     },
     .executables = .{
         .download_era_files = .{
@@ -350,6 +354,12 @@
                 .imports = .{ .hashing, .zbench },
             },
         },
+        .bench_pq_signer = .{
+            .root_module = .{
+                .root_source_file = "bench/pq/signer.zig",
+                .imports = .{ .constants, .leanvm, .state_transition, .time, .vrf_tree },
+            },
+        },
         .bench_hashing = .{
             .root_module = .{
                 .root_source_file = "bench/ssz/hashing.zig",
@@ -404,6 +414,7 @@
                     .hex,
                     .ere_verifier,
                     .leanvm,
+                    .vrf_tree,
                     "zapi:zapi",
                 },
             },
@@ -434,6 +445,7 @@
         .beacon_node = .{ .root_module = .beacon_node },
         .ere_verifier = .{ .root_module = .ere_verifier },
         .leanvm = .{ .root_module = .leanvm },
+        .vrf_tree = .{ .root_module = .vrf_tree },
         .bindings_allocator = .{
             .root_module = .{
                 .root_source_file = "bindings/napi/tracked_allocator.zig",

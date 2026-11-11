@@ -42,6 +42,10 @@
     "./leanvm": {
       "types": "./src/leanvm.d.ts",
       "import": "./src/leanvm.js"
+    },
+    "./vrf-tree": {
+      "types": "./src/vrf-tree.d.ts",
+      "import": "./src/vrf-tree.js"
     }
   },
   "scripts": {
