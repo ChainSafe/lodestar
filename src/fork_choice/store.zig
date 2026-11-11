@@ -25,10 +25,7 @@ const AnyIndexedAttestation = fork_types.AnyIndexedAttestation;
 const AnyAttesterSlashing = fork_types.AnyAttesterSlashing;
 const ForkTypes = fork_types.ForkTypes;
 const head_mod = @import("head.zig");
-const vote_targets_mod = @import("vote_targets.zig");
-const VoteTargets = vote_targets_mod.VoteTargets;
-const TargetId = vote_targets_mod.TargetId;
-const NO_TARGET = vote_targets_mod.NO_TARGET;
+const Votes = @import("votes.zig").Votes;
 
 pub const Slot = ct.primitive.Slot.Type;
 pub const Epoch = ct.primitive.Epoch.Type;
@@ -312,28 +309,14 @@ pub const Store = struct {
     unrealized_justified_checkpoint: Checkpoint,
     unrealized_finalized_checkpoint: Checkpoint,
     proposer_boost_root: Root,
-    equivocating_indices: std.DynamicBitSetUnmanaged,
     blocks: std.MultiArrayList(Block),
     index_by_root: RootIndexMap,
     /// Parallel to `blocks`; only meaningful for Gloas blocks.
     ptc_votes: std.ArrayList(PtcVotes),
-    /// Dense by validator index: each validator's latest message as an id into `vote_targets`.
-    latest_votes: std.ArrayList(TargetId),
-    /// Votes whose slot is not yet past, one per validator like `latest_votes`; applied
-    /// by the tick that makes their slot past. The spec rejects such attestations and
-    /// expects the caller to retry; gossip delivers them in their own slot.
-    queued_votes: std.ArrayList(TargetId),
-    /// The validators with a queued vote. Few validators attest per slot, so the tick
-    /// visits these instead of every entry of `queued_votes`.
-    queued_validators: std.DynamicBitSetUnmanaged,
-    /// Set bits in `queued_validators`, so a tick with nothing queued skips scanning it.
-    queued_count: usize,
-    vote_targets: VoteTargets,
+    /// Spec `latest_messages` and `equivocating_indices`, with the weight they put on each node.
+    votes: Votes,
     justified_balances: JustifiedBalances,
-    /// `effective_balance_increments` with inactive and slashed validators zeroed:
-    /// the per-validator weight `get_attestation_score` sums.
-    justified_vote_increments: []u16,
-    /// Sum of `justified_vote_increments` in Gwei (`get_total_balance` of the active unslashed set).
+    /// `get_total_balance` of the justified state's active unslashed validators, in Gwei.
     justified_total_balance: u64,
     provider: StateProvider,
     head_cache: head_mod.Cache,
@@ -372,7 +355,7 @@ pub const Store = struct {
     ) !Store {
         const checkpoint: Checkpoint = .{ .epoch = computeEpochAtSlot(anchor.slot), .root = anchor.root };
         // Owned by `self` from here on: `self.deinit` is the only cleanup.
-        const vote_targets = try VoteTargets.init(allocator);
+        const votes = try Votes.init(allocator);
         var self: Store = .{
             .allocator = allocator,
             .config = config,
@@ -384,17 +367,11 @@ pub const Store = struct {
             .unrealized_justified_checkpoint = checkpoint,
             .unrealized_finalized_checkpoint = checkpoint,
             .proposer_boost_root = constants.ZERO_HASH,
-            .equivocating_indices = .{},
             .blocks = .empty,
             .index_by_root = .empty,
             .ptc_votes = .empty,
-            .latest_votes = .empty,
-            .queued_votes = .empty,
-            .queued_validators = .{},
-            .queued_count = 0,
-            .vote_targets = vote_targets,
+            .votes = votes,
             .justified_balances = .empty,
-            .justified_vote_increments = &.{},
             .justified_total_balance = 0,
             .provider = provider,
             .head_cache = .empty,
@@ -427,16 +404,11 @@ pub const Store = struct {
 
     pub fn deinit(self: *Store) void {
         self.head_cache.deinit(self.allocator);
-        self.allocator.free(self.justified_vote_increments);
         self.justified_balances.deinit(self.allocator);
-        self.latest_votes.deinit(self.allocator);
-        self.queued_votes.deinit(self.allocator);
-        self.queued_validators.deinit(self.allocator);
-        self.vote_targets.deinit(self.allocator);
+        self.votes.deinit(self.allocator);
         self.ptc_votes.deinit(self.allocator);
         self.index_by_root.deinit(self.allocator);
         self.blocks.deinit(self.allocator);
-        self.equivocating_indices.deinit(self.allocator);
         self.* = undefined;
     }
 
@@ -593,11 +565,9 @@ pub const Store = struct {
             out.* = if (active) increment else 0;
             total += out.*;
         }
-        self.head_cache.applyBalanceChange(self.vote_targets.nodes.items, self.justified_vote_increments, vote_increments);
+        self.votes.setIncrements(self.allocator, vote_increments);
         self.justified_balances.deinit(self.allocator);
-        self.allocator.free(self.justified_vote_increments);
         self.justified_balances = balances;
-        self.justified_vote_increments = vote_increments;
         self.justified_total_balance = total * preset.EFFECTIVE_BALANCE_INCREMENT;
         self.head_cache.dirty = true;
     }
@@ -638,7 +608,7 @@ pub const Store = struct {
         if (current_slot > previous_slot and computeSlotsSinceEpochStart(current_slot) == 0) {
             try self.updateCheckpoints(self.unrealized_justified_checkpoint, self.unrealized_finalized_checkpoint);
         }
-        if (current_slot > previous_slot) self.drainQueuedMessages(current_slot);
+        if (current_slot > previous_slot) self.votes.drain(self.config, current_slot);
     }
 
     // --- on_block ---------------------------------------------------------------------
@@ -854,92 +824,17 @@ pub const Store = struct {
             .payload_present = self.config.forkSeq(data.slot).gte(.gloas) and data.index == 1,
         };
         const queue = self.currentSlot() < data.slot + 1;
-        try self.ensureValidatorSlots(&self.latest_votes, indices);
-        if (queue) {
-            try self.ensureValidatorSlots(&self.queued_votes, indices);
-            try self.queued_validators.resize(self.allocator, self.queued_votes.items.len, false);
-        }
-        const id = try self.internVoteTarget(message);
-        if (queue) return self.queueVotes(indices, id, message);
-        for (indices) |index| self.applyVote(index, id, message);
-    }
-
-    fn ensureValidatorSlots(self: *Store, list: *std.ArrayList(TargetId), attesting_indices: []const ValidatorIndex) !void {
-        var max_index: usize = 0;
-        for (attesting_indices) |index| max_index = @max(max_index, index);
-        if (max_index >= list.items.len) {
-            try list.appendNTimes(self.allocator, NO_TARGET, max_index + 1 - list.items.len);
-        }
-    }
-
-    /// The id of `message` in `vote_targets`, compacting the table first when it has grown.
-    fn internVoteTarget(self: *Store, message: LatestMessage) !TargetId {
-        if (self.vote_targets.needsCompaction()) {
-            try self.vote_targets.compact(self.allocator, &.{ self.latest_votes.items, self.queued_votes.items, self.head_cache.applied_votes.items });
-        }
-        return self.vote_targets.getOrInsert(self.allocator, message, head_mod.nodeId(head_mod.supportedNode(self, message)));
-    }
-
-    /// The replacement rule of spec `update_latest_messages` for one validator: a later
-    /// target epoch before Gloas, a later slot from Gloas on. `message.slot` is in the
-    /// target epoch, which `checkAttestationData` asserted.
-    fn applyVote(self: *Store, index: ValidatorIndex, id: TargetId, message: LatestMessage) void {
-        if (self.isEquivocating(index)) return;
-        const current_id = &self.latest_votes.items[index];
-        const current = self.vote_targets.messages.items[current_id.*];
-        const newer = current_id.* == NO_TARGET or
-            (if (self.config.forkSeq(message.slot).gte(.gloas)) message.slot > current.slot else computeEpochAtSlot(message.slot) > computeEpochAtSlot(current.slot));
-        if (newer) {
-            current_id.* = id;
-            self.head_cache.markVoteChanged(index);
-        }
-    }
-
-    /// Holds a vote until its slot is past. The first vote of a slot wins, as applying
-    /// them in order would, and a vote for a later slot replaces an earlier one.
-    fn queueVotes(self: *Store, attesting_indices: []const ValidatorIndex, id: TargetId, message: LatestMessage) void {
-        const messages = self.vote_targets.messages.items;
-        for (attesting_indices) |index| {
-            if (self.isEquivocating(index)) continue;
-            const queued = &self.queued_votes.items[index];
-            if (queued.* == NO_TARGET) {
-                self.queued_validators.set(index);
-                self.queued_count += 1;
-                queued.* = id;
-            } else if (message.slot > messages[queued.*].slot) {
-                queued.* = id;
-            }
-        }
-    }
-
-    /// Applies the queued votes whose slot is now past.
-    fn drainQueuedMessages(self: *Store, current_slot: Slot) void {
-        const queued = self.queued_votes.items;
-        std.debug.assert(queued.len <= self.latest_votes.items.len);
-        var validators = self.queued_validators.iterator(.{});
-        // Bounded by the count, so the scan skips the empty words after the last queued validator.
-        for (0..self.queued_count) |_| {
-            const index = validators.next().?;
-            const id = &queued[index];
-            std.debug.assert(id.* != NO_TARGET);
-            const message = self.vote_targets.messages.items[id.*];
-            if (message.slot >= current_slot) continue;
-            self.applyVote(index, id.*, message);
-            id.* = NO_TARGET;
-            self.queued_validators.unset(index);
-            self.queued_count -= 1;
-        }
+        const node = head_mod.nodeId(head_mod.supportedNode(self, message));
+        if (try self.votes.record(self.allocator, self.config, indices, message, node, queue)) self.head_cache.dirty = true;
     }
 
     /// Validators with a vote waiting for its slot to pass.
     pub fn queuedVoteCount(self: *const Store) usize {
-        return self.queued_count;
+        return self.votes.queued_count;
     }
 
     pub fn latestMessage(self: *const Store, validator_index: ValidatorIndex) ?LatestMessage {
-        if (validator_index >= self.latest_votes.items.len) return null;
-        const id = self.latest_votes.items[validator_index];
-        return if (id == NO_TARGET) null else self.vote_targets.messages.items[id];
+        return self.votes.latestMessage(validator_index);
     }
 
     // --- on_attester_slashing ---------------------------------------------------------
@@ -963,30 +858,12 @@ pub const Store = struct {
         indices_2: []const ValidatorIndex,
     ) !void {
         if (!isSlashableAttestationData(data_1, data_2)) return error.NotSlashableAttestationData;
-        var max_index: usize = 0;
-        for (indices_1) |index| max_index = @max(max_index, index);
-        if (max_index >= self.equivocating_indices.bit_length) {
-            try self.equivocating_indices.resize(self.allocator, max_index + 1, false);
-        }
-        var i: usize = 0;
-        var j: usize = 0;
-        while (i < indices_1.len and j < indices_2.len) {
-            if (indices_1[i] == indices_2[j]) {
-                self.equivocating_indices.set(indices_1[i]);
-                self.head_cache.markVoteChanged(indices_1[i]);
-                i += 1;
-                j += 1;
-            } else if (indices_1[i] < indices_2[j]) {
-                i += 1;
-            } else {
-                j += 1;
-            }
-        }
+        try self.votes.slash(self.allocator, indices_1, indices_2);
         self.head_cache.dirty = true;
     }
 
     pub fn isEquivocating(self: *const Store, validator_index: ValidatorIndex) bool {
-        return validator_index < self.equivocating_indices.bit_length and self.equivocating_indices.isSet(validator_index);
+        return self.votes.isEquivocating(validator_index);
     }
 
     // --- Gloas payload handlers -------------------------------------------------------
@@ -1291,9 +1168,7 @@ pub const Store = struct {
             remap[i] = if (keep) kept else NO_BLOCK;
             if (keep) kept += 1;
         }
-        // Votes hold target ids, so renumbering the target table carries every vote over.
-        self.vote_targets.remap(remap);
-        self.head_cache.remapVoteWeight(remap, kept);
+        self.votes.remap(remap, kept);
         if (parents[finalized] != NO_BLOCK) {
             const hung_from: ForkChoiceNode = .{ .block = parents[finalized], .payload_status = self.blocks.items(.parent_payload_status)[finalized] };
             self.root_base_status = self.head_cache.execution.items[head_mod.nodeId(hung_from)];

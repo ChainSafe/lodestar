@@ -110,7 +110,7 @@ pub const Bench = struct {
 /// Interns a vote for `block` at the block's own slot, as `onAttestation` would.
 pub fn voteTarget(store: *Store, block: fork_choice.BlockIndex) !fork_choice.TargetId {
     const message: fork_choice.LatestMessage = .{ .slot = store.blockSlot(block), .block = block, .payload_present = false };
-    return store.vote_targets.getOrInsert(store.allocator, message, fork_choice.head.nodeId(fork_choice.head.supportedNode(store, message)));
+    return store.votes.vote_targets.getOrInsert(store.allocator, message, fork_choice.head.nodeId(fork_choice.head.supportedNode(store, message)));
 }
 
 /// Never the zero root, which the store reserves for "no proposer boost".
@@ -198,7 +198,7 @@ pub fn initStore(allocator: Allocator, opts: Opts) !Bench {
     if (opts.gloas_boosted) store.proposer_boost_root = parent_root;
 
     if (opts.initial_equivocated_count > 0) {
-        try store.equivocating_indices.resize(allocator, opts.initial_equivocated_count, true);
+        try store.votes.equivocating_indices.resize(allocator, opts.initial_equivocated_count, true);
     }
 
     return .{ .store = store, .provider = provider };

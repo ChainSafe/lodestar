@@ -345,32 +345,33 @@ const VaryingProvider = struct {
 /// back so a wrong count keeps showing in later rounds.
 fn expectVoteWeightsMatchRecount(store: *Store) !void {
     const cache = &store.head_cache;
+    const votes = &store.votes;
     _ = try store.getHead();
-    try testing.expectEqual(@as(usize, 0), cache.changed_count);
-    const vote_changes_total = cache.vote_changes_total;
+    try testing.expectEqual(@as(usize, 0), votes.changed_count);
+    const changes_total = votes.vote_changes_total;
     cache.dirty = true;
     _ = try store.getHead();
-    try testing.expectEqual(vote_changes_total, cache.vote_changes_total);
-    const weights = try testing.allocator.dupe(u64, cache.vote_weight.items);
+    try testing.expectEqual(changes_total, votes.vote_changes_total);
+    const weights = try testing.allocator.dupe(u64, votes.vote_weight.items);
     defer testing.allocator.free(weights);
     // A run with no changes leaves the totals as they are.
     cache.dirty = true;
     _ = try store.getHead();
-    try testing.expectEqualSlices(u64, weights, cache.vote_weight.items);
-    const applied = try testing.allocator.dupe(u32, cache.applied_votes.items);
+    try testing.expectEqualSlices(u64, weights, votes.vote_weight.items);
+    const applied = try testing.allocator.dupe(u32, votes.applied_votes.items);
     defer testing.allocator.free(applied);
-    cache.rescan_votes = true;
+    votes.rescan_votes = true;
     cache.dirty = true;
     _ = try store.getHead();
-    try testing.expectEqualSlices(u64, cache.vote_weight.items, weights);
+    try testing.expectEqualSlices(u64, votes.vote_weight.items, weights);
     // A vote on a pruned block may keep its target id where a recount records none;
     // both count nowhere, so compare where each applied vote lands.
-    const nodes = store.vote_targets.nodes.items;
-    for (cache.applied_votes.items, applied) |recounted, incremental| {
+    const nodes = votes.vote_targets.nodes.items;
+    for (votes.applied_votes.items, applied) |recounted, incremental| {
         try testing.expectEqual(nodes[recounted], nodes[incremental]);
     }
-    @memcpy(cache.vote_weight.items, weights);
-    @memcpy(cache.applied_votes.items, applied);
+    @memcpy(votes.vote_weight.items, weights);
+    @memcpy(votes.applied_votes.items, applied);
 }
 
 test "vote weights: incremental updates match a full recount" {
@@ -449,8 +450,8 @@ test "vote weights: incremental updates match a full recount" {
         const justified_root = if (branches == 2) anchor_root else store.blockRoot(0);
         try store.updateCheckpoints(.{ .epoch = epoch + 1, .root = justified_root }, store.finalized_checkpoint);
         // Below the full recount threshold, so the balance diff itself is checked.
-        try testing.expect(store.head_cache.changed_count * 2 <= store.head_cache.applied_votes.items.len);
-        try testing.expectEqual(store.head_cache.changed_votes.count(), store.head_cache.changed_count);
+        try testing.expect(store.votes.changed_count * 2 <= store.votes.applied_votes.items.len);
+        try testing.expectEqual(store.votes.changed_votes.count(), store.votes.changed_count);
         try expectVoteWeightsMatchRecount(&store);
 
         // Finalizing the first branch at epoch 1 drops the second branch and its votes.
@@ -473,9 +474,9 @@ test "vote weights: incremental updates match a full recount" {
             const target_root = store.blockRoot(store.getCheckpointBlock(kept_vote.block, target_epoch));
             var repeat_indices = [_]u64{0};
             var repeat = indexedAttestation(&repeat_indices, kept_vote.slot, store.blockRoot(kept_vote.block), .{ .epoch = target_epoch, .root = target_root });
-            const targets_before = store.vote_targets.len();
+            const targets_before = store.votes.vote_targets.len();
             try store.onAttestation(.{ .electra = &repeat }, true);
-            try testing.expectEqual(targets_before, store.vote_targets.len());
+            try testing.expectEqual(targets_before, store.votes.vote_targets.len());
         }
     }
 }
@@ -523,13 +524,13 @@ test "vote targets: identical votes share an entry and the table stays bounded" 
         });
     }
 
-    const before = store.vote_targets.len();
+    const before = store.votes.vote_targets.len();
     for (0..2) |validator| {
         var indices = [_]u64{validator};
         var vote = indexedAttestation(&indices, 3, roots[0], .{ .epoch = 0, .root = anchor_root });
         try store.onAttestation(.{ .electra = &vote }, true);
     }
-    try testing.expectEqual(before + 1, store.vote_targets.len());
+    try testing.expectEqual(before + 1, store.votes.vote_targets.len());
 
     // Without finality `prune` never runs, yet every slot adds a target.
     for (3..last_slot + 1) |slot| {
@@ -543,7 +544,7 @@ test "vote targets: identical votes share an entry and the table stays bounded" 
         if (slot % 16 == 0) try expectVoteWeightsMatchRecount(&store);
     }
     // About 5000 targets were added, so the table only stays this small by compacting.
-    try testing.expect(store.vote_targets.len() < vote_targets_mod.MIN_COMPACT_AT);
+    try testing.expect(store.votes.vote_targets.len() < vote_targets_mod.MIN_COMPACT_AT);
     for (0..validator_count) |validator| {
         const newest = last_slot - (last_slot + validator_count - validator) % validator_count;
         const message = store.latestMessage(validator).?;
@@ -824,8 +825,8 @@ test "queued votes: a vote for the current slot lands on the next tick" {
     var v1 = [_]u64{1};
     var vote_1 = indexedAttestation(&v1, 3, tagRoot(0x30), target);
     try store.onAttestation(.{ .electra = &vote_1 }, false);
-    try store.equivocating_indices.resize(allocator, 2, false);
-    store.equivocating_indices.set(1);
+    try store.votes.equivocating_indices.resize(allocator, 2, false);
+    store.votes.equivocating_indices.set(1);
     try store.onTick(store.timing.timeAtSlotMs(4));
     try testing.expectEqual(@as(?store_mod.LatestMessage, null), store.latestMessage(1));
 
@@ -856,6 +857,16 @@ test "queued votes: a vote for the current slot lands on the next tick" {
     try store.onTick(store.timing.timeAtSlotMs(7));
     try testing.expectEqual(NO_BLOCK, store.latestMessage(3).?.block);
     try testing.expectEqual(@as(u64, 6), store.latestMessage(3).?.slot);
+
+    // An applied vote invalidates the cached head; repeating it does not.
+    _ = try store.getHead();
+    var v4 = [_]u64{4};
+    var vote_4 = indexedAttestation(&v4, 6, tagRoot(0x30), store.finalized_checkpoint);
+    try store.onAttestation(.{ .electra = &vote_4 }, false);
+    try testing.expect(store.head_cache.dirty);
+    _ = try store.getHead();
+    try store.onAttestation(.{ .electra = &vote_4 }, false);
+    try testing.expect(!store.head_cache.dirty);
 }
 
 test "optimistic sync: pruning keeps the status a Gloas root inherited from dropped ancestors" {

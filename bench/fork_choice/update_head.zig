@@ -35,18 +35,18 @@ const UpdateHeadBench = struct {
     pub fn run(self: *UpdateHeadBench, _: std.mem.Allocator) void {
         const store = self.bench.store;
         if (self.changed_per_run) |changed| {
-            const votes = store.latest_votes.items;
+            const votes = store.votes.latest_votes.items;
             for (0..changed) |_| {
                 const validator = self.order[self.cursor.*];
                 votes[validator] = if (votes[validator] == self.vote_ids[0]) self.vote_ids[1] else self.vote_ids[0];
-                store.head_cache.markVoteChanged(validator);
+                store.votes.markChanged(validator);
                 self.cursor.* = (self.cursor.* + 1) % self.order.len;
             }
-            if (self.recount) store.head_cache.rescan_votes = true;
+            if (self.recount) store.votes.rescan_votes = true;
         } else {
-            store.latest_votes = self.votes[@intFromBool(self.flip.*)];
-            store.head_cache.changed_votes.setAll();
-            store.head_cache.changed_count = store.head_cache.changed_votes.bit_length;
+            store.votes.latest_votes = self.votes[@intFromBool(self.flip.*)];
+            store.votes.changed_votes.setAll();
+            store.votes.changed_count = store.votes.changed_votes.bit_length;
             self.flip.* = !self.flip.*;
         }
         store.head_cache.dirty = true;
@@ -54,7 +54,7 @@ const UpdateHeadBench = struct {
     }
 
     fn deinit(self: *UpdateHeadBench, allocator: std.mem.Allocator) void {
-        self.bench.store.latest_votes = .empty;
+        self.bench.store.votes.latest_votes = .empty;
         for (&self.votes) |*votes| votes.deinit(allocator);
         allocator.destroy(self.flip);
         allocator.destroy(self.cursor);
@@ -110,8 +110,8 @@ fn setupBench(allocator: std.mem.Allocator, case: Case) !UpdateHeadBench {
     const order = try flipOrder(allocator, opts, case.shuffled);
     errdefer allocator.free(order);
     if (changed_per_run != null) {
-        bench.store.latest_votes = votes_1;
-        errdefer bench.store.latest_votes = .empty;
+        bench.store.votes.latest_votes = votes_1;
+        errdefer bench.store.votes.latest_votes = .empty;
         _ = try bench.store.getHead();
     }
     return .{
