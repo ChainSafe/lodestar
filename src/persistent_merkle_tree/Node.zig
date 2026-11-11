@@ -27,6 +27,7 @@ const max_depth = @import("hashing").max_depth;
 const Depth = @import("hashing").Depth;
 const Gindex = @import("gindex.zig").Gindex;
 const ChunkedLeaf = @import("ChunkedLeaf.zig");
+const ChunkedLeafSlab = @import("ChunkedLeafSlab.zig");
 const FreeSlotBitmap = @import("FreeSlotBitmap.zig");
 const expensive_safety_checks = @import("root.zig").expensive_safety_checks;
 
@@ -259,6 +260,8 @@ pub const Pool = struct {
     allocator: Allocator,
     nodes: std.MultiArrayList(Node).Slice,
     free_slots: FreeSlotBitmap,
+    /// Created by the first chunked leaf, so a pool without chunked leaves does not pay for it.
+    chunked_leaf_slab: ?ChunkedLeafSlab,
     /// Lowest free slot, or `nodes.len` when no slot is free.
     next_free_node: Id,
     nodes_in_use: usize,
@@ -293,6 +296,7 @@ pub const Pool = struct {
             .allocator = opts.allocator,
             .nodes = undefined,
             .free_slots = free_slots,
+            .chunked_leaf_slab = null,
             .next_free_node = @enumFromInt(max_depth),
             .nodes_in_use = max_depth,
             .chunked_leaf_scratch = undefined,
@@ -331,7 +335,7 @@ pub const Pool = struct {
             if (s.isFree()) continue;
             const idx: u32 = @intCast(i);
             switch (s.kind()) {
-                .chunked_leaf => self.allocator.destroy(chunkedLeafPtr(payloads, idx)),
+                .chunked_leaf => self.freeChunkedLeaf(chunkedLeafPtr(payloads, idx)),
                 .container_struct => {
                     const struct_ref = containerStructRef(payloads, idx);
                     struct_ref.deinit(struct_ref.ptr, self.allocator);
@@ -343,6 +347,7 @@ pub const Pool = struct {
         var list = self.nodes.toMultiArrayList();
         list.deinit(self.page_allocator);
         self.free_slots.deinit(self.page_allocator);
+        if (self.chunked_leaf_slab) |*slab| slab.deinit(self.page_allocator);
         self.* = undefined;
     }
 
@@ -432,7 +437,7 @@ pub const Pool = struct {
     pub fn createChunkedLeaf(self: *Pool, chunks: *align(64) const [ChunkedLeaf.K][32]u8, len: u16) Error!Id {
         std.debug.assert(len <= ChunkedLeaf.K);
         const storage = try self.allocChunkedLeaf();
-        errdefer self.allocator.destroy(storage);
+        errdefer self.freeChunkedLeaf(storage);
 
         storage.chunks = chunks.*;
         storage.len = len;
@@ -450,7 +455,7 @@ pub const Pool = struct {
     pub fn createChunkedLeafEmpty(self: *Pool, len: u16) Error!Id {
         std.debug.assert(len <= ChunkedLeaf.K);
         const storage = try self.allocChunkedLeaf();
-        errdefer self.allocator.destroy(storage);
+        errdefer self.freeChunkedLeaf(storage);
 
         @memset(std.mem.asBytes(&storage.chunks), 0);
         storage.len = len;
@@ -463,12 +468,31 @@ pub const Pool = struct {
         return node_id;
     }
 
+    /// Returns storage from the chunked leaf slab. A caller must write all chunks and `len` before
+    /// reading. Free with `freeChunkedLeaf`.
+    fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
+        if (self.chunked_leaf_slab == null) {
+            // Every chunked leaf is a node, and its storage is allocated before the node.
+            self.chunked_leaf_slab = try ChunkedLeafSlab.init(self.page_allocator, @intCast(self.nodes.len));
+        }
+        return self.chunked_leaf_slab.?.alloc(self.page_allocator);
+    }
+
+    fn freeChunkedLeaf(self: *Pool, storage: *ChunkedLeaf) void {
+        self.chunked_leaf_slab.?.release(storage);
+    }
+
+    /// Bytes of chunked leaf storage in use. They are not allocated through `allocator`.
+    pub fn chunkedLeafBytesInUse(self: *const Pool) usize {
+        return if (self.chunked_leaf_slab) |*slab| slab.bytesInUse() else 0;
+    }
+
     /// Creates a chunked_leaf Node whose chunks start with `bytes` (`bytes.len <= K * 32`) and are
     /// zero after them, with `ceil(bytes.len / 32)` valid chunks.
     pub fn createChunkedLeafFromBytes(self: *Pool, bytes: []const u8) Error!Id {
         std.debug.assert(bytes.len <= ChunkedLeaf.K * 32);
         const storage = try self.allocChunkedLeaf();
-        errdefer self.allocator.destroy(storage);
+        errdefer self.freeChunkedLeaf(storage);
 
         const chunk_bytes = std.mem.asBytes(&storage.chunks);
         @memcpy(chunk_bytes[0..bytes.len], bytes);
@@ -481,19 +505,6 @@ pub const Pool = struct {
         self.nodes.items(.root)[idx] = lazy_sentinel;
         self.nodes.items(.state)[idx] = State.initInUse(.chunked_leaf, 0);
         return node_id;
-    }
-
-    /// The caller must write all chunks and `len` before reading. Free with `allocator.destroy`.
-    fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
-        // `Allocator.create`'s 0xAA fill exposes a read before write, but costs 2 KiB per
-        // copy-on-write on a hot path whose caller overwrites every field.
-        if (expensive_safety_checks) return self.allocator.create(ChunkedLeaf);
-        const bytes = self.allocator.rawAlloc(
-            @sizeOf(ChunkedLeaf),
-            .of(ChunkedLeaf),
-            @returnAddress(),
-        ) orelse return error.OutOfMemory;
-        return @ptrCast(@alignCast(bytes));
     }
 
     /// Create a `.container_struct` Node holding a cloned `T` instance.
@@ -742,7 +753,7 @@ pub const Pool = struct {
                 },
                 .chunked_leaf => {
                     const storage = chunkedLeafPtr(self.nodes.items(.payload), @intFromEnum(id));
-                    self.allocator.destroy(storage);
+                    self.freeChunkedLeaf(storage);
                     current = null;
                 },
                 .container_struct => {
@@ -1046,7 +1057,7 @@ pub const Id = enum(u32) {
         const old_storage = chunkedLeafPtr(pool.nodes.items(.payload), idx);
 
         const new_storage = try pool.allocChunkedLeaf();
-        errdefer pool.allocator.destroy(new_storage);
+        errdefer pool.freeChunkedLeaf(new_storage);
 
         new_storage.chunks = old_storage.chunks;
         new_storage.len = old_storage.len;
@@ -1077,7 +1088,7 @@ pub const Id = enum(u32) {
         const old_storage = chunkedLeafPtr(pool.nodes.items(.payload), idx);
 
         const new_storage = try pool.allocChunkedLeaf();
-        errdefer pool.allocator.destroy(new_storage);
+        errdefer pool.freeChunkedLeaf(new_storage);
 
         new_storage.chunks = old_storage.chunks;
         new_storage.len = old_storage.len;

@@ -87,17 +87,18 @@ test "shared pool payload stays charged until its last parent is released" {
     defer pool.deinit();
     const baseline_nodes = pool.getNodesInUse();
 
+    // Chunked leaf storage comes from the pool's slab and is charged through the pool.
     const leaf = try pool.createChunkedLeafEmpty(1);
-    const payload_bytes = tracked.bytesInUse();
+    const payload_bytes = tracked.bytesInUse() + pool.chunkedLeafBytesInUse();
     try std.testing.expect(payload_bytes > 0);
     const first = try pool.createBranch(leaf, leaf);
     const second = try pool.createBranch(leaf, leaf);
-    try std.testing.expectEqual(payload_bytes, tracked.bytesInUse());
+    try std.testing.expectEqual(payload_bytes, tracked.bytesInUse() + pool.chunkedLeafBytesInUse());
     try std.testing.expectEqual(baseline_nodes + 3, pool.getNodesInUse());
 
     pool.unref(first);
-    try std.testing.expectEqual(payload_bytes, tracked.bytesInUse());
+    try std.testing.expectEqual(payload_bytes, tracked.bytesInUse() + pool.chunkedLeafBytesInUse());
     pool.unref(second);
-    try std.testing.expectEqual(0, tracked.bytesInUse());
+    try std.testing.expectEqual(0, tracked.bytesInUse() + pool.chunkedLeafBytesInUse());
     try std.testing.expectEqual(baseline_nodes, pool.getNodesInUse());
 }
