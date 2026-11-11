@@ -309,10 +309,6 @@ export class AggregatedAttestationPool {
       //                 att01  ---     -    ---  att21  ---   1 (att 01 __ 21)
       //                   -    ---     -    ---  att22  ---   2 (att __ __ 22)
       const dataRootHexes = new Set([...attestationGroupByIndexByDataHash.keys(), ...singlesDataBySlot.keys()]);
-      // a singles only slot is skipped once the single attestation budget is spent
-      if (dataRootHexes.size === 0) {
-        continue;
-      }
       for (const dataRootHex of dataRootHexes) {
         if (remainingSingles === 0 && !attestationGroupByIndexByDataHash.has(dataRootHex)) {
           continue;
