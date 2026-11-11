@@ -67,8 +67,9 @@ pub const TreeViewState = struct {
         }
     }
 
-    /// Writes one packed value into the leaf staged by `stageChunkedLeaf`. `write` must not retain
-    /// the chunk pointer or access the pool.
+    /// Stages the leaf at `gindex` with `stageChunkedLeaf` and writes one packed value into it.
+    /// `valid_chunks` must preserve or grow the length. `write` must not retain the chunk pointer
+    /// or access the pool.
     pub fn editChunkedLeaf(
         self: *TreeViewState,
         gindex: Gindex,
@@ -86,8 +87,9 @@ pub const TreeViewState = struct {
 
     /// Stages the chunked leaf at `gindex` for the next commit and returns its chunks, copying a
     /// shared leaf and reusing a pending one. The chunks are writable only until the next commit,
-    /// `clearCache`, or clone with `transfer_cache`, which share or drop the node. On error the
-    /// view is unchanged. `valid_chunks` must preserve or grow the length.
+    /// `clearCache`, clone with `transfer_cache`, or `setChildNode` at `gindex`, which share or
+    /// drop the node. On error the view is unchanged. `valid_chunks` must preserve or grow the
+    /// length.
     pub fn stageChunkedLeaf(
         self: *TreeViewState,
         gindex: Gindex,
