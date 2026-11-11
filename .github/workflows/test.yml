@@ -419,6 +419,9 @@ jobs:
       - name: Run swap-or-not-shuffle tests for the release CPU baseline
         run: |
           zig build test:swap_or_not_shuffle -Dcpu=baseline
+      - name: Run execution-block-hash tests
+        run: |
+          zig build test:execution_block_hash
       - name: Run state-transition tests
         run: |
           zig build test:state_transition
