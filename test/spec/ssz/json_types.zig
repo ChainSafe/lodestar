@@ -15,6 +15,7 @@ const Square = ssz.FixedProgressiveContainerType(struct { side: Uint16, color: U
 const Circle = ssz.FixedProgressiveContainerType(struct { radius: Uint16, color: Uint8 }, &.{ 0, 1, 1 });
 const SquareList = ssz.FixedProgressiveListType(Square, .{});
 const CircleList = ssz.FixedProgressiveListType(Circle, .{});
+const Shape = ssz.CompatibleUnionType(.{ .{ 1, Square }, .{ 2, Circle }, .{ 127, Square } });
 
 pub const test_basic_types = struct {
     pub const Boolean = ssz.BoolType();
@@ -39,9 +40,19 @@ pub const test_basic_types = struct {
 };
 
 pub const test_compatible_unions = struct {
-    pub const SampleShape = ssz.CompatibleUnionType(.{ .{ 1, Square }, .{ 2, Circle }, .{ 127, Square } });
+    pub const SampleShape = Shape;
     pub const SampleNumbers = ssz.CompatibleUnionType(.{ .{ 1, Uint16List4 }, .{ 2, Uint16List4 } });
     pub const SampleEmptyProne = ssz.CompatibleUnionType(.{ .{ 1, SquareList }, .{ 2, CircleList } });
+    pub const SampleNestedShape = ssz.CompatibleUnionType(.{
+        .{ 1, Shape },
+        .{ 2, ssz.CompatibleUnionType(.{.{ 5, Square }}) },
+    });
+    pub const SampleShapeContainer = ssz.VariableContainerType(struct { tag: Uint64, body: Shape });
+    pub const SampleShapeProgressiveContainer = ssz.VariableProgressiveContainerType(
+        struct { tag: Uint64, body: Shape },
+        &.{ 1, 0, 1 },
+    );
+    pub const SampleShapeProgressiveList = ssz.VariableProgressiveListType(Shape, .{});
 };
 
 pub const test_decode_failure_smoke = struct {

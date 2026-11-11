@@ -19,6 +19,7 @@ pub fn UintType(comptime bits: comptime_int) type {
         pub const fixed_size: usize = bytes;
 
         pub const default_value: Type = 0;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = [_]u8{0} ** 32;
 

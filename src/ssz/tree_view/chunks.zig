@@ -489,13 +489,9 @@ pub fn CompositeChunks(
                 if (comptime isFixedType(ST.Element)) {
                     try ST.Element.tree.toValue(node, self.state.pool, &values[i]);
                 } else {
-                    // Initialize value to default before toValue for variable types
+                    // Initialize value before toValue for variable types
                     // (e.g. BitList fields need initialized ArrayList)
-                    if (comptime @hasDecl(ST.Element, "default_value")) {
-                        values[i] = ST.Element.default_value;
-                    } else {
-                        values[i] = std.mem.zeroes(Value);
-                    }
+                    values[i] = ST.Element.init;
                     errdefer if (comptime @hasDecl(ST.Element, "deinit")) {
                         ST.Element.deinit(allocator, &values[i]);
                     };

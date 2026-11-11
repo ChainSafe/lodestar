@@ -71,6 +71,7 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
         const chunked_leaf_depth: u8 = if (use_chunked_leaf) chunk_depth - ChunkedLeaf.k_log2 else 0;
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = blk: {
             var buf = getZeroHash(chunk_depth).*;
@@ -702,6 +703,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
         pub const chunk_depth: u8 = maxChunksToDepth(max_chunk_count);
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = blk: {
             var buf = getZeroHash(chunk_depth).*;
@@ -744,7 +746,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
             try out.ensureTotalCapacity(allocator, value.items.len);
 
             for (value.items) |*element| {
-                out.appendAssumeCapacity(DestinationST.Element.default_value);
+                out.appendAssumeCapacity(DestinationST.Element.init);
                 try Element.cloneInto(
                     DestinationST.Element,
                     allocator,
@@ -805,7 +807,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
             const len = elements.len;
 
             try out.resize(allocator, len);
-            @memset(out.items[0..len], Element.default_value);
+            @memset(out.items[0..len], Element.init);
 
             var i: usize = 0;
             while (try elements.next()) |element_bytes| : (i += 1) {
@@ -916,7 +918,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
                 var it = Node.DepthIterator.init(pool, node, chunk_depth + 1, 0);
 
                 try out.resize(allocator, len);
-                @memset(out.items, Element.default_value);
+                @memset(out.items, Element.init);
                 for (out.items) |*item| {
                     try Element.tree.toValue(allocator, try it.next(), pool, item);
                 }
@@ -1000,7 +1002,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
                 }
 
                 _ = try out.addOne(allocator);
-                out.items[i] = Element.default_value;
+                out.items[i] = Element.init;
                 try Element.deserializeFromJson(allocator, source, &out.items[i]);
             }
             return error.invalidLength;

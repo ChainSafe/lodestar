@@ -1,9 +1,11 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputBlobs, BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
@@ -11,10 +13,16 @@ import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../../src/
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
-import {BlockGossipError, GossipAction} from "../../../../src/chain/errors/index.js";
+import {
+  BlockGossipError,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+  GossipAction,
+} from "../../../../src/chain/errors/index.js";
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
+import {validateGossipExecutionPayloadEnvelope} from "../../../../src/chain/validation/executionPayloadEnvelope.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
@@ -35,7 +43,8 @@ vi.mock("../../../../src/chain/validation/index.js", async (importActual) => {
   };
 });
 
-vi.mock("../../../../src/chain/validation/executionPayloadEnvelope.js", () => ({
+vi.mock("../../../../src/chain/validation/executionPayloadEnvelope.js", async (importActual) => ({
+  ...(await importActual<typeof import("../../../../src/chain/validation/executionPayloadEnvelope.js")>()),
   validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -55,7 +64,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     vi.useRealTimers();
   });
 
-  function setup(blobCount = 1) {
+  function setup(blobCount = 1, gasLimit = 0n, parentGasLimit = 0) {
     const config = createBeaconConfig(
       {
         ...defaultConfig,
@@ -78,6 +87,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
       {length: blobCount},
       () => new Uint8Array(48)
     );
+    block.message.body.signedExecutionPayloadBid.message.gasLimit = gasLimit;
     const blockRoot = forkTypes.BeaconBlock.hashTreeRoot(block.message);
     const payloadInput = PayloadEnvelopeInput.createFromBlock({
       block,
@@ -103,7 +113,12 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
       emitter,
       processExecutionPayload: vi.fn().mockResolvedValue(undefined),
       seenPayloadEnvelopeInputCache: {get: getPayloadInput},
-      forkChoice: {getBlockHex: vi.fn().mockReturnValue(null)},
+      forkChoice: {
+        getBlockHex: vi.fn().mockReturnValue(null),
+        getBlockHexDefaultStatus: vi
+          .fn()
+          .mockReturnValue({executionPayloadBlockHash: "0x", executionPayloadGasLimit: parentGasLimit}),
+      },
       serializedCache: {set: vi.fn()},
       columnReconstructionTracker: {triggerColumnReconstruction: vi.fn()},
     } as unknown as IBeaconChain;
@@ -126,16 +141,30 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
       GossipType.data_column_sidecar
     ] as SequentialGossipHandler<GossipType.data_column_sidecar>;
 
-    async function sendEnvelope(): Promise<void> {
+    function createEnvelope(transactionCount = 0) {
       const envelope = forkTypes.SignedExecutionPayloadEnvelope.defaultValue();
       envelope.message.beaconBlockRoot = blockRoot;
       envelope.message.payload.slotNumber = 1;
+      envelope.message.payload.transactions = SerializedList.fromArray(
+        Array.from({length: transactionCount}, () => new Uint8Array(1))
+      );
+      return envelope;
+    }
+
+    // Returns once gossip validation has passed, before the next event loop runs
+    async function validateEnvelope(transactionCount = 0): Promise<void> {
       await envelopeHandler({
-        gossipData: {serializedData: forkTypes.SignedExecutionPayloadEnvelope.serialize(envelope)},
+        gossipData: {
+          serializedData: forkTypes.SignedExecutionPayloadEnvelope.serialize(createEnvelope(transactionCount)),
+        },
         topic: {boundary: {fork, epoch: 0}, type: GossipType.execution_payload},
         peerIdStr,
         seenTimestampSec: Date.now() / 1000,
       });
+    }
+
+    async function sendEnvelope(transactionCount = 0): Promise<void> {
+      await validateEnvelope(transactionCount);
       await vi.advanceTimersByTimeAsync(0);
     }
 
@@ -153,8 +182,65 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
       await vi.advanceTimersByTimeAsync(0);
     }
 
-    return {config, payloadInput, onIncomplete, getPayloadInput, peerIdStr, sendEnvelope, sendColumn};
+    return {
+      chain,
+      config,
+      createEnvelope,
+      emitter,
+      payloadInput,
+      onIncomplete,
+      getPayloadInput,
+      peerIdStr,
+      sendEnvelope,
+      sendColumn,
+      validateEnvelope,
+    };
   }
+
+  // What BlockInputSync does when a by-root response lands, see toPendingPayloadInput
+  function addByRootIfMissing(
+    payloadInput: PayloadEnvelopeInput,
+    envelope: gloas.SignedExecutionPayloadEnvelope
+  ): void {
+    if (!payloadInput.hasPayloadEnvelope()) {
+      payloadInput.addPayloadEnvelope({
+        envelope,
+        source: PayloadEnvelopeInputSource.byRoot,
+        seenTimestampSec: Date.now() / 1000,
+      });
+    }
+  }
+
+  it("adds a validated gossip envelope before the next event loop, so a by-root response cannot add it first", async () => {
+    const {chain, createEnvelope, emitter, payloadInput, validateEnvelope} = setup();
+    const onGossip = vi.fn();
+    emitter.on(routes.events.EventType.executionPayloadGossip, onGossip);
+
+    await validateEnvelope();
+    expect(payloadInput.hasPayloadEnvelope()).toBe(true);
+    expect(payloadInput.getPayloadEnvelopeSource().source).toBe(PayloadEnvelopeInputSource.gossip);
+
+    addByRootIfMissing(payloadInput, createEnvelope());
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onGossip).toHaveBeenCalledOnce();
+    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validSignature: true});
+  });
+
+  it("still emits and imports if another source added the envelope while gossip validation was running", async () => {
+    const {chain, createEnvelope, emitter, payloadInput, sendEnvelope} = setup();
+    const onGossip = vi.fn();
+    emitter.on(routes.events.EventType.executionPayloadGossip, onGossip);
+    const byRootEnvelope = createEnvelope();
+    addByRootIfMissing(payloadInput, byRootEnvelope);
+
+    await sendEnvelope();
+
+    expect(payloadInput.getPayloadEnvelope()).toBe(byRootEnvelope);
+    expect(onGossip).toHaveBeenCalledOnce();
+    // The stored envelope is not the one gossip validated, so its signature must be verified at import
+    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validSignature: false});
+  });
 
   it("requests missing columns at the configured payload deadline when only the envelope arrives", async () => {
     const {config, payloadInput, onIncomplete, peerIdStr, sendEnvelope} = setup();
@@ -231,6 +317,49 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     getPayloadInput.mockReturnValue(undefined);
     await vi.advanceTimersByTimeAsync(config.getPayloadDueMs(fork));
     expect(onIncomplete).not.toHaveBeenCalled();
+  });
+
+  it("ignores an envelope with more transactions than the parent payload's gas limit allows before deserializing", async () => {
+    const {config, payloadInput, sendEnvelope} = setup(0, 2n ** 62n, 30_000_000);
+    vi.mocked(validateGossipExecutionPayloadEnvelope).mockClear();
+    const maxTransactionCount = Math.floor(
+      (30_000_000 + Math.floor(30_000_000 / 1024) - 1) / config.MIN_TRANSACTION_GAS
+    );
+
+    await expect(sendEnvelope(maxTransactionCount + 1)).rejects.toThrow(
+      new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+        code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+        slot: 1,
+        root: payloadInput.blockRootHex,
+        transactionCount: maxTransactionCount + 1,
+        maxTransactionCount,
+      })
+    );
+    expect(validateGossipExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+
+    await sendEnvelope(maxTransactionCount);
+    expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+    expect(payloadInput.hasPayloadEnvelope()).toBe(true);
+  });
+
+  it("bounds the transaction count by the bid's gas limit if the parent payload's gas limit is unknown", async () => {
+    const {config, payloadInput, sendEnvelope} = setup(0, 30_000_000n, 0);
+    const maxTransactionCount = Math.floor(30_000_000 / config.MIN_TRANSACTION_GAS);
+
+    await expect(sendEnvelope(maxTransactionCount + 1)).rejects.toThrow(
+      new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+        code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+        slot: 1,
+        root: payloadInput.blockRootHex,
+        transactionCount: maxTransactionCount + 1,
+        maxTransactionCount,
+      })
+    );
+    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+
+    await sendEnvelope(maxTransactionCount);
+    expect(payloadInput.hasPayloadEnvelope()).toBe(true);
   });
 });
 
@@ -371,10 +500,28 @@ describe("getGossipHandlers", () => {
       execStatus: ExecutionPayloadStatus.INVALID,
       errorMessage: "invalid payload",
     },
-  ])("evicts the cached envelope when payload processing fails with $code", async (errorType) => {
-    const {removeInvalid, payloadInput} = await runExecutionPayloadProcessingError(errorType);
+  ])("evicts the cached envelope and reports the peer when payload processing fails with $code", async (errorType) => {
+    const {removeInvalid, payloadInput, reportPeer, peerIdStr} = await runExecutionPayloadProcessingError(errorType);
 
     expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
+    expect(reportPeer).toHaveBeenCalledExactlyOnceWith(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+  });
+
+  it.each<PayloadErrorType>([
+    {code: PayloadErrorCode.INVALID_SIGNATURE},
+    {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
+    {
+      code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+      execStatus: ExecutionPayloadStatus.INVALID,
+      errorMessage: "invalid payload",
+    },
+  ])("does not report the gossip peer when an envelope added by another source fails with $code", async (errorType) => {
+    const {removeInvalid, payloadInput, reportPeer} = await runExecutionPayloadProcessingError(errorType, {
+      addedByAnotherSource: true,
+    });
+
+    expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
+    expect(reportPeer).not.toHaveBeenCalled();
   });
 
   it("keeps the cached envelope when payload data is unavailable", async () => {
@@ -394,9 +541,14 @@ describe("getGossipHandlers", () => {
   });
 });
 
-async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): Promise<{
+async function runExecutionPayloadProcessingError(
+  errorType: PayloadErrorType,
+  opts: {addedByAnotherSource?: boolean} = {}
+): Promise<{
   removeInvalid: ReturnType<typeof vi.fn>;
   payloadInput: PayloadEnvelopeInput;
+  reportPeer: ReturnType<typeof vi.fn>;
+  peerIdStr: PeerIdStr;
 }> {
   const config = createBeaconConfig(
     {
@@ -430,12 +582,24 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
   signedEnvelope.message.beaconBlockRoot = blockRoot;
   signedEnvelope.message.payload.slotNumber = 1;
 
+  if (opts.addedByAnotherSource) {
+    const byRootEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(signedEnvelope);
+    payloadInput.addPayloadEnvelope({
+      envelope: byRootEnvelope,
+      source: PayloadEnvelopeInputSource.byRoot,
+      seenTimestampSec: 0,
+    });
+  }
+
   const removeInvalid = vi.fn();
+  const reportPeer = vi.fn();
   const chain = {
+    config,
     clock: new ClockStopped(1),
     emitter: new ChainEventEmitter(),
     logger,
     processExecutionPayload: vi.fn().mockRejectedValue(new PayloadError(payloadInput, errorType)),
+    forkChoice: {getBlockHexDefaultStatus: vi.fn().mockReturnValue(null)},
     seenPayloadEnvelopeInputCache: {
       get: vi.fn().mockReturnValue(payloadInput),
       removeInvalid,
@@ -448,7 +612,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
       aggregatorTracker: {} as AggregatorTracker,
       chain,
       config,
-      core: {reportPeer: vi.fn()} as unknown as INetworkCore,
+      core: {reportPeer} as unknown as INetworkCore,
       events: new NetworkEventBus(),
       logger,
       metrics: null,
@@ -472,7 +636,7 @@ async function runExecutionPayloadProcessingError(errorType: PayloadErrorType): 
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {removeInvalid, payloadInput};
+  return {removeInvalid, payloadInput, reportPeer, peerIdStr};
 }
 
 async function runBeaconBlockProcessingError(
