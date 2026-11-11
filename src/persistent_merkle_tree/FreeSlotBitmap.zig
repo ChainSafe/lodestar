@@ -72,15 +72,14 @@ pub fn init(allocator: Allocator, capacity: u32, first_free: u32) Allocator.Erro
     var level_count: u8 = 0;
     var total: usize = 0;
     var bits: usize = capacity;
-    while (true) {
-        std.debug.assert(level_count < max_levels);
-        const len = (bits + 63) / 64;
-        lens[level_count] = len;
-        total += len;
+    for (&lens) |*len| {
+        len.* = (bits + 63) / 64;
+        total += len.*;
         level_count += 1;
-        if (len == 1) break;
-        bits = len;
+        bits = len.*;
+        if (bits == 1) break;
     }
+    std.debug.assert(bits == 1);
 
     const words = try allocator.alloc(u64, total);
     @memset(words, 0);
@@ -111,15 +110,15 @@ pub fn deinit(self: *FreeSlotBitmap, allocator: Allocator) void {
 
 /// Returns the lowest free slot, or `capacity` when no slot is free.
 pub fn lowest(self: *const FreeSlotBitmap) u32 {
-    var level: usize = self.level_count - 1;
+    const level: usize = self.level_count - 1;
     if (self.levels[level][0] == 0) return self.capacity;
     var index: usize = 0;
-    while (true) : (level -= 1) {
-        const word = self.levels[level][index];
+    for (0..self.level_count) |depth| {
+        const word = self.levels[level - depth][index];
         std.debug.assert(word != 0);
         index = index * 64 + @ctz(word);
-        if (level == 0) return @intCast(index);
     }
+    return @intCast(index);
 }
 
 /// Marks `slot` free. The slot must be in use.
