@@ -1061,11 +1061,11 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot + 1,
         {strict: false}
       );
-      // LVH at genesis would invalidate the validated A payload, the verdict is dropped whole
+      // LVH above A's payload would invalidate the validated A payload, the verdict is dropped whole
       const applied = protoArray.validateLatestHash(
         {
           executionStatus: ExecutionStatus.Invalid,
-          latestValidExecHash: genesisRoot,
+          latestValidExecHash: "0x0a",
           invalidateFromParentBlockRoot: "0x0b",
           invalidateFromParentBlockHash: "0xb1",
         },
@@ -1090,10 +1090,11 @@ describe("Gloas Fork Choice", () => {
         ExecutionStatus.Syncing,
         DataAvailabilityStatus.Available
       );
+      // LVH above A's payload would cross the justified block, only what is above it is invalidated
       const applied = protoArray.validateLatestHash(
         {
           executionStatus: ExecutionStatus.Invalid,
-          latestValidExecHash: "0xa1",
+          latestValidExecHash: "0x0a",
           invalidateFromParentBlockRoot: "0x0b",
           invalidateFromParentBlockHash: "0xb1",
         },
