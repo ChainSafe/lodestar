@@ -1,0 +1,37 @@
+import {ValueOf} from "@chainsafe/ssz";
+import * as ssz from "./sszTypes.js";
+
+export type XMSSPubkey = ValueOf<typeof ssz.XMSSPubkey>;
+export type XMSSSignature = ValueOf<typeof ssz.XMSSSignature>;
+export type VRFProof = ValueOf<typeof ssz.VRFProof>;
+export type AttestationProof = ValueOf<typeof ssz.AttestationProof>;
+
+export type Validator = ValueOf<typeof ssz.Validator>;
+export type SignedBeaconBlockHeader = ValueOf<typeof ssz.SignedBeaconBlockHeader>;
+export type ProposerSlashing = ValueOf<typeof ssz.ProposerSlashing>;
+export type SignedVoluntaryExit = ValueOf<typeof ssz.SignedVoluntaryExit>;
+export type SingleAttestation = ValueOf<typeof ssz.SingleAttestation>;
+export type Attestation = ValueOf<typeof ssz.Attestation>;
+export type IndexedAttestation = ValueOf<typeof ssz.IndexedAttestation>;
+export type IndexedAttestationBigint = ValueOf<typeof ssz.IndexedAttestationBigint>;
+export type AttesterSlashing = ValueOf<typeof ssz.AttesterSlashing>;
+export type AggregateAndProof = ValueOf<typeof ssz.AggregateAndProof>;
+export type SignedAggregateAndProof = ValueOf<typeof ssz.SignedAggregateAndProof>;
+export type Builder = ValueOf<typeof ssz.Builder>;
+export type PayloadAttestationMessage = ValueOf<typeof ssz.PayloadAttestationMessage>;
+export type SignedProposerPreferences = ValueOf<typeof ssz.SignedProposerPreferences>;
+export type SignedExecutionPayloadBid = ValueOf<typeof ssz.SignedExecutionPayloadBid>;
+export type ValidatorPreregistration = ValueOf<typeof ssz.ValidatorPreregistration>;
+export type PreregistrationRequest = ValueOf<typeof ssz.PreregistrationRequest>;
+export type StoredPreregistration = ValueOf<typeof ssz.StoredPreregistration>;
+export type ExecutionRequests = ValueOf<typeof ssz.ExecutionRequests>;
+export type NewPayloadRequest = ValueOf<typeof ssz.NewPayloadRequest>;
+export type ExecutionPayloadEnvelope = ValueOf<typeof ssz.ExecutionPayloadEnvelope>;
+export type SignedExecutionPayloadEnvelope = ValueOf<typeof ssz.SignedExecutionPayloadEnvelope>;
+export type SignedExecutionPayloadEnvelopeContents = ValueOf<typeof ssz.SignedExecutionPayloadEnvelopeContents>;
+export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
+export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;
+export type SignedBeaconBlock = ValueOf<typeof ssz.SignedBeaconBlock>;
+export type BlockContents = ValueOf<typeof ssz.BlockContents>;
+export type SignedBlockContents = {signedBlock: SignedBeaconBlock};
+export type BeaconState = ValueOf<typeof ssz.BeaconState>;

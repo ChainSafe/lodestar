@@ -703,7 +703,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: WithVersion((fork) => ArrayOf(ssz[fork].AttesterSlashing)),
+        data: WithVersion((fork) => ArrayOf(ssz[fork].AttesterSlashing as Type<AttesterSlashing>)),
         meta: VersionCodec,
       },
     },

@@ -1,4 +1,11 @@
-import {ForkName, ForkSeq, INCLUSION_LIST_COMMITTEE_SIZE, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {
+  ForkBls,
+  ForkName,
+  ForkSeq,
+  INCLUSION_LIST_COMMITTEE_SIZE,
+  SLOTS_PER_EPOCH,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {
   Attestation,
   CommitteeIndex,
@@ -142,8 +149,8 @@ export function calculateCommitteeAssignments(
 export function getIndexedAttestation(
   epochShuffling: EpochShuffling,
   fork: ForkSeq,
-  attestation: Attestation
-): IndexedAttestation {
+  attestation: Attestation<ForkBls>
+): IndexedAttestation<ForkBls> {
   const {data} = attestation;
   const attestingIndices = getAttestingIndices(epochShuffling, fork, attestation);
 

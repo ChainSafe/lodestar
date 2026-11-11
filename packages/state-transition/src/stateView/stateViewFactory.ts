@@ -2,6 +2,7 @@ import {BeaconConfig} from "@lodestar/config";
 import bindings from "@lodestar/native";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {createCachedBeaconState} from "../cache/stateCache.js";
+import {BeaconStateAllForks} from "../cache/types.js";
 import {getStateSlotFromBytes, getStateTypeFromBytes} from "../util/sszBytes.js";
 import {BeaconStateView} from "./beaconStateView.js";
 import {IBeaconStateView, IBeaconStateViewNative} from "./interface.js";
@@ -28,7 +29,11 @@ export function createBeaconStateView(opts: CreateBeaconStateViewOpts): IBeaconS
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-  const cachedState = createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: false});
+  const cachedState = createCachedBeaconState(
+    state as BeaconStateAllForks,
+    {config, pubkeyCache},
+    {skipSyncPubkeys: false}
+  );
   return new BeaconStateView(cachedState);
 }
 
@@ -57,7 +62,11 @@ export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | 
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-  const cachedState = createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: true});
+  const cachedState = createCachedBeaconState(
+    state as BeaconStateAllForks,
+    {config, pubkeyCache},
+    {skipSyncPubkeys: true}
+  );
   return new BeaconStateView(cachedState);
 }
 

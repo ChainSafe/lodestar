@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
+import {ForkBls, ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {IndexedAttestation, IndexedAttestationBigint, Slot} from "@lodestar/types";
 import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 import {verifySignatureSet} from "../util/index.js";
@@ -11,7 +11,7 @@ export function isValidIndexedAttestation(
   config: BeaconConfig,
   stateSlot: Slot,
   validatorsLen: number,
-  indexedAttestation: IndexedAttestation,
+  indexedAttestation: IndexedAttestation<ForkBls>,
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, indexedAttestation.attestingIndices)) {
@@ -28,7 +28,7 @@ export function isValidIndexedAttestationBigint(
   config: BeaconConfig,
   stateSlot: Slot,
   validatorsLen: number,
-  indexedAttestation: IndexedAttestationBigint,
+  indexedAttestation: IndexedAttestationBigint<ForkBls>,
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, indexedAttestation.attestingIndices)) {

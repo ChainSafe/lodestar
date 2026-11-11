@@ -1,4 +1,4 @@
-import {ProgressiveListCompositeType, ValueOf} from "@chainsafe/ssz";
+import {ProgressiveListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkPostElectra, ForkPreElectra, PTC_SIZE, isForkPostElectra} from "@lodestar/params";
 import {
@@ -31,6 +31,13 @@ const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const SingleAttestationListTypeElectra = ArrayOf(ssz.electra.SingleAttestation);
 const AttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const AttestationListTypeElectra = ArrayOf(ssz.electra.Attestation);
+function attesterSlashingType(fork: ForkName): Type<AttesterSlashing> {
+  if (fork === ForkName.pq) return ssz.pq.AttesterSlashing as Type<AttesterSlashing>;
+  return (
+    isForkPostElectra(fork) ? ssz.electra.AttesterSlashing : ssz.phase0.AttesterSlashing
+  ) as Type<AttesterSlashing>;
+}
+
 const AttesterSlashingListTypePhase0 = ArrayOf(ssz.phase0.AttesterSlashing);
 const AttesterSlashingListTypeElectra = ArrayOf(ssz.electra.AttesterSlashing);
 const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
@@ -341,35 +348,27 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({attesterSlashing}) => {
           const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
           return {
-            body: isForkPostElectra(fork)
-              ? ssz.electra.AttesterSlashing.toJson(attesterSlashing)
-              : ssz.phase0.AttesterSlashing.toJson(attesterSlashing),
+            body: attesterSlashingType(fork).toJson(attesterSlashing),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            attesterSlashing: isForkPostElectra(fork)
-              ? ssz.electra.AttesterSlashing.fromJson(body)
-              : ssz.phase0.AttesterSlashing.fromJson(body),
+            attesterSlashing: attesterSlashingType(fork).fromJson(body),
           };
         },
         writeReqSsz: ({attesterSlashing}) => {
           const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
           return {
-            body: isForkPostElectra(fork)
-              ? ssz.electra.AttesterSlashing.serialize(attesterSlashing as electra.AttesterSlashing)
-              : ssz.phase0.AttesterSlashing.serialize(attesterSlashing as phase0.AttesterSlashing),
+            body: attesterSlashingType(fork).serialize(attesterSlashing),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            attesterSlashing: isForkPostElectra(fork)
-              ? ssz.electra.AttesterSlashing.deserialize(body)
-              : ssz.phase0.AttesterSlashing.deserialize(body),
+            attesterSlashing: attesterSlashingType(fork).deserialize(body),
           };
         },
         schema: {

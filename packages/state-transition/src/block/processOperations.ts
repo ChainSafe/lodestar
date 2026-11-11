@@ -1,4 +1,4 @@
-import {ForkPreHeze, ForkSeq} from "@lodestar/params";
+import {ForkBls, ForkPreHeze, ForkSeq} from "@lodestar/params";
 import {BeaconBlockBody, Slot, capella, electra, gloas} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
@@ -36,7 +36,7 @@ export {
 export function processOperations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  body: BeaconBlockBody,
+  body: BeaconBlockBody<ForkBls>,
   parentSlot: Slot | null,
   opts: ProcessBlockOpts = {verifySignatures: true},
   metrics?: BeaconStateTransitionMetrics | null

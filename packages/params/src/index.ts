@@ -124,6 +124,15 @@ export const {
   MAX_ATTESTER_SLASHING_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
 
+  MAX_STARK_PROOF_SIZE,
+  MAX_ATTESTATIONS_PQ,
+  MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD,
+  PREREGISTRATIONS_LIMIT,
+  PREREGISTRATION_EXPIRY_SLOTS,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE_PQ,
+  MAX_ATTESTER_SLASHING_SIZE_PQ,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_PQ,
+
   INCLUSION_LIST_COMMITTEE_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
   MAX_SIGNED_INCLUSION_LIST_SIZE,
@@ -174,6 +183,7 @@ export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
 export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
+export const DOMAIN_PREREGISTRATION = Uint8Array.from([17, 0, 0, 0]);
 
 // Application specific domains
 
@@ -369,6 +379,28 @@ export const BUILDER_INDEX_FLAG = 2 ** 40;
 export const BUILDER_INDEX_SELF_BUILD = Infinity;
 export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
 export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;
+
+// PQ
+
+export const XMSS_PUBKEY_SIZE = 32;
+export const XMSS_SIGNATURE_SIZE = 2404;
+/** Leaves for messages a key signs at most once. */
+export const XMSS_RESERVED_LEAVES = 2 ** 15;
+/** Leaves for attestations, one per target epoch, after the reserved ones. */
+export const XMSS_ATTESTATION_LEAVES = 2 ** 29;
+/** Leaves per slot, after the attestation ones. */
+export const XMSS_LEAVES_PER_SLOT = 8;
+export const LEAF_OFFSET_BEACON_PROPOSER = 0;
+export const LEAF_OFFSET_AGGREGATE_AND_PROOF = 1;
+export const LEAF_OFFSET_PTC_ATTESTER = 2;
+export const LEAF_OFFSET_PROPOSER_PREFERENCES = 3;
+export const LEAF_OFFSET_EXECUTION_PAYLOAD_BID = 4;
+export const LEAF_OFFSET_EXECUTION_PAYLOAD_ENVELOPE = 5;
+export const RESERVED_LEAF_PREREGISTRATION = 0;
+export const RESERVED_LEAF_VOLUNTARY_EXIT = 1;
+export const VRF_TREE_DEPTH = 31;
+export const TARGET_AGGREGATORS_PER_COMMITTEE_PQ = 4;
+export const PREREGISTRATION_REQUEST_TYPE = 0x07;
 export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;
 export const BUILDER_EXIT_REQUEST_TYPE = 0x04;
 

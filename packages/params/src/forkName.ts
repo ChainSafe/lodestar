@@ -1,5 +1,7 @@
 /**
  * Fork code name in order of occurrence
+ *
+ * `pq` is the exception: it builds on gloas, not heze, so heze is not a post-pq fork.
  */
 export enum ForkName {
   phase0 = "phase0",
@@ -10,6 +12,7 @@ export enum ForkName {
   electra = "electra",
   fulu = "fulu",
   gloas = "gloas",
+  pq = "pq",
   heze = "heze",
 }
 
@@ -25,7 +28,8 @@ export enum ForkSeq {
   electra = 5,
   fulu = 6,
   gloas = 7,
-  heze = 8,
+  pq = 8,
+  heze = 9,
 }
 
 function exclude<T extends ForkName, U extends T>(coll: T[], val: U[]): Exclude<T, U>[] {
@@ -57,6 +61,8 @@ export function lowestFork<F extends ForkName>(forkNames: F[]): F {
 }
 
 export type ForkAll = ForkName;
+/** Forks whose signatures are BLS: every fork but pq */
+export type ForkBls = Exclude<ForkName, ForkName.pq>;
 export const forkAll = Object.values(ForkName);
 
 export type ForkPreAltair = ForkName.phase0;
@@ -129,7 +135,7 @@ export function isForkPostGloas(fork: ForkName): fork is ForkPostGloas {
   return isForkPostFulu(fork) && fork !== ForkName.fulu;
 }
 
-export type ForkPreHeze = ForkPreGloas | ForkName.gloas;
+export type ForkPreHeze = ForkPreGloas | ForkName.gloas | ForkName.pq;
 export type ForkPostHeze = Exclude<ForkName, ForkPreHeze>;
 export const forkPostHeze = exclude(forkAll, [
   ForkName.phase0,
@@ -140,9 +146,10 @@ export const forkPostHeze = exclude(forkAll, [
   ForkName.electra,
   ForkName.fulu,
   ForkName.gloas,
+  ForkName.pq,
 ]);
 export function isForkPostHeze(fork: ForkName): fork is ForkPostHeze {
-  return isForkPostGloas(fork) && fork !== ForkName.gloas;
+  return isForkPostGloas(fork) && fork !== ForkName.gloas && fork !== ForkName.pq;
 }
 
 /*

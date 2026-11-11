@@ -1,5 +1,5 @@
 import {digest} from "@chainsafe/as-sha256";
-import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
+import {EPOCHS_PER_HISTORICAL_VECTOR, ForkBls} from "@lodestar/params";
 import {BeaconBlock} from "@lodestar/types";
 import {xor} from "@lodestar/utils";
 import {verifyRandaoSignature} from "../signatureSets/index.js";
@@ -11,7 +11,11 @@ import {getRandaoMix} from "../util/index.js";
  *
  * PERF: Fixed work independent of block contents.
  */
-export function processRandao(state: CachedBeaconStateAllForks, block: BeaconBlock, verifySignature = true): void {
+export function processRandao(
+  state: CachedBeaconStateAllForks,
+  block: BeaconBlock<ForkBls>,
+  verifySignature = true
+): void {
   const {epochCtx, config} = state;
   const epoch = epochCtx.epoch;
   const randaoReveal = block.body.randaoReveal;

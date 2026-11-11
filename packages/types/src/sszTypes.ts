@@ -10,56 +10,70 @@ import {ssz as fuluSsz} from "./fulu/index.js";
 import {ssz as gloasSsz} from "./gloas/index.js";
 import {ssz as hezeSsz} from "./heze/index.js";
 import {ssz as phase0Ssz} from "./phase0/index.js";
+import {ssz as pqSsz} from "./pq/index.js";
 
 export * from "./primitive/sszTypes.js";
+
+// Each fork is a superset of the previous one, with the types it changes overridden,
+// so a fork's subdirectory only declares the types that change in it.
+// `pq` and `heze` both build on gloas.
+export const phase0 = {...phase0Ssz};
+export const altair = {...phase0Ssz, ...altairSsz};
+export const bellatrix = {...phase0Ssz, ...altairSsz, ...bellatrixSsz};
+export const capella = {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz};
+export const deneb = {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz};
+export const electra = {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz};
+export const fulu = {
+  ...phase0Ssz,
+  ...altairSsz,
+  ...bellatrixSsz,
+  ...capellaSsz,
+  ...denebSsz,
+  ...electraSsz,
+  ...fuluSsz,
+};
+export const gloas = {
+  ...phase0Ssz,
+  ...altairSsz,
+  ...bellatrixSsz,
+  ...capellaSsz,
+  ...denebSsz,
+  ...electraSsz,
+  ...fuluSsz,
+  ...gloasSsz,
+};
+export const pq = {...gloas, ...pqSsz};
+export const heze = {...gloas, ...hezeSsz};
 
 /**
  * Index the ssz types that differ by fork
  * A record of AllForksSSZTypes indexed by fork
  */
-const typesByFork = {
-  [ForkName.phase0]: {...phase0Ssz},
-  [ForkName.altair]: {...phase0Ssz, ...altairSsz},
-  [ForkName.bellatrix]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz},
-  [ForkName.capella]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz},
-  [ForkName.deneb]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz},
-  [ForkName.electra]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz},
-  [ForkName.fulu]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz, ...fuluSsz},
-  [ForkName.gloas]: {
-    ...phase0Ssz,
-    ...altairSsz,
-    ...bellatrixSsz,
-    ...capellaSsz,
-    ...denebSsz,
-    ...electraSsz,
-    ...fuluSsz,
-    ...gloasSsz,
-  },
-  [ForkName.heze]: {
-    ...phase0Ssz,
-    ...altairSsz,
-    ...bellatrixSsz,
-    ...capellaSsz,
-    ...denebSsz,
-    ...electraSsz,
-    ...fuluSsz,
-    ...gloasSsz,
-    ...hezeSsz,
-  },
+// Annotated with `typeof` so that the declaration file names each fork's types instead of inlining them
+const typesByFork: {
+  [ForkName.phase0]: typeof phase0;
+  [ForkName.altair]: typeof altair;
+  [ForkName.bellatrix]: typeof bellatrix;
+  [ForkName.capella]: typeof capella;
+  [ForkName.deneb]: typeof deneb;
+  [ForkName.electra]: typeof electra;
+  [ForkName.fulu]: typeof fulu;
+  [ForkName.gloas]: typeof gloas;
+  [ForkName.pq]: typeof pq;
+  [ForkName.heze]: typeof heze;
+} = {
+  [ForkName.phase0]: phase0,
+  [ForkName.altair]: altair,
+  [ForkName.bellatrix]: bellatrix,
+  [ForkName.capella]: capella,
+  [ForkName.deneb]: deneb,
+  [ForkName.electra]: electra,
+  [ForkName.fulu]: fulu,
+  [ForkName.gloas]: gloas,
+  [ForkName.pq]: pq,
+  [ForkName.heze]: heze,
 };
 
-// Export these types to ensure that each fork is a superset of the previous one (with overridden types obviously)
-// This allows us to only declare types that change in each fork in each fork subdirectory
-
-export const phase0 = typesByFork[ForkName.phase0];
-export const altair = typesByFork[ForkName.altair];
-export const bellatrix = typesByFork[ForkName.bellatrix];
-export const capella = typesByFork[ForkName.capella];
-export const deneb = typesByFork[ForkName.deneb];
-export const electra = typesByFork[ForkName.electra];
-export const fulu = typesByFork[ForkName.fulu];
-export const gloas = typesByFork[ForkName.gloas];
-export const heze = typesByFork[ForkName.heze];
 export const eip8025 = eip8025Ssz;
 
 /**

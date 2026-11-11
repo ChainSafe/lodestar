@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkBls, ForkSeq} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, altair, capella, gloas} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
@@ -35,8 +35,8 @@ export function getBlockSignatureSets(
   config: BeaconConfig,
   currentSyncCommitteeIndexed: SyncCommitteeCache,
   state: IBeaconStateView,
-  signedBlock: SignedBeaconBlock,
-  indexedAttestations: IndexedAttestation[],
+  signedBlock: SignedBeaconBlock<ForkBls>,
+  indexedAttestations: IndexedAttestation<ForkBls>[],
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;

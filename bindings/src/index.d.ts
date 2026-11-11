@@ -139,6 +139,7 @@ export enum ForkName {
   electra = "electra",
   fulu = "fulu",
   gloas = "gloas",
+  pq = "pq",
   heze = "heze",
 }
 
@@ -151,7 +152,8 @@ export enum ForkSeq {
   electra = 5,
   fulu = 6,
   gloas = 7,
-  heze = 8,
+  pq = 8,
+  heze = 9,
 }
 
 interface SyncCommittee {

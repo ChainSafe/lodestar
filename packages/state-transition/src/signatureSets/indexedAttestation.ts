@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
+import {DOMAIN_BEACON_ATTESTER, ForkBls} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {
   ISignatureSet,
@@ -35,7 +35,7 @@ export function getAttestationWithIndicesSignatureSet(
 export function getIndexedAttestationSignatureSet(
   config: BeaconConfig,
   stateSlot: Slot,
-  indexedAttestation: IndexedAttestation
+  indexedAttestation: IndexedAttestation<ForkBls>
 ): ISignatureSet {
   return getAttestationWithIndicesSignatureSet(
     config,
@@ -47,8 +47,8 @@ export function getIndexedAttestationSignatureSet(
 
 export function getAttestationsSignatureSets(
   config: BeaconConfig,
-  signedBlock: SignedBeaconBlock,
-  indexedAttestations: IndexedAttestation[]
+  signedBlock: SignedBeaconBlock<ForkBls>,
+  indexedAttestations: IndexedAttestation<ForkBls>[]
 ): ISignatureSet[] {
   if (indexedAttestations.length !== signedBlock.message.body.attestations.length) {
     throw Error(

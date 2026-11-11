@@ -104,6 +104,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
   const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
+  const pqForkRelevant = localConfig.PQ_FORK_EPOCH < Infinity;
   const hezeForkRelevant = localConfig.HEZE_FORK_EPOCH < Infinity;
 
   return {
@@ -146,6 +147,10 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // gloas
     GLOAS_FORK_VERSION: gloasForkRelevant,
     GLOAS_FORK_EPOCH: gloasForkRelevant,
+    // pq
+    PQ_FORK_VERSION: pqForkRelevant,
+    PQ_FORK_EPOCH: pqForkRelevant,
+    ATTESTATION_SUBNET_COUNT_PQ: pqForkRelevant,
     // heze
     HEZE_FORK_VERSION: hezeForkRelevant,
     HEZE_FORK_EPOCH: hezeForkRelevant,
@@ -339,6 +344,16 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
     GAS_LIMIT_SCHEDULE: false,
+
+    // PQ
+    MAX_STARK_PROOF_SIZE: pqForkRelevant,
+    MAX_ATTESTATIONS_PQ: pqForkRelevant,
+    MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD: pqForkRelevant,
+    PREREGISTRATIONS_LIMIT: pqForkRelevant,
+    PREREGISTRATION_EXPIRY_SLOTS: pqForkRelevant,
+    MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE_PQ: false,
+    MAX_ATTESTER_SLASHING_SIZE_PQ: false,
+    MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_PQ: false,
 
     // HEZE
     INCLUSION_LIST_DUE_BPS: hezeForkRelevant,

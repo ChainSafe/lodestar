@@ -69,7 +69,8 @@ export function getGenesisBeaconState(
   const randaoMixes = newFilledArray(EPOCHS_PER_HISTORICAL_VECTOR, genesisEth1Data.blockHash);
 
   const beaconStateType = config.getForkTypes(GENESIS_SLOT).BeaconState;
-  const state = beaconStateType.defaultViewDU();
+  // A pq genesis state is not built here: see `initDevStatePq`
+  const state = beaconStateType.defaultViewDU() as BeaconStateAllForks;
 
   // MISC
   state.slot = GENESIS_SLOT;

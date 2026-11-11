@@ -86,6 +86,14 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.FULU_FORK_VERSION,
     prevForkName: ForkName.fulu,
   };
+  const pq: ForkInfo = {
+    name: ForkName.pq,
+    seq: ForkSeq.pq,
+    epoch: config.PQ_FORK_EPOCH,
+    version: config.PQ_FORK_VERSION,
+    prevVersion: config.GLOAS_FORK_VERSION,
+    prevForkName: ForkName.gloas,
+  };
   const heze: ForkInfo = {
     name: ForkName.heze,
     seq: ForkSeq.heze,
@@ -97,7 +105,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, heze};
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, pq, heze};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);

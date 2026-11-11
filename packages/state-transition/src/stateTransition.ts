@@ -1,5 +1,5 @@
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {ForkBls, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconBlock, Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
@@ -122,7 +122,8 @@ export function stateTransition(
   // Note: time only on success
   const processBlockTimer = metrics?.processBlockTime.startTimer();
 
-  processBlock(fork, postState, block, options, options, metrics);
+  // The TypeScript state transition does not implement pq
+  processBlock(fork, postState, block as BeaconBlock<ForkBls>, options, options, metrics);
 
   const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
   postState.commit();

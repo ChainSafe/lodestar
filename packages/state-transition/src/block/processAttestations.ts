@@ -1,4 +1,4 @@
-import {ForkSeq} from "@lodestar/params";
+import {ForkBls, ForkSeq} from "@lodestar/params";
 import {Attestation, Slot} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../types.js";
@@ -11,7 +11,7 @@ import {processAttestationsAltair} from "./processAttestationsAltair.js";
 export function processAttestations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attestations: Attestation[],
+  attestations: Attestation<ForkBls>[],
   parentSlot: Slot | null,
   verifySignatures = true,
   metrics?: BeaconStateTransitionMetrics | null

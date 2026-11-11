@@ -51,6 +51,10 @@ export type ChainConfig = {
   // GLOAS
   GLOAS_FORK_VERSION: Uint8Array;
   GLOAS_FORK_EPOCH: number;
+  // PQ
+  PQ_FORK_VERSION: Uint8Array;
+  PQ_FORK_EPOCH: number;
+  ATTESTATION_SUBNET_COUNT_PQ: number;
   // HEZE
   HEZE_FORK_VERSION: Uint8Array;
   HEZE_FORK_EPOCH: number;
@@ -190,6 +194,10 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // GLOAS
   GLOAS_FORK_VERSION: "bytes",
   GLOAS_FORK_EPOCH: "number",
+  // PQ
+  PQ_FORK_VERSION: "bytes",
+  PQ_FORK_EPOCH: "number",
+  ATTESTATION_SUBNET_COUNT_PQ: "number",
   // HEZE
   HEZE_FORK_VERSION: "bytes",
   HEZE_FORK_EPOCH: "number",

@@ -1,6 +1,7 @@
 import {ByteListType, ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  ForkName,
   ForkPostDeneb,
   ForkPostGloas,
   ForkPreDeneb,
@@ -1280,7 +1281,14 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: WithVersion((fork) => (isForkPostElectra(fork) ? ssz.electra.Attestation : ssz.phase0.Attestation)),
+        data: WithVersion(
+          (fork) =>
+            (fork === ForkName.pq
+              ? ssz.pq.Attestation
+              : isForkPostElectra(fork)
+                ? ssz.electra.Attestation
+                : ssz.phase0.Attestation) as Type<Attestation>
+        ),
         meta: VersionCodec,
       },
     },

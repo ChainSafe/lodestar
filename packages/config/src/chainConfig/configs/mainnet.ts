@@ -60,6 +60,10 @@ export const chainConfig: ChainConfig = {
   GLOAS_FORK_VERSION: b("0x07000000"),
   GLOAS_FORK_EPOCH: Infinity,
 
+  // PQ
+  PQ_FORK_VERSION: b("0xe0000000"),
+  PQ_FORK_EPOCH: Infinity,
+  ATTESTATION_SUBNET_COUNT_PQ: 16,
   // HEZE
   HEZE_FORK_VERSION: b("0x08000000"),
   HEZE_FORK_EPOCH: Infinity,

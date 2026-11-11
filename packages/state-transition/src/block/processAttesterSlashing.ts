@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkBls, ForkSeq} from "@lodestar/params";
 import {AttesterSlashing, Slot} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
@@ -15,7 +15,7 @@ import {slashValidator} from "./slashValidator.js";
 export function processAttesterSlashing(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attesterSlashing: AttesterSlashing,
+  attesterSlashing: AttesterSlashing<ForkBls>,
   verifySignatures = true
 ): void {
   const {epochCtx} = state;
@@ -42,7 +42,7 @@ export function assertValidAttesterSlashing(
   config: BeaconConfig,
   stateSlot: Slot,
   validatorsLen: number,
-  attesterSlashing: AttesterSlashing,
+  attesterSlashing: AttesterSlashing<ForkBls>,
   verifySignatures = true
 ): void {
   const attestation1 = attesterSlashing.attestation1;

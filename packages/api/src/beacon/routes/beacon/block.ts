@@ -1,4 +1,4 @@
-import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkPostDeneb,
@@ -311,7 +311,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: blockIdOnlyReq,
       resp: {
-        data: WithVersion((fork) => ssz[fork].BeaconBlockBody.fields.attestations),
+        data: WithVersion(
+          (fork) => ssz[fork].BeaconBlockBody.fields.attestations as Type<BeaconBlockBody["attestations"]>
+        ),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

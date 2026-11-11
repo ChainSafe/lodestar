@@ -1,4 +1,4 @@
-import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkBls, ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   AttesterSlashing,
   IndexedAttestation,
@@ -57,7 +57,10 @@ export function getAttesterSlashableIndices(attesterSlashing: AttesterSlashing):
  * Convert IndexedAttestation to IndexedAttestationBigint via SSZ roundtrip.
  * Both types share the same binary layout — only the JS numeric representation differs.
  */
-export function toIndexedAttestationBigint(att: IndexedAttestation, fork: ForkSeq): IndexedAttestationBigint {
+export function toIndexedAttestationBigint(
+  att: IndexedAttestation<ForkBls>,
+  fork: ForkSeq
+): IndexedAttestationBigint<ForkBls> {
   const sszType = fork >= ForkSeq.electra ? ssz.electra.IndexedAttestation : ssz.phase0.IndexedAttestation;
   const sszTypeBigint =
     fork >= ForkSeq.electra ? ssz.electra.IndexedAttestationBigint : ssz.phase0.IndexedAttestationBigint;

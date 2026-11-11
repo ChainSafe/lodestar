@@ -6,6 +6,7 @@ import {
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
+  ForkBls,
   ForkSeq,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
@@ -894,7 +895,7 @@ export class EpochCache {
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
-  getIndexedAttestation(fork: ForkSeq, attestation: Attestation): IndexedAttestation {
+  getIndexedAttestation(fork: ForkSeq, attestation: Attestation<ForkBls>): IndexedAttestation<ForkBls> {
     const shuffling = this.getShufflingAtSlot(attestation.data.slot);
     return getIndexedAttestation(shuffling, fork, attestation);
   }
