@@ -25,12 +25,6 @@ const linearGossipQueueOpts: {
 } = {
   // validation gossip block asap
   [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
-  // gossip length for blob is beacon block length * max blobs per block = 4096
-  [GossipType.blob_sidecar]: {
-    maxLength: 4096,
-    type: QueueType.FIFO,
-    dropOpts: {type: DropType.count, count: 1},
-  },
   [GossipType.data_column_sidecar]: {
     maxLength: 4096,
     type: QueueType.FIFO,

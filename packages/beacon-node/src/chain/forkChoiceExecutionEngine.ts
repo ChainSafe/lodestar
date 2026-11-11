@@ -1,7 +1,6 @@
 import {ExecutionStatus, IForkChoice, LVHInvalidResponse} from "@lodestar/fork-choice";
-import {ForkName, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkPostFulu} from "@lodestar/params";
 import {RootHex, bellatrix} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {Logger} from "@lodestar/utils";
 import {ExecutionPayloadBodyV2} from "../execution/engine/types.js";
@@ -115,21 +114,8 @@ export class ForkChoiceExecutionEngine {
     fork: ForkPostFulu,
     versionedHashes: VersionedHashes,
     buffers?: Uint8Array[]
-  ): Promise<BlobAndProofV2[] | null>;
-  getBlobs(
-    fork: ForkPreFulu,
-    versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<(BlobAndProof | null)[]>;
-  getBlobs(
-    fork: ForkName,
-    versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
-    if (isForkPostFulu(fork)) {
-      return this.engine.getBlobs(fork, versionedHashes, buffers);
-    }
-    return this.engine.getBlobs(fork as ForkPreFulu, versionedHashes, buffers);
+  ): Promise<BlobAndProofV2[] | null> {
+    return this.engine.getBlobs(fork, versionedHashes, buffers);
   }
 
   /**

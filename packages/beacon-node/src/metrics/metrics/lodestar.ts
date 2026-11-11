@@ -1054,10 +1054,6 @@ export function createLodestarMetrics(
         help: "Time elapsed for blob validation",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
-      publishedFromEngine: register.counter({
-        name: "lodestar_gossip_blob_published_from_engine_total",
-        help: "Total number of blobs retrieved from execution engine and published to gossip",
-      }),
     },
     // Gossip execution payload envelope
     gossipExecutionPayloadEnvelope: {
@@ -1178,11 +1174,6 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_by_source_total",
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
-      }),
-      blobsBySource: register.gauge<{blobsSource: BlockInputSource}>({
-        name: "lodestar_import_blobs_by_source_total",
-        help: "Total number of imported blobs by source",
-        labelNames: ["blobsSource"],
       }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "lodestar_import_block_not_override_fcu_reason_total",
@@ -1863,11 +1854,6 @@ export function createLodestarMetrics(
           help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        duplicateBlobCount: register.counter<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_blob_total",
-          help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
-          labelNames: ["source"],
-        }),
         duplicateColumnCount: register.counter<{source: BlockInputSource}>({
           name: "lodestar_seen_block_input_cache_duplicate_column_total",
           help: "Total number of duplicate columns that pass validation and attempt to be cached but are known",
@@ -1876,10 +1862,6 @@ export function createLodestarMetrics(
         createdByBlock: register.counter({
           name: "lodestar_seen_block_input_cache_items_created_by_block_total",
           help: "Number of BlockInputs created via a block being seen first",
-        }),
-        createdByBlob: register.counter({
-          name: "lodestar_seen_block_input_cache_items_created_by_blob_total",
-          help: "Number of BlockInputs created via a blob being seen first",
         }),
         createdByColumn: register.counter({
           name: "lodestar_seen_block_input_cache_items_created_by_column_total",

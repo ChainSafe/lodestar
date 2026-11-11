@@ -10,6 +10,7 @@ const bellatrixForkEpoch = 0;
 const capellaForkEpoch = 0;
 const denebForkEpoch = 0;
 const electraForkEpoch = 0;
+const fuluForkEpoch = 0;
 const runTillEpoch = 4;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
@@ -18,6 +19,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   DENEB_FORK_EPOCH: denebForkEpoch,
   ELECTRA_FORK_EPOCH: electraForkEpoch,
+  FULU_FORK_EPOCH: fuluForkEpoch,
   runTillEpoch: runTillEpoch,
   additionalSlotsForTTD: 0,
   initialNodes: 3,
