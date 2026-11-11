@@ -809,8 +809,8 @@ pub const EpochCache = struct {
         out: []ValidatorIndex,
     ) ![]ValidatorIndex {
         const aggregation_bits = &attestation.aggregation_bits;
-        const data = &attestation.data;
         std.debug.assert(out.len >= aggregation_bits.bit_len);
+        const data = &attestation.data;
 
         var committees_buffer: [preset.MAX_COMMITTEES_PER_SLOT][]const u32 = undefined;
         const committees = if (comptime fork.lt(.electra)) blk: {

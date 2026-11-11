@@ -464,7 +464,7 @@ pub const Pool = struct {
     /// exposes a read before write. Otherwise it fills 2 KiB per copy-on-write on a hot path, and
     /// the caller then overwrites every field. A new caller must also write all chunks and `len`
     /// before reading.
-    /// std intends `rawAlloc` only for `Allocator` implementations. Free with `allocator.destroy`.
+    /// Free with `allocator.destroy`.
     fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
         if (expensive_safety_checks) return self.allocator.create(ChunkedLeaf);
         const bytes = self.allocator.rawAlloc(
