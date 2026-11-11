@@ -25,7 +25,7 @@ import {
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BuilderApiClient} from "../execution/builder/apiClient.js";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
@@ -42,6 +42,7 @@ import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {ForkChoiceExecutionEngine} from "./forkChoiceExecutionEngine.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
@@ -100,7 +101,7 @@ export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   earliestAvailableSlot: Slot;
-  readonly executionEngine: IExecutionEngine;
+  readonly executionEngine: ForkChoiceExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
   readonly builderApiClient: BuilderApiClient;

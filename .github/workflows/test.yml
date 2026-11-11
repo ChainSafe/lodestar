@@ -291,7 +291,7 @@ jobs:
           node: 24
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       - name: Restore era files cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: fixtures/era
           key: era-files-${{ hashFiles('build.zig.zon', 'scripts/download_era_files.zig') }}
@@ -451,7 +451,7 @@ jobs:
         with:
           cache-key: ubuntu-latest
       - name: Restore spec tests cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: fixtures/era
           key: era-files-${{ hashFiles('build.zig.zon', 'scripts/download_era_files.zig') }}
@@ -481,7 +481,7 @@ jobs:
           test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Restore spec tests cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: test/spec/spec_tests
           key: zig-spec-test-data-${{ steps.spec-test-version.outputs.version }}
@@ -533,7 +533,7 @@ jobs:
           cache-key: ubuntu-latest
       - name: Restore spec tests cache
         id: spec-tests-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: test/spec/spec_tests
           key: zig-spec-test-data-${{ needs['zig-spec-test-prep'].outputs['spec-test-version'] }}
@@ -569,7 +569,7 @@ jobs:
           cache-key: ubuntu-latest
       - name: Restore spec tests cache
         id: spec-tests-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: test/spec/spec_tests
           key: zig-spec-test-data-${{ needs['zig-spec-test-prep'].outputs['spec-test-version'] }}
@@ -583,7 +583,7 @@ jobs:
           path: test/spec
       - name: Run ssz_static spec tests
         run: |
-          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=ReleaseSafe
+          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=ReleaseSafe -Dbuild_options.expensive_safety_checks=true
 
   zig-spec-tests:
     name: Zig spec tests (${{ matrix.preset }}, ${{ matrix.runner }})
@@ -617,7 +617,7 @@ jobs:
           cache-key: ubuntu-latest
       - name: Restore spec tests cache
         id: spec-tests-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: test/spec/spec_tests
           key: zig-spec-test-data-${{ needs['zig-spec-test-prep'].outputs['spec-test-version'] }}
@@ -631,7 +631,7 @@ jobs:
           path: test/spec
       - name: Run spec tests - ${{ matrix.preset }} (${{ matrix.runner }})
         run: |
-          zig build test:spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }} -Dspec_tests.filters=${{ matrix.runner }}
+          zig build test:spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }} -Dbuild_options.expensive_safety_checks=true -Dspec_tests.filters=${{ matrix.runner }}
 
   zig-build-fuzz:
     name: Zig fuzz build

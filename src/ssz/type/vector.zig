@@ -56,6 +56,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
         const chunked_leaf_depth: u8 = if (use_chunked_leaf) chunk_depth - ChunkedLeaf.k_log2 else 0;
 
         pub const default_value: Type = [_]Element.Type{Element.default_value} ** length;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = getZeroHash(chunk_depth).*;
 
@@ -498,6 +499,7 @@ pub fn VariableVectorType(comptime ST: type, comptime _length: comptime_int) typ
         pub const chunk_depth: u8 = maxChunksToDepth(chunk_count);
 
         pub const default_value: Type = [_]Element.Type{Element.default_value} ** length;
+        pub const init: Type = [_]Element.Type{Element.init} ** length;
 
         pub const default_root: [32]u8 = blk: {
             var buf: [32]u8 = undefined;

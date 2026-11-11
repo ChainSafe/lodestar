@@ -62,6 +62,7 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
+      "builder.bidDeadline": 500,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 8,
 
@@ -172,6 +173,7 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         url: "http://localhost:8661",
         timeout: 12000,
+        bidDeadline: 500,
         faultInspectionWindow: 32,
         allowedFaults: 8,
       },

@@ -27,6 +27,7 @@ const max_depth = @import("hashing").max_depth;
 const Depth = @import("hashing").Depth;
 const Gindex = @import("gindex.zig").Gindex;
 const ChunkedLeaf = @import("ChunkedLeaf.zig");
+const expensive_safety_checks = @import("root.zig").expensive_safety_checks;
 
 // Flat node fields (file-as-struct). Order doesn't affect SoA layout.
 payload: u64,
@@ -427,7 +428,7 @@ pub const Pool = struct {
     /// lazy root; `Id.getRoot` will compute and cache it on first access.
     pub fn createChunkedLeaf(self: *Pool, chunks: *align(64) const [ChunkedLeaf.K][32]u8, len: u16) Error!Id {
         std.debug.assert(len <= ChunkedLeaf.K);
-        const storage = try self.allocator.create(ChunkedLeaf);
+        const storage = try self.allocChunkedLeaf();
         errdefer self.allocator.destroy(storage);
 
         storage.chunks = chunks.*;
@@ -445,7 +446,7 @@ pub const Pool = struct {
     /// `ChunkedLeaf`. Caller fills via `Id.getChunkedLeafPtr`.
     pub fn createChunkedLeafEmpty(self: *Pool, len: u16) Error!Id {
         std.debug.assert(len <= ChunkedLeaf.K);
-        const storage = try self.allocator.create(ChunkedLeaf);
+        const storage = try self.allocChunkedLeaf();
         errdefer self.allocator.destroy(storage);
 
         @memset(std.mem.asBytes(&storage.chunks), 0);
@@ -457,6 +458,19 @@ pub const Pool = struct {
         self.nodes.items(.root)[idx] = lazy_sentinel;
         self.nodes.items(.state)[idx] = State.initInUse(.chunked_leaf, 0);
         return node_id;
+    }
+
+    /// The caller must write all chunks and `len` before reading. Free with `allocator.destroy`.
+    fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
+        // `Allocator.create`'s 0xAA fill exposes a read before write, but costs 2 KiB per
+        // copy-on-write on a hot path whose caller overwrites every field.
+        if (expensive_safety_checks) return self.allocator.create(ChunkedLeaf);
+        const bytes = self.allocator.rawAlloc(
+            @sizeOf(ChunkedLeaf),
+            .of(ChunkedLeaf),
+            @returnAddress(),
+        ) orelse return error.OutOfMemory;
+        return @ptrCast(@alignCast(bytes));
     }
 
     /// Create a `.container_struct` Node holding a cloned `T` instance.
@@ -873,7 +887,8 @@ pub const Id = enum(u32) {
         std.debug.assert(intra_chunk < valid_chunks);
         std.debug.assert(valid_chunks <= ChunkedLeaf.K);
         const storage = try node_id.getChunkedLeafPtr(pool);
-        std.debug.assert(storage.len <= valid_chunks);
+        // Only this check loads `len`, past the 2 KiB of chunks; the store below doesn't stall.
+        if (expensive_safety_checks) std.debug.assert(storage.len <= valid_chunks);
 
         write(&storage.chunks[intra_chunk], index, value);
         storage.len = valid_chunks;
@@ -887,7 +902,7 @@ pub const Id = enum(u32) {
         if (pool.nodes.items(.state)[idx].kind() != .chunked_leaf) return error.InvalidNode;
         const old_storage = chunkedLeafPtr(pool.nodes.items(.payload), idx);
 
-        const new_storage = try pool.allocator.create(ChunkedLeaf);
+        const new_storage = try pool.allocChunkedLeaf();
         errdefer pool.allocator.destroy(new_storage);
 
         new_storage.chunks = old_storage.chunks;
@@ -918,7 +933,7 @@ pub const Id = enum(u32) {
         if (pool.nodes.items(.state)[idx].kind() != .chunked_leaf) return error.InvalidNode;
         const old_storage = chunkedLeafPtr(pool.nodes.items(.payload), idx);
 
-        const new_storage = try pool.allocator.create(ChunkedLeaf);
+        const new_storage = try pool.allocChunkedLeaf();
         errdefer pool.allocator.destroy(new_storage);
 
         new_storage.chunks = old_storage.chunks;

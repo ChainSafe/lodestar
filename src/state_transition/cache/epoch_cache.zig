@@ -12,6 +12,7 @@ const ValidatorIndex = types.primitive.ValidatorIndex.Type;
 const CommitteeIndex = types.primitive.CommitteeIndex.Type;
 const BeaconConfig = @import("config").BeaconConfig;
 const PubkeyCache = @import("./pubkey_cache.zig").PubkeyCache;
+const BuilderDepositSignatureCacheRc = @import("builder_deposit_signature_cache.zig").BuilderDepositSignatureCacheRc;
 const EpochShuffling = @import("../utils//epoch_shuffling.zig").EpochShuffling;
 const EpochShufflingRc = @import("../utils/epoch_shuffling.zig").EpochShufflingRc;
 const EffectiveBalanceIncrementsRc = @import("./effective_balance_increments.zig").EffectiveBalanceIncrementsRc;
@@ -48,6 +49,7 @@ const ForkTypes = @import("fork_types").ForkTypes;
 pub const EpochCacheImmutableData = struct {
     config: *const BeaconConfig,
     pubkey_cache: *PubkeyCache,
+    builder_deposit_signature_cache: ?*BuilderDepositSignatureCacheRc = null,
 };
 
 pub const EpochCacheOpts = struct {
@@ -67,6 +69,8 @@ pub const EpochCache = struct {
 
     /// Application-wide pubkey cache; EpochCache does not own it.
     pubkey_cache: *PubkeyCache,
+
+    builder_deposit_signature_cache: *BuilderDepositSignatureCacheRc,
 
     proposers: [preset.SLOTS_PER_EPOCH]ValidatorIndex,
 
@@ -437,10 +441,19 @@ pub const EpochCache = struct {
         const epoch_cache_ptr = try allocator.create(EpochCache);
         errdefer allocator.destroy(epoch_cache_ptr);
 
+        const builder_deposit_signature_cache = if (immutable_data.builder_deposit_signature_cache) |cache|
+            cache.ref()
+        else
+            try BuilderDepositSignatureCacheRc.create(allocator, .{
+                .hash_context = pubkey_cache.hashContext(),
+                .validity_context = .{ .pubkey_context = pubkey_cache.hashContext() },
+            });
+
         epoch_cache_ptr.* = .{
             .allocator = allocator,
             .config = config,
             .pubkey_cache = pubkey_cache,
+            .builder_deposit_signature_cache = builder_deposit_signature_cache,
             .proposers = proposers,
             // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
             .proposers_prev_epoch = null,
@@ -473,6 +486,7 @@ pub const EpochCache = struct {
     }
 
     pub fn deinit(self: *EpochCache) void {
+        self.builder_deposit_signature_cache.unref();
         // EpochCache does not own the application-wide pubkey cache.
 
         // unref the epoch shufflings
@@ -497,6 +511,7 @@ pub const EpochCache = struct {
             .config = self.config,
             // Common append-only structures shared with all states, no need to clone
             .pubkey_cache = self.pubkey_cache,
+            .builder_deposit_signature_cache = self.builder_deposit_signature_cache.ref(),
             // Immutable data
             .proposers = self.proposers,
             .proposers_prev_epoch = self.proposers_prev_epoch,
@@ -727,7 +742,7 @@ pub const EpochCache = struct {
     /// Consumer takes ownership of the returned indexed attestation and must deinit
     /// its `attesting_indices` with `allocator`.
     pub fn computeIndexedAttestationPhase0(self: *const EpochCache, allocator: Allocator, attestation: *const types.phase0.Attestation.Type, out: *types.phase0.IndexedAttestation.Type) !void {
-        const attesting_indices = try self.getAttestingIndicesPhase0(allocator, attestation);
+        const attesting_indices = try self.getAttestingIndices(.phase0, allocator, attestation);
         const sort_fn = struct {
             pub fn sort(_: void, a: ValidatorIndex, b: ValidatorIndex) bool {
                 return a < b;
@@ -748,7 +763,7 @@ pub const EpochCache = struct {
     /// Consumer takes ownership of the returned indexed attestation and must deinit
     /// its `attesting_indices` with `allocator`.
     pub fn computeIndexedAttestationElectra(self: *const EpochCache, allocator: Allocator, attestation: *const types.electra.Attestation.Type, out: *types.electra.IndexedAttestation.Type) !void {
-        const attesting_indices = try self.getAttestingIndicesElectra(allocator, attestation);
+        const attesting_indices = try self.getAttestingIndices(.electra, allocator, attestation);
         const sort_fn = struct {
             pub fn sort(_: void, a: ValidatorIndex, b: ValidatorIndex) bool {
                 return a < b;
@@ -766,62 +781,80 @@ pub const EpochCache = struct {
         };
     }
 
+    /// Consumer takes ownership of the returned array and must free it with `allocator`.
+    /// Allocates `bit_len` indices up front, so callers must bound unvalidated bits first.
     pub fn getAttestingIndices(
         self: *const EpochCache,
         comptime fork: ForkSeq,
         allocator: Allocator,
         attestation: *const ForkTypes(fork).Attestation.Type,
     ) !std.ArrayList(ValidatorIndex) {
-        return if (comptime fork.lt(.electra))
-            self.getAttestingIndicesPhase0(allocator, attestation)
-        else
-            self.getAttestingIndicesPostElectra(fork, allocator, attestation);
+        const bit_len = attestation.aggregation_bits.bit_len;
+
+        var indices = try std.ArrayList(ValidatorIndex).initCapacity(allocator, bit_len);
+        errdefer indices.deinit(allocator);
+
+        indices.items =
+            try self.getAttestingIndicesInto(fork, attestation, indices.allocatedSlice());
+        return indices;
     }
 
-    /// Consumer takes ownership of the returned array and must free it with `allocator`.
-    pub fn getAttestingIndicesPhase0(self: *const EpochCache, allocator: Allocator, attestation: *const types.phase0.Attestation.Type) !std.ArrayList(ValidatorIndex) {
-        const aggregation_bits = attestation.aggregation_bits;
-        const data = attestation.data;
-        const validator_indices = try self.getBeaconCommittee(data.slot, data.index);
-        return try aggregation_bits.intersectValues(ValidatorIndex, u32, allocator, validator_indices);
-    }
+    /// Writes the attesting validator indices to `out` in aggregation-bit order and returns the
+    /// written prefix. `out` must hold at least `aggregation_bits.bit_len` indices. Returns
+    /// `error.InvalidSize` when the selected committees' total size differs from `bit_len`.
+    pub fn getAttestingIndicesInto(
+        self: *const EpochCache,
+        comptime fork: ForkSeq,
+        attestation: *const ForkTypes(fork).Attestation.Type,
+        out: []ValidatorIndex,
+    ) ![]ValidatorIndex {
+        const aggregation_bits = &attestation.aggregation_bits;
+        std.debug.assert(out.len >= aggregation_bits.bit_len);
+        const data = &attestation.data;
 
-    /// Consumer takes ownership of the returned array and must free it with `allocator`.
-    pub fn getAttestingIndicesElectra(self: *const EpochCache, allocator: Allocator, attestation: *const types.electra.Attestation.Type) !std.ArrayList(ValidatorIndex) {
-        return self.getAttestingIndicesPostElectra(.electra, allocator, attestation);
-    }
+        var committees_buffer: [preset.MAX_COMMITTEES_PER_SLOT][]const u32 = undefined;
+        const committees = if (comptime fork.lt(.electra)) blk: {
+            committees_buffer[0] = try self.getBeaconCommittee(data.slot, data.index);
+            break :blk committees_buffer[0..1];
+        } else blk: {
+            // There is a naming conflict on the term `committeeIndices`
+            // In Lodestar it usually means a list of validator indices of
+            // participants in a committee
+            // In the spec it means a list of committee indices according to committeeBits
+            // This `committeeIndices` refers to the latter
+            // TODO Electra: resolve the naming conflicts
+            var committee_indices_buffer: [preset.MAX_COMMITTEES_PER_SLOT]usize = undefined;
+            const len =
+                try attestation.committee_bits.getTrueBitIndexes(&committee_indices_buffer);
+            const committee_indices = committee_indices_buffer[0..len];
+            for (committee_indices, 0..) |committee_index, i| {
+                committees_buffer[i] = try self.getBeaconCommittee(data.slot, committee_index);
+            }
+            break :blk committees_buffer[0..len];
+        };
 
-    pub fn getAttestingIndicesPostElectra(self: *const EpochCache, comptime fork: ForkSeq, allocator: Allocator, attestation: *const ForkTypes(fork).Attestation.Type) !std.ArrayList(ValidatorIndex) {
-        const aggregation_bits = attestation.aggregation_bits;
-        const committee_bits = attestation.committee_bits;
-        const data = attestation.data;
+        var committees_total_len: usize = 0;
+        for (committees) |committee| committees_total_len += committee.len;
+        if (committees_total_len != aggregation_bits.bit_len) return error.InvalidSize;
 
-        // There is a naming conflict on the term `committeeIndices`
-        // In Lodestar it usually means a list of validator indices of participants in a committee
-        // In the spec it means a list of committee indices according to committeeBits
-        // This `committeeIndices` refers to the latter
-        // TODO Electra: resolve the naming conflicts
-        var committee_indices_buffer: [preset.MAX_COMMITTEES_PER_SLOT]usize = undefined;
-        const committee_indices_len = try committee_bits.getTrueBitIndexes(committee_indices_buffer[0..]);
-        const committee_indices = committee_indices_buffer[0..committee_indices_len];
-
-        var total_len: usize = 0;
-        for (committee_indices) |committee_index| {
-            const committee = try self.getBeaconCommittee(data.slot, committee_index);
-            total_len += committee.len;
+        var written: usize = 0;
+        var committee_i: usize = 0;
+        var committee_start: usize = 0;
+        const byte_len = (aggregation_bits.bit_len + 7) / 8;
+        for (aggregation_bits.data.items[0..byte_len], 0..) |byte, byte_index| {
+            var bits = byte;
+            while (bits != 0) : (bits &= bits - 1) {
+                const bit_index = byte_index * 8 + @ctz(bits);
+                if (bit_index >= aggregation_bits.bit_len) break;
+                while (bit_index - committee_start >= committees[committee_i].len) {
+                    committee_start += committees[committee_i].len;
+                    committee_i += 1;
+                }
+                out[written] = committees[committee_i][bit_index - committee_start];
+                written += 1;
+            }
         }
-
-        var committee_validators = try allocator.alloc(ValidatorIndex, total_len);
-        defer allocator.free(committee_validators);
-
-        var offset: usize = 0;
-        for (committee_indices) |committee_index| {
-            const committee = try self.getBeaconCommittee(data.slot, committee_index);
-            for (committee, committee_validators[offset..][0..committee.len]) |index, *dest| dest.* = index;
-            offset += committee.len;
-        }
-
-        return try aggregation_bits.intersectValues(ValidatorIndex, ValidatorIndex, allocator, committee_validators);
+        return out[0..written];
     }
 
     // TODO: getCommitteeAssignments

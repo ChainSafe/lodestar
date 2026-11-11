@@ -4,6 +4,7 @@ import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {
+  AncestorStatus,
   CheckpointWithHex,
   EpochDifference,
   ForkChoiceStateGetter,
@@ -92,8 +93,9 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
-import {ChainEvent, ChainEventEmitter} from "./emitter.js";
+import {ChainEvent, ChainEventEmitter, ReorgEventData} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
+import {ForkChoiceExecutionEngine} from "./forkChoiceExecutionEngine.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
@@ -170,7 +172,7 @@ const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
-  readonly executionEngine: IExecutionEngine;
+  readonly executionEngine: ForkChoiceExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
   readonly builderApiClient: BuilderApiClient;
@@ -328,7 +330,6 @@ export class BeaconChain implements IBeaconChain {
     this.genesisTime = anchorState.genesisTime;
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
-    this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
@@ -470,6 +471,12 @@ export class BeaconChain implements IBeaconChain {
     this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
     this.forkChoice = forkChoice;
+    this.executionEngine = new ForkChoiceExecutionEngine(executionEngine, {
+      forkChoice,
+      recomputeHeadAfterELInvalidResponse: () => this.recomputeHeadAfterELInvalidResponse(),
+      logger,
+      metrics,
+    });
 
     this.builderCircuitBreaker = new BuilderCircuitBreaker(
       {faultInspectionWindow: opts.faultInspectionWindow, allowedFaults: opts.allowedFaults},
@@ -1441,6 +1448,58 @@ export class BeaconChain implements IBeaconChain {
     } finally {
       timer?.();
     }
+  }
+
+  /**
+   * Apply chain side effects of a fork choice head change: head state, head metrics, and reorg detection
+   */
+  onHeadChanged(oldHead: ProtoBlock, newHead: ProtoBlock, maybeHeadState?: IBeaconStateView): void {
+    // Set head state as strong reference
+    this.regen.updateHeadState(newHead, maybeHeadState);
+
+    const delaySec = this.clock.secFromSlot(newHead.slot);
+    this.logger.verbose("New chain head", {
+      slot: newHead.slot,
+      root: newHead.blockRoot,
+      payloadStatus: newHead.payloadStatus,
+      delaySec,
+    });
+    this.metrics?.headSlot.set(newHead.slot);
+
+    this.onNewHead(newHead);
+    this.metrics?.forkChoice.changedHead.inc();
+
+    const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
+    if (ancestorResult.code === AncestorStatus.CommonAncestor) {
+      // CommonAncestor = chain reorg, old head and new head not direct descendants
+
+      const forkChoiceReorgEventData: ReorgEventData = {
+        depth: ancestorResult.depth,
+        epoch: computeEpochAtSlot(newHead.slot),
+        slot: newHead.slot,
+        newHeadBlock: newHead.blockRoot,
+        oldHeadBlock: oldHead.blockRoot,
+        newHeadState: newHead.stateRoot,
+        oldHeadState: oldHead.stateRoot,
+        executionOptimistic: isOptimisticBlock(newHead),
+      };
+
+      this.emitter.emit(routes.events.EventType.chainReorg, forkChoiceReorgEventData);
+      this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
+
+      this.metrics?.forkChoice.reorg.inc();
+      this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
+    }
+  }
+
+  private recomputeHeadAfterELInvalidResponse(): void {
+    // validateLatestHash only re-scores proto-array, the cached head is still the old one
+    const oldHead = this.forkChoice.getHead();
+    const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.executionInvalid);
+    if (newHead.blockRoot === oldHead.blockRoot && newHead.payloadStatus === oldHead.payloadStatus) {
+      return;
+    }
+    this.onHeadChanged(oldHead, newHead);
   }
 
   /**

@@ -20,7 +20,7 @@ const MAX_TRACKED_BLOCK_ROOTS = 64;
 
 export type GetBlobsTrackerInit = {
   logger: Logger;
-  executionEngine: IExecutionEngine;
+  executionEngine: Pick<IExecutionEngine, "getBlobs">;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;
@@ -31,7 +31,7 @@ export type GetBlobsTrackerInit = {
  */
 export class GetBlobsTracker {
   logger: Logger;
-  executionEngine: IExecutionEngine;
+  executionEngine: Pick<IExecutionEngine, "getBlobs">;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;

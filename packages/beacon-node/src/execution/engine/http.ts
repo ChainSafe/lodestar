@@ -22,9 +22,11 @@ import {
   ExecutePayloadResponse,
   ExecutionEngineState,
   ExecutionPayloadStatus,
+  ForkchoiceUpdatedResult,
   IExecutionEngine,
   PayloadAttributes,
   PayloadId,
+  PayloadStatusResult,
   VersionedHashes,
 } from "./interface.js";
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClientEvent} from "./jsonRpcHttpClient.js";
@@ -32,7 +34,7 @@ import {PayloadIdCache} from "./payloadIdCache.js";
 import {EngineRestError, EngineRestResponseError, isRetryableEngineRestError} from "./restHttpClient.js";
 import {EngineCapabilities, RestEngineTransport} from "./restTransport.js";
 import {executionForkName} from "./sszTypes.js";
-import {IEngineTransport, PayloadStatusResult} from "./transport.js";
+import {IEngineTransport} from "./transport.js";
 import {ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -342,15 +344,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId | null> {
-    const {
-      payloadStatus: {status, validationError},
-      payloadId,
-    } = await this.enqueue(() =>
+  ): Promise<ForkchoiceUpdatedResult> {
+    const result = await this.enqueue(() =>
       this.withTransport(fork, undefined, (transport) =>
         transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes)
       )
     );
+    const {
+      payloadStatus: {status},
+      payloadId,
+    } = result;
 
     this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
     this.metrics?.engineNotifyForkchoiceUpdateResult.inc({result: status});
@@ -374,21 +377,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           );
           void this.prunePayloadIdCache();
         }
-        return payloadId;
+        return result;
 
       case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
           throw Error("Execution Layer Syncing");
         }
-        return null;
+        return result;
 
       case ExecutionPayloadStatus.INVALID:
-        throw Error(
-          `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
-            validationError ?? ""
-          }`
-        );
+        return result;
 
       default:
         throw Error(`Unknown status ${status}`);
