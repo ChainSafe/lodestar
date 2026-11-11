@@ -77,6 +77,11 @@ describe("gossip execution payload envelope block hash", () => {
       seenTimestampSec: 0,
     });
 
+    const protoBlock = generateProtoBlock({
+      slot,
+      blockRoot: toRootHex(blockRoot),
+      parentRoot: toRootHex(parentBeaconBlockRoot),
+    });
     const logger = testLogger();
     const chain = {
       config,
@@ -85,11 +90,8 @@ describe("gossip execution payload envelope block hash", () => {
       logger,
       metrics: null,
       forkChoice: {
-        getBlockDefaultStatus: vi
-          .fn()
-          .mockReturnValue(
-            generateProtoBlock({slot, blockRoot: toRootHex(blockRoot), parentRoot: toRootHex(parentBeaconBlockRoot)})
-          ),
+        getBlockDefaultStatus: vi.fn().mockReturnValue(protoBlock),
+        getBlockHexDefaultStatus: vi.fn().mockReturnValue(protoBlock),
         getBlockHex: vi.fn().mockReturnValue(null),
         getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0, root: Buffer.alloc(32), rootHex: ""}),
       },
