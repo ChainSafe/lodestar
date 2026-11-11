@@ -460,12 +460,10 @@ pub const Pool = struct {
         return node_id;
     }
 
-    /// Keeps `Allocator.create`'s 0xAA fill only under `expensive_safety_checks`, where it
-    /// exposes a read before write. Otherwise it fills 2 KiB per copy-on-write on a hot path, and
-    /// the caller then overwrites every field. A new caller must also write all chunks and `len`
-    /// before reading.
-    /// Free with `allocator.destroy`.
+    /// The caller must write all chunks and `len` before reading. Free with `allocator.destroy`.
     fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
+        // `Allocator.create`'s 0xAA fill exposes a read before write, but costs 2 KiB per
+        // copy-on-write on a hot path whose caller overwrites every field.
         if (expensive_safety_checks) return self.allocator.create(ChunkedLeaf);
         const bytes = self.allocator.rawAlloc(
             @sizeOf(ChunkedLeaf),
