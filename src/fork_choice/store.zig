@@ -1220,9 +1220,11 @@ pub const Store = struct {
         return matching > DATA_AVAILABILITY_TIMELY_THRESHOLD;
     }
 
-    /// Spec `is_payload_inclusion_list_satisfied`.
+    /// Spec `is_payload_inclusion_list_satisfied`; a payload from before Heze has no
+    /// inclusion list to satisfy.
     pub fn isPayloadInclusionListSatisfied(self: *const Store, block: BlockIndex) bool {
         if (!self.isPayloadVerified(block)) return false;
+        if (self.blocks.items(.fork)[block].lt(.heze)) return true;
         return self.blocks.items(.inclusion_list_satisfaction)[block] == .satisfied;
     }
 
