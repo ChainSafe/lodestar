@@ -725,7 +725,7 @@ test "optimistic sync: valid walks down to the merge boundary, invalid removes t
     try testing.expectEqual(pendingOf(&store, 0x30), try store.getHead());
 }
 
-test "optimistic sync: invalidating a payload invalidates every block carrying it" {
+test "optimistic sync: a payload verdict applies to every block carrying it" {
     const allocator = testing.allocator;
     const config = &@import("config").mainnet.config;
     const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
@@ -749,14 +749,16 @@ test "optimistic sync: invalidating a payload invalidates every block carrying i
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x40)));
     try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
 
-    // A validated copy of the payload rejects the verdict without touching the other copy.
-    var conflicted = try Store.initFromSummary(allocator, config, 0, anchor, Provider.stateProvider());
-    defer conflicted.deinit();
-    try conflicted.onTick(conflicted.timing.timeAtSlotMs(8));
-    for (blocks[0..3]) |block| try conflicted.onBlockSummary(optimisticSummary(block));
-    try conflicted.onPayloadValid(tagHash(0x30));
-    try testing.expectError(error.PayloadValidToInvalid, conflicted.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20)));
-    try testing.expectEqual(ExecutionStatus.syncing, try conflicted.executionStatus(pendingOf(&conflicted, 0x30)));
+    var validated = try Store.initFromSummary(allocator, config, 0, anchor, Provider.stateProvider());
+    defer validated.deinit();
+    try validated.onTick(validated.timing.timeAtSlotMs(8));
+    for (blocks) |block| try validated.onBlockSummary(optimisticSummary(block));
+    try validated.onPayloadValid(tagHash(0x30));
+    try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x30)));
+    try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x31)));
+    try testing.expectEqual(ExecutionStatus.syncing, try validated.executionStatus(pendingOf(&validated, 0x40)));
+    try testing.expectError(error.PayloadValidToInvalid, validated.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20)));
+    try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x31)));
 }
 
 test "optimistic sync: a zero latest valid hash invalidates through the merge block" {

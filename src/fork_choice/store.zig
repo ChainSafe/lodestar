@@ -1096,19 +1096,19 @@ pub const Store = struct {
         return .{ .store = self, .node = node };
     }
 
-    /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash` and,
-    /// as the spec requires, every not yet validated payload below it.
+    /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash`, in every
+    /// block carrying it, and, as the spec requires, every not yet validated payload below it.
     pub fn onPayloadValid(self: *Store, block_hash: Root) Error!void {
         const hashes = self.blocks.items(.payload_block_hash);
-        var i = self.blocks.len;
-        while (i > 0) {
-            i -= 1;
-            if (!std.mem.eql(u8, &hashes[i], &block_hash)) continue;
+        var found = false;
+        for (hashes, 0..) |*hash, i| {
+            if (!std.mem.eql(u8, hash, &block_hash)) continue;
+            found = true;
             const index: BlockIndex = @intCast(i);
             const node: ForkChoiceNode = if (self.blocks.items(.fork)[i].gte(.gloas)) .{ .block = index, .payload_status = .full } else pendingNode(index);
-            return self.markChainValid(node);
+            try self.markChainValid(node);
         }
-        return error.UnknownPayload;
+        if (!found) return error.UnknownPayload;
     }
 
     /// Marks the `.syncing` payloads from `node` down `.valid`, stopping at the first payload
