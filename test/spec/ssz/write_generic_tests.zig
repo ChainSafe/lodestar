@@ -10,23 +10,6 @@ const suites = [_][]const u8{
     "test_progressive_types",
 };
 
-/// A compatible union has no default value, so a container's `default_value` and new list slots,
-/// which are built from their fields' or elements' defaults, cannot hold one yet (#788). These
-/// cases are generated as skipped tests rather than dropped; remove them once unions can nest.
-const unsupported = [_]struct { suite: []const u8, type_name: []const u8 }{
-    .{ .suite = "test_compatible_unions", .type_name = "SampleNestedShape" },
-    .{ .suite = "test_compatible_unions", .type_name = "SampleShapeContainer" },
-    .{ .suite = "test_compatible_unions", .type_name = "SampleShapeProgressiveContainer" },
-    .{ .suite = "test_compatible_unions", .type_name = "SampleShapeProgressiveList" },
-};
-
-fn unsupportedIndex(suite: []const u8, type_name: []const u8) ?usize {
-    for (unsupported, 0..) |entry, i| {
-        if (std.mem.eql(u8, entry.suite, suite) and std.mem.eql(u8, entry.type_name, type_name)) return i;
-    }
-    return null;
-}
-
 pub fn main(init: std.process.Init) !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
@@ -75,8 +58,6 @@ pub fn main(init: std.process.Init) !void {
     const yaml_total = try writeYamlTests(allocator, io, writer);
 
     var total: usize = 0;
-    var skipped: usize = 0;
-    var unsupported_seen: [unsupported.len]bool = @splat(false);
     for (suites) |suite| {
         var dir = try fixtures.openDir(io, suite, .{ .iterate = true });
         defer dir.close(io);
@@ -108,18 +89,6 @@ pub fn main(init: std.process.Init) !void {
                 if (!std.zig.isValidId(type_name)) return error.InvalidTypeName;
 
                 total += 1;
-                if (unsupportedIndex(suite, type_name)) |i| {
-                    unsupported_seen[i] = true;
-                    skipped += 1;
-                    try writer.print(
-                        \\test "{s}/{f}" {{
-                        \\    return error.SkipZigTest;
-                        \\}}
-                        \\
-                        \\
-                    , .{ suite, std.zig.fmtString(entry.key_ptr.*) });
-                    continue;
-                }
                 try writer.print(
                     \\test "{s}/{f}" {{
                     \\    const path = try std.fs.path.join(std.testing.allocator, &.{{ options.spec_test_out_dir, "ssz", options.ssz_spec_test_version, "fixtures/ssz/ssz/{s}/{f}" }});
@@ -132,23 +101,14 @@ pub fn main(init: std.process.Init) !void {
             }
         }
     }
-    if (total == skipped) return error.EmptyFixtures;
-    // A stale entry would hide that upstream renamed or dropped the case.
-    for (unsupported, unsupported_seen) |entry, seen| {
-        if (!seen) {
-            std.log.err("unsupported entry matches no fixture: {s}/{s}", .{ entry.suite, entry.type_name });
-            return error.StaleUnsupported;
-        }
-    }
 
     const out = try std.Io.Dir.cwd().createFile(io, "test/spec/ssz/generic_tests.zig", .{});
     defer out.close(io);
     try out.writeStreamingAll(io, buffer.written());
-    std.log.info("generated {d} YAML cases from {s}, {d} JSON cases ({d} skipped) from {s}", .{
+    std.log.info("generated {d} YAML cases from {s}, {d} JSON cases from {s}", .{
         yaml_total,
         options.ssz_generic_spec_test_version,
         total,
-        skipped,
         options.ssz_spec_test_version,
     });
 }

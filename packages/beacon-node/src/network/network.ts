@@ -30,7 +30,7 @@ import {
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
-import {prettyPrintIndices, sleep} from "@lodestar/utils";
+import {defer, prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
@@ -128,6 +128,7 @@ export class Network implements INetwork {
 
   private subscribedToCoreTopics = false;
   private connectedPeersSyncMeta = new Map<PeerIdStr, Omit<PeerSyncMeta, "peerId">>();
+  private closePromise: Promise<void> | undefined;
 
   constructor(modules: NetworkModules) {
     this.peerId = peerIdFromPrivateKey(modules.privateKey);
@@ -145,12 +146,8 @@ export class Network implements INetwork {
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
     this.chain.emitter.on(routes.events.EventType.head, this.onHead);
-    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) =>
-      this.onLightClientFinalityUpdate(data)
-    );
-    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) =>
-      this.onLightClientOptimisticUpdate(data)
-    );
+    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
@@ -240,9 +237,16 @@ export class Network implements INetwork {
     return this.controller.signal.aborted;
   }
 
-  /** Destroy this instance. Can only be called once. */
-  async close(): Promise<void> {
-    if (this.closed) return;
+  close(): Promise<void> {
+    if (this.closePromise !== undefined) return this.closePromise;
+    const completion = defer<void>();
+    this.closePromise = completion.promise;
+    void this.closeInternal().then(completion.resolve, completion.reject);
+    return this.closePromise;
+  }
+
+  private async closeInternal(): Promise<void> {
+    this.controller.abort();
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -254,10 +258,12 @@ export class Network implements INetwork {
     this.chain.emitter.off(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.off(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
-    await this.core.close();
-
-    // Used only for sleep() statements
-    this.controller.abort();
+    this.connectedPeersSyncMeta.clear();
+    this.subscribedToCoreTopics = false;
+    const results = await Promise.allSettled([this.networkProcessor.stop(), this.core.close()]);
+    for (const result of results) {
+      if (result.status === "rejected") throw result.reason;
+    }
     this.logger.debug("network core closed");
   }
 
@@ -333,6 +339,7 @@ export class Network implements INetwork {
   async subscribeGossipCoreTopics(): Promise<void> {
     if (!this.subscribedToCoreTopics) {
       await this.core.subscribeGossipCoreTopics();
+      if (this.closed) return;
       // Only mark subscribedToCoreTopics if worker resolved this call
       this.subscribedToCoreTopics = true;
     }
@@ -803,26 +810,32 @@ export class Network implements INetwork {
     return this.core.writeDiscv5HeapSnapshot(prefix, dirpath);
   }
 
-  private onLightClientFinalityUpdate = async (finalityUpdate: LightClientFinalityUpdate): Promise<void> => {
+  private onLightClientFinalityUpdate = async ({
+    data: finalityUpdate,
+  }: routes.events.EventData[routes.events.EventType.lightClientFinalityUpdate]): Promise<void> => {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {
       // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
       // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/light-client/p2p-interface.md#sync-committee
       await this.waitForSyncMessageCutoff(finalityUpdate.signatureSlot);
+      if (this.closed) return;
       await this.publishLightClientFinalityUpdate(finalityUpdate);
     } catch (e) {
       this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
     }
   };
 
-  private onLightClientOptimisticUpdate = async (optimisticUpdate: LightClientOptimisticUpdate): Promise<void> => {
+  private onLightClientOptimisticUpdate = async ({
+    data: optimisticUpdate,
+  }: routes.events.EventData[routes.events.EventType.lightClientOptimisticUpdate]): Promise<void> => {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {
       // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
       // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/light-client/p2p-interface.md#sync-committee
       await this.waitForSyncMessageCutoff(optimisticUpdate.signatureSlot);
+      if (this.closed) return;
       await this.publishLightClientOptimisticUpdate(optimisticUpdate);
     } catch (e) {
       this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
@@ -859,10 +872,12 @@ export class Network implements INetwork {
     this.connectedPeersSyncMeta.delete(data.peer);
   };
 
-  private onTargetGroupCountUpdated = (count: number): void => {
-    this.core.setTargetGroupCount(count).catch((e) => {
-      this.logger.debug("Error setting target custody group count", {count}, e as Error);
-    });
+  private onTargetGroupCountUpdated = async (count: number): Promise<void> => {
+    try {
+      await this.core.setTargetGroupCount(count);
+    } catch (error) {
+      this.logger.error("Error updating network custody group count", {count}, error as Error);
+    }
   };
 
   private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {
@@ -886,6 +901,10 @@ export class Network implements INetwork {
   };
 
   private onUpdateStatus = async (): Promise<void> => {
-    await this.core.updateStatus(this.chain.getStatus());
+    try {
+      await this.core.updateStatus(this.chain.getStatus());
+    } catch (error) {
+      this.logger.error("Error updating network status", {}, error as Error);
+    }
   };
 }

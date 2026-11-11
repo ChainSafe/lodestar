@@ -10,6 +10,7 @@ const SyncCommitteeCacheRc = @import("sync_committee_cache.zig").SyncCommitteeCa
 const EffectiveBalanceIncrementsRc = @import("effective_balance_increments.zig").EffectiveBalanceIncrementsRc;
 const effectiveBalanceIncrementsInit = @import("effective_balance_increments.zig").effectiveBalanceIncrementsInit;
 const SLOTS_PER_EPOCH = @import("preset").preset.SLOTS_PER_EPOCH;
+const TARGET_COMMITTEE_SIZE = @import("preset").preset.TARGET_COMMITTEE_SIZE;
 
 test "memory_safety: createFromState releases shuffling inputs on every allocation failure" {
     const allocator = std.testing.allocator;
@@ -372,8 +373,9 @@ test "getAttestingIndicesInto should write set committee members and reject a le
     });
     defer pool.deinit();
 
-    // 250 validators give the first committee 7 members, so its only byte has a spare bit.
-    var test_state = try TestCachedBeaconState.init(allocator, &pool, 250);
+    // Seven validators per slot form one committee of 7 on every preset, so its only byte has a
+    // spare bit.
+    var test_state = try TestCachedBeaconState.init(allocator, &pool, 7 * SLOTS_PER_EPOCH);
     defer test_state.deinit();
 
     const epoch_cache = test_state.cached_state.epoch_cache;
@@ -419,4 +421,57 @@ test "getAttestingIndicesInto should write set committee members and reject a le
         error.InvalidSize,
         epoch_cache.getAttestingIndicesInto(.electra, &attestation, &out),
     );
+}
+
+test "getAttestingIndicesInto should map bits across committee boundaries" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 500_000,
+    });
+    defer pool.deinit();
+
+    // The smallest active set that splits every slot into two committees.
+    const committee_size = TARGET_COMMITTEE_SIZE;
+    var test_state = try TestCachedBeaconState.init(
+        allocator,
+        &pool,
+        2 * committee_size * SLOTS_PER_EPOCH,
+    );
+    defer test_state.deinit();
+
+    const epoch_cache = test_state.cached_state.epoch_cache;
+    var data = std.mem.zeroes(ct.phase0.AttestationData.Type);
+    data.slot = epoch_cache.epoch * SLOTS_PER_EPOCH;
+    const first = try epoch_cache.getBeaconCommittee(data.slot, 0);
+    const second = try epoch_cache.getBeaconCommittee(data.slot, 1);
+    try std.testing.expectEqual(@as(usize, committee_size), first.len);
+    try std.testing.expectEqual(@as(usize, committee_size), second.len);
+
+    var attestation: ct.electra.Attestation.Type = .{
+        .aggregation_bits = try .fromBitLen(allocator, 2 * committee_size),
+        .data = data,
+        .signature = std.mem.zeroes(ct.primitive.BLSSignature.Type),
+        .committee_bits = .empty,
+    };
+    defer attestation.aggregation_bits.deinit(allocator);
+
+    try attestation.committee_bits.set(0, true);
+    try attestation.committee_bits.set(1, true);
+    try attestation.aggregation_bits.set(allocator, 0, true);
+    try attestation.aggregation_bits.set(allocator, committee_size - 1, true);
+    try attestation.aggregation_bits.set(allocator, committee_size, true);
+    try attestation.aggregation_bits.set(allocator, 2 * committee_size - 1, true);
+
+    const ValidatorIndex = ct.primitive.ValidatorIndex.Type;
+    var out: [2 * committee_size]ValidatorIndex = undefined;
+    const selected = try epoch_cache.getAttestingIndicesInto(.electra, &attestation, &out);
+    const expected = [_]ValidatorIndex{
+        first[0],
+        first[committee_size - 1],
+        second[0],
+        second[committee_size - 1],
+    };
+    try std.testing.expectEqualSlices(ValidatorIndex, &expected, selected);
 }

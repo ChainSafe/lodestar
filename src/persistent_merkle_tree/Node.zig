@@ -27,6 +27,7 @@ const max_depth = @import("hashing").max_depth;
 const Depth = @import("hashing").Depth;
 const Gindex = @import("gindex.zig").Gindex;
 const ChunkedLeaf = @import("ChunkedLeaf.zig");
+const expensive_safety_checks = @import("root.zig").expensive_safety_checks;
 
 // Flat node fields (file-as-struct). Order doesn't affect SoA layout.
 payload: u64,
@@ -459,11 +460,11 @@ pub const Pool = struct {
         return node_id;
     }
 
-    /// Skips `Allocator.create`'s 0xAA fill outside Debug: ReleaseSafe would fill 2 KiB on every
-    /// copy-on-write, and callers write all chunks and `len` right away. Debug keeps the fill so a
-    /// read before write shows 0xAA. Free with `allocator.destroy`.
+    /// The caller must write all chunks and `len` before reading. Free with `allocator.destroy`.
     fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
-        if (builtin.mode == .Debug) return self.allocator.create(ChunkedLeaf);
+        // `Allocator.create`'s 0xAA fill exposes a read before write, but costs 2 KiB per
+        // copy-on-write on a hot path whose caller overwrites every field.
+        if (expensive_safety_checks) return self.allocator.create(ChunkedLeaf);
         const bytes = self.allocator.rawAlloc(
             @sizeOf(ChunkedLeaf),
             .of(ChunkedLeaf),
@@ -899,7 +900,8 @@ pub const Id = enum(u32) {
         std.debug.assert(valid_chunks > 0);
         std.debug.assert(valid_chunks <= ChunkedLeaf.K);
         const storage = try node_id.getChunkedLeafPtr(pool);
-        std.debug.assert(storage.len <= valid_chunks);
+        // Only this check loads `len`, past the 2 KiB of chunks; the store below doesn't stall.
+        if (expensive_safety_checks) std.debug.assert(storage.len <= valid_chunks);
 
         storage.len = valid_chunks;
         pool.nodes.items(.root)[@intFromEnum(node_id)] = lazy_sentinel;

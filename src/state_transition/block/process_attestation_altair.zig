@@ -69,6 +69,7 @@ pub fn processAttestationsAltair(
     }
     // Gloas aggregation bits have no SSZ limit; validateAttestation rejects longer ones before use.
     const buffer_len = @min(max_bit_len, MAX_AGGREGATION_BITS);
+
     const attesting_indices_buffer = try allocator.alloc(ValidatorIndex, buffer_len);
     defer allocator.free(attesting_indices_buffer);
 

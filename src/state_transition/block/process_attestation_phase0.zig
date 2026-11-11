@@ -128,6 +128,7 @@ pub fn validateAttestation(
 
             // Assert aggregation bits in this committee have at least one true bit
             const has_true_bit = for (committee_offset..committee_end) |bit_index| {
+                // `get` fails only out of range, and bit_index < committee_end <= bit_len.
                 if (aggregation_bits.get(bit_index) catch unreachable) break true;
             } else false;
             if (!has_true_bit) {
@@ -159,4 +160,8 @@ pub fn isTimelyTarget(comptime fork: ForkSeq, inclusion_distance: Slot) bool {
     }
 
     return inclusion_distance <= preset.SLOTS_PER_EPOCH;
+}
+
+test {
+    _ = @import("process_attestation_phase0_test.zig");
 }
