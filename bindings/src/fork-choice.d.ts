@@ -57,15 +57,39 @@ export interface AttestationData {
   target: Checkpoint;
 }
 
+/** A state's validators as the fast confirmation rule reads them */
+export interface BalanceSource {
+  /** At least one entry per validator */
+  effectiveBalanceIncrements: Uint16Array;
+  /** One entry per validator, inactive and slashed validators zeroed */
+  zeroInactiveIncrements: Uint16Array;
+  /** Validators active in the state's current epoch */
+  activeIndices: Uint32Array;
+}
+
 /**
- * Answers from beacon states, which the store does not hold. Both run synchronously inside the
- * call that needs them and must not throw for a checkpoint or block the store was just given.
+ * Answers from beacon states, which the store does not hold. Each runs synchronously inside the
+ * call that needs it and must not throw for a checkpoint or block the store was just given.
  */
 export interface StateProvider {
   /** Effective balance increments of the checkpoint state, inactive and slashed validators zeroed */
   justifiedBalances(epoch: number, root: Uint8Array): Uint16Array;
   /** Members of every beacon committee of `slot` in the state of block `root` */
   slotCommitteeMembers(root: Uint8Array, slot: number): Uint32Array;
+  /** Fast confirmation: the checkpoint state. Providing it turns the rule on */
+  checkpointBalanceSource?(epoch: number, root: Uint8Array): BalanceSource;
+  /** Fast confirmation: the state of block `root`, advanced to the start of `epoch` when older */
+  pulledUpBalanceSource?(root: Uint8Array, epoch: number): BalanceSource;
+}
+
+/** Spec `FastConfirmationStore` without its `store` */
+export interface FastConfirmationStore {
+  confirmedRoot: Uint8Array;
+  previousEpochObservedJustifiedCheckpoint: Checkpoint;
+  currentEpochObservedJustifiedCheckpoint: Checkpoint;
+  previousEpochGreatestUnrealizedCheckpoint: Checkpoint;
+  previousSlotHead: Uint8Array;
+  currentSlotHead: Uint8Array;
 }
 
 export type KeepHeadReason =
@@ -101,6 +125,8 @@ export declare class ForkChoice {
   readonly proposerBoostRoot: Uint8Array;
   /** Total active unslashed balance of the justified state in Gwei */
   readonly justifiedTotalBalance: bigint;
+  /** Spec `fcr_store.confirmed_root`. Throws when the provider did not turn on fast confirmation */
+  readonly confirmedRoot: Uint8Array;
 
   /** Spec `compute_time_at_slot_ms` */
   timeAtSlotMs(slot: number): number;
@@ -169,6 +195,10 @@ export declare class ForkChoice {
   /** Worst engine verdict on the payloads each node id stands on */
   executionStatuses(): Uint8Array;
   viableHeads(): {root: Uint8Array; payloadStatus: PayloadStatus; weight: bigint}[];
+
+  /** Spec `on_fast_confirmation`: once per slot, after the tick that applies the past slots' votes */
+  onFastConfirmation(): void;
+  fastConfirmationStore(): FastConfirmationStore;
 
   checkpoints(): {
     justified: Checkpoint;

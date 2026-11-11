@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import bindings from "@lodestar/native";
 import {
+  type BalanceSource,
   type BlockSummary,
   type KeepHeadReason,
   NO_BLOCK,
@@ -28,7 +29,6 @@ import {
   Root,
   RootHex,
   Slot,
-  ValidatorIndex,
   isGloasBeaconBlock,
   phase0,
   ssz,
@@ -51,13 +51,7 @@ import {
 } from "../protoArray/interface.js";
 import {DEFAULT_PRUNE_THRESHOLD} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
-import {
-  type FastConfirmationContext,
-  FastConfirmationRule,
-  FastConfirmationSteps,
-  type IFastConfirmationRule,
-  type IFastConfirmationSpecStore,
-} from "./fastConfirmation/fastConfirmationRule.js";
+import {FastConfirmationSteps, type IFastConfirmationSpecStore} from "./fastConfirmation/fastConfirmationRule.js";
 import {ForkChoiceOpts, UpdateAndGetHeadOpt, UpdateHeadOpt} from "./forkChoice.js";
 import {
   AncestorResult,
@@ -160,10 +154,8 @@ export class NativeForkChoice implements IForkChoice {
   /** Balances the provider last handed to the store, for the checkpoint they belong to */
   private providedBalances: {checkpoint: CheckpointWithHex; balances: EffectiveBalanceIncrements} | null = null;
   private scores: NativeScores | null = null;
-  private latestMessages: {slots: Float64Array; nodes: Uint32Array} | null = null;
 
-  private readonly fastConfirmationRule?: IFastConfirmationRule;
-  private readonly fastConfirmationContext?: FastConfirmationContext;
+  private readonly fastConfirmation: boolean;
   private fastConfirmationPaused = false;
 
   constructor(
@@ -205,8 +197,17 @@ export class NativeForkChoice implements IForkChoice {
       {
         justifiedBalances: (epoch, root) => this.provideJustifiedBalances(epoch, root),
         slotCommitteeMembers: (root, slot) => this.provideSlotCommitteeMembers(root, slot),
+        ...(opts?.fastConfirmation
+          ? {
+              checkpointBalanceSource: (epoch: number, root: Uint8Array) =>
+                this.provideCheckpointBalanceSource(epoch, root),
+              pulledUpBalanceSource: (root: Uint8Array, epoch: number) =>
+                this.providePulledUpBalanceSource(root, epoch),
+            }
+          : {}),
       }
     );
+    this.fastConfirmation = opts?.fastConfirmation === true;
     this.insertBlock(0, block);
 
     // Bring the clock up to the slot the caller starts at; the anchor may be older
@@ -215,9 +216,8 @@ export class NativeForkChoice implements IForkChoice {
     this.syncCheckpoints();
     this.head = this.updateHead();
 
-    if (this.opts?.fastConfirmation) {
-      this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
-      this.fastConfirmationContext = this.createFastConfirmationContext();
+    if (this.fastConfirmation) {
+      this.fcStore.confirmedRoot = toRootHex(this.store.confirmedRoot);
       metrics?.fastConfirmation.paused.set(0);
     }
 
@@ -385,7 +385,7 @@ export class NativeForkChoice implements IForkChoice {
   // Fast confirmation
 
   getConfirmedRoot(): RootHex {
-    return this.fastConfirmationRule?.getConfirmedRoot() ?? this.fcStore.justified.checkpoint.rootHex;
+    return this.fastConfirmation ? this.fcStore.confirmedRoot : this.fcStore.justified.checkpoint.rootHex;
   }
 
   getConfirmedBlock(): ProtoBlock | null {
@@ -393,13 +393,24 @@ export class NativeForkChoice implements IForkChoice {
   }
 
   getFastConfirmationStore(): IFastConfirmationSpecStore {
+    if (!this.fastConfirmation) {
+      return {
+        confirmedRoot: this.getConfirmedRoot(),
+        previousEpochObservedJustifiedCheckpoint: this.fcStore.previousEpochObservedJustifiedCheckpoint,
+        currentEpochObservedJustifiedCheckpoint: this.fcStore.currentEpochObservedJustifiedCheckpoint,
+        previousEpochGreatestUnrealizedCheckpoint: this.fcStore.previousEpochGreatestUnrealizedCheckpoint,
+        previousSlotHead: this.fcStore.previousSlotHead,
+        currentSlotHead: this.fcStore.currentSlotHead,
+      };
+    }
+    const fcr = this.store.fastConfirmationStore();
     return {
       confirmedRoot: this.getConfirmedRoot(),
-      previousEpochObservedJustifiedCheckpoint: this.fcStore.previousEpochObservedJustifiedCheckpoint,
-      currentEpochObservedJustifiedCheckpoint: this.fcStore.currentEpochObservedJustifiedCheckpoint,
-      previousEpochGreatestUnrealizedCheckpoint: this.fcStore.previousEpochGreatestUnrealizedCheckpoint,
-      previousSlotHead: this.fcStore.previousSlotHead,
-      currentSlotHead: this.fcStore.currentSlotHead,
+      previousEpochObservedJustifiedCheckpoint: toCheckpointWithHex(fcr.previousEpochObservedJustifiedCheckpoint),
+      currentEpochObservedJustifiedCheckpoint: toCheckpointWithHex(fcr.currentEpochObservedJustifiedCheckpoint),
+      previousEpochGreatestUnrealizedCheckpoint: toCheckpointWithHex(fcr.previousEpochGreatestUnrealizedCheckpoint),
+      previousSlotHead: toRootHex(fcr.previousSlotHead),
+      currentSlotHead: toRootHex(fcr.currentSlotHead),
     };
   }
 
@@ -412,7 +423,7 @@ export class NativeForkChoice implements IForkChoice {
   }
 
   private toggleFastConfirmation(paused: boolean): void {
-    if (!this.fastConfirmationRule || paused === this.fastConfirmationPaused) return;
+    if (!this.fastConfirmation || paused === this.fastConfirmationPaused) return;
     this.fastConfirmationPaused = paused;
     if (paused) {
       this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
@@ -440,9 +451,7 @@ export class NativeForkChoice implements IForkChoice {
 
   /** Returns whether it recomputed the head */
   private runFastConfirmation(): boolean {
-    const fastConfirmationRule = this.fastConfirmationRule;
-    const fastConfirmationContext = this.fastConfirmationContext;
-    if (!fastConfirmationRule || !fastConfirmationContext) return false;
+    if (!this.fastConfirmation) return false;
 
     if (this.fastConfirmationPaused) {
       this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
@@ -456,8 +465,13 @@ export class NativeForkChoice implements IForkChoice {
           this.metrics?.fastConfirmation.stepsDuration.startTimer({step: FastConfirmationSteps.updateHead}),
           () => this.updateHead()
         );
-        const result = fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(fastConfirmationContext);
-        this.fcStore.confirmedRoot = result.confirmedRoot;
+        const previousConfirmedRoot = this.fcStore.confirmedRoot;
+        withObservedDuration(
+          this.metrics?.fastConfirmation.stepsDuration.startTimer({step: FastConfirmationSteps.runRules}),
+          () => this.store.onFastConfirmation()
+        );
+        this.fcStore.confirmedRoot = toRootHex(this.store.confirmedRoot);
+        this.updateFastConfirmationMetrics(previousConfirmedRoot);
       } catch (err) {
         const previousConfirmedRoot = this.fcStore.confirmedRoot;
         const finalizedRoot = this.fcStore.finalizedCheckpoint.rootHex;
@@ -488,56 +502,25 @@ export class NativeForkChoice implements IForkChoice {
     return true;
   }
 
-  private createFastConfirmationContext(): FastConfirmationContext {
-    const confirmationByzantineThreshold = this.config.CONFIRMATION_BYZANTINE_THRESHOLD;
-    if (!confirmationByzantineThreshold) {
-      throw new Error("CONFIRMATION_BYZANTINE_THRESHOLD must be set to use fast confirmation");
+  private updateFastConfirmationMetrics(previousConfirmedRoot: RootHex): void {
+    const metrics = this.metrics?.fastConfirmation;
+    if (!metrics) return;
+    const confirmedRoot = this.fcStore.confirmedRoot;
+    const confirmedBlock = this.getBlockHexDefaultStatus(confirmedRoot);
+    if (confirmedBlock !== null) {
+      metrics.confirmedEpoch.set(computeEpochAtSlot(confirmedBlock.slot));
+      metrics.slot.set(confirmedBlock.slot);
     }
-
-    return {
-      config: {
-        CONFIRMATION_BYZANTINE_THRESHOLD: confirmationByzantineThreshold,
-        PROPOSER_SCORE_BOOST: this.config.PROPOSER_SCORE_BOOST,
-      },
-      getCurrentSlot: () => this.fcStore.currentSlot,
-      getHead: () => this.head,
-      getBlock: (root: RootHex) => this.getBlockHexDefaultStatus(root),
-      getAncestor: (root: RootHex, slot: Slot) => this.getAncestor(root, slot).blockRoot,
-      isDescendant: (ancestor: RootHex, descendant: RootHex) => {
-        const ancestorBlock = this.getDefaultNode(ancestor);
-        const descendantBlock = this.getDefaultNode(descendant);
-        if (ancestorBlock === undefined || descendantBlock === undefined) return false;
-        return this.isDescendant(ancestor, ancestorBlock.payloadStatus, descendant, descendantBlock.payloadStatus);
-      },
-      getLatestMessage: (validatorIndex: ValidatorIndex) => {
-        const {slots, nodes} = this.getLatestMessages();
-        const node = validatorIndex < nodes.length ? this.nodes[nodes[validatorIndex]] : undefined;
-        if (node === undefined) return null;
-        return {
-          root: node.blockRoot,
-          payloadStatus: node.payloadStatus,
-          epoch: computeEpochAtSlot(slots[validatorIndex]),
-        };
-      },
-      getParentNodePayloadStatus: (blockRoot: RootHex) => {
-        const blockIndex = this.blockIndexByRoot.get(blockRoot);
-        const parentNode = blockIndex === undefined ? undefined : this.parentNodes[blockIndex];
-        return parentNode === undefined ? null : (this.nodes[parentNode]?.payloadStatus ?? null);
-      },
-      getUnrealizedJustified: () => ({
-        checkpoint: this.fcStore.unrealizedJustified.checkpoint,
-        balances: this.fcStore.unrealizedJustified.balances,
-      }),
-      getFinalizedCheckpoint: () => this.fcStore.finalizedCheckpoint,
-      getEquivocatingIndices: () => this.fcStore.equivocatingIndices,
-      getTrackedVotesCount: () => {
-        let count = 0;
-        for (const node of this.getLatestMessages().nodes) {
-          if (node !== NO_NODE) count++;
-        }
-        return count;
-      },
-    };
+    if (confirmedRoot !== previousConfirmedRoot) {
+      const previousBlock = this.getBlockHexDefaultStatus(previousConfirmedRoot);
+      if (previousBlock !== null && confirmedBlock !== null && confirmedBlock.slot < previousBlock.slot) {
+        metrics.resets.inc();
+      }
+      if (confirmedRoot === this.fcStore.finalizedCheckpoint.rootHex) {
+        metrics.fallbacks.inc();
+      }
+    }
+    metrics.votesTracked.set(this.store.voteCount);
   }
 
   // Checkpoints and time
@@ -661,6 +644,37 @@ export class NativeForkChoice implements IForkChoice {
       members.push(...state.getBeaconCommittee(slot, index));
     }
     return Uint32Array.from(members);
+  }
+
+  private provideCheckpointBalanceSource(epoch: number, root: Uint8Array): BalanceSource {
+    const checkpoint = toCheckpointWithHex({epoch, root: root.slice()});
+    const state = this.fcStore.stateGetter({checkpoint});
+    if (state) return balanceSourceOf(state);
+    // As the TypeScript rule does, fall back to the balances captured with the checkpoint
+    const balances = this.balancesOf(checkpoint);
+    const activeIndices: number[] = [];
+    for (let i = 0; i < balances.length; i++) {
+      if (balances[i] > 0) activeIndices.push(i);
+    }
+    return {
+      effectiveBalanceIncrements: balances,
+      zeroInactiveIncrements: balances,
+      activeIndices: Uint32Array.from(activeIndices),
+    };
+  }
+
+  private providePulledUpBalanceSource(root: Uint8Array, epoch: number): BalanceSource {
+    const blockRoot = toRootHex(root);
+    const block = this.getDefaultNode(blockRoot);
+    const headState = block === undefined ? null : this.fcStore.stateGetter({stateRoot: block.stateRoot});
+    if (!headState) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.BEACON_STATE_ERROR,
+        error: Error(`Missing state for fast confirmation, blockRoot=${blockRoot}`),
+      });
+    }
+    const state = headState.epoch < epoch ? headState.processSlots(computeStartSlotAtEpoch(epoch)) : headState;
+    return balanceSourceOf(state);
   }
 
   // Handlers
@@ -1504,7 +1518,6 @@ export class NativeForkChoice implements IForkChoice {
 
   private mutated(): void {
     this.scores = null;
-    this.latestMessages = null;
   }
 
   private getScores(): NativeScores {
@@ -1514,11 +1527,6 @@ export class NativeForkChoice implements IForkChoice {
       bestChildren: this.store.bestChildren(),
     };
     return this.scores;
-  }
-
-  private getLatestMessages(): {slots: Float64Array; nodes: Uint32Array} {
-    this.latestMessages ??= this.store.latestMessages();
-    return this.latestMessages;
   }
 
   private insertBlock(blockIndex: number, block: ProtoBlock): void {
@@ -1713,6 +1721,14 @@ export class NativeForkChoice implements IForkChoice {
         return e;
     }
   }
+}
+
+function balanceSourceOf(state: IBeaconStateView): BalanceSource {
+  return {
+    effectiveBalanceIncrements: state.effectiveBalanceIncrements,
+    zeroInactiveIncrements: state.getEffectiveBalanceIncrementsZeroInactive(),
+    activeIndices: state.getCurrentShuffling().activeIndices,
+  };
 }
 
 /** The Zig error name of a failed native call */

@@ -2,6 +2,7 @@ import {mainnetChainConfig, minimalChainConfig} from "@lodestar/config/configs";
 import {ACTIVE_PRESET, PresetName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
 import {
+  type BalanceSource,
   type BlockSummary,
   ExecutionStatus,
   ForkChoice,
@@ -225,5 +226,59 @@ describe("ForkChoice", () => {
           justifiedBalances: () => new Uint16Array(0),
         } as unknown as StateProvider)
     ).toThrow("InvalidProvider");
+  });
+
+  describe("fast confirmation", () => {
+    function balanceSource(): BalanceSource {
+      const increments = new Uint16Array(VALIDATOR_COUNT).fill(32);
+      return {
+        activeIndices: Uint32Array.from({length: VALIDATOR_COUNT}, (_, i) => i),
+        effectiveBalanceIncrements: increments,
+        zeroInactiveIncrements: increments,
+      };
+    }
+
+    it("is off unless the provider supplies balance sources", () => {
+      const forkChoice = createForkChoice();
+      expect(() => forkChoice.onFastConfirmation()).toThrow("FastConfirmationDisabled");
+      expect(() => forkChoice.confirmedRoot).toThrow("FastConfirmationDisabled");
+    });
+
+    it("confirms a block every validator voted for", () => {
+      const checkpoints: {epoch: number; root: Uint8Array}[] = [];
+      const forkChoice = createForkChoice({
+        checkpointBalanceSource: (epoch, checkpointRoot) => {
+          checkpoints.push({epoch, root: checkpointRoot.slice()});
+          return balanceSource();
+        },
+        pulledUpBalanceSource: () => balanceSource(),
+      });
+      expect(forkChoice.confirmedRoot).toEqual(ANCHOR);
+      expect(forkChoice.fastConfirmationStore().currentEpochObservedJustifiedCheckpoint).toEqual(anchorCheckpoint);
+
+      forkChoice.onTick(forkChoice.timeAtSlotMs(1));
+      forkChoice.onBlock(summary(2, ANCHOR, 1));
+      const everyone = Uint32Array.from({length: VALIDATOR_COUNT}, (_, i) => i);
+      forkChoice.onAttestation(1, 0, root(2), 0, ANCHOR, everyone, false);
+      forkChoice.onTick(forkChoice.timeAtSlotMs(2));
+      forkChoice.onFastConfirmation();
+
+      const store = forkChoice.fastConfirmationStore();
+      expect(store.currentSlotHead).toEqual(root(2));
+      expect(store.previousSlotHead).toEqual(ANCHOR);
+      expect(forkChoice.confirmedRoot).toEqual(root(2));
+      expect(checkpoints).toEqual([anchorCheckpoint]);
+    });
+
+    it("rejects a balance source with an active index past the validators", () => {
+      const forkChoice = createForkChoice({
+        checkpointBalanceSource: () => ({...balanceSource(), activeIndices: Uint32Array.from([VALIDATOR_COUNT])}),
+        pulledUpBalanceSource: () => balanceSource(),
+      });
+      forkChoice.onTick(forkChoice.timeAtSlotMs(1));
+      forkChoice.onBlock(summary(2, ANCHOR, 1));
+      forkChoice.onTick(forkChoice.timeAtSlotMs(2));
+      expect(() => forkChoice.onFastConfirmation()).toThrow("InvalidActiveIndex");
+    });
   });
 });

@@ -267,8 +267,10 @@ instead of proto-array. Three layers:
 
 - `bindings/napi/ForkChoice.zig` exposes the store as the `ForkChoice` class of
   `@lodestar/native/fork-choice`. Blocks are addressed by block index and nodes by node
-  id (`block * 3 + status`); roots cross as 32-byte arrays. The `StateProvider` is two
-  JavaScript callbacks that run synchronously inside the call that needs them.
+  id (`block * 3 + status`); roots cross as 32-byte arrays. The `StateProvider` is
+  JavaScript callbacks that run synchronously inside the call that needs them; with
+  `--chain.fastConfirmation` it also returns balance sources, which turns the native
+  fast confirmation rule on.
 - `NativeForkChoice` in `packages/fork-choice` implements `IForkChoice` on that class. It
   keeps one `ProtoBlock` per node id for the rest of the node to read and mirrors the
   store's checkpoints into `ForkChoiceStore`, whose setters emit the chain events.
@@ -278,6 +280,7 @@ Run the consensus vectors through the whole beacon node on the store with:
 
 ```
 LODESTAR_NATIVE_FORK_CHOICE=true pnpm vitest run --project spec-minimal test/spec/presets/fork_choice.test.ts
+LODESTAR_NATIVE_FORK_CHOICE=true pnpm vitest run --project spec-minimal test/spec/presets/fast_confirmation.test.ts
 ```
 
 Behaviour that differs from proto-array under the flag:
@@ -294,8 +297,11 @@ Behaviour that differs from proto-array under the flag:
   zeroed, which is all the beacon node's balances cache keeps. `is_head_weak` therefore
   adds nothing back for an equivocating committee member that is slashed or inactive in
   the justified state, where the spec adds its effective balance.
-- The fast confirmation rule is the TypeScript one, reading votes through
-  `latestMessages`.
+- The fast confirmation rule is the native one. A balance source comes from the
+  checkpoint state when the state cache has it, else from the balances captured with
+  the checkpoint, as the TypeScript rule does. The metrics that need the rule's
+  reasons, `reorgs` and `restarts`, stay at zero; resets and fallbacks are read from
+  how the confirmed block moved.
 
 ## Deviations from the spec
 
@@ -388,7 +394,6 @@ On macOS 27 with Zig 0.16 the C++-linking test targets need
 2. Done: execution status per payload and `onPayloadInvalid` (see Optimistic sync).
 3. Done: votes for a slot not yet past are queued in the store and applied on tick.
 4. Done: the fast confirmation rule (see Fast confirmation).
-   `should_override_forkchoice_update` is omitted on purpose (see Deviations). Lodestar
-   still runs the TypeScript rule on top of the store (see Lodestar integration).
+   `should_override_forkchoice_update` is omitted on purpose (see Deviations).
 5. Done: the store runs in Lodestar behind `--chain.nativeForkChoice` (see Lodestar
    integration). It decides; there is no shadow mode comparing it against proto-array.

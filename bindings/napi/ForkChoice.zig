@@ -5,8 +5,8 @@
 //! with the spec's status values (`empty = 0`, `full = 1`, `pending = 2`). Both are
 //! stable until `prune`, which returns how the block indices moved.
 //!
-//! Beacon states stay in JavaScript: the two `provider` callbacks answer from them and
-//! run synchronously inside whichever call needs them, so they must not throw for a
+//! Beacon states stay in JavaScript: the `provider` callbacks answer from them and run
+//! synchronously inside whichever call needs them, so they must not throw for a
 //! checkpoint or block the store was just told about.
 
 const std = @import("std");
@@ -27,6 +27,7 @@ const Checkpoint = fork_choice.Checkpoint;
 const AttestationData = fork_choice.store.AttestationData;
 const BlockSummary = fork_choice.store.BlockSummary;
 const ExecutionStatus = fork_choice.ExecutionStatus;
+const FastConfirmation = fork_choice.FastConfirmation;
 const BeaconConfig = @import("./BeaconConfig.zig");
 const OwnedConfigRc = BeaconConfig.OwnedConfigRc;
 const js_types = @import("./js_types.zig");
@@ -42,6 +43,7 @@ pub const js_meta = js.class(.{ .properties = .{
     .voteChangesTotal = js.prop(.{ .get = true, .set = false }),
     .proposerBoostRoot = js.prop(.{ .get = true, .set = false }),
     .justifiedTotalBalance = js.prop(.{ .get = true, .set = false }),
+    .confirmedRoot = js.prop(.{ .get = true, .set = false }),
 } });
 
 const allocator = std.heap.c_allocator;
@@ -55,6 +57,9 @@ const Inner = struct {
     config_rc: *OwnedConfigRc,
     justified_balances: napi.Ref,
     slot_committee_members: napi.Ref,
+    checkpoint_balance_source: ?napi.Ref,
+    pulled_up_balance_source: ?napi.Ref,
+    fast_confirmation: ?FastConfirmation = null,
     indices: std.ArrayList(ValidatorIndex) = .empty,
     indices_2: std.ArrayList(ValidatorIndex) = .empty,
 };
@@ -67,6 +72,10 @@ const ForkChoice = @This();
 /// returns the effective balance increments of the checkpoint state with inactive and
 /// slashed validators zeroed; `provider.slotCommitteeMembers(root, slot)` returns the
 /// members of every beacon committee of `slot` in the state of block `root`.
+/// A provider that also has `checkpointBalanceSource(epoch, root)` and
+/// `pulledUpBalanceSource(root, epoch)` turns on the fast confirmation rule; both return
+/// `{effectiveBalanceIncrements, zeroInactiveIncrements, activeIndices}` of the state
+/// at the checkpoint, or of block `root`'s state advanced to the start of `epoch`.
 pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Value, provider: js.Value) !ForkChoice {
     const env = js.env();
     const provider_value = provider.toValue();
@@ -74,6 +83,11 @@ pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Val
     errdefer justified_balances.delete() catch {};
     const slot_committee_members = try functionRef(env, provider_value, "slotCommitteeMembers");
     errdefer slot_committee_members.delete() catch {};
+    const fast_confirmation = try isPresent(try provider_value.getNamedProperty("checkpointBalanceSource"));
+    const checkpoint_balance_source = if (fast_confirmation) try functionRef(env, provider_value, "checkpointBalanceSource") else null;
+    errdefer if (checkpoint_balance_source) |ref| ref.delete() catch {};
+    const pulled_up_balance_source = if (fast_confirmation) try functionRef(env, provider_value, "pulledUpBalanceSource") else null;
+    errdefer if (pulled_up_balance_source) |ref| ref.delete() catch {};
 
     const config_rc = config.config_rc.ref();
     errdefer config_rc.unref();
@@ -88,8 +102,11 @@ pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Val
         .config_rc = config_rc,
         .justified_balances = justified_balances,
         .slot_committee_members = slot_committee_members,
+        .checkpoint_balance_source = checkpoint_balance_source,
+        .pulled_up_balance_source = pulled_up_balance_source,
     };
     inner.store = try Store.initFromSummary(allocator, beacon_config, genesis, summary, .{ .ctx = inner, .vtable = &provider_vtable });
+    if (fast_confirmation) inner.fast_confirmation = .init(&inner.store);
     return .{ .inner = inner };
 }
 
@@ -100,6 +117,8 @@ pub fn deinit(self: *ForkChoice) void {
     inner.indices_2.deinit(allocator);
     inner.justified_balances.delete() catch {};
     inner.slot_committee_members.delete() catch {};
+    if (inner.checkpoint_balance_source) |ref| ref.delete() catch {};
+    if (inner.pulled_up_balance_source) |ref| ref.delete() catch {};
     inner.config_rc.unref();
     allocator.destroy(inner);
 }
@@ -113,6 +132,8 @@ fn functionRef(env: napi.Env, object: napi.Value, comptime name: [:0]const u8) !
 const provider_vtable: fork_choice.StateProvider.VTable = .{
     .justifiedBalances = providerJustifiedBalances,
     .slotCommitteeMembers = providerSlotCommitteeMembers,
+    .checkpointBalanceSource = providerCheckpointBalanceSource,
+    .pulledUpBalanceSource = providerPulledUpBalanceSource,
 };
 
 fn providerJustifiedBalances(ctx: *anyopaque, gpa: std.mem.Allocator, checkpoint: Checkpoint) anyerror!fork_choice.JustifiedBalances {
@@ -145,6 +166,56 @@ fn providerSlotCommitteeMembers(ctx: *anyopaque, gpa: std.mem.Allocator, root: R
     if (members.len > max_attesting_indices) return error.TooManyCommitteeMembers;
     try out.ensureUnusedCapacity(gpa, members.len);
     for (members) |member| out.appendAssumeCapacity(member);
+}
+
+fn providerCheckpointBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, checkpoint: Checkpoint) anyerror!fork_choice.BalanceSource {
+    const inner: *Inner = @ptrCast(@alignCast(ctx));
+    const ref = inner.checkpoint_balance_source orelse return error.FastConfirmationUnsupported;
+    const env = js.env();
+    const result = try env.callFunction(try ref.getValue(), try env.getUndefined(), .{
+        try env.createDouble(@floatFromInt(checkpoint.epoch)),
+        js.Uint8Array.from(&checkpoint.root).toValue(),
+    });
+    return balanceSource(gpa, result);
+}
+
+fn providerPulledUpBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, root: Root, epoch: fork_choice.store.Epoch) anyerror!fork_choice.BalanceSource {
+    const inner: *Inner = @ptrCast(@alignCast(ctx));
+    const ref = inner.pulled_up_balance_source orelse return error.FastConfirmationUnsupported;
+    const env = js.env();
+    const result = try env.callFunction(try ref.getValue(), try env.getUndefined(), .{
+        js.Uint8Array.from(&root).toValue(),
+        try env.createDouble(@floatFromInt(epoch)),
+    });
+    return balanceSource(gpa, result);
+}
+
+/// A state's validators as the fast confirmation rule reads them. `zeroInactiveIncrements`
+/// has one entry per validator with inactive and slashed validators zeroed, so an active
+/// validator it zeroes despite a nonzero balance is slashed.
+fn balanceSource(gpa: std.mem.Allocator, object: napi.Value) !fork_choice.BalanceSource {
+    const increments = try typedArraySlice(js.Uint16Array, u16, try object.getNamedProperty("effectiveBalanceIncrements"));
+    const zero_inactive = try typedArraySlice(js.Uint16Array, u16, try object.getNamedProperty("zeroInactiveIncrements"));
+    const active_indices = try typedArraySlice(js.Uint32Array, u32, try object.getNamedProperty("activeIndices"));
+    const validator_count = zero_inactive.len;
+    if (increments.len < validator_count or active_indices.len > validator_count) return error.InvalidBalanceSource;
+    const owned = try gpa.dupe(u16, increments[0..validator_count]);
+    errdefer gpa.free(owned);
+    var active = try std.DynamicBitSetUnmanaged.initEmpty(gpa, validator_count);
+    errdefer active.deinit(gpa);
+    var slashed = try std.DynamicBitSetUnmanaged.initEmpty(gpa, validator_count);
+    errdefer slashed.deinit(gpa);
+    for (active_indices) |index| {
+        if (index >= validator_count) return error.InvalidActiveIndex;
+        active.set(index);
+        if (zero_inactive[index] == 0 and owned[index] > 0) slashed.set(index);
+    }
+    return .{ .effective_balance_increments = owned, .active = active, .slashed = slashed };
+}
+
+fn typedArraySlice(comptime T: type, comptime Element: type, value: napi.Value) ![]Element {
+    try T.validateArg(value);
+    return js_types.wrap(T, value).toSlice();
 }
 
 // --- argument conversion ----------------------------------------------------------
@@ -513,6 +584,38 @@ pub fn proposerBoostRoot(self: *ForkChoice) js.Uint8Array {
 /// Total active unslashed balance of the justified state in Gwei.
 pub fn justifiedTotalBalance(self: *ForkChoice) js.BigInt {
     return js.BigInt.from(self.inner.store.justified_total_balance);
+}
+
+// --- fast confirmation --------------------------------------------------------------
+
+fn fastConfirmation(self: *ForkChoice) !*FastConfirmation {
+    if (self.inner.fast_confirmation) |*fcr| return fcr;
+    return error.FastConfirmationDisabled;
+}
+
+/// Spec `on_fast_confirmation`: once per slot, after the tick that applies the past
+/// slots' votes.
+pub fn onFastConfirmation(self: *ForkChoice) !void {
+    try (try self.fastConfirmation()).onFastConfirmation(&self.inner.store);
+}
+
+/// Spec `fcr_store.confirmed_root`.
+pub fn confirmedRoot(self: *ForkChoice) !js.Uint8Array {
+    return js.Uint8Array.from(&(try self.fastConfirmation()).confirmed_root);
+}
+
+/// The spec `FastConfirmationStore` fields, checkpoints as `{epoch, root}`.
+pub fn fastConfirmationStore(self: *ForkChoice) !js.Value {
+    const env = js.env();
+    const fcr = try self.fastConfirmation();
+    const object = try env.createObject();
+    try object.setNamedProperty("confirmedRoot", js.Uint8Array.from(&fcr.confirmed_root).toValue());
+    try object.setNamedProperty("previousEpochObservedJustifiedCheckpoint", try sszValueToNapiValue(env, ct.phase0.Checkpoint, &fcr.previous_epoch_observed_justified_checkpoint));
+    try object.setNamedProperty("currentEpochObservedJustifiedCheckpoint", try sszValueToNapiValue(env, ct.phase0.Checkpoint, &fcr.current_epoch_observed_justified_checkpoint));
+    try object.setNamedProperty("previousEpochGreatestUnrealizedCheckpoint", try sszValueToNapiValue(env, ct.phase0.Checkpoint, &fcr.previous_epoch_greatest_unrealized_checkpoint));
+    try object.setNamedProperty("previousSlotHead", js.Uint8Array.from(&fcr.previous_slot_head).toValue());
+    try object.setNamedProperty("currentSlotHead", js.Uint8Array.from(&fcr.current_slot_head).toValue());
+    return js_types.wrap(js.Value, object);
 }
 
 /// The store's four checkpoints as `{epoch, root}`.
