@@ -761,6 +761,35 @@ test "optimistic sync: a payload verdict applies to every block carrying it" {
     try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x31)));
 }
 
+test "payload decisions: a Heze payload failing its inclusion list loses its own slot to EMPTY" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 0,
+        .HEZE_FORK_EPOCH = 0,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .heze }), Provider.stateProvider());
+    defer store.deinit();
+    try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, true);
+    try store.onTick(store.timing.timeAtSlotMs(1));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .heze, .bid_parent = 1 }));
+    const block = store.blockIndex(tagRoot(0x20)).?;
+
+    try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, false);
+    try testing.expect(!store.isPayloadInclusionListSatisfied(block));
+    try testing.expectEqual(store_mod.ForkChoiceNode{ .block = block, .payload_status = .empty }, try store.getHead());
+
+    try testing.expect(store.recordInclusionListSatisfaction(block, true));
+    try testing.expectEqual(fullOf(&store, 0x20), try store.getHead());
+}
+
 test "payload decisions: before Heze a delivered payload satisfies its inclusion list" {
     const allocator = testing.allocator;
     const config_mod = @import("config");
