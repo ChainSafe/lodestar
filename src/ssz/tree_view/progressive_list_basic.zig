@@ -162,7 +162,8 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
                         ST.Element.tree.fromValuePackedIntoChunk,
                     );
                 } else {
-                    // Growth can address a new subtree before commit installs its zero scaffold.
+                    // A subtree added by uncommitted growth is not in the tree yet, so seed its
+                    // leaf before staging looks it up.
                     try self.state.children_nodes.put(self.allocator, gindex, node);
                     try self.state.editChunkedLeaf(
                         gindex,
@@ -221,8 +222,9 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
 
             const zero_chunks: [ChunkedLeaf.K][32]u8 align(64) = @splat(@splat(0));
 
-            // Every subtree from the first folded one holds a multiple of K chunks, so their
-            // chunked leaves form one evenly spaced sequence. Earlier chunks go through the view.
+            // Folded subtrees are contiguous and each spans a multiple of K chunks, so chunked leaf
+            // i starts at chunk first_folded_chunk + i * K. Earlier chunks are unfolded and go
+            // through the view.
             const first_folded_chunk = blk: {
                 var subtree_index: usize = 0;
                 while (foldedDepth(subtree_index) == 0) : (subtree_index += 1) {}
@@ -287,7 +289,8 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
             fn stage(self: *Editor, leaf_index: usize) !*align(64) [ChunkedLeaf.K][32]u8 {
                 const position = leafPosition(leaf_index);
                 const state = &self.view.state;
-                // Growth can address a new subtree before commit installs its zero scaffold.
+                // A subtree added by uncommitted growth is not in the tree yet, so seed its
+                // leaf before staging looks it up.
                 try state.children_nodes.put(
                     self.view.allocator,
                     position.gindex,
@@ -298,7 +301,7 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
                     chunkCount(self.len) - position.first_chunk,
                 ));
                 const chunks = try state.stageChunkedLeaf(position.gindex, valid_chunks);
-                // Staging replaces the leaf's node, which the view may have cached.
+                // Staging can replace the leaf's node, which the view may have cached.
                 self.view.cached_leaf = null;
                 self.leaves[leaf_index] = .{ .writable = chunks };
                 return chunks;

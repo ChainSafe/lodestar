@@ -618,7 +618,8 @@ test "ProgressiveListBasicTreeView editor should match get and set across unfold
     inline for (.{ ssz.UintType(8), ssz.UintType(64) }) |Element| {
         const ST = ssz.FixedProgressiveListType(Element, .{ .chunked_leaf = true });
         const per_chunk = 32 / Element.fixed_size;
-        // Chunks 0..20 are unfolded; chunked leaves start at chunks 21, 85, 149, 213, 277, 341.
+        // Chunks 0..20 are unfolded; 64-chunk leaves start at 21, 85, 149, 213, 277, 341. The
+        // leaf at 341 is partial.
         const len = 342 * per_chunk + 1;
         var pool = try Node.Pool.init(.{ .allocator = allocator, .page_allocator = allocator, .pool_size = 4096 });
         defer pool.deinit();
@@ -630,21 +631,22 @@ test "ProgressiveListBasicTreeView editor should match get and set across unfold
             const view = try ST.TreeView.fromValue(allocator, &pool, &value);
             defer view.deinit();
 
-            // One leaf is staged through the view before the editor starts.
-            const staged = 85 * per_chunk;
-            try view.set(staged, 200);
-            value.items[staged] = 200;
+            // The leaf at chunk 85 already has a pending view write; the editor must read it and
+            // keep it when writing the same leaf.
+            const pending = 85 * per_chunk;
+            try view.set(pending, 200);
+            value.items[pending] = 200;
             {
                 var editor = try view.editor();
                 defer editor.deinit();
-                try std.testing.expectEqual(@as(Element.Type, 200), try editor.get(staged));
+                try std.testing.expectEqual(@as(Element.Type, 200), try editor.get(pending));
                 const writes = [_]usize{
                     0,
                     20 * per_chunk,
                     21 * per_chunk - 1,
                     21 * per_chunk,
                     85 * per_chunk - 1,
-                    staged + 1,
+                    pending + 1,
                     149 * per_chunk + 1,
                     341 * per_chunk,
                     len - 1,
@@ -662,7 +664,7 @@ test "ProgressiveListBasicTreeView editor should match get and set across unfold
                 try std.testing.expectError(error.IndexOutOfBounds, editor.set(len, 1));
             }
 
-            // The view caches a leaf that the editor then replaces.
+            // view.get caches the leaf at chunk 213; an editor write to it must drop that cache.
             const cached = 213 * per_chunk;
             try std.testing.expectEqual(value.items[cached], try view.get(cached));
             {
@@ -697,15 +699,19 @@ test "ProgressiveListBasicTreeView editor should write a subtree added by pendin
             try std.testing.expectError(error.IndexOutOfBounds, editor.get(40));
         }
 
-        const grown = 90 * 32;
+        const per_chunk = 32 / ST.Element.fixed_size;
+        // 90 chunks: growth adds the folded subtrees at chunks 21 and 85, and the list ends
+        // 5 chunks into the second.
+        const grown = 90 * per_chunk;
         try view.growTo(grown);
         try value.appendNTimes(allocator, 0, grown - 40);
+        // The editor must not commit the pending growth.
         const root = view.getRoot();
         {
             var editor = try view.editor();
             defer editor.deinit();
             try std.testing.expectEqual(@as(u8, 0), try editor.get(grown - 1));
-            for ([_]usize{ 21 * 32, 85 * 32, grown - 1 }) |index| {
+            for ([_]usize{ 21 * per_chunk, 85 * per_chunk, grown - 1 }) |index| {
                 try editor.set(index, 9);
                 value.items[index] = 9;
             }
