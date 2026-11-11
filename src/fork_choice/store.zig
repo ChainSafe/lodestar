@@ -685,7 +685,7 @@ pub const Store = struct {
 
         const head = try self.getHead();
         const parent_node: ForkChoiceNode = .{ .block = parent, .payload_status = self.parentPayloadStatus(&summary, parent) };
-        if (self.head_cache.execution.items[head_mod.nodeId(parent_node)] == .invalid) return error.ParentPayloadInvalid;
+        if (self.head_cache.nodes.items(.execution)[head_mod.nodeId(parent_node)] == .invalid) return error.ParentPayloadInvalid;
 
         const index: BlockIndex = @intCast(self.blocks.len);
         try self.appendBlock(.{
@@ -1085,7 +1085,7 @@ pub const Store = struct {
     /// The worst engine verdict on the payloads `node` stands on, valid after `getHead`.
     pub fn executionStatus(self: *Store, node: ForkChoiceNode) !ExecutionStatus {
         try head_mod.ensureComputed(self);
-        return self.head_cache.execution.items[head_mod.nodeId(node)];
+        return self.head_cache.nodes.items(.execution)[head_mod.nodeId(node)];
     }
 
     /// Spec `is_optimistic`: some payload below `node` is still `NOT_VALIDATED`.
@@ -1177,7 +1177,7 @@ pub const Store = struct {
         self.votes.remap(remap, kept);
         if (parents[finalized] != NO_BLOCK) {
             const hung_from: ForkChoiceNode = .{ .block = parents[finalized], .payload_status = self.blocks.items(.parent_payload_status)[finalized] };
-            self.root_base_status = self.head_cache.execution.items[head_mod.nodeId(hung_from)];
+            self.root_base_status = self.head_cache.nodes.items(.execution)[head_mod.nodeId(hung_from)];
         }
         for (0..n) |i| {
             const target = remap[i];

@@ -40,7 +40,8 @@ const NodeFlags = packed struct(u8) {
     viable: bool = false,
     has_children: bool = false,
     any_viable_child: bool = false,
-    /// Set only when the boost applies, so `weight` adds the score without asking again.
+    /// Set only when the boost applies (`should_apply_proposer_boost` and the boosted block
+    /// not derived invalid), so `weight` need not recheck it.
     on_boost_chain: bool = false,
     /// On `pending` nodes: spec `get_checkpoint_block(store, root, finalized.epoch)` is
     /// the finalized root.
@@ -54,23 +55,25 @@ pub const ViableHead = struct {
     weight: u64,
 };
 
+const Node = struct {
+    /// Spec `get_attestation_score`, in Gwei.
+    weight: u64,
+    flags: NodeFlags,
+    /// The worst engine verdict on the payloads the node stands on.
+    execution: ExecutionStatus,
+    best_child: u32,
+};
+
 pub const Cache = struct {
     dirty: bool = true,
-    /// Spec `get_attestation_score` per node, in Gwei.
-    weight: std.ArrayList(u64) = .empty,
-    flags: std.ArrayList(NodeFlags) = .empty,
-    /// Per node: the worst engine verdict on the payloads the node stands on.
-    execution: std.ArrayList(ExecutionStatus) = .empty,
-    best_child: std.ArrayList(u32) = .empty,
+    /// Indexed by node id; `compute` rewrites every field.
+    nodes: std.MultiArrayList(Node) = .empty,
     head: ForkChoiceNode = .{ .block = 0, .payload_status = .pending },
 
     pub const empty: Cache = .{};
 
     pub fn deinit(self: *Cache, allocator: Allocator) void {
-        self.weight.deinit(allocator);
-        self.flags.deinit(allocator);
-        self.execution.deinit(allocator);
-        self.best_child.deinit(allocator);
+        self.nodes.deinit(allocator);
         self.* = .empty;
     }
 };
@@ -93,23 +96,22 @@ fn compute(store: *Store) !void {
     const cache = &store.head_cache;
     const n: usize = store.blocks.len;
     const node_count = n * 3;
-    try cache.weight.resize(allocator, node_count);
-    try cache.flags.resize(allocator, node_count);
-    try cache.execution.resize(allocator, node_count);
-    try cache.best_child.resize(allocator, node_count);
+    try cache.nodes.resize(allocator, node_count);
     try store.votes.update(allocator, node_count);
-    @memcpy(cache.weight.items, store.votes.vote_weight.items);
-    @memset(cache.flags.items, .{});
-    @memset(cache.best_child.items, NO_NODE);
+    const nodes = cache.nodes.slice();
+    const weight_col = nodes.items(.weight);
+    const flags = nodes.items(.flags);
+    const exec = nodes.items(.execution);
+    const best_child = nodes.items(.best_child);
+    @memcpy(weight_col, store.votes.vote_weight.items);
+    @memset(flags, .{});
+    @memset(best_child, NO_NODE);
 
     const slots = store.blocks.items(.slot);
     const parents = store.blocks.items(.parent);
     const forks = store.blocks.items(.fork);
     const parent_statuses = store.blocks.items(.parent_payload_status);
     const payload_verified = store.blocks.items(.payload_verified);
-    const weight_col = cache.weight.items;
-    const flags = cache.flags.items;
-    const exec = cache.execution.items;
     const current_epoch = store.currentEpoch();
 
     const own_status = store.blocks.items(.execution_status);
@@ -222,8 +224,8 @@ fn compute(store: *Store) !void {
     if (forks[justified].gte(.gloas) and !flags[nodeId(head)].viable) {
         head = .{ .block = justified, .payload_status = .empty };
     } else {
-        while (cache.best_child.items[nodeId(head)] != NO_NODE) {
-            head = nodeAt(cache.best_child.items[nodeId(head)]);
+        while (best_child[nodeId(head)] != NO_NODE) {
+            head = nodeAt(best_child[nodeId(head)]);
         }
     }
     cache.head = head;
@@ -255,10 +257,10 @@ fn leafViable(store: *const Store, block: BlockIndex, current_epoch: Epoch, fina
 }
 
 fn offerChild(store: *Store, parent_id: u32, child: ForkChoiceNode) !void {
-    const cache = &store.head_cache;
-    const current = cache.best_child.items[parent_id];
+    const best_child = store.head_cache.nodes.items(.best_child);
+    const current = best_child[parent_id];
     if (current == NO_NODE or try childGreater(store, child, nodeAt(current))) {
-        cache.best_child.items[parent_id] = nodeId(child);
+        best_child[parent_id] = nodeId(child);
     }
 }
 
@@ -278,16 +280,16 @@ fn childGreater(store: *Store, a: ForkChoiceNode, b: ForkChoiceNode) !bool {
 /// Spec `get_weight`, valid after `ensureComputed`.
 pub fn weight(store: *const Store, node: ForkChoiceNode) u64 {
     if (store.isPreviousSlotPayloadDecision(node)) return 0;
-    const cache = &store.head_cache;
+    const nodes = store.head_cache.nodes.slice();
     const id = nodeId(node);
-    var total = cache.weight.items[id];
-    if (cache.flags.items[id].on_boost_chain) total += store.proposerScore();
+    var total = nodes.items(.weight)[id];
+    if (nodes.items(.flags)[id].on_boost_chain) total += store.proposerScore();
     return total;
 }
 
 /// Spec `get_attestation_score`, valid after `ensureComputed`.
 pub fn attestationScore(store: *const Store, node: ForkChoiceNode) u64 {
-    return store.head_cache.weight.items[nodeId(node)];
+    return store.head_cache.nodes.items(.weight)[nodeId(node)];
 }
 
 /// Spec `get_payload_status_tiebreaker`.
@@ -358,7 +360,7 @@ pub fn viableHeads(store: *Store, allocator: Allocator) ![]ViableHead {
     for (0..n) |i| {
         in_subtree[i] = i == justified or (parents[i] != NO_BLOCK and in_subtree[parents[i]]);
     }
-    const flags = store.head_cache.flags.items;
+    const flags = store.head_cache.nodes.items(.flags);
     const roots = store.blocks.items(.root);
     for (flags, 0..) |flag, id| {
         const node = nodeAt(@intCast(id));
