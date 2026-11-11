@@ -1,6 +1,7 @@
 import {MIN_ATTESTATION_INCLUSION_DELAY} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
+import {Metrics} from "../metrics/metrics.js";
 
 /**
  * Track upcoming block proposals of validators connected to this node, and the vote slots those blocks can include,
@@ -17,7 +18,17 @@ export class ProposerTracker {
    * @param ignoreProposalDuty dev only, collect every vote slot a block at the clock slot can include regardless of
    * local proposals
    */
-  constructor(private readonly ignoreProposalDuty = false) {}
+  constructor(
+    private readonly ignoreProposalDuty = false,
+    metrics: Metrics | null = null
+  ) {
+    metrics?.proposerTracker.proposalSlots.addCollect(() =>
+      metrics.proposerTracker.proposalSlots.set(this.proposalSlots.size)
+    );
+    metrics?.proposerTracker.collectableSlot.addCollect(() =>
+      metrics.proposerTracker.collectableSlot.set(this.shouldCollect(this.clockSlot) ? 1 : 0)
+    );
+  }
 
   /**
    * Idempotent, a known proposal is ignored

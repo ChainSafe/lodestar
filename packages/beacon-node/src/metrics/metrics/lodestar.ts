@@ -1361,6 +1361,11 @@ export function createLodestarMetrics(
             help: "Number of attesters newly included only thanks to single attestations per produced block",
             buckets: [0, 1, 5, 10, 25, 50, 100, 250, 500, 1000, 1024],
           }),
+          singlesNewSeenAttestersByInclusionDistance: register.gauge<{inclusionDistance: number}>({
+            name: "lodestar_oppool_packed_attestations_singles_new_seen_attesters_by_inclusion_distance",
+            help: "Number of attesters newly included only thanks to single attestations in the last produced block, by inclusion distance",
+            labelNames: ["inclusionDistance"],
+          }),
           singlesNewSeenEffectiveBalance: register.histogram({
             name: "lodestar_oppool_packed_attestations_singles_new_seen_effective_balance",
             help: "Effective balance increments of attesters newly included only thanks to single attestations per produced block",
@@ -1544,6 +1549,17 @@ export function createLodestarMetrics(
           buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.5],
         }),
       },
+    },
+
+    proposerTracker: {
+      proposalSlots: register.gauge({
+        name: "lodestar_proposer_tracker_proposal_slots",
+        help: "Current number of upcoming block proposals of connected validators tracked by the ProposerTracker",
+      }),
+      collectableSlot: register.gauge({
+        name: "lodestar_proposer_tracker_collectable_slot",
+        help: "1 if single attestations of the clock slot are collected for an upcoming local proposal, 0 otherwise",
+      }),
     },
 
     chain: {

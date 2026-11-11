@@ -273,6 +273,9 @@ export class AggregatedAttestationPool {
     let scannedSlots = 0;
     let stopReason: ScannedSlotsTerminationReason | null = null;
     const missingShufflingCommitteesByEpoch = new Map<Epoch, number>();
+    // reset so that inclusion distances not scanned for this block do not keep values of a previous block
+    this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.returnedAttestations.reset();
+    this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.scannedAttestations.reset();
     slot: for (const slot of slots) {
       // a slot may only have single attestations, e.g. votes for a minority head that nobody aggregated
       const attestationGroupByIndexByDataHash =
@@ -479,6 +482,13 @@ export class AggregatedAttestationPool {
     const packedAttestationsMetrics = this.metrics?.opPool.aggregatedAttestationPool.packedAttestations;
     const packedAttestations: electra.Attestation[] = [];
     const packedConsolidations: AttestationsConsolidation[] = [];
+    // reset so that indexes beyond the packed attestations of this block do not keep values of a previous block
+    packedAttestationsMetrics?.committeeCount.reset();
+    packedAttestationsMetrics?.totalAttesters.reset();
+    packedAttestationsMetrics?.nonParticipation.reset();
+    packedAttestationsMetrics?.inclusionDistance.reset();
+    packedAttestationsMetrics?.newSeenAttesters.reset();
+    packedAttestationsMetrics?.totalEffectiveBalance.reset();
     for (const consolidation of sortedConsolidationsByScore) {
       if (packedAttestations.length >= MAX_ATTESTATIONS_ELECTRA) {
         break;
@@ -517,11 +527,20 @@ export class AggregatedAttestationPool {
     let singlesNewSeenEffectiveBalance = 0;
     let singlesOnlyConsolidations = 0;
     let singlesCommittees = 0;
+    const singlesNewSeenAttestersByInclusionDistance = new Map<number, number>();
     for (const consolidation of packedConsolidations) {
       totalValue += consolidation.totalNewSeenEffectiveBalance * consolidation.weight;
       singlesValue += consolidation.singlesNewSeenEffectiveBalance * consolidation.weight;
       newSeenAttesters += consolidation.newSeenAttesters;
       singlesNewSeenAttesters += consolidation.singlesNewSeenAttesters;
+      if (consolidation.singlesNewSeenAttesters > 0) {
+        const inclusionDistance = stateSlot - consolidation.attData.slot;
+        singlesNewSeenAttestersByInclusionDistance.set(
+          inclusionDistance,
+          (singlesNewSeenAttestersByInclusionDistance.get(inclusionDistance) ?? 0) +
+            consolidation.singlesNewSeenAttesters
+        );
+      }
       singlesNewSeenEffectiveBalance += consolidation.singlesNewSeenEffectiveBalance;
       singlesCommittees += consolidation.singlesByCommittee.size;
       if (consolidation.byCommittee.size === 0) {
@@ -533,6 +552,11 @@ export class AggregatedAttestationPool {
     packedAttestationsMetrics?.blockNewSeenAttesters.set(newSeenAttesters);
     packedAttestationsMetrics?.singlesValueRatio.observe(totalValue > 0 ? singlesValue / totalValue : 0);
     packedAttestationsMetrics?.singlesNewSeenAttesters.observe(singlesNewSeenAttesters);
+    // reset so that distances of a previous block do not keep stale values, the gauge then sums to the last block
+    packedAttestationsMetrics?.singlesNewSeenAttestersByInclusionDistance.reset();
+    for (const [inclusionDistance, count] of singlesNewSeenAttestersByInclusionDistance) {
+      packedAttestationsMetrics?.singlesNewSeenAttestersByInclusionDistance.set({inclusionDistance}, count);
+    }
     packedAttestationsMetrics?.singlesNewSeenEffectiveBalance.observe(singlesNewSeenEffectiveBalance);
     packedAttestationsMetrics?.singlesOnlyConsolidations.observe(singlesOnlyConsolidations);
     packedAttestationsMetrics?.singlesFoldedCommittees.observe(singlesCommittees);
@@ -548,6 +572,8 @@ export class AggregatedAttestationPool {
     if (stopReason === null) {
       stopReason = ScannedSlotsTerminationReason.ScannedAllSlots;
     }
+    // only one reason per block, reset so that other reasons do not keep values of a previous block
+    packedAttestationsMetrics?.scannedSlots.reset();
     packedAttestationsMetrics?.scannedSlots.set({reason: stopReason}, scannedSlots);
     packedAttestationsMetrics?.poolSlots.set(slots.length);
 
