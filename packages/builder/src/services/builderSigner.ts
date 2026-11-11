@@ -1,5 +1,5 @@
-import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
+import {PublicKey, SecretKey} from "@lodestar/native/blst";
 import {getExecutionPayloadBidSigningRoot, getExecutionPayloadEnvelopeSigningRoot} from "@lodestar/state-transition";
 import {gloas, heze} from "@lodestar/types";
 

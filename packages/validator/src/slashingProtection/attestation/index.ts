@@ -6,6 +6,7 @@ import {ZERO_ROOT, isEqualNonZeroRoot, isEqualRoot, minEpoch} from "../utils.js"
 import {AttestationByTargetRepository} from "./attestationByTargetRepository.js";
 import {AttestationLowerBoundRepository} from "./attestationLowerBoundRepository.js";
 import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors.js";
+
 export {
   AttestationByTargetRepository,
   AttestationLowerBoundRepository,

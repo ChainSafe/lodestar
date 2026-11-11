@@ -4,12 +4,8 @@ import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
-import {
-  DataColumnEngineResult,
-  getBlobSidecarsFromExecution,
-  getDataColumnSidecarsFromExecution,
-} from "../util/execution.js";
-import {IBlockInput, isBlockInputBlobs} from "./blocks/blockInput/index.js";
+import {DataColumnEngineResult, getDataColumnSidecarsFromExecution} from "../util/execution.js";
+import {IBlockInput, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
@@ -20,7 +16,7 @@ const MAX_TRACKED_BLOCK_ROOTS = 64;
 
 export type GetBlobsTrackerInit = {
   logger: Logger;
-  executionEngine: IExecutionEngine;
+  executionEngine: Pick<IExecutionEngine, "getBlobs">;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;
@@ -31,7 +27,7 @@ export type GetBlobsTrackerInit = {
  */
 export class GetBlobsTracker {
   logger: Logger;
-  executionEngine: IExecutionEngine;
+  executionEngine: Pick<IExecutionEngine, "getBlobs">;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;
@@ -51,6 +47,10 @@ export class GetBlobsTracker {
   }
 
   triggerGetBlobs(input: IBlockInput | PayloadEnvelopeInput): void {
+    if (!(input instanceof PayloadEnvelopeInput) && !isBlockInputColumns(input)) {
+      return;
+    }
+
     if (this.activeReconstructions.has(input.blockRootHex)) {
       this.pendingTriggers.add(input.blockRootHex);
       return;
@@ -74,37 +74,6 @@ export class GetBlobsTracker {
       }
     }
 
-    // The request is sent right away, before block processing issues newPayload: ELs that drop a
-    // transaction's blobs once the payload is validated can only answer a request that gets there first
-    if (!(input instanceof PayloadEnvelopeInput) && isBlockInputBlobs(input)) {
-      // there is not preallocation for blob sidecars like there is for columns sidecars so no need to
-      // store the index for the preallocated buffers
-      this.activeReconstructions.add(input.blockRootHex);
-      const logCtx = {slot: input.slot, root: input.blockRootHex};
-      this.logger.verbose("Trigger getBlobsV1 for block", logCtx);
-      let requestFailed = false;
-      getBlobSidecarsFromExecution(this.config, this.executionEngine, this.metrics, this.emitter, input)
-        .then(() => {
-          // EL errors and misses are handled inside the helper, blobs still missing means the attempt failed
-          if (!input.hasAllData()) {
-            requestFailed = true;
-            this.recordFailedAttempt(input.blockRootHex);
-          }
-        })
-        .catch((error) => {
-          this.logger.debug("Error during getBlobsV1 for block", logCtx, error as Error);
-          requestFailed = true;
-          this.recordFailedAttempt(input.blockRootHex);
-        })
-        .finally(() => {
-          this.logger.verbose("Completed getBlobsV1 for block", logCtx);
-          this.activeReconstructions.delete(input.blockRootHex);
-          this.retryPendingTrigger(input, requestFailed);
-        });
-
-      return;
-    }
-
     let freeIndex = this.blobsAndProofsBuffers.findIndex(({inUse}) => !inUse);
     if (freeIndex === -1) {
       freeIndex = this.blobsAndProofsBuffers.length;
@@ -126,6 +95,8 @@ export class GetBlobsTracker {
     const logCtx = {slot: input.slot, root: input.blockRootHex};
     this.logger.verbose("Trigger getBlobsV2 for block", logCtx);
     let requestFailed = false;
+    // The request is sent right away, before block processing issues newPayload: ELs that drop a
+    // transaction's blobs once the payload is validated can only answer a request that gets there first
     getDataColumnSidecarsFromExecution(
       this.config,
       this.executionEngine,
@@ -158,8 +129,10 @@ export class GetBlobsTracker {
 
   private retryPendingTrigger(input: IBlockInput | PayloadEnvelopeInput, requestFailed: boolean): void {
     // Triggers dropped while the request was in flight re-enter once it failed, the attempt that was just
-    // recorded makes this arm the trailing retry instead of sending another request right away
-    if (this.pendingTriggers.delete(input.blockRootHex) && requestFailed) {
+    // recorded makes this arm the trailing retry instead of sending another request right away.
+    // Post-gloas only the bid triggers a request, so every failed attempt re-enters to arm its own retry
+    const hadPendingTrigger = this.pendingTriggers.delete(input.blockRootHex);
+    if (requestFailed && (hadPendingTrigger || input instanceof PayloadEnvelopeInput)) {
       this.triggerGetBlobs(input);
     }
   }

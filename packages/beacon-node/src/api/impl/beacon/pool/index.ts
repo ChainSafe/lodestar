@@ -17,6 +17,7 @@ import {
   PayloadAttestationError,
   PayloadAttestationErrorCode,
   SyncCommitteeError,
+  SyncCommitteeErrorCode,
 } from "../../../../chain/errors/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
@@ -120,6 +121,32 @@ export function getBeaconPoolApi({
               // The pool is a local optimization, failing to insert must not stop us from publishing a
               // validated attestation, which the route requires us to do. Same handling as the gossip path
               logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
+            }
+
+            // Collected only for vote slots that an upcoming block of a connected validator can include
+            if (isForkPostElectra(fork) && chain.proposerTracker.shouldCollect(slot)) {
+              try {
+                const insertOutcome = chain.singleAttestationPool.add(
+                  attestation as SingleAttestation<ForkPostElectra>,
+                  attDataRootHex,
+                  validatorCommitteeIndex,
+                  committeeSize
+                );
+                metrics?.opPool.singleAttestationPool.apiInsertOutcome.inc({insertOutcome});
+              } catch (e) {
+                logger.debug(
+                  "Error adding single attestation to pool",
+                  {
+                    slot,
+                    committeeIndex,
+                    validatorCommitteeIndex,
+                    validatorIndex: (attestation as SingleAttestation<ForkPostElectra>).attesterIndex,
+                    subnet,
+                    attDataRoot: attDataRootHex,
+                  },
+                  e as Error
+                );
+              }
             }
 
             if (isForkPostElectra(fork)) {
@@ -340,7 +367,10 @@ export function getBeaconPoolApi({
             const synCommittee = state.getIndexedSyncCommittee(signature.slot);
             const indexesInCommittee = synCommittee.validatorIndexMap.get(signature.validatorIndex);
             if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
-              return; // Not a sync committee member
+              throw new SyncCommitteeError(GossipAction.REJECT, {
+                code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
+                validatorIndex: signature.validatorIndex,
+              });
             }
 
             // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
