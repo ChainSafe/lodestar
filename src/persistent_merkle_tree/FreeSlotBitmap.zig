@@ -9,11 +9,43 @@
 //! `capacity` when no slot is free. `remove` marks a free slot in use;
 //! `insert` marks an in-use slot free. Both require `slot < capacity`.
 //!
-//! Each upper-level bit is set exactly when the corresponding word in the
-//! level below is nonzero. The top level contains one word. `lowest` follows
-//! the least significant set bit at each level. Mutations propagate upward
-//! only when a word changes between zero and nonzero. Lookup and mutation
-//! visit at most six levels, independent of the number of slots in use.
+//! Each word contains 64 bits. An upper-level bit summarizes one word in the
+//! level below: 1 means that word is nonzero, so it contains a free slot or a
+//! path to one. The top level contains one word.
+//!
+//! Example: capacity 192, with only slots 67, 70, and 130 free.
+//! Columns below follow increasing indexes, not binary display order.
+//!
+//! ```text
+//! Level 1 (top):  bit 0 = 0       bit 1 = 1       bit 2 = 1
+//!                    |               |               |
+//! Level 0:       word 0 = 0      word 1 != 0     word 2 != 0
+//! Slot indexes:     0..63          64..127         128..191
+//! Free slots:       none           67, 70            130
+//! ```
+//!
+//! `lowest` selects the least significant set bit in the top word, then
+//! repeats in the selected word below. It skips empty words without scanning
+//! them. In this example:
+//!
+//! ```text
+//! Level 1: first set bit = 1  -> select level-0 word 1
+//! Level 0: first set bit = 3  -> slot = 1 * 64 + 3 = 67
+//! ```
+//!
+//! Mutations update the summary bit only when a word becomes empty or stops
+//! being empty. Starting from the same example, apply these operations in order:
+//!
+//! ```text
+//! Operation    Set-bit positions in word 1    Level-1 summary bit 1
+//! remove(67)   {3, 6} -> {6}                  1 -> 1 (no update)
+//! remove(70)   {6}    -> {}                   1 -> 0
+//! insert(67)   {}     -> {3}                  0 -> 1
+//! ```
+//!
+//! The same rule applies at each higher level. Propagation stops when a word
+//! stays nonzero. With u32 slot indexes, lookup and mutation visit at most six
+//! levels, independent of the number of slots in use.
 //!
 //! `init` allocates one buffer for all levels. Lookup and mutation do not
 //! allocate. `deinit` frees the buffer with the allocator passed to `init`.
