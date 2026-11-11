@@ -9,6 +9,7 @@ import {gloas, heze, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
+import {getXmssExecutionPayloadBidSignatureSet, verifyXmssSignatureSet} from "../signatureSets/pq.js";
 import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
 import {canBuilderCoverBid, isActiveBuilder} from "../util/gloas.js";
 import {
@@ -21,8 +22,11 @@ import {
 
 export function processExecutionPayloadBid(
   state: CachedBeaconStateGloas | CachedBeaconStateHeze,
-  signedBid: gloas.SignedExecutionPayloadBid
+  signedBid: gloas.SignedExecutionPayloadBid,
+  /** Only honoured from pq, where a verifier outside the state transition can check the bid */
+  verifySignature = true
 ): void {
+  const isPq = state.config.getForkSeq(state.slot) === ForkSeq.pq;
   const bid = signedBid.message;
   const {builderIndex, value: amount} = bid;
 
@@ -31,7 +35,10 @@ export function processExecutionPayloadBid(
     if (amount !== 0) {
       throw Error(`Invalid execution payload bid: self-build with non-zero amount ${amount}`);
     }
-    if (!byteArrayEquals(signedBid.signature, G2_POINT_AT_INFINITY)) {
+    const noSignature = isPq
+      ? signedBid.signature.every((byte) => byte === 0)
+      : byteArrayEquals(signedBid.signature, G2_POINT_AT_INFINITY);
+    if (!noSignature) {
       throw Error("Invalid execution payload bid: self-build with non-zero signature");
     }
   }
@@ -57,7 +64,11 @@ export function processExecutionPayloadBid(
     }
 
     // Verify that the bid signature is valid
-    if (!verifyExecutionPayloadBidSignature(state, builder.pubkey, signedBid)) {
+    const isValid = isPq
+      ? !verifySignature ||
+        verifyXmssSignatureSet(getXmssExecutionPayloadBidSignatureSet(state.config, builder.pubkey, signedBid))
+      : verifyExecutionPayloadBidSignature(state, builder.pubkey, signedBid);
+    if (!isValid) {
       throw Error(`Invalid execution payload bid: invalid signature for builder ${builderIndex}`);
     }
   }

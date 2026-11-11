@@ -1,4 +1,4 @@
-import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
@@ -10,6 +10,7 @@ import {
   switchToCompoundingValidator,
 } from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
+import {isLegacyPubkey} from "../util/pq.js";
 import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 
 // TODO Electra: Clean up necessary as there is a lot of overlap with isValidSwitchToCompoundRequest
@@ -18,6 +19,13 @@ export function processConsolidationRequest(
   consolidationRequest: electra.ConsolidationRequest
 ): void {
   const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
+  // From pq a request that names a BLS public key is ignored
+  if (
+    state.config.getForkSeq(state.slot) === ForkSeq.pq &&
+    (isLegacyPubkey(sourcePubkey) || isLegacyPubkey(targetPubkey))
+  ) {
+    return;
+  }
   if (!isPubkeyKnown(state, sourcePubkey) || !isPubkeyKnown(state, targetPubkey)) {
     return;
   }

@@ -27,7 +27,7 @@ import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 export function initiateValidatorExit(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  validator: CompositeViewDU<typeof ssz.phase0.Validator>
+  validator: CompositeViewDU<typeof ssz.phase0.Validator> | CompositeViewDU<typeof ssz.pq.Validator>
 ): void {
   const {config, epochCtx} = state;
 

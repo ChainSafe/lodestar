@@ -1,5 +1,5 @@
 import {ForkBls, ForkPostGloas, ForkPreHeze, ForkSeq} from "@lodestar/params";
-import {BeaconBlock, BlindedBeaconBlock, Slot, altair, capella} from "@lodestar/types";
+import {BeaconBlock, BeaconBlockBody, BlindedBeaconBlock, Slot, altair, capella} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,
@@ -30,6 +30,7 @@ export * from "./processBuilderDepositRequest.js";
 export * from "./processBuilderExitRequest.js";
 export * from "./processDepositRequest.js";
 export * from "./processOperations.js";
+export * from "./processPreregistrationRequest.js";
 // Spec tests
 export {
   processBlockHeader,
@@ -46,7 +47,7 @@ export {
 export function processBlock(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  block: BeaconBlock<ForkBls> | BlindedBeaconBlock,
+  block: BeaconBlock | BlindedBeaconBlock,
   externalData: BlockExternalData & ProcessBlockOpts,
   opts?: ProcessBlockOpts,
   metrics?: BeaconStateTransitionMetrics | null
@@ -106,14 +107,15 @@ export function processBlock(
     const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processExecutionPayloadBid});
     processExecutionPayloadBid(
       state as CachedBeaconStateGloas,
-      (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid
+      (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid,
+      verifySignatures
     );
     timer?.();
   }
 
   {
     const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processRandao});
-    processRandao(state, block, verifySignatures);
+    processRandao(state, block as BeaconBlock, verifySignatures);
     timer?.();
   }
 
@@ -125,11 +127,12 @@ export function processBlock(
 
   {
     const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processOperations});
-    processOperations(fork, state, block.body, parentSlot, opts, metrics);
+    processOperations(fork, state, block.body as BeaconBlockBody, parentSlot, opts, metrics);
     timer?.();
   }
 
-  if (fork >= ForkSeq.altair) {
+  // pq removes the sync committees
+  if (fork >= ForkSeq.altair && fork !== ForkSeq.pq) {
     const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processSyncAggregate});
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
     timer?.();

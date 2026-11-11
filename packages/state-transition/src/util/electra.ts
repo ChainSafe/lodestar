@@ -3,6 +3,7 @@ import {ValidatorIndex, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
+import {toRequestPubkey} from "./pq.js";
 
 export function hasCompoundingWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === COMPOUNDING_WITHDRAWAL_PREFIX;
@@ -43,12 +44,14 @@ export function queueExcessActiveBalance(
     const excessBalance = balance - MIN_ACTIVATION_BALANCE;
     state.balances.set(index, MIN_ACTIVATION_BALANCE);
 
+    // From pq a deposit names a leanXMSS public key behind 16 zero bytes and carries no signature
+    const isPq = validator.pubkey.length === 32;
     const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
-      pubkey: validator.pubkey,
+      pubkey: isPq ? toRequestPubkey(validator.pubkey) : validator.pubkey,
       withdrawalCredentials: validator.withdrawalCredentials,
       amount: excessBalance,
       // Use bls.G2_POINT_AT_INFINITY as a signature field placeholder
-      signature: G2_POINT_AT_INFINITY,
+      signature: isPq ? new Uint8Array(96) : G2_POINT_AT_INFINITY,
       // Use GENESIS_SLOT to distinguish from a pending deposit request
       slot: GENESIS_SLOT,
     });

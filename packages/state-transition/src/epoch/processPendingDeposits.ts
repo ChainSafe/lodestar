@@ -11,6 +11,7 @@ import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
+import {computeDepositPubkey, computeDepositVrfRoot, isLegacyPubkey} from "../util/pq.js";
 import {getActivationChurnLimit, getActivationExitChurnLimit} from "../util/validator.js";
 
 /**
@@ -68,14 +69,15 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
       let isValidatorExited = false;
       let isValidatorWithdrawn = false;
 
-      const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
+      const validatorIndex = state.epochCtx.getValidatorIndex(depositPubkey(fork, deposit.pubkey));
       if (isValidatorKnown(state, validatorIndex)) {
         const validator = state.validators.getReadonly(validatorIndex);
         isValidatorExited = validator.exitEpoch < FAR_FUTURE_EPOCH;
         isValidatorWithdrawn = validator.withdrawableEpoch < nextEpoch;
       }
 
-      if (isValidatorWithdrawn) {
+      // From pq a legacy deposit's validator never becomes active, so it does not consume churn
+      if (isValidatorWithdrawn || (fork === ForkSeq.pq && isLegacyPubkey(deposit.pubkey))) {
         // Deposited balance will never become active. Increase balance but do not consume churn
         applyPendingDeposit(fork, state, deposit, cache);
       } else if (isValidatorExited) {
@@ -115,15 +117,38 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   }
 }
 
+/** The key the pubkey cache holds for the validator a deposit names */
+function depositPubkey(fork: ForkSeq, pubkey: Uint8Array): Uint8Array {
+  return fork === ForkSeq.pq ? computeDepositPubkey(pubkey) : pubkey;
+}
+
 function applyPendingDeposit(
   fork: ForkSeq,
   state: CachedBeaconStateElectra,
   deposit: electra.PendingDeposit,
   cache: EpochTransitionCache
 ): void {
-  const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
+  const validatorIndex = state.epochCtx.getValidatorIndex(depositPubkey(fork, deposit.pubkey));
   const {pubkey, withdrawalCredentials, amount, signature} = deposit;
   const cachedBalances = cache.balances;
+
+  // From pq a deposit carries no signature to check
+  if (fork === ForkSeq.pq && !isValidatorKnown(state, validatorIndex)) {
+    const vrfRoot = computeDepositVrfRoot(pubkey, signature);
+    addValidatorToRegistry(fork, state, computeDepositPubkey(pubkey), withdrawalCredentials, amount, vrfRoot);
+    const newValidatorIndex = state.validators.length - 1;
+    cache.isCompoundingValidatorArr[newValidatorIndex] = hasCompoundingWithdrawalCredential(withdrawalCredentials);
+    if (cachedBalances) {
+      cachedBalances[newValidatorIndex] = amount;
+    }
+    if (isLegacyPubkey(pubkey)) {
+      // No signature verifies against a legacy deposit's key: exit its validator at once
+      const validator = state.validators.get(newValidatorIndex);
+      validator.exitEpoch = state.epochCtx.epoch;
+      validator.withdrawableEpoch = state.epochCtx.epoch + state.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
+    }
+    return;
+  }
 
   if (!isValidatorKnown(state, validatorIndex)) {
     // Do not create validators with BLS withdrawal credentials, the deposit is skipped without a refund

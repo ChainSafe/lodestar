@@ -1,5 +1,5 @@
-import {ForkBls, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconBlock, Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {ForkBls, ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
@@ -8,6 +8,7 @@ import {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionC
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
+import {getXmssBlockProposerSignatureSet, verifyXmssSignatureSet} from "./signatureSets/pq.js";
 import {
   processSlot,
   upgradeStateToAltair,
@@ -29,6 +30,7 @@ import {
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
+  CachedBeaconStatePq,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 
@@ -112,8 +114,18 @@ export function stateTransition(
   postState = processSlotsWithTransientCache(postState, blockSlot, {metrics, validatorMonitor});
 
   // Verify proposer signature only
-  if (verifyProposer && !verifyProposerSignature(postState.config, signedBlock)) {
-    throw new Error("Invalid block signature");
+  if (verifyProposer) {
+    const isValid =
+      postState.config.getForkSeq(blockSlot) === ForkSeq.pq
+        ? verifyXmssSignatureSet(
+            getXmssBlockProposerSignatureSet(
+              postState.config,
+              (index) => (postState as CachedBeaconStatePq).validators.getReadonly(index).pubkey,
+              signedBlock as SignedBeaconBlock<ForkName.pq>
+            )
+          )
+        : verifyProposerSignature(postState.config, signedBlock as SignedBeaconBlock<ForkBls>);
+    if (!isValid) throw new Error("Invalid block signature");
   }
 
   // Process block
@@ -122,8 +134,7 @@ export function stateTransition(
   // Note: time only on success
   const processBlockTimer = metrics?.processBlockTime.startTimer();
 
-  // The TypeScript state transition does not implement pq
-  processBlock(fork, postState, block as BeaconBlock<ForkBls>, options, options, metrics);
+  processBlock(fork, postState, block, options, options, metrics);
 
   const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
   postState.commit();

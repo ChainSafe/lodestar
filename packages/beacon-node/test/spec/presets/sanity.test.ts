@@ -78,7 +78,8 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks | und
       const config = getConfig(fork);
       let state = createBeaconStateViewForTest(fork, testcase.pre, config);
       const {metrics, register} = createSpecTestMetrics();
-      const verify = shouldVerify(testcase);
+      // The pq vectors carry stub signatures and proofs, which the spec's reference does not check
+      const verify = shouldVerify(testcase) && fork !== ForkName.pq;
       const runStateTransition = (): void => {
         for (let i = 0; i < testcase.meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;

@@ -14,7 +14,6 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_STARK_PROOF_SIZE,
   MAX_VOLUNTARY_EXITS,
-  PREREGISTRATIONS_LIMIT,
   VALIDATOR_REGISTRY_LIMIT,
   VRF_TREE_DEPTH,
   XMSS_SIGNATURE_SIZE,
@@ -269,9 +268,9 @@ export const PreregistrationRequests = new ProgressiveListCompositeType(Preregis
   limit: MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD,
 });
 
+// Unbounded: `PREREGISTRATIONS_LIMIT` caps the active records, and expired ones stay until swept
 export const ValidatorPreregistrations = new ProgressiveListCompositeType(StoredPreregistration, {
   typeName: "ValidatorPreregistrations",
-  limit: PREREGISTRATIONS_LIMIT,
 });
 
 // Indices 5 and 6 held the EIP-8483 registration requests

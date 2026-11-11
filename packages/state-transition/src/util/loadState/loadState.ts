@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
-import {BeaconStateAllForks, BeaconStateAltair} from "../../types.js";
+import {BeaconStateAllForks, BeaconStateAltair, BeaconStatePq} from "../../types.js";
 import {VALIDATOR_BYTES_SIZE, getForkFromStateBytes, getStateTypeFromBytes} from "../sszBytes.js";
 import {findModifiedInactivityScores} from "./findModifiedInactivityScores.js";
 import {findModifiedValidators} from "./findModifiedValidators.js";
@@ -35,6 +35,15 @@ export function loadState(
   const validatorsRange = fieldRanges[validatorsFieldIndex];
   const newValidatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
 
+  // pq validators have their own schema, so nothing of the seed's is reused
+  if (fork === ForkSeq.pq || seedFork === ForkSeq.pq) {
+    const migratedState = stateType.deserializeToViewDU(stateBytes) as BeaconStateAllForks;
+    return {
+      state: migratedState,
+      modifiedValidators: Array.from({length: migratedState.validators.length}, (_, i) => i),
+    };
+  }
+
   // EIP-7688 replaces List with ProgressiveList for validators and inactivityScores at gloas,
   // changing the merkle tree shape. Seed nodes cannot be reused when one state is pre-gloas
   // and the other post-gloas.
@@ -58,7 +67,12 @@ export function loadState(
   ) as BeaconStateAllForks;
 
   // validators are rarely changed
-  const modifiedValidators = loadValidators(migratedState, seedState, newValidatorsBytes, seedValidatorsBytes);
+  const modifiedValidators = loadValidators(
+    migratedState as Exclude<BeaconStateAllForks, BeaconStatePq>,
+    seedState as Exclude<BeaconStateAllForks, BeaconStatePq>,
+    newValidatorsBytes,
+    seedValidatorsBytes
+  );
 
   // inactivityScores are rarely changed
   // this saves ~500ms of hashTreeRoot() time of state
@@ -217,8 +231,8 @@ function findModifiedAndAppendedValidators(
 }
 
 function loadValidators(
-  migratedState: BeaconStateAllForks,
-  seedState: BeaconStateAllForks,
+  migratedState: Exclude<BeaconStateAllForks, BeaconStatePq>,
+  seedState: Exclude<BeaconStateAllForks, BeaconStatePq>,
   newValidatorsBytes: Uint8Array,
   seedStateValidatorsBytes?: Uint8Array
 ): number[] {

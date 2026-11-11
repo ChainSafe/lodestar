@@ -108,12 +108,14 @@ pub fn reset() !void {
 pub fn getIndex(pubkey: js.Uint8Array) !js.Value {
     if (!state.initialized) return error.PubkeyIndexNotInitialized;
 
+    // A 32-byte key is a leanXMSS public key, as PQ validators have.
     const pubkey_slice = try pubkey.toSlice();
-    if (pubkey_slice.len != 48) return error.InvalidPubkeyLength;
-    const pubkey_bytes = pubkey_slice[0..48].*;
-
     const io = js.io();
-    const index = state.cache.get(io, pubkey_bytes);
+    const index = switch (pubkey_slice.len) {
+        32 => state.cache.getXmss(io, pubkey_slice[0..32]),
+        48 => state.cache.get(io, pubkey_slice[0..48].*),
+        else => return error.InvalidPubkeyLength,
+    };
 
     const e = js.env();
     if (index) |validator_index| {
@@ -188,10 +190,11 @@ pub fn append(index: js.Number, pubkey: js.Uint8Array) !void {
     const io = js.io();
 
     const pubkey_slice = try pubkey.toSlice();
-    if (pubkey_slice.len != 48) return error.InvalidPubkeyLength;
-    const pubkey_bytes = pubkey_slice[0..48].*;
-
-    try state.cache.append(io, pubkey_bytes, idx);
+    switch (pubkey_slice.len) {
+        32 => try state.cache.appendXmss(io, pubkey_slice[0..32], idx),
+        48 => try state.cache.append(io, pubkey_slice[0..48].*, idx),
+        else => return error.InvalidPubkeyLength,
+    }
 }
 
 /// JS: pubkeys.syncPubkeys(validators)
@@ -204,6 +207,17 @@ pub fn syncPubkeys(validators: js.Array) !void {
     if (validator_count <= num_cached) return;
 
     const num_new_validators = validator_count - num_cached;
+
+    // PQ validators have 32-byte leanXMSS public keys, which need no decompression.
+    const first = try (try (try validators.get(@intCast(num_cached))).asObject(struct { pubkey: js.Uint8Array })).get();
+    if ((try first.pubkey.toSlice()).len == 32) {
+        for (num_cached..validator_count) |new_index| {
+            const value = try validators.get(@intCast(new_index));
+            const validator = try (try value.asObject(struct { pubkey: js.Uint8Array })).get();
+            try state.cache.appendXmss(io, &try validator.pubkey.toArray(32), new_index);
+        }
+        return;
+    }
 
     // SAFETY: the first `num_cached` validator ptrs are intentionally left undefined,
     // because syncPubkeys only has to append the last `num_new_validators` pubkeys.

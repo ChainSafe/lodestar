@@ -1,6 +1,6 @@
 import {BuilderIndex, Epoch, PubkeyHex} from "@lodestar/types";
 import {Builder} from "@lodestar/types/gloas";
-import {toPubkeyHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
 import {createBuilderView} from "../util/gloas.js";
@@ -21,7 +21,7 @@ export class IndexedBuilderState {
     const builders = state.builders.getAllReadonlyValues();
     this.currentEpoch = computeEpochAtSlot(state.slot);
     for (const [index, builder] of builders.entries()) {
-      const pubkeyHex = toPubkeyHex(builder.pubkey);
+      const pubkeyHex = toHex(builder.pubkey);
       this.indexByPubkey.set(pubkeyHex, index);
       if (canReuseBuilder(builder, this.currentEpoch)) {
         this.reusableIndexCandidates.push(index);
@@ -30,7 +30,7 @@ export class IndexedBuilderState {
   }
 
   findBuilderIndexByPubkey(pubkey: Uint8Array): BuilderIndex | null {
-    return this.indexByPubkey.get(toPubkeyHex(pubkey)) ?? null;
+    return this.indexByPubkey.get(toHex(pubkey)) ?? null;
   }
 
   addBuilderToRegistry(pubkey: Uint8Array, version: number, executionAddress: Uint8Array, amount: number): void {
@@ -39,12 +39,12 @@ export class IndexedBuilderState {
     const index = reusableIndex ?? this.state.builders.length;
     if (reusableIndex !== null) {
       const oldBuilder = this.state.builders.getReadonly(index);
-      this.indexByPubkey.delete(toPubkeyHex(oldBuilder.pubkey));
+      this.indexByPubkey.delete(toHex(oldBuilder.pubkey));
       this.state.builders.set(index, builder);
     } else {
       this.state.builders.push(builder);
     }
-    this.indexByPubkey.set(toPubkeyHex(pubkey), index);
+    this.indexByPubkey.set(toHex(pubkey), index);
   }
 
   private findReusableBuilderIndex(): BuilderIndex | null {

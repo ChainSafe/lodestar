@@ -58,6 +58,7 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     epochFns.processPtcWindow(state as CachedBeaconStateGloas, epochTransitionCache);
   },
   builder_pending_payments: epochFns.processBuilderPendingPayments as EpochTransitionFn,
+  preregistration_expiry: epochFns.processPreregistrationExpiry as EpochTransitionFn,
 };
 
 /**

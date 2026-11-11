@@ -1,13 +1,14 @@
-import {ForkPostGloas, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {BeaconBlock, gloas, ssz} from "@lodestar/types";
+import {ForkPostGloas, ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {BeaconBlock, gloas, pq, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateGloas, CachedBeaconStatePq} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
 import {IndexedBuilderState} from "./indexedBuilderState.js";
 import {processBuilderDepositRequest} from "./processBuilderDepositRequest.js";
 import {processBuilderExitRequest} from "./processBuilderExitRequest.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
+import {processPreregistrationRequest} from "./processPreregistrationRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 /**
@@ -28,7 +29,11 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
   }
 
   // Parent was FULL -- verify the bid commitment and apply the payload
-  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(requests);
+  const isPq = state.config.getForkSeq(state.slot) === ForkSeq.pq;
+  const requestsType = (
+    isPq ? ssz.pq.ExecutionRequests : ssz.gloas.ExecutionRequests
+  ) as typeof ssz.gloas.ExecutionRequests;
+  const requestsRoot = requestsType.hashTreeRoot(requests);
   if (!byteArrayEquals(requestsRoot, parentBid.executionRequestsRoot)) {
     throw new Error(
       `Parent execution requests root mismatch actual=${toRootHex(requestsRoot)} expected=${toRootHex(parentBid.executionRequestsRoot)}`
@@ -97,6 +102,12 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
   }
 
   // Update parent payload availability and latest block hash
+  if (fork === ForkSeq.pq) {
+    for (const preregistration of (requests as pq.ExecutionRequests).preregistrations) {
+      processPreregistrationRequest(state as unknown as CachedBeaconStatePq, preregistration);
+    }
+  }
+
   state.executionPayloadAvailability.set(parentSlot % SLOTS_PER_HISTORICAL_ROOT, true);
   state.latestBlockHash = parentBid.blockHash;
 }
@@ -126,7 +137,8 @@ function assertEmptyExecutionRequests(requests: gloas.ExecutionRequests): void {
     requests.withdrawals.length !== 0 ||
     requests.consolidations.length !== 0 ||
     requests.builderDeposits.length !== 0 ||
-    requests.builderExits.length !== 0
+    requests.builderExits.length !== 0 ||
+    ((requests as pq.ExecutionRequests).preregistrations?.length ?? 0) !== 0
   ) {
     throw new Error("Parent execution requests must be empty when parent block is EMPTY");
   }

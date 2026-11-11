@@ -90,7 +90,13 @@ export const defaultSkipOpts: SkipOpts = {
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // pq vectors that store a preregistration. Its signature is a stub, which the spec's reference
+    // accepts with XMSS switched off, and block processing always checks it: its validity decides
+    // the post-state.
+    /^pq\/operations\/parent_execution_payload\/.*\/(max_preregistration_requests|parent_payload_preregistration_stored)$/,
+    /^pq\/operations\/preregistration_request\/.*\/(preregistration_admitted_when_full_of_expired_records|preregistration_replaces_expired_binding|preregistration_stored)$/,
+  ],
   skippedRunners: [],
   // Gossip handlers not implemented in the spec runner.
   skippedHandlers: [

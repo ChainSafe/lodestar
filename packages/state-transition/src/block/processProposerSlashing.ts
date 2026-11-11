@@ -1,8 +1,9 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
-import {Slot, phase0, ssz} from "@lodestar/types";
+import {Slot, phase0, pq, ssz} from "@lodestar/types";
 import {Validator} from "@lodestar/types/phase0";
 import {getProposerSlashingSignatureSets} from "../signatureSets/index.js";
+import {getXmssProposerSlashingSignatureSets, verifyXmssSignatureSet} from "../signatureSets/pq.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, isSlashableValidator} from "../util/index.js";
 import {verifySignatureSet} from "../util/signatureSets.js";
@@ -17,7 +18,7 @@ import {slashValidator} from "./slashValidator.js";
 export function processProposerSlashing(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  proposerSlashing: phase0.ProposerSlashing,
+  proposerSlashing: phase0.ProposerSlashing | pq.ProposerSlashing,
   verifySignatures = true
 ): void {
   const proposer = state.validators.getReadonly(proposerSlashing.signedHeader1.message.proposerIndex);
@@ -29,8 +30,8 @@ export function processProposerSlashing(
 export function assertValidProposerSlashing(
   config: BeaconConfig,
   stateSlot: Slot,
-  proposerSlashing: phase0.ProposerSlashing,
-  proposer: Validator,
+  proposerSlashing: phase0.ProposerSlashing | pq.ProposerSlashing,
+  proposer: Validator | pq.Validator,
   verifySignatures = true
 ): void {
   const header1 = proposerSlashing.signedHeader1.message;
@@ -61,7 +62,19 @@ export function assertValidProposerSlashing(
   }
 
   // verify signatures
-  if (verifySignatures) {
+  if (verifySignatures && config.getForkSeq(stateSlot) === ForkSeq.pq) {
+    const signatureSets = getXmssProposerSlashingSignatureSets(
+      config,
+      stateSlot,
+      () => (proposer as pq.Validator).pubkey,
+      proposerSlashing
+    );
+    for (let i = 0; i < signatureSets.length; i++) {
+      if (!verifyXmssSignatureSet(signatureSets[i])) {
+        throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
+      }
+    }
+  } else if (verifySignatures) {
     const signatureSets = getProposerSlashingSignatureSets(config, stateSlot, proposerSlashing);
     for (let i = 0; i < signatureSets.length; i++) {
       if (!verifySignatureSet(signatureSets[i])) {

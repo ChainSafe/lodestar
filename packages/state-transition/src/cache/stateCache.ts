@@ -15,6 +15,7 @@ import {
   BeaconStateGloas,
   BeaconStateHeze,
   BeaconStatePhase0,
+  BeaconStatePq,
   BeaconStatePreHeze,
 } from "./types.js";
 
@@ -139,6 +140,7 @@ export type CachedBeaconStateDeneb = CachedBeaconState<BeaconStateDeneb>;
 export type CachedBeaconStateElectra = CachedBeaconState<BeaconStateElectra>;
 export type CachedBeaconStateFulu = CachedBeaconState<BeaconStateFulu>;
 export type CachedBeaconStateGloas = CachedBeaconState<BeaconStateGloas>;
+export type CachedBeaconStatePq = CachedBeaconState<BeaconStatePq>;
 export type CachedBeaconStateHeze = CachedBeaconState<BeaconStateHeze>;
 
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;

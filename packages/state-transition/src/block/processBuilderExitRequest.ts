@@ -1,6 +1,8 @@
+import {ForkSeq} from "@lodestar/params";
 import {gloas} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
 import {getPendingBalanceToWithdrawForBuilder, initiateBuilderExit, isActiveBuilder} from "../util/gloas.js";
+import {fromRequestPubkey} from "../util/pq.js";
 import {IndexedBuilderState} from "./indexedBuilderState.js";
 
 /**
@@ -14,7 +16,8 @@ import {IndexedBuilderState} from "./indexedBuilderState.js";
  */
 export function processBuilderExitRequest(indexedState: IndexedBuilderState, request: gloas.BuilderExitRequest): void {
   const {state} = indexedState;
-  const builderIndex = indexedState.findBuilderIndexByPubkey(request.pubkey);
+  const isPq = state.config.getForkSeq(state.slot) === ForkSeq.pq;
+  const builderIndex = indexedState.findBuilderIndexByPubkey(isPq ? fromRequestPubkey(request.pubkey) : request.pubkey);
   if (builderIndex === null) {
     return;
   }

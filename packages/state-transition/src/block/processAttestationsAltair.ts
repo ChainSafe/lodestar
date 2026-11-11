@@ -37,7 +37,7 @@ const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 export function processAttestationsAltair(
   fork: ForkSeq,
   state: CachedBeaconStateAltair | CachedBeaconStateGloas,
-  attestations: Attestation<ForkBls>[],
+  attestations: Attestation[],
   parentSlot: Slot | null,
   verifySignature = true,
   metrics?: BeaconStateTransitionMetrics | null
@@ -66,7 +66,9 @@ export function processAttestationsAltair(
     // this check is done last because its the most expensive (if signature verification is toggled on)
     // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature
     // we can verify only that and nothing else.
-    if (verifySignature) {
+    // From pq an attestation carries no signature: one proof covers every attestation of a block,
+    // and it is not checked here. `getPqBlockSignatureSets` gives it to a verifier.
+    if (verifySignature && "signature" in attestation) {
       const sigSet = getAttestationWithIndicesSignatureSet(state.config, state.slot, attestation, attestingIndices);
       if (!verifySignatureSet(sigSet)) {
         throw new Error("Attestation signature is not valid");

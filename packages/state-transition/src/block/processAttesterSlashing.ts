@@ -3,7 +3,7 @@ import {ForkBls, ForkSeq} from "@lodestar/params";
 import {AttesterSlashing, Slot} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
-import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
+import {isValidIndexedAttestationBigint, isValidIndexedAttestationIndices} from "./isValidIndexedAttestation.js";
 import {slashValidator} from "./slashValidator.js";
 
 /**
@@ -15,7 +15,7 @@ import {slashValidator} from "./slashValidator.js";
 export function processAttesterSlashing(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attesterSlashing: AttesterSlashing<ForkBls>,
+  attesterSlashing: AttesterSlashing,
   verifySignatures = true
 ): void {
   const {epochCtx} = state;
@@ -42,7 +42,7 @@ export function assertValidAttesterSlashing(
   config: BeaconConfig,
   stateSlot: Slot,
   validatorsLen: number,
-  attesterSlashing: AttesterSlashing<ForkBls>,
+  attesterSlashing: AttesterSlashing,
   verifySignatures = true
 ): void {
   const attestation1 = attesterSlashing.attestation1;
@@ -56,7 +56,13 @@ export function assertValidAttesterSlashing(
   // be higher than the clock and the slashing would still be valid. Same applies to attestation data index, which
   // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
   for (const [i, attestation] of [attestation1, attestation2].entries()) {
-    if (!isValidIndexedAttestationBigint(config, stateSlot, validatorsLen, attestation, verifySignatures)) {
+    // From pq an indexed attestation carries a proof, which is not checked here: verifying one is
+    // asynchronous. `getIndexedAttestationProofSet` gives it to a verifier.
+    const isValid =
+      "proof" in attestation
+        ? isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, attestation.attestingIndices)
+        : isValidIndexedAttestationBigint(config, stateSlot, validatorsLen, attestation, verifySignatures);
+    if (!isValid) {
       throw new Error(`AttesterSlashing attestation${i} is invalid`);
     }
   }

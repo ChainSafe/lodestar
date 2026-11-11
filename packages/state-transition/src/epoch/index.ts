@@ -5,6 +5,7 @@ import {
   MAX_VALIDATORS_PER_COMMITTEE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
+import {processPreregistrationExpiry} from "../block/processPreregistrationRequest.js";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,
@@ -14,6 +15,7 @@ import {
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
+  CachedBeaconStatePq,
   CachedBeaconStatePreHeze,
   EpochTransitionCache,
 } from "../types.js";
@@ -52,6 +54,7 @@ export {
   processParticipationRecordUpdates,
   processPendingConsolidations,
   processPendingDeposits,
+  processPreregistrationExpiry,
   processProposerLookahead,
   processPtcWindow,
   processRandaoMixesReset,
@@ -200,7 +203,8 @@ export function processEpoch(
       timer?.();
     }
 
-    {
+    // pq removes the sync committees
+    if (fork !== ForkSeq.pq) {
       const timer = metrics?.epochTransitionStepTime.startTimer({
         step: EpochTransitionStep.processSyncCommitteeUpdates,
       });
@@ -221,5 +225,9 @@ export function processEpoch(
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processPtcWindow});
     processPtcWindow(state as CachedBeaconStateGloas, cache);
     timer?.();
+  }
+
+  if (fork === ForkSeq.pq) {
+    processPreregistrationExpiry(state as CachedBeaconStatePq);
   }
 }

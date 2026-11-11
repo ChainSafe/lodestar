@@ -1,7 +1,8 @@
-import {FAR_FUTURE_EPOCH, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {gloas} from "@lodestar/types";
 import {computeEpochAtSlot} from "../util/epoch.js";
-import {isBuilderWithdrawalCredential, isValidBuilderDepositSignature} from "../util/gloas.js";
+import {initiateBuilderExit, isBuilderWithdrawalCredential, isValidBuilderDepositSignature} from "../util/gloas.js";
+import {computeDepositPubkey, isLegacyPubkey} from "../util/pq.js";
 import {IndexedBuilderState} from "./indexedBuilderState.js";
 
 /**
@@ -22,11 +23,24 @@ export function processBuilderDepositRequest(
     return;
   }
 
-  const builderIndex = indexedState.findBuilderIndexByPubkey(pubkey);
+  // From pq a builder deposit carries no signature, and a legacy one, which names a BLS public
+  // key, is for the leanXMSS key derived from it
+  const isPq = state.config.getForkSeq(state.slot) === ForkSeq.pq;
+  const builderPubkey = isPq ? computeDepositPubkey(pubkey) : pubkey;
+  const builderIndex = indexedState.findBuilderIndexByPubkey(builderPubkey);
 
   if (builderIndex === null) {
-    if (isValidBuilderDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
-      indexedState.addBuilderToRegistry(pubkey, PAYLOAD_BUILDER_VERSION, withdrawalCredentials.subarray(12), amount);
+    if (isPq || isValidBuilderDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
+      indexedState.addBuilderToRegistry(
+        builderPubkey,
+        PAYLOAD_BUILDER_VERSION,
+        withdrawalCredentials.subarray(12),
+        amount
+      );
+    }
+    if (isPq && isLegacyPubkey(pubkey)) {
+      // No signature verifies against a legacy deposit's key: its builder exits at once
+      initiateBuilderExit(state, indexedState.findBuilderIndexByPubkey(builderPubkey) as number);
     }
     return;
   }

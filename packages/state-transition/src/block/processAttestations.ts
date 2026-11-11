@@ -11,14 +11,14 @@ import {processAttestationsAltair} from "./processAttestationsAltair.js";
 export function processAttestations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attestations: Attestation<ForkBls>[],
+  attestations: Attestation[],
   parentSlot: Slot | null,
   verifySignatures = true,
   metrics?: BeaconStateTransitionMetrics | null
 ): void {
   if (fork === ForkSeq.phase0) {
     for (const attestation of attestations) {
-      processAttestationPhase0(state as CachedBeaconStatePhase0, attestation, verifySignatures);
+      processAttestationPhase0(state as CachedBeaconStatePhase0, attestation as Attestation<ForkBls>, verifySignatures);
     }
   } else {
     processAttestationsAltair(

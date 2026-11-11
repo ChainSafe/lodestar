@@ -260,7 +260,9 @@ export function createBuilderView(
   amount: number,
   depositEpoch: Epoch
 ) {
-  return ssz.gloas.Builder.toViewDU({
+  // From pq a builder has a 32-byte leanXMSS public key
+  const type = (pubkey.length === 32 ? ssz.pq.Builder : ssz.gloas.Builder) as typeof ssz.gloas.Builder;
+  return type.toViewDU({
     pubkey,
     version,
     executionAddress,

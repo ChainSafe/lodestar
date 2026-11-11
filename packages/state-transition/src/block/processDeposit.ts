@@ -21,6 +21,8 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateElectra,
+  CachedBeaconStatePhase0,
+  CachedBeaconStatePq,
   CachedBeaconStatePreHeze,
 } from "../types.js";
 import {
@@ -109,7 +111,9 @@ export function addValidatorToRegistry(
   state: CachedBeaconStateAllForks,
   pubkey: BLSPubkey,
   withdrawalCredentials: Bytes32,
-  amount: UintNum64
+  amount: UintNum64,
+  /** From pq a validator has a VRF root, and `pubkey` is its 32-byte leanXMSS public key */
+  vrfRoot?: Bytes32
 ): void {
   const {validators, epochCtx} = state;
   // add validator and balance entries
@@ -117,18 +121,22 @@ export function addValidatorToRegistry(
     amount - (amount % EFFECTIVE_BALANCE_INCREMENT),
     fork < ForkSeq.electra ? MAX_EFFECTIVE_BALANCE : getMaxEffectiveBalance(withdrawalCredentials)
   );
-  validators.push(
-    ssz.phase0.Validator.toViewDU({
-      pubkey,
-      withdrawalCredentials,
-      activationEligibilityEpoch: FAR_FUTURE_EPOCH,
-      activationEpoch: FAR_FUTURE_EPOCH,
-      exitEpoch: FAR_FUTURE_EPOCH,
-      withdrawableEpoch: FAR_FUTURE_EPOCH,
-      effectiveBalance,
-      slashed: false,
-    })
-  );
+  const validator = {
+    pubkey,
+    withdrawalCredentials,
+    activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+    activationEpoch: FAR_FUTURE_EPOCH,
+    exitEpoch: FAR_FUTURE_EPOCH,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+    effectiveBalance,
+    slashed: false,
+  };
+  if (fork === ForkSeq.pq) {
+    if (vrfRoot === undefined) throw Error("A pq validator needs a VRF root");
+    (state as CachedBeaconStatePq).validators.push(ssz.pq.Validator.toViewDU({...validator, vrfRoot}));
+  } else {
+    (validators as CachedBeaconStatePhase0["validators"]).push(ssz.phase0.Validator.toViewDU(validator));
+  }
 
   const validatorIndex = validators.length - 1;
   // TODO Electra: Review this

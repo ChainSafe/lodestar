@@ -8,6 +8,10 @@ import type {PublicKey} from "./blst.js";
  * - An existing public key at a different index.
  *
  * No-op for an exact index and public-key replay.
+ *
+ * A 48-byte key is a compressed BLS public key. A 32-byte key is a leanXMSS public key, as validators
+ * have from the pq fork: it is cached as requests name it, 16 zero bytes then the key, and `get` and
+ * `aggregate` have no meaning for it.
  */
 export interface PubkeyCache {
   /** Get a cached, deserialized PublicKey. */

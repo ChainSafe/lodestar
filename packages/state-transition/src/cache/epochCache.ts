@@ -469,7 +469,8 @@ export class EpochCache {
     let currentSyncCommitteeIndexed: SyncCommitteeCache;
     let nextSyncCommitteeIndexed: SyncCommitteeCache;
     // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
-    if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
+    // pq removes the sync committees
+    if (afterAltairFork && !opts?.skipSyncCommitteeCache && config.getForkSeqAtEpoch(currentEpoch) !== ForkSeq.pq) {
       const altairState = state as BeaconStateAltair;
       currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkeyCache);
       nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkeyCache);

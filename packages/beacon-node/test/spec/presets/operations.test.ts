@@ -10,13 +10,25 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
+  CachedBeaconStatePq,
   CachedBeaconStatePreHeze,
   ExecutionPayloadStatus,
   IndexedBuilderState,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {
+  AttesterSlashing,
+  altair,
+  bellatrix,
+  capella,
+  electra,
+  gloas,
+  phase0,
+  pq,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -38,6 +50,14 @@ const syncAggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
 
   blockFns.processSyncAggregate(state, block);
 };
+
+/**
+ * The pq vectors carry stub signatures and proofs, which the spec's reference does not check: it
+ * runs with XMSS switched off.
+ */
+function verifiesByDefault(fork: ForkSeq): boolean {
+  return fork !== ForkSeq.pq;
+}
 
 const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = {
   attestation: (state, testCase: {attestation: phase0.Attestation}) => {
@@ -66,7 +86,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
 
   proposer_slashing: (state, testCase: {proposer_slashing: phase0.ProposerSlashing}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processProposerSlashing(fork, state, testCase.proposer_slashing);
+    blockFns.processProposerSlashing(fork, state, testCase.proposer_slashing, verifiesByDefault(fork));
   },
 
   sync_aggregate: syncAggregate,
@@ -74,12 +94,12 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
 
   voluntary_exit: (state, testCase: {voluntary_exit: phase0.SignedVoluntaryExit}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
+    blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit, verifiesByDefault(fork));
   },
 
   voluntary_exit_churn: (state, testCase: {voluntary_exit: phase0.SignedVoluntaryExit}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
+    blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit, verifiesByDefault(fork));
   },
 
   execution_payload: (
@@ -121,7 +141,12 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   },
 
   execution_payload_bid: (state, testCase: {execution_payload_bid: gloas.SignedExecutionPayloadBid}) => {
-    blockFns.processExecutionPayloadBid(state as CachedBeaconStateGloas, testCase.execution_payload_bid);
+    const fork = state.config.getForkSeq(state.slot);
+    blockFns.processExecutionPayloadBid(
+      state as CachedBeaconStateGloas,
+      testCase.execution_payload_bid,
+      verifiesByDefault(fork)
+    );
   },
 
   parent_execution_payload: (state, testCase: {block: gloas.BeaconBlock}) => {
@@ -137,6 +162,18 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
       new IndexedBuilderState(state as CachedBeaconStateGloas),
       testCase.builder_deposit_request
     );
+  },
+
+  preregistration_request: (state, testCase: {preregistration_request: pq.PreregistrationRequest}) => {
+    blockFns.processPreregistrationRequest(state as CachedBeaconStatePq, testCase.preregistration_request);
+  },
+
+  randao: (state, testCase: {body: pq.BeaconBlockBody}) => {
+    const block = ssz.pq.BeaconBlock.defaultValue();
+    block.slot = state.slot;
+    block.proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
+    block.body = testCase.body;
+    blockFns.processRandao(state, block, false);
   },
 
   builder_exit_request: (state, testCase: {builder_exit_request: gloas.BuilderExitRequest}) => {
@@ -192,8 +229,9 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         block: ssz[fork].BeaconBlock,
         body: ssz[fork].BeaconBlockBody,
         deposit: ssz.phase0.Deposit,
-        proposer_slashing: ssz.phase0.ProposerSlashing,
-        voluntary_exit: ssz.phase0.SignedVoluntaryExit,
+        proposer_slashing: fork === ForkName.pq ? ssz.pq.ProposerSlashing : ssz.phase0.ProposerSlashing,
+        voluntary_exit: fork === ForkName.pq ? ssz.pq.SignedVoluntaryExit : ssz.phase0.SignedVoluntaryExit,
+        preregistration_request: ssz.pq.PreregistrationRequest,
         // Altair
         sync_aggregate: ssz.altair.SyncAggregate,
         // Bellatrix

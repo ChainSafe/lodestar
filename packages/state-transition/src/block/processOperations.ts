@@ -36,7 +36,7 @@ export {
 export function processOperations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  body: BeaconBlockBody<ForkBls>,
+  body: BeaconBlockBody,
   parentSlot: Slot | null,
   opts: ProcessBlockOpts = {verifySignatures: true},
   metrics?: BeaconStateTransitionMetrics | null
@@ -90,7 +90,8 @@ export function processOperations(
     timer?.();
   }
 
-  if (fork >= ForkSeq.capella) {
+  // pq disables BLS to execution changes and carries payload attestations on gossip only
+  if (fork >= ForkSeq.capella && fork !== ForkSeq.pq) {
     const timer = metrics?.processOperationsStepTime.startTimer({
       step: ProcessOperationsStep.processBlsToExecutionChange,
     });
@@ -133,7 +134,7 @@ export function processOperations(
     }
   }
 
-  if (fork >= ForkSeq.gloas) {
+  if (fork >= ForkSeq.gloas && fork !== ForkSeq.pq) {
     const timer = metrics?.processOperationsStepTime.startTimer({
       step: ProcessOperationsStep.processPayloadAttestation,
     });

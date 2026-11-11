@@ -14,6 +14,7 @@ import {
   isValidatorKnown,
 } from "../util/electra.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
+import {isLegacyPubkey} from "../util/pq.js";
 import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
@@ -22,6 +23,11 @@ export function processWithdrawalRequest(
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   withdrawalRequest: electra.WithdrawalRequest
 ): void {
+  // From pq a request that names a BLS public key is ignored
+  if (fork === ForkSeq.pq && isLegacyPubkey(withdrawalRequest.validatorPubkey)) {
+    return;
+  }
+
   const amount = Number(withdrawalRequest.amount);
   const {pendingPartialWithdrawals, validators, epochCtx} = state;
   // no need to use unfinalized pubkey cache from 6110 as validator won't be active anyway
