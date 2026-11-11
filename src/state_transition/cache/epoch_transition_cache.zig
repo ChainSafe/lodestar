@@ -576,37 +576,24 @@ pub const EpochTransitionCache = struct {
             }
         }
 
-        var prev_source_unsl_stake = unslashed_stakes.prev_source;
-        var prev_target_unsl_stake = unslashed_stakes.prev_target;
-        var prev_head_unsl_stake = unslashed_stakes.prev_head;
-        var curr_target_unsl_stake = unslashed_stakes.curr_target;
-
         if (fork_seq.gte(.altair)) {
-            if (epoch_cache.current_target_unslashed_balance_increments != curr_target_unsl_stake) {
+            if (epoch_cache.current_target_unslashed_balance_increments != unslashed_stakes.curr_target) {
                 try metrics.state_transition.progressive_balances_mismatches.incr(.{ .target = .current });
-                epoch_cache.current_target_unslashed_balance_increments = curr_target_unsl_stake;
+                epoch_cache.current_target_unslashed_balance_increments = unslashed_stakes.curr_target;
             }
-            if (epoch_cache.previous_target_unslashed_balance_increments != prev_target_unsl_stake) {
+            if (epoch_cache.previous_target_unslashed_balance_increments != unslashed_stakes.prev_target) {
                 try metrics.state_transition.progressive_balances_mismatches.incr(.{ .target = .previous });
-                epoch_cache.previous_target_unslashed_balance_increments = prev_target_unsl_stake;
+                epoch_cache.previous_target_unslashed_balance_increments = unslashed_stakes.prev_target;
             }
         }
 
         // As per spec of `get_total_balance`:
         // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
         // Math safe up to ~10B ETH, afterwhich this overflows uint64.
-        if (prev_source_unsl_stake < 1) {
-            prev_source_unsl_stake = 1;
-        }
-        if (prev_target_unsl_stake < 1) {
-            prev_target_unsl_stake = 1;
-        }
-        if (prev_head_unsl_stake < 1) {
-            prev_head_unsl_stake = 1;
-        }
-        if (curr_target_unsl_stake < 1) {
-            curr_target_unsl_stake = 1;
-        }
+        unslashed_stakes.prev_source = @max(unslashed_stakes.prev_source, 1);
+        unslashed_stakes.prev_target = @max(unslashed_stakes.prev_target, 1);
+        unslashed_stakes.prev_head = @max(unslashed_stakes.prev_head, 1);
+        unslashed_stakes.curr_target = @max(unslashed_stakes.curr_target, 1);
 
         // zig specific map function similar to "indicesEligibleForActivation.map(({validatorIndex}) => validatorIndex)"
         var indices_eligible_for_activation = try std.ArrayList(ValidatorIndex).initCapacity(allocator, validator_activation_list.items.len);
@@ -624,10 +611,10 @@ pub const EpochTransitionCache = struct {
             .current_epoch = current_epoch,
             .total_active_stake_by_increment = total_active_stake_by_increment,
             .base_reward_per_increment = base_reward_per_increment,
-            .prev_epoch_unslashed_stake_source_by_increment = prev_source_unsl_stake,
-            .prev_epoch_unslashed_stake_target_by_increment = prev_target_unsl_stake,
-            .prev_epoch_unslashed_stake_head_by_increment = prev_head_unsl_stake,
-            .curr_epoch_unslashed_target_stake_by_increment = curr_target_unsl_stake,
+            .prev_epoch_unslashed_stake_source_by_increment = unslashed_stakes.prev_source,
+            .prev_epoch_unslashed_stake_target_by_increment = unslashed_stakes.prev_target,
+            .prev_epoch_unslashed_stake_head_by_increment = unslashed_stakes.prev_head,
+            .curr_epoch_unslashed_target_stake_by_increment = unslashed_stakes.curr_target,
             .indices_to_slash = indices_to_slash,
             .indices_eligible_for_activation_queue = indices_eligible_for_activation_queue,
             .indices_eligible_for_activation = indices_eligible_for_activation,
